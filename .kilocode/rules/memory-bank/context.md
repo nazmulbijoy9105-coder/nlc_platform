@@ -1,87 +1,76 @@
-# Active Context: Next.js Starter Template
+# Context - NLC Platform Backend
 
 ## Current State
 
-**Template Status**: ✅ Ready for development
+**Project Status**: ✅ NLC Platform backend scaffolded
 
-The template is a clean Next.js 16 starter with TypeScript and Tailwind CSS 4. It's ready for AI-assisted expansion to build any type of application.
+The NLC Platform backend is a FastAPI application for RJSC compliance monitoring. The template is ready for development with Docker.
 
 ## Recently Completed
 
-- [x] Base Next.js 16 setup with App Router
-- [x] TypeScript configuration with strict mode
-- [x] Tailwind CSS 4 integration
-- [x] ESLint configuration
-- [x] Memory bank documentation
-- [x] Recipe system for common features
+- [x] Created SPEC.md for NLC Platform (RJSC Compliance Intelligence Platform)
+- [x] Set up Python project structure with FastAPI, SQLAlchemy, Redis, Celery
+- [x] Created 28 database models across 6 model files
+- [x] Built 8 API routers with ~70 endpoints
+- [x] Implemented ILRMF rule engine with 32 compliance rules across 9 modules
+- [x] Created JWT + TOTP authentication system
+- [x] Set up Celery workers with beat schedule
+- [x] Created Docker and docker-compose configuration
+- [x] Wrote unit tests for rule engine and security
 
 ## Current Structure
 
-| File/Directory | Purpose | Status |
+| Directory/File | Purpose | Status |
 |----------------|---------|--------|
-| `src/app/page.tsx` | Home page | ✅ Ready |
-| `src/app/layout.tsx` | Root layout | ✅ Ready |
-| `src/app/globals.css` | Global styles | ✅ Ready |
-| `.kilocode/` | AI context & recipes | ✅ Ready |
+| `nlc_platform/app/main.py` | FastAPI app factory | ✅ |
+| `nlc_platform/app/core/` | Config, security, DB | ✅ |
+| `nlc_platform/app/models/` | 28 SQLAlchemy tables | ✅ |
+| `nlc_platform/app/api/v1/` | 8 API routers | ✅ |
+| `nlc_platform/app/rule_engine/` | 32 ILRMF rules | ✅ |
+| `nlc_platform/app/services/` | Auth service | ✅ |
+| `nlc_platform/app/worker/` | Celery tasks | ✅ |
+| `nlc_platform/tests/` | Unit tests | ✅ |
+| `nlc_platform/docker-compose.yml` | Local dev stack | ✅ |
+| `nlc_platform/.env.example` | Environment template | ✅ |
 
-## Current Focus
+## Tech Stack
 
-The template is ready. Next steps depend on user requirements:
+- **API**: FastAPI + Pydantic v2 + uvicorn
+- **Database**: PostgreSQL 16 + SQLAlchemy 2.0 async
+- **Cache/Queue**: Redis 7 + Celery 5 + redbeat
+- **Auth**: JWT + TOTP (2FA mandatory)
+- **AI**: Anthropic Claude / OpenAI ready
+- **Storage**: AWS S3 ready
+- **Notifications**: Email (SES), WhatsApp (Twilio)
 
-1. What type of application to build
-2. What features are needed
-3. Design/branding preferences
+## Quick Start
 
-## Quick Start Guide
+```bash
+cd nlc_platform
+cp .env.example .env
+# Edit .env with your secrets
 
-### To add a new page:
+# Start services
+make dev
 
-Create a file at `src/app/[route]/page.tsx`:
-```tsx
-export default function NewPage() {
-  return <div>New page content</div>;
-}
+# Or with Docker
+docker-compose up -d
 ```
 
-### To add components:
+## API Endpoints
 
-Create `src/components/` directory and add components:
-```tsx
-// src/components/ui/Button.tsx
-export function Button({ children }: { children: React.ReactNode }) {
-  return <button className="px-4 py-2 bg-blue-600 text-white rounded">{children}</button>;
-}
-```
-
-### To add a database:
-
-Follow `.kilocode/recipes/add-database.md`
-
-### To add API routes:
-
-Create `src/app/api/[route]/route.ts`:
-```tsx
-import { NextResponse } from "next/server";
-
-export async function GET() {
-  return NextResponse.json({ message: "Hello" });
-}
-```
-
-## Available Recipes
-
-| Recipe | File | Use Case |
-|--------|------|----------|
-| Add Database | `.kilocode/recipes/add-database.md` | Data persistence with Drizzle + SQLite |
-
-## Pending Improvements
-
-- [ ] Add more recipes (auth, email, etc.)
-- [ ] Add example components
-- [ ] Add testing setup recipe
+- `/api/v1/auth` - Authentication (8 endpoints)
+- `/api/v1/companies` - Company management (14 endpoints)
+- `/api/v1/filings` - RJSC filings (10 endpoints)
+- `/api/v1/rescue` - Corporate rescue (6 endpoints)
+- `/api/v1/documents` - Legal documents (7 endpoints)
+- `/api/v1/commercial` - Commercial pipeline (11 endpoints)
+- `/api/v1/rules` - ILRMF rules (6 endpoints)
+- `/api/v1/admin` - Admin analytics (15 endpoints)
+- `/api/v1/health` - Health checks (3 endpoints)
 
 ## Session History
 
 | Date | Changes |
 |------|---------|
-| Initial | Template created with base setup |
+| 2026-03-15 | Created NLC Platform backend with FastAPI, 28 models, 32 rules, auth, Docker |
