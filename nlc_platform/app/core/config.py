@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8000"]
 
     # Database
+    DATABASE_TYPE: Literal["sqlite", "postgres"] = "sqlite"
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str = "nlc"
@@ -27,18 +28,16 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "nlc_platform"
 
     @property
-    def DATABASE_URL(self) -> PostgresDsn:
-        return PostgresDsn(
-            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
-            f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-        )
+    def DATABASE_URL(self) -> str:
+        if self.DATABASE_TYPE == "sqlite":
+            return "sqlite+aiosqlite:///./nlc_platform.db"
+        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     @property
     def SYNC_DATABASE_URL(self) -> str:
-        return (
-            f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
-            f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-        )
+        if self.DATABASE_TYPE == "sqlite":
+            return "sqlite:///./nlc_platform.db"
+        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     # Redis
     REDIS_HOST: str = "localhost"
