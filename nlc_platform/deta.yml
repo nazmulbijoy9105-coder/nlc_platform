@@ -1,0 +1,7 @@
+name: nlc-platform
+description: Neum Lex Counsel - RJSC Compliance Intelligence Platform
+runtime: python311
+Entrypoint: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+buildCommand: pip install -e .
+public: false
+stack: space-api
