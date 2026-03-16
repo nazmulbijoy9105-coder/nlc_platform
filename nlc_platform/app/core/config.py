@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8000"]
 
     # Database
-    DATABASE_TYPE: Literal["sqlite", "postgres"] = "sqlite"
+    DATABASE_TYPE: str = "sqlite"
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str = "nlc"
@@ -64,7 +64,7 @@ class Settings(BaseSettings):
         return self.REDIS_URL
 
     # JWT
-    JWT_SECRET_KEY: str
+    JWT_SECRET_KEY: str = "f1bfb8d2dbc317d1df9153b2b836f9ec7d0330eddff233b88a44404134284872"
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
