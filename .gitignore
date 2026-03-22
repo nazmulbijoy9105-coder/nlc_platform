@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# SECRETS - NEVER COMMIT
+.env
+.env.local
+.env.production
+*.pem
+*.key
+infra/nginx/ssl/
+
+# DB / Logs
+*.db
+*.sqlite3
+*.log
+logs/
+
+# Tests / Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+coverage.xml
+.mypy_cache/
+
+# IDEs
+.idea/
+.vscode/
+.DS_Store
+
+# Generated
+/tmp/
+*.pdf

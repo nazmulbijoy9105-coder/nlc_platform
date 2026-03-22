@@ -1,0 +1,265 @@
+# ═══════════════════════════════════════════════════════════════════════
+# NEUM LEX COUNSEL — Backend Dockerfile
+# Multi-stage build: builder → runtime
+#
+# BUILD TARGETS:
+#   api     — FastAPI application server (default)
+#   worker  — Celery task worker
+#   beat    — Celery beat scheduler
+#   flower  — Celery monitoring UI
+#
+# BUILD COMMANDS:
+#   # Production API:
+#   docker build --target api -t nlc-api:latest .
+#
+#   # Celery worker:
+#   docker build --target worker -t nlc-worker:latest .
+#
+#   # Celery beat:
+#   docker build --target beat -t nlc-beat:latest .
+#
+# RUN COMMANDS (also see docker-compose.yml):
+#   docker run -p 8000:8000 --env-file .env nlc-api:latest
+#   docker run --env-file .env nlc-worker:latest
+#   docker run --env-file .env nlc-beat:latest
+#
+# SECURITY:
+#   - Non-root user (nlc, UID 1001) for all targets
+#   - No secrets in image — all from environment / Docker secrets
+#   - Multi-stage: build tools not in runtime image
+#   - Minimal base image: python:3.11-slim-bookworm
+# ═══════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────
+# STAGE 1: builder
+# Install all Python deps + compile requirements
+# ─────────────────────────────────────────────────────────────────────
+FROM python:3.11-slim-bookworm AS builder
+
+# Prevent Python from writing .pyc files and buffering stdout
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /build
+
+# Install build-time system dependencies
+# WeasyPrint needs Cairo + Pango for PDF rendering
+# python-magic needs libmagic
+# asyncpg needs gcc for compilation
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    libffi-dev \
+    libssl-dev \
+    libpq-dev \
+    libmagic1 \
+    libmagic-dev \
+    # WeasyPrint system deps
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libharfbuzz0b \
+    libharfbuzz-icu0 \
+    libfontconfig1 \
+    libcairo2 \
+    libgdk-pixbuf2.0-0 \
+    libxml2-dev \
+    libxslt1-dev \
+    shared-mime-info \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first (layer caching — only rebuild when reqs change)
+COPY requirements.txt .
+
+# Install Python dependencies into /install for clean copy to runtime stage
+RUN pip install --upgrade pip==24.0 && \
+    pip install --prefix=/install --no-warn-script-location \
+    -r requirements.txt
+
+
+# ─────────────────────────────────────────────────────────────────────
+# STAGE 2: runtime-base
+# Minimal runtime image shared by all targets
+# ─────────────────────────────────────────────────────────────────────
+FROM python:3.11-slim-bookworm AS runtime-base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    # Python path includes installed packages
+    PATH="/install/bin:$PATH" \
+    PYTHONPATH="/install/lib/python3.11/site-packages:/app:$PYTHONPATH"
+
+# Install ONLY runtime system dependencies (no build tools)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Database client tools
+    libpq5 \
+    # python-magic runtime lib
+    libmagic1 \
+    # WeasyPrint runtime — PDF generation
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libharfbuzz0b \
+    libharfbuzz-icu0 \
+    libfontconfig1 \
+    libfontconfig1-dev \
+    fontconfig \
+    libcairo2 \
+    libgdk-pixbuf2.0-0 \
+    libxml2 \
+    libxslt1.1 \
+    shared-mime-info \
+    # Fonts for PDF rendering (Bangla + Latin)
+    fonts-liberation \
+    fonts-noto \
+    fonts-noto-core \
+    # curl for health checks
+    curl \
+    # timezone data
+    tzdata \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && fc-cache -fv  # Rebuild font cache
+
+# Set timezone
+ENV TZ=UTC
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# Copy installed Python packages from builder
+COPY --from=builder /install /install
+
+# Create non-root user for security
+RUN groupadd --gid 1001 nlc && \
+    useradd --uid 1001 --gid 1001 --no-create-home --shell /bin/sh nlc
+
+# Create app directory and set ownership
+WORKDIR /app
+RUN chown -R nlc:nlc /app
+
+# Create necessary runtime directories
+RUN mkdir -p /app/static/fonts \
+             /app/templates/pdf \
+             /tmp/nlc_pdfs \
+    && chown -R nlc:nlc /app /tmp/nlc_pdfs
+
+# Copy application code
+COPY --chown=nlc:nlc . /app/
+
+# Switch to non-root user for all subsequent operations
+USER nlc
+
+
+# ─────────────────────────────────────────────────────────────────────
+# STAGE 3: api — FastAPI application server
+# ─────────────────────────────────────────────────────────────────────
+FROM runtime-base AS api
+
+# Default environment (override in docker-compose or Kubernetes)
+ENV ENVIRONMENT=production \
+    LOG_LEVEL=INFO \
+    SQL_ECHO=false
+
+# Port the API listens on
+EXPOSE 8000
+
+# Health check: calls /health endpoint
+# Requires the API to expose GET /health returning {"status": "ok"}
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Start FastAPI with uvicorn
+# --workers: 1 worker (scale via Docker replicas, not uvicorn workers, for Celery compat)
+# --host 0.0.0.0: bind to all interfaces inside container
+# --proxy-headers: trust X-Forwarded-For from Nginx
+# --forwarded-allow-ips "*": trust reverse proxy (Nginx sets this)
+CMD ["uvicorn", "app.main:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000", \
+     "--workers", "1", \
+     "--proxy-headers", \
+     "--forwarded-allow-ips", "*", \
+     "--log-level", "info", \
+     "--access-log"]
+
+
+# ─────────────────────────────────────────────────────────────────────
+# STAGE 4: worker — Celery task worker
+# ─────────────────────────────────────────────────────────────────────
+FROM runtime-base AS worker
+
+ENV ENVIRONMENT=production \
+    LOG_LEVEL=INFO
+
+# No exposed port — worker doesn't accept HTTP connections
+
+# Health check: verify Celery can connect to broker
+HEALTHCHECK --interval=60s --timeout=15s --start-period=30s --retries=3 \
+    CMD python -c "from app.worker.celery_app import celery_app; \
+                   result = celery_app.control.ping(timeout=5.0); \
+                   exit(0 if result else 1)" || exit 1
+
+# Start Celery worker
+# --loglevel info: structured logging
+# --concurrency 4: 4 concurrent task threads per worker process
+# --queues: process all 4 queues (or set per-container in docker-compose)
+# --max-tasks-per-child 500: restart after 500 tasks (memory management)
+# --max-memory-per-child 256000: restart if >256MB (memory safety)
+CMD ["celery", \
+     "-A", "app.worker.celery_app", \
+     "worker", \
+     "--loglevel=info", \
+     "--concurrency=4", \
+     "--queues=compliance,notifications,documents,maintenance,default", \
+     "--max-tasks-per-child=500", \
+     "--max-memory-per-child=256000", \
+     "--hostname=worker@%h"]
+
+
+# ─────────────────────────────────────────────────────────────────────
+# STAGE 5: beat — Celery beat scheduler
+# ─────────────────────────────────────────────────────────────────────
+FROM runtime-base AS beat
+
+ENV ENVIRONMENT=production \
+    LOG_LEVEL=INFO
+
+# Only ONE beat instance should run at a time.
+# redbeat handles distributed locking to prevent duplicate crons.
+# In Docker Swarm/K8s: deploy with replicas=1.
+
+HEALTHCHECK --interval=60s --timeout=15s --start-period=30s --retries=3 \
+    CMD python -c "import redis, os; \
+                   r = redis.from_url(os.environ.get('REDIS_URL', 'redis://redis:6379/0')); \
+                   r.ping()" || exit 1
+
+# Start Celery beat with redbeat Redis scheduler
+CMD ["celery", \
+     "-A", "app.worker.celery_app", \
+     "beat", \
+     "--loglevel=info", \
+     "--scheduler", "redbeat.RedBeatScheduler"]
+
+
+# ─────────────────────────────────────────────────────────────────────
+# STAGE 6: flower — Celery monitoring UI
+# Optional — deploy separately for task monitoring
+# ─────────────────────────────────────────────────────────────────────
+FROM runtime-base AS flower
+
+ENV ENVIRONMENT=production
+
+EXPOSE 5555
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:5555 || exit 1
+
+# Start Flower monitoring dashboard
+# --basic-auth: basic auth protection (set FLOWER_BASIC_AUTH env var)
+# --url-prefix: if running behind Nginx at /flower/
+CMD ["celery", \
+     "-A", "app.worker.celery_app", \
+     "flower", \
+     "--port=5555", \
+     "--loglevel=info"]
