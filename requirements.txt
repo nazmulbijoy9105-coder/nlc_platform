@@ -100,3 +100,4 @@ pip-audit==2.7.1                    # Vulnerability scanner (run in CI pipeline)
 # asyncpg requires PostgreSQL 11+ and libssl.
 # For Docker: use python:3.11-slim-bookworm base image (has libssl).
 # ─────────────────────────────────────────────────────────────────────
+mangum>=0.17.0

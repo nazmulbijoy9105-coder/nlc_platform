@@ -1,0 +1,10 @@
+tests/
+scripts/
+infra/
+Makefile
+docker-compose.yml
+Dockerfile
+.env*
+__pycache__
+*.pyc
+.pytest_cache
