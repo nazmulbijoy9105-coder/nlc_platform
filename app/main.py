@@ -143,7 +143,7 @@ class AccessLogMiddleware(BaseHTTPMiddleware):
     Skips /health to avoid log noise.
     """
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        if request.url.path.startswith("/api/v1/health"):
+        if request.url.path.startswith("/api/v1/health/live"):
             return await call_next(request)
 
         start = time.perf_counter()
@@ -351,7 +351,7 @@ def create_app() -> FastAPI:
             "service": "Neum Lex Counsel API",
             "version": settings.app_version,
             "docs": "/api/v1/docs" if not settings.is_production else "disabled in production",
-            "health": "/api/v1/health",
+            "health": "/api/v1/health/live",
         }
 
     return app
