@@ -44,7 +44,7 @@ email-validator==2.1.1              # Email field validation
 celery==5.3.6                       # Background task worker
 redis==5.0.2                        # Redis client (Celery broker + result backend)
 kombu==5.3.4                        # Celery messaging library (pinned with celery)
-redbeat==2.0.0                      # Redis-backed beat scheduler (HA-safe, no file locks)
+celery-redbeat==2.3.3                      # Redis-backed beat scheduler (HA-safe, no file locks)
 flower==2.0.1                       # Celery monitoring web UI (run separately)
 billiard==4.2.0                     # Celery subprocess pool (pinned with celery)
 
