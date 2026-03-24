@@ -74,8 +74,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 
 # Install Python dependencies into /install for clean copy to runtime stage
-RUN pip install --upgrade pip==24.0 && \
-    pip install --prefix=/install --no-warn-script-location \
+RUN pip install --upgrade "pip==24.0" setuptools wheel
+RUN pip install \
+    --prefix=/install \
+    --no-warn-script-location \
+    --no-cache-dir \
     -r requirements.txt
 
 

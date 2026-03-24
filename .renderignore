@@ -1,0 +1,3 @@
+# Ignore pyproject.toml to prevent Render from trying to use Poetry
+# This project uses Docker for deployment with pip/requirements.txt
+pyproject.toml
