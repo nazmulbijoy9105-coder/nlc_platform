@@ -145,14 +145,9 @@ def _make_token(role: str, user_id: Optional[str] = None, company_ids: Optional[
     """Generate a real JWT token for testing (uses actual security module)."""
     from app.core.security import create_access_token
     uid = user_id or str(uuid.uuid4())
-    payload = {
-        "sub": uid,
-        "type": "access",
-        "role": role,
-        "company_ids": company_ids or [],
-        "email": f"test_{role.lower()}@nlctest.com",
-    }
-    return create_access_token(payload)
+    email = f"test_{role.lower()}@nlctest.com"
+    companies = company_ids or []
+    return create_access_token(uid, email, role, companies)
 
 
 @pytest.fixture(scope="session")
@@ -250,7 +245,10 @@ def rule_engine():
     Initialised NLCRuleEngine instance.
     Session-scoped — engine is stateless (flags reset per evaluate() call).
     """
-    from C_rule_engine import NLCRuleEngine  # adjust import path as needed
+    try:
+        from C_rule_engine import NLCRuleEngine  # adjust import path as needed
+    except ModuleNotFoundError:
+        from app.rule_engine.engine import NLCRuleEngine
     return NLCRuleEngine()
 
 
@@ -268,7 +266,10 @@ def build_profile():
     Usage:
         profile = build_profile(agm_held_this_cycle=False)  # triggers AGM default
     """
-    from C_rule_engine import CompanyProfile, DirectorChange, ShareTransfer
+    try:
+        from C_rule_engine import CompanyProfile, DirectorChange, ShareTransfer
+    except ModuleNotFoundError:
+        from app.rule_engine.engine import CompanyProfile, DirectorChange, ShareTransfer
 
     def _build(**overrides) -> CompanyProfile:
         today = date.today()
@@ -360,11 +361,14 @@ def black_band_profile(build_profile):
 @pytest.fixture
 def make_director_change():
     """Factory for DirectorChange test objects."""
-    from C_rule_engine import DirectorChange
+    try:
+        from C_rule_engine import DirectorChange
+    except ModuleNotFoundError:
+        from app.rule_engine.engine import DirectorChange
 
     def _make(
         event_type: str = "appointment",
-        days_ago: int = 400,     # Default: filed late (over 1 year)
+        days_ago: int = 400,
         form_filed: bool = False,
         form_filed_days_ago: Optional[int] = None,
     ) -> DirectorChange:
@@ -384,7 +388,10 @@ def make_director_change():
 @pytest.fixture
 def make_share_transfer():
     """Factory for ShareTransfer test objects."""
-    from C_rule_engine import ShareTransfer
+    try:
+        from C_rule_engine import ShareTransfer
+    except ModuleNotFoundError:
+        from app.rule_engine.engine import ShareTransfer
 
     def _make(
         days_ago: int = 30,

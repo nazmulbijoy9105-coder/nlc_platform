@@ -31,21 +31,27 @@ DATABASE_URL: str = os.environ.get(
 # Testing:    NullPool (each test gets fresh connection)
 _testing = os.environ.get("TESTING", "false").lower() == "true"
 
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=os.environ.get("SQL_ECHO", "false").lower() == "true",
-    pool_size=int(os.environ.get("DB_POOL_SIZE", "20")),
-    max_overflow=int(os.environ.get("DB_MAX_OVERFLOW", "40")),
-    pool_pre_ping=True,
-    pool_recycle=3600,
-    connect_args={
+engine_args = {
+    "echo": os.environ.get("SQL_ECHO", "false").lower() == "true",
+    "pool_pre_ping": True,
+    "pool_recycle": 3600,
+    "connect_args": {
         "server_settings": {
             "application_name": "nlc_api",
             "timezone": "UTC",
         }
     },
-    **({"poolclass": NullPool} if _testing else {}),
-)
+}
+
+if not _testing:
+    engine_args.update({
+        "pool_size": int(os.environ.get("DB_POOL_SIZE", "20")),
+        "max_overflow": int(os.environ.get("DB_MAX_OVERFLOW", "40")),
+    })
+else:
+    engine_args["poolclass"] = NullPool
+
+engine = create_async_engine(DATABASE_URL, **engine_args)
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,

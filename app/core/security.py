@@ -113,21 +113,38 @@ def get_totp_provisioning_uri(secret: str, email: str) -> str:
 
 # ── JWT token creation ────────────────────────────────────────────────
 def create_access_token(
-    user_id: str,
-    email: str,
-    role: str,
-    company_ids: list[str],
+    user_id: str | dict[str, Any],
+    email: Optional[str] = None,
+    role: Optional[str] = None,
+    company_ids: Optional[list[str]] = None,
 ) -> str:
     """
     Create a full access JWT (issued after successful 2FA).
+    Supports both old payload-style calls `create_access_token(payload)` and
+    new explicit args `create_access_token(user_id, email, role, company_ids)`.
     Contains: user_id, email, role, company_ids.
     Expires: jwt_access_token_expire_minutes (default 480 = 8 hours).
     """
     settings = get_settings()
     now = datetime.now(timezone.utc)
+
+    if isinstance(user_id, dict):
+        payload_data = user_id
+        uid = payload_data.get("user_id") or payload_data.get("sub")
+        if not uid:
+            raise ValueError("user_id or sub must be set in payload")
+        email = payload_data.get("email")
+        role = payload_data.get("role")
+        company_ids = payload_data.get("company_ids", [])
+    else:
+        uid = user_id
+
+    if not (email and role and company_ids is not None):
+        raise ValueError("email, role, and company_ids must be provided")
+
     payload = {
-        "sub":         user_id,
-        "user_id":     user_id,
+        "sub":         uid,
+        "user_id":     uid,
         "email":       email,
         "role":        role,
         "company_ids": company_ids,
