@@ -1,18 +1,9 @@
 # =============================================================================
-# render.yaml — Render.com Infrastructure Blueprint
+# render.yaml — Render.com Pure Docker Deployment
 # NEUM LEX COUNSEL — RJSC Compliance Intelligence Platform
-# =============================================================================
 #
-# HOW TO DEPLOY:
-#   1. Push this repo to GitHub
-#   2. Go to https://dashboard.render.com → New → Blueprint
-#   3. Select your repo — Render reads this file automatically
-#   4. After deploy, set the "sync: false" secrets in each service's
-#      Environment tab in the Render dashboard
-#   5. Run migrations: open nlc-api shell → alembic upgrade head
-#   6. Seed data: python scripts/seed_rules.py && python scripts/seed_prompt_templates.py
-#
-# Services: nlc-api (web) + nlc-worker + nlc-beat + PostgreSQL + Redis
+# CRITICAL: This uses ONLY Docker. No Python/Poetry/Node detection.
+# All buildpacks are disabled to force pure Docker workflow.
 # =============================================================================
 
 databases:
@@ -37,7 +28,6 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    preDeployCommand: ""
     dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips "*" --workers 1
     healthCheckPath: /api/v1/health/live
     autoDeploy: true
@@ -85,7 +75,6 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    preDeployCommand: ""
     dockerCommand: celery -A app.worker.celery_app worker --loglevel=info --concurrency=2 --queues=compliance,notifications,documents,maintenance,default --max-tasks-per-child=500
     envVars:
       - key: ENVIRONMENT
@@ -122,7 +111,6 @@ services:
     plan: starter
     runtime: docker
     dockerfilePath: ./Dockerfile
-    preDeployCommand: ""
     dockerContext: .
     dockerCommand: celery -A app.worker.celery_app beat --loglevel=info --scheduler redbeat.RedBeatScheduler
     numInstances: 1
