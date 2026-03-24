@@ -1,3 +1,9 @@
-# Ignore pyproject.toml to prevent Render from trying to use Poetry
-# This project uses Docker for deployment with pip/requirements.txt
+# Ignore pyproject.toml and Poetry config to prevent Render from using Poetry
+# This project uses Docker with pip/requirements.txt for deployment
 pyproject.toml
+poetry.lock
+.python-version
+Pipfile
+Pipfile.lock
+setup.py
+setup.cfg

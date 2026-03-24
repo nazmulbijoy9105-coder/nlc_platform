@@ -37,6 +37,7 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
+    preDeployCommand: ""
     dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips "*" --workers 1
     healthCheckPath: /api/v1/health/live
     autoDeploy: true
@@ -84,6 +85,7 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
+    preDeployCommand: ""
     dockerCommand: celery -A app.worker.celery_app worker --loglevel=info --concurrency=2 --queues=compliance,notifications,documents,maintenance,default --max-tasks-per-child=500
     envVars:
       - key: ENVIRONMENT
@@ -120,6 +122,7 @@ services:
     plan: starter
     runtime: docker
     dockerfilePath: ./Dockerfile
+    preDeployCommand: ""
     dockerContext: .
     dockerCommand: celery -A app.worker.celery_app beat --loglevel=info --scheduler redbeat.RedBeatScheduler
     numInstances: 1
