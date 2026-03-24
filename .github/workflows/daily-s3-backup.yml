@@ -1,0 +1,104 @@
+# =============================================================================
+# GitHub Actions: Automated Daily S3 Backup
+# NEUM LEX COUNSEL — Database Archival
+# =============================================================================
+
+name: Daily Database Backup to S3
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 2 AM UTC daily
+  workflow_dispatch:
+
+jobs:
+  backup_to_s3:
+    name: Backup Database to S3
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Install Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Export Database to S3
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
+        run: |
+          set -e
+          
+          TIMESTAMP=$(date -u +%Y-%m-%d_%H-%M-%S)
+          BACKUP_FILE="/tmp/nlc_backup_$TIMESTAMP.sql"
+          BACKUP_TARBALL="nlc_backup_$TIMESTAMP.tar.gz"
+          
+          echo "📦 Exporting PostgreSQL database..."
+          flyctl ssh console --app nlc-api --command "pg_dump -U nlc_user nlc_db" > "$BACKUP_FILE"
+          
+          if [ ! -f "$BACKUP_FILE" ]; then
+            echo "❌ Failed to create backup"
+            exit 1
+          fi
+          
+          # Compress
+          echo "🗜️ Compressing backup..."
+          tar -czf "$BACKUP_TARBALL" -C /tmp "nlc_backup_$TIMESTAMP.sql"
+          
+          # Upload to S3
+          echo "📤 Uploading to S3..."
+          aws s3 cp "$BACKUP_TARBALL" "s3://nlc-backups/database/$BACKUP_TARBALL" \
+            --storage-class STANDARD_IA \
+            --metadata "timestamp=$TIMESTAMP,type=postgresql"
+          
+          echo "✅ Backup uploaded successfully"
+          
+          # List recent backups
+          echo ""
+          echo "📋 Recent backups:"
+          aws s3 ls s3://nlc-backups/database/ --recursive | tail -5
+
+      - name: Send Slack Notification - Success
+        if: success()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "✅ Daily Database Backup Completed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*NLC Database Backup*\n*Status:* ✅ Success\n*Location:* S3 (STANDARD_IA)\n*Time:* $(date -u --iso-8601=seconds)"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_DEPLOYMENTS }}
+
+      - name: Send Slack Notification - Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "❌ Daily Backup FAILED",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*NLC Database Backup*\n*Status:* ❌ FAILED\n*Action:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Check Logs>"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_DEPLOYMENTS }}

@@ -1,0 +1,51 @@
+# =============================================================================
+# GitHub Actions: Auto-Deploy Frontend to Vercel on Push
+# =============================================================================
+
+name: Deploy Frontend to Vercel
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Vercel
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: nazmulbijoy9105-coder/nlc_frontend
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy to Vercel Production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          vercel deploy \
+            --prod \
+            --token=$VERCEL_TOKEN \
+            --confirm
+
+      - name: Get Deployment URL
+        id: deployment
+        run: |
+          echo "url=$(vercel --token=$VERCEL_TOKEN list | grep nlc-frontend | awk '{print $2}')" >> $GITHUB_OUTPUT
+
+      - name: Health Check
+        run: |
+          sleep 10
+          curl -f -s https://nlc-frontend.vercel.app || exit 1
+
+      - name: Update Backend CORS
+        run: |
+          echo "Remember to update backend ALLOWED_ORIGINS environment variable"
+          echo "ALLOWED_ORIGINS=https://nlc-frontend.vercel.app,http://localhost:3000"
