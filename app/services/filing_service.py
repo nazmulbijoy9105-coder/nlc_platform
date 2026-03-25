@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.agm import AGM
 from app.models.annual_return import AnnualReturn
 from app.models.audit import Audit
+from app.models.infrastructure import StatutoryRegister
 from app.services.base import BaseService
 
 
@@ -394,3 +395,63 @@ class AnnualReturnService(BaseService[AnnualReturn]):
     def calculate_filing_deadline(agm_date: date) -> date:
         """Section 190: Annual return due within 30 days of AGM."""
         return agm_date + timedelta(days=30)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# STATUTORY REGISTER SERVICE
+# ═══════════════════════════════════════════════════════════════════════
+
+class StatutoryRegisterService(BaseService[StatutoryRegister]):
+    model = StatutoryRegister
+
+    async def create_register_entry(
+        self,
+        company_id: uuid.UUID,
+        register_type: str,
+        *,
+        is_maintained: bool = False,
+        last_updated_date: Optional[date] = None,
+        location: Optional[str] = None,
+        notes: Optional[str] = None,
+    ) -> StatutoryRegister:
+        return await self.create(
+            company_id=company_id,
+            register_type=register_type,
+            is_maintained=is_maintained,
+            last_updated_date=last_updated_date,
+            location=location,
+            notes=notes,
+        )
+
+    async def get_for_company(self, company_id: uuid.UUID) -> List[StatutoryRegister]:
+        result = await self.db.execute(
+            select(StatutoryRegister)
+            .where(StatutoryRegister.company_id == company_id)
+            .order_by(StatutoryRegister.register_type.asc())
+        )
+        return list(result.scalars().all())
+
+    async def update_register_entry(
+        self,
+        register_id: uuid.UUID,
+        *,
+        is_maintained: Optional[bool] = None,
+        last_updated_date: Optional[date] = None,
+        location: Optional[str] = None,
+        notes: Optional[str] = None,
+    ) -> Optional[StatutoryRegister]:
+        entry = await self.get_by_id(register_id)
+        if not entry:
+            return None
+
+        updates = {}
+        if is_maintained is not None:
+            updates["is_maintained"] = is_maintained
+        if last_updated_date is not None:
+            updates["last_updated_date"] = last_updated_date
+        if location is not None:
+            updates["location"] = location
+        if notes is not None:
+            updates["notes"] = notes
+
+        return await self.update_instance(entry, **updates)

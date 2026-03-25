@@ -295,6 +295,15 @@ ILRMF_RULES = [
         "of lodgement of transfer. Section 82 requires timely certificate issuance.",
         "YELLOW", 10, "COMPLIANCE_PACKAGE", False,
     ),
+    (
+        "REG-004",
+        "Statutory Register Core Maintenance",
+        "REGISTER",
+        "Section 26, Companies Act 1994 (Bangladesh)",
+        "Core statutory registers (Members, Directors, Charges) must be maintained. "
+        "Failure to maintain core registers is a high-risk statutory default.",
+        "RED", 15, "STRUCTURED_REGULARIZATION", False,
+    ),
 
     # ── OFFICE RULES (1) ──────────────────────────────────────────
     (
