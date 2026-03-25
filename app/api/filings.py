@@ -41,7 +41,7 @@ from app.core.dependencies import (
     require_company_access,
 )
 from app.models.user import User
-from app.services.filing_service import AGMService, AuditService, AnnualReturnService
+from app.services.filing_service import AGMService, AuditService, AnnualReturnService, StatutoryRegisterService
 from app.services.notification_service import ActivityService
 
 logger = structlog.get_logger(__name__)
@@ -148,6 +148,33 @@ class AnnualReturnResponse(BaseModel):
     rjsc_acknowledgment_number: Optional[str]
     late_fee_paid: bool
     created_at: str
+
+
+class StatutoryRegisterCreateRequest(BaseModel):
+    company_id: uuid.UUID
+    register_type: str
+    is_maintained: bool = False
+    last_updated_date: Optional[date] = None
+    location: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class StatutoryRegisterUpdateRequest(BaseModel):
+    is_maintained: Optional[bool] = None
+    last_updated_date: Optional[date] = None
+    location: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class StatutoryRegisterResponse(BaseModel):
+    register_id: str
+    company_id: str
+    register_type: str
+    is_maintained: bool
+    last_updated_date: Optional[str]
+    location: Optional[str]
+    notes: Optional[str]
+    updated_at: str
 
 
 class MessageResponse(BaseModel):
@@ -464,6 +491,98 @@ async def mark_return_filed(
     return _return_to_response(annual_return)
 
 
+# ==========================================================================
+# STATUTORY REGISTER ENDPOINTS
+# ===========================================================================
+
+@router.post(
+    "/statutory-register",
+    response_model=StatutoryRegisterResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+    summary="Create a statutory register record",
+)
+async def create_statutory_register(
+    body: StatutoryRegisterCreateRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    svc = StatutoryRegisterService(db)
+    activity = ActivityService(db)
+
+    entry = await svc.create_register_entry(
+        company_id=body.company_id,
+        register_type=body.register_type,
+        is_maintained=body.is_maintained,
+        last_updated_date=body.last_updated_date,
+        location=body.location,
+        notes=body.notes,
+    )
+
+    await activity.log(
+        action="STATUTORY_REGISTER_CREATED",
+        resource_type="statutory_register",
+        resource_id=str(entry.id),
+        description=f"Statutory register {body.register_type} created",
+        ip_address=request.client.host if request.client else None,
+        actor_user_id=current_user.id,
+    )
+    _dispatch_reevaluation(body.company_id, "STATUTORY_REGISTER_CREATED")
+    return _statutory_register_to_response(entry)
+
+
+@router.get(
+    "/statutory-register/{company_id}",
+    response_model=List[StatutoryRegisterResponse],
+    dependencies=[Depends(require_company_access("company_id"))],
+    summary="List statutory register entries for a company",
+)
+async def list_statutory_registers(
+    company_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    svc = StatutoryRegisterService(db)
+    entries = await svc.get_for_company(company_id)
+    return [_statutory_register_to_response(e) for e in entries]
+
+
+@router.patch(
+    "/statutory-register/{register_id}",
+    response_model=StatutoryRegisterResponse,
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+    summary="Update a statutory register entry",
+)
+async def update_statutory_register(
+    register_id: uuid.UUID,
+    body: StatutoryRegisterUpdateRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    svc = StatutoryRegisterService(db)
+    entry = await svc.update_register_entry(
+        register_id=register_id,
+        is_maintained=body.is_maintained,
+        last_updated_date=body.last_updated_date,
+        location=body.location,
+        notes=body.notes,
+    )
+    if not entry:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Statutory register entry not found")
+
+    await ActivityService(db).log(
+        action="STATUTORY_REGISTER_UPDATED",
+        resource_type="statutory_register",
+        resource_id=str(register_id),
+        description=f"Statutory register {entry.register_type} updated",
+        ip_address=request.client.host if request.client else None,
+        actor_user_id=current_user.id,
+    )
+    _dispatch_reevaluation(entry.company_id, "STATUTORY_REGISTER_UPDATED")
+    return _statutory_register_to_response(entry)
+
+
 # ---------------------------------------------------------------------------
 # Serialisers
 # ---------------------------------------------------------------------------
@@ -508,4 +627,17 @@ def _return_to_response(r) -> AnnualReturnResponse:
         rjsc_acknowledgment_number=r.rjsc_acknowledgment_number,
         late_fee_paid=r.late_fee_paid,
         created_at=r.created_at.isoformat(),
+    )
+
+
+def _statutory_register_to_response(r) -> StatutoryRegisterResponse:
+    return StatutoryRegisterResponse(
+        register_id=str(r.id),
+        company_id=str(r.company_id),
+        register_type=r.register_type,
+        is_maintained=r.is_maintained,
+        last_updated_date=r.last_updated_date.isoformat() if r.last_updated_date else None,
+        location=r.location,
+        notes=r.notes,
+        updated_at=r.updated_at.isoformat(),
     )
