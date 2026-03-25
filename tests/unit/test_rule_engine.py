@@ -557,6 +557,20 @@ class TestRegisterRules:
         output = rule_engine.evaluate(profile)
         assert_flag_not_triggered(output, "REG-001")
 
+    def test_REG004_triggers_core_register_missing(self, rule_engine, build_profile):
+        profile = build_profile(
+            maintained_registers=["members", "transfers", "debentures", "mortgages"],
+        )
+        output = rule_engine.evaluate(profile)
+        assert_flag_triggered(output, "REG-004")
+
+    def test_REG004_no_trigger_all_core_registers_maintained(self, rule_engine, build_profile):
+        profile = build_profile(
+            maintained_registers=["members", "directors", "charges", "transfers", "debentures", "mortgages"],
+        )
+        output = rule_engine.evaluate(profile)
+        assert_flag_not_triggered(output, "REG-004")
+
     def test_REG002_triggers_certificate_not_issued(self, rule_engine, build_profile):
         """Share certificate not issued after allotment → REG-002."""
         profile = build_profile(
