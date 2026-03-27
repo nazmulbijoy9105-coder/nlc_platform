@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════
-# NEUM LEX COUNSEL — Backend Dockerfile (Venv Optimized)
+# NEUM LEX COUNSEL — Backend Dockerfile (Full Multi-Stage)
 # ═══════════════════════════════════════════════════════════════════════
 
 # STAGE 1: builder
@@ -21,7 +21,7 @@ COPY requirements.txt .
 RUN pip install --upgrade "pip==24.0" setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
-# STAGE 2: runtime-base
+# STAGE 2: runtime-base (Shared by all services)
 FROM python:3.11-slim-bookworm AS runtime-base
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 TZ=UTC \
     PATH="/opt/venv/bin:$PATH" \
@@ -50,3 +50,11 @@ USER nlc
 FROM runtime-base AS api
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# STAGE 4: worker
+FROM runtime-base AS worker
+CMD ["celery", "-A", "app.worker.celery_app", "worker", "--loglevel=info"]
+
+# STAGE 5: beat
+FROM runtime-base AS beat
+CMD ["celery", "-A", "app.worker.celery_app", "beat", "--loglevel=info", "--scheduler", "redbeat.RedBeatScheduler"]
