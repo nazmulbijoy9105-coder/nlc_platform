@@ -74,8 +74,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 
 # Install Python dependencies into /install for clean copy to runtime stage
-RUN pip install --upgrade pip==24.0 && \
-    pip install --prefix=/install --no-warn-script-location \
+RUN pip install --upgrade "pip==24.0" setuptools wheel
+RUN pip install \
+    --prefix=/install \
+    --no-warn-script-location \
+    --no-cache-dir \
     -r requirements.txt
 
 
@@ -164,23 +167,23 @@ ENV ENVIRONMENT=production \
 # Port the API listens on
 EXPOSE 8000
 
-# Health check: calls /api/v1/health/live endpoint
-# Requires the API to expose GET /api/v1/health/live returning {"status": "ok"}
+# Health check: calls /health endpoint
+# Requires the API to expose GET /health returning {"status": "ok"}
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8000/api/v1/health/live || exit 1
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # Start FastAPI with uvicorn
 # --workers: 1 worker (scale via Docker replicas, not uvicorn workers, for Celery compat)
 # --host 0.0.0.0: bind to all interfaces inside container
 # --proxy-headers: trust X-Forwarded-For from Nginx
 # --forwarded-allow-ips "*": trust reverse proxy (Nginx sets this)
-CMD ["uvicorn", "app.main:app", \
-     "--host", "0.0.0.0", \
-     "--port", "8000", \
-     "--workers", "1", \
-     "--proxy-headers", \
-     "--forwarded-allow-ips", "*", \
-     "--log-level", "info", \
+CMD [CMD ["uvicorn", "app.main:app",
+     "--host", "0.0.0.0",
+     "--port", "${PORT}",
+     "--workers", "1",
+     "--proxy-headers",
+     "--forwarded-allow-ips", "*",
+     "--log-level", "info",
      "--access-log"]
 
 
