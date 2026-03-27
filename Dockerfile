@@ -1,3 +1,4 @@
+t
 # ═══════════════════════════════════════════════════════════════════════
 # NEUM LEX COUNSEL — Backend Dockerfile
 # Multi-stage build: builder → runtime
