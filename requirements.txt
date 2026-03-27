@@ -12,7 +12,7 @@ pyotp==2.9.0
 cryptography==43.0.3
 celery==5.4.0
 redis==5.2.1
-redbeat==2.2.0
+celery-redbeat==2.2.0
 kombu==5.4.2
 flower==2.0.1
 boto3==1.35.81
