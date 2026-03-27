@@ -96,6 +96,7 @@ class ComplianceFlag:
     triggered_date:     date = field(default_factory=date.today)
     detail:             Dict[str, Any] = field(default_factory=dict)
     resolved:           bool = False
+    is_black_override: bool = False
     escalation_pending: bool = False
 
 
@@ -140,6 +141,7 @@ class CompanyProfile:
     agm_count:                  int         # Total AGMs held to date
     last_agm_date:              Optional[date]
     agm_held_this_cycle:        bool = False
+    agm_held_without_audit:     bool = False
     agm_scheduled_date:         Optional[date] = None
     notice_sent_date:           Optional[date] = None
     members_present_at_agm:     int = 0
@@ -254,12 +256,12 @@ PRIVATE_COMPANY_QUORUM          = 2     # Members
 
 # Required statutory registers
 REQUIRED_REGISTERS = [
-    "register_of_members",
-    "register_of_directors",
-    "register_of_share_transfers",
-    "register_of_charges",
-    "minutes_book_board",
-    "minutes_book_general",
+    "members",
+    "directors",
+    "charges",
+    "transfers",
+    "debentures",
+    "mortgages",
 ]
 
 # Score weight table (ILRMF Article 4, AI Constitution)
@@ -436,7 +438,8 @@ class NLCRuleEngine:
                     "AGM is procedurally defective and may be legally void."
                 ),
                 statutory_basis="Companies Act 1994, Sections 151, 210",
-                detail={"override_to_black": True}
+                detail={"override_to_black": True},
+                is_black_override=True,
             ))
 
     # ═══════════════════════════════════════════════════════════════════
@@ -854,11 +857,11 @@ class NLCRuleEngine:
                     detail={
                         "transfer_id": transfer.transfer_id,
                         "override_to_black": True
-                    }
+                    },
+                    is_black_override=True,
                 ))
 
             # ── TR-006: Transfer Composite Irregularity ────────────────
-            # Fires when multiple TR flags exist for same transfer
             tr_flags_for_transfer = [
                 f for f in self._flags
                 if f.detail.get("transfer_id") == transfer.transfer_id
@@ -888,8 +891,22 @@ class NLCRuleEngine:
 
     def _run_register_rules(self, c: CompanyProfile) -> None:
 
+        # Normalize register naming conventions (alias handling)
+        register_aliases = {
+            "register_of_members": "members",
+            "register_of_directors": "directors",
+            "register_of_share_transfers": "transfers",
+            "register_of_charges": "charges",
+            "register_of_debenture_holders": "debentures",
+            "minutes_book_board": "minutes_book_board",
+            "minutes_book_general": "minutes_book_general",
+        }
+        normalized_maintained = {
+            register_aliases.get(r, r) for r in c.maintained_registers
+        }
+
         # ── REG-001: Statutory Register Incomplete ────────────────────
-        missing = [r for r in REQUIRED_REGISTERS if r not in c.maintained_registers]
+        missing = [r for r in REQUIRED_REGISTERS if r not in normalized_maintained]
         if missing:
             self._add_flag(ComplianceFlag(
                 rule_id="REG-001",
@@ -922,6 +939,30 @@ class NLCRuleEngine:
                     statutory_basis="Companies Act 1994, Section 46",
                     detail={"delay_days": delay, "deadline_days": SHARE_CERTIFICATE_DEADLINE_DAYS}
                 ))
+
+        # ── REG-004: Statutory Register Core Maintenance (Members/Directors/Charges) ─────
+        core_registers = [
+            "members",
+            "directors",
+            "charges",
+        ]
+        missing_core = [r for r in core_registers if r not in normalized_maintained]
+        if missing_core:
+            severity = Severity.RED if len(missing_core) == 1 else Severity.BLACK
+            score_impact = 10 if len(missing_core) == 1 else 20
+            self._add_flag(ComplianceFlag(
+                rule_id="REG-004",
+                flag_code="STATUTORY_REGISTER_CORE_DEFECT",
+                severity=severity,
+                score_impact=score_impact,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION if severity in (Severity.RED, Severity.YELLOW) else RevenueTier.CORPORATE_RESCUE,
+                description=(
+                    "One or more core statutory registers for members, directors, or charges "
+                    "are not maintained."
+                ),
+                statutory_basis="Companies Act 1994, Section 26",
+                detail={"missing_core_registers": missing_core}
+            ))
 
     # ═══════════════════════════════════════════════════════════════════
     # RULE MODULE 8: REGISTERED OFFICE RULES
@@ -1035,24 +1076,8 @@ class NLCRuleEngine:
                     "ar_default_years": ar_default_years,
                     "override_to_black": True
                 },
-                escalation_pending=True
-            ))
-
-        # ── ESC-003: Rescue Required Mandatory ────────────────────────
-        active_black = [
-            f for f in self._flags
-            if f.severity == Severity.BLACK and not f.resolved
-        ]
-        esc_001_active = any(f.rule_id == "ESC-001" for f in self._flags)
-
-        if active_black and esc_001_active:
-            self._add_flag(ComplianceFlag(
-                rule_id="ESC-003",
-                flag_code="RESCUE_REQUIRED_MANDATORY",
-                severity=Severity.BLACK,
-                score_impact=0,
-                revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description=(
+                    escalation_pending=True,
+                    is_black_override=True,
                     "Multiple BLACK flags combined with strike-off risk. "
                     "Corporate Rescue engagement is mandatory, not optional."
                 ),
