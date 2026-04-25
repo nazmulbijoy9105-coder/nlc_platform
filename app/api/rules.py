@@ -37,7 +37,7 @@ from app.core.dependencies import (
 )
 from app.models.user import User
 from app.models.enums import SeverityLevel
-from app.services.rules_service import LegalRuleService
+from app.services.rules_service import RulesService
 from app.services.notification_service import ActivityService
 
 logger = structlog.get_logger(__name__)
@@ -150,7 +150,7 @@ async def list_rules(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    svc = LegalRuleService(db)
+    svc = RulesService(db)
     rules = await svc.get_all(
         rule_type=rule_type,
         severity=severity,
@@ -173,7 +173,7 @@ async def get_rule_summary(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    svc = LegalRuleService(db)
+    svc = RulesService(db)
     rules = await svc.get_all()
 
     by_module: Dict[str, int] = {}
@@ -218,7 +218,7 @@ async def get_black_overrides(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    svc = LegalRuleService(db)
+    svc = RulesService(db)
     rules = await svc.get_black_override_rules()
     return [_rule_to_response(r) for r in rules]
 
@@ -237,7 +237,7 @@ async def get_rule(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    svc = LegalRuleService(db)
+    svc = RulesService(db)
     rule = await svc.get_by_rule_id(rule_id)
     if not rule:
         raise HTTPException(status_code=404, detail=f"Rule '{rule_id}' not found.")
@@ -266,7 +266,7 @@ async def update_rule(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    svc = LegalRuleService(db)
+    svc = RulesService(db)
     activity = ActivityService(db)
 
     existing = await svc.get_by_rule_id(rule_id)
@@ -335,7 +335,7 @@ async def get_rule_history(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    svc = LegalRuleService(db)
+    svc = RulesService(db)
     existing = await svc.get_by_rule_id(rule_id)
     if not existing:
         raise HTTPException(status_code=404, detail=f"Rule '{rule_id}' not found.")

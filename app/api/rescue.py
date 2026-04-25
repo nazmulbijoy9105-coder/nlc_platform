@@ -35,7 +35,7 @@ from app.core.dependencies import (
 )
 from app.models.user import User
 from app.models.enums import RiskBand
-from app.services.rescue_service import RescuePlanService
+from app.services.rescue_service import RescueService
 from app.services.company_service import CompanyService
 from app.services.notification_service import ActivityService
 
@@ -156,7 +156,7 @@ async def create_rescue_plan(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     company_svc = CompanyService(db)
-    rescue_svc = RescuePlanService(db)
+    rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
     # Verify company exists and fetch
@@ -246,7 +246,7 @@ async def get_active_plan(
     company_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    rescue_svc = RescuePlanService(db)
+    rescue_svc = RescueService(db)
     company_svc = CompanyService(db)
 
     plan = await rescue_svc.get_active_plan(company_id)
@@ -310,7 +310,7 @@ async def update_rescue_step(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    rescue_svc = RescuePlanService(db)
+    rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
     valid_statuses = ("PENDING", "IN_PROGRESS", "COMPLETED", "BLOCKED")
@@ -376,7 +376,7 @@ async def create_engagement_from_rescue(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    rescue_svc = RescuePlanService(db)
+    rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
     engagement = await rescue_svc.create_engagement_from_rescue(

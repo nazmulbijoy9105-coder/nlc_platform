@@ -19,9 +19,9 @@ from sqlalchemy import and_, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.agm import AGM
-from app.models.annual_return import AnnualReturn
-from app.models.audit import Audit
+from app.models.filings import AGM
+from app.models.filings import AnnualReturn
+from app.models.filings import Audit
 from app.models.company import Company, CompanyUserAccess
 from app.models.enums import CompanyStatus, CompanyType, LifecycleStage, RiskBand
 from app.models.people import Director, ShareTransfer, Shareholder
