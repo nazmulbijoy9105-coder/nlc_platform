@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import json
 from functools import lru_cache
-from typing import List, Literal, Optional
+from typing import Any, List, Literal, Optional
 
 from pydantic import (
     AnyHttpUrl, EmailStr, Field,
@@ -162,54 +162,35 @@ class Settings(BaseSettings):
     # ═══════════════════════════════════════════════════════════════
     # CORS
     # ═══════════════════════════════════════════════════════════════
+    allowed_origins: Any = Field(
+        default="http://localhost:3000",
+        description="Allowed CORS origins. Comma-separated or JSON array."
+    )
+    allowed_hosts: Any = Field(
+        default="*",
+        description="TrustedHostMiddleware hosts. Comma-separated or JSON array."
+    )
 
     @field_validator("allowed_origins", "allowed_hosts", mode="before")
     @classmethod
-    def parse_list_str(cls, v):
-        """Handle empty, comma-separated, or JSON array values for list[str] fields."""
+    def _parse_list_env(cls, v):
+        """Parse env var str -> list[str]. Handles: JSON array, comma-separated, empty."""
+        if isinstance(v, list):
+            return v
         if isinstance(v, str):
-            if not v.strip():
+            v = v.strip()
+            if not v:
                 return []
-            try:
-                import json
-                result = json.loads(v)
-                if isinstance(result, list):
-                    return result
-                return [str(result)]
-            except (json.JSONDecodeError, ValueError):
-                return [item.strip() for item in v.split(",") if item.strip()]
+            if v.startswith("["):
+                try:
+                    parsed = json.loads(v)
+                    if isinstance(parsed, list):
+                        return parsed
+                except (json.JSONDecodeError, ValueError):
+                    pass
+            return [s.strip() for s in v.split(",") if s.strip()]
         return v
 
-    allowed_origins: List[str] = Field(
-        default=["http://localhost:3000"],
-        description="Allowed CORS origins. Production: https://app.neumlexcounsel.com"
-    )
-
-    @field_validator("allowed_origins", mode="before")
-    @classmethod
-    def parse_origins(cls, v):
-        """Accept JSON string, comma-separated string, or list."""
-        if isinstance(v, str):
-            try:
-                return json.loads(v)
-            except json.JSONDecodeError:
-                return [o.strip() for o in v.split(",") if o.strip()]
-        return v or []
-
-    allowed_hosts: List[str] = Field(
-        default=["*"],
-        description="TrustedHostMiddleware hosts. Production: [\"app.neumlexcounsel.com\"]"
-    )
-
-    @field_validator("allowed_hosts", mode="before")
-    @classmethod
-    def parse_hosts(cls, v):
-        if isinstance(v, str):
-            try:
-                return json.loads(v)
-            except json.JSONDecodeError:
-                return [h.strip() for h in v.split(",") if h.strip()]
-        return v or ["*"]
 
     # ═══════════════════════════════════════════════════════════════
     # REDIS (Celery broker + session cache)
