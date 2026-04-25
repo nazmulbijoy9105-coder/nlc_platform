@@ -1,132 +1,21 @@
-# =============================================================================
-# render.yaml — Render.com Pure Docker Deployment
-# NEUM LEX COUNSEL — RJSC Compliance Intelligence Platform
-#
-# CRITICAL: This uses ONLY Docker. No Python/Poetry/Node detection.
-# All buildpacks are disabled to force pure Docker workflow.
-# =============================================================================
-
-databases:
-  - name: nlc-db
-    databaseName: nlc_db
-    user: nlc_user
-    plan: starter
-    region: singapore
-
 services:
-
-  - type: redis
-    name: nlc-redis
-    plan: starter
-    region: singapore
-    maxmemoryPolicy: allkeys-lru
-
   - type: web
-    name: nlc-api
-    region: singapore
-    plan: starter
+    name: nlc-platform
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips "*" --workers 1
-    healthCheckPath: /api/v1/health/live
-    autoDeploy: true
+    target: api
     envVars:
-      - key: ENVIRONMENT
-        value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: nlc-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          name: nlc-redis
-          type: redis
-          property: connectionString
-      - key: JWT_SECRET_KEY
+        sync: false
+      - key: SECRET_KEY
         generateValue: true
-      - key: TOTP_ENCRYPTION_KEY
+      - key: REDIS_URL
         sync: false
-      - key: ANTHROPIC_API_KEY
-        sync: false
-      - key: AWS_ACCESS_KEY_ID
-        sync: false
-      - key: AWS_SECRET_ACCESS_KEY
-        sync: false
-      - key: AWS_REGION
-        value: ap-south-1
-      - key: S3_BUCKET_NAME
-        sync: false
-      - key: S3_BACKUP_BUCKET
-        sync: false
-      - key: EMAIL_FROM
-        sync: false
-      - key: ALLOWED_ORIGINS
-        sync: false
-      - key: LOG_LEVEL
-        value: INFO
-      - key: AI_PROVIDER
-        value: anthropic
-
-  - type: worker
-    name: nlc-worker
-    region: singapore
-    plan: starter
-    runtime: docker
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
-    dockerCommand: celery -A app.worker.celery_app worker --loglevel=info --concurrency=2 --queues=compliance,notifications,documents,maintenance,default --max-tasks-per-child=500
-    envVars:
       - key: ENVIRONMENT
         value: production
-      - key: DATABASE_URL
-        fromDatabase:
-          name: nlc-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          name: nlc-redis
-          type: redis
-          property: connectionString
-      - key: TOTP_ENCRYPTION_KEY
-        sync: false
-      - key: ANTHROPIC_API_KEY
-        sync: false
-      - key: AWS_ACCESS_KEY_ID
-        sync: false
-      - key: AWS_SECRET_ACCESS_KEY
-        sync: false
-      - key: AWS_REGION
-        value: ap-south-1
-      - key: S3_BUCKET_NAME
-        sync: false
-      - key: EMAIL_FROM
-        sync: false
-      - key: AI_PROVIDER
-        value: anthropic
-
-  - type: worker
-    name: nlc-beat
-    region: singapore
-    plan: starter
-    runtime: docker
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
-    dockerCommand: celery -A app.worker.celery_app beat --loglevel=info --scheduler redbeat.RedBeatScheduler
-    numInstances: 1
-    envVars:
-      - key: ENVIRONMENT
-        value: production
-      - key: DATABASE_URL
-        fromDatabase:
-          name: nlc-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          name: nlc-redis
-          type: redis
-          property: connectionString
-      - key: TOTP_ENCRYPTION_KEY
-        sync: false
-      - key: AI_PROVIDER
-        value: anthropic
+      - key: PORT
+        value: 8000
+      - key: CORS_ORIGINS
+        value: https://nlc-frontend.vercel.app
+    healthCheckPath: /api/v1/health

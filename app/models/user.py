@@ -20,7 +20,7 @@ from .mixins import FullMixin
 
 if TYPE_CHECKING:
     from .company import Company, CompanyUserAccess
-    from .audit import UserActivityLog
+    from .infrastructure import UserActivityLog
 
 
 class User(FullMixin, Base):

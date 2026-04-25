@@ -27,22 +27,22 @@ from .mixins import FullMixin, UUIDPrimaryKeyMixin, TimestampMixin
 
 if TYPE_CHECKING:
     from .user import User
-    from .director import Director
-    from .shareholder import Shareholder
-    from .share_transfer import ShareTransfer
-    from .agm import AGM
-    from .audit import Audit
-    from .annual_return import AnnualReturn
-    from .compliance_flag import ComplianceFlag
-    from .compliance_score_history import ComplianceScoreHistory
-    from .rescue_plan import RescuePlan
-    from .task import Task
-    from .engagement import Engagement
-    from .document import Document
-    from .notification import Notification
-    from .statutory_register import StatutoryRegister
-    from .registered_office_history import RegisteredOfficeHistory
-    from .ai_output_log import AIOutputLog
+    from .people import Director
+    from .people import Shareholder
+    from .people import ShareTransfer
+    from .filings import AGM
+    from .filings import Audit
+    from .filings import AnnualReturn
+    from .compliance import ComplianceFlag
+    from .compliance import ComplianceScoreHistory
+    from .rescue import RescuePlan
+    from .commercial import Task
+    from .commercial import Engagement
+    from .documents import Document
+    from .infrastructure import Notification
+    from .infrastructure import StatutoryRegister
+    from .infrastructure import RegisteredOfficeHistory
+    from .documents import AIOutputLog
 
 
 class Company(FullMixin, Base):

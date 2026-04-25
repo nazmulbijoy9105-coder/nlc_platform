@@ -17,9 +17,9 @@ from typing import Dict, List, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.agm import AGM
-from app.models.annual_return import AnnualReturn
-from app.models.audit import Audit
+from app.models.filings import AGM
+from app.models.filings import AnnualReturn
+from app.models.filings import Audit
 from app.models.infrastructure import StatutoryRegister
 from app.services.base import BaseService
 

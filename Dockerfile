@@ -1,7 +1,3 @@
-# ═══════════════════════════════════════════════════════════════════════
-# NEUM LEX COUNSEL — Backend Dockerfile (Full Multi-Stage)
-# ═══════════════════════════════════════════════════════════════════════
-
 # STAGE 1: builder
 FROM python:3.11-slim-bookworm AS builder
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
@@ -21,7 +17,7 @@ COPY requirements.txt .
 RUN pip install --upgrade "pip==24.0" setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
-# STAGE 2: runtime-base (Shared by all services)
+# STAGE 2: runtime-base
 FROM python:3.11-slim-bookworm AS runtime-base
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 TZ=UTC \
     PATH="/opt/venv/bin:$PATH" \
@@ -46,15 +42,15 @@ RUN mkdir -p /app/static/fonts /app/templates/pdf /tmp/nlc_pdfs && \
 COPY --chown=nlc:nlc . /app/
 USER nlc
 
-# STAGE 3: api
-FROM runtime-base AS api
-EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-
-# STAGE 4: worker
+# STAGE 3: worker
 FROM runtime-base AS worker
 CMD ["celery", "-A", "app.worker.celery_app", "worker", "--loglevel=info"]
 
-# STAGE 5: beat
+# STAGE 4: beat
 FROM runtime-base AS beat
 CMD ["celery", "-A", "app.worker.celery_app", "beat", "--loglevel=info", "--scheduler", "redbeat.RedBeatScheduler"]
+
+# STAGE 5: api — MUST BE LAST (Render default target)
+FROM runtime-base AS api
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -162,6 +162,24 @@ class Settings(BaseSettings):
     # ═══════════════════════════════════════════════════════════════
     # CORS
     # ═══════════════════════════════════════════════════════════════
+
+    @field_validator("allowed_origins", "allowed_hosts", mode="before")
+    @classmethod
+    def parse_list_str(cls, v):
+        """Handle empty, comma-separated, or JSON array values for list[str] fields."""
+        if isinstance(v, str):
+            if not v.strip():
+                return []
+            try:
+                import json
+                result = json.loads(v)
+                if isinstance(result, list):
+                    return result
+                return [str(result)]
+            except (json.JSONDecodeError, ValueError):
+                return [item.strip() for item in v.split(",") if item.strip()]
+        return v
+
     allowed_origins: List[str] = Field(
         default=["http://localhost:3000"],
         description="Allowed CORS origins. Production: https://app.neumlexcounsel.com"
