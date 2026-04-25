@@ -62,7 +62,7 @@ async def lifespan(app: FastAPI):
         "nlc_api_starting",
         version=settings.app_version,
         environment=settings.environment,
-        debug=settings.debug,
+        debug=(settings.environment == "development"),
     )
 
     # Verify DB is reachable
