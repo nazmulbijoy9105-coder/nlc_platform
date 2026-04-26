@@ -12,15 +12,17 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import NotificationChannel, NotificationStatus
 from app.models.infrastructure import Notification
 from app.services.base import BaseService
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger("nlc.notification")
 
@@ -31,15 +33,15 @@ class NotificationService(BaseService[Notification]):
     async def queue_notification(
         self,
         *,
-        company_id: Optional[uuid.UUID],
-        user_id: Optional[uuid.UUID] = None,
+        company_id: uuid.UUID | None,
+        user_id: uuid.UUID | None = None,
         title: str,
         body: str,
         notification_type: str,
         channel: NotificationChannel = NotificationChannel.DASHBOARD,
-        days_until_deadline: Optional[int] = None,
-        related_flag_id: Optional[uuid.UUID] = None,
-        scheduled_for: Optional[datetime] = None,
+        days_until_deadline: int | None = None,
+        related_flag_id: uuid.UUID | None = None,
+        scheduled_for: datetime | None = None,
     ) -> Notification:
         """
         Queue a notification for delivery.
@@ -55,7 +57,7 @@ class NotificationService(BaseService[Notification]):
             notification_type=notification_type,
             channel=channel,
             notification_status=NotificationStatus.PENDING,
-            scheduled_for=scheduled_for or datetime.now(timezone.utc),
+            scheduled_for=scheduled_for or datetime.now(UTC),
             days_until_deadline=days_until_deadline,
             related_flag_id=related_flag_id,
         )
@@ -63,7 +65,7 @@ class NotificationService(BaseService[Notification]):
     async def queue_for_new_flags(
         self,
         company_id: uuid.UUID,
-        flags: List[Any],  # ComplianceFlag objects from rule engine output
+        flags: list[Any],  # ComplianceFlag objects from rule engine output
     ) -> None:
         """
         Generate notifications for new RED/BLACK compliance flags.
@@ -131,10 +133,10 @@ class NotificationService(BaseService[Notification]):
         self,
         user_id: uuid.UUID,
         *,
-        company_id: Optional[uuid.UUID] = None,
+        company_id: uuid.UUID | None = None,
         unread_only: bool = False,
         limit: int = 50,
-    ) -> List[Notification]:
+    ) -> list[Notification]:
         """
         Get notifications for a user.
         _get_user_notifications stub implementation.
@@ -158,7 +160,7 @@ class NotificationService(BaseService[Notification]):
         company_id: uuid.UUID,
         *,
         limit: int = 50,
-    ) -> List[Notification]:
+    ) -> list[Notification]:
         """Get all notifications for a company (admin view)."""
         result = await self.db.execute(
             select(Notification)
@@ -172,7 +174,7 @@ class NotificationService(BaseService[Notification]):
         self,
         notification_id: uuid.UUID,
         acknowledged_by: uuid.UUID,
-    ) -> Optional[Notification]:
+    ) -> Notification | None:
         """
         Mark a notification as acknowledged.
         _acknowledge_notification stub implementation.
@@ -183,13 +185,13 @@ class NotificationService(BaseService[Notification]):
         return await self.update_instance(
             notif,
             notification_status=NotificationStatus.ACKNOWLEDGED,
-            acknowledged_at=datetime.now(timezone.utc),
+            acknowledged_at=datetime.now(UTC),
         )
 
     async def mark_sent(
         self,
         notification_id: uuid.UUID,
-    ) -> Optional[Notification]:
+    ) -> Notification | None:
         """Mark as sent (called by Celery email/WhatsApp worker)."""
         notif = await self.get_by_id(notification_id)
         if not notif:
@@ -197,14 +199,14 @@ class NotificationService(BaseService[Notification]):
         return await self.update_instance(
             notif,
             notification_status=NotificationStatus.SENT,
-            sent_at=datetime.now(timezone.utc),
+            sent_at=datetime.now(UTC),
         )
 
     async def mark_failed(
         self,
         notification_id: uuid.UUID,
         reason: str,
-    ) -> Optional[Notification]:
+    ) -> Notification | None:
         """Mark as failed with reason (delivery failure)."""
         notif = await self.get_by_id(notification_id)
         if not notif:
@@ -218,9 +220,9 @@ class NotificationService(BaseService[Notification]):
 
     async def get_pending(
         self,
-        channel: Optional[NotificationChannel] = None,
+        channel: NotificationChannel | None = None,
         limit: int = 100,
-    ) -> List[Notification]:
+    ) -> list[Notification]:
         """Get pending notifications for the Celery delivery worker."""
         filters = [Notification.notification_status == NotificationStatus.PENDING]
         if channel:
@@ -252,16 +254,16 @@ class ActivityService:
     async def log(
         self,
         *,
-        user_id: Optional[uuid.UUID],
-        company_id: Optional[uuid.UUID],
+        user_id: uuid.UUID | None,
+        company_id: uuid.UUID | None,
         action: str,
-        resource_type: Optional[str] = None,
-        resource_id: Optional[uuid.UUID] = None,
-        description: Optional[str] = None,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        request_id: Optional[str] = None,
-        detail: Optional[Dict] = None,
+        resource_type: str | None = None,
+        resource_id: uuid.UUID | None = None,
+        description: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        request_id: str | None = None,
+        detail: dict | None = None,
     ) -> None:
         """
         Append a single activity log entry.
@@ -281,7 +283,7 @@ class ActivityService:
             user_agent=user_agent,
             request_id=request_id,
             detail=detail,
-            logged_at=datetime.now(timezone.utc),
+            logged_at=datetime.now(UTC),
         )
         self.db.add(log)
         try:
@@ -293,23 +295,23 @@ class ActivityService:
     async def get_logs(
         self,
         *,
-        user_id: Optional[uuid.UUID] = None,
-        company_id: Optional[uuid.UUID] = None,
-        action: Optional[str] = None,
+        user_id: uuid.UUID | None = None,
+        company_id: uuid.UUID | None = None,
+        action: str | None = None,
         days: int = 90,
         limit: int = 200,
         offset: int = 0,
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Query audit logs with filters.
         _get_activity_logs stub implementation.
         """
-        from app.models.infrastructure import UserActivityLog
         from datetime import timedelta
-        from sqlalchemy import text
+
+        from app.models.infrastructure import UserActivityLog
 
         filters = [
-            UserActivityLog.logged_at >= datetime.now(timezone.utc) - timedelta(days=days)
+            UserActivityLog.logged_at >= datetime.now(UTC) - timedelta(days=days)
         ]
         if user_id:
             filters.append(UserActivityLog.user_id == user_id)

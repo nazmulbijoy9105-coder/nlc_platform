@@ -17,12 +17,14 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any, Dict, Generic, List, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from sqlalchemy import func, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.database import Base
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger("nlc.services")
 
@@ -39,7 +41,7 @@ class BaseService(Generic[ModelT]):
         class UserService(BaseService[User]):
             model = User
     """
-    model: Type[ModelT]
+    model: type[ModelT]
 
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
@@ -63,7 +65,7 @@ class BaseService(Generic[ModelT]):
 
     # ── READ ──────────────────────────────────────────────────────
 
-    async def get_by_id(self, record_id: uuid.UUID) -> Optional[ModelT]:
+    async def get_by_id(self, record_id: uuid.UUID) -> ModelT | None:
         """Fetch one record by primary key. Returns None if not found."""
         result = await self.db.execute(
             select(self.model).where(self.model.id == record_id)
@@ -87,8 +89,8 @@ class BaseService(Generic[ModelT]):
         limit: int = 25,
         offset: int = 0,
         order_by=None,
-        filters: Optional[List] = None,
-    ) -> List[ModelT]:
+        filters: list | None = None,
+    ) -> list[ModelT]:
         """
         List records with optional filters, ordering, and pagination.
         filters: list of SQLAlchemy column expressions e.g. [Model.is_active == True]
@@ -103,7 +105,7 @@ class BaseService(Generic[ModelT]):
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-    async def count(self, filters: Optional[List] = None) -> int:
+    async def count(self, filters: list | None = None) -> int:
         """Count records matching filters."""
         stmt = select(func.count()).select_from(self.model)
         if filters:
@@ -118,7 +120,7 @@ class BaseService(Generic[ModelT]):
         self,
         record_id: uuid.UUID,
         **kwargs: Any,
-    ) -> Optional[ModelT]:
+    ) -> ModelT | None:
         """
         Update specific fields on a record by ID.
         Returns the refreshed instance or None if not found.

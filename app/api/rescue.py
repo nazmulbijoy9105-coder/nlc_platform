@@ -19,25 +19,29 @@ Business rules:
 
 from __future__ import annotations
 
-import uuid
-from typing import Optional, List
+from typing import TYPE_CHECKING
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
-    get_db_for_user,
     get_current_user,
-    require_roles,
+    get_db_for_user,
     require_company_access,
+    require_roles,
 )
-from app.models.user import User
 from app.models.enums import RiskBand
-from app.services.rescue_service import RescueService
 from app.services.company_service import CompanyService
 from app.services.notification_service import ActivityService
+from app.services.rescue_service import RescueService
+
+if TYPE_CHECKING:
+    import uuid
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.models.user import User
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -49,22 +53,22 @@ router = APIRouter()
 
 class RescuePlanCreateRequest(BaseModel):
     company_id: uuid.UUID
-    notes: Optional[str] = None
-    assigned_officer_id: Optional[uuid.UUID] = None
-    estimated_fee_bdt: Optional[float] = Field(None, gt=0)
-    target_completion_date: Optional[str] = None
+    notes: str | None = None
+    assigned_officer_id: uuid.UUID | None = None
+    estimated_fee_bdt: float | None = Field(None, gt=0)
+    target_completion_date: str | None = None
 
 
 class RescueStepUpdateRequest(BaseModel):
     status: str = Field(description="PENDING | IN_PROGRESS | COMPLETED | BLOCKED")
-    completion_note: Optional[str] = None
-    completion_document_id: Optional[uuid.UUID] = None
+    completion_note: str | None = None
+    completion_document_id: uuid.UUID | None = None
 
 
 class EngagementFromRescueRequest(BaseModel):
     confirmed_fee_bdt: float = Field(gt=0)
-    payment_terms: Optional[str] = None
-    notes: Optional[str] = None
+    payment_terms: str | None = None
+    notes: str | None = None
 
 
 class RescueStepResponse(BaseModel):
@@ -73,25 +77,25 @@ class RescueStepResponse(BaseModel):
     step_name: str
     description: str
     status: str
-    completion_note: Optional[str]
-    started_at: Optional[str]
-    completed_at: Optional[str]
+    completion_note: str | None
+    started_at: str | None
+    completed_at: str | None
     triggers_reevaluation: bool
 
 
 class RescuePlanResponse(BaseModel):
     plan_id: str
     company_id: str
-    company_name: Optional[str]
+    company_name: str | None
     status: str
     completion_percentage: float
     total_steps: int
     completed_steps: int
-    estimated_fee_bdt: Optional[float]
-    assigned_officer_id: Optional[str]
-    target_completion_date: Optional[str]
-    engagement_id: Optional[str]
-    steps: List[RescueStepResponse]
+    estimated_fee_bdt: float | None
+    assigned_officer_id: str | None
+    target_completion_date: str | None
+    engagement_id: str | None
+    steps: list[RescueStepResponse]
     created_at: str
     updated_at: str
 
@@ -211,7 +215,7 @@ async def create_rescue_plan(
 
 @router.get(
     "/plans",
-    response_model=List[RescuePlanResponse],
+    response_model=list[RescuePlanResponse],
     dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
     summary="List all rescue plans across the portfolio",
 )
@@ -219,9 +223,9 @@ async def list_rescue_plans(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     from sqlalchemy import select
-    from app.models.rescue import RescuePlan
-    from app.models.company import Company
     from sqlalchemy.orm import selectinload
+
+    from app.models.rescue import RescuePlan
 
     result = await db.execute(
         select(RescuePlan)
@@ -274,8 +278,9 @@ async def get_rescue_plan(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     from sqlalchemy import select
-    from app.models.rescue import RescuePlan
     from sqlalchemy.orm import selectinload
+
+    from app.models.rescue import RescuePlan
 
     result = await db.execute(
         select(RescuePlan)
@@ -398,5 +403,5 @@ async def create_engagement_from_rescue(
         actor_user_id=current_user.id,
     )
     return MessageResponse(
-        message=f"Engagement created successfully. Quotation will be generated shortly."
+        message="Engagement created successfully. Quotation will be generated shortly."
     )

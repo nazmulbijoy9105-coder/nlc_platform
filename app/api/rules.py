@@ -22,23 +22,25 @@ Governance notes:
 
 from __future__ import annotations
 
-import uuid
-from typing import Optional, List, Dict, Any
+from typing import TYPE_CHECKING
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
-    get_db_for_user,
     get_current_user,
+    get_db_for_user,
     require_roles,
 )
-from app.models.user import User
-from app.models.enums import SeverityLevel
-from app.services.rules_service import RulesService
 from app.services.notification_service import ActivityService
+from app.services.rules_service import RulesService
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.models.enums import SeverityLevel
+    from app.models.user import User
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -53,11 +55,11 @@ class RuleUpdateRequest(BaseModel):
     Only the operational fields may be updated.
     rule_id, rule_type, and statutory_basis are immutable.
     """
-    rule_name: Optional[str] = Field(None, min_length=3, max_length=255)
-    description: Optional[str] = None
-    default_severity: Optional[SeverityLevel] = None
-    score_impact: Optional[int] = Field(None, ge=0, le=50)
-    is_active: Optional[bool] = None
+    rule_name: str | None = Field(None, min_length=3, max_length=255)
+    description: str | None = None
+    default_severity: SeverityLevel | None = None
+    score_impact: int | None = Field(None, ge=0, le=50)
+    is_active: bool | None = None
     # Required for audit trail
     change_reason: str = Field(
         min_length=10,
@@ -79,17 +81,17 @@ class RuleResponse(BaseModel):
     is_active: bool
     version: int
     created_at: str
-    updated_at: Optional[str]
+    updated_at: str | None
 
 
 class RuleVersionResponse(BaseModel):
     version_id: str
     rule_id: str
     version: int
-    previous_severity: Optional[str]
-    new_severity: Optional[str]
-    previous_score_impact: Optional[int]
-    new_score_impact: Optional[int]
+    previous_severity: str | None
+    new_severity: str | None
+    previous_score_impact: int | None
+    new_score_impact: int | None
     change_reason: str
     changed_by_id: str
     changed_at: str
@@ -100,8 +102,8 @@ class RuleSummaryResponse(BaseModel):
     active_rules: int
     inactive_rules: int
     black_override_rules: int
-    by_module: Dict[str, int]
-    by_severity: Dict[str, int]
+    by_module: dict[str, int]
+    by_severity: dict[str, int]
     total_max_deduction: int
 
 
@@ -138,15 +140,15 @@ def _rule_to_response(rule) -> RuleResponse:
 
 @router.get(
     "",
-    response_model=List[RuleResponse],
+    response_model=list[RuleResponse],
     summary="List all ILRMF legal rules",
     description="Returns all 32 rules. No auth restriction — clients may see rule metadata.",
 )
 async def list_rules(
-    rule_type: Optional[str] = None,
-    severity: Optional[SeverityLevel] = None,
-    is_active: Optional[bool] = None,
-    is_black_override: Optional[bool] = None,
+    rule_type: str | None = None,
+    severity: SeverityLevel | None = None,
+    is_active: bool | None = None,
+    is_black_override: bool | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
@@ -176,8 +178,8 @@ async def get_rule_summary(
     svc = RulesService(db)
     rules = await svc.get_all()
 
-    by_module: Dict[str, int] = {}
-    by_severity: Dict[str, int] = {}
+    by_module: dict[str, int] = {}
+    by_severity: dict[str, int] = {}
     total_max_deduction = 0
     black_overrides = 0
     active_count = 0
@@ -210,7 +212,7 @@ async def get_rule_summary(
 
 @router.get(
     "/black-overrides",
-    response_model=List[RuleResponse],
+    response_model=list[RuleResponse],
     summary="List all BLACK override rules",
     description="Returns rules where is_black_override=True (AUD-003, TR-005, ESC-002, ESC-003).",
 )
@@ -326,7 +328,7 @@ async def update_rule(
 
 @router.get(
     "/{rule_id}/history",
-    response_model=List[RuleVersionResponse],
+    response_model=list[RuleVersionResponse],
     dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN"))],
     summary="Get the version history for a rule",
 )

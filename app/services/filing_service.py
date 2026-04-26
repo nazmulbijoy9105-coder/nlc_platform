@@ -10,19 +10,17 @@ Every create/update triggers a score re-evaluation via background task.
 """
 from __future__ import annotations
 
-import uuid
 from datetime import date, timedelta
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.filings import AGM
-from app.models.filings import AnnualReturn
-from app.models.filings import Audit
+from app.models.filings import AGM, AnnualReturn, Audit
 from app.models.infrastructure import StatutoryRegister
 from app.services.base import BaseService
 
+if TYPE_CHECKING:
+    import uuid
 
 # ═══════════════════════════════════════════════════════════════════════
 # AGM SERVICE
@@ -37,22 +35,22 @@ class AGMService(BaseService[AGM]):
         financial_year: int,
         *,
         agm_type: str = "ANNUAL",
-        agm_deadline: Optional[date] = None,
+        agm_deadline: date | None = None,
         agm_held: bool = False,
-        agm_date: Optional[date] = None,
-        notice_sent_date: Optional[date] = None,
+        agm_date: date | None = None,
+        notice_sent_date: date | None = None,
         members_present: int = 0,
         quorum_required: int = 2,
         auditor_reappointed: bool = True,
         minutes_prepared: bool = False,
         minutes_filed_rjsc: bool = False,
-        rjsc_filing_date: Optional[date] = None,
+        rjsc_filing_date: date | None = None,
         is_default: bool = False,
         delay_days: int = 0,
         notice_defective: bool = False,
         notice_missing: bool = False,
         quorum_met: bool = True,
-        created_by: Optional[uuid.UUID] = None,
+        created_by: uuid.UUID | None = None,
     ) -> AGM:
         """
         Create an AGM record. Calculates is_default and delay_days automatically
@@ -105,8 +103,8 @@ class AGMService(BaseService[AGM]):
         self,
         company_id: uuid.UUID,
         *,
-        financial_year: Optional[int] = None,
-    ) -> List[AGM]:
+        financial_year: int | None = None,
+    ) -> list[AGM]:
         """Get all AGMs for a company, optionally filtered by year."""
         filters = [AGM.company_id == company_id]
         if financial_year:
@@ -122,7 +120,7 @@ class AGMService(BaseService[AGM]):
         self,
         company_id: uuid.UUID,
         financial_year: int,
-    ) -> Optional[AGM]:
+    ) -> AGM | None:
         """Fetch AGM by company and financial year (unique constraint)."""
         result = await self.db.execute(
             select(AGM).where(
@@ -139,7 +137,7 @@ class AGMService(BaseService[AGM]):
         members_present: int,
         auditor_reappointed: bool,
         quorum_required: int = 2,
-    ) -> Optional[AGM]:
+    ) -> AGM | None:
         """
         Record that an AGM was held on a given date.
         Auto-calculates quorum, notice, and default status.
@@ -199,16 +197,16 @@ class AuditService(BaseService[Audit]):
         company_id: uuid.UUID,
         financial_year: int,
         *,
-        auditor_name: Optional[str] = None,
-        auditor_firm: Optional[str] = None,
-        icab_number: Optional[str] = None,
+        auditor_name: str | None = None,
+        auditor_firm: str | None = None,
+        icab_number: str | None = None,
         audit_complete: bool = False,
-        audit_signed_date: Optional[date] = None,
+        audit_signed_date: date | None = None,
         first_auditor_appointed: bool = False,
-        first_auditor_appointment_date: Optional[date] = None,
+        first_auditor_appointment_date: date | None = None,
         first_auditor_delay_days: int = 0,
         report_qualified: bool = False,
-        qualification_notes: Optional[str] = None,
+        qualification_notes: str | None = None,
     ) -> Audit:
         """
         Create an audit record. Auto-detects AUD-003 (AGM without audit).
@@ -240,7 +238,7 @@ class AuditService(BaseService[Audit]):
     async def get_for_company(
         self,
         company_id: uuid.UUID,
-    ) -> List[Audit]:
+    ) -> list[Audit]:
         """Get all audits for a company, ordered by year desc."""
         result = await self.db.execute(
             select(Audit)
@@ -249,7 +247,7 @@ class AuditService(BaseService[Audit]):
         )
         return list(result.scalars().all())
 
-    async def get_latest(self, company_id: uuid.UUID) -> Optional[Audit]:
+    async def get_latest(self, company_id: uuid.UUID) -> Audit | None:
         """Get the most recent audit for a company."""
         result = await self.db.execute(
             select(Audit)
@@ -265,10 +263,10 @@ class AuditService(BaseService[Audit]):
         signed_date: date,
         auditor_name: str,
         auditor_firm: str,
-        icab_number: Optional[str] = None,
+        icab_number: str | None = None,
         report_qualified: bool = False,
-        qualification_notes: Optional[str] = None,
-    ) -> Optional[Audit]:
+        qualification_notes: str | None = None,
+    ) -> Audit | None:
         """Mark an audit as complete with signed date."""
         audit = await self.get_by_id(audit_id)
         if not audit:
@@ -298,13 +296,13 @@ class AnnualReturnService(BaseService[AnnualReturn]):
         company_id: uuid.UUID,
         financial_year: int,
         *,
-        filing_deadline: Optional[date] = None,
-        filed_date: Optional[date] = None,
-        rjsc_receipt_number: Optional[str] = None,
+        filing_deadline: date | None = None,
+        filed_date: date | None = None,
+        rjsc_receipt_number: str | None = None,
         is_complete: bool = True,
-        missing_attachments: Optional[str] = None,
-        filing_fee_paid_bdt: Optional[float] = None,
-        late_fee_paid_bdt: Optional[float] = None,
+        missing_attachments: str | None = None,
+        filing_fee_paid_bdt: float | None = None,
+        late_fee_paid_bdt: float | None = None,
     ) -> AnnualReturn:
         """
         Create an annual return record.
@@ -336,7 +334,7 @@ class AnnualReturnService(BaseService[AnnualReturn]):
             late_fee_paid_bdt=late_fee_paid_bdt,
         )
 
-    async def get_for_company(self, company_id: uuid.UUID) -> List[AnnualReturn]:
+    async def get_for_company(self, company_id: uuid.UUID) -> list[AnnualReturn]:
         """Get all annual returns for a company, ordered by year desc."""
         result = await self.db.execute(
             select(AnnualReturn)
@@ -353,7 +351,7 @@ class AnnualReturnService(BaseService[AnnualReturn]):
             .select_from(AnnualReturn)
             .where(
                 AnnualReturn.company_id == company_id,
-                AnnualReturn.is_default == True,
+                AnnualReturn.is_default,
             )
         )
         return result.scalar_one()
@@ -363,11 +361,11 @@ class AnnualReturnService(BaseService[AnnualReturn]):
         return_id: uuid.UUID,
         filed_date: date,
         rjsc_receipt_number: str,
-        filing_fee_paid_bdt: Optional[float] = None,
-        late_fee_paid_bdt: Optional[float] = None,
+        filing_fee_paid_bdt: float | None = None,
+        late_fee_paid_bdt: float | None = None,
         is_complete: bool = True,
-        missing_attachments: Optional[str] = None,
-    ) -> Optional[AnnualReturn]:
+        missing_attachments: str | None = None,
+    ) -> AnnualReturn | None:
         """Mark an annual return as filed."""
         annual_return = await self.get_by_id(return_id)
         if not annual_return:
@@ -410,9 +408,9 @@ class StatutoryRegisterService(BaseService[StatutoryRegister]):
         register_type: str,
         *,
         is_maintained: bool = False,
-        last_updated_date: Optional[date] = None,
-        location: Optional[str] = None,
-        notes: Optional[str] = None,
+        last_updated_date: date | None = None,
+        location: str | None = None,
+        notes: str | None = None,
     ) -> StatutoryRegister:
         return await self.create(
             company_id=company_id,
@@ -423,7 +421,7 @@ class StatutoryRegisterService(BaseService[StatutoryRegister]):
             notes=notes,
         )
 
-    async def get_for_company(self, company_id: uuid.UUID) -> List[StatutoryRegister]:
+    async def get_for_company(self, company_id: uuid.UUID) -> list[StatutoryRegister]:
         result = await self.db.execute(
             select(StatutoryRegister)
             .where(StatutoryRegister.company_id == company_id)
@@ -435,11 +433,11 @@ class StatutoryRegisterService(BaseService[StatutoryRegister]):
         self,
         register_id: uuid.UUID,
         *,
-        is_maintained: Optional[bool] = None,
-        last_updated_date: Optional[date] = None,
-        location: Optional[str] = None,
-        notes: Optional[str] = None,
-    ) -> Optional[StatutoryRegister]:
+        is_maintained: bool | None = None,
+        last_updated_date: date | None = None,
+        location: str | None = None,
+        notes: str | None = None,
+    ) -> StatutoryRegister | None:
         entry = await self.get_by_id(register_id)
         if not entry:
             return None

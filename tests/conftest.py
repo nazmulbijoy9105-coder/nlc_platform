@@ -30,17 +30,19 @@ import asyncio
 import os
 import sys
 import uuid
-from dataclasses import dataclass, field
 from datetime import date, timedelta
-from typing import AsyncGenerator, Dict, Generator, List, Optional
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
 
 # Ensure app is importable (adjust sys.path if tests run outside Docker)
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -141,7 +143,7 @@ async def db(test_engine) -> AsyncGenerator[AsyncSession, None]:
 # Security helpers (tokens)
 # ---------------------------------------------------------------------------
 
-def _make_token(role: str, user_id: Optional[str] = None, company_ids: Optional[List[str]] = None) -> str:
+def _make_token(role: str, user_id: str | None = None, company_ids: list[str] | None = None) -> str:
     """Generate a real JWT token for testing (uses actual security module)."""
     from app.core.security import create_access_token
     uid = user_id or str(uuid.uuid4())
@@ -185,22 +187,22 @@ def sample_company_id() -> str:
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def super_admin_headers(super_admin_token) -> Dict[str, str]:
+def super_admin_headers(super_admin_token) -> dict[str, str]:
     return {"Authorization": f"Bearer {super_admin_token}"}
 
 
 @pytest.fixture
-def admin_headers(admin_token) -> Dict[str, str]:
+def admin_headers(admin_token) -> dict[str, str]:
     return {"Authorization": f"Bearer {admin_token}"}
 
 
 @pytest.fixture
-def legal_headers(legal_token) -> Dict[str, str]:
+def legal_headers(legal_token) -> dict[str, str]:
     return {"Authorization": f"Bearer {legal_token}"}
 
 
 @pytest.fixture
-def client_headers(client_token) -> Dict[str, str]:
+def client_headers(client_token) -> dict[str, str]:
     return {"Authorization": f"Bearer {client_token}"}
 
 
@@ -215,8 +217,8 @@ async def api_client(db) -> AsyncGenerator[AsyncClient, None]:
     DB session is overridden to use test transaction.
     Celery tasks are mocked to run eagerly (no worker needed).
     """
-    from app.main import create_app
     from app.core.dependencies import get_db, get_db_for_user
+    from app.main import create_app
 
     app = create_app()
 
@@ -269,62 +271,62 @@ def build_profile():
     try:
         from C_rule_engine import CompanyProfile, DirectorChange, ShareTransfer
     except ModuleNotFoundError:
-        from app.rule_engine.engine import CompanyProfile, DirectorChange, ShareTransfer
+        from app.rule_engine.engine import CompanyProfile
 
     def _build(**overrides) -> CompanyProfile:
         today = date.today()
-        defaults = dict(
-            company_id=str(uuid.uuid4()),
-            company_name="Test Company Ltd",
-            company_type="PRIVATE_LIMITED",
+        defaults = {
+            "company_id": str(uuid.uuid4()),
+            "company_name": "Test Company Ltd",
+            "company_type": "PRIVATE_LIMITED",
             # Incorporated 3 years ago — old enough for all deadlines
-            incorporation_date=today - timedelta(days=365 * 3),
-            financial_year_end=date(today.year - 1, 12, 31),
+            "incorporation_date": today - timedelta(days=365 * 3),
+            "financial_year_end": date(today.year - 1, 12, 31),
             # AGM — fully compliant
-            agm_count=3,
-            last_agm_date=today - timedelta(days=60),
-            agm_held_this_cycle=True,
-            agm_scheduled_date=None,
-            notice_sent_date=today - timedelta(days=84),  # 21+ days before AGM
-            members_present_at_agm=3,
-            auditor_reappointed_at_agm=True,
-            accounts_adopted_at_agm=True,
+            "agm_count": 3,
+            "last_agm_date": today - timedelta(days=60),
+            "agm_held_this_cycle": True,
+            "agm_scheduled_date": None,
+            "notice_sent_date": today - timedelta(days=84),  # 21+ days before AGM
+            "members_present_at_agm": 3,
+            "auditor_reappointed_at_agm": True,
+            "accounts_adopted_at_agm": True,
             # Audit — fully compliant
-            first_auditor_appointed=True,
-            audit_complete=True,
-            last_audit_signed_date=today - timedelta(days=90),
-            audit_in_progress=False,
+            "first_auditor_appointed": True,
+            "audit_complete": True,
+            "last_audit_signed_date": today - timedelta(days=90),
+            "audit_in_progress": False,
             # Annual return — fully compliant
-            last_return_filed_year=today.year - 1,
-            unfiled_returns_count=0,
-            annual_return_filed=True,
-            annual_return_content_complete=True,
-            last_agm_filing_date=today - timedelta(days=30),
+            "last_return_filed_year": today.year - 1,
+            "unfiled_returns_count": 0,
+            "annual_return_filed": True,
+            "annual_return_content_complete": True,
+            "last_agm_filing_date": today - timedelta(days=30),
             # Directors — no changes pending
-            director_changes=[],
+            "director_changes": [],
             # Shareholders — no changes
-            shareholder_change_date=None,
-            form_xv_filed=True,
+            "shareholder_change_date": None,
+            "form_xv_filed": True,
             # Transfers — none
-            share_transfers=[],
+            "share_transfers": [],
             # Office — no change
-            registered_office_change_date=None,
-            form_ix_filed=True,
+            "registered_office_change_date": None,
+            "form_ix_filed": True,
             # Corporate structure
-            aoa_transfer_restriction=True,
-            has_foreign_shareholder=False,
-            is_dormant=False,
-            is_fdi_registered=False,
+            "aoa_transfer_restriction": True,
+            "has_foreign_shareholder": False,
+            "is_dormant": False,
+            "is_fdi_registered": False,
             # Registers & certificates
-            maintained_registers=["members", "directors", "charges", "transfers", "debentures", "mortgages"],
-            last_allotment_date=None,
-            share_certificate_issued=True,
+            "maintained_registers": ["members", "directors", "charges", "transfers", "debentures", "mortgages"],
+            "last_allotment_date": None,
+            "share_certificate_issued": True,
             # Capital
-            capital_increase_date=None,
-            capital_increase_resolution=True,
-            charge_creation_date=None,
-            form_viii_filed=True,
-        )
+            "capital_increase_date": None,
+            "capital_increase_resolution": True,
+            "charge_creation_date": None,
+            "form_viii_filed": True,
+        }
         defaults.update(overrides)
         return CompanyProfile(**defaults)
 
@@ -370,7 +372,7 @@ def make_director_change():
         event_type: str = "appointment",
         days_ago: int = 400,
         form_filed: bool = False,
-        form_filed_days_ago: Optional[int] = None,
+        form_filed_days_ago: int | None = None,
     ) -> DirectorChange:
         today = date.today()
         filed_date = today - timedelta(days=form_filed_days_ago) if form_filed and form_filed_days_ago else None
@@ -401,7 +403,7 @@ def make_share_transfer():
         share_register_updated: bool = True,
         aoa_restriction_apply: bool = False,
         board_approval_obtained: bool = True,
-        stamp_duty_amount: Optional[float] = 1000.0,
+        stamp_duty_amount: float | None = 1000.0,
     ) -> ShareTransfer:
         return ShareTransfer(
             transfer_id=str(uuid.uuid4()),
@@ -423,10 +425,10 @@ def make_share_transfer():
 # ---------------------------------------------------------------------------
 
 @pytest_asyncio.fixture
-async def db_company(db: AsyncSession) -> "Company":
+async def db_company(db: AsyncSession) -> Company:
     """Create a Company row in the test DB."""
     from app.models.company import Company
-    from app.models.enums import RiskBand, CompanyStatus
+    from app.models.enums import CompanyStatus, RiskBand
 
     today = date.today()
     company = Company(
@@ -450,11 +452,11 @@ async def db_company(db: AsyncSession) -> "Company":
 
 
 @pytest_asyncio.fixture
-async def db_user(db: AsyncSession) -> "User":
+async def db_user(db: AsyncSession) -> User:
     """Create a User row in the test DB."""
-    from app.models.user import User
-    from app.models.enums import UserRole
     from app.core.security import get_password_hash
+    from app.models.enums import UserRole
+    from app.models.user import User
 
     user = User(
         id=uuid.uuid4(),
@@ -471,11 +473,11 @@ async def db_user(db: AsyncSession) -> "User":
 
 
 @pytest_asyncio.fixture
-async def db_super_admin(db: AsyncSession) -> "User":
+async def db_super_admin(db: AsyncSession) -> User:
     """Create a Super Admin user in the test DB."""
-    from app.models.user import User
-    from app.models.enums import UserRole
     from app.core.security import get_password_hash
+    from app.models.enums import UserRole
+    from app.models.user import User
 
     user = User(
         id=uuid.uuid4(),

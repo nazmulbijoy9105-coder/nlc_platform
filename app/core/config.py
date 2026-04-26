@@ -21,12 +21,14 @@ from __future__ import annotations
 
 import json
 from functools import lru_cache
-from typing import Any, List, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import (
-    AnyHttpUrl, EmailStr, Field,
-    PostgresDsn, RedisDsn, SecretStr,
-    field_validator, model_validator,
+    EmailStr,
+    Field,
+    SecretStr,
+    field_validator,
+    model_validator,
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -73,7 +75,7 @@ class Settings(BaseSettings):
         description="Async database URL. postgresql+asyncpg://user:pass@host:5432/db",
         examples=["postgresql+asyncpg://nlc:secret@localhost:5432/nlc_db"]
     )
-    database_url_sync: Optional[str] = Field(
+    database_url_sync: str | None = Field(
         default=None,
         description="Sync URL for Alembic. postgresql://user:pass@host:5432/db"
     )
@@ -82,7 +84,7 @@ class Settings(BaseSettings):
     db_pool_recycle: int = Field(default=3600, description="Seconds before recycling connections")
 
     @model_validator(mode="after")
-    def derive_sync_url(self) -> "Settings":
+    def derive_sync_url(self) -> Settings:
         """Auto-derive sync URL from async URL if not set."""
         if not self.database_url_sync and self.database_url:
             self.database_url_sync = (
@@ -143,7 +145,7 @@ class Settings(BaseSettings):
         default="120/minute",
         description="Default API rate limit per IP."
     )
-    super_admin_ip_whitelist: List[str] = Field(
+    super_admin_ip_whitelist: list[str] = Field(
         default=[],
         description="IP addresses allowed for Super Admin login. Empty = no restriction."
     )
@@ -200,17 +202,17 @@ class Settings(BaseSettings):
         description="Redis connection URL. redis://:password@host:6379/0"
     )
     redis_max_connections: int = Field(default=20)
-    celery_broker_url: Optional[str] = Field(
+    celery_broker_url: str | None = Field(
         default=None,
         description="Celery broker URL. Defaults to redis_url if not set."
     )
-    celery_result_backend: Optional[str] = Field(
+    celery_result_backend: str | None = Field(
         default=None,
         description="Celery result backend. Defaults to redis_url if not set."
     )
 
     @model_validator(mode="after")
-    def derive_celery_urls(self) -> "Settings":
+    def derive_celery_urls(self) -> Settings:
         """Default Celery URLs to Redis if not explicitly set."""
         if not self.celery_broker_url:
             self.celery_broker_url = self.redis_url
@@ -221,11 +223,11 @@ class Settings(BaseSettings):
     # ═══════════════════════════════════════════════════════════════
     # AWS
     # ═══════════════════════════════════════════════════════════════
-    aws_access_key_id: Optional[SecretStr] = Field(
+    aws_access_key_id: SecretStr | None = Field(
         default=None,
         description="IAM user with S3 + SES access only. Never root credentials."
     )
-    aws_secret_access_key: Optional[SecretStr] = Field(default=None)
+    aws_secret_access_key: SecretStr | None = Field(default=None)
     aws_region: str = Field(
         default="ap-southeast-1",
         description="Primary AWS region. Singapore for Bangladesh latency."
@@ -258,7 +260,7 @@ class Settings(BaseSettings):
         default="noreply@neumlexcounsel.com",
         description="From address for all outbound emails."
     )
-    email_reply_to: Optional[EmailStr] = Field(
+    email_reply_to: EmailStr | None = Field(
         default=None,
         description="Reply-to address. Defaults to email_from."
     )
@@ -271,8 +273,8 @@ class Settings(BaseSettings):
         description="AI provider for document drafting. "
                     "AI Constitution: provider must be sandboxed, never direct DB access."
     )
-    openai_api_key: Optional[SecretStr] = Field(default=None)
-    anthropic_api_key: Optional[SecretStr] = Field(default=None)
+    openai_api_key: SecretStr | None = Field(default=None)
+    anthropic_api_key: SecretStr | None = Field(default=None)
     local_llm_base_url: str = Field(
         default="http://ollama:11434",
         description="Ollama or local LLM base URL."
@@ -294,12 +296,12 @@ class Settings(BaseSettings):
     # WHATSAPP (optional)
     # ═══════════════════════════════════════════════════════════════
     whatsapp_enabled: bool = Field(default=False)
-    whatsapp_api_token: Optional[SecretStr] = Field(default=None)
+    whatsapp_api_token: SecretStr | None = Field(default=None)
     whatsapp_api_url: str = Field(
         default="https://graph.facebook.com/v18.0",
         description="WhatsApp Business API base URL."
     )
-    whatsapp_phone_number_id: Optional[str] = Field(default=None)
+    whatsapp_phone_number_id: str | None = Field(default=None)
 
     # ═══════════════════════════════════════════════════════════════
     # RULE ENGINE (AI Constitution Article 1)
@@ -320,7 +322,7 @@ class Settings(BaseSettings):
         default="00:00",
         description="UTC time for daily compliance evaluation cron. HH:MM"
     )
-    cron_deadline_warning_days: List[int] = Field(
+    cron_deadline_warning_days: list[int] = Field(
         default=[30, 15, 7, 3, 1],
         description="Days ahead to send deadline warnings."
     )
@@ -365,15 +367,15 @@ class Settings(BaseSettings):
     # API DOCS (disabled in production)
     # ═══════════════════════════════════════════════════════════════
     @property
-    def docs_url(self) -> Optional[str]:
+    def docs_url(self) -> str | None:
         return "/docs" if self.environment == "development" else None
 
     @property
-    def redoc_url(self) -> Optional[str]:
+    def redoc_url(self) -> str | None:
         return "/redoc" if self.environment == "development" else None
 
     @property
-    def openapi_url(self) -> Optional[str]:
+    def openapi_url(self) -> str | None:
         return "/api/v1/openapi.json" if self.environment != "production" else None
 
     # ═══════════════════════════════════════════════════════════════
@@ -398,15 +400,15 @@ class Settings(BaseSettings):
         return self.totp_encryption_key.get_secret_value()
 
     @property
-    def aws_key_id(self) -> Optional[str]:
+    def aws_key_id(self) -> str | None:
         return self.aws_access_key_id.get_secret_value() if self.aws_access_key_id else None
 
     @property
-    def aws_secret(self) -> Optional[str]:
+    def aws_secret(self) -> str | None:
         return self.aws_secret_access_key.get_secret_value() if self.aws_secret_access_key else None
 
     @property
-    def ai_key(self) -> Optional[str]:
+    def ai_key(self) -> str | None:
         """Unwrapped AI API key for the active provider."""
         if self.ai_provider == "openai" and self.openai_api_key:
             return self.openai_api_key.get_secret_value()

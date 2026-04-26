@@ -8,17 +8,17 @@ AI Constitution Article 2: NID/passport data encrypted at application layer.
 """
 from __future__ import annotations
 
-import uuid
 from datetime import date, timedelta
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING
 
-from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.models.enums import DirectorStatus, TransferStatus
-from app.models.people import Director, ShareTransfer, Shareholder
+from app.models.people import Director, Shareholder, ShareTransfer
 from app.services.base import BaseService
 
+if TYPE_CHECKING:
+    import uuid
 
 # ═══════════════════════════════════════════════════════════════════════
 # DIRECTOR SERVICE
@@ -33,15 +33,15 @@ class DirectorService(BaseService[Director]):
         *,
         full_name: str,
         appointment_date: date,
-        father_name: Optional[str] = None,
-        nid_number: Optional[str] = None,
-        passport_number: Optional[str] = None,
+        father_name: str | None = None,
+        nid_number: str | None = None,
+        passport_number: str | None = None,
         nationality: str = "Bangladeshi",
-        address: Optional[str] = None,
+        address: str | None = None,
         is_managing_director: bool = False,
         is_chairman: bool = False,
         shares_held: int = 0,
-        appointment_filed_date: Optional[date] = None,
+        appointment_filed_date: date | None = None,
     ) -> Director:
         """
         Record a director appointment.
@@ -79,8 +79,8 @@ class DirectorService(BaseService[Director]):
         *,
         departure_type: DirectorStatus,  # RESIGNED | REMOVED | DECEASED
         departure_date: date,
-        departure_filed_date: Optional[date] = None,
-    ) -> Optional[Director]:
+        departure_filed_date: date | None = None,
+    ) -> Director | None:
         """
         Record a director's departure.
         Auto-calculates departed_still_liable if filing is missing/late.
@@ -110,7 +110,7 @@ class DirectorService(BaseService[Director]):
             departed_still_liable=still_liable,
         )
 
-    async def get_active_directors(self, company_id: uuid.UUID) -> List[Director]:
+    async def get_active_directors(self, company_id: uuid.UUID) -> list[Director]:
         """Get all active directors for a company."""
         result = await self.db.execute(
             select(Director).where(
@@ -120,7 +120,7 @@ class DirectorService(BaseService[Director]):
         )
         return list(result.scalars().all())
 
-    async def get_all_for_company(self, company_id: uuid.UUID) -> List[Director]:
+    async def get_all_for_company(self, company_id: uuid.UUID) -> list[Director]:
         """Get all directors (active and departed) for a company."""
         result = await self.db.execute(
             select(Director)
@@ -129,7 +129,7 @@ class DirectorService(BaseService[Director]):
         )
         return list(result.scalars().all())
 
-    async def get_departed_still_liable(self, company_id: uuid.UUID) -> List[Director]:
+    async def get_departed_still_liable(self, company_id: uuid.UUID) -> list[Director]:
         """
         Get directors who departed but are still shown as active with RJSC.
         DIR-004: Personal liability risk for these directors.
@@ -137,7 +137,7 @@ class DirectorService(BaseService[Director]):
         result = await self.db.execute(
             select(Director).where(
                 Director.company_id == company_id,
-                Director.departed_still_liable == True,
+                Director.departed_still_liable,
             )
         )
         return list(result.scalars().all())
@@ -158,15 +158,15 @@ class ShareholderService(BaseService[Shareholder]):
         shares_held: int,
         share_class: str = "ORDINARY",
         shareholder_type: str = "INDIVIDUAL",
-        nid_or_reg_number: Optional[str] = None,
+        nid_or_reg_number: str | None = None,
         nationality: str = "Bangladeshi",
-        address: Optional[str] = None,
-        effective_date: Optional[date] = None,
-        percentage_holding: Optional[float] = None,
+        address: str | None = None,
+        effective_date: date | None = None,
+        percentage_holding: float | None = None,
         share_certificate_issued: bool = False,
-        certificate_issue_date: Optional[date] = None,
+        certificate_issue_date: date | None = None,
         change_filed_with_rjsc: bool = False,
-        rjsc_filing_date: Optional[date] = None,
+        rjsc_filing_date: date | None = None,
     ) -> Shareholder:
         """
         Add a new shareholder record.
@@ -196,7 +196,7 @@ class ShareholderService(BaseService[Shareholder]):
             rjsc_filing_date=rjsc_filing_date,
         )
 
-    async def get_for_company(self, company_id: uuid.UUID) -> List[Shareholder]:
+    async def get_for_company(self, company_id: uuid.UUID) -> list[Shareholder]:
         """Get all shareholders for a company."""
         result = await self.db.execute(
             select(Shareholder)
@@ -209,8 +209,8 @@ class ShareholderService(BaseService[Shareholder]):
         self,
         shareholder_id: uuid.UUID,
         new_shares: int,
-        percentage: Optional[float] = None,
-    ) -> Optional[Shareholder]:
+        percentage: float | None = None,
+    ) -> Shareholder | None:
         """Update a shareholder's shares held after a transfer."""
         sh = await self.get_by_id(shareholder_id)
         if not sh:
@@ -237,17 +237,17 @@ class ShareTransferService(BaseService[ShareTransfer]):
         transferee_name: str,
         shares_transferred: int,
         transfer_date: date,
-        consideration_bdt: Optional[float] = None,
+        consideration_bdt: float | None = None,
         has_transfer_instrument: bool = True,
         stamp_duty_paid: bool = True,
-        stamp_duty_amount_bdt: Optional[float] = None,
+        stamp_duty_amount_bdt: float | None = None,
         board_approval_obtained: bool = True,
-        board_approval_date: Optional[date] = None,
+        board_approval_date: date | None = None,
         register_updated: bool = True,
-        register_update_date: Optional[date] = None,
+        register_update_date: date | None = None,
         aoa_restriction_violated: bool = False,
-        transferor_shareholder_id: Optional[uuid.UUID] = None,
-        transferee_shareholder_id: Optional[uuid.UUID] = None,
+        transferor_shareholder_id: uuid.UUID | None = None,
+        transferee_shareholder_id: uuid.UUID | None = None,
     ) -> ShareTransfer:
         """
         Record a share transfer. Auto-detects irregularities.
@@ -294,7 +294,7 @@ class ShareTransferService(BaseService[ShareTransfer]):
             irregularity_notes="\n".join(irregularities) if irregularities else None,
         )
 
-    async def get_for_company(self, company_id: uuid.UUID) -> List[ShareTransfer]:
+    async def get_for_company(self, company_id: uuid.UUID) -> list[ShareTransfer]:
         """Get all share transfers for a company."""
         result = await self.db.execute(
             select(ShareTransfer)
@@ -303,12 +303,12 @@ class ShareTransferService(BaseService[ShareTransfer]):
         )
         return list(result.scalars().all())
 
-    async def get_irregular(self, company_id: uuid.UUID) -> List[ShareTransfer]:
+    async def get_irregular(self, company_id: uuid.UUID) -> list[ShareTransfer]:
         """Get all irregular transfers (TR-001 through TR-006 triggers)."""
         result = await self.db.execute(
             select(ShareTransfer).where(
                 ShareTransfer.company_id == company_id,
-                ShareTransfer.is_irregular == True,
+                ShareTransfer.is_irregular,
             )
         )
         return list(result.scalars().all())

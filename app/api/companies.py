@@ -23,29 +23,32 @@ Endpoints:
 
 from __future__ import annotations
 
-import uuid
-from datetime import date
-from typing import Optional, List
+from typing import TYPE_CHECKING
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
-    get_db,
-    get_db_for_user,
-    get_current_user,
-    require_roles,
-    require_company_access,
     Pagination,
+    get_current_user,
+    get_db_for_user,
     get_rule_engine,
+    require_company_access,
+    require_roles,
 )
-from app.models.user import User
-from app.models.enums import RiskBand, CompanyStatus, RevenueTier
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
 from app.services.notification_service import ActivityService
+
+if TYPE_CHECKING:
+    import uuid
+    from datetime import date
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.models.enums import CompanyStatus, RevenueTier, RiskBand
+    from app.models.user import User
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -66,26 +69,26 @@ class CompanyCreateRequest(BaseModel):
         description="Financial year end as MM-DD, e.g. '12-31'"
     )
     # Admin-only fields
-    revenue_tier: Optional[RevenueTier] = None
+    revenue_tier: RevenueTier | None = None
     is_fdi_registered: bool = False
-    assigned_officer_id: Optional[uuid.UUID] = None
-    notes: Optional[str] = None
+    assigned_officer_id: uuid.UUID | None = None
+    notes: str | None = None
 
 
 class CompanyUpdateRequest(BaseModel):
-    company_name: Optional[str] = Field(None, min_length=2, max_length=255)
-    registered_address: Optional[str] = None
-    financial_year_end: Optional[str] = None
-    revenue_tier: Optional[RevenueTier] = None
-    is_fdi_registered: Optional[bool] = None
-    is_dormant: Optional[bool] = None
-    assigned_officer_id: Optional[uuid.UUID] = None
-    notes: Optional[str] = None
+    company_name: str | None = Field(None, min_length=2, max_length=255)
+    registered_address: str | None = None
+    financial_year_end: str | None = None
+    revenue_tier: RevenueTier | None = None
+    is_fdi_registered: bool | None = None
+    is_dormant: bool | None = None
+    assigned_officer_id: uuid.UUID | None = None
+    notes: str | None = None
 
 
 class FlagResolveRequest(BaseModel):
     resolution_note: str = Field(min_length=5, max_length=1000)
-    resolution_document_id: Optional[uuid.UUID] = None
+    resolution_document_id: uuid.UUID | None = None
 
 
 class CompanyResponse(BaseModel):
@@ -96,13 +99,13 @@ class CompanyResponse(BaseModel):
     registered_address: str
     company_type: str
     financial_year_end: str
-    current_compliance_score: Optional[int]
-    current_risk_band: Optional[str]
+    current_compliance_score: int | None
+    current_risk_band: str | None
     company_status: str
-    revenue_tier: Optional[str]
+    revenue_tier: str | None
     is_fdi_registered: bool
     is_dormant: bool
-    last_evaluated_at: Optional[str]
+    last_evaluated_at: str | None
     created_at: str
 
     class Config:
@@ -112,13 +115,13 @@ class CompanyResponse(BaseModel):
 class ComplianceSummaryResponse(BaseModel):
     company_id: str
     company_name: str
-    current_score: Optional[int]
-    risk_band: Optional[str]
+    current_score: int | None
+    risk_band: str | None
     active_flags: int
     black_flags: int
     red_flags: int
     yellow_flags: int
-    last_evaluated_at: Optional[str]
+    last_evaluated_at: str | None
     evaluation_triggered: bool = False
 
 
@@ -131,8 +134,8 @@ class FlagResponse(BaseModel):
     status: str
     is_black_override: bool
     triggered_at: str
-    resolved_at: Optional[str]
-    resolution_note: Optional[str]
+    resolved_at: str | None
+    resolution_note: str | None
 
 
 class ScoreHistoryEntry(BaseModel):
@@ -236,21 +239,21 @@ async def create_company(
 
 @router.get(
     "",
-    response_model=List[CompanyResponse],
+    response_model=list[CompanyResponse],
     summary="List companies (filtered/paginated)",
 )
 async def list_companies(
-    search: Optional[str] = Query(None, description="Full-text search on name or registration number"),
-    risk_band: Optional[RiskBand] = Query(None),
-    company_status: Optional[CompanyStatus] = Query(None),
-    revenue_tier: Optional[RevenueTier] = Query(None),
-    is_dormant: Optional[bool] = Query(None),
+    search: str | None = Query(None, description="Full-text search on name or registration number"),
+    risk_band: RiskBand | None = Query(None),
+    company_status: CompanyStatus | None = Query(None),
+    revenue_tier: RevenueTier | None = Query(None),
+    is_dormant: bool | None = Query(None),
     pagination: Pagination = Depends(),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = CompanyService(db)
-    companies, total = await svc.list_companies(
+    companies, _total = await svc.list_companies(
         search=search,
         risk_band=risk_band,
         company_status=company_status,
@@ -457,7 +460,7 @@ async def get_compliance(
 
 @router.get(
     "/{company_id}/flags",
-    response_model=List[FlagResponse],
+    response_model=list[FlagResponse],
     dependencies=[Depends(require_company_access("company_id"))],
     summary="Get active compliance flags for a company",
 )
@@ -557,7 +560,7 @@ async def acknowledge_flag(
 
 @router.get(
     "/{company_id}/score-history",
-    response_model=List[ScoreHistoryEntry],
+    response_model=list[ScoreHistoryEntry],
     dependencies=[Depends(require_company_access("company_id"))],
     summary="Get compliance score history (monthly snapshots)",
 )

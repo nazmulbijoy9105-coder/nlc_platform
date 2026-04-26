@@ -40,12 +40,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from datetime import date, datetime, timedelta, timezone
-from functools import wraps
-from typing import Any, Dict, List, Optional
+from datetime import UTC, date, datetime, timedelta
+from typing import Any
 
 from celery import Task
-from celery.exceptions import MaxRetriesExceededError, SoftTimeLimitExceeded
+from celery.exceptions import SoftTimeLimitExceeded
 
 from app.worker.celery_app import celery_app
 
@@ -88,14 +87,14 @@ class NLCBaseTask(Task):
     max_retries = 3
     default_retry_delay = 60  # 1 minute
 
-    def on_failure(self, exc, task_id, args, kwargs, einfo):
+    def on_failure(self, exc, task_id, args, kwargs, einfo) -> None:
         """Called on permanent failure (after all retries exhausted)."""
         logger.error(
             f"[Task] PERMANENT FAILURE "
             f"task={self.name} id={task_id} error={exc!r:.300}"
         )
 
-    def on_retry(self, exc, task_id, args, kwargs, einfo):
+    def on_retry(self, exc, task_id, args, kwargs, einfo) -> None:
         """Called on each retry."""
         logger.warning(
             f"[Task] RETRYING "
@@ -121,7 +120,7 @@ def evaluate_company_compliance(
     self: Task,
     company_id: str,
     trigger_source: str = "CELERY_TASK",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Evaluate compliance for a single company.
 
@@ -143,15 +142,14 @@ def evaluate_company_compliance(
         from app.models.database import AsyncSessionLocal, set_admin_context
         from app.services.compliance_service import ComplianceService
 
-        async with AsyncSessionLocal() as db:
-            async with db.begin():
-                await set_admin_context(db)  # Bypass RLS for cron/background
-                svc = ComplianceService(db)
-                result = await svc.evaluate_company(
-                    company_id=uuid.UUID(company_id),
-                    trigger_source=trigger_source,
-                )
-                return result
+        async with AsyncSessionLocal() as db, db.begin():
+            await set_admin_context(db)  # Bypass RLS for cron/background
+            svc = ComplianceService(db)
+            result = await svc.evaluate_company(
+                company_id=uuid.UUID(company_id),
+                trigger_source=trigger_source,
+            )
+            return result
 
     try:
         result = run_async(_run())
@@ -193,7 +191,7 @@ def evaluate_all_companies(
     self: Task,
     trigger_source: str = "CRON_DAILY",
     batch_size: int = 50,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Daily batch evaluation of ALL active companies.
     Runs every night at 00:00 UTC (06:00 BST).
@@ -212,7 +210,7 @@ def evaluate_all_companies(
         f"[Compliance] Starting batch evaluation trigger={trigger_source}"
     )
 
-    async def _get_company_ids() -> List[str]:
+    async def _get_company_ids() -> list[str]:
         from app.models.database import AsyncSessionLocal, set_admin_context
         from app.services.company_service import CompanyService
 
@@ -252,7 +250,7 @@ def evaluate_all_companies(
             "trigger_source": trigger_source,
             "total_companies": total,
             "dispatched":      dispatched,
-            "started_at":      datetime.now(timezone.utc).isoformat(),
+            "started_at":      datetime.now(UTC).isoformat(),
         }
         logger.info(
             f"[Compliance] Batch dispatch complete: {dispatched}/{total} companies"
@@ -278,7 +276,7 @@ def trigger_rescue_reevaluation(
     company_id: str,
     rescue_plan_id: str,
     completed_step_number: int,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Re-evaluate compliance after a rescue step is completed.
     Triggered when rescue step 8 (RJSC Acknowledgment) is marked complete.
@@ -305,7 +303,7 @@ def trigger_rescue_reevaluation(
         "company_id":             company_id,
         "rescue_plan_id":         rescue_plan_id,
         "completed_step_number":  completed_step_number,
-        "evaluation_scheduled_at": datetime.now(timezone.utc).isoformat(),
+        "evaluation_scheduled_at": datetime.now(UTC).isoformat(),
     }
 
 
@@ -324,7 +322,7 @@ def trigger_rescue_reevaluation(
 def send_pending_notifications(
     self: Task,
     batch_size: int = 50,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Process all PENDING notifications and attempt delivery.
     Runs every 10 minutes via beat schedule.
@@ -336,47 +334,42 @@ def send_pending_notifications(
     logger.info(f"[Notifications] Processing pending batch (max={batch_size})")
 
     async def _process():
+
         from app.models.database import AsyncSessionLocal, set_admin_context
         from app.services.notification_service import NotificationService
-        from app.models.infrastructure import Notification
-        from app.models.enums import NotificationStatus, NotificationChannel
-        from sqlalchemy import select, update
-        import boto3
-        from botocore.exceptions import ClientError
 
         sent = failed = skipped = 0
 
-        async with AsyncSessionLocal() as db:
-            async with db.begin():
-                await set_admin_context(db)
-                svc = NotificationService(db)
+        async with AsyncSessionLocal() as db, db.begin():
+            await set_admin_context(db)
+            svc = NotificationService(db)
 
-                # Get pending notifications
-                pending = await svc.get_pending(limit=batch_size)
+            # Get pending notifications
+            pending = await svc.get_pending(limit=batch_size)
 
-                for notif in pending:
-                    try:
-                        success = await _deliver_notification(notif, db)
-                        if success:
-                            await svc.mark_sent(notif.id)
-                            sent += 1
+            for notif in pending:
+                try:
+                    success = await _deliver_notification(notif, db)
+                    if success:
+                        await svc.mark_sent(notif.id)
+                        sent += 1
+                    else:
+                        if notif.retry_count >= 3:
+                            await svc.mark_failed(
+                                notif.id,
+                                reason="Max retries exceeded"
+                            )
+                            failed += 1
                         else:
-                            if notif.retry_count >= 3:
-                                await svc.mark_failed(
-                                    notif.id,
-                                    reason="Max retries exceeded"
-                                )
-                                failed += 1
-                            else:
-                                # Increment retry count
-                                notif.retry_count += 1
-                                db.add(notif)
-                                skipped += 1
-                    except Exception as e:
-                        logger.warning(
-                            f"[Notifications] Delivery error notif={notif.id}: {e!r}"
-                        )
-                        failed += 1
+                            # Increment retry count
+                            notif.retry_count += 1
+                            db.add(notif)
+                            skipped += 1
+                except Exception as e:
+                    logger.warning(
+                        f"[Notifications] Delivery error notif={notif.id}: {e!r}"
+                    )
+                    failed += 1
 
         return {"sent": sent, "failed": failed, "skipped": skipped}
 
@@ -395,8 +388,9 @@ def send_pending_notifications(
     async def _send_email(notif) -> bool:
         """Send email via AWS SES."""
         try:
-            from app.core.config import get_settings
             import boto3
+
+            from app.core.config import get_settings
 
             settings = get_settings()
             if not settings.aws_key_id:
@@ -414,9 +408,10 @@ def send_pending_notifications(
             if not notif.user_id:
                 return False
 
+            from sqlalchemy import select
+
             from app.models.database import AsyncSessionLocal
             from app.models.user import User
-            from sqlalchemy import select
 
             async with AsyncSessionLocal() as db2:
                 result = await db2.execute(
@@ -449,8 +444,8 @@ def send_pending_notifications(
     async def _send_whatsapp(notif) -> bool:
         """Send WhatsApp message via Facebook Graph API."""
         try:
+
             from app.core.config import get_settings
-            import httpx
 
             settings = get_settings()
             if not settings.whatsapp_enabled or not settings.whatsapp_api_token:
@@ -490,8 +485,8 @@ def send_pending_notifications(
 )
 def queue_deadline_warning_notifications(
     self: Task,
-    warning_days: Optional[List[int]] = None,
-) -> Dict[str, Any]:
+    warning_days: list[int] | None = None,
+) -> dict[str, Any]:
     """
     Scan all companies for upcoming AGM, Annual Return, and Audit deadlines.
     Queue warning notifications for each deadline within warning_days threshold.
@@ -509,55 +504,54 @@ def queue_deadline_warning_notifications(
 
     async def _scan_and_queue():
         from app.models.database import AsyncSessionLocal, set_admin_context
-        from app.services.notification_service import NotificationService
         from app.services.company_service import CompanyService
+        from app.services.notification_service import NotificationService
 
-        async with AsyncSessionLocal() as db:
-            async with db.begin():
-                await set_admin_context(db)
-                svc = NotificationService(db)
-                company_svc = CompanyService(db)
+        async with AsyncSessionLocal() as db, db.begin():
+            await set_admin_context(db)
+            svc = NotificationService(db)
+            company_svc = CompanyService(db)
 
-                queued = 0
-                today = date.today()
+            queued = 0
+            today = date.today()
 
-                # Get all upcoming deadlines within max warning window
-                max_days = max(warning_days)
-                deadlines = await company_svc.get_upcoming_deadlines(
-                    days_ahead=max_days
+            # Get all upcoming deadlines within max warning window
+            max_days = max(warning_days)
+            deadlines = await company_svc.get_upcoming_deadlines(
+                days_ahead=max_days
+            )
+
+            for deadline_item in deadlines:
+                days_remaining = (
+                    deadline_item["deadline_date"] - today
+                ).days
+
+                # Only notify at exact warning thresholds
+                if days_remaining not in warning_days:
+                    continue
+
+                # Queue notification
+                await svc.queue_notification(
+                    company_id=deadline_item["company_id"],
+                    title=(
+                        f"⚠ {deadline_item['deadline_type']} due in "
+                        f"{days_remaining} day{'s' if days_remaining != 1 else ''}"
+                    ),
+                    body=(
+                        f"{deadline_item['company_name']} "
+                        f"({deadline_item['registration_number']}): "
+                        f"{deadline_item['deadline_type']} deadline is "
+                        f"{deadline_item['deadline_date'].isoformat()} "
+                        f"({days_remaining} day{'s' if days_remaining != 1 else ''} remaining). "
+                        f"Immediate action required to avoid statutory default."
+                    ),
+                    notification_type=f"DEADLINE_{deadline_item['deadline_type']}",
+                    channel="DASHBOARD",
+                    days_until_deadline=days_remaining,
                 )
+                queued += 1
 
-                for deadline_item in deadlines:
-                    days_remaining = (
-                        deadline_item["deadline_date"] - today
-                    ).days
-
-                    # Only notify at exact warning thresholds
-                    if days_remaining not in warning_days:
-                        continue
-
-                    # Queue notification
-                    await svc.queue_notification(
-                        company_id=deadline_item["company_id"],
-                        title=(
-                            f"⚠ {deadline_item['deadline_type']} due in "
-                            f"{days_remaining} day{'s' if days_remaining != 1 else ''}"
-                        ),
-                        body=(
-                            f"{deadline_item['company_name']} "
-                            f"({deadline_item['registration_number']}): "
-                            f"{deadline_item['deadline_type']} deadline is "
-                            f"{deadline_item['deadline_date'].isoformat()} "
-                            f"({days_remaining} day{'s' if days_remaining != 1 else ''} remaining). "
-                            f"Immediate action required to avoid statutory default."
-                        ),
-                        notification_type=f"DEADLINE_{deadline_item['deadline_type']}",
-                        channel="DASHBOARD",
-                        days_until_deadline=days_remaining,
-                    )
-                    queued += 1
-
-                return {"queued": queued, "deadlines_checked": len(deadlines)}
+            return {"queued": queued, "deadlines_checked": len(deadlines)}
 
     try:
         result = run_async(_scan_and_queue())
@@ -591,9 +585,9 @@ def generate_ai_document_async(
     company_id: str,
     document_type: str,
     template_name: str,
-    template_params: Dict[str, Any],
+    template_params: dict[str, Any],
     requested_by: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Generate an AI-assisted document draft.
     AI Constitution Article 3:
@@ -618,18 +612,17 @@ def generate_ai_document_async(
         from app.models.database import AsyncSessionLocal, set_admin_context
         from app.services.document_service import DocumentService
 
-        async with AsyncSessionLocal() as db:
-            async with db.begin():
-                await set_admin_context(db)
-                svc = DocumentService(db)
-                doc_id, review_notif = await svc.generate_ai_document(
-                    company_id=uuid.UUID(company_id),
-                    document_type=document_type,
-                    template_name=template_name,
-                    template_params=template_params,
-                    requested_by=uuid.UUID(requested_by),
-                )
-                return str(doc_id)
+        async with AsyncSessionLocal() as db, db.begin():
+            await set_admin_context(db)
+            svc = DocumentService(db)
+            doc_id, _review_notif = await svc.generate_ai_document(
+                company_id=uuid.UUID(company_id),
+                document_type=document_type,
+                template_name=template_name,
+                template_params=template_params,
+                requested_by=uuid.UUID(requested_by),
+            )
+            return str(doc_id)
 
     try:
         doc_id = run_async(_generate())
@@ -663,7 +656,7 @@ def render_pdf(
     self: Task,
     document_id: str,
     upload_to_s3: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Render a stored document as PDF using WeasyPrint.
     Uploads to S3 and updates document record with s3_key.
@@ -677,14 +670,13 @@ def render_pdf(
         from app.models.database import AsyncSessionLocal, set_admin_context
         from app.services.document_service import DocumentService
 
-        async with AsyncSessionLocal() as db:
-            async with db.begin():
-                await set_admin_context(db)
-                svc = DocumentService(db)
-                presigned_url = await svc.generate_pdf_and_presign(
-                    document_id=uuid.UUID(document_id)
-                )
-                return presigned_url
+        async with AsyncSessionLocal() as db, db.begin():
+            await set_admin_context(db)
+            svc = DocumentService(db)
+            presigned_url = await svc.generate_pdf_and_presign(
+                document_id=uuid.UUID(document_id)
+            )
+            return presigned_url
 
     try:
         url = run_async(_render())
@@ -707,7 +699,7 @@ def render_pdf(
 def process_ai_review_queue(
     self: Task,
     alert_threshold_hours: int = 2,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Check for AI documents waiting for human review longer than threshold.
     AI Constitution Article 3: AI documents must not linger without review.
@@ -720,73 +712,73 @@ def process_ai_review_queue(
     )
 
     async def _check():
+        from sqlalchemy import select
+
         from app.models.database import AsyncSessionLocal, set_admin_context
         from app.models.documents import Document
         from app.models.enums import UserRole
         from app.models.user import User
-        from sqlalchemy import select
 
-        alert_threshold = datetime.now(timezone.utc) - timedelta(
+        alert_threshold = datetime.now(UTC) - timedelta(
             hours=alert_threshold_hours
         )
 
-        async with AsyncSessionLocal() as db:
-            async with db.begin():
-                await set_admin_context(db)
+        async with AsyncSessionLocal() as db, db.begin():
+            await set_admin_context(db)
 
-                # Find documents waiting more than threshold
-                result = await db.execute(
-                    select(Document).where(
-                        Document.ai_generated == True,
-                        Document.in_review_queue == True,
-                        Document.human_approved == False,
-                        Document.created_at < alert_threshold,
-                        Document.is_active == True,
-                    )
+            # Find documents waiting more than threshold
+            result = await db.execute(
+                select(Document).where(
+                    Document.ai_generated,
+                    Document.in_review_queue,
+                    not Document.human_approved,
+                    Document.created_at < alert_threshold,
+                    Document.is_active,
                 )
-                pending_docs = result.scalars().all()
+            )
+            pending_docs = result.scalars().all()
 
-                if not pending_docs:
-                    return {"pending_documents": 0, "alerts_sent": 0}
+            if not pending_docs:
+                return {"pending_documents": 0, "alerts_sent": 0}
 
-                # Find all legal staff users to alert
-                staff_result = await db.execute(
-                    select(User).where(
-                        User.role.in_([UserRole.ADMIN_STAFF, UserRole.LEGAL_STAFF]),
-                        User.is_active == True,
-                    )
+            # Find all legal staff users to alert
+            staff_result = await db.execute(
+                select(User).where(
+                    User.role.in_([UserRole.ADMIN_STAFF, UserRole.LEGAL_STAFF]),
+                    User.is_active,
                 )
-                staff_users = staff_result.scalars().all()
+            )
+            staff_users = staff_result.scalars().all()
 
-                # Queue a notification for each staff member
-                from app.services.notification_service import NotificationService
-                notif_svc = NotificationService(db)
+            # Queue a notification for each staff member
+            from app.services.notification_service import NotificationService
+            notif_svc = NotificationService(db)
 
-                alerts_sent = 0
-                for staff in staff_users:
-                    await notif_svc.queue_notification(
-                        user_id=staff.id,
-                        title=(
-                            f"⏳ {len(pending_docs)} AI document(s) awaiting review"
-                        ),
-                        body=(
-                            f"{len(pending_docs)} AI-generated document(s) have been "
-                            f"waiting for human review for more than "
-                            f"{alert_threshold_hours} hour(s). "
-                            f"Please review and approve or reject them in the "
-                            f"Documents section. "
-                            f"AI Constitution Article 3: documents must not be "
-                            f"auto-sent without review."
-                        ),
-                        notification_type="AI_REVIEW_QUEUE_ALERT",
-                        channel="DASHBOARD",
-                    )
-                    alerts_sent += 1
+            alerts_sent = 0
+            for staff in staff_users:
+                await notif_svc.queue_notification(
+                    user_id=staff.id,
+                    title=(
+                        f"⏳ {len(pending_docs)} AI document(s) awaiting review"
+                    ),
+                    body=(
+                        f"{len(pending_docs)} AI-generated document(s) have been "
+                        f"waiting for human review for more than "
+                        f"{alert_threshold_hours} hour(s). "
+                        f"Please review and approve or reject them in the "
+                        f"Documents section. "
+                        f"AI Constitution Article 3: documents must not be "
+                        f"auto-sent without review."
+                    ),
+                    notification_type="AI_REVIEW_QUEUE_ALERT",
+                    channel="DASHBOARD",
+                )
+                alerts_sent += 1
 
-                return {
-                    "pending_documents": len(pending_docs),
-                    "alerts_sent": alerts_sent,
-                }
+            return {
+                "pending_documents": len(pending_docs),
+                "alerts_sent": alerts_sent,
+            }
 
     try:
         result = run_async(_check())
@@ -815,7 +807,7 @@ def process_ai_review_queue(
     time_limit=3600,           # 1 hour for full portfolio snapshot
     soft_time_limit=3300,
 )
-def monthly_score_snapshot_all(self: Task) -> Dict[str, Any]:
+def monthly_score_snapshot_all(self: Task) -> dict[str, Any]:
     """
     Take the formal monthly compliance score snapshot for all companies.
     Runs on the 1st of each month at 01:00 UTC.
@@ -829,7 +821,6 @@ def monthly_score_snapshot_all(self: Task) -> Dict[str, Any]:
     async def _snapshot():
         from app.models.database import AsyncSessionLocal, set_admin_context
         from app.services.company_service import CompanyService
-        from app.services.compliance_service import ComplianceService
 
         async with AsyncSessionLocal() as db:
             await set_admin_context(db)
@@ -863,7 +854,7 @@ def monthly_score_snapshot_all(self: Task) -> Dict[str, Any]:
             f"{result['dispatched']}/{result['total']} companies"
         )
         return result
-    except Exception as exc:
+    except Exception:
         raise
 
 
@@ -878,7 +869,7 @@ def monthly_score_snapshot_all(self: Task) -> Dict[str, Any]:
 def cleanup_old_activity_logs(
     self: Task,
     retain_years: int = 7,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Archive activity logs older than retain_years to S3, then delete from DB.
     Runs every Sunday at 02:00 UTC.
@@ -895,98 +886,100 @@ def cleanup_old_activity_logs(
     """
     logger.info(f"[Cleanup] Activity log retention check (retain={retain_years} years)")
 
-    cutoff_date = datetime.now(timezone.utc) - timedelta(days=365 * retain_years)
+    cutoff_date = datetime.now(UTC) - timedelta(days=365 * retain_years)
 
     async def _cleanup():
+        import json
+
+        from sqlalchemy import delete, select
+
         from app.models.database import AsyncSessionLocal, set_admin_context
         from app.models.infrastructure import UserActivityLog
-        from sqlalchemy import select, delete
-        import json
 
         archived = 0
         deleted = 0
 
-        async with AsyncSessionLocal() as db:
-            async with db.begin():
-                await set_admin_context(db)
+        async with AsyncSessionLocal() as db, db.begin():
+            await set_admin_context(db)
 
-                # Count eligible records
-                count_result = await db.execute(
-                    select(UserActivityLog).where(
-                        UserActivityLog.logged_at < cutoff_date
+            # Count eligible records
+            count_result = await db.execute(
+                select(UserActivityLog).where(
+                    UserActivityLog.logged_at < cutoff_date
+                )
+            )
+            old_logs = count_result.scalars().all()
+
+            if not old_logs:
+                return {"archived": 0, "deleted": 0, "total_checked": 0}
+
+            logger.info(
+                f"[Cleanup] Found {len(old_logs)} logs older than "
+                f"{retain_years} years for archival"
+            )
+
+            # Try to archive to S3
+            try:
+                import boto3
+
+                from app.core.config import get_settings
+
+                settings = get_settings()
+                if settings.aws_key_id:
+                    s3 = boto3.client(
+                        "s3",
+                        region_name=settings.aws_region,
+                        aws_access_key_id=settings.aws_key_id,
+                        aws_secret_access_key=settings.aws_secret,
+                    )
+
+                    # Export to JSON for archival
+                    archive_data = [
+                        {
+                            "id":            str(log.id),
+                            "user_id":       str(log.user_id) if log.user_id else None,
+                            "company_id":    str(log.company_id) if log.company_id else None,
+                            "action":        log.action,
+                            "resource_type": log.resource_type,
+                            "resource_id":   str(log.resource_id) if log.resource_id else None,
+                            "description":   log.description,
+                            "ip_address":    log.ip_address,
+                            "logged_at":     log.logged_at.isoformat(),
+                        }
+                        for log in old_logs
+                    ]
+
+                    archive_key = (
+                        f"activity_logs/{cutoff_date.year}/"
+                        f"archive_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
+                    )
+                    s3.put_object(
+                        Bucket=settings.s3_backup_bucket,
+                        Key=archive_key,
+                        Body=json.dumps(archive_data).encode("utf-8"),
+                        ContentType="application/json",
+                    )
+                    archived = len(old_logs)
+                    logger.info(
+                        f"[Cleanup] Archived {archived} logs to s3://"
+                        f"{settings.s3_backup_bucket}/{archive_key}"
+                    )
+            except Exception as archive_err:
+                logger.error(
+                    f"[Cleanup] S3 archival failed: {archive_err!r}. "
+                    f"Skipping deletion to preserve data."
+                )
+                return {"archived": 0, "deleted": 0, "error": str(archive_err)}
+
+            # Delete from DB only if archival succeeded
+            if archived > 0:
+                old_ids = [log.id for log in old_logs]
+                await db.execute(
+                    delete(UserActivityLog).where(
+                        UserActivityLog.id.in_(old_ids)
                     )
                 )
-                old_logs = count_result.scalars().all()
-
-                if not old_logs:
-                    return {"archived": 0, "deleted": 0, "total_checked": 0}
-
-                logger.info(
-                    f"[Cleanup] Found {len(old_logs)} logs older than "
-                    f"{retain_years} years for archival"
-                )
-
-                # Try to archive to S3
-                try:
-                    from app.core.config import get_settings
-                    import boto3
-
-                    settings = get_settings()
-                    if settings.aws_key_id:
-                        s3 = boto3.client(
-                            "s3",
-                            region_name=settings.aws_region,
-                            aws_access_key_id=settings.aws_key_id,
-                            aws_secret_access_key=settings.aws_secret,
-                        )
-
-                        # Export to JSON for archival
-                        archive_data = [
-                            {
-                                "id":            str(log.id),
-                                "user_id":       str(log.user_id) if log.user_id else None,
-                                "company_id":    str(log.company_id) if log.company_id else None,
-                                "action":        log.action,
-                                "resource_type": log.resource_type,
-                                "resource_id":   str(log.resource_id) if log.resource_id else None,
-                                "description":   log.description,
-                                "ip_address":    log.ip_address,
-                                "logged_at":     log.logged_at.isoformat(),
-                            }
-                            for log in old_logs
-                        ]
-
-                        archive_key = (
-                            f"activity_logs/{cutoff_date.year}/"
-                            f"archive_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.json"
-                        )
-                        s3.put_object(
-                            Bucket=settings.s3_backup_bucket,
-                            Key=archive_key,
-                            Body=json.dumps(archive_data).encode("utf-8"),
-                            ContentType="application/json",
-                        )
-                        archived = len(old_logs)
-                        logger.info(
-                            f"[Cleanup] Archived {archived} logs to s3://"
-                            f"{settings.s3_backup_bucket}/{archive_key}"
-                        )
-                except Exception as archive_err:
-                    logger.error(
-                        f"[Cleanup] S3 archival failed: {archive_err!r}. "
-                        f"Skipping deletion to preserve data."
-                    )
-                    return {"archived": 0, "deleted": 0, "error": str(archive_err)}
-
-                # Delete from DB only if archival succeeded
-                if archived > 0:
-                    old_ids = [log.id for log in old_logs]
-                    await db.execute(
-                        delete(UserActivityLog).where(
-                            UserActivityLog.id.in_(old_ids)
-                        )
-                    )
-                    deleted = archived
+                deleted = archived
 
         return {
             "archived":      archived,
@@ -1002,7 +995,7 @@ def cleanup_old_activity_logs(
             f"archived={result['archived']} deleted={result['deleted']}"
         )
         return result
-    except Exception as exc:
+    except Exception:
         raise
 
 
@@ -1017,7 +1010,7 @@ def cleanup_old_activity_logs(
 def cleanup_expired_notifications(
     self: Task,
     expire_after_hours: int = 48,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Mark PENDING notifications that have not been sent within expire_after_hours
     as FAILED. Prevents notification queue from accumulating stale entries.
@@ -1028,31 +1021,31 @@ def cleanup_expired_notifications(
     )
 
     async def _cleanup():
-        from app.models.database import AsyncSessionLocal, set_admin_context
-        from app.models.infrastructure import Notification
-        from app.models.enums import NotificationStatus
         from sqlalchemy import update
 
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=expire_after_hours)
+        from app.models.database import AsyncSessionLocal, set_admin_context
+        from app.models.enums import NotificationStatus
+        from app.models.infrastructure import Notification
 
-        async with AsyncSessionLocal() as db:
-            async with db.begin():
-                await set_admin_context(db)
-                result = await db.execute(
-                    update(Notification)
-                    .where(
-                        Notification.notification_status == NotificationStatus.PENDING,
-                        Notification.created_at < cutoff,
-                    )
-                    .values(
-                        notification_status=NotificationStatus.FAILED,
-                        failure_reason=(
-                            f"Notification expired: not delivered within "
-                            f"{expire_after_hours} hours"
-                        ),
-                    )
+        cutoff = datetime.now(UTC) - timedelta(hours=expire_after_hours)
+
+        async with AsyncSessionLocal() as db, db.begin():
+            await set_admin_context(db)
+            result = await db.execute(
+                update(Notification)
+                .where(
+                    Notification.notification_status == NotificationStatus.PENDING,
+                    Notification.created_at < cutoff,
                 )
-                return result.rowcount
+                .values(
+                    notification_status=NotificationStatus.FAILED,
+                    failure_reason=(
+                        f"Notification expired: not delivered within "
+                        f"{expire_after_hours} hours"
+                    ),
+                )
+            )
+            return result.rowcount
 
     try:
         count = run_async(_cleanup())
@@ -1061,7 +1054,7 @@ def cleanup_expired_notifications(
                 f"[Cleanup] Expired {count} stale pending notifications"
             )
         return {"expired": count}
-    except Exception as exc:
+    except Exception:
         raise
 
 
@@ -1073,20 +1066,21 @@ def cleanup_expired_notifications(
     max_retries=0,
     time_limit=30,
 )
-def database_health_check(self: Task) -> Dict[str, Any]:
+def database_health_check(self: Task) -> dict[str, Any]:
     """
     Lightweight DB connectivity check.
     Runs every 5 minutes. Alerts if DB is unreachable.
     Just runs SELECT 1 — should complete in <100ms.
     """
     async def _check():
-        from app.models.database import AsyncSessionLocal
         import sqlalchemy as sa
 
-        start = datetime.now(timezone.utc)
+        from app.models.database import AsyncSessionLocal
+
+        start = datetime.now(UTC)
         async with AsyncSessionLocal() as db:
             await db.execute(sa.text("SELECT 1"))
-        elapsed_ms = (datetime.now(timezone.utc) - start).total_seconds() * 1000
+        elapsed_ms = (datetime.now(UTC) - start).total_seconds() * 1000
         return elapsed_ms
 
     try:
@@ -1108,7 +1102,7 @@ def database_health_check(self: Task) -> Dict[str, Any]:
     max_retries=1,
     time_limit=120,
 )
-def sync_sro_registry(self: Task) -> Dict[str, Any]:
+def sync_sro_registry(self: Task) -> dict[str, Any]:
     """
     Check SRO registry for entries with rule_update_required=True.
     Alert Super Admin of any SROs that require rule engine updates.
@@ -1120,68 +1114,68 @@ def sync_sro_registry(self: Task) -> Dict[str, Any]:
     logger.info("[SRO] Checking SRO registry for pending rule updates")
 
     async def _check():
-        from app.models.database import AsyncSessionLocal, set_admin_context
-        from app.models.infrastructure import SRORegistry
-        from app.models.user import User
-        from app.models.enums import UserRole
-        from app.services.notification_service import NotificationService
         from sqlalchemy import select
 
-        async with AsyncSessionLocal() as db:
-            async with db.begin():
-                await set_admin_context(db)
+        from app.models.database import AsyncSessionLocal, set_admin_context
+        from app.models.enums import UserRole
+        from app.models.infrastructure import SRORegistry
+        from app.models.user import User
+        from app.services.notification_service import NotificationService
 
-                # Find SROs needing rule updates
-                result = await db.execute(
-                    select(SRORegistry).where(
-                        SRORegistry.rule_update_required == True,
-                        SRORegistry.rule_updated_at == None,
-                        SRORegistry.is_active == True,
-                    )
+        async with AsyncSessionLocal() as db, db.begin():
+            await set_admin_context(db)
+
+            # Find SROs needing rule updates
+            result = await db.execute(
+                select(SRORegistry).where(
+                    SRORegistry.rule_update_required,
+                    SRORegistry.rule_updated_at is None,
+                    SRORegistry.is_active,
                 )
-                pending_sros = result.scalars().all()
+            )
+            pending_sros = result.scalars().all()
 
-                if not pending_sros:
-                    return {"pending_sros": 0, "alerts_sent": 0}
+            if not pending_sros:
+                return {"pending_sros": 0, "alerts_sent": 0}
 
-                # Alert Super Admin
-                super_admins = await db.execute(
-                    select(User).where(
-                        User.role == UserRole.SUPER_ADMIN,
-                        User.is_active == True,
-                    )
+            # Alert Super Admin
+            super_admins = await db.execute(
+                select(User).where(
+                    User.role == UserRole.SUPER_ADMIN,
+                    User.is_active,
                 )
-                admins = super_admins.scalars().all()
+            )
+            admins = super_admins.scalars().all()
 
-                notif_svc = NotificationService(db)
-                alerts_sent = 0
+            notif_svc = NotificationService(db)
+            alerts_sent = 0
 
-                for admin in admins:
-                    sro_list = ", ".join(
-                        s.sro_number for s in pending_sros[:10]
-                    )
-                    await notif_svc.queue_notification(
-                        user_id=admin.id,
-                        title=(
-                            f"⚠ {len(pending_sros)} SRO(s) require rule engine update"
-                        ),
-                        body=(
-                            f"The following SROs have rule_update_required=True "
-                            f"but no rule update has been made: {sro_list}. "
-                            f"Please review and update the affected ILRMF rules "
-                            f"via the Legal Rules admin panel. "
-                            f"AI Constitution Article 1: Only Super Admin may "
-                            f"modify rules."
-                        ),
-                        notification_type="SRO_RULE_UPDATE_REQUIRED",
-                        channel="DASHBOARD",
-                    )
-                    alerts_sent += 1
+            for admin in admins:
+                sro_list = ", ".join(
+                    s.sro_number for s in pending_sros[:10]
+                )
+                await notif_svc.queue_notification(
+                    user_id=admin.id,
+                    title=(
+                        f"⚠ {len(pending_sros)} SRO(s) require rule engine update"
+                    ),
+                    body=(
+                        f"The following SROs have rule_update_required=True "
+                        f"but no rule update has been made: {sro_list}. "
+                        f"Please review and update the affected ILRMF rules "
+                        f"via the Legal Rules admin panel. "
+                        f"AI Constitution Article 1: Only Super Admin may "
+                        f"modify rules."
+                    ),
+                    notification_type="SRO_RULE_UPDATE_REQUIRED",
+                    channel="DASHBOARD",
+                )
+                alerts_sent += 1
 
-                return {
-                    "pending_sros": len(pending_sros),
-                    "alerts_sent":  alerts_sent,
-                }
+            return {
+                "pending_sros": len(pending_sros),
+                "alerts_sent":  alerts_sent,
+            }
 
     try:
         result = run_async(_check())
@@ -1226,10 +1220,4 @@ def _is_transient_error(exc: Exception) -> bool:
         return True
 
     # asyncpg connection errors
-    if "asyncpg" in exc_module and any(
-        kw in exc_name for kw in
-        ["ConnectionFailureError", "TooManyConnectionsError"]
-    ):
-        return True
-
-    return False
+    return bool("asyncpg" in exc_module and any(kw in exc_name for kw in ["ConnectionFailureError", "TooManyConnectionsError"]))

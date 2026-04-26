@@ -22,24 +22,28 @@ AI Constitution Article 3 compliance:
 
 from __future__ import annotations
 
-import uuid
-from typing import Optional, List
+from typing import TYPE_CHECKING
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
-    get_db_for_user,
     get_current_user,
-    require_roles,
+    get_db_for_user,
     require_company_access,
+    require_roles,
 )
-from app.models.user import User
-from app.models.enums import DocumentType
 from app.services.document_service import DocumentService, PromptTemplateService
 from app.services.notification_service import ActivityService
+
+if TYPE_CHECKING:
+    import uuid
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.models.enums import DocumentType
+    from app.models.user import User
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -57,15 +61,15 @@ class DocumentGenerateRequest(BaseModel):
         default_factory=dict,
         description="Key-value pairs substituted into the prompt template placeholders",
     )
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 class DocumentApproveRequest(BaseModel):
-    approval_note: Optional[str] = None
+    approval_note: str | None = None
 
 
 class DocumentReleaseRequest(BaseModel):
-    release_note: Optional[str] = None
+    release_note: str | None = None
     notify_client: bool = True
 
 
@@ -73,8 +77,8 @@ class DocumentResponse(BaseModel):
     document_id: str
     company_id: str
     document_type: str
-    template_name: Optional[str]
-    title: Optional[str]
+    template_name: str | None
+    title: str | None
     # AI Constitution flags
     human_approved: bool
     in_review_queue: bool
@@ -82,28 +86,28 @@ class DocumentResponse(BaseModel):
     is_client_visible: bool
     # Status
     status: str
-    approved_by_id: Optional[str]
-    approved_at: Optional[str]
-    client_released_at: Optional[str]
+    approved_by_id: str | None
+    approved_at: str | None
+    client_released_at: str | None
     # File
     has_pdf: bool
     created_at: str
-    notes: Optional[str]
+    notes: str | None
 
 
 class TemplateResponse(BaseModel):
     template_name: str
     document_type: str
-    description: Optional[str]
-    required_placeholders: List[str]
-    optional_placeholders: Optional[List[str]]
+    description: str | None
+    required_placeholders: list[str]
+    optional_placeholders: list[str] | None
     is_active: bool
 
 
 class GenerateJobResponse(BaseModel):
     """Returned immediately — generation is async."""
     job_queued: bool = True
-    document_id: Optional[str] = None
+    document_id: str | None = None
     message: str
     estimated_seconds: int = 15
 
@@ -111,7 +115,7 @@ class GenerateJobResponse(BaseModel):
 class MessageResponse(BaseModel):
     message: str
     success: bool = True
-    document_id: Optional[str] = None
+    document_id: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -145,11 +149,11 @@ def _doc_to_response(doc) -> DocumentResponse:
 
 @router.get(
     "/templates",
-    response_model=List[TemplateResponse],
+    response_model=list[TemplateResponse],
     summary="List all available AI document templates",
 )
 async def list_templates(
-    document_type: Optional[DocumentType] = None,
+    document_type: DocumentType | None = None,
     db: AsyncSession = Depends(get_db_for_user),
     current_user: User = Depends(get_current_user),
 ):
@@ -159,9 +163,10 @@ async def list_templates(
         templates = await svc.get_by_document_type(document_type)
     else:
         from sqlalchemy import select
+
         from app.models.documents import AIPromptTemplate
         result = await db.execute(
-            select(AIPromptTemplate).where(AIPromptTemplate.is_active == True)
+            select(AIPromptTemplate).where(AIPromptTemplate.is_active)
         )
         templates = result.scalars().all()
 
@@ -256,8 +261,8 @@ async def generate_document(
         return GenerateJobResponse(
             job_queued=True,
             message=(
-                f"Document generation queued. It will appear in the review queue once complete. "
-                f"A LEGAL_STAFF member must approve it before it can be released to the client."
+                "Document generation queued. It will appear in the review queue once complete. "
+                "A LEGAL_STAFF member must approve it before it can be released to the client."
             ),
             estimated_seconds=20,
         )
@@ -286,13 +291,13 @@ async def generate_document(
 
 @router.get(
     "/{company_id}",
-    response_model=List[DocumentResponse],
+    response_model=list[DocumentResponse],
     dependencies=[Depends(require_company_access("company_id"))],
     summary="List all documents for a company",
 )
 async def list_documents(
     company_id: uuid.UUID,
-    document_type: Optional[DocumentType] = None,
+    document_type: DocumentType | None = None,
     approved_only: bool = False,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
@@ -463,7 +468,7 @@ async def get_pdf_url(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = DocumentService(db)
-    activity = ActivityService(db)
+    ActivityService(db)
 
     doc = await svc.get_by_id_or_404(document_id)
 

@@ -27,16 +27,14 @@ AI Constitution compliance:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.dependencies import get_db, get_current_user, get_db_for_user
+from app.core.dependencies import get_current_user, get_db, get_db_for_user
 from app.core.security import (
     create_access_token,
     create_password_reset_token,
@@ -44,9 +42,15 @@ from app.core.security import (
     create_temp_token,
     decode_token,
 )
-from app.models.user import User
-from app.services.user_service import UserService
 from app.services.notification_service import ActivityService
+from app.services.user_service import UserService
+
+if TYPE_CHECKING:
+    from datetime import datetime
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.models.user import User
 
 logger = structlog.get_logger(__name__)
 settings = get_settings()
@@ -117,7 +121,7 @@ class UserProfileResponse(BaseModel):
     role: str
     is_active: bool
     totp_enabled: bool
-    last_login_at: Optional[datetime]
+    last_login_at: datetime | None
     company_ids: list[str]
     created_at: datetime
 
@@ -200,8 +204,8 @@ async def login(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=(
-                f"Account is temporarily locked due to too many failed attempts. "
-                f"Please try again later or contact NLC support."
+                "Account is temporarily locked due to too many failed attempts. "
+                "Please try again later or contact NLC support."
             ),
         )
 
@@ -270,11 +274,11 @@ async def verify_2fa(
     # Decode and validate the temp token
     try:
         claims = decode_token(body.temp_token, expected_type="temp_2fa")
-    except Exception:
+    except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired authentication session. Please log in again.",
-        )
+        ) from exc
 
     user_id = claims.get("sub")
     svc = UserService(db)
@@ -378,11 +382,11 @@ async def refresh_token(
 ):
     try:
         claims = decode_token(body.refresh_token, expected_type="refresh")
-    except Exception:
+    except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token. Please log in again.",
-        )
+        ) from exc
 
     user_id = claims.get("sub")
     svc = UserService(db)
@@ -564,11 +568,11 @@ async def reset_password(
 ):
     try:
         claims = decode_token(body.reset_token, expected_type="password_reset")
-    except Exception:
+    except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired password reset token.",
-        )
+        ) from exc
 
     user_id = claims.get("sub")
     svc = UserService(db)

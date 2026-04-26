@@ -8,9 +8,9 @@ TLS 1.3 enforced in connection string.
 from __future__ import annotations
 
 import os
-from typing import AsyncGenerator
+from typing import TYPE_CHECKING
 
-from sqlalchemy import event, text
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
     AsyncSession,
@@ -19,6 +19,9 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import NullPool
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
 
 # ── CONNECTION ────────────────────────────────────────────────────────
 # Set in environment: DATABASE_URL=postgresql+asyncpg://user:pass@host/db

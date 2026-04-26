@@ -6,23 +6,32 @@ AI Constitution Article 6: Activity logs append-only, 7-year retention.
 """
 from __future__ import annotations
 
-import uuid
-from datetime import date, datetime
-from typing import Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    Boolean, Date, DateTime, Enum, ForeignKey,
-    Integer, String, Text,
+    Boolean,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
 )
-from sqlalchemy.dialects.postgresql import INET, JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
 from .enums import (
-    NotificationChannel, NotificationStatus,
-    SroType, UserRole,
+    NotificationChannel,
+    NotificationStatus,
+    SroType,
 )
-from .mixins import AuditMixin, UUIDPrimaryKeyMixin, TimestampMixin
+from .mixins import AuditMixin, TimestampMixin, UUIDPrimaryKeyMixin
+
+if TYPE_CHECKING:
+    import uuid
+    from datetime import date, datetime
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -31,13 +40,13 @@ from .mixins import AuditMixin, UUIDPrimaryKeyMixin, TimestampMixin
 class Notification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "notifications"
 
-    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    company_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("companies.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
     )
-    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=True,
@@ -62,22 +71,22 @@ class Notification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     # ── Timing ────────────────────────────────────────────────────
-    scheduled_for: Mapped[Optional[datetime]] = mapped_column(
+    scheduled_for: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    sent_at: Mapped[Optional[datetime]] = mapped_column(
+    sent_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    acknowledged_at: Mapped[Optional[datetime]] = mapped_column(
+    acknowledged_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
     # ── Reference ─────────────────────────────────────────────────
-    days_until_deadline: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    related_flag_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    days_until_deadline: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    related_flag_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), nullable=True
     )
-    failure_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     retry_count: Mapped[int] = mapped_column(Integer, default=0)
 
     def __repr__(self) -> str:
@@ -102,29 +111,29 @@ class SRORegistry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Enum(SroType, name="sro_type"), nullable=False
     )
     title: Mapped[str] = mapped_column(String(1000), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     effective_date: Mapped[date] = mapped_column(Date, nullable=False)
-    gazette_reference: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    gazette_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # ── Impact ────────────────────────────────────────────────────
-    affected_rule_ids: Mapped[Optional[list]] = mapped_column(
+    affected_rule_ids: Mapped[list | None] = mapped_column(
         JSONB, nullable=True,
         comment="Array of ILRMF rule_ids affected by this SRO"
     )
     rule_update_required: Mapped[bool] = mapped_column(Boolean, default=False)
-    rule_updated_at: Mapped[Optional[datetime]] = mapped_column(
+    rule_updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    rule_updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+    rule_updated_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
 
     # ── Source ────────────────────────────────────────────────────
-    source_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     entered_by: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
-    verified_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+    verified_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -155,12 +164,12 @@ class StatutoryRegister(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         comment="register_of_members | register_of_directors | etc."
     )
     is_maintained: Mapped[bool] = mapped_column(Boolean, default=False)
-    last_updated_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
-    location: Mapped[Optional[str]] = mapped_column(
+    last_updated_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    location: Mapped[str | None] = mapped_column(
         String(500), nullable=True,
         comment="Physical or digital location of register"
     )
-    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # ── Relationships ─────────────────────────────────────────────
     company = relationship("Company", back_populates="statutory_registers")
@@ -191,12 +200,12 @@ class RegisteredOfficeHistory(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     address: Mapped[str] = mapped_column(Text, nullable=False)
     effective_date: Mapped[date] = mapped_column(Date, nullable=False)
-    change_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    change_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # ── Filing ────────────────────────────────────────────────────
     # OFF-001: change not filed within 30 days
     filed_with_rjsc: Mapped[bool] = mapped_column(Boolean, default=False)
-    rjsc_filing_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    rjsc_filing_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     filing_delay_days: Mapped[int] = mapped_column(Integer, default=0)
     is_current: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -219,13 +228,13 @@ class UserActivityLog(AuditMixin, Base):
     """
     __tablename__ = "user_activity_logs"
 
-    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id"),
         nullable=True,
         index=True,
     )
-    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    company_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("companies.id"),
         nullable=True,
@@ -237,20 +246,20 @@ class UserActivityLog(AuditMixin, Base):
         String(200), nullable=False, index=True,
         comment="e.g. LOGIN | COMPANY_VIEW | SCORE_EVAL | RULE_MODIFIED | etc."
     )
-    resource_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    resource_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    resource_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    resource_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), nullable=True
     )
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # ── Context ───────────────────────────────────────────────────
-    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
-    user_agent: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    request_id: Mapped[Optional[str]] = mapped_column(
+    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
+    request_id: Mapped[str | None] = mapped_column(
         String(36), nullable=True,
         comment="UUID correlation ID from API request"
     )
-    detail: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    detail: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # ── Timestamp ─────────────────────────────────────────────────
     logged_at: Mapped[datetime] = mapped_column(

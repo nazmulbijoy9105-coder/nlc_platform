@@ -22,16 +22,18 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
-from datetime import date, datetime, timezone
-from typing import Dict, List, Optional
+from datetime import UTC, date, datetime
 
-from sqlalchemy import and_, select, text, update
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, text, update
 
-from app.models.compliance import ComplianceFlag, ComplianceScoreHistory
 from app.models.company import Company
+from app.models.compliance import ComplianceFlag, ComplianceScoreHistory
 from app.models.enums import (
-    ExposureBand, FlagStatus, RiskBand, RevenueTier, SeverityLevel,
+    ExposureBand,
+    FlagStatus,
+    RevenueTier,
+    RiskBand,
+    SeverityLevel,
 )
 from app.services.base import BaseService
 
@@ -47,7 +49,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         self,
         company_id: uuid.UUID,
         trigger_source: str = "API_REQUEST",
-    ) -> Dict:
+    ) -> dict:
         """
         Full compliance evaluation pipeline:
         1. Build CompanyProfile from DB
@@ -58,9 +60,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
         trigger_source: CRON_DAILY | API_REQUEST | RESCUE_STEP_COMPLETE | MANUAL
         AI Constitution Article 1: Result is deterministic. Identical input = identical output.
         """
-        from app.services.company_service import CompanyService
+        from C_rule_engine import CompanyProfile
+
         from app.core.dependencies import get_rule_engine
-        from C_rule_engine import CompanyProfile, NLCRuleEngine
+        from app.services.company_service import CompanyService
 
         # ── Step 1: Build profile ──────────────────────────────────
         company_svc = CompanyService(self.db)
@@ -130,7 +133,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         from app.core.config import get_settings
         settings = get_settings()
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         today = date.today()
         score = output.score_breakdown.final_score
         risk_band = RiskBand(output.score_breakdown.risk_band)
@@ -227,7 +230,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             self.db.add(snapshot)
 
         # ── Update company compliance state ────────────────────────
-        company_svc_update: Dict = {
+        company_svc_update: dict = {
             "current_compliance_score": score,
             "current_risk_band":        risk_band,
             "rescue_required":          rescue_required,
@@ -245,7 +248,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
     # ── Flag Management ───────────────────────────────────────────
 
-    async def get_active_flags(self, company_id: uuid.UUID) -> List[ComplianceFlag]:
+    async def get_active_flags(self, company_id: uuid.UUID) -> list[ComplianceFlag]:
         """Return all ACTIVE compliance flags for a company."""
         result = await self.db.execute(
             select(ComplianceFlag)
@@ -257,7 +260,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
         return list(result.scalars().all())
 
-    async def get_flag_summary(self, company_id: uuid.UUID) -> Dict:
+    async def get_flag_summary(self, company_id: uuid.UUID) -> dict:
         """
         Flag summary from vw_company_flag_summary view.
         Fast — single query against pre-aggregated view.
@@ -276,7 +279,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         flag_id: uuid.UUID,
         resolved_by: uuid.UUID,
         resolution_notes: str,
-    ) -> Optional[ComplianceFlag]:
+    ) -> ComplianceFlag | None:
         """
         Manually resolve a compliance flag after remediation.
         Triggers score re-evaluation.
@@ -297,7 +300,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         self,
         flag_id: uuid.UUID,
         acknowledged_by: uuid.UUID,
-    ) -> Optional[ComplianceFlag]:
+    ) -> ComplianceFlag | None:
         """Mark a flag as acknowledged (client has seen it)."""
         flag = await self.get_by_id(flag_id)
         if not flag:
@@ -313,7 +316,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         self,
         company_id: uuid.UUID,
         months: int = 12,
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Return score history for the last N months.
         Used to render the compliance trend chart.
@@ -343,7 +346,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             for row in rows
         ]
 
-    async def get_dashboard_kpis(self) -> Dict:
+    async def get_dashboard_kpis(self) -> dict:
         """Aggregate KPIs for admin dashboard from vw_admin_dashboard_kpis."""
         result = await self.db.execute(
             text("SELECT * FROM vw_admin_dashboard_kpis LIMIT 1")

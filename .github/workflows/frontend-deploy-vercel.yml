@@ -22,23 +22,12 @@ jobs:
   deploy:
     name: Deploy to Vercel
     runs-on: ubuntu-latest
-    # Skip if the required Vercel secrets aren't configured yet
-    if: ${{ vars.VERCEL_DEPLOY_ENABLED != 'false' }}
 
     steps:
-      - name: Check required secrets
-        run: |
-          if [ -z "${{ secrets.NLC_FRONTEND_PAT }}" ]; then
-            echo "::warning::NLC_FRONTEND_PAT secret is not set. Add it in Settings > Secrets > Actions."
-            echo "Skipping frontend deployment."
-            exit 0
-          fi
-          if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
-            echo "::warning::VERCEL_TOKEN secret is not set. Add it in Settings > Secrets > Actions."
-            exit 1
-          fi
-
       - uses: actions/checkout@v4
+        # Use PAT to checkout the separate private frontend repo.
+        # If NLC_FRONTEND_PAT is not yet configured the token falls back to an
+        # empty string which will fail — add the secret to unblock this job.
         with:
           repository: nazmulbijoy9105-coder/nlc_frontend
           token: ${{ secrets.NLC_FRONTEND_PAT }}
@@ -75,4 +64,4 @@ jobs:
           echo "Checking: $TARGET_URL"
           curl -f -s --max-time 30 "$TARGET_URL" > /dev/null && \
             echo "Health check passed" || \
-            (echo "::warning::Health check failed for $TARGET_URL" && exit 0)
+            echo "::warning::Health check failed for $TARGET_URL"

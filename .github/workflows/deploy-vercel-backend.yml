@@ -2,16 +2,19 @@
 # GitHub Actions: Deploy NLC Backend API to Vercel (Serverless)
 # =============================================================================
 #
-# Deploys the FastAPI/Mangum backend to Vercel on every push to main.
+# To ENABLE this workflow, add these GitHub Secrets:
+#   VERCEL_TOKEN              - Vercel deploy token  (vercel.com → Account Settings → Tokens)
+#   VERCEL_ORG_ID             - Vercel org/team ID   (Vercel project Settings)
+#   VERCEL_BACKEND_PROJECT_ID - Vercel project ID    (Vercel project Settings for this backend)
 #
-# Required GitHub Secrets:
-#   VERCEL_TOKEN          - Vercel deploy token
-#   VERCEL_ORG_ID         - Vercel org/team ID
-#   VERCEL_BACKEND_PROJECT_ID - Vercel project ID for this backend project
-#
-# Required Vercel Environment Variables (set in Vercel dashboard):
-#   DATABASE_URL, JWT_SECRET_KEY, TOTP_ENCRYPTION_KEY,
-#   REDIS_URL, ALLOWED_ORIGINS, ENVIRONMENT=production, ...
+# Also set these in Vercel dashboard → Environment Variables for this project:
+#   DATABASE_URL=postgresql+asyncpg://...
+#   JWT_SECRET_KEY=<openssl rand -hex 64>
+#   TOTP_ENCRYPTION_KEY=<python3 -c "import secrets; print(secrets.token_hex(32))">
+#   REDIS_URL=redis://...
+#   ALLOWED_ORIGINS=https://nlc-frontend.vercel.app,http://localhost:3000
+#   ENVIRONMENT=production
+#   CELERY_ENABLED=false
 #
 # =============================================================================
 
@@ -27,22 +30,9 @@ jobs:
   deploy-backend:
     name: Deploy API to Vercel
     runs-on: ubuntu-latest
-    if: ${{ secrets.VERCEL_BACKEND_PROJECT_ID != '' || true }}
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Check Vercel secrets
-        run: |
-          if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
-            echo "::warning::VERCEL_TOKEN not set — skipping backend Vercel deploy."
-            exit 0
-          fi
-          if [ -z "${{ secrets.VERCEL_BACKEND_PROJECT_ID }}" ]; then
-            echo "::warning::VERCEL_BACKEND_PROJECT_ID not set — skipping backend Vercel deploy."
-            echo "Create a Vercel project linked to this repo, then add the project ID as a secret."
-            exit 0
-          fi
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -59,6 +49,11 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_BACKEND_PROJECT_ID }}
         run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::warning::VERCEL_TOKEN or VERCEL_BACKEND_PROJECT_ID secret not set."
+            echo "Add both secrets to enable automatic backend Vercel deployment."
+            exit 0
+          fi
           DEPLOY_URL=$(vercel deploy \
             --prod \
             --token=$VERCEL_TOKEN \
@@ -67,6 +62,7 @@ jobs:
           echo "Backend deployed to: $DEPLOY_URL"
 
       - name: Health Check
+        if: ${{ steps.deploy.outputs.deploy_url != '' }}
         run: |
           sleep 20
           TARGET_URL="${{ steps.deploy.outputs.deploy_url }}/api/v1/health/live"

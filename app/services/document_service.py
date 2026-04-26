@@ -20,17 +20,19 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 
 import httpx
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.models.documents import AIOutputLog, AIPromptTemplate, Document, DocumentAccessLog
-from app.models.enums import AiModel, DocumentType, SeverityLevel
+from app.models.enums import AiModel, DocumentType
 from app.services.base import BaseService
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger("nlc.document")
 
@@ -42,24 +44,24 @@ logger = logging.getLogger("nlc.document")
 class PromptTemplateService(BaseService[AIPromptTemplate]):
     model = AIPromptTemplate
 
-    async def get_by_name(self, template_name: str) -> Optional[AIPromptTemplate]:
+    async def get_by_name(self, template_name: str) -> AIPromptTemplate | None:
         """Fetch template by name. Returns None if not found or inactive."""
         result = await self.db.execute(
             select(AIPromptTemplate).where(
                 AIPromptTemplate.template_name == template_name,
-                AIPromptTemplate.is_active == True,
+                AIPromptTemplate.is_active,
             )
         )
         return result.scalar_one_or_none()
 
     async def get_by_document_type(
         self, document_type: DocumentType
-    ) -> Optional[AIPromptTemplate]:
+    ) -> AIPromptTemplate | None:
         """Get the active template for a given document type."""
         result = await self.db.execute(
             select(AIPromptTemplate).where(
                 AIPromptTemplate.document_type == document_type,
-                AIPromptTemplate.is_active == True,
+                AIPromptTemplate.is_active,
             )
         )
         return result.scalar_one_or_none()
@@ -82,10 +84,10 @@ class DocumentService(BaseService[Document]):
         self,
         company_id: uuid.UUID,
         document_type: DocumentType,
-        parameters: Dict[str, Any],
-        template_name: Optional[str] = None,
-        requested_by: Optional[uuid.UUID] = None,
-        financial_year: Optional[int] = None,
+        parameters: dict[str, Any],
+        template_name: str | None = None,
+        requested_by: uuid.UUID | None = None,
+        financial_year: int | None = None,
     ) -> Document:
         """
         Full AI document generation pipeline.
@@ -188,7 +190,7 @@ class DocumentService(BaseService[Document]):
         self,
         document_id: uuid.UUID,
         approved_by: uuid.UUID,
-    ) -> Optional[Document]:
+    ) -> Document | None:
         """
         Human approval of AI-generated document.
         AI Constitution Article 3: Only staff can approve. Never auto-approve.
@@ -200,7 +202,7 @@ class DocumentService(BaseService[Document]):
         if not doc.ai_generated:
             logger.warning(f"approve_document called on non-AI doc {document_id}")
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return await self.update_instance(
             doc,
             human_approved=True,
@@ -213,7 +215,7 @@ class DocumentService(BaseService[Document]):
         self,
         document_id: uuid.UUID,
         released_by: uuid.UUID,
-    ) -> Optional[Document]:
+    ) -> Document | None:
         """
         Make a document visible to client users.
         AI Constitution: Must be approved before release.
@@ -229,7 +231,7 @@ class DocumentService(BaseService[Document]):
         return await self.update_instance(
             doc,
             is_client_visible=True,
-            client_released_at=datetime.now(timezone.utc),
+            client_released_at=datetime.now(UTC),
         )
 
     # ── Access & Download ─────────────────────────────────────────
@@ -239,7 +241,7 @@ class DocumentService(BaseService[Document]):
         document_id: uuid.UUID,
         accessed_by: uuid.UUID,
         access_type: str,  # VIEW | DOWNLOAD | EXPORT | SHARE
-        ip_address: Optional[str] = None,
+        ip_address: str | None = None,
     ) -> None:
         """
         Log every document access for audit trail.
@@ -251,7 +253,7 @@ class DocumentService(BaseService[Document]):
             accessed_by=accessed_by,
             access_type=access_type,
             ip_address=ip_address,
-            accessed_at=datetime.now(timezone.utc),
+            accessed_at=datetime.now(UTC),
         )
         self.db.add(log)
         await self.db.flush()
@@ -295,18 +297,18 @@ class DocumentService(BaseService[Document]):
         self,
         company_id: uuid.UUID,
         *,
-        document_type: Optional[DocumentType] = None,
+        document_type: DocumentType | None = None,
         include_unapproved: bool = False,
-    ) -> List[Document]:
+    ) -> list[Document]:
         """Get all documents for a company."""
         filters = [
             Document.company_id == company_id,
-            Document.is_active == True,
+            Document.is_active,
         ]
         if document_type:
             filters.append(Document.document_type == document_type)
         if not include_unapproved:
-            filters.append(Document.is_client_visible == True)
+            filters.append(Document.is_client_visible)
 
         result = await self.db.execute(
             select(Document)
@@ -320,7 +322,7 @@ class DocumentService(BaseService[Document]):
 # AI PROVIDER CALL
 # ═══════════════════════════════════════════════════════════════════════
 
-async def _call_ai_provider(template: AIPromptTemplate, params: Dict, settings) -> str:
+async def _call_ai_provider(template: AIPromptTemplate, params: dict, settings) -> str:
     """
     Call the configured AI provider (OpenAI / Anthropic / Local LLM).
     Returns raw AI text output.
@@ -413,7 +415,7 @@ async def _log_ai_call(
     ai_model: AiModel,
     prompt_hash: str,
     output_token_count: int,
-    requested_by: Optional[uuid.UUID],
+    requested_by: uuid.UUID | None,
 ) -> AIOutputLog:
     """Append-only log entry for every AI call. AI Constitution Article 3 + 6."""
     log = AIOutputLog(
@@ -427,7 +429,7 @@ async def _log_ai_call(
         in_review_queue=True,
         human_approved=False,
         requested_by=requested_by,
-        requested_at=datetime.now(timezone.utc),
+        requested_at=datetime.now(UTC),
     )
     db.add(log)
     await db.flush()
@@ -451,7 +453,7 @@ _SENSITIVE_KEYS = {
 }
 
 
-def _sanitize_for_ai(params: Dict[str, Any]) -> Dict[str, Any]:
+def _sanitize_for_ai(params: dict[str, Any]) -> dict[str, Any]:
     """
     Replace PII values with {PLACEHOLDER} tokens before sending to AI.
     AI Constitution: Real client data NEVER sent to external AI services.
@@ -465,7 +467,7 @@ def _sanitize_for_ai(params: Dict[str, Any]) -> Dict[str, Any]:
     return sanitized
 
 
-def _reinject_real_values(ai_output: str, real_params: Dict[str, Any]) -> str:
+def _reinject_real_values(ai_output: str, real_params: dict[str, Any]) -> str:
     """
     Substitute {PLACEHOLDER} tokens with real values in AI output.
     This happens LOCALLY — real values never leave the server.
@@ -580,7 +582,7 @@ async def _render_pdf(content: str, title: str, settings) -> bytes:
           <hr/>
           <pre>{content}</pre>
           <hr/>
-          <p><small>This document was prepared by Neum Lex Counsel. 
+          <p><small>This document was prepared by Neum Lex Counsel.
           It is not legal advice. Consult your legal counsel.</small></p>
         </body></html>
         """

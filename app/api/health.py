@@ -18,8 +18,7 @@ Used by:
 from __future__ import annotations
 
 import time
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 import structlog
 from fastapi import APIRouter, status
@@ -39,8 +38,8 @@ router = APIRouter()
 
 class ComponentHealth(BaseModel):
     status: str          # "ok" | "error" | "degraded"
-    response_ms: Optional[float] = None
-    detail: Optional[str] = None
+    response_ms: float | None = None
+    detail: str | None = None
 
 
 class HealthResponse(BaseModel):
@@ -60,8 +59,9 @@ async def _check_database() -> ComponentHealth:
     """Verify DB connection via SELECT 1. Measures response time."""
     start = time.perf_counter()
     try:
-        from app.models.database import engine
         import sqlalchemy
+
+        from app.models.database import engine
         async with engine.connect() as conn:
             await conn.execute(sqlalchemy.text("SELECT 1"))
         ms = round((time.perf_counter() - start) * 1000, 2)
@@ -193,7 +193,7 @@ async def full_health_check():
         "status": overall,
         "version": settings.app_version,
         "environment": settings.environment,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "uptime_check": True,
         "components": components,
     }
@@ -232,7 +232,7 @@ async def liveness():
     """
     return {
         "status": "alive",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -261,7 +261,7 @@ async def readiness():
 
     response = {
         "ready": ready,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "database": db_health.status,
         "redis": redis_health.status,
     }

@@ -31,24 +31,29 @@ Endpoints:
 
 from __future__ import annotations
 
-import uuid
-from typing import Dict, List, Optional
+from datetime import UTC
+from typing import TYPE_CHECKING
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Request, Query, status
-from pydantic import BaseModel, Field, EmailStr
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from pydantic import BaseModel, EmailStr, Field
 
 from app.core.dependencies import (
-    get_db_for_user,
-    get_current_user,
-    require_roles,
     Pagination,
+    get_current_user,
+    get_db_for_user,
+    require_roles,
 )
-from app.models.user import User
-from app.models.enums import UserRole
+from app.services.notification_service import ActivityService, NotificationService
 from app.services.user_service import UserService
-from app.services.notification_service import NotificationService, ActivityService
+
+if TYPE_CHECKING:
+    import uuid
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.models.enums import UserRole
+    from app.models.user import User
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -69,9 +74,9 @@ class UserCreateRequest(BaseModel):
 
 
 class UserUpdateRequest(BaseModel):
-    full_name: Optional[str] = Field(None, min_length=2, max_length=255)
-    role: Optional[UserRole] = None
-    is_active: Optional[bool] = None
+    full_name: str | None = Field(None, min_length=2, max_length=255)
+    role: UserRole | None = None
+    is_active: bool | None = None
 
 
 class CompanyAccessRequest(BaseModel):
@@ -86,7 +91,7 @@ class UserAdminResponse(BaseModel):
     role: str
     is_active: bool
     totp_enabled: bool
-    last_login_at: Optional[str]
+    last_login_at: str | None
     failed_login_attempts: int
     is_locked: bool
     created_at: str
@@ -98,14 +103,14 @@ class UserAdminResponse(BaseModel):
 
 class NotificationResponse(BaseModel):
     notification_id: str
-    company_id: Optional[str]
+    company_id: str | None
     user_id: str
     channel: str
     message: str
     status: str
     is_acknowledged: bool
     created_at: str
-    sent_at: Optional[str]
+    sent_at: str | None
 
 
 # ---------------------------------------------------------------------------
@@ -115,11 +120,11 @@ class NotificationResponse(BaseModel):
 class ActivityLogResponse(BaseModel):
     log_id: str
     action: str
-    resource_type: Optional[str]
-    resource_id: Optional[str]
-    description: Optional[str]
-    actor_user_id: Optional[str]
-    ip_address: Optional[str]
+    resource_type: str | None
+    resource_id: str | None
+    description: str | None
+    actor_user_id: str | None
+    ip_address: str | None
     created_at: str
 
 
@@ -136,7 +141,7 @@ class WorkerHealthResponse(BaseModel):
     status: str
     active_workers: int
     active_tasks: int
-    queued_tasks: Dict = {}
+    queued_tasks: dict = {}
     broker_reachable: bool
     timestamp: str
 
@@ -166,17 +171,18 @@ def _user_to_admin_response(user) -> UserAdminResponse:
 
 @router.get(
     "/users",
-    response_model=List[UserAdminResponse],
+    response_model=list[UserAdminResponse],
     dependencies=[Depends(require_roles(*ADMIN_ROLES))],
     summary="List all NLC staff users",
 )
 async def list_users(
-    role: Optional[UserRole] = None,
-    is_active: Optional[bool] = None,
+    role: UserRole | None = None,
+    is_active: bool | None = None,
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    svc = UserService(db)
+    UserService(db)
     from sqlalchemy import select
+
     from app.models.user import User as UserModel
 
     query = select(UserModel)
@@ -347,10 +353,10 @@ async def unlock_account(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+
     from sqlalchemy import update
+
     from app.models.user import User as UserModel
-    from datetime import timezone as _tz
-    import datetime as _dt
 
     await db.execute(
         update(UserModel)
@@ -384,6 +390,7 @@ async def reset_totp(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     from sqlalchemy import update
+
     from app.models.user import User as UserModel
 
     await db.execute(
@@ -411,7 +418,7 @@ async def reset_totp(
 
 @router.get(
     "/notifications/user/{user_id}",
-    response_model=List[NotificationResponse],
+    response_model=list[NotificationResponse],
     dependencies=[Depends(require_roles(*ADMIN_ROLES))],
     summary="Get notifications for a specific user",
 )
@@ -465,7 +472,7 @@ async def acknowledge_notification(
 
 @router.get(
     "/logs/company/{company_id}",
-    response_model=List[ActivityLogResponse],
+    response_model=list[ActivityLogResponse],
     dependencies=[Depends(require_roles(*ADMIN_ROLES))],
     summary="Activity logs for a company",
 )
@@ -481,12 +488,12 @@ async def get_company_logs(
         limit=pagination.page_size,
         offset=pagination.offset,
     )
-    return [_log_to_response(l) for l in logs]
+    return [_log_to_response(log_entry) for log_entry in logs]
 
 
 @router.get(
     "/logs/user/{user_id}",
-    response_model=List[ActivityLogResponse],
+    response_model=list[ActivityLogResponse],
     dependencies=[Depends(require_roles(*ADMIN_ROLES))],
     summary="Activity logs for a specific user",
 )
@@ -501,12 +508,12 @@ async def get_user_logs(
         limit=pagination.page_size,
         offset=pagination.offset,
     )
-    return [_log_to_response(l) for l in logs]
+    return [_log_to_response(log_entry) for log_entry in logs]
 
 
 @router.get(
     "/logs/recent",
-    response_model=List[ActivityLogResponse],
+    response_model=list[ActivityLogResponse],
     dependencies=[Depends(require_roles(*ADMIN_ROLES))],
     summary="Recent platform-wide activity",
 )
@@ -516,7 +523,7 @@ async def get_recent_logs(
 ):
     svc = ActivityService(db)
     logs = await svc.get_logs(limit=limit, offset=0)
-    return [_log_to_response(l) for l in logs]
+    return [_log_to_response(log_entry) for log_entry in logs]
 
 
 def _log_to_response(log) -> ActivityLogResponse:
@@ -568,7 +575,7 @@ async def trigger_backup(
         raise HTTPException(
             status_code=503,
             detail="Could not queue backup task. Ensure Celery worker is running.",
-        )
+        ) from e
 
 
 @router.post(
@@ -602,7 +609,7 @@ async def trigger_evaluate_all(
         )
     except Exception as e:
         logger.error("evaluate_all_dispatch_failed", error=str(e))
-        raise HTTPException(status_code=503, detail="Could not queue evaluation task.")
+        raise HTTPException(status_code=503, detail="Could not queue evaluation task.") from e
 
 
 @router.get(
@@ -613,13 +620,13 @@ async def trigger_evaluate_all(
 async def worker_health(
     current_user: User = Depends(get_current_user),
 ):
-    from datetime import datetime, timezone
+    from datetime import datetime
     try:
         from app.worker.celery_app import check_worker_health
         health = check_worker_health()
         return {
             **health,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
     except Exception as e:
         return {
@@ -627,7 +634,7 @@ async def worker_health(
             "active_workers": 0,
             "broker_reachable": False,
             "error": str(e),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
 

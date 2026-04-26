@@ -18,11 +18,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, timedelta
-from typing import List
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-import pytest_asyncio
 
 pytestmark = [pytest.mark.integration]
 
@@ -73,14 +71,14 @@ class TestCompanyService:
         from app.services.company_service import CompanyService
 
         svc = CompanyService(db)
-        companies, total = await svc.list_companies(limit=100, offset=0)
+        companies, _total = await svc.list_companies(limit=100, offset=0)
         company_ids = [c.id for c in companies]
         assert db_company.id in company_ids
 
     @pytest.mark.asyncio
     async def test_list_companies_filter_by_risk_band(self, db, db_company):
-        from app.services.company_service import CompanyService
         from app.models.enums import RiskBand
+        from app.services.company_service import CompanyService
 
         svc = CompanyService(db)
         # db_company is GREEN band
@@ -376,8 +374,9 @@ class TestFilingService:
     @pytest.mark.asyncio
     async def test_create_agm_duplicate_year_raises(self, db, db_company):
         """Two AGMs for the same company + year should raise integrity error."""
-        from app.services.filing_service import AGMService
         from sqlalchemy.exc import IntegrityError
+
+        from app.services.filing_service import AGMService
 
         svc = AGMService(db)
         await svc.create_agm(
@@ -535,15 +534,14 @@ class TestNotificationService:
             limit=10,
             offset=0,
         )
-        actions = [l.action for l in logs]
+        actions = [log.action for log in logs]
         assert "TEST_ACTION" in actions
 
     @pytest.mark.asyncio
     async def test_activity_log_immutable(self, db, db_user, db_company):
         """Activity logs must not be updateable (append-only pattern)."""
+
         from app.services.notification_service import ActivityService
-        from sqlalchemy import select, update
-        from app.models.infrastructure import UserActivityLog
 
         svc = ActivityService(db)
         await svc.log(
@@ -616,8 +614,7 @@ class TestRulesService:
             pytest.skip("Rules not seeded")
 
         # Update OFF-001 (lowest impact — safest to test with)
-        original = await svc.get_by_rule_id("OFF-001")
-        original_impact = original.score_impact
+        await svc.get_by_rule_id("OFF-001")
 
         await svc.update_rule(
             rule_id="OFF-001",

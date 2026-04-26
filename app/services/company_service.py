@@ -12,19 +12,14 @@ must be sourced from verified DB records — no AI involvement.
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timezone
-from typing import Dict, List, Optional
+from datetime import UTC, date, datetime
 
-from sqlalchemy import and_, func, select, text, update
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func, select, text, update
 from sqlalchemy.orm import selectinload
 
-from app.models.filings import AGM
-from app.models.filings import AnnualReturn
-from app.models.filings import Audit
-from app.models.company import Company, CompanyUserAccess
+from app.models.company import Company
 from app.models.enums import CompanyStatus, CompanyType, LifecycleStage, RiskBand
-from app.models.people import Director, ShareTransfer, Shareholder
+from app.models.people import Director, Shareholder
 from app.services.base import BaseService
 
 
@@ -41,15 +36,15 @@ class CompanyService(BaseService[Company]):
         company_type: CompanyType,
         incorporation_date: date,
         financial_year_end: date,
-        registered_address: Optional[str] = None,
-        industry_sector: Optional[str] = None,
-        tin_number: Optional[str] = None,
-        authorized_capital_bdt: Optional[float] = None,
-        paid_up_capital_bdt: Optional[float] = None,
-        assigned_staff_id: Optional[uuid.UUID] = None,
-        initial_directors: Optional[List[Dict]] = None,
-        initial_shareholders: Optional[List[Dict]] = None,
-        created_by: Optional[uuid.UUID] = None,
+        registered_address: str | None = None,
+        industry_sector: str | None = None,
+        tin_number: str | None = None,
+        authorized_capital_bdt: float | None = None,
+        paid_up_capital_bdt: float | None = None,
+        assigned_staff_id: uuid.UUID | None = None,
+        initial_directors: list[dict] | None = None,
+        initial_shareholders: list[dict] | None = None,
+        created_by: uuid.UUID | None = None,
     ) -> Company:
         """
         Create a new company with optional initial directors and shareholders.
@@ -97,7 +92,7 @@ class CompanyService(BaseService[Company]):
 
     # ── READ ──────────────────────────────────────────────────────
 
-    async def get_with_relations(self, company_id: uuid.UUID) -> Optional[Company]:
+    async def get_with_relations(self, company_id: uuid.UUID) -> Company | None:
         """
         Fetch company with all active directors, shareholders, AGMs,
         audits, annual returns, and active compliance flags loaded.
@@ -122,7 +117,7 @@ class CompanyService(BaseService[Company]):
     async def get_by_registration_number(
         self,
         registration_number: str,
-    ) -> Optional[Company]:
+    ) -> Company | None:
         """Fetch company by RJSC registration number (unique)."""
         result = await self.db.execute(
             select(Company).where(
@@ -136,18 +131,18 @@ class CompanyService(BaseService[Company]):
         *,
         limit: int = 25,
         offset: int = 0,
-        risk_band: Optional[RiskBand] = None,
-        rescue_required: Optional[bool] = None,
-        search: Optional[str] = None,
-        company_ids_filter: Optional[List[str]] = None,
-    ) -> tuple[List[Company], int]:
+        risk_band: RiskBand | None = None,
+        rescue_required: bool | None = None,
+        search: str | None = None,
+        company_ids_filter: list[str] | None = None,
+    ) -> tuple[list[Company], int]:
         """
         List companies with filters, search, and pagination.
         Returns (companies, total_count).
         company_ids_filter: used for client roles (from JWT).
         search: full-text search on company name or registration number.
         """
-        filters = [Company.is_active == True]
+        filters = [Company.is_active]
 
         if risk_band:
             filters.append(Company.current_risk_band == risk_band)
@@ -184,17 +179,17 @@ class CompanyService(BaseService[Company]):
         result = await self.db.execute(stmt)
         return list(result.scalars().all()), total
 
-    async def get_all_active_ids(self) -> List[uuid.UUID]:
+    async def get_all_active_ids(self) -> list[uuid.UUID]:
         """
         Return IDs of all active companies.
         Used by the daily compliance cron to schedule evaluations.
         """
         result = await self.db.execute(
-            select(Company.id).where(Company.is_active == True)
+            select(Company.id).where(Company.is_active)
         )
         return [row[0] for row in result.all()]
 
-    async def get_portfolio_stats(self) -> Dict:
+    async def get_portfolio_stats(self) -> dict:
         """
         Aggregate portfolio statistics from the vw_admin_dashboard_kpis view.
         """
@@ -212,12 +207,12 @@ class CompanyService(BaseService[Company]):
             }
         return dict(row)
 
-    async def get_risk_distribution(self) -> List[Dict]:
+    async def get_risk_distribution(self) -> list[dict]:
         """Risk band distribution from vw_risk_distribution view."""
         result = await self.db.execute(text("SELECT * FROM vw_risk_distribution"))
         return [dict(row) for row in result.mappings().all()]
 
-    async def get_upcoming_deadlines(self, days_ahead: int = 30) -> List[Dict]:
+    async def get_upcoming_deadlines(self, days_ahead: int = 30) -> list[dict]:
         """Fetch upcoming AGM and return deadlines within N days."""
         result = await self.db.execute(
             text(
@@ -237,21 +232,21 @@ class CompanyService(BaseService[Company]):
         score: int,
         risk_band: RiskBand,
         rescue_required: bool,
-        lifecycle_stage: Optional[LifecycleStage] = None,
-        last_agm_date: Optional[date] = None,
-        last_audit_signed_date: Optional[date] = None,
-        last_return_filed_year: Optional[int] = None,
-        unfiled_returns_count: Optional[int] = None,
+        lifecycle_stage: LifecycleStage | None = None,
+        last_agm_date: date | None = None,
+        last_audit_signed_date: date | None = None,
+        last_return_filed_year: int | None = None,
+        unfiled_returns_count: int | None = None,
     ) -> None:
         """
         Update the company's cached compliance state after rule engine evaluation.
         This is the only path that writes compliance scores to companies table.
         """
-        updates: Dict = {
+        updates: dict = {
             "current_compliance_score": score,
             "current_risk_band":        risk_band,
             "rescue_required":          rescue_required,
-            "last_evaluated_at":        datetime.now(timezone.utc),
+            "last_evaluated_at":        datetime.now(UTC),
         }
         if lifecycle_stage:
             updates["lifecycle_stage"] = lifecycle_stage
@@ -264,7 +259,7 @@ class CompanyService(BaseService[Company]):
         if unfiled_returns_count is not None:
             updates["unfiled_returns_count"] = unfiled_returns_count
         if rescue_required:
-            updates["rescue_triggered_at"] = datetime.now(timezone.utc)
+            updates["rescue_triggered_at"] = datetime.now(UTC)
 
         await self.db.execute(
             update(Company)
@@ -275,7 +270,7 @@ class CompanyService(BaseService[Company]):
 
     # ── RULE ENGINE PROFILE BUILDER ───────────────────────────────
 
-    async def build_company_profile(self, company_id: uuid.UUID) -> Optional[Dict]:
+    async def build_company_profile(self, company_id: uuid.UUID) -> dict | None:
         """
         Assemble a CompanyProfile dict for the rule engine from verified DB data.
         Returns all fields that C_rule_engine.py's CompanyProfile dataclass needs.
