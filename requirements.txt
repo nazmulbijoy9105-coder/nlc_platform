@@ -25,3 +25,4 @@ anthropic==0.40.0
 openai==1.57.4
 slowapi==0.1.9
 email-validator==2.2.0
+mangum==0.21.0
