@@ -39,6 +39,7 @@ from app.core.config import get_settings
 from app.core.dependencies import get_db, get_current_user, get_db_for_user
 from app.core.security import (
     create_access_token,
+    create_password_reset_token,
     create_refresh_token,
     create_temp_token,
     decode_token,
@@ -119,6 +120,15 @@ class UserProfileResponse(BaseModel):
     last_login_at: Optional[datetime]
     company_ids: list[str]
     created_at: datetime
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    reset_token: str
+    new_password: str = Field(min_length=12, max_length=128)
 
 
 class MessageResponse(BaseModel):
@@ -259,7 +269,7 @@ async def verify_2fa(
 ):
     # Decode and validate the temp token
     try:
-        claims = decode_token(body.temp_token, expected_type="2fa_pending")
+        claims = decode_token(body.temp_token, expected_type="temp_2fa")
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -472,7 +482,7 @@ async def change_password(
     activity = ActivityService(db)
 
     success = await svc.change_password(
-        user=current_user,
+        current_user,
         current_password=body.current_password,
         new_password=body.new_password,
     )
@@ -491,3 +501,92 @@ async def change_password(
         actor_user_id=current_user.id,
     )
     return MessageResponse(message="Password changed successfully.")
+
+
+# ---------------------------------------------------------------------------
+# POST /auth/forgot-password — Request a password reset link
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/forgot-password",
+    response_model=MessageResponse,
+    summary="Request a password reset email",
+    description=(
+        "Generates a short-lived (15 min) reset token and logs it. "
+        "In production wire this to SES to email the link to the user. "
+        "Always returns 200 to avoid user enumeration."
+    ),
+)
+async def forgot_password(
+    body: ForgotPasswordRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    svc = UserService(db)
+    activity = ActivityService(db)
+
+    user = await svc.get_by_email(body.email)
+    if user:
+        reset_token = create_password_reset_token(str(user.id), user.email)
+        await activity.log(
+            action="PASSWORD_RESET_REQUESTED",
+            resource_type="user",
+            resource_id=str(user.id),
+            description=f"Password reset requested for {user.email}",
+            ip_address=request.client.host if request.client else None,
+            actor_user_id=user.id,
+        )
+        logger.info("password_reset_token_generated", user_id=str(user.id))
+        # TODO: send reset_token via SES email to user.email
+        # In development log the token so admins can share it manually
+        if settings.environment == "development":
+            logger.info("password_reset_token_DEV_ONLY", token=reset_token)
+
+    # Always return 200 — do not reveal whether email exists
+    return MessageResponse(
+        message="If that email is registered you will receive a password reset link shortly."
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /auth/reset-password — Consume reset token and set new password
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/reset-password",
+    response_model=MessageResponse,
+    summary="Reset password using a reset token",
+)
+async def reset_password(
+    body: ResetPasswordRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        claims = decode_token(body.reset_token, expected_type="password_reset")
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired password reset token.",
+        )
+
+    user_id = claims.get("sub")
+    svc = UserService(db)
+    activity = ActivityService(db)
+
+    user = await svc.get_by_id_or_404(uuid.UUID(user_id))
+
+    # Use internal method to skip current-password verification
+    from app.core.security import hash_password
+    await svc.update_instance(user, password_hash=hash_password(body.new_password))
+
+    await activity.log(
+        action="PASSWORD_RESET_COMPLETED",
+        resource_type="user",
+        resource_id=str(user.id),
+        description=f"Password reset completed for {user.email}",
+        ip_address=request.client.host if request.client else None,
+        actor_user_id=user.id,
+    )
+    logger.info("password_reset_complete", user_id=str(user.id))
+    return MessageResponse(message="Password has been reset successfully. Please log in.")
