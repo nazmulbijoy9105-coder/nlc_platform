@@ -25,24 +25,33 @@ after update so the company score is always fresh.
 
 from __future__ import annotations
 
-import uuid
-from datetime import date
-from typing import Optional, List
+from typing import TYPE_CHECKING
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
-    get_db_for_user,
     get_current_user,
-    require_roles,
+    get_db_for_user,
     require_company_access,
+    require_roles,
 )
-from app.models.user import User
-from app.services.filing_service import AGMService, AuditService, AnnualReturnService, StatutoryRegisterService
+from app.services.filing_service import (
+    AGMService,
+    AnnualReturnService,
+    AuditService,
+    StatutoryRegisterService,
+)
 from app.services.notification_service import ActivityService
+
+if TYPE_CHECKING:
+    import uuid
+    from datetime import date
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.models.user import User
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -56,24 +65,24 @@ class AGMCreateRequest(BaseModel):
     company_id: uuid.UUID
     financial_year: int = Field(ge=2000, le=2100)
     agm_due_date: date
-    scheduled_date: Optional[date] = None
-    notice_sent_date: Optional[date] = None
+    scheduled_date: date | None = None
+    notice_sent_date: date | None = None
 
 
 class AGMMarkHeldRequest(BaseModel):
     held_date: date
-    venue: Optional[str] = None
+    venue: str | None = None
     members_present: int = Field(ge=0)
     quorum_met: bool
     auditor_reappointed: bool
     accounts_adopted: bool
     agm_held_without_audit: bool = False
-    minutes_document_id: Optional[uuid.UUID] = None
+    minutes_document_id: uuid.UUID | None = None
 
 
 class AGMMarkFiledRequest(BaseModel):
     filed_date: date
-    rjsc_acknowledgment_number: Optional[str] = None
+    rjsc_acknowledgment_number: str | None = None
 
 
 class AGMResponse(BaseModel):
@@ -81,11 +90,11 @@ class AGMResponse(BaseModel):
     company_id: str
     financial_year: int
     agm_due_date: str
-    held_date: Optional[str]
-    filed_date: Optional[str]
-    quorum_met: Optional[bool]
-    auditor_reappointed: Optional[bool]
-    accounts_adopted: Optional[bool]
+    held_date: str | None
+    filed_date: str | None
+    quorum_met: bool | None
+    auditor_reappointed: bool | None
+    accounts_adopted: bool | None
     agm_held_without_audit: bool
     is_default: bool
     created_at: str
@@ -98,8 +107,8 @@ class AGMResponse(BaseModel):
 class AuditCreateRequest(BaseModel):
     company_id: uuid.UUID
     financial_year: int = Field(ge=2000, le=2100)
-    auditor_firm: Optional[str] = None
-    auditor_icab_number: Optional[str] = None
+    auditor_firm: str | None = None
+    auditor_icab_number: str | None = None
 
 
 class AuditMarkCompleteRequest(BaseModel):
@@ -107,7 +116,7 @@ class AuditMarkCompleteRequest(BaseModel):
     auditor_firm: str
     auditor_icab_number: str
     audit_opinion: str = Field(default="UNQUALIFIED")
-    report_document_id: Optional[uuid.UUID] = None
+    report_document_id: uuid.UUID | None = None
 
 
 class AuditResponse(BaseModel):
@@ -115,9 +124,9 @@ class AuditResponse(BaseModel):
     company_id: str
     financial_year: int
     is_complete: bool
-    signed_date: Optional[str]
-    auditor_firm: Optional[str]
-    audit_opinion: Optional[str]
+    signed_date: str | None
+    auditor_firm: str | None
+    audit_opinion: str | None
     created_at: str
 
 
@@ -128,15 +137,15 @@ class AuditResponse(BaseModel):
 class AnnualReturnCreateRequest(BaseModel):
     company_id: uuid.UUID
     financial_year: int = Field(ge=2000, le=2100)
-    agm_date: Optional[date] = None
+    agm_date: date | None = None
 
 
 class AnnualReturnMarkFiledRequest(BaseModel):
     filed_date: date
-    rjsc_acknowledgment_number: Optional[str] = None
+    rjsc_acknowledgment_number: str | None = None
     late_fee_paid: bool = False
-    late_fee_amount: Optional[float] = None
-    filing_document_id: Optional[uuid.UUID] = None
+    late_fee_amount: float | None = None
+    filing_document_id: uuid.UUID | None = None
 
 
 class AnnualReturnResponse(BaseModel):
@@ -144,8 +153,8 @@ class AnnualReturnResponse(BaseModel):
     company_id: str
     financial_year: int
     is_filed: bool
-    filed_date: Optional[str]
-    rjsc_acknowledgment_number: Optional[str]
+    filed_date: str | None
+    rjsc_acknowledgment_number: str | None
     late_fee_paid: bool
     created_at: str
 
@@ -154,16 +163,16 @@ class StatutoryRegisterCreateRequest(BaseModel):
     company_id: uuid.UUID
     register_type: str
     is_maintained: bool = False
-    last_updated_date: Optional[date] = None
-    location: Optional[str] = None
-    notes: Optional[str] = None
+    last_updated_date: date | None = None
+    location: str | None = None
+    notes: str | None = None
 
 
 class StatutoryRegisterUpdateRequest(BaseModel):
-    is_maintained: Optional[bool] = None
-    last_updated_date: Optional[date] = None
-    location: Optional[str] = None
-    notes: Optional[str] = None
+    is_maintained: bool | None = None
+    last_updated_date: date | None = None
+    location: str | None = None
+    notes: str | None = None
 
 
 class StatutoryRegisterResponse(BaseModel):
@@ -171,9 +180,9 @@ class StatutoryRegisterResponse(BaseModel):
     company_id: str
     register_type: str
     is_maintained: bool
-    last_updated_date: Optional[str]
-    location: Optional[str]
-    notes: Optional[str]
+    last_updated_date: str | None
+    location: str | None
+    notes: str | None
     updated_at: str
 
 
@@ -249,7 +258,7 @@ async def create_agm(
 
 @router.get(
     "/agm/{company_id}",
-    response_model=List[AGMResponse],
+    response_model=list[AGMResponse],
     dependencies=[Depends(require_company_access("company_id"))],
     summary="List all AGM records for a company",
 )
@@ -318,7 +327,7 @@ async def mark_agm_filed(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = AGMService(db)
-    agm = await svc.get_by_id_or_404(agm_id)
+    await svc.get_by_id_or_404(agm_id)
 
     update_data = {
         "filed_date": body.filed_date,
@@ -359,7 +368,7 @@ async def create_audit(
 
 @router.get(
     "/audit/{company_id}",
-    response_model=List[AuditResponse],
+    response_model=list[AuditResponse],
     dependencies=[Depends(require_company_access("company_id"))],
     summary="List all audit records for a company",
 )
@@ -439,7 +448,7 @@ async def create_annual_return(
 
 @router.get(
     "/annual-return/{company_id}",
-    response_model=List[AnnualReturnResponse],
+    response_model=list[AnnualReturnResponse],
     dependencies=[Depends(require_company_access("company_id"))],
     summary="List all annual return records for a company",
 )
@@ -534,7 +543,7 @@ async def create_statutory_register(
 
 @router.get(
     "/statutory-register/{company_id}",
-    response_model=List[StatutoryRegisterResponse],
+    response_model=list[StatutoryRegisterResponse],
     dependencies=[Depends(require_company_access("company_id"))],
     summary="List statutory register entries for a company",
 )

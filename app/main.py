@@ -20,29 +20,31 @@ from __future__ import annotations
 
 import time
 import uuid
-import logging
 from contextlib import asynccontextmanager
-from typing import Any, Callable
+from typing import TYPE_CHECKING
 
 import structlog
-from fastapi import FastAPI, Request, Response, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.core.config import get_settings
 from app.api import (
-    auth,
-    companies,
-    filings,
-    rescue,
-    documents,
-    commercial,
-    rules,
     admin,
+    auth,
+    commercial,
+    companies,
+    documents,
+    filings,
     health,
+    rescue,
+    rules,
 )
+from app.core.config import get_settings
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 logger = structlog.get_logger(__name__)
 settings = get_settings()

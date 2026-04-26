@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import base64
 import os
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import pyotp
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -114,9 +114,9 @@ def get_totp_provisioning_uri(secret: str, email: str) -> str:
 # ── JWT token creation ────────────────────────────────────────────────
 def create_access_token(
     user_id: str | dict[str, Any],
-    email: Optional[str] = None,
-    role: Optional[str] = None,
-    company_ids: Optional[list[str]] = None,
+    email: str | None = None,
+    role: str | None = None,
+    company_ids: list[str] | None = None,
 ) -> str:
     """
     Create a full access JWT (issued after successful 2FA).
@@ -126,7 +126,7 @@ def create_access_token(
     Expires: jwt_access_token_expire_minutes (default 480 = 8 hours).
     """
     settings = get_settings()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     if isinstance(user_id, dict):
         payload_data = user_id
@@ -162,7 +162,7 @@ def create_temp_token(user_id: str, email: str, role: str) -> str:
     Expires: jwt_temp_token_expire_minutes (default 5 minutes).
     """
     settings = get_settings()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub":     user_id,
         "user_id": user_id,
@@ -182,7 +182,7 @@ def create_refresh_token(user_id: str) -> str:
     Expires: jwt_refresh_token_expire_days (default 30 days).
     """
     settings = get_settings()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub":     user_id,
         "user_id": user_id,
@@ -199,7 +199,7 @@ def create_password_reset_token(user_id: str, email: str) -> str:
     Sent via email link; must be single-use (checked by consuming endpoint).
     """
     settings = get_settings()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub":     user_id,
         "user_id": user_id,
@@ -211,7 +211,7 @@ def create_password_reset_token(user_id: str, email: str) -> str:
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
-def decode_token(token: str, expected_type: Optional[str] = None) -> Dict[str, Any]:
+def decode_token(token: str, expected_type: str | None = None) -> dict[str, Any]:
     """
     Decode and validate a JWT token.
     Raises JWTError if invalid, expired, or wrong type.

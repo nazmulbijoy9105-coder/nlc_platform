@@ -7,25 +7,37 @@ AI Constitution Article 4: Score formula fixed. History immutable.
 """
 from __future__ import annotations
 
-import uuid
-from datetime import date, datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    Boolean, Date, DateTime, Enum, ForeignKey,
-    Integer, Numeric, String, Text, UniqueConstraint,
+    Boolean,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
 from .enums import (
-    EventAction, ExposureBand, FlagStatus, RiskBand,
-    RevenueTier, SeverityLevel,
+    EventAction,
+    ExposureBand,
+    FlagStatus,
+    RevenueTier,
+    RiskBand,
+    SeverityLevel,
 )
-from .mixins import AuditMixin, UUIDPrimaryKeyMixin, TimestampMixin
+from .mixins import AuditMixin, TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
+    import uuid
+    from datetime import date, datetime
+
     from .company import Company
 
 
@@ -71,7 +83,7 @@ class ComplianceFlag(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Integer, nullable=False, default=0,
         comment="Negative points deducted from base 100"
     )
-    exposure_band: Mapped[Optional[ExposureBand]] = mapped_column(
+    exposure_band: Mapped[ExposureBand | None] = mapped_column(
         Enum(ExposureBand, name="exposure_band"), nullable=True
     )
     revenue_tier: Mapped[RevenueTier] = mapped_column(
@@ -85,15 +97,15 @@ class ComplianceFlag(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
     )
     triggered_date: Mapped[date] = mapped_column(Date, nullable=False)
-    resolved_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
-    resolved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+    resolved_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    resolved_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), nullable=True
     )
-    resolution_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    resolution_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # ── Explainability (AI Constitution 2.3) ─────────────────────
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    detail: Mapped[Optional[dict]] = mapped_column(
+    detail: Mapped[dict | None] = mapped_column(
         JSONB, nullable=True,
         comment="Structured explanation: delay_days, calculation_basis, etc."
     )
@@ -102,7 +114,7 @@ class ComplianceFlag(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     notification_sent: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # ── Relationships ─────────────────────────────────────────────
-    company: Mapped["Company"] = relationship(
+    company: Mapped[Company] = relationship(
         "Company", back_populates="compliance_flags"
     )
 
@@ -146,11 +158,11 @@ class ComplianceScoreHistory(UUIDPrimaryKeyMixin, Base):
     )
 
     # ── Component Scores ──────────────────────────────────────────
-    agm_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    audit_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    return_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    director_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    shareholding_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    agm_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    audit_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    return_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    director_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    shareholding_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # ── Flags Summary ─────────────────────────────────────────────
     active_flags_count: Mapped[int] = mapped_column(Integer, default=0)
@@ -171,7 +183,7 @@ class ComplianceScoreHistory(UUIDPrimaryKeyMixin, Base):
     )
 
     # ── Relationships ─────────────────────────────────────────────
-    company: Mapped["Company"] = relationship(
+    company: Mapped[Company] = relationship(
         "Company", back_populates="score_history"
     )
 
@@ -209,17 +221,17 @@ class ComplianceEvent(AuditMixin, Base):
     action: Mapped[EventAction] = mapped_column(
         Enum(EventAction, name="event_action"), nullable=False
     )
-    performed_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+    performed_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), nullable=True
     )
-    reference_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    reference_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), nullable=True,
         comment="ID of related record (agm.id, audit.id, etc.)"
     )
-    detail: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    detail: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # ── Relationships ─────────────────────────────────────────────
-    company: Mapped["Company"] = relationship("Company")
+    company: Mapped[Company] = relationship("Company")
 
     def __repr__(self) -> str:
         return f"<ComplianceEvent {self.event_type} company={self.company_id} date={self.event_date}>"

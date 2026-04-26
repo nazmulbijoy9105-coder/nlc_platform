@@ -8,21 +8,21 @@ import enum
 
 
 # ── RISK & SEVERITY ──────────────────────────────────────────────────
-class RiskBand(str, enum.Enum):
+class RiskBand(enum.StrEnum):
     GREEN  = "GREEN"
     YELLOW = "YELLOW"
     RED    = "RED"
     BLACK  = "BLACK"
 
 
-class SeverityLevel(str, enum.Enum):
+class SeverityLevel(enum.StrEnum):
     GREEN  = "GREEN"
     YELLOW = "YELLOW"
     RED    = "RED"
     BLACK  = "BLACK"
 
 
-class ExposureBand(str, enum.Enum):
+class ExposureBand(enum.StrEnum):
     LOW      = "LOW"
     MODERATE = "MODERATE"
     HIGH     = "HIGH"
@@ -30,14 +30,14 @@ class ExposureBand(str, enum.Enum):
 
 
 # ── REVENUE ──────────────────────────────────────────────────────────
-class RevenueTier(str, enum.Enum):
+class RevenueTier(enum.StrEnum):
     COMPLIANCE_PACKAGE        = "COMPLIANCE_PACKAGE"
     STRUCTURED_REGULARIZATION = "STRUCTURED_REGULARIZATION"
     CORPORATE_RESCUE          = "CORPORATE_RESCUE"
 
 
 # ── COMPANY ──────────────────────────────────────────────────────────
-class CompanyStatus(str, enum.Enum):
+class CompanyStatus(enum.StrEnum):
     ACTIVE          = "ACTIVE"
     IRREGULAR       = "IRREGULAR"
     STATUTORY_DEFAULT = "STATUTORY_DEFAULT"
@@ -47,7 +47,7 @@ class CompanyStatus(str, enum.Enum):
     DISSOLVED       = "DISSOLVED"
 
 
-class LifecycleStage(str, enum.Enum):
+class LifecycleStage(enum.StrEnum):
     INCORPORATION      = "INCORPORATION"
     PRE_FIRST_AGM      = "PRE_FIRST_AGM"
     ACTIVE_COMPLIANT   = "ACTIVE_COMPLIANT"
@@ -57,7 +57,7 @@ class LifecycleStage(str, enum.Enum):
     POST_RESCUE        = "POST_RESCUE"
 
 
-class CompanyType(str, enum.Enum):
+class CompanyType(enum.StrEnum):
     PRIVATE_LIMITED = "PRIVATE_LIMITED"
     PUBLIC_LIMITED  = "PUBLIC_LIMITED"
     ONE_PERSON      = "ONE_PERSON"
@@ -65,7 +65,7 @@ class CompanyType(str, enum.Enum):
 
 
 # ── USER ─────────────────────────────────────────────────────────────
-class UserRole(str, enum.Enum):
+class UserRole(enum.StrEnum):
     SUPER_ADMIN      = "SUPER_ADMIN"
     ADMIN_STAFF      = "ADMIN_STAFF"
     LEGAL_STAFF      = "LEGAL_STAFF"
@@ -74,21 +74,21 @@ class UserRole(str, enum.Enum):
 
 
 # ── COMPLIANCE ───────────────────────────────────────────────────────
-class FlagStatus(str, enum.Enum):
+class FlagStatus(enum.StrEnum):
     ACTIVE       = "ACTIVE"
     RESOLVED     = "RESOLVED"
     ACKNOWLEDGED = "ACKNOWLEDGED"
     ESCALATED    = "ESCALATED"
 
 
-class TaskPriority(str, enum.Enum):
+class TaskPriority(enum.StrEnum):
     CRITICAL = "CRITICAL"
     HIGH     = "HIGH"
     MEDIUM   = "MEDIUM"
     LOW      = "LOW"
 
 
-class TaskStatus(str, enum.Enum):
+class TaskStatus(enum.StrEnum):
     PENDING     = "PENDING"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED   = "COMPLETED"
@@ -96,7 +96,7 @@ class TaskStatus(str, enum.Enum):
 
 
 # ── DOCUMENT ─────────────────────────────────────────────────────────
-class DocumentType(str, enum.Enum):
+class DocumentType(enum.StrEnum):
     AGM_MINUTES        = "AGM_MINUTES"
     BOARD_RESOLUTION   = "BOARD_RESOLUTION"
     ANNUAL_RETURN      = "ANNUAL_RETURN"
@@ -111,7 +111,7 @@ class DocumentType(str, enum.Enum):
 
 
 # ── AUDIT ────────────────────────────────────────────────────────────
-class EventAction(str, enum.Enum):
+class EventAction(enum.StrEnum):
     CREATED  = "CREATED"
     UPDATED  = "UPDATED"
     DELETED  = "DELETED"
@@ -122,13 +122,13 @@ class EventAction(str, enum.Enum):
 
 
 # ── NOTIFICATION ─────────────────────────────────────────────────────
-class NotificationChannel(str, enum.Enum):
+class NotificationChannel(enum.StrEnum):
     EMAIL     = "EMAIL"
     DASHBOARD = "DASHBOARD"
     WHATSAPP  = "WHATSAPP"
 
 
-class NotificationStatus(str, enum.Enum):
+class NotificationStatus(enum.StrEnum):
     PENDING      = "PENDING"
     SENT         = "SENT"
     ACKNOWLEDGED = "ACKNOWLEDGED"
@@ -136,7 +136,7 @@ class NotificationStatus(str, enum.Enum):
 
 
 # ── SHARE TRANSFER ───────────────────────────────────────────────────
-class TransferStatus(str, enum.Enum):
+class TransferStatus(enum.StrEnum):
     COMPLETE       = "COMPLETE"
     IRREGULAR      = "IRREGULAR"
     PENDING_REVIEW = "PENDING_REVIEW"
@@ -144,7 +144,7 @@ class TransferStatus(str, enum.Enum):
 
 
 # ── DIRECTOR ─────────────────────────────────────────────────────────
-class DirectorStatus(str, enum.Enum):
+class DirectorStatus(enum.StrEnum):
     ACTIVE   = "ACTIVE"
     RESIGNED = "RESIGNED"
     REMOVED  = "REMOVED"
@@ -152,7 +152,7 @@ class DirectorStatus(str, enum.Enum):
 
 
 # ── ENGAGEMENT ───────────────────────────────────────────────────────
-class EngagementStatus(str, enum.Enum):
+class EngagementStatus(enum.StrEnum):
     IDENTIFIED = "IDENTIFIED"
     QUOTED     = "QUOTED"
     CONFIRMED  = "CONFIRMED"
@@ -162,7 +162,7 @@ class EngagementStatus(str, enum.Enum):
 
 
 # ── RESCUE ───────────────────────────────────────────────────────────
-class RescueStepStatus(str, enum.Enum):
+class RescueStepStatus(enum.StrEnum):
     PENDING     = "PENDING"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETE    = "COMPLETE"
@@ -170,14 +170,14 @@ class RescueStepStatus(str, enum.Enum):
 
 
 # ── RULE ENGINE ──────────────────────────────────────────────────────
-class ComplexityLevel(str, enum.Enum):
+class ComplexityLevel(enum.StrEnum):
     LOW      = "LOW"
     MEDIUM   = "MEDIUM"
     HIGH     = "HIGH"
     CRITICAL = "CRITICAL"
 
 
-class RuleType(str, enum.Enum):
+class RuleType(enum.StrEnum):
     AGM        = "AGM"
     AUDIT      = "AUDIT"
     RETURN     = "RETURN"
@@ -189,14 +189,14 @@ class RuleType(str, enum.Enum):
 
 
 # ── AI ───────────────────────────────────────────────────────────────
-class AiModel(str, enum.Enum):
+class AiModel(enum.StrEnum):
     GPT4      = "GPT4"
     CLAUDE    = "CLAUDE"
     LOCAL_LLM = "LOCAL_LLM"
 
 
 # ── SRO ──────────────────────────────────────────────────────────────
-class SroType(str, enum.Enum):
+class SroType(enum.StrEnum):
     FEE       = "FEE"
     FORM      = "FORM"
     DEADLINE  = "DEADLINE"

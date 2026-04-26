@@ -3,18 +3,23 @@ app/rule_engine/__init__.py
 Package wrapper - exports NLCRuleEngine and dataclasses.
 """
 from app.rule_engine.engine import (
-    NLCRuleEngine,
     CompanyProfile,
-    EngineOutput,
-    ScoreBreakdown,
     ComplianceFlag,
     DirectorChange,
-    ShareTransfer,
+    EngineOutput,
     LifecycleStage,
+    NLCRuleEngine,
+    ScoreBreakdown,
+    ShareTransfer,
 )
 
 __all__ = [
-    "NLCRuleEngine", "CompanyProfile", "EngineOutput",
-    "ScoreBreakdown", "ComplianceFlag", "DirectorChange",
-    "ShareTransfer", "LifecycleStage",
+    "CompanyProfile",
+    "ComplianceFlag",
+    "DirectorChange",
+    "EngineOutput",
+    "LifecycleStage",
+    "NLCRuleEngine",
+    "ScoreBreakdown",
+    "ShareTransfer",
 ]

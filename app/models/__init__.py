@@ -13,101 +13,137 @@ before Alembic migrations are generated.
 """
 
 # ── Database infrastructure ─────────────────────────────────────────
-from .database import Base, get_db, set_rls_context, set_admin_context  # noqa: F401
-
-# ── Enums (22 types) ────────────────────────────────────────────────
-from .enums import (  # noqa: F401
-    RiskBand, SeverityLevel, ExposureBand, RevenueTier,
-    CompanyStatus, LifecycleStage, CompanyType,
-    UserRole, FlagStatus, TaskPriority, TaskStatus,
-    DocumentType, EventAction,
-    NotificationChannel, NotificationStatus,
-    TransferStatus, DirectorStatus, EngagementStatus,
-    RescueStepStatus, ComplexityLevel, RuleType,
-    AiModel, SroType,
-)
-
-# ── Users ────────────────────────────────────────────────────────────
-from .user import User  # noqa: F401
+# ── Commercial (Tasks, Engagements, Quotations) ──────────────────────
+from .commercial import Engagement, Quotation, Task
 
 # ── Companies ────────────────────────────────────────────────────────
-from .company import Company, CompanyUserAccess  # noqa: F401
-
-# ── People (Directors, Shareholders, Transfers) ──────────────────────
-from .people import Director, Shareholder, ShareTransfer  # noqa: F401
-
-# ── Filings (AGM, Audit, Annual Return) ──────────────────────────────
-from .filings import AGM, Audit, AnnualReturn  # noqa: F401
+from .company import Company, CompanyUserAccess
 
 # ── Compliance (Flags, Score History, Events) ────────────────────────
-from .compliance import (  # noqa: F401
-    ComplianceFlag, ComplianceScoreHistory, ComplianceEvent,
+from .compliance import (
+    ComplianceEvent,
+    ComplianceFlag,
+    ComplianceScoreHistory,
 )
-
-# ── Rules (Legal Rules + Version History) ────────────────────────────
-from .rules import LegalRule, LegalRuleVersion  # noqa: F401
-
-# ── Rescue (Plans + Steps) ───────────────────────────────────────────
-from .rescue import RescuePlan, RescueStep  # noqa: F401
-
-# ── Commercial (Tasks, Engagements, Quotations) ──────────────────────
-from .commercial import Task, Engagement, Quotation  # noqa: F401
+from .database import Base, get_db, set_admin_context, set_rls_context
 
 # ── Documents (Documents, Access Log, AI Templates, AI Log) ──────────
-from .documents import (  # noqa: F401
-    Document, DocumentAccessLog,
-    AIPromptTemplate, AIOutputLog,
+from .documents import (
+    AIOutputLog,
+    AIPromptTemplate,
+    Document,
+    DocumentAccessLog,
 )
 
+# ── Enums (22 types) ────────────────────────────────────────────────
+from .enums import (
+    AiModel,
+    CompanyStatus,
+    CompanyType,
+    ComplexityLevel,
+    DirectorStatus,
+    DocumentType,
+    EngagementStatus,
+    EventAction,
+    ExposureBand,
+    FlagStatus,
+    LifecycleStage,
+    NotificationChannel,
+    NotificationStatus,
+    RescueStepStatus,
+    RevenueTier,
+    RiskBand,
+    RuleType,
+    SeverityLevel,
+    SroType,
+    TaskPriority,
+    TaskStatus,
+    TransferStatus,
+    UserRole,
+)
+
+# ── Filings (AGM, Audit, Annual Return) ──────────────────────────────
+from .filings import AGM, AnnualReturn, Audit
+
 # ── Infrastructure (Notifications, SRO, Registers, Activity Log) ─────
-from .infrastructure import (  # noqa: F401
-    Notification, SRORegistry,
-    StatutoryRegister, RegisteredOfficeHistory,
+from .infrastructure import (
+    Notification,
+    RegisteredOfficeHistory,
+    SRORegistry,
+    StatutoryRegister,
     UserActivityLog,
 )
 
+# ── People (Directors, Shareholders, Transfers) ──────────────────────
+from .people import Director, Shareholder, ShareTransfer
+
+# ── Rescue (Plans + Steps) ───────────────────────────────────────────
+from .rescue import RescuePlan, RescueStep
+
+# ── Rules (Legal Rules + Version History) ────────────────────────────
+from .rules import LegalRule, LegalRuleVersion
+
+# ── Users ────────────────────────────────────────────────────────────
+from .user import User
+
 # ── All models (28 tables) for reference ─────────────────────────────
 __all__ = [
-    # Database
-    "Base", "get_db", "set_rls_context", "set_admin_context",
-
-    # Enums
-    "RiskBand", "SeverityLevel", "ExposureBand", "RevenueTier",
-    "CompanyStatus", "LifecycleStage", "CompanyType",
-    "UserRole", "FlagStatus", "TaskPriority", "TaskStatus",
-    "DocumentType", "EventAction",
-    "NotificationChannel", "NotificationStatus",
-    "TransferStatus", "DirectorStatus", "EngagementStatus",
-    "RescueStepStatus", "ComplexityLevel", "RuleType",
-    "AiModel", "SroType",
-
-    # Models (28 tables)
-    "User",                     # TABLE: users
-    "Company",                  # TABLE: companies
-    "CompanyUserAccess",        # TABLE: company_user_access
-    "Director",                 # TABLE: directors
-    "Shareholder",              # TABLE: shareholders
-    "ShareTransfer",            # TABLE: share_transfers
     "AGM",                      # TABLE: agms
-    "Audit",                    # TABLE: audits
+    "AIOutputLog",              # TABLE: ai_output_log
+    "AIPromptTemplate",         # TABLE: ai_prompt_templates
+    "AiModel",
     "AnnualReturn",             # TABLE: annual_returns
+    "Audit",                    # TABLE: audits
+    # Database
+    "Base",
+    "Company",                  # TABLE: companies
+    "CompanyStatus",
+    "CompanyType",
+    "CompanyUserAccess",        # TABLE: company_user_access
+    "ComplexityLevel",
+    "ComplianceEvent",          # TABLE: compliance_events
     "ComplianceFlag",           # TABLE: compliance_flags
     "ComplianceScoreHistory",   # TABLE: compliance_score_history
-    "ComplianceEvent",          # TABLE: compliance_events
-    "LegalRule",                # TABLE: legal_rules
-    "LegalRuleVersion",         # TABLE: legal_rule_versions
-    "RescuePlan",               # TABLE: rescue_plans
-    "RescueStep",               # TABLE: rescue_steps
-    "Task",                     # TABLE: tasks
-    "Engagement",               # TABLE: engagements
-    "Quotation",                # TABLE: quotations
+    "Director",                 # TABLE: directors
+    "DirectorStatus",
     "Document",                 # TABLE: documents
     "DocumentAccessLog",        # TABLE: document_access_log
-    "AIPromptTemplate",         # TABLE: ai_prompt_templates
-    "AIOutputLog",              # TABLE: ai_output_log
+    "DocumentType",
+    "Engagement",               # TABLE: engagements
+    "EngagementStatus",
+    "EventAction",
+    "ExposureBand",
+    "FlagStatus",
+    "LegalRule",                # TABLE: legal_rules
+    "LegalRuleVersion",         # TABLE: legal_rule_versions
+    "LifecycleStage",
     "Notification",             # TABLE: notifications
-    "SRORegistry",              # TABLE: sro_registry
-    "StatutoryRegister",        # TABLE: statutory_registers
+    "NotificationChannel",
+    "NotificationStatus",
+    "Quotation",                # TABLE: quotations
     "RegisteredOfficeHistory",  # TABLE: registered_office_history
+    "RescuePlan",               # TABLE: rescue_plans
+    "RescueStep",               # TABLE: rescue_steps
+    "RescueStepStatus",
+    "RevenueTier",
+    # Enums
+    "RiskBand",
+    "RuleType",
+    "SRORegistry",              # TABLE: sro_registry
+    "SeverityLevel",
+    "ShareTransfer",            # TABLE: share_transfers
+    "Shareholder",              # TABLE: shareholders
+    "SroType",
+    "StatutoryRegister",        # TABLE: statutory_registers
+    "Task",                     # TABLE: tasks
+    "TaskPriority",
+    "TaskStatus",
+    "TransferStatus",
+    # Models (28 tables)
+    "User",                     # TABLE: users
     "UserActivityLog",          # TABLE: user_activity_logs
+    "UserRole",
+    "get_db",
+    "set_admin_context",
+    "set_rls_context",
 ]

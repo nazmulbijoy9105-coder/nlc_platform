@@ -12,20 +12,21 @@ AI Constitution Article 2.2:
 """
 from __future__ import annotations
 
-import uuid
-from datetime import date
-from typing import Dict, List, Optional
+from datetime import UTC, date
+from typing import TYPE_CHECKING
 
 from sqlalchemy import func, select, text
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.commercial import Engagement, Quotation, Task
 from app.models.enums import (
-    ComplexityLevel, EngagementStatus, RevenueTier,
-    TaskPriority, TaskStatus,
+    EngagementStatus,
+    TaskPriority,
+    TaskStatus,
 )
 from app.services.base import BaseService
 
+if TYPE_CHECKING:
+    import uuid
 
 # ═══════════════════════════════════════════════════════════════════════
 # ENGAGEMENT SERVICE
@@ -34,7 +35,7 @@ from app.services.base import BaseService
 class EngagementService(BaseService[Engagement]):
     model = Engagement
 
-    async def get_pipeline(self) -> Dict:
+    async def get_pipeline(self) -> dict:
         """
         Revenue pipeline from vw_revenue_pipeline view.
         _get_revenue_pipeline stub implementation.
@@ -80,7 +81,7 @@ class EngagementService(BaseService[Engagement]):
             ),
         }
 
-    async def get_conversion_funnel(self) -> Dict:
+    async def get_conversion_funnel(self) -> dict:
         """
         Engagement conversion funnel metrics.
         _get_conversion_funnel stub implementation.
@@ -91,7 +92,7 @@ class EngagementService(BaseService[Engagement]):
                 func.count().label("count"),
                 func.sum(Engagement.estimated_fee_bdt).label("value"),
             )
-            .where(Engagement.is_active == True)
+            .where(Engagement.is_active)
             .group_by(Engagement.engagement_status)
         )
         stages = {row.engagement_status: {"count": row.count, "value": float(row.value or 0)}
@@ -118,13 +119,13 @@ class EngagementService(BaseService[Engagement]):
         engagement_id: uuid.UUID,
         new_status: EngagementStatus,
         *,
-        fee_bdt: Optional[float] = None,
-    ) -> Optional[Engagement]:
+        fee_bdt: float | None = None,
+    ) -> Engagement | None:
         """Advance engagement through the pipeline stages."""
         eng = await self.get_by_id(engagement_id)
         if not eng:
             return None
-        updates: Dict = {"engagement_status": new_status}
+        updates: dict = {"engagement_status": new_status}
         status_date_map = {
             EngagementStatus.QUOTED:      "quoted_date",
             EngagementStatus.CONFIRMED:   "confirmed_date",
@@ -140,13 +141,13 @@ class EngagementService(BaseService[Engagement]):
                 updates["confirmed_fee_bdt"] = fee_bdt
         return await self.update_instance(eng, **updates)
 
-    async def get_for_company(self, company_id: uuid.UUID) -> List[Engagement]:
+    async def get_for_company(self, company_id: uuid.UUID) -> list[Engagement]:
         """Get all engagements for a company."""
         result = await self.db.execute(
             select(Engagement)
             .where(
                 Engagement.company_id == company_id,
-                Engagement.is_active == True,
+                Engagement.is_active,
             )
             .order_by(Engagement.identified_date.desc())
         )
@@ -170,9 +171,9 @@ class QuotationService(BaseService[Quotation]):
         professional_fee_bdt: float,
         government_fee_bdt: float = 0,
         vat_rate: float = 0.15,
-        line_items: Optional[List[Dict]] = None,
+        line_items: list[dict] | None = None,
         valid_days: int = 30,
-        notes: Optional[str] = None,
+        notes: str | None = None,
     ) -> Quotation:
         """Create a quotation for an engagement."""
         vat_bdt = round(professional_fee_bdt * vat_rate, 2)
@@ -211,7 +212,7 @@ class QuotationService(BaseService[Quotation]):
     async def accept(
         self,
         quotation_id: uuid.UUID,
-    ) -> Optional[Quotation]:
+    ) -> Quotation | None:
         """Mark quotation as accepted."""
         q = await self.get_by_id(quotation_id)
         if not q:
@@ -222,7 +223,7 @@ class QuotationService(BaseService[Quotation]):
         self,
         quotation_id: uuid.UUID,
         reason: str,
-    ) -> Optional[Quotation]:
+    ) -> Quotation | None:
         """Mark quotation as rejected."""
         q = await self.get_by_id(quotation_id)
         if not q:
@@ -242,13 +243,13 @@ class TaskService(BaseService[Task]):
         company_id: uuid.UUID,
         title: str,
         *,
-        description: Optional[str] = None,
+        description: str | None = None,
         priority: TaskPriority = TaskPriority.MEDIUM,
-        due_date: Optional[date] = None,
-        assigned_to: Optional[uuid.UUID] = None,
-        created_by: Optional[uuid.UUID] = None,
-        source_flag_id: Optional[uuid.UUID] = None,
-        source_rescue_step_id: Optional[uuid.UUID] = None,
+        due_date: date | None = None,
+        assigned_to: uuid.UUID | None = None,
+        created_by: uuid.UUID | None = None,
+        source_flag_id: uuid.UUID | None = None,
+        source_rescue_step_id: uuid.UUID | None = None,
     ) -> Task:
         """Create a task for a company."""
         return await self.create(
@@ -268,11 +269,11 @@ class TaskService(BaseService[Task]):
         self,
         company_id: uuid.UUID,
         *,
-        status: Optional[TaskStatus] = None,
-        assigned_to: Optional[uuid.UUID] = None,
-    ) -> List[Task]:
+        status: TaskStatus | None = None,
+        assigned_to: uuid.UUID | None = None,
+    ) -> list[Task]:
         """Get tasks for a company with optional filters."""
-        filters = [Task.company_id == company_id, Task.is_active == True]
+        filters = [Task.company_id == company_id, Task.is_active]
         if status:
             filters.append(Task.task_status == status)
         if assigned_to:
@@ -287,14 +288,14 @@ class TaskService(BaseService[Task]):
     async def complete_task(
         self,
         task_id: uuid.UUID,
-    ) -> Optional[Task]:
+    ) -> Task | None:
         """Mark a task as completed."""
-        from datetime import datetime, timezone
+        from datetime import datetime
         task = await self.get_by_id(task_id)
         if not task:
             return None
         return await self.update_instance(
             task,
             task_status=TaskStatus.COMPLETED,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )

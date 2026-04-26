@@ -28,7 +28,7 @@ Usage:
 from __future__ import annotations
 
 import uuid
-from typing import Annotated, List, Optional
+from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -59,7 +59,7 @@ class TokenData(BaseModel):
     user_id:     str
     email:       str
     role:        str
-    company_ids: List[str] = []
+    company_ids: list[str] = []
 
     @property
     def user_uuid(self) -> uuid.UUID:
@@ -196,6 +196,7 @@ async def get_current_user(
     Raises 401 if user not found or deactivated.
     """
     from sqlalchemy import select
+
     from app.models.user import User as UserModel
 
     # Set RLS context so all queries in this session are scoped
@@ -204,7 +205,7 @@ async def get_current_user(
     result = await db.execute(
         select(UserModel).where(
             UserModel.id == uuid.UUID(token.user_id),
-            UserModel.is_active == True,
+            UserModel.is_active,
         )
     )
     user = result.scalar_one_or_none()
@@ -238,7 +239,7 @@ async def get_current_user_with_db(
         await set_rls_context(db, token.user_id)
         from sqlalchemy import select
         result = await db.execute(
-            select(User).where(User.id == uuid.UUID(token.user_id), User.is_active == True)
+            select(User).where(User.id == uuid.UUID(token.user_id), User.is_active)
         )
         user = result.scalar_one_or_none()
         if not user:
@@ -371,7 +372,7 @@ def require_company_access(company_id_param: str = "company_id"):
 
 def get_client_company_filter(
     token: TokenData = Depends(verify_access_token),
-) -> Optional[List[str]]:
+) -> list[str] | None:
     """
     For list endpoints: return the company_ids filter for client roles.
     Admin/Staff get None (no filter = all companies via RLS).

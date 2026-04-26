@@ -6,12 +6,9 @@ Password hashed (bcrypt). TOTP secret encrypted at application layer.
 """
 from __future__ import annotations
 
-import uuid
-from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Enum, Integer, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, DateTime, Enum, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -19,7 +16,9 @@ from .enums import UserRole
 from .mixins import FullMixin
 
 if TYPE_CHECKING:
-    from .company import Company, CompanyUserAccess
+    from datetime import datetime
+
+    from .company import CompanyUserAccess
     from .infrastructure import UserActivityLog
 
 
@@ -37,28 +36,28 @@ class User(FullMixin, Base):
 
     # ── Auth ──────────────────────────────────────────────────────
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    totp_secret_encrypted: Mapped[Optional[str]] = mapped_column(
+    totp_secret_encrypted: Mapped[str | None] = mapped_column(
         Text, nullable=True, comment="AES-256 encrypted TOTP secret"
     )
     totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0)
-    locked_until: Mapped[Optional[datetime]] = mapped_column(
+    locked_until: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    last_login_at: Mapped[Optional[datetime]] = mapped_column(
+    last_login_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
     # ── Profile ───────────────────────────────────────────────────
-    phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    designation: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    avatar_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    designation: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # ── Relationships ─────────────────────────────────────────────
-    company_access: Mapped[List["CompanyUserAccess"]] = relationship(
+    company_access: Mapped[list[CompanyUserAccess]] = relationship(
         "CompanyUserAccess", back_populates="user", lazy="selectin"
     )
-    activity_logs: Mapped[List["UserActivityLog"]] = relationship(
+    activity_logs: Mapped[list[UserActivityLog]] = relationship(
         "UserActivityLog", back_populates="user", lazy="noload"
     )
 

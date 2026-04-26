@@ -11,7 +11,7 @@ Endpoints:
   GET   /commercial/engagements/{company_id}  Engagements for a company
   POST  /commercial/engagements           Create engagement
   PATCH /commercial/engagements/{id}/status  Advance engagement status
-  
+
   POST  /commercial/quotations            Create quotation
   PATCH /commercial/quotations/{id}/accept  Accept quotation
   PATCH /commercial/quotations/{id}/reject  Reject quotation
@@ -23,23 +23,27 @@ Endpoints:
 
 from __future__ import annotations
 
-import uuid
-from typing import Optional, List
+from typing import TYPE_CHECKING
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
-    get_db_for_user,
     get_current_user,
+    get_db_for_user,
     require_roles,
 )
-from app.models.user import User
-from app.models.enums import EngagementStatus, RevenueTier
 from app.services.commercial_service import EngagementService, QuotationService, TaskService
 from app.services.notification_service import ActivityService
+
+if TYPE_CHECKING:
+    import uuid
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.models.enums import EngagementStatus, RevenueTier
+    from app.models.user import User
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -56,15 +60,15 @@ class EngagementCreateRequest(BaseModel):
     company_id: uuid.UUID
     engagement_type: str = Field(description="COMPLIANCE_PACKAGE | STRUCTURED_REGULARIZATION | CORPORATE_RESCUE")
     revenue_tier: RevenueTier
-    description: Optional[str] = None
-    estimated_fee_bdt: Optional[float] = Field(None, gt=0)
-    assigned_officer_id: Optional[uuid.UUID] = None
-    notes: Optional[str] = None
+    description: str | None = None
+    estimated_fee_bdt: float | None = Field(None, gt=0)
+    assigned_officer_id: uuid.UUID | None = None
+    notes: str | None = None
 
 
 class EngagementStatusUpdateRequest(BaseModel):
     new_status: EngagementStatus
-    note: Optional[str] = None
+    note: str | None = None
 
 
 class EngagementResponse(BaseModel):
@@ -73,10 +77,10 @@ class EngagementResponse(BaseModel):
     engagement_type: str
     revenue_tier: str
     status: str
-    description: Optional[str]
-    estimated_fee_bdt: Optional[float]
-    confirmed_fee_bdt: Optional[float]
-    assigned_officer_id: Optional[str]
+    description: str | None
+    estimated_fee_bdt: float | None
+    confirmed_fee_bdt: float | None
+    assigned_officer_id: str | None
     created_at: str
     updated_at: str
 
@@ -91,9 +95,9 @@ class QuotationCreateRequest(BaseModel):
     professional_fee_bdt: float = Field(gt=0)
     government_fee_bdt: float = Field(default=0, ge=0)
     vat_bdt: float = Field(default=0, ge=0)
-    line_items: Optional[List[dict]] = None
+    line_items: list[dict] | None = None
     valid_until_days: int = Field(default=30, ge=7, le=90)
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 class QuotationResponse(BaseModel):
@@ -111,7 +115,7 @@ class QuotationResponse(BaseModel):
 
 
 class QuotationRejectRequest(BaseModel):
-    reason: Optional[str] = None
+    reason: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -121,28 +125,28 @@ class QuotationRejectRequest(BaseModel):
 class TaskCreateRequest(BaseModel):
     company_id: uuid.UUID
     title: str = Field(min_length=3, max_length=255)
-    description: Optional[str] = None
-    due_date: Optional[str] = None
-    assigned_to_id: Optional[uuid.UUID] = None
-    linked_flag_id: Optional[uuid.UUID] = None
-    linked_rescue_step_id: Optional[uuid.UUID] = None
+    description: str | None = None
+    due_date: str | None = None
+    assigned_to_id: uuid.UUID | None = None
+    linked_flag_id: uuid.UUID | None = None
+    linked_rescue_step_id: uuid.UUID | None = None
     priority: str = Field(default="MEDIUM", description="LOW | MEDIUM | HIGH | CRITICAL")
 
 
 class TaskCompleteRequest(BaseModel):
-    completion_note: Optional[str] = None
+    completion_note: str | None = None
 
 
 class TaskResponse(BaseModel):
     task_id: str
     company_id: str
     title: str
-    description: Optional[str]
+    description: str | None
     status: str
     priority: str
-    due_date: Optional[str]
-    assigned_to_id: Optional[str]
-    completed_at: Optional[str]
+    due_date: str | None
+    assigned_to_id: str | None
+    completed_at: str | None
     created_at: str
 
 
@@ -270,7 +274,7 @@ async def create_engagement(
 
 @router.get(
     "/engagements/{company_id}",
-    response_model=List[EngagementResponse],
+    response_model=list[EngagementResponse],
     dependencies=[Depends(require_roles(*ADMIN_ROLES))],
     summary="List engagements for a company",
 )
@@ -446,13 +450,13 @@ async def create_task(
 
 @router.get(
     "/tasks/{company_id}",
-    response_model=List[TaskResponse],
+    response_model=list[TaskResponse],
     dependencies=[Depends(require_roles(*STAFF_ROLES))],
     summary="List tasks for a company",
 )
 async def list_tasks(
     company_id: uuid.UUID,
-    status_filter: Optional[str] = None,
+    status_filter: str | None = None,
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = TaskService(db)

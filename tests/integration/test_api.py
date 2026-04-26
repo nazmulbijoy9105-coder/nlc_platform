@@ -26,12 +26,8 @@ Test conventions:
 from __future__ import annotations
 
 import uuid
-from datetime import date, timedelta
-from typing import Dict
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import pytest_asyncio
 
 pytestmark = [pytest.mark.integration]
 
@@ -40,7 +36,7 @@ pytestmark = [pytest.mark.integration]
 # HELPERS
 # =============================================================================
 
-def _auth(token: str) -> Dict[str, str]:
+def _auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -429,6 +425,7 @@ class TestRescue:
     async def test_create_rescue_plan_for_red_company(self, api_client, super_admin_tok, db, db_company):
         """Force company to RED band then create rescue plan."""
         from sqlalchemy import update
+
         from app.models.company import Company
 
         # Force RED band
@@ -955,9 +952,6 @@ class TestRBAC:
     @pytest.mark.asyncio
     async def test_expired_token_returns_401(self, api_client):
         """Manually crafted expired token should be rejected."""
-        from app.core.security import create_access_token
-        from datetime import timezone
-        import time
 
         # We can't easily create truly expired tokens without mocking time,
         # so we test with a clearly invalid token structure

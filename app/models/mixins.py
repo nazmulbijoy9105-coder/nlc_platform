@@ -7,11 +7,14 @@ Soft-delete pattern (is_active) applied where schema mandates.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 
 class UUIDPrimaryKeyMixin:

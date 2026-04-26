@@ -20,7 +20,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("nlc.rule_engine")
 
@@ -1074,15 +1074,30 @@ class NLCRuleEngine:
                 detail={
                     "agm_default_years": agm_default_years,
                     "ar_default_years": ar_default_years,
-                    "override_to_black": True
+                    "override_to_black": True,
                 },
-                    escalation_pending=True,
-                    is_black_override=True,
+                escalation_pending=True,
+                is_black_override=True,
+            ))
+
+        # ── ESC-003: Rescue Required Mandatory — BLACK OVERRIDE ────────
+        active_black = [
+            f for f in self._flags if f.severity == Severity.BLACK
+        ]
+        if len(active_black) >= 2:
+            self._add_flag(ComplianceFlag(
+                rule_id="ESC-003",
+                flag_code="RESCUE_REQUIRED_MANDATORY",
+                severity=Severity.BLACK,
+                score_impact=0,
+                revenue_tier=RevenueTier.CORPORATE_RESCUE,
+                description=(
                     "Multiple BLACK flags combined with strike-off risk. "
                     "Corporate Rescue engagement is mandatory, not optional."
                 ),
                 statutory_basis="Companies Act 1994, Sections 304–309",
-                detail={"black_flag_count": len(active_black), "override_to_black": True}
+                detail={"black_flag_count": len(active_black), "override_to_black": True},
+                is_black_override=True,
             ))
 
     # ═══════════════════════════════════════════════════════════════════

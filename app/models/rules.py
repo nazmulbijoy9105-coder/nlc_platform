@@ -8,20 +8,28 @@ Rule engine reads from legal_rules — AI cannot write to it.
 """
 from __future__ import annotations
 
-import uuid
-from datetime import date, datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    Boolean, Date, DateTime, Enum, ForeignKey,
-    Integer, String, Text,
+    Boolean,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
-from .enums import RuleType, SeverityLevel, RevenueTier
-from .mixins import UUIDPrimaryKeyMixin, TimestampMixin
+from .enums import RevenueTier, RuleType, SeverityLevel
+from .mixins import TimestampMixin, UUIDPrimaryKeyMixin
+
+if TYPE_CHECKING:
+    import uuid
+    from datetime import date, datetime
 
 
 class LegalRule(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -47,14 +55,14 @@ class LegalRule(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         String(1000), nullable=False,
         comment="e.g. Section 81, Companies Act 1994 (Bangladesh)"
     )
-    statutory_effective_date: Mapped[Optional[date]] = mapped_column(
+    statutory_effective_date: Mapped[date | None] = mapped_column(
         Date, nullable=True
     )
     description: Mapped[str] = mapped_column(Text, nullable=False)
 
     # ── Rule Logic ────────────────────────────────────────────────
     # Stored for reference only — actual logic is in Python rule engine
-    rule_condition: Mapped[Optional[dict]] = mapped_column(
+    rule_condition: Mapped[dict | None] = mapped_column(
         JSONB, nullable=True,
         comment="Reference-only condition definition (not executed by DB)"
     )
@@ -83,18 +91,18 @@ class LegalRule(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
 
     # ── Governance ────────────────────────────────────────────────
-    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
-    last_modified_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+    last_modified_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
-    last_modified_at: Mapped[Optional[datetime]] = mapped_column(
+    last_modified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
     # ── Relationships ─────────────────────────────────────────────
-    versions: Mapped[list["LegalRuleVersion"]] = relationship(
+    versions: Mapped[list[LegalRuleVersion]] = relationship(
         "LegalRuleVersion", back_populates="rule",
         order_by="LegalRuleVersion.changed_at.desc()",
         lazy="noload",
@@ -132,13 +140,13 @@ class LegalRuleVersion(UUIDPrimaryKeyMixin, Base):
         JSONB, nullable=False,
         comment="Full snapshot of rule before this change"
     )
-    sro_reference: Mapped[Optional[str]] = mapped_column(
+    sro_reference: Mapped[str | None] = mapped_column(
         String(255), nullable=True,
         comment="RJSC SRO/circular that triggered this change"
     )
 
     # ── Relationships ─────────────────────────────────────────────
-    rule: Mapped["LegalRule"] = relationship(
+    rule: Mapped[LegalRule] = relationship(
         "LegalRule", back_populates="versions"
     )
 

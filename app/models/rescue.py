@@ -6,23 +6,31 @@ Completing a rescue step triggers compliance re-evaluation.
 """
 from __future__ import annotations
 
-import uuid
-from datetime import date, datetime
-from decimal import Decimal
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    Boolean, Date, DateTime, Enum, ForeignKey,
-    Integer, Numeric, String, Text,
+    Boolean,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
 from .enums import ComplexityLevel, RescueStepStatus, RevenueTier
-from .mixins import FullMixin, UUIDPrimaryKeyMixin, TimestampMixin
+from .mixins import FullMixin, TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
+    import uuid
+    from datetime import date, datetime
+    from decimal import Decimal
+
     from .company import Company
 
 
@@ -55,13 +63,13 @@ class RescuePlan(FullMixin, Base):
 
     # ── Status ────────────────────────────────────────────────────
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
-    started_at: Mapped[Optional[datetime]] = mapped_column(
+    started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(
+    completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    target_completion_date: Mapped[Optional[date]] = mapped_column(
+    target_completion_date: Mapped[date | None] = mapped_column(
         Date, nullable=True
     )
 
@@ -73,26 +81,26 @@ class RescuePlan(FullMixin, Base):
 
     # ── Commercial ────────────────────────────────────────────────
     # Admin-only — never exposed to client-facing roles
-    quoted_fee_bdt: Mapped[Optional[Decimal]] = mapped_column(
+    quoted_fee_bdt: Mapped[Decimal | None] = mapped_column(
         Numeric(15, 2), nullable=True
     )
-    confirmed_fee_bdt: Mapped[Optional[Decimal]] = mapped_column(
+    confirmed_fee_bdt: Mapped[Decimal | None] = mapped_column(
         Numeric(15, 2), nullable=True
     )
 
     # ── Assigned ──────────────────────────────────────────────────
-    assigned_staff_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    assigned_staff_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
-    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
 
     # ── Relationships ─────────────────────────────────────────────
-    company: Mapped["Company"] = relationship(
+    company: Mapped[Company] = relationship(
         "Company", back_populates="rescue_plans"
     )
-    steps: Mapped[List["RescueStep"]] = relationship(
+    steps: Mapped[list[RescueStep]] = relationship(
         "RescueStep", back_populates="plan",
         order_by="RescueStep.step_number",
         lazy="selectin",
@@ -132,7 +140,7 @@ class RescueStep(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     step_title: Mapped[str] = mapped_column(String(500), nullable=False)
     step_description: Mapped[str] = mapped_column(Text, nullable=False)
-    statutory_basis: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    statutory_basis: Mapped[str | None] = mapped_column(String(500), nullable=True)
     complexity: Mapped[ComplexityLevel] = mapped_column(
         Enum(ComplexityLevel, name="complexity_level"),
         default=ComplexityLevel.MEDIUM,
@@ -142,7 +150,7 @@ class RescueStep(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # ── Timeline ──────────────────────────────────────────────────
     estimated_days_min: Mapped[int] = mapped_column(Integer, default=7)
     estimated_days_max: Mapped[int] = mapped_column(Integer, default=21)
-    target_completion_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    target_completion_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # ── Status ────────────────────────────────────────────────────
     step_status: Mapped[RescueStepStatus] = mapped_column(
@@ -150,20 +158,20 @@ class RescueStep(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         default=RescueStepStatus.PENDING,
         nullable=False,
     )
-    started_at: Mapped[Optional[datetime]] = mapped_column(
+    started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(
+    completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    blocked_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    completion_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    blocked_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    completion_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # ── Assignment ────────────────────────────────────────────────
-    assigned_staff_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    assigned_staff_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True
     )
-    updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
 
@@ -174,7 +182,7 @@ class RescueStep(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     # ── Relationships ─────────────────────────────────────────────
-    plan: Mapped["RescuePlan"] = relationship(
+    plan: Mapped[RescuePlan] = relationship(
         "RescuePlan", back_populates="steps"
     )
 

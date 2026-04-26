@@ -16,17 +16,17 @@ Handles:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core.security import (
-    encrypt_totp_secret, generate_totp_secret,
-    get_totp_provisioning_uri, hash_password,
-    verify_password, verify_totp_code,
+    encrypt_totp_secret,
+    generate_totp_secret,
+    get_totp_provisioning_uri,
+    hash_password,
+    verify_password,
+    verify_totp_code,
 )
 from app.models.company import CompanyUserAccess
 from app.models.enums import UserRole
@@ -39,7 +39,7 @@ class UserService(BaseService[User]):
 
     # ── Authentication ────────────────────────────────────────────
 
-    async def get_by_email(self, email: str) -> Optional[User]:
+    async def get_by_email(self, email: str) -> User | None:
         """
         Fetch user by email (case-insensitive).
         Returns None if not found or deactivated.
@@ -47,7 +47,7 @@ class UserService(BaseService[User]):
         result = await self.db.execute(
             select(User).where(
                 User.email == email.lower().strip(),
-                User.is_active == True,
+                User.is_active,
             )
         )
         return result.scalar_one_or_none()
@@ -56,7 +56,7 @@ class UserService(BaseService[User]):
         self,
         email: str,
         password: str,
-    ) -> Optional[User]:
+    ) -> User | None:
         """
         Verify email + password. Returns User on success, None on failure.
         Increments failed_login_attempts on bad password.
@@ -84,10 +84,10 @@ class UserService(BaseService[User]):
         """
         if user.locked_until is None:
             return False
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         locked_until = user.locked_until
         if locked_until.tzinfo is None:
-            locked_until = locked_until.replace(tzinfo=timezone.utc)
+            locked_until = locked_until.replace(tzinfo=UTC)
         if now < locked_until:
             return True
         # Lockout expired — clear it
@@ -101,9 +101,9 @@ class UserService(BaseService[User]):
         from app.core.config import get_settings
         settings = get_settings()
         new_count = user.failed_login_attempts + 1
-        updates: Dict = {"failed_login_attempts": new_count}
+        updates: dict = {"failed_login_attempts": new_count}
         if new_count >= settings.max_login_attempts:
-            lockout_until = datetime.now(timezone.utc) + timedelta(
+            lockout_until = datetime.now(UTC) + timedelta(
                 minutes=settings.lockout_minutes
             )
             updates["locked_until"] = lockout_until
@@ -127,11 +127,11 @@ class UserService(BaseService[User]):
 
     async def record_login(self, user: User) -> None:
         """Update last_login_at timestamp."""
-        await self.update_instance(user, last_login_at=datetime.now(timezone.utc))
+        await self.update_instance(user, last_login_at=datetime.now(UTC))
 
     # ── 2FA Setup ─────────────────────────────────────────────────
 
-    async def setup_totp(self, user: User) -> Dict[str, str]:
+    async def setup_totp(self, user: User) -> dict[str, str]:
         """
         Generate a new TOTP secret for the user.
         Returns the secret and provisioning URI for QR code.
@@ -175,7 +175,7 @@ class UserService(BaseService[User]):
 
     # ── Company Access ────────────────────────────────────────────
 
-    async def get_company_ids(self, user_id: uuid.UUID) -> List[str]:
+    async def get_company_ids(self, user_id: uuid.UUID) -> list[str]:
         """
         Return list of company UUID strings this user can access.
         Used to populate JWT company_ids claim.
@@ -184,7 +184,7 @@ class UserService(BaseService[User]):
         result = await self.db.execute(
             select(CompanyUserAccess.company_id).where(
                 CompanyUserAccess.user_id == user_id,
-                CompanyUserAccess.is_active == True,
+                CompanyUserAccess.is_active,
             )
         )
         return [str(row[0]) for row in result.all()]
@@ -212,7 +212,7 @@ class UserService(BaseService[User]):
             existing.can_edit = can_edit
             existing.can_view_financials = can_view_financials
             existing.granted_by = granted_by
-            existing.granted_at = datetime.now(timezone.utc)
+            existing.granted_at = datetime.now(UTC)
             self.db.add(existing)
             await self.db.flush()
             return existing
@@ -224,7 +224,7 @@ class UserService(BaseService[User]):
             can_edit=can_edit,
             can_view_financials=can_view_financials,
             granted_by=granted_by,
-            granted_at=datetime.now(timezone.utc),
+            granted_at=datetime.now(UTC),
         )
         self.db.add(access)
         await self.db.flush()
@@ -255,8 +255,8 @@ class UserService(BaseService[User]):
         role: UserRole,
         plain_password: str,
         *,
-        phone: Optional[str] = None,
-        designation: Optional[str] = None,
+        phone: str | None = None,
+        designation: str | None = None,
         created_by: uuid.UUID,
     ) -> User:
         """
@@ -292,14 +292,14 @@ class UserService(BaseService[User]):
         )
         return True
 
-    async def get_all_active(self) -> List[User]:
+    async def get_all_active(self) -> list[User]:
         """List all active users. Admin only."""
         return await self.list_all(
-            filters=[User.is_active == True],
+            filters=[User.is_active],
             order_by=User.full_name,
         )
 
-    async def build_jwt_payload(self, user: User) -> Dict:
+    async def build_jwt_payload(self, user: User) -> dict:
         """
         Build the full JWT payload for an authenticated user.
         For admin roles, company_ids is empty (RLS handles access).

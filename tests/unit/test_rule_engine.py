@@ -20,15 +20,13 @@ Pytest marks:
 
 from __future__ import annotations
 
-import uuid
 from datetime import date, timedelta
 
 import pytest
 
 from tests.conftest import (
-    assert_flag_triggered,
     assert_flag_not_triggered,
-    assert_risk_band,
+    assert_flag_triggered,
 )
 
 # All tests in this file are unit tests
@@ -797,7 +795,7 @@ class TestScoreImmutability:
         At minimum, we should get flags from multiple modules.
         """
         output = rule_engine.evaluate(black_band_profile)
-        modules_triggered = set(f.rule_id.split("-")[0] for f in output.flags)
+        modules_triggered = {f.rule_id.split("-")[0] for f in output.flags}
         assert len(modules_triggered) >= 3, (
             f"Expected flags from multiple modules, only got: {modules_triggered}"
         )

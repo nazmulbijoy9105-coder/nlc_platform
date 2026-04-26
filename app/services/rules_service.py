@@ -16,11 +16,10 @@ AI Constitution Article 1 — RULE GOVERNANCE:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
-from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.models.rules import LegalRule, LegalRuleVersion
 from app.services.base import BaseService
@@ -33,15 +32,15 @@ class RulesService(BaseService[LegalRule]):
         self,
         *,
         active_only: bool = True,
-        rule_type: Optional[str] = None,
-    ) -> List[LegalRule]:
+        rule_type: str | None = None,
+    ) -> list[LegalRule]:
         """
         Get all ILRMF rules.
         _get_all_legal_rules stub implementation.
         """
         filters = []
         if active_only:
-            filters.append(LegalRule.is_active == True)
+            filters.append(LegalRule.is_active)
         if rule_type:
             filters.append(LegalRule.rule_type == rule_type)
         result = await self.db.execute(
@@ -51,7 +50,7 @@ class RulesService(BaseService[LegalRule]):
         )
         return list(result.scalars().all())
 
-    async def get_by_rule_id(self, rule_id: str) -> Optional[LegalRule]:
+    async def get_by_rule_id(self, rule_id: str) -> LegalRule | None:
         """
         Fetch a rule by its ILRMF rule_id (e.g. "AGM-001").
         _get_legal_rule stub implementation.
@@ -67,17 +66,17 @@ class RulesService(BaseService[LegalRule]):
         *,
         change_reason: str,
         changed_by: uuid.UUID,
-        sro_reference: Optional[str] = None,
+        sro_reference: str | None = None,
         # Updatable fields
-        rule_name: Optional[str] = None,
-        statutory_basis: Optional[str] = None,
-        description: Optional[str] = None,
-        default_severity: Optional[str] = None,
-        score_impact: Optional[int] = None,
-        revenue_tier: Optional[str] = None,
-        is_active: Optional[bool] = None,
-        rule_condition: Optional[Dict] = None,
-    ) -> Optional[LegalRule]:
+        rule_name: str | None = None,
+        statutory_basis: str | None = None,
+        description: str | None = None,
+        default_severity: str | None = None,
+        score_impact: int | None = None,
+        revenue_tier: str | None = None,
+        is_active: bool | None = None,
+        rule_condition: dict | None = None,
+    ) -> LegalRule | None:
         """
         Update a legal rule with mandatory version history.
         AI Constitution Article 1: change_reason is REQUIRED.
@@ -111,10 +110,10 @@ class RulesService(BaseService[LegalRule]):
             new_version = "1.1"
 
         # ── Step 3: Apply updates ───────────────────────────────────
-        updates: Dict[str, Any] = {
+        updates: dict[str, Any] = {
             "rule_version":     new_version,
             "last_modified_by": changed_by,
-            "last_modified_at": datetime.now(timezone.utc),
+            "last_modified_at": datetime.now(UTC),
         }
         if rule_name is not None:
             updates["rule_name"] = rule_name
@@ -140,7 +139,7 @@ class RulesService(BaseService[LegalRule]):
         rule: LegalRule,
         change_reason: str,
         changed_by: uuid.UUID,
-        sro_reference: Optional[str] = None,
+        sro_reference: str | None = None,
     ) -> LegalRuleVersion:
         """
         Snapshot the current rule state into LegalRuleVersion.
@@ -164,7 +163,7 @@ class RulesService(BaseService[LegalRule]):
             version=rule.rule_version or "1.0",
             change_reason=change_reason,
             changed_by=changed_by,
-            changed_at=datetime.now(timezone.utc),
+            changed_at=datetime.now(UTC),
             previous_definition=previous_definition,
             sro_reference=sro_reference,
         )
@@ -172,7 +171,7 @@ class RulesService(BaseService[LegalRule]):
         await self.db.flush()
         return version
 
-    async def get_version_history(self, rule_id: str) -> List[LegalRuleVersion]:
+    async def get_version_history(self, rule_id: str) -> list[LegalRuleVersion]:
         """Get full version history for a rule."""
         result = await self.db.execute(
             select(LegalRuleVersion)
@@ -181,12 +180,12 @@ class RulesService(BaseService[LegalRule]):
         )
         return list(result.scalars().all())
 
-    async def get_black_override_rules(self) -> List[LegalRule]:
+    async def get_black_override_rules(self) -> list[LegalRule]:
         """Get all rules that trigger BLACK band override."""
         result = await self.db.execute(
             select(LegalRule).where(
-                LegalRule.is_black_override == True,
-                LegalRule.is_active == True,
+                LegalRule.is_black_override,
+                LegalRule.is_active,
             )
         )
         return list(result.scalars().all())

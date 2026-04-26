@@ -40,7 +40,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from celery import Celery
 from celery.signals import (
@@ -230,7 +230,10 @@ celery_app.conf.update(
 )
 
 # ── Import beat schedule (must come after celery_app is created) ──────
-from app.worker.beat_schedule import BEAT_SCHEDULE  # noqa: E402
+from datetime import UTC
+
+from app.worker.beat_schedule import BEAT_SCHEDULE
+
 celery_app.conf.beat_schedule = BEAT_SCHEDULE
 
 
@@ -239,7 +242,7 @@ celery_app.conf.beat_schedule = BEAT_SCHEDULE
 # ═══════════════════════════════════════════════════════════════════════
 
 @celeryd_init.connect
-def configure_worker(sender: str = None, conf: Any = None, **kwargs: Any) -> None:
+def configure_worker(sender: str | None = None, conf: Any = None, **kwargs: Any) -> None:
     """Called when a new Celery worker process starts."""
     try:
         import structlog
@@ -274,10 +277,10 @@ def on_worker_shutdown(sender: Any = None, **kwargs: Any) -> None:
 
 @task_prerun.connect
 def on_task_prerun(
-    task_id: str = None,
+    task_id: str | None = None,
     task: Any = None,
-    args: tuple = None,
-    kwargs: Dict = None,
+    args: tuple | None = None,
+    kwargs: dict | None = None,
     **extra: Any,
 ) -> None:
     """Log task start with structured context."""
@@ -289,12 +292,12 @@ def on_task_prerun(
 
 @task_postrun.connect
 def on_task_postrun(
-    task_id: str = None,
+    task_id: str | None = None,
     task: Any = None,
-    args: tuple = None,
-    kwargs: Dict = None,
+    args: tuple | None = None,
+    kwargs: dict | None = None,
     retval: Any = None,
-    state: str = None,
+    state: str | None = None,
     **extra: Any,
 ) -> None:
     """Log task completion."""
@@ -315,19 +318,19 @@ def on_task_success(
 
 @task_failure.connect
 def on_task_failure(
-    task_id: str = None,
-    exception: Exception = None,
+    task_id: str | None = None,
+    exception: Exception | None = None,
     traceback: Any = None,
     sender: Any = None,
-    args: tuple = None,
-    kwargs: Dict = None,
+    args: tuple | None = None,
+    kwargs: dict | None = None,
     einfo: Any = None,
     **extra: Any,
 ) -> None:
     """
     Handle task failure.
     Logs the error with full context. Does not suppress the exception.
-    For compliance evaluation failures: the company will be re-evaluated 
+    For compliance evaluation failures: the company will be re-evaluated
     on the next daily cron run.
     """
     logger.error(
@@ -339,30 +342,30 @@ def on_task_failure(
     if kwargs and kwargs.get("company_id"):
         try:
             import asyncio
-            from sqlalchemy.ext.asyncio import AsyncSession
+
             # Fire-and-forget activity log — do not let this crash the signal handler
-            async def _log_failure():
+            async def _log_failure() -> None:
+                from datetime import datetime
+
                 from app.models.database import AsyncSessionLocal
                 from app.models.infrastructure import UserActivityLog
-                from datetime import datetime, timezone
-                async with AsyncSessionLocal() as db:
-                    async with db.begin():
-                        log = UserActivityLog(
-                            action="TASK_FAILURE",
-                            resource_type="CeleryTask",
-                            description=(
-                                f"Task {sender.name if sender else 'unknown'} "
-                                f"failed: {exception!r:.200}"
-                            ),
-                            detail={
-                                "task_id":    task_id,
-                                "task_name":  sender.name if sender else None,
-                                "company_id": str(kwargs.get("company_id", "")),
-                                "error":      repr(exception)[:500],
-                            },
-                            logged_at=datetime.now(timezone.utc),
-                        )
-                        db.add(log)
+                async with AsyncSessionLocal() as db, db.begin():
+                    log = UserActivityLog(
+                        action="TASK_FAILURE",
+                        resource_type="CeleryTask",
+                        description=(
+                            f"Task {sender.name if sender else 'unknown'} "
+                            f"failed: {exception!r:.200}"
+                        ),
+                        detail={
+                            "task_id":    task_id,
+                            "task_name":  sender.name if sender else None,
+                            "company_id": str(kwargs.get("company_id", "")),
+                            "error":      repr(exception)[:500],
+                        },
+                        logged_at=datetime.now(UTC),
+                    )
+                    db.add(log)
 
             asyncio.run(_log_failure())
         except Exception as log_err:
@@ -387,7 +390,7 @@ def on_task_retry(
 # HEALTH CHECK HELPER
 # ═══════════════════════════════════════════════════════════════════════
 
-def check_worker_health() -> Dict[str, Any]:
+def check_worker_health() -> dict[str, Any]:
     """
     Check Celery worker health.
     Returns dict with: active_workers, active_tasks, queued_tasks.
