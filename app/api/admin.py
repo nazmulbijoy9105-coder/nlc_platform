@@ -32,7 +32,7 @@ Endpoints:
 from __future__ import annotations
 
 import uuid
-from typing import Optional, List
+from typing import Dict, List, Optional
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, Query, status
@@ -217,7 +217,7 @@ async def create_user(
         email=body.email,
         full_name=body.full_name,
         role=body.role,
-        password=body.password,
+        plain_password=body.password,
         created_by=current_user.id,
     )
 
@@ -267,7 +267,7 @@ async def update_user(
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update.")
 
-    user = await svc.update_by_id(user_id, update_data)
+    user = await svc.update_by_id(user_id, **update_data)
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
 
@@ -298,10 +298,11 @@ async def grant_company_access(
     svc = UserService(db)
     activity = ActivityService(db)
 
+    can_edit = body.access_level.upper() == "FULL"
     await svc.grant_company_access(
         user_id=user_id,
         company_id=body.company_id,
-        access_level=body.access_level,
+        can_edit=can_edit,
         granted_by=current_user.id,
     )
 
@@ -332,6 +333,42 @@ async def revoke_company_access(
     svc = UserService(db)
     await svc.revoke_company_access(user_id=user_id, company_id=company_id)
     return MessageResponse(message="Company access revoked.")
+
+
+@router.post(
+    "/users/{user_id}/unlock",
+    response_model=MessageResponse,
+    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
+    summary="Unlock a locked-out account and reset failed login counter",
+)
+async def unlock_account(
+    user_id: uuid.UUID,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    from sqlalchemy import update
+    from app.models.user import User as UserModel
+    from datetime import timezone as _tz
+    import datetime as _dt
+
+    await db.execute(
+        update(UserModel)
+        .where(UserModel.id == user_id)
+        .values(failed_login_attempts=0, locked_until=None)
+    )
+    await db.commit()
+
+    activity = ActivityService(db)
+    await activity.log(
+        action="ACCOUNT_UNLOCKED",
+        resource_type="user",
+        resource_id=str(user_id),
+        description="Account manually unlocked by admin",
+        ip_address=request.client.host if request.client else None,
+        actor_user_id=current_user.id,
+    )
+    return MessageResponse(message="Account unlocked and login counter reset.")
 
 
 @router.post(
@@ -594,5 +631,3 @@ async def worker_health(
         }
 
 
-# Fix missing import
-from typing import Dict
