@@ -493,8 +493,3 @@ RevenueAccess = Annotated[TokenData, Depends(require_revenue_access)]
 # Alias for backward compatibility
 get_db_for_user = get_db
 
-
-
-# Alias for backward compatibility
-get_db_for_user = get_db
-

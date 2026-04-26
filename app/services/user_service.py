@@ -144,10 +144,12 @@ class UserService(BaseService[User]):
             totp_secret_encrypted=encrypted,
             totp_enabled=False,  # Not yet confirmed
         )
+        # Format secret in groups of 4 for manual entry (e.g. "ABCD EFGH IJKL")
+        manual_key = " ".join(secret[i:i+4] for i in range(0, len(secret), 4))
         return {
-            "secret": secret,
-            "provisioning_uri": get_totp_provisioning_uri(secret, user.email),
-            "qr_url": f"otpauth://totp/{user.email}?secret={secret}&issuer=NeumLexCounsel",
+            "totp_secret": secret,
+            "qr_uri": get_totp_provisioning_uri(secret, user.email),
+            "manual_entry_key": manual_key,
         }
 
     async def confirm_totp(self, user: User, code: str) -> bool:
@@ -275,13 +277,20 @@ class UserService(BaseService[User]):
     async def change_password(
         self,
         user: User,
-        new_plain_password: str,
-    ) -> None:
-        """Change user password. Invalidates active sessions (no token blacklist — use short expiry)."""
+        current_password: str,
+        new_password: str,
+    ) -> bool:
+        """
+        Verify current_password then update to new_password.
+        Returns True on success, False if current_password is wrong.
+        """
+        if not verify_password(current_password, user.password_hash):
+            return False
         await self.update_instance(
             user,
-            password_hash=hash_password(new_plain_password),
+            password_hash=hash_password(new_password),
         )
+        return True
 
     async def get_all_active(self) -> List[User]:
         """List all active users. Admin only."""
