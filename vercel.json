@@ -16,10 +16,5 @@
   "env": {
     "PYTHONPATH": ".",
     "CELERY_ENABLED": "false"
-  },
-  "functions": {
-    "api/index.py": {
-      "maxDuration": 30
-    }
   }
 }
