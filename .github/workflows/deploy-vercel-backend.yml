@@ -1,14 +1,9 @@
 # =============================================================================
-# DEPRECATED: Backend is deployed on Render, not Vercel.
-# Render auto-deploys from the main branch via render.yaml.
-# See: https://nlc-platform.onrender.com
-#
-# To trigger a manual Render deploy, use the Render dashboard or:
-#   curl -X POST https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys \
-#     -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json"
+# GitHub Actions: Trigger Render Backend Redeploy on Push to main
+# Backend: https://nlc-platform.onrender.com
 # =============================================================================
 
-name: Deploy Backend (Render - Auto)
+name: Deploy Backend (Render)
 
 on:
   push:
@@ -17,26 +12,38 @@ on:
   workflow_dispatch:
 
 jobs:
-  verify-backend:
-    name: Verify Render Backend Health
+  deploy-render:
+    name: Trigger Render Redeploy
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for Render deployment
-        run: sleep 30
-
-      - name: Health check Render backend
+      - name: Trigger Render Deploy Hook
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
-          echo "Checking https://nlc-platform.onrender.com/api/v1/health/live"
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "::warning::RENDER_DEPLOY_HOOK_URL secret not set."
+            echo "Get it from: Render Dashboard → nlc-platform → Settings → Deploy Hook"
+            echo "Then add it as RENDER_DEPLOY_HOOK_URL in GitHub Secrets."
+            exit 0
+          fi
+          echo "Triggering Render deploy..."
+          RESPONSE=$(curl -s -X POST "$RENDER_DEPLOY_HOOK")
+          echo "Response: $RESPONSE"
+
+      - name: Wait and verify backend health
+        run: |
+          echo "Waiting 3 minutes for Render to build and deploy..."
+          sleep 180
           for i in 1 2 3 4 5; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 \
-              https://nlc-platform.onrender.com/api/v1/health/live)
+              https://nlc-platform.onrender.com/api/v1/health/live 2>/dev/null)
+            echo "Health check attempt $i: HTTP $STATUS"
             if [ "$STATUS" = "200" ]; then
-              echo "Backend is healthy (HTTP $STATUS)"
+              echo "Backend is healthy!"
               curl -s https://nlc-platform.onrender.com/api/v1/health/live
               exit 0
             fi
-            echo "Attempt $i: HTTP $STATUS — waiting 30s..."
             sleep 30
           done
-          echo "::warning::Backend health check did not return 200 after 5 attempts"
+          echo "::warning::Backend health check incomplete — check Render dashboard"
           exit 0
