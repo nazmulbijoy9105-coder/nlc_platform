@@ -5,17 +5,31 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     target: api
+    healthCheckPath: /api/v1/health/live
     envVars:
       - key: DATABASE_URL
-        sync: false
-      - key: SECRET_KEY
-        generateValue: true
+        value: "postgresql+asyncpg://neondb_owner:npg_c6sEDg3PXFAS@ep-winter-forest-aozont4u-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?ssl=require"
+      - key: JWT_SECRET_KEY
+        value: "248a7d73134f6bf0bcd311a948e5bfe0bb1ea39705e6800613b6bea641f7d9ad2a590f1314f06f7c434e74d3f3bd5817d96d3d99a26fecaaee293af70eaf6215"
+      - key: TOTP_ENCRYPTION_KEY
+        value: "f53c035b2e32e0a57ff9c8c2561d43fca70fe0ae33999a4ea245016a6dcf8e98"
       - key: REDIS_URL
-        sync: false
+        value: "redis://localhost:6379/0"
       - key: ENVIRONMENT
         value: production
-      - key: PORT
-        value: 8000
-      - key: CORS_ORIGINS
-        value: https://nlc-frontend.vercel.app
-    healthCheckPath: /api/v1/health
+      - key: CELERY_ENABLED
+        value: "false"
+      - key: ALLOWED_ORIGINS
+        value: "https://nlc-frontend.vercel.app,https://nlc-frontend-md-nazmul-islams-projects-a30bac60.vercel.app,http://localhost:3000"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: AI_PROVIDER
+        value: local_llm
+      - key: AWS_REGION
+        value: ap-southeast-1
+      - key: S3_BUCKET_NAME
+        value: nlc-documents
+      - key: S3_BACKUP_BUCKET
+        value: nlc-backups
+      - key: EMAIL_FROM
+        value: compliance@neumlexcounsel.com
