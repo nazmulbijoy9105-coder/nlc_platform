@@ -7,14 +7,8 @@
 #   VERCEL_ORG_ID             - Vercel org/team ID   (Vercel project Settings)
 #   VERCEL_BACKEND_PROJECT_ID - Vercel project ID    (Vercel project Settings for this backend)
 #
-# Also set these in Vercel dashboard → Environment Variables for this project:
-#   DATABASE_URL=postgresql+asyncpg://...
-#   JWT_SECRET_KEY=<openssl rand -hex 64>
-#   TOTP_ENCRYPTION_KEY=<python3 -c "import secrets; print(secrets.token_hex(32))">
-#   REDIS_URL=redis://...
-#   ALLOWED_ORIGINS=https://nlc-frontend.vercel.app,http://localhost:3000
-#   ENVIRONMENT=production
-#   CELERY_ENABLED=false
+# Environment variables are automatically configured by the "Configure Vercel
+# environment variables" step below — no manual Vercel dashboard setup needed.
 #
 # =============================================================================
 
@@ -42,6 +36,40 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
+      - name: Configure Vercel environment variables
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_BACKEND_PROJECT_ID }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::warning::VERCEL_TOKEN or VERCEL_BACKEND_PROJECT_ID not set — skipping."
+            exit 0
+          fi
+
+          set_env() {
+            curl -s -X POST "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID/env" \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{\"key\":\"$1\",\"value\":\"$2\",\"type\":\"encrypted\",\"target\":[\"production\",\"preview\",\"development\"]}" \
+              > /dev/null && echo "  Set $1"
+          }
+
+          echo "Configuring environment variables..."
+          set_env "DATABASE_URL" "postgresql+asyncpg://neondb_owner:npg_c6sEDg3PXFAS@ep-winter-forest-aozont4u-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?ssl=require"
+          set_env "JWT_SECRET_KEY" "${{ secrets.NLC_JWT_SECRET_KEY }}"
+          set_env "TOTP_ENCRYPTION_KEY" "${{ secrets.NLC_TOTP_KEY }}"
+          set_env "ENVIRONMENT" "production"
+          set_env "CELERY_ENABLED" "false"
+          set_env "PYTHONPATH" "."
+          set_env "AI_PROVIDER" "local_llm"
+          set_env "LOG_LEVEL" "INFO"
+          set_env "ALLOWED_ORIGINS" "https://nlc-frontend.vercel.app,https://nlc-frontend.coonect.vercel.app,http://localhost:3000"
+          set_env "REDIS_URL" "redis://localhost:6379/0"
+          set_env "AWS_REGION" "ap-southeast-1"
+          set_env "S3_BUCKET_NAME" "nlc-documents"
+          set_env "EMAIL_FROM" "compliance@neumlexcounsel.com"
+          echo "Environment variables configured."
+
       - name: Deploy backend to Vercel Production
         id: deploy
         env:
@@ -64,7 +92,7 @@ jobs:
       - name: Health Check
         if: ${{ steps.deploy.outputs.deploy_url != '' }}
         run: |
-          sleep 20
+          sleep 30
           TARGET_URL="${{ steps.deploy.outputs.deploy_url }}/api/v1/health/live"
           echo "Checking backend health: $TARGET_URL"
           curl -f -s --max-time 30 "$TARGET_URL" > /dev/null && \
