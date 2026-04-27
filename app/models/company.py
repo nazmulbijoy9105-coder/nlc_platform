@@ -6,6 +6,9 @@ Multi-tenant isolation enforced via PostgreSQL RLS on this table.
 """
 from __future__ import annotations
 
+import uuid
+from datetime import date, datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (

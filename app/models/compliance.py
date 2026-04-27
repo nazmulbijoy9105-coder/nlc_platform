@@ -7,6 +7,8 @@ AI Constitution Article 4: Score formula fixed. History immutable.
 """
 from __future__ import annotations
 
+import uuid
+from datetime import date, datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (

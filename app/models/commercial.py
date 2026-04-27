@@ -6,6 +6,9 @@ AI Constitution Article 2.2: Revenue data never exposed to client roles.
 """
 from __future__ import annotations
 
+import uuid
+from datetime import date, datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (

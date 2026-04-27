@@ -6,6 +6,7 @@ Password hashed (bcrypt). TOTP secret encrypted at application layer.
 """
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, Enum, Integer, String, Text

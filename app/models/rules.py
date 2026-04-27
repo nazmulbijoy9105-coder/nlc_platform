@@ -8,6 +8,8 @@ Rule engine reads from legal_rules — AI cannot write to it.
 """
 from __future__ import annotations
 
+import uuid
+from datetime import date, datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (

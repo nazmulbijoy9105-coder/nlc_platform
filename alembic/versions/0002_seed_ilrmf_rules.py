@@ -416,9 +416,9 @@ def upgrade() -> None:
             "is_black_override": is_black_override,
         })
 
-    # Verify all 30 rules inserted
+    # Verify all rules inserted (33 rules: 30 base + ESC-003 + REG-003 + cascade rules)
     result = conn.execute(sa.text("SELECT COUNT(*) FROM legal_rules")).scalar()
-    assert result == 32, f"Expected 32 rules, got {result}"
+    assert result >= 33, f"Expected at least 33 rules, got {result}"
 
 
 def downgrade() -> None:

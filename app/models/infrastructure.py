@@ -6,6 +6,8 @@ AI Constitution Article 6: Activity logs append-only, 7-year retention.
 """
 from __future__ import annotations
 
+import uuid
+from datetime import date, datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (

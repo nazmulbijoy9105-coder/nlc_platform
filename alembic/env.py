@@ -157,20 +157,38 @@ async def run_async_migrations() -> None:
     Async entry point for migrations.
     Uses asyncpg engine with NullPool for Alembic (one connection per run).
     """
+    import ssl as _ssl
+    import re as _re
+
     # Override URL with resolved value
     configuration = config.get_section(config.config_ini_section, {})
-    configuration["sqlalchemy.url"] = get_database_url()
+    db_url = get_database_url()
+
+    # asyncpg does not accept ssl=require as a URL param — strip it and use connect_args
+    connect_args = {}
+    if "ssl=require" in db_url or "sslmode=require" in db_url:
+        db_url = _re.sub(r'[?&]ssl=require', '', db_url)
+        db_url = _re.sub(r'[?&]sslmode=require', '', db_url)
+        db_url = db_url.rstrip('?').rstrip('&')
+        ssl_ctx = _ssl.create_default_context()
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = _ssl.CERT_NONE
+        connect_args["ssl"] = ssl_ctx
+
+    configuration["sqlalchemy.url"] = db_url
 
     connectable = async_engine_from_config(
         configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,  # Always NullPool for migrations
+        connect_args=connect_args,
     )
 
     async with connectable.connect() as connection:
         # Set timezone for the session
         await connection.execute(text("SET timezone = 'UTC'"))
         await connection.run_sync(do_run_migrations)
+        await connection.commit()
 
     await connectable.dispose()
 
