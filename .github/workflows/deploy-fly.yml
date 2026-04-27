@@ -104,6 +104,11 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
         run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "::warning::FLY_API_TOKEN_PROD secret not set — skipping Fly.io deploy."
+            echo "Add the secret to enable automatic Fly.io deployment."
+            exit 0
+          fi
           flyctl deploy --remote-only \
             --app nlc-api \
             --build-arg VERSION=${{ steps.deploy_id.outputs.version }} \
@@ -114,6 +119,10 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_STAGING }}
         run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "::warning::FLY_API_TOKEN_STAGING secret not set — skipping staging deploy."
+            exit 0
+          fi
           flyctl deploy --remote-only \
             --app nlc-api-staging \
             --build-arg VERSION=${{ steps.deploy_id.outputs.version }} \
@@ -132,6 +141,7 @@ jobs:
 
       - name: Notify Slack on Success
         if: success()
+        continue-on-error: true
         uses: slackapi/slack-github-action@v1
         with:
           payload: |
@@ -152,6 +162,7 @@ jobs:
 
       - name: Notify Slack on Failure
         if: failure()
+        continue-on-error: true
         uses: slackapi/slack-github-action@v1
         with:
           payload: |
