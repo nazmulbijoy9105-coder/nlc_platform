@@ -35,6 +35,8 @@ if TYPE_CHECKING:
     import uuid
     from datetime import date, datetime
 
+    from .company import Company
+
 
 # ═══════════════════════════════════════════════════════════════════
 # NOTIFICATION
@@ -90,6 +92,11 @@ class Notification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     retry_count: Mapped[int] = mapped_column(Integer, default=0)
+
+    # ── Relationships ─────────────────────────────────────────────
+    company: Mapped[Company] = relationship(
+        "Company", back_populates="notifications", lazy="noload"
+    )
 
     def __repr__(self) -> str:
         return f"<Notification {self.notification_type} [{self.notification_status}]>"
