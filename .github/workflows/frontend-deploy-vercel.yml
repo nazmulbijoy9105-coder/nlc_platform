@@ -1,15 +1,14 @@
 # =============================================================================
-# GitHub Actions: Auto-Deploy Frontend to Vercel on Push
+# GitHub Actions: Auto-Deploy Frontend (nlc_frontend) to Vercel
 # =============================================================================
 #
 # Required GitHub Secrets:
 #   NLC_FRONTEND_PAT  - Fine-grained PAT with read access to nlc_frontend repo
-#   VERCEL_TOKEN      - Vercel deploy token
-#   VERCEL_ORG_ID     - Vercel org/team ID
-#   VERCEL_PROJECT_ID - Vercel project ID for nlc-frontend
+#   VERCEL_TOKEN      - Your Vercel deploy token (vercel.com → Account Settings → Tokens)
+#   VERCEL_ORG_ID     - team_5lVdmnfrsIJ8vVeGDIubLkas
+#   VERCEL_PROJECT_ID - prj_qU3TXrWK9ynGAcyu8swbt47qgP5s
 #
-# To enable: add all four secrets above in GitHub → Settings → Secrets → Actions
-#
+# Backend URL: https://nlc-platform.onrender.com (Render — auto-deploys from main)
 # =============================================================================
 
 name: Deploy Frontend to Vercel
@@ -33,8 +32,8 @@ jobs:
             echo "available=true" >> $GITHUB_OUTPUT
           else
             echo "available=false" >> $GITHUB_OUTPUT
-            echo "::warning::NLC_FRONTEND_PAT or VERCEL_TOKEN secret not set — skipping frontend deploy."
-            echo "Add secrets at: Settings → Secrets and variables → Actions"
+            echo "::warning::NLC_FRONTEND_PAT or VERCEL_TOKEN not set — skipping frontend deploy."
+            echo "Add: NLC_FRONTEND_PAT and VERCEL_TOKEN in GitHub Settings → Secrets → Actions"
           fi
 
   deploy:
@@ -78,7 +77,6 @@ jobs:
           if [ -z "$TARGET_URL" ]; then
             TARGET_URL="https://nlc-frontend.vercel.app"
           fi
-          echo "Checking: $TARGET_URL"
           curl -f -s --max-time 30 "$TARGET_URL" > /dev/null && \
-            echo "Health check passed" || \
-            echo "::warning::Health check failed for $TARGET_URL"
+            echo "Frontend health check passed" || \
+            echo "::warning::Frontend health check failed for $TARGET_URL"

@@ -1,3 +1,9 @@
+[project]
+name = "nlc-platform"
+version = "1.0.0"
+requires-python = ">=3.11"
+dependencies = []
+
 # =============================================================================
 # pyproject.toml — NLC Project Config (pytest + ruff + mypy)
 # =============================================================================
