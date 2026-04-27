@@ -6,6 +6,9 @@ AI Constitution Article 2: NID/passport are sensitive governance data.
 """
 from __future__ import annotations
 
+import uuid
+from datetime import date
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (

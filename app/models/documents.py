@@ -7,6 +7,8 @@ auto_sent_blocked = TRUE always. Human approval mandatory.
 """
 from __future__ import annotations
 
+import uuid
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
