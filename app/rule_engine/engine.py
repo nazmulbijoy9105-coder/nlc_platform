@@ -275,9 +275,9 @@ SCORE_WEIGHTS = {
 
 # Risk band boundaries
 RISK_BANDS = {
-    Severity.GREEN:  (80, 100),
-    Severity.YELLOW: (60, 79),
-    Severity.RED:    (30, 59),
+    Severity.GREEN:  (70, 100),
+    Severity.YELLOW: (50, 69),
+    Severity.RED:    (30, 49),
     Severity.BLACK:  (0, 29),
 }
 
