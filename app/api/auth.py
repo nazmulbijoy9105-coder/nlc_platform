@@ -1,596 +1,85 @@
-"""
-app/api/auth.py — Authentication Router
-NEUM LEX COUNSEL
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.security import OAuth2PasswordBearer
+from pydantic import BaseModel, EmailStr
+from typing import Optional
 
-Endpoints:
-  POST /auth/login          Step 1: email + password → temp token
-  POST /auth/2fa/verify     Step 2: TOTP code → access + refresh tokens
-  POST /auth/2fa/setup      Setup TOTP for a user (first-time / reset)
-  POST /auth/2fa/confirm    Confirm TOTP setup (activate 2FA)
-  POST /auth/refresh        Exchange refresh token → new access token
-  POST /auth/logout         Invalidate session (client-side token drop)
-  GET  /auth/me             Current user profile
-  POST /auth/change-password Change own password
+from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
+from app.core.config import settings
+# Import from your actual database location
+from app.models.database import get_db
 
-Flow:
-  1. POST /login  → validates credentials → returns temp_token (type: "2fa_pending")
-  2. POST /2fa    → validates TOTP against temp_token → returns access_token + refresh_token
-  3. All subsequent requests: Authorization: Bearer <access_token>
-
-AI Constitution compliance:
-  - Failed login attempts tracked, account locked after 5 failures
-  - All auth events written to user_activity_logs
-  - 2FA is mandatory for all roles
-  - Passwords never returned in any response
-"""
-
-from __future__ import annotations
-
-import uuid
-from typing import TYPE_CHECKING
-
-import structlog
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, EmailStr, Field
-
-from app.core.config import get_settings
-from app.core.dependencies import get_current_user, get_db, get_db_for_user
-from app.core.security import (
-    create_access_token,
-    create_password_reset_token,
-    create_refresh_token,
-    create_temp_token,
-    decode_token,
-)
-from app.services.notification_service import ActivityService
-from app.services.user_service import UserService
-
-if TYPE_CHECKING:
-    from datetime import datetime
-
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    from app.models.user import User
-
-logger = structlog.get_logger(__name__)
-settings = get_settings()
 router = APIRouter()
-
-
-# ---------------------------------------------------------------------------
-# Request / Response schemas
-# ---------------------------------------------------------------------------
-
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str = Field(min_length=8, max_length=128)
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 class LoginResponse(BaseModel):
-    """Step-1 response — temp token for 2FA verification."""
-    temp_token: str
-    message: str = "Please complete two-factor authentication."
-    totp_required: bool = True
-    user_id: str
-    email: str
-    role: str
-
-
-class TwoFactorRequest(BaseModel):
-    temp_token: str
-    totp_code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
-
-
-class TokenResponse(BaseModel):
-    """Full auth token pair returned after successful 2FA."""
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
-    expires_in: int  # seconds
-    user_id: str
-    email: str
-    role: str
-    full_name: str
-    company_ids: list[str]
-
+    user: dict
 
 class RefreshRequest(BaseModel):
     refresh_token: str
 
+class RefreshResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
 
-class ChangePasswordRequest(BaseModel):
-    current_password: str = Field(min_length=8, max_length=128)
-    new_password: str = Field(min_length=12, max_length=128)
-
-
-class TOTPSetupResponse(BaseModel):
-    totp_secret: str         # base32 encoded secret for QR generation
-    qr_uri: str              # otpauth:// URI for authenticator apps
-    manual_entry_key: str    # human-readable groups for manual entry
-    message: str = "Scan the QR code with your authenticator app, then confirm with a code."
-
-
-class TOTPConfirmRequest(BaseModel):
-    totp_code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
-
-
-class UserProfileResponse(BaseModel):
-    user_id: str
+class UserResponse(BaseModel):
+    id: int
     email: str
-    full_name: str
+    first_name: str
+    last_name: str
     role: str
     is_active: bool
-    totp_enabled: bool
-    last_login_at: datetime | None
-    company_ids: list[str]
-    created_at: datetime
 
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    payload = decode_token(token)
+    if not payload or payload.get("type") != "access":
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return payload
 
-class ForgotPasswordRequest(BaseModel):
-    email: EmailStr
+@router.post("/login", response_model=LoginResponse)
+async def login(request: Request, db=Depends(get_db)):
+    from sqlalchemy import select
+    from app.models.user import User
 
+    form = await request.form()
+    email = form.get("username", "")
+    password = form.get("password", "")
 
-class ResetPasswordRequest(BaseModel):
-    reset_token: str
-    new_password: str = Field(min_length=12, max_length=128)
+    if not email or not password:
+        raise HTTPException(status_code=422, detail="Email and password required")
 
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
 
-class MessageResponse(BaseModel):
-    message: str
-    success: bool = True
-
-
-# ---------------------------------------------------------------------------
-# Helper: build full TokenResponse from authenticated user
-# ---------------------------------------------------------------------------
-
-async def _build_token_response(user: User, db: AsyncSession) -> TokenResponse:
-    svc = UserService(db)
-    payload = await svc.build_jwt_payload(user)
-    company_ids = await svc.get_company_ids(user.id)
-
-    access_token = create_access_token(payload)
-    refresh_token = create_refresh_token(str(user.id))
-
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        expires_in=settings.jwt_access_token_expire_minutes * 60,
-        user_id=str(user.id),
-        email=user.email,
-        role=user.role,
-        full_name=user.full_name,
-        company_ids=[str(cid) for cid in company_ids],
-    )
-
-
-# ---------------------------------------------------------------------------
-# POST /auth/login — Step 1: email + password
-# ---------------------------------------------------------------------------
-
-@router.post(
-    "/login",
-    response_model=LoginResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Step 1: Authenticate with email and password",
-    description=(
-        "Validates credentials. Returns a short-lived `temp_token` to be used "
-        "with the `/auth/2fa/verify` endpoint. The account is locked after 5 "
-        "consecutive failed attempts."
-    ),
-)
-async def login(
-    body: LoginRequest,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-):
-    svc = UserService(db)
-    activity = ActivityService(db)
-
-    # Look up user
-    user = await svc.get_by_email(body.email)
-    if not user:
-        # Generic message — do not reveal whether email exists
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials.",
-        )
-
-    # Check lockout before verifying password
-    is_locked = await svc.check_lockout(user)
-    if is_locked:
-        logger.warning("login_account_locked", user_id=str(user.id), email=user.email)
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=(
-                "Account is temporarily locked due to too many failed attempts. "
-                "Please try again later or contact NLC support."
-            ),
-        )
-
-    # Verify password
-    authenticated = await svc.verify_credentials(body.email, body.password)
-    if not authenticated:
-        await svc.increment_failed_attempts(user)
-        await activity.log(
-            action="LOGIN_FAILED",
-            resource_type="user",
-            resource_id=str(user.id),
-            description=f"Failed login attempt for {body.email}",
-            ip_address=request.client.host if request.client else None,
-            user_agent=request.headers.get("user-agent"),
-            actor_user_id=user.id,
-        )
-        logger.warning("login_failed_credentials", email=body.email)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials.",
-        )
-
-    # Verify user is active
+    if not user or not verify_password(password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
     if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account is deactivated. Please contact NLC support.",
-        )
+        raise HTTPException(status_code=403, detail="Account disabled")
 
-    # Reset failed attempts on successful password verification
-    await svc.reset_failed_attempts(user)
-
-    # Issue temp token (2FA not yet done)
-    temp_token = create_temp_token(
-        user_id=str(user.id),
-        email=user.email,
-        role=user.role,
-    )
-
-    logger.info("login_step1_ok", user_id=str(user.id), role=user.role)
-
+    token_data = {"sub": str(user.id), "email": user.email, "role": user.role}
     return LoginResponse(
-        temp_token=temp_token,
-        user_id=str(user.id),
-        email=user.email,
-        role=user.role,
-        totp_required=user.totp_enabled,
+        access_token=create_access_token(token_data),
+        refresh_token=create_refresh_token(token_data),
+        user={"id": user.id, "email": user.email, "first_name": user.first_name, "last_name": user.last_name, "role": user.role}
     )
 
+@router.post("/refresh", response_model=RefreshResponse)
+async def refresh(body: RefreshRequest):
+    payload = decode_token(body.refresh_token)
+    if not payload or payload.get("type") != "refresh":
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+    token_data = {"sub": payload["sub"], "email": payload["email"], "role": payload["role"]}
+    return RefreshResponse(access_token=create_access_token(token_data))
 
-# ---------------------------------------------------------------------------
-# POST /auth/2fa/verify — Step 2: TOTP code
-# ---------------------------------------------------------------------------
+@router.get("/me", response_model=UserResponse)
+async def me(current_user=Depends(get_current_user), db=Depends(get_db)):
+    from sqlalchemy import select
+    from app.models.user import User
 
-@router.post(
-    "/2fa/verify",
-    response_model=TokenResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Step 2: Verify TOTP code and receive access token",
-)
-async def verify_2fa(
-    body: TwoFactorRequest,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-):
-    # Decode and validate the temp token
-    try:
-        claims = decode_token(body.temp_token, expected_type="temp_2fa")
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired authentication session. Please log in again.",
-        ) from exc
-
-    user_id = claims.get("sub")
-    svc = UserService(db)
-    activity = ActivityService(db)
-
-    user = await svc.get_by_id_or_404(uuid.UUID(user_id))
-
-    # Verify TOTP code
-    totp_ok = await svc.verify_totp(user, body.totp_code)
-    if not totp_ok:
-        await activity.log(
-            action="2FA_FAILED",
-            resource_type="user",
-            resource_id=str(user.id),
-            description="TOTP verification failed",
-            ip_address=request.client.host if request.client else None,
-            user_agent=request.headers.get("user-agent"),
-            actor_user_id=user.id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired two-factor code. Please try again.",
-        )
-
-    # Record successful login
-    await svc.record_login(user)
-    await activity.log(
-        action="LOGIN_SUCCESS",
-        resource_type="user",
-        resource_id=str(user.id),
-        description=f"Successful login for {user.email}",
-        ip_address=request.client.host if request.client else None,
-        user_agent=request.headers.get("user-agent"),
-        actor_user_id=user.id,
-    )
-
-    logger.info("login_complete", user_id=str(user.id), role=user.role)
-    return await _build_token_response(user, db)
-
-
-# ---------------------------------------------------------------------------
-# POST /auth/2fa/setup — Initialise TOTP for a user
-# ---------------------------------------------------------------------------
-
-@router.post(
-    "/2fa/setup",
-    response_model=TOTPSetupResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Generate a new TOTP secret for the current user",
-    description="Returns QR URI. User must confirm with /2fa/confirm before 2FA is activated.",
-)
-async def setup_2fa(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_for_user),
-):
-    svc = UserService(db)
-    result = await svc.setup_totp(current_user)
-    return TOTPSetupResponse(
-        totp_secret=result["totp_secret"],
-        qr_uri=result["qr_uri"],
-        manual_entry_key=result["manual_entry_key"],
-    )
-
-
-# ---------------------------------------------------------------------------
-# POST /auth/2fa/confirm — Activate 2FA after scanning QR
-# ---------------------------------------------------------------------------
-
-@router.post(
-    "/2fa/confirm",
-    response_model=MessageResponse,
-    summary="Confirm TOTP setup and activate two-factor authentication",
-)
-async def confirm_2fa(
-    body: TOTPConfirmRequest,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_for_user),
-):
-    svc = UserService(db)
-    confirmed = await svc.confirm_totp(current_user, body.totp_code)
-    if not confirmed:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="TOTP code is incorrect. Please ensure your authenticator app is synced.",
-        )
-    return MessageResponse(message="Two-factor authentication has been enabled successfully.")
-
-
-# ---------------------------------------------------------------------------
-# POST /auth/refresh — Exchange refresh token for new access token
-# ---------------------------------------------------------------------------
-
-@router.post(
-    "/refresh",
-    response_model=TokenResponse,
-    summary="Exchange a refresh token for a new access token",
-)
-async def refresh_token(
-    body: RefreshRequest,
-    db: AsyncSession = Depends(get_db),
-):
-    try:
-        claims = decode_token(body.refresh_token, expected_type="refresh")
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired refresh token. Please log in again.",
-        ) from exc
-
-    user_id = claims.get("sub")
-    svc = UserService(db)
-    user = await svc.get_by_id_or_404(uuid.UUID(user_id))
-
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account is deactivated.",
-        )
-
-    return await _build_token_response(user, db)
-
-
-# ---------------------------------------------------------------------------
-# POST /auth/logout — Client-side logout
-# ---------------------------------------------------------------------------
-
-@router.post(
-    "/logout",
-    response_model=MessageResponse,
-    summary="Log out (invalidate session client-side)",
-    description=(
-        "NLC uses stateless JWTs. Logout instructs the client to discard its tokens. "
-        "For server-side revocation, tokens expire per their TTL."
-    ),
-)
-async def logout(
-    request: Request,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_for_user),
-):
-    activity = ActivityService(db)
-    await activity.log(
-        action="LOGOUT",
-        resource_type="user",
-        resource_id=str(current_user.id),
-        description="User logged out",
-        ip_address=request.client.host if request.client else None,
-        user_agent=request.headers.get("user-agent"),
-        actor_user_id=current_user.id,
-    )
-    logger.info("logout", user_id=str(current_user.id))
-    return MessageResponse(message="Logged out successfully. Please discard your tokens.")
-
-
-# ---------------------------------------------------------------------------
-# GET /auth/me — Current user profile
-# ---------------------------------------------------------------------------
-
-@router.get(
-    "/me",
-    response_model=UserProfileResponse,
-    summary="Get the current authenticated user's profile",
-)
-async def get_me(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_for_user),
-):
-    svc = UserService(db)
-    company_ids = await svc.get_company_ids(current_user.id)
-    return UserProfileResponse(
-        user_id=str(current_user.id),
-        email=current_user.email,
-        full_name=current_user.full_name,
-        role=current_user.role,
-        is_active=current_user.is_active,
-        totp_enabled=current_user.totp_enabled,
-        last_login_at=current_user.last_login_at,
-        company_ids=[str(cid) for cid in company_ids],
-        created_at=current_user.created_at,
-    )
-
-
-# ---------------------------------------------------------------------------
-# POST /auth/change-password
-# ---------------------------------------------------------------------------
-
-@router.post(
-    "/change-password",
-    response_model=MessageResponse,
-    summary="Change the current user's password",
-)
-async def change_password(
-    body: ChangePasswordRequest,
-    request: Request,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_for_user),
-):
-    if body.current_password == body.new_password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New password must differ from current password.",
-        )
-
-    svc = UserService(db)
-    activity = ActivityService(db)
-
-    success = await svc.change_password(
-        current_user,
-        current_password=body.current_password,
-        new_password=body.new_password,
-    )
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current password is incorrect.",
-        )
-
-    await activity.log(
-        action="PASSWORD_CHANGED",
-        resource_type="user",
-        resource_id=str(current_user.id),
-        description="Password changed successfully",
-        ip_address=request.client.host if request.client else None,
-        actor_user_id=current_user.id,
-    )
-    return MessageResponse(message="Password changed successfully.")
-
-
-# ---------------------------------------------------------------------------
-# POST /auth/forgot-password — Request a password reset link
-# ---------------------------------------------------------------------------
-
-@router.post(
-    "/forgot-password",
-    response_model=MessageResponse,
-    summary="Request a password reset email",
-    description=(
-        "Generates a short-lived (15 min) reset token and logs it. "
-        "In production wire this to SES to email the link to the user. "
-        "Always returns 200 to avoid user enumeration."
-    ),
-)
-async def forgot_password(
-    body: ForgotPasswordRequest,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-):
-    svc = UserService(db)
-    activity = ActivityService(db)
-
-    user = await svc.get_by_email(body.email)
-    if user:
-        reset_token = create_password_reset_token(str(user.id), user.email)
-        await activity.log(
-            action="PASSWORD_RESET_REQUESTED",
-            resource_type="user",
-            resource_id=str(user.id),
-            description=f"Password reset requested for {user.email}",
-            ip_address=request.client.host if request.client else None,
-            actor_user_id=user.id,
-        )
-        logger.info("password_reset_token_generated", user_id=str(user.id))
-        # TODO: send reset_token via SES email to user.email
-        # In development log the token so admins can share it manually
-        if settings.environment == "development":
-            logger.info("password_reset_token_DEV_ONLY", token=reset_token)
-
-    # Always return 200 — do not reveal whether email exists
-    return MessageResponse(
-        message="If that email is registered you will receive a password reset link shortly."
-    )
-
-
-# ---------------------------------------------------------------------------
-# POST /auth/reset-password — Consume reset token and set new password
-# ---------------------------------------------------------------------------
-
-@router.post(
-    "/reset-password",
-    response_model=MessageResponse,
-    summary="Reset password using a reset token",
-)
-async def reset_password(
-    body: ResetPasswordRequest,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-):
-    try:
-        claims = decode_token(body.reset_token, expected_type="password_reset")
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired password reset token.",
-        ) from exc
-
-    user_id = claims.get("sub")
-    svc = UserService(db)
-    activity = ActivityService(db)
-
-    user = await svc.get_by_id_or_404(uuid.UUID(user_id))
-
-    # Use internal method to skip current-password verification
-    from app.core.security import hash_password
-    await svc.update_instance(user, password_hash=hash_password(body.new_password))
-
-    await activity.log(
-        action="PASSWORD_RESET_COMPLETED",
-        resource_type="user",
-        resource_id=str(user.id),
-        description=f"Password reset completed for {user.email}",
-        ip_address=request.client.host if request.client else None,
-        actor_user_id=user.id,
-    )
-    logger.info("password_reset_complete", user_id=str(user.id))
-    return MessageResponse(message="Password has been reset successfully. Please log in.")
+    result = await db.execute(select(User).where(User.id == int(current_user["sub"])))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return UserResponse(id=user.id, email=user.email, first_name=user.first_name, last_name=user.last_name, role=user.role, is_active=user.is_active)
