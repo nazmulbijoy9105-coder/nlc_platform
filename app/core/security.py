@@ -98,3 +98,10 @@ def verify_totp_code(secret: str, code: str) -> bool:
         return totp.verify(code, valid_window=1)
     except ImportError:
         return False
+
+def get_totp_provisioning_uri(secret: str, email: str, issuer_name: str = "NLC Platform") -> str:
+    try:
+        import pyotp
+        return pyotp.totp.TOTP(secret).provisioning_uri(name=email, issuer_name=issuer_name)
+    except ImportError:
+        return ""
