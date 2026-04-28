@@ -4,6 +4,7 @@ import os
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "NLC Platform"
+    APP_VERSION: str = "1.0.0"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "production")
     PORT: int = int(os.getenv("PORT", "8000"))
 
