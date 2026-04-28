@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "NLC Platform"
     app_version: str = "1.0.0"
     is_production: bool = True
+    environment: str = "production"
+    allowed_origins: list = ["https://nlc-frontend.vercel.app"]
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "production")
     PORT: int = int(os.getenv("PORT", "8000"))
 
