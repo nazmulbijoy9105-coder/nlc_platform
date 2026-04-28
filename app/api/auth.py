@@ -1,15 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from app.core.config import settings
-# Import from your actual database location
 from app.models.database import get_db
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+
+class LoginBody(BaseModel):
+    email: EmailStr
+    password: str
 
 class LoginResponse(BaseModel):
     access_token: str
@@ -39,21 +42,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     return payload
 
 @router.post("/login", response_model=LoginResponse)
-async def login(request: Request, db=Depends(get_db)):
+async def login(body: LoginBody, db=Depends(get_db)):
     from sqlalchemy import select
     from app.models.user import User
 
-    form = await request.form()
-    email = form.get("username", "")
-    password = form.get("password", "")
-
-    if not email or not password:
-        raise HTTPException(status_code=422, detail="Email and password required")
-
-    result = await db.execute(select(User).where(User.email == email))
+    result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
 
-    if not user or not verify_password(password, user.password_hash):
+    if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account disabled")
