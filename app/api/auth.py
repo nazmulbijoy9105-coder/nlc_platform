@@ -53,7 +53,7 @@ async def login(request: Request, db=Depends(get_db)):
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
 
-    if not user or not verify_password(password, user.hashed_password):
+    if not user or not verify_password(password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account disabled")
