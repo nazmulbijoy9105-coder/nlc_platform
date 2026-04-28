@@ -59,7 +59,7 @@ async def create_admin_user_if_missing():
 
             admin = User(
                 email=settings.ADMIN_EMAIL,
-                hashed_password=hash_password(settings.ADMIN_PASSWORD),
+                password_hash=hash_password(settings.ADMIN_PASSWORD),
                 first_name=settings.ADMIN_FIRST_NAME,
                 last_name=settings.ADMIN_LAST_NAME,
                 role="admin",
