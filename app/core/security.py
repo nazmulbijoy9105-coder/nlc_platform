@@ -71,3 +71,30 @@ async def create_admin_user_if_missing():
             print(f"[OK] Admin created: {settings.ADMIN_EMAIL}")
     except Exception as e:
         print(f"[ERROR] Admin seed failed: {e}")
+
+# ── TOTP & Temp Token Functions (Required by app.core.__init__) ──
+import base64
+import os
+
+def create_temp_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=15))
+    to_encode.update({"exp": expire, "type": "temp"})
+    return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+def generate_totp_secret() -> str:
+    return base64.b32encode(os.urandom(20)).decode("utf-8")
+
+def encrypt_totp_secret(secret: str) -> str:
+    return base64.b64encode(secret.encode()).decode()
+
+def decrypt_totp_secret(encrypted: str) -> str:
+    return base64.b64decode(encrypted.encode()).decode()
+
+def verify_totp_code(secret: str, code: str) -> bool:
+    try:
+        import pyotp
+        totp = pyotp.TOTP(secret)
+        return totp.verify(code, valid_window=1)
+    except ImportError:
+        return False
