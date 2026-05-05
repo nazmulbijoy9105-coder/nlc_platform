@@ -305,7 +305,7 @@ def create_app() -> FastAPI:
                 if isinstance(settings.allowed_origins, str) and settings.allowed_origins
                 else ""
             ) if o.strip()
-        ] + (["*"] if settings.environment == "development" else []), list) else [],
+        ] + (["*"] if settings.environment == "development" else []),
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=[
