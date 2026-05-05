@@ -297,7 +297,15 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.allowed_origins if isinstance(settings.allowed_origins, list) else [],
+        allow_origins=[
+            o.strip() for o in (
+                settings.allowed_origins
+                if isinstance(settings.allowed_origins, list)
+                else settings.allowed_origins.split(",")
+                if isinstance(settings.allowed_origins, str) and settings.allowed_origins
+                else ""
+            ) if o.strip()
+        ] + (["*"] if settings.environment == "development" else []), list) else [],
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=[
