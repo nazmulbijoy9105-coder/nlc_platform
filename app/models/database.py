@@ -27,9 +27,12 @@ if TYPE_CHECKING:
 # CRITICAL FIX: Use settings to auto-convert postgres:// to postgresql+asyncpg://
 # Render injects postgres:// but asyncpg requires postgresql+asyncpg://
 # ══════════════════════════════════════════════════════════════════════
-from app.core.config import settings
-
-DATABASE_URL: str = settings.ASYNC_DATABASE_URL
+import os
+DATABASE_URL = os.environ.get('DATABASE_URL', '')
+if DATABASE_URL.startswith('postgres://'):
+    DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql+asyncpg://', 1)
+elif DATABASE_URL.startswith('postgresql://'):
+    DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+asyncpg://', 1)
 
 # ── CONNECTION ────────────────────────────────────────────────────────
 _testing = os.environ.get("TESTING", "false").lower() == "true"
