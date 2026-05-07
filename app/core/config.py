@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import Optional, List
 import os
 
 class Settings(BaseSettings):
@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     app_version: str = "1.0.0"
     is_production: bool = True
     environment: str = "production"
-    allowed_origins: list = ["https://nlc-frontend.vercel.app"]
+    
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "production")
     PORT: int = int(os.getenv("PORT", "8000"))
 
@@ -49,14 +49,23 @@ class Settings(BaseSettings):
     ADMIN_LAST_NAME: str = os.getenv("ADMIN_LAST_NAME", "Admin")
 
     # Redis
-    REDIS_URL: str = os.getenv("REDIS_URL", "")
-    CELERY_BROKER_URL: str = REDIS_URL
-    CELERY_RESULT_BACKEND: str = REDIS_URL
+    # FIX 1: Use lowercase 'redis_url' to match main.py
+    # FIX 2: Read from 'CELERY_BROKER_URL' to match Render Dashboard
+    redis_url: str = os.getenv("CELERY_BROKER_URL", "")
+    CELERY_BROKER_URL: str = redis_url
+    CELERY_RESULT_BACKEND: str = redis_url
 
     # Uploads & AI
     UPLOAD_DIR: str = "/tmp/uploads"
     MAX_UPLOAD_SIZE_MB: int = 25
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
+
+    # FIX 3: Read allowed_origins from Environment Variable
+    # This allows you to control it via Render Dashboard
+    @property
+    def allowed_origins(self) -> List[str]:
+        origins_str = os.getenv("ALLOWED_ORIGINS", "https://nlc-frontend.vercel.app")
+        return [o.strip() for o in origins_str.split(",") if o.strip()]
 
     class Config:
         env_file = ".env"
