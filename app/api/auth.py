@@ -54,6 +54,13 @@ async def login(body: LoginBody, db=Depends(get_db)):
         raise HTTPException(status_code=403, detail="Account disabled")
 
     token_data = {"sub": str(user.id), "email": user.email, "role": user.role}
+
+    if user.totp_enabled:
+        from app.core.security import create_temp_token
+        temp = create_temp_token({"sub": str(user.id), "email": user.email, "role": user.role})
+        from fastapi.responses import JSONResponse as _JSONResponse
+        return _JSONResponse(content={"requires_2fa": True, "temp_token": temp})
+
     return LoginResponse(
         access_token=create_access_token(token_data),
         refresh_token=create_refresh_token(token_data),
@@ -106,6 +113,13 @@ async def verify_2fa(body: Verify2FARequest, db=Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid 2FA code")
 
     token_data = {"sub": str(user.id), "email": user.email, "role": user.role}
+
+    if user.totp_enabled:
+        from app.core.security import create_temp_token
+        temp = create_temp_token({"sub": str(user.id), "email": user.email, "role": user.role})
+        from fastapi.responses import JSONResponse as _JSONResponse
+        return _JSONResponse(content={"requires_2fa": True, "temp_token": temp})
+
     return LoginResponse(
         access_token=create_access_token(token_data),
         refresh_token=create_refresh_token(token_data),
