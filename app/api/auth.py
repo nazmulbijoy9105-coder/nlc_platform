@@ -30,8 +30,7 @@ class RefreshResponse(BaseModel):
 class UserResponse(BaseModel):
     id: int
     email: str
-    first_name: str
-    last_name: str
+    full_name: str
     role: str
     is_active: bool
 
@@ -58,7 +57,7 @@ async def login(body: LoginBody, db=Depends(get_db)):
     return LoginResponse(
         access_token=create_access_token(token_data),
         refresh_token=create_refresh_token(token_data),
-        user={"id": user.id, "email": user.email, "first_name": user.first_name, "last_name": user.last_name, "role": user.role}
+        user={"id": user.id, "email": user.email, "full_name": user.full_name, "role": user.role}
     )
 
 @router.post("/refresh", response_model=RefreshResponse)
@@ -78,4 +77,4 @@ async def me(current_user=Depends(get_current_user), db=Depends(get_db)):
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return UserResponse(id=user.id, email=user.email, first_name=user.first_name, last_name=user.last_name, role=user.role, is_active=user.is_active)
+    return UserResponse(id=user.id, email=user.email, full_name=user.full_name, role=user.role, is_active=user.is_active)
