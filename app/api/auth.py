@@ -78,3 +78,36 @@ async def me(current_user=Depends(get_current_user), db=Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return UserResponse(id=user.id, email=user.email, full_name=user.full_name, role=user.role, is_active=user.is_active)
+
+class Verify2FARequest(BaseModel):
+    temp_token: str
+    totp_code: str
+
+@router.post("/verify-2fa")
+async def verify_2fa(body: Verify2FARequest, db=Depends(get_db)):
+    from sqlalchemy import select
+    from app.models.user import User
+    from app.core.security import verify_totp_code, decrypt_totp_secret
+
+    payload = decode_token(body.temp_token)
+    if not payload or payload.get("type") != "temp":
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+    result = await db.execute(select(User).where(User.id == int(payload["sub"])))
+    user = result.scalar_one_or_none()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    if not user.totp_enabled or not user.totp_secret_encrypted:
+        raise HTTPException(status_code=400, detail="2FA not configured for this account")
+
+    decrypted = decrypt_totp_secret(user.totp_secret_encrypted)
+    if not verify_totp_code(decrypted, body.totp_code):
+        raise HTTPException(status_code=401, detail="Invalid 2FA code")
+
+    token_data = {"sub": str(user.id), "email": user.email, "role": user.role}
+    return LoginResponse(
+        access_token=create_access_token(token_data),
+        refresh_token=create_refresh_token(token_data),
+        user={"id": user.id, "email": user.email, "full_name": user.full_name, "role": user.role}
+    )
