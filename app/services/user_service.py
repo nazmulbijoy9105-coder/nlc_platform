@@ -64,9 +64,6 @@ class UserService(BaseService[User]):
         """
         user = await self.get_by_email(email)
         if user is None:
-            # Timing attack mitigation: run hash even on miss
-            
-            
             return None
 
         if not verify_password(password, user.password_hash):
