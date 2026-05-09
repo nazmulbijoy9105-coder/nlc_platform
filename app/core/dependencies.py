@@ -456,17 +456,11 @@ _rule_engine_instance = None
 
 
 def get_rule_engine():
-    """
-    Return singleton NLCRuleEngine instance.
-    Engine is loaded once at startup (deterministic, no state between calls).
-    AI Constitution Article 1: Rule engine is immutable during runtime.
-    Modifying rules in DB does NOT hot-reload the engine — requires restart.
-    """
     global _rule_engine_instance
     if _rule_engine_instance is None:
-        # Import here to avoid circular imports at module load time
-        from C_rule_engine import NLCRuleEngine
+        from app.rule_engine import NLCRuleEngine
         _rule_engine_instance = NLCRuleEngine()
+    return _rule_engine_instance
     return _rule_engine_instance
 
 
