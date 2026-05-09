@@ -303,7 +303,7 @@ class CompanyService(BaseService[Company]):
         # ── Director Changes ──────────────────────────────────────
         director_changes = []
         for d in company.directors:
-            from C_rule_engine import DirectorChange
+            from app.rule_engine import DirectorChange
             director_changes.append(DirectorChange(
                 director_id=str(d.id),
                 name=d.full_name,
@@ -317,7 +317,7 @@ class CompanyService(BaseService[Company]):
         # ── Share Transfers ───────────────────────────────────────
         share_transfers = []
         for t in company.share_transfers:
-            from C_rule_engine import ShareTransfer as EngineTransfer
+            from app.rule_engine import ShareTransfer as EngineTransfer
             share_transfers.append(EngineTransfer(
                 transfer_id=str(t.id),
                 transferor=t.transferor_name,
