@@ -1,37 +1,29 @@
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-*.egg-info/
-.venv/
-venv/
-env/
+*$py.class
 
-# SECRETS - NEVER COMMIT
+# C extensions
+*.so
+
+# Environments & Secrets
 .env
-.env.local
-.env.production
-*.pem
-*.key
-infra/nginx/ssl/
+.venv
+env/
+venv/
+ENV/
 
-# DB / Logs
-*.db
-*.sqlite3
-*.log
-logs/
-
-# Tests / Coverage
-.coverage
-htmlcov/
-.pytest_cache/
-coverage.xml
-.mypy_cache/
-
-# IDEs
-.idea/
+# IDE
 .vscode/
-.DS_Store
+.idea/
 
-# Generated
-/tmp/
-*.pdf
+# Testing
+.pytest_cache/
+.coverage
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+*.log
