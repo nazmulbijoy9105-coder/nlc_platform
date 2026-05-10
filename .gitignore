@@ -1,29 +1,10 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
-
-# C extensions
 *.so
-
-# Environments & Secrets
-.env
-.venv
-env/
 venv/
-ENV/
-
-# IDE
-.vscode/
-.idea/
-
-# Testing
+.env
 .pytest_cache/
-.coverage
-
-# OS
+.vscode/
 .DS_Store
-Thumbs.db
-
-# Project specific
 *.log
