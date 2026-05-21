@@ -23,11 +23,13 @@ Endpoints:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import uuid
+from datetime import date
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
     Pagination,
@@ -37,18 +39,11 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
+from app.models.enums import CompanyStatus, CompanyType, RevenueTier, RiskBand
+from app.models.user import User
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
 from app.services.notification_service import ActivityService
-
-if TYPE_CHECKING:
-    import uuid
-    from datetime import date
-
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    from app.models.enums import CompanyStatus, RevenueTier, RiskBand
-    from app.models.user import User
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -63,17 +58,17 @@ class CompanyCreateRequest(BaseModel):
     registration_number: str = Field(min_length=3, max_length=50)
     incorporation_date: date
     registered_address: str = Field(min_length=5, max_length=500)
-    company_type: str = Field(default="PRIVATE_LIMITED")
-    financial_year_end: str = Field(
-        default="12-31",
-        description="Financial year end as MM-DD, e.g. '12-31'"
-    )
+    
+    # FIX 1: Strict Enum matching app/models/enums.py
+    company_type: CompanyType = Field(default=CompanyType.PRIVATE_LIMITED)
+    
+    # FIX 2: Date object matching SQLAlchemy ORM & Service layer (prevents DataError)
+    financial_year_end: date | None = None  # Optional on creation, defaults in service  
+    
     # Admin-only fields
     revenue_tier: RevenueTier | None = None
-    is_fdi_registered: bool = False
     assigned_officer_id: uuid.UUID | None = None
-    notes: str | None = None
-
+    
 
 class CompanyUpdateRequest(BaseModel):
     company_name: str | None = Field(None, min_length=2, max_length=255)
@@ -92,19 +87,20 @@ class FlagResolveRequest(BaseModel):
 
 
 class CompanyResponse(BaseModel):
-    company_id: str
+    # FIX 3: Frontend expects 'id', not 'company_id' (matches types/index.ts)
+    id: str  
     company_name: str
     registration_number: str
     incorporation_date: date
-    registered_address: str
+    registered_address: str | None
     company_type: str
-    financial_year_end: str
+    financial_year_end: str | None
     current_compliance_score: int | None
     current_risk_band: str | None
     company_status: str
     revenue_tier: str | None
-    is_fdi_registered: bool
-    is_dormant: bool
+    is_fdi_registered: bool | None
+    is_dormant: bool | None
     last_evaluated_at: str | None
     created_at: str
 
@@ -160,7 +156,7 @@ class MessageResponse(BaseModel):
 
 def _company_to_response(company) -> CompanyResponse:
     return CompanyResponse(
-        company_id=str(company.id),
+        id=str(company.id),  # FIX 3: Map to 'id'
         company_name=company.company_name,
         registration_number=company.registration_number,
         incorporation_date=company.incorporation_date,
@@ -171,8 +167,8 @@ def _company_to_response(company) -> CompanyResponse:
         current_risk_band=company.current_risk_band,
         company_status=company.company_status,
         revenue_tier=company.revenue_tier,
-        is_fdi_registered=company.is_fdi_registered,
-        is_dormant=company.is_dormant,
+        is_fdi_registered=company.is_fdi_registered if hasattr(company, 'is_fdi_registered') else False,
+        is_dormant=company.is_dormant if hasattr(company, 'is_dormant') else False,
         last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
         created_at=company.created_at.isoformat(),
     )
@@ -206,6 +202,8 @@ async def create_company(
             detail=f"Company with registration number '{body.registration_number}' already exists.",
         )
 
+    # FIX 4: Removed `notes` and `is_fdi_registered` (not in CompanyService signature)
+    # FIX 1 & 2: Passed strict Enum and Date objects
     company = await svc.create_company(
         company_name=body.company_name,
         registration_number=body.registration_number,
@@ -213,10 +211,7 @@ async def create_company(
         registered_address=body.registered_address,
         company_type=body.company_type,
         financial_year_end=body.financial_year_end,
-        revenue_tier=body.revenue_tier,
-        is_fdi_registered=body.is_fdi_registered,
-        assigned_officer_id=body.assigned_officer_id,
-        notes=body.notes,
+        assigned_staff_id=body.assigned_officer_id,  # Mapped from API schema name
         created_by=current_user.id,
     )
 
