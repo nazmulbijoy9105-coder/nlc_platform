@@ -171,6 +171,12 @@ def _company_to_response(company) -> CompanyResponse:
         is_dormant=company.is_dormant if hasattr(company, 'is_dormant') else False,
         last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
         created_at=company.created_at.isoformat(),
+        risk_band=company.current_risk_band or "UNKNOWN",
+        active_flags=0,
+        black_flags=0,
+        red_flags=0,
+        yellow_flags=0,
+        snapshot_date=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
     )
 
 
