@@ -1,22 +1,3 @@
-"""
-app/api/rescue.py — Corporate Rescue Router
-NEUM LEX COUNSEL
-
-Endpoints:
-  POST  /rescue/plans                       Generate rescue plan (BLACK band only)
-  GET   /rescue/plans/{company_id}/active   Get active rescue plan for a company
-  GET   /rescue/plans/{plan_id}             Get rescue plan with all steps
-  PATCH /rescue/plans/{plan_id}/steps/{step_number}   Update a rescue step status
-  POST  /rescue/plans/{plan_id}/engagement  Create engagement from rescue plan
-  GET   /rescue/plans                       List all rescue plans (ADMIN_STAFF+)
-
-Business rules:
-  - Rescue plans may only be created for companies in BLACK or RED band
-  - Only one active rescue plan per company at a time
-  - Step 8 completion triggers automatic compliance re-evaluation via Celery
-  - Engagement creation is admin-only (revenue tracking)
-"""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -26,6 +7,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
+from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
     require_company_access,
@@ -37,36 +19,9 @@ from app.services.notification_service import ActivityService
 from app.services.rescue_service import RescueService
 
 if TYPE_CHECKING:
-    import uuid
-
     from sqlalchemy.ext.asyncio import AsyncSession
-
     from app.models.user import User
 
-logger = structlog.get_logger(__name__)
-router = APIRouter()
-
-
-# ---------------------------------------------------------------------------
-# Schemas
-# ---------------------------------------------------------------------------
-
-class RescuePlanCreateRequest(BaseModel):
-    company_id: uuid.UUID
-    notes: str | None = None
-    assigned_officer_id: uuid.UUID | None = None
-    estimated_fee_bdt: float | None = Field(None, gt=0)
-    target_completion_date: str | None = None
-
-
-class RescueStepUpdateRequest(BaseModel):
-    status: str = Field(description="PENDING | IN_PROGRESS | COMPLETED | BLOCKED")
-    completion_note: str | None = None
-    completion_document_id: uuid.UUID | None = None
-
-
-class EngagementFromRescueRequest(BaseModel):
-    confirmed_fee_bdt: float = Field(gt=0)
     payment_terms: str | None = None
     notes: str | None = None
 
