@@ -22,10 +22,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import structlog
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
-from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
     require_company_access,
