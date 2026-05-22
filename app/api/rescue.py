@@ -102,9 +102,6 @@ def _plan_to_response(plan, company=None) -> RescuePlanResponse:
 # ---------------------------------------------------------------------------
 
 router = APIRouter()
-@router.post(
-    "/plans",
-    response_model=RescuePlanResponse,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
     summary="Generate a corporate rescue plan for a BLACK or RED band company",
