@@ -87,7 +87,7 @@ class RuleResponse(BaseModel):
 class RuleVersionResponse(BaseModel):
     version_id: str
     rule_id: str
-    version: int
+    version: strt
     previous_severity: str | None
     new_severity: str | None
     previous_score_impact: int | None
