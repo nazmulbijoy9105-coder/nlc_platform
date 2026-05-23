@@ -1,5 +1,5 @@
 """
-app/api/health.py — Health Check Router
+app/api/health.py - Health Check Router
 NEUM LEX COUNSEL
 
 Endpoints:
@@ -130,7 +130,7 @@ async def _check_s3() -> ComponentHealth:
 
 
 # ---------------------------------------------------------------------------
-# GET /health — Full health check
+# GET /health - Full health check
 # ---------------------------------------------------------------------------
 
 @router.get(
@@ -207,12 +207,12 @@ async def full_health_check():
 
 
 # ---------------------------------------------------------------------------
-# GET /health/live — Kubernetes liveness probe
+# GET /health/live - Kubernetes liveness probe
 # ---------------------------------------------------------------------------
 
 @router.get(
     "/health/live",
-    summary="Liveness probe — confirms the process is running",
+    summary="Liveness probe - confirms the process is running",
     tags=["Health"],
 )
 async def liveness():
@@ -227,12 +227,12 @@ async def liveness():
 
 
 # ---------------------------------------------------------------------------
-# GET /health/ready — Kubernetes readiness probe
+# GET /health/ready - Kubernetes readiness probe
 # ---------------------------------------------------------------------------
 
 @router.get(
     "/health/ready",
-    summary="Readiness probe — confirms the app is ready to serve traffic",
+    summary="Readiness probe - confirms the app is ready to serve traffic",
     tags=["Health"],
 )
 async def readiness():
