@@ -191,6 +191,22 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+
+class CORSErrorMiddleware(BaseHTTPMiddleware):
+    """
+    Forces CORS headers onto error responses (403, 500, etc).
+    Prevents the browser from masking backend crashes as CORS errors.
+    """
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        origin = request.headers.get("origin")
+        if origin and "access-control-allow-origin" not in response.headers:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, X-Request-ID"
+        return response
+
 # ---------------------------------------------------------------------------
 # Exception handlers
 # ---------------------------------------------------------------------------
@@ -335,6 +351,7 @@ def create_app() -> FastAPI:
     # Custom middleware (order matters — outermost = last added)
     # ------------------------------------------------------------------
     app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(CORSErrorMiddleware)
     app.add_middleware(AccessLogMiddleware)
     app.add_middleware(RequestIDMiddleware)
 

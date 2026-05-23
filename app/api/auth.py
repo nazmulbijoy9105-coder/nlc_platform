@@ -28,7 +28,7 @@ class RefreshResponse(BaseModel):
     token_type: str = "bearer"
 
 class UserResponse(BaseModel):
-    id: int
+    id: str
     email: str
     full_name: str
     role: str
@@ -84,7 +84,7 @@ async def me(current_user=Depends(get_current_user), db=Depends(get_db)):
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return UserResponse(id=user.id, email=user.email, full_name=user.full_name, role=user.role, is_active=user.is_active)
+    return UserResponse(id=str(user.id), email=user.email, full_name=user.full_name, role=user.role, is_active=user.is_active)
 
 class Verify2FARequest(BaseModel):
     temp_token: str
