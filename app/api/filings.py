@@ -23,7 +23,6 @@ All filing endpoints auto-trigger compliance re-evaluation via Celery task
 after update so the company score is always fresh.
 """
 
-from __future__ import annotations
 
 from typing import TYPE_CHECKING
 

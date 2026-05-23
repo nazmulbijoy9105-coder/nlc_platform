@@ -21,7 +21,6 @@ Endpoints:
   GET    /companies/dashboard/risk      Risk band distribution
 """
 
-from __future__ import annotations
 
 import uuid
 from datetime import date
