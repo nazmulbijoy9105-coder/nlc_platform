@@ -102,9 +102,6 @@ class RescuePlanResponse(BaseModel):
 
 
 class MessageResponse(BaseModel):
-
-# ---------------------------------------------------------------------------
-# Serialisers
 # ---------------------------------------------------------------------------
 
 def _step_to_response(step) -> RescueStepResponse:
