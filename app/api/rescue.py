@@ -141,6 +141,8 @@ def _plan_to_response(plan, company=None) -> RescuePlanResponse:
 # POST /rescue/plans — Generate rescue plan
 # ---------------------------------------------------------------------------
 
+router = APIRouter()
+
 @router.post(
     "/plans",
     response_model=RescuePlanResponse,
