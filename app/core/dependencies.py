@@ -135,7 +135,7 @@ def verify_access_token(
     Raises 401 on invalid/expired token.
     """
     try:
-        payload = decode_token(credentials.credentials)
+        payload = decode_token(credentials.credentials, expected_type="access")
     except JWTError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -166,7 +166,7 @@ def verify_temp_token(
     Used only on the /auth/verify-2fa endpoint.
     """
     try:
-        payload = decode_token(credentials.credentials)
+        payload = decode_token(credentials.credentials, expected_type="temp")
     except JWTError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
