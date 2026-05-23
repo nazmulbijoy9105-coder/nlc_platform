@@ -45,6 +45,8 @@ from app.services.filing_service import (
 )
 from app.services.notification_service import ActivityService
 
+import uuid
+from datetime import date
 if TYPE_CHECKING:
     import uuid
     from datetime import date

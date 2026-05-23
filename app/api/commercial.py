@@ -37,6 +37,7 @@ from app.core.dependencies import (
 from app.services.commercial_service import EngagementService, QuotationService, TaskService
 from app.services.notification_service import ActivityService
 
+from app.models.enums import RevenueTier, EngagementStatus
 if TYPE_CHECKING:
 
     from sqlalchemy.ext.asyncio import AsyncSession

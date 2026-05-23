@@ -35,6 +35,7 @@ from app.core.dependencies import (
 from app.services.notification_service import ActivityService
 from app.services.rules_service import RulesService
 
+from app.models.enums import SeverityLevel
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 

@@ -37,6 +37,8 @@ from app.core.dependencies import (
 from app.services.document_service import DocumentService, PromptTemplateService
 from app.services.notification_service import ActivityService
 
+import uuid
+from app.models.enums import DocumentType
 if TYPE_CHECKING:
     import uuid
 
