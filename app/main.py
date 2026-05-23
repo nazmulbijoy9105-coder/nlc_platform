@@ -350,10 +350,10 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
     # Custom middleware (order matters — outermost = last added)
     # ------------------------------------------------------------------
+    app.add_middleware(RequestIDMiddleware)
+    app.add_middleware(AccessLogMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(CORSErrorMiddleware)
-    app.add_middleware(AccessLogMiddleware)
-    app.add_middleware(RequestIDMiddleware)
 
     # ------------------------------------------------------------------
     # Exception handlers
