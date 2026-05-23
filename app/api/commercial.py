@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from app.models.enums import EngagementStatus, RevenueTier
+    from app.models.enums import RevenueTier, EngagementStatus, RevenueTier
     from app.models.user import User
 
 logger = structlog.get_logger(__name__)
