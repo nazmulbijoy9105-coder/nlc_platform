@@ -38,6 +38,8 @@ from app.services.commercial_service import EngagementService, QuotationService,
 from app.services.notification_service import ActivityService
 
 from app.models.enums import RevenueTier, EngagementStatus
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.user import User
 if TYPE_CHECKING:
 
     from sqlalchemy.ext.asyncio import AsyncSession
