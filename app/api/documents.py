@@ -39,6 +39,8 @@ from app.services.notification_service import ActivityService
 
 import uuid
 from app.models.enums import DocumentType
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.user import User
 if TYPE_CHECKING:
     import uuid
 

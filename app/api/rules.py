@@ -36,6 +36,8 @@ from app.services.notification_service import ActivityService
 from app.services.rules_service import RulesService
 
 from app.models.enums import SeverityLevel
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.user import User
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
