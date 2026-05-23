@@ -153,6 +153,7 @@ async def full_health_check():
         celery_health = ComponentHealth(status="degraded", detail="Celery check skipped")
     s3_health = await _check_s3()
     logger.info("health_checks_done", db=db_health.status, redis=redis_health.status, s3=s3_health.status)
+    logger.info("health_checks_done", db=db_health.status, redis=redis_health.status, s3=s3_health.status)
 
     components = {
         "database": db_health.model_dump(),
