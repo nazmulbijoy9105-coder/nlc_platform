@@ -110,7 +110,7 @@ def _check_celery_workers() -> ComponentHealth:
 async def _check_s3() -> ComponentHealth:
     """Verify S3 bucket is accessible (head_bucket). Only runs if AWS is configured."""
     if not settings.aws_s3_bucket:
-        return ComponentHealth(status="ok", detail="S3 not configured — skipped")
+        return ComponentHealth(status="ok", detail="S3 not configured - skipped")
 
     start = time.perf_counter()
     try:
