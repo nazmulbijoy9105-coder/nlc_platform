@@ -18,10 +18,10 @@ Business rules:
 """
 
 
+import uuid
 from typing import TYPE_CHECKING
 
 import structlog
-import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
@@ -39,7 +39,9 @@ from app.services.rescue_service import RescueService
 router = APIRouter()
 
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.user import User
+
 if TYPE_CHECKING:
 
     from sqlalchemy.ext.asyncio import AsyncSession

@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, EmailStr
-from typing import Optional
 
-from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
-from app.core.config import settings
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+    verify_password,
+)
 from app.models.database import get_db
 
 router = APIRouter()
@@ -43,6 +46,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 @router.post("/login", response_model=LoginResponse)
 async def login(body: LoginBody, db=Depends(get_db)):
     from sqlalchemy import select
+
     from app.models.user import User
 
     result = await db.execute(select(User).where(User.email == body.email))
@@ -78,6 +82,7 @@ async def refresh(body: RefreshRequest):
 @router.get("/me", response_model=UserResponse)
 async def me(current_user=Depends(get_current_user), db=Depends(get_db)):
     from sqlalchemy import select
+
     from app.models.user import User
 
     result = await db.execute(select(User).where(User.id == int(current_user["sub"])))
@@ -93,8 +98,9 @@ class Verify2FARequest(BaseModel):
 @router.post("/verify-2fa")
 async def verify_2fa(body: Verify2FARequest, db=Depends(get_db)):
     from sqlalchemy import select
+
+    from app.core.security import decrypt_totp_secret, verify_totp_code
     from app.models.user import User
-    from app.core.security import verify_totp_code, decrypt_totp_secret
 
     payload = decode_token(body.temp_token)
     if not payload or payload.get("type") != "temp":

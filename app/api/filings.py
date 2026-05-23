@@ -24,12 +24,14 @@ after update so the company score is always fresh.
 """
 
 
+import uuid
+from datetime import date
 from typing import TYPE_CHECKING
 
 import structlog
-import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
     get_current_user,
@@ -37,6 +39,7 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
+from app.models.user import User
 from app.services.filing_service import (
     AGMService,
     AnnualReturnService,
@@ -45,10 +48,6 @@ from app.services.filing_service import (
 )
 from app.services.notification_service import ActivityService
 
-import uuid
-from datetime import date
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.user import User
 if TYPE_CHECKING:
     import uuid
     from datetime import date
