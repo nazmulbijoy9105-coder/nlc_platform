@@ -38,11 +38,11 @@ from app.models.user import User
 from app.services.notification_service import ActivityService
 from app.services.rules_service import RulesService
 
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.enums import SeverityLevel
+from app.models.user import User
 if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
 
-    from app.models.enums import SeverityLevel
-    from app.models.user import User
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()

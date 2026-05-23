@@ -42,11 +42,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
 
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.user import User
 if TYPE_CHECKING:
 
-    from sqlalchemy.ext.asyncio import AsyncSession
 
-    from app.models.user import User
 
 logger = structlog.get_logger(__name__)
 
