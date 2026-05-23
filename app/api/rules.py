@@ -20,7 +20,6 @@ Governance notes:
   - Rule engine picks up changes on next warm-up or cache refresh
 """
 
-from __future__ import annotations
 
 from typing import TYPE_CHECKING
 

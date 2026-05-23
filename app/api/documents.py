@@ -20,7 +20,6 @@ AI Constitution Article 3 compliance:
   - All AI calls are logged to ai_output_log (prompt_hash only — no PII)
 """
 
-from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
