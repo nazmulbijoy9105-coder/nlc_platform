@@ -48,13 +48,13 @@ from app.services.filing_service import (
 )
 from app.services.notification_service import ActivityService
 
+import uuid
+from datetime import date
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.user import User
 if TYPE_CHECKING:
-    import uuid
-    from datetime import date
 
-    from sqlalchemy.ext.asyncio import AsyncSession
 
-    from app.models.user import User
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
