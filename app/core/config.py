@@ -50,10 +50,14 @@ class Settings(BaseSettings):
 
     # Redis
     # FIX 1: Use lowercase 'redis_url' to match main.py
+    aws_s3_bucket: str = ""
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
+    aws_region: str = "ap-southeast-1"
     # FIX 2: Read from 'CELERY_BROKER_URL' to match Render Dashboard
     redis_url: str = os.getenv("CELERY_BROKER_URL", "")
-    CELERY_BROKER_URL: str = redis_url
-    CELERY_RESULT_BACKEND: str = redis_url
+    CELERY_BROKER_URL: str = ""
+    CELERY_RESULT_BACKEND: str = ""
 
     # Uploads & AI
     UPLOAD_DIR: str = "/tmp/uploads"
