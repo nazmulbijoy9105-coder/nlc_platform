@@ -53,6 +53,7 @@ from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user import User
 if TYPE_CHECKING:
+    pass
 
 
 
