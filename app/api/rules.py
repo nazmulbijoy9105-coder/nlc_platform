@@ -42,6 +42,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.enums import SeverityLevel
 from app.models.user import User
 if TYPE_CHECKING:
+    pass
 
 
 logger = structlog.get_logger(__name__)

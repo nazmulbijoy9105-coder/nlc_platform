@@ -45,6 +45,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.enums import DocumentType
 from app.models.user import User
 if TYPE_CHECKING:
+    pass
 
 
 
