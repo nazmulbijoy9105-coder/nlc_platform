@@ -61,7 +61,7 @@ class CompanyCreateRequest(BaseModel):
     company_type: CompanyType = Field(default=CompanyType.PRIVATE_LIMITED)
     
     # FIX 2: Date object matching SQLAlchemy ORM & Service layer (prevents DataError)
-    financial_year_end: date | None = None  # Optional on creation, defaults in service  
+    financial_year_end: date | None = None  # Optional on creation, defaults in service
     
     # Admin-only fields
     revenue_tier: RevenueTier | None = None
@@ -86,7 +86,7 @@ class FlagResolveRequest(BaseModel):
 
 class CompanyResponse(BaseModel):
     # FIX 3: Frontend expects 'id', not 'company_id' (matches types/index.ts)
-    id: str  
+    id: str
     company_name: str
     registration_number: str
     incorporation_date: date

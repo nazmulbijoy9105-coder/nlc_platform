@@ -22,24 +22,24 @@ Endpoints:
 """
 
 
-from typing import TYPE_CHECKING
+
+import uuid
 
 import structlog
-import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
     require_roles,
 )
+from app.models.enums import EngagementStatus, RevenueTier
+from app.models.user import User
 from app.services.commercial_service import EngagementService, QuotationService, TaskService
 from app.services.notification_service import ActivityService
 
-from app.models.enums import RevenueTier, EngagementStatus
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.user import User
 logger = structlog.get_logger(__name__)
 router = APIRouter()
 

@@ -21,12 +21,13 @@ AI Constitution Article 3 compliance:
 """
 
 
+import uuid
 from typing import TYPE_CHECKING
 
 import structlog
-import uuid
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
     get_current_user,
@@ -34,13 +35,11 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
+from app.models.enums import DocumentType
+from app.models.user import User
 from app.services.document_service import DocumentService, PromptTemplateService
 from app.services.notification_service import ActivityService
 
-import uuid
-from app.models.enums import DocumentType
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.user import User
 if TYPE_CHECKING:
     import uuid
 

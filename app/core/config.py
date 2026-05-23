@@ -1,6 +1,8 @@
-from pydantic_settings import BaseSettings
-from typing import Optional, List
 import os
+from typing import List, Optional
+
+from pydantic_settings import BaseSettings
+
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "NLC Platform"
@@ -78,7 +80,8 @@ class Settings(BaseSettings):
 
 from functools import lru_cache
 
-@lru_cache()
+
+@lru_cache
 def get_settings() -> Settings:
     return Settings()
 

@@ -1,9 +1,12 @@
+
 from fastapi import APIRouter, Depends, HTTPException, Query
-from typing import Optional
 from pydantic import BaseModel
+
 from app.api.auth import get_current_user
+
 # Import from your actual database location
 from app.models.database import get_db
+
 router = APIRouter()
 async def require_admin(current_user=Depends(get_current_user)):
     if current_user.get("role") != "admin":
@@ -22,7 +25,8 @@ class UserListItem(BaseModel):
     is_active: bool
 @router.get("/dashboard", response_model=DashboardStats)
 async def get_dashboard(admin=Depends(require_admin), db=Depends(get_db)):
-    from sqlalchemy import select, func
+    from sqlalchemy import func, select
+
     from app.models.user import User
     total_users = (await db.execute(select(func.count(User.id)))).scalar() or 0
     total_cases = 0
@@ -46,6 +50,7 @@ async def list_users(
     db=Depends(get_db),
 ):
     from sqlalchemy import select
+
     from app.models.user import User
     query = select(User).order_by(User.id.desc()).offset((page - 1) * per_page).limit(per_page)
     result = await db.execute(query)

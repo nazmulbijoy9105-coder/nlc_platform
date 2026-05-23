@@ -94,8 +94,9 @@ def _check_celery_workers() -> ComponentHealth:
     """Check Celery broker reachability without blocking."""
     start = time.perf_counter()
     try:
-        from app.core.config import get_settings
         import redis
+
+        from app.core.config import get_settings
         s = get_settings()
         r = redis.from_url(s.redis_url, socket_connect_timeout=2, socket_timeout=2)
         r.ping()

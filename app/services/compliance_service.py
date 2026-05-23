@@ -60,9 +60,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
         trigger_source: CRON_DAILY | API_REQUEST | RESCUE_STEP_COMPLETE | MANUAL
         AI Constitution Article 1: Result is deterministic. Identical input = identical output.
         """
-        from app.rule_engine import CompanyProfile
-
         from app.core.dependencies import get_rule_engine
+        from app.rule_engine import CompanyProfile
         from app.services.company_service import CompanyService
 
         # ── Step 1: Build profile ──────────────────────────────────
