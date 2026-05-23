@@ -91,32 +91,20 @@ async def _check_redis() -> ComponentHealth:
 
 
 def _check_celery_workers() -> ComponentHealth:
-    """Check if any Celery workers are active by pinging the broker."""
+    """Check Celery broker reachability without blocking."""
     start = time.perf_counter()
     try:
-        from app.worker.celery_app import celery_app
-        inspector = celery_app.control.inspect(timeout=3.0)
-        active = inspector.active()
+        from app.core.config import get_settings
+        import redis
+        s = get_settings()
+        r = redis.from_url(s.redis_url, socket_connect_timeout=2, socket_timeout=2)
+        r.ping()
+        r.close()
         ms = round((time.perf_counter() - start) * 1000, 2)
-        if active is None:
-            return ComponentHealth(
-                status="degraded",
-                response_ms=ms,
-                detail="No workers responded to ping. Scheduled tasks may be delayed.",
-            )
-        worker_count = len(active)
-        return ComponentHealth(
-            status="ok",
-            response_ms=ms,
-            detail=f"{worker_count} worker(s) active",
-        )
+        return ComponentHealth(status="degraded", response_ms=ms, detail="Broker reachable; worker count unknown")
     except Exception as e:
         ms = round((time.perf_counter() - start) * 1000, 2)
-        return ComponentHealth(
-            status="error",
-            response_ms=ms,
-            detail=str(e)[:100],
-        )
+        return ComponentHealth(status="degraded", response_ms=ms, detail=f"Celery broker unreachable: {str(e)[:80]}")
 
 
 async def _check_s3() -> ComponentHealth:
@@ -159,7 +147,10 @@ async def full_health_check():
     # Run all checks
     db_health = await _check_database()
     redis_health = await _check_redis()
-    celery_health = _check_celery_workers()
+    try:
+        celery_health = _check_celery_workers()
+    except Exception:
+        celery_health = ComponentHealth(status="degraded", detail="Celery check skipped")
     s3_health = await _check_s3()
 
     components = {
