@@ -102,9 +102,6 @@ class RescuePlanResponse(BaseModel):
 
 
 class MessageResponse(BaseModel):
-    message: str
-    success: bool = True
-
 
 # ---------------------------------------------------------------------------
 # Serialisers
