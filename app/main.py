@@ -73,6 +73,26 @@ async def lifespan(app: FastAPI):
         async with engine.connect() as conn:
             await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
         logger.info("db_connectivity_ok")
+    # Auto-create admin user from env vars if not exists
+    try:
+        _ae = settings.ADMIN_EMAIL
+        _ap = settings.ADMIN_PASSWORD
+        if _ae and _ap:
+            from sqlalchemy import select as _sel
+            from app.models.user import User as _User
+            from app.core.security import hash_password as _hp
+            from app.models.database import AsyncSessionLocal as _ASL
+            import uuid as _uuid
+            async with _ASL() as _db:
+                _ex = await _db.execute(_sel(_User).where(_User.email == _ae))
+                if not _ex.scalar_one_or_none():
+                    _db.add(_User(id=_uuid.uuid4(), email=_ae, password_hash=_hp(_ap),
+                        full_name="NLC Super Admin", role="SUPER_ADMIN",
+                        is_active=True, requires_2fa=False))
+                    await _db.commit()
+                    logger.info("admin_auto_created", email=_ae)
+    except Exception as _e:
+        logger.warning("admin_auto_create_failed", error=str(_e))
     except Exception as e:
         logger.error("db_connectivity_failed", error=str(e))
         raise RuntimeError(f"Cannot connect to database on startup: {e}")
