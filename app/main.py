@@ -71,7 +71,6 @@ async def lifespan(app: FastAPI):
     try:
         from app.models.database import engine
         async with engine.connect() as conn:
-    except Exception as e:\n        logger.error("db_connectivity_failed", error=str(e))\n        raise RuntimeError(f"Cannot connect to database on startup: {e}")
             await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
         logger.info("db_connectivity_ok")
     except Exception as e:
@@ -98,9 +97,6 @@ async def lifespan(app: FastAPI):
                     logger.info("admin_auto_created", email=_ae)
     except Exception as _e:
         logger.warning("admin_auto_create_failed", error=str(_e))
-    except Exception as e:
-        logger.error("db_connectivity_failed", error=str(e))
-        raise RuntimeError(f"Cannot connect to database on startup: {e}")
 
     # Verify Redis/Celery broker is reachable (non-fatal — workers may not be up yet)
     try:

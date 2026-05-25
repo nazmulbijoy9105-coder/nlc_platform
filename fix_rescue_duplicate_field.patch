@@ -1,0 +1,10 @@
+--- a/app/api/rescue.py
++++ b/app/api/rescue.py
+@@ -102,7 +102,6 @@
+
+ class MessageResponse(BaseModel):
+     message: str
+-    message: str
+ # ---------------------------------------------------------------------------
+
+ def _step_to_response(step) -> RescueStepResponse:
