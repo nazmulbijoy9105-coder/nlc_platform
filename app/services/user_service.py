@@ -166,7 +166,7 @@ class UserService(BaseService[User]):
         Verify a TOTP code during login step 2.
         Returns True if valid.
         """
-        if not user.totp_enabled or not user.totp_secret_encrypted:
+        if not user.requires_2fa or not user.totp_secret_encrypted:
             return False
         return verify_totp_code(user.totp_secret_encrypted, code)
 
