@@ -26,7 +26,7 @@ from datetime import date
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
@@ -48,7 +48,7 @@ router = APIRouter()
 
 
 # ---------------------------------------------------------------------------
-# Schemas
+# Schemas — MATCH FRONTEND types/index.ts EXACTLY
 # ---------------------------------------------------------------------------
 
 class CompanyCreateRequest(BaseModel):
@@ -56,17 +56,11 @@ class CompanyCreateRequest(BaseModel):
     registration_number: str = Field(min_length=3, max_length=50)
     incorporation_date: date
     registered_address: str = Field(min_length=5, max_length=500)
-    
-    # FIX 1: Strict Enum matching app/models/enums.py
     company_type: CompanyType = Field(default=CompanyType.PRIVATE_LIMITED)
-    
-    # FIX 2: Date object matching SQLAlchemy ORM & Service layer (prevents DataError)
-    financial_year_end: date | None = None  # Optional on creation, defaults in service
-    
-    # Admin-only fields
+    financial_year_end: date | None = None
     revenue_tier: RevenueTier | None = None
     assigned_officer_id: uuid.UUID | None = None
-    
+
 
 class CompanyUpdateRequest(BaseModel):
     company_name: str | None = Field(None, min_length=2, max_length=255)
@@ -85,25 +79,35 @@ class FlagResolveRequest(BaseModel):
 
 
 class CompanyResponse(BaseModel):
-    # FIX 3: Frontend expects 'id', not 'company_id' (matches types/index.ts)
-    id: str
-    company_name: str
-    registration_number: str
-    incorporation_date: date
-    registered_address: str | None
-    company_type: str
-    financial_year_end: str | None
-    current_compliance_score: int | None
-    current_risk_band: str | None
-    company_status: str
-    revenue_tier: str | None
-    is_fdi_registered: bool | None
-    is_dormant: bool | None
-    last_evaluated_at: str | None
-    created_at: str
+    """
+    MATCHES frontend types/index.ts Company interface EXACTLY.
+    JSON keys: id, name, registration_number, incorporation_date,
+    compliance_score, band, last_evaluated_at, director_count, violation_count
+    """
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    id: str
+    name: str                              # ← frontend field (was company_name)
+    registration_number: str
+    incorporation_date: str               # ISO format string
+    compliance_score: int | None           # ← frontend field (was current_compliance_score)
+    band: str | None                       # ← frontend field (was current_risk_band)
+    last_evaluated_at: str | None          # ISO format string
+    director_count: int = 0                # ← NEW: computed from company.directors
+    violation_count: int = 0               # ← NEW: computed from active flags
+    # Optional backend extras (frontend ignores if not present)
+    company_type: str | None = None
+    company_status: str | None = None
+    financial_year_end: str | None = None
+    registered_address: str | None = None
+    revenue_tier: str | None = None
+    is_fdi_registered: bool | None = None
+    is_dormant: bool | None = None
+    created_at: str | None = None
+    active_flags: int = 0
+    black_flags: int = 0
+    red_flags: int = 0
+    yellow_flags: int = 0
 
 
 class ComplianceSummaryResponse(BaseModel):
@@ -149,32 +153,52 @@ class MessageResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Helper: serialise company ORM object
+# Helper: serialise company ORM object → frontend-compatible JSON
 # ---------------------------------------------------------------------------
 
 def _company_to_response(company) -> CompanyResponse:
+    """Convert SQLAlchemy Company ORM → CompanyResponse with frontend field names."""
+    # Compute director_count from loaded relationship
+    director_count = 0
+    if hasattr(company, 'directors') and company.directors is not None:
+        director_count = len(company.directors)
+
+    # Compute violation_count from active flags
+    violation_count = 0
+    if hasattr(company, 'compliance_flags') and company.compliance_flags is not None:
+        violation_count = len([
+            f for f in company.compliance_flags
+            if hasattr(f, 'status') and str(f.status) == 'ACTIVE'
+        ])
+
+    # Convert enums to strings
+    def _str_or_none(val):
+        if val is None:
+            return None
+        return str(val.value if hasattr(val, 'value') else val)
+
     return CompanyResponse(
-        id=str(company.id),  # FIX 3: Map to 'id'
-        company_name=company.company_name,
+        id=str(company.id),
+        name=company.company_name,                           # ← frontend field
         registration_number=company.registration_number,
-        incorporation_date=company.incorporation_date,
+        incorporation_date=company.incorporation_date.isoformat() if company.incorporation_date else None,
+        compliance_score=company.current_compliance_score,  # ← frontend field
+        band=_str_or_none(company.current_risk_band),       # ← frontend field
+        last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
+        director_count=director_count,
+        violation_count=violation_count,
+        company_type=_str_or_none(company.company_type),
+        company_status=_str_or_none(company.company_status),
+        financial_year_end=company.financial_year_end.isoformat() if company.financial_year_end else None,
         registered_address=company.registered_address,
-        company_type=company.company_type,
-        financial_year_end=company.financial_year_end,
-        current_compliance_score=company.current_compliance_score,
-        current_risk_band=company.current_risk_band,
-        company_status=company.company_status,
-        revenue_tier=company.revenue_tier,
+        revenue_tier=_str_or_none(company.revenue_tier),
         is_fdi_registered=company.is_fdi_registered if hasattr(company, 'is_fdi_registered') else False,
         is_dormant=company.is_dormant if hasattr(company, 'is_dormant') else False,
-        last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
-        created_at=company.created_at.isoformat(),
-        risk_band=company.current_risk_band or "UNKNOWN",
+        created_at=company.created_at.isoformat() if company.created_at else None,
         active_flags=0,
         black_flags=0,
         red_flags=0,
         yellow_flags=0,
-        snapshot_date=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
     )
 
 
@@ -198,7 +222,6 @@ async def create_company(
     svc = CompanyService(db)
     activity = ActivityService(db)
 
-    # Check registration number uniqueness
     existing = await svc.get_by_registration_number(body.registration_number)
     if existing:
         raise HTTPException(
@@ -206,8 +229,6 @@ async def create_company(
             detail=f"Company with registration number '{body.registration_number}' already exists.",
         )
 
-    # FIX 4: Removed `notes` and `is_fdi_registered` (not in CompanyService signature)
-    # FIX 1 & 2: Passed strict Enum and Date objects
     company = await svc.create_company(
         company_name=body.company_name,
         registration_number=body.registration_number,
@@ -215,7 +236,7 @@ async def create_company(
         registered_address=body.registered_address,
         company_type=body.company_type,
         financial_year_end=body.financial_year_end,
-        assigned_staff_id=body.assigned_officer_id,  # Mapped from API schema name
+        assigned_staff_id=body.assigned_officer_id,
         created_by=current_user.id,
     )
 
@@ -388,7 +409,6 @@ async def evaluate_company(
 
     company = await company_svc.get_by_id_or_404(company_id)
 
-    # Run evaluation pipeline
     result = await compliance_svc.evaluate_company(
         company_id=company_id,
         rule_engine=rule_engine,

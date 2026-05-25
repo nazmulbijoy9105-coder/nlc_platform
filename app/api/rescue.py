@@ -19,7 +19,6 @@ Business rules:
 
 
 import uuid
-from typing import TYPE_CHECKING
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -39,13 +38,7 @@ from app.services.rescue_service import RescueService
 router = APIRouter()
 
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.models.user import User
-
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.user import User
-if TYPE_CHECKING:
-    pass
 
 
 
@@ -107,7 +100,7 @@ class RescuePlanResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
-    message: str
+
 # ---------------------------------------------------------------------------
 
 def _step_to_response(step) -> RescueStepResponse:

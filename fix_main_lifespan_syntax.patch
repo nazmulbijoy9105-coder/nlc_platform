@@ -1,0 +1,35 @@
+--- a/app/main.py
++++ b/app/main.py
+@@ -60,15 +60,12 @@
+     # Verify DB is reachable
+     try:
+         from app.models.database import engine
+         async with engine.connect() as conn:
+-    except Exception as e:
+        logger.error("db_connectivity_failed", error=str(e))
+        raise RuntimeError(f"Cannot connect to database on startup: {e}")
+             await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
+         logger.info("db_connectivity_ok")
+     except Exception as e:
+         logger.error("db_connectivity_failed", error=str(e))
+         raise RuntimeError(f"Cannot connect to database on startup: {e}")
+
+     # Auto-create admin user from env vars if not exists
+@@ -90,9 +87,6 @@
+                     logger.info("admin_auto_created", email=_ae)
+     except Exception as _e:
+         logger.warning("admin_auto_create_failed", error=str(_e))
+-    except Exception as e:
+-        logger.error("db_connectivity_failed", error=str(e))
+-        raise RuntimeError(f"Cannot connect to database on startup: {e}")
+
+     # Verify Redis/Celery broker is reachable (non-fatal — workers may not be up yet)
+     try:
+@@ -105,6 +99,8 @@
+     # Warm the rule engine singleton (loads DB rules into memory)
+     try:
+         from app.core.dependencies import get_rule_engine
++        engine_instance = get_rule_engine()
++        logger.info("rule_engine_warmed", engine=type(engine_instance).__name__)
+     except Exception as e:
++        logger.warning("rule_engine_warm_failed", error=str(e))
