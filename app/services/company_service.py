@@ -62,6 +62,12 @@ class CompanyService(BaseService[Company]):
             lifecycle_stage=LifecycleStage.INCORPORATION,
             incorporation_date=incorporation_date,
             financial_year_end=financial_year_end,
+            registered_address=registered_address,
+            industry_sector=industry_sector,
+            tin_number=tin_number,
+            authorized_capital_bdt=authorized_capital_bdt,
+            paid_up_capital_bdt=paid_up_capital_bdt,
+            assigned_staff_id=assigned_staff_id,
         )
 
         # Create initial directors if provided
