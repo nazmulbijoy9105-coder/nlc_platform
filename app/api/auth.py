@@ -77,8 +77,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(get
         "requires_2fa": getattr(user, "requires_2fa", False),  # ← FIX
     }
 
-    access_token = create_access_token({"sub": str(user.id), "type": "access"})
-    refresh_token = create_refresh_token({"sub": str(user.id), "type": "refresh"})
+    access_token = create_access_token({"sub": str(user.id), "user_id": str(user.id), "email": user.email, "role": str(user.role), "type": "access"})
+    refresh_token = create_refresh_token({"sub": str(user.id), "user_id": str(user.id), "email": user.email, "role": str(user.role), "type": "refresh"})
 
     return {
         "access_token": access_token,
