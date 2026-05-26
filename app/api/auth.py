@@ -107,3 +107,20 @@ async def me(current_user: dict = Depends(get_current_user), db=Depends(get_db))
         is_active=user.is_active,
         requires_2fa=getattr(user, "requires_2fa", False),  # ← FIX
     )
+
+@router.post("/setup-admin", include_in_schema=False)
+async def setup_admin(db=Depends(get_db)):
+    """One-time admin setup. Delete after use."""
+    from sqlalchemy import select
+    from app.models.user import User
+    import uuid, datetime
+    existing = await db.execute(select(User).where(User.email == "admin@neumlexcounsel.com"))
+    if existing.scalar_one_or_none():
+        return {"status": "already exists"}
+    user = User(id=uuid.uuid4(), email="admin@neumlexcounsel.com",
+        password_hash=hash_password("NLC@Admin2026!"), full_name="NLC Super Admin",
+        role="SUPER_ADMIN", is_active=True, requires_2fa=False,
+        created_at=datetime.datetime.utcnow(), updated_at=datetime.datetime.utcnow())
+    db.add(user)
+    await db.commit()
+    return {"status": "created", "email": "admin@neumlexcounsel.com"}
