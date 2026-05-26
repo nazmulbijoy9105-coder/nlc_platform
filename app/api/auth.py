@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import Depends,
+    OAuth2PasswordRequestForm, APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, EmailStr
 
@@ -53,14 +54,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(body: LoginBody, db=Depends(get_db)):
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db)):
     from sqlalchemy import select
     from app.models.user import User
 
-    result = await db.execute(select(User).where(User.email == body.email))
+    result = await db.execute(select(User).where(User.email == form_data.username))
     user = result.scalar_one_or_none()
 
-    if not user or not verify_password(body.password, user.password_hash):
+    if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     if not user.is_active:
