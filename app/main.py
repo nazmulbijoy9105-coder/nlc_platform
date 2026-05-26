@@ -77,26 +77,32 @@ async def lifespan(app: FastAPI):
         logger.error("db_connectivity_failed", error=str(e))
         raise RuntimeError(f"Cannot connect to database on startup: {e}")
 
-    # Auto-create admin user from env vars if not exists
+    # Auto-create or sync admin password from env vars
     try:
         _ae = settings.ADMIN_EMAIL
         _ap = settings.ADMIN_PASSWORD
         if _ae and _ap:
             from sqlalchemy import select as _sel
             from app.models.user import User as _User
-            from app.core.security import hash_password as _hp
+            from app.core.security import hash_password as _hp, verify_password as _vp
             from app.models.database import AsyncSessionLocal as _ASL
             import uuid as _uuid
             async with _ASL() as _db:
                 _ex = await _db.execute(_sel(_User).where(_User.email == _ae))
-                if not _ex.scalar_one_or_none():
-                    _db.add(_User(id=_uuid.uuid4(), email=_ae, password_hash=_hp(_ap),
+                _user = _ex.scalar_one_or_none()
+                _new_hash = _hp(_ap)
+                if not _user:
+                    _db.add(_User(id=_uuid.uuid4(), email=_ae, password_hash=_new_hash,
                         full_name="NLC Super Admin", role="SUPER_ADMIN",
                         is_active=True, requires_2fa=False))
                     await _db.commit()
                     logger.info("admin_auto_created", email=_ae)
+                elif not _vp(_ap, _user.password_hash):
+                    _user.password_hash = _new_hash
+                    await _db.commit()
+                    logger.info("admin_password_synced", email=_ae)
     except Exception as _e:
-        logger.warning("admin_auto_create_failed", error=str(_e))
+        logger.warning("admin_auto_sync_failed", error=str(_e))
 
     # Verify Redis/Celery broker is reachable (non-fatal — workers may not be up yet)
     try:
