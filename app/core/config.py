@@ -73,6 +73,11 @@ class Settings(BaseSettings):
         origins_str = os.getenv("ALLOWED_ORIGINS", "https://nlc-frontend.vercel.app")
         return [o.strip() for o in origins_str.split(",") if o.strip()]
 
+
+    # Rule engine
+    rule_engine_version: str = "1.0.0"
+    max_login_attempts: int = 5
+    lockout_minutes: int = 30
     class Config:
         env_file = ".env"
         case_sensitive = True
