@@ -41,6 +41,7 @@ from app.services.base import BaseService
 logger = logging.getLogger("nlc.compliance")
 
 
+
 def _company_profile_kwargs(profile_data: dict, profile_cls) -> dict:
     """Normalize CompanyService profile output to the active rule-engine dataclass."""
     accepted = {field.name for field in dataclass_fields(profile_cls)}
@@ -205,7 +206,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     statutory_basis=flag.statutory_basis,
                     severity=SeverityLevel(flag.severity),
                     score_impact=flag.score_impact,
-                    exposure_band=ExposureBand(flag.exposure_band) if flag.exposure_band else None,
+                    exposure_band=ExposureBand(getattr(flag, "exposure_band", output.score_breakdown.exposure_band)),
                     revenue_tier=RevenueTier(flag.revenue_tier),
                     flag_status=FlagStatus.ACTIVE,
                     triggered_date=today,
