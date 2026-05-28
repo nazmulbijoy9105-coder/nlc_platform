@@ -17,8 +17,8 @@ from datetime import UTC, date, datetime
 from sqlalchemy import func, select, text, update
 from sqlalchemy.orm import selectinload
 
-from app.models.company import Company
-from app.models.enums import CompanyStatus, CompanyType, LifecycleStage, RiskBand
+from app.models.company import Company, CompanyUserAccess
+from app.models.enums import CompanyStatus, CompanyType, LifecycleStage, RevenueTier, RiskBand
 from app.models.people import Director, Shareholder
 from app.services.base import BaseService
 
@@ -136,9 +136,13 @@ class CompanyService(BaseService[Company]):
         limit: int = 25,
         offset: int = 0,
         risk_band: RiskBand | None = None,
+        company_status: CompanyStatus | None = None,
+        revenue_tier: RevenueTier | None = None,
+        is_dormant: bool | None = None,
         rescue_required: bool | None = None,
         search: str | None = None,
         company_ids_filter: list[str] | None = None,
+        user_id: uuid.UUID | None = None,
     ) -> tuple[list[Company], int]:
         """
         List companies with filters, search, and pagination.
@@ -150,11 +154,23 @@ class CompanyService(BaseService[Company]):
 
         if risk_band:
             filters.append(Company.current_risk_band == risk_band)
+        if company_status:
+            filters.append(Company.company_status == company_status)
+        if revenue_tier:
+            filters.append(Company.revenue_tier == revenue_tier)
+        if is_dormant is not None:
+            dormant_filter = Company.company_status == CompanyStatus.DORMANT
+            filters.append(dormant_filter if is_dormant else Company.company_status != CompanyStatus.DORMANT)
         if rescue_required is not None:
             filters.append(Company.rescue_required == rescue_required)
         if company_ids_filter is not None:
             uuids = [uuid.UUID(cid) for cid in company_ids_filter]
             filters.append(Company.id.in_(uuids))
+        if user_id is not None:
+            accessible_company_ids = select(CompanyUserAccess.company_id).where(
+                CompanyUserAccess.user_id == user_id
+            )
+            filters.append(Company.id.in_(accessible_company_ids))
         if search and search.strip():
             # Use PostgreSQL full-text search on company_name_search vector
             search_term = search.strip()

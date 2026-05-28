@@ -1,22 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from pydantic import BaseModel, EmailStr
+import datetime
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel
+from sqlalchemy import select
 
 from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    hash_password,
     verify_password,
 )
 from app.models.database import get_db
+from app.models.user import User
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
-
-
-class LoginBody(BaseModel):
-    email: EmailStr
-    password: str
 
 
 class LoginResponse(BaseModel):
@@ -53,14 +54,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(body: LoginBody, db=Depends(get_db)):
-    from sqlalchemy import select
-    from app.models.user import User
-
-    result = await db.execute(select(User).where(User.email == body.email))
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == form_data.username))
     user = result.scalar_one_or_none()
 
-    if not user or not verify_password(body.password, user.password_hash):
+    if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     if not user.is_active:
@@ -89,9 +87,6 @@ async def login(body: LoginBody, db=Depends(get_db)):
 
 @router.get("/me", response_model=UserResponse)
 async def me(current_user: dict = Depends(get_current_user), db=Depends(get_db)):
-    from sqlalchemy import select
-    from app.models.user import User
-
     result = await db.execute(select(User).where(User.id == current_user["sub"]))
     user = result.scalar_one_or_none()
 
@@ -110,9 +105,6 @@ async def me(current_user: dict = Depends(get_current_user), db=Depends(get_db))
 @router.post("/setup-admin", include_in_schema=False)
 async def setup_admin(db=Depends(get_db)):
     """One-time admin setup. Delete after use."""
-    from sqlalchemy import select
-    from app.models.user import User
-    import uuid, datetime
     existing = await db.execute(select(User).where(User.email == "admin@neumlexcounsel.com"))
     if existing.scalar_one_or_none():
         return {"status": "already exists"}
