@@ -33,7 +33,6 @@ from app.core.dependencies import (
     Pagination,
     get_current_user,
     get_db_for_user,
-    get_rule_engine,
     require_company_access,
     require_roles,
 )
@@ -193,7 +192,7 @@ def _company_to_response(company) -> CompanyResponse:
         registered_address=company.registered_address,
         revenue_tier=_str_or_none(company.revenue_tier),
         is_fdi_registered=company.is_fdi_registered if hasattr(company, 'is_fdi_registered') else False,
-        is_dormant=company.is_dormant if hasattr(company, 'is_dormant') else False,
+        is_dormant=company.company_status == CompanyStatus.DORMANT,
         created_at=company.created_at.isoformat() if company.created_at else None,
         active_flags=0,
         black_flags=0,
@@ -401,7 +400,6 @@ async def evaluate_company(
     request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
-    rule_engine=Depends(get_rule_engine),
 ):
     company_svc = CompanyService(db)
     compliance_svc = ComplianceService(db)
@@ -411,16 +409,14 @@ async def evaluate_company(
 
     result = await compliance_svc.evaluate_company(
         company_id=company_id,
-        rule_engine=rule_engine,
         trigger_source="API_MANUAL",
-        triggered_by=current_user.id,
     )
 
     await activity.log(
         action="COMPLIANCE_EVALUATED",
         resource_type="company",
         resource_id=str(company_id),
-        description=f"Manual evaluation triggered. Score: {result.score}, Band: {result.risk_band}",
+        description=f"Manual evaluation triggered. Score: {result['score']}, Band: {result['risk_band']}",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
     )
@@ -429,13 +425,13 @@ async def evaluate_company(
     return ComplianceSummaryResponse(
         company_id=str(company_id),
         company_name=company.company_name,
-        current_score=result.score,
-        risk_band=result.risk_band,
+        current_score=result["score"],
+        risk_band=result["risk_band"],
         active_flags=flag_summary.get("total_active", 0),
         black_flags=flag_summary.get("black", 0),
         red_flags=flag_summary.get("red", 0),
         yellow_flags=flag_summary.get("yellow", 0),
-        last_evaluated_at=result.evaluated_at.isoformat() if hasattr(result, "evaluated_at") else None,
+        last_evaluated_at=None,
         evaluation_triggered=True,
     )
 
