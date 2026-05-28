@@ -388,7 +388,7 @@ class CompanyService(BaseService[Company]):
             "unfiled_returns_count":          unfiled_returns,
             "annual_return_filed":            latest_return is not None and not latest_return.is_default if latest_return else False,
             "annual_return_content_complete": latest_return.is_complete if latest_return else False,
-            "last_agm_filing_date":           latest_return.filed_date if latest_return else None,
+            "annual_return_filed_date":       latest_return.filed_date if latest_return else None,
 
             # People
             "director_changes": director_changes,
@@ -400,7 +400,7 @@ class CompanyService(BaseService[Company]):
 
             # Office
             "registered_office_change_date": None,
-            "form_ix_filed": True,
+            "form_vi_filed": True,
 
             # Corporate structure
             "aoa_transfer_restriction": True,
@@ -413,11 +413,11 @@ class CompanyService(BaseService[Company]):
             # Registers
             "maintained_registers":   maintained_registers,
             "last_allotment_date":    None,
-            "share_certificate_issued": all(s.share_certificate_issued for s in company.shareholders) if company.shareholders else True,
+            "share_certificates_issued": all(s.share_certificate_issued for s in company.shareholders) if company.shareholders else True,
 
             # Capital
             "capital_increase_date":       None,
             "capital_increase_resolution": True,
-            "charge_creation_date":        None,
+            "charges":                     [],
             "form_viii_filed":             True,
         }
