@@ -22,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
+from dataclasses import fields as dataclass_fields
 from datetime import UTC, date, datetime
 
 from sqlalchemy import select, text, update
@@ -38,6 +39,31 @@ from app.models.enums import (
 from app.services.base import BaseService
 
 logger = logging.getLogger("nlc.compliance")
+
+
+
+def _company_profile_kwargs(profile_data: dict, profile_cls) -> dict:
+    """Normalize CompanyService profile output to the active rule-engine dataclass."""
+    accepted = {field.name for field in dataclass_fields(profile_cls)}
+    aliases = {
+        "last_agm_filing_date": "annual_return_filed_date",
+        "form_ix_filed": "form_vi_filed",
+        "share_certificate_issued": "share_certificates_issued",
+        "charge_creation_date": None,
+    }
+
+    normalized = dict(profile_data)
+    for old_key, new_key in aliases.items():
+        if old_key in normalized and new_key and new_key not in normalized:
+            normalized[new_key] = normalized[old_key]
+
+    return {key: value for key, value in normalized.items() if key in accepted}
+
+
+def _has_rescue_output(output) -> bool:
+    rescue_plan = getattr(output, "rescue_plan", None)
+    rescue_sequence = getattr(output, "rescue_sequence", None)
+    return bool(rescue_plan or rescue_sequence)
 
 
 class ComplianceService(BaseService[ComplianceFlag]):
@@ -72,7 +98,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
         # Convert dict to CompanyProfile dataclass
         try:
-            profile = CompanyProfile(**profile_data)
+            profile = CompanyProfile(**_company_profile_kwargs(profile_data, CompanyProfile))
         except TypeError as exc:
             raise ValueError(f"CompanyProfile assembly failed: {exc}") from exc
 
@@ -114,7 +140,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "shareholding_score":output.score_breakdown.shareholding_score,
                 "override_applied":  output.score_breakdown.override_applied,
             },
-            "rescue_required": output.rescue_plan is not None,
+            "rescue_required": _has_rescue_output(output),
             "engine_version":  output.engine_version,
             "ilrmf_version":   output.ilrmf_version,
         }
@@ -136,7 +162,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         today = date.today()
         score = output.score_breakdown.final_score
         risk_band = RiskBand(output.score_breakdown.risk_band)
-        rescue_required = output.rescue_plan is not None
+        rescue_required = _has_rescue_output(output)
 
         # ── Resolve previously active flags not in current output ──
         current_rule_ids = {f.rule_id for f in output.flags}
@@ -180,7 +206,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     statutory_basis=flag.statutory_basis,
                     severity=SeverityLevel(flag.severity),
                     score_impact=flag.score_impact,
-                    exposure_band=ExposureBand(flag.exposure_band) if flag.exposure_band else None,
+                    exposure_band=ExposureBand(getattr(flag, "exposure_band", output.score_breakdown.exposure_band)),
                     revenue_tier=RevenueTier(flag.revenue_tier),
                     flag_status=FlagStatus.ACTIVE,
                     triggered_date=today,
