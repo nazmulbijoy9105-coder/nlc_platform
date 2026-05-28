@@ -33,7 +33,7 @@ class NotificationService(BaseService[Notification]):
     async def queue_notification(
         self,
         *,
-        company_id: uuid.UUID | None,
+        company_id: uuid.UUID | None = None,
         user_id: uuid.UUID | None = None,
         title: str,
         body: str,
@@ -254,11 +254,12 @@ class ActivityService:
     async def log(
         self,
         *,
-        user_id: uuid.UUID | None,
-        company_id: uuid.UUID | None,
+        user_id: uuid.UUID | None = None,
+        actor_user_id: uuid.UUID | None = None,
+        company_id: uuid.UUID | None = None,
         action: str,
         resource_type: str | None = None,
-        resource_id: uuid.UUID | None = None,
+        resource_id: uuid.UUID | str | None = None,
         description: str | None = None,
         ip_address: str | None = None,
         user_agent: str | None = None,
@@ -271,6 +272,13 @@ class ActivityService:
         Always called in background — never blocks the response.
         """
         from app.models.infrastructure import UserActivityLog
+        if user_id is None:
+            user_id = actor_user_id
+        if isinstance(resource_id, str):
+            try:
+                resource_id = uuid.UUID(resource_id)
+            except ValueError:
+                resource_id = None
         log = UserActivityLog(
             id=uuid.uuid4(),
             user_id=user_id,
