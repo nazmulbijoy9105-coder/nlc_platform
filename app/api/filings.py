@@ -213,6 +213,64 @@ def _dispatch_reevaluation(company_id: uuid.UUID, trigger: str) -> None:
         logger.warning("reevaluation_dispatch_failed", company_id=str(company_id), error=str(e))
 
 
+
+# ===========================================================================
+# PORTFOLIO LIST — GET /filings
+# All filings across portfolio (admin) or accessible companies (client)
+# ===========================================================================
+
+@router.get(
+    "",
+    summary="List all filings across portfolio",
+)
+async def list_all_filings(
+    company_id: uuid.UUID | None = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    from sqlalchemy import select
+    from app.models.filings import AGM, AnnualReturn, Audit
+    from app.models.company import Company, CompanyUserAccess
+
+    # Role-based company filter
+    if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):
+        accessible = select(CompanyUserAccess.company_id).where(
+            CompanyUserAccess.user_id == current_user.id
+        )
+        company_filter = Company.id.in_(accessible)
+    else:
+        company_filter = None
+
+    results = {"agms": [], "audits": [], "annual_returns": []}
+
+    # AGMs
+    stmt = select(AGM)
+    if company_id:
+        stmt = stmt.where(AGM.company_id == company_id)
+    elif company_filter is not None:
+        stmt = stmt.where(AGM.company_id.in_(
+            select(CompanyUserAccess.company_id).where(CompanyUserAccess.user_id == current_user.id)
+        ))
+    agms = (await db.execute(stmt.order_by(AGM.agm_due_date.desc()).limit(50))).scalars().all()
+    results["agms"] = [_agm_to_response(a) for a in agms]
+
+    # Audits
+    stmt = select(Audit)
+    if company_id:
+        stmt = stmt.where(Audit.company_id == company_id)
+    audits = (await db.execute(stmt.order_by(Audit.financial_year.desc()).limit(50))).scalars().all()
+    results["audits"] = [_audit_to_response(a) for a in audits]
+
+    # Annual Returns
+    stmt = select(AnnualReturn)
+    if company_id:
+        stmt = stmt.where(AnnualReturn.company_id == company_id)
+    returns = (await db.execute(stmt.order_by(AnnualReturn.financial_year.desc()).limit(50))).scalars().all()
+    results["annual_returns"] = [_return_to_response(r) for r in returns]
+
+    return results
+
+
 # ===========================================================================
 # AGM ENDPOINTS
 # ===========================================================================
