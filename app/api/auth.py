@@ -20,6 +20,10 @@ router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
+class LoginBody(BaseModel):
+    email: str
+    password: str
+
 class LoginResponse(BaseModel):
     access_token: str
     refresh_token: str
