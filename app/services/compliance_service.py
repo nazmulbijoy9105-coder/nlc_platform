@@ -161,7 +161,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         now = datetime.now(UTC)
         today = date.today()
         score = output.score_breakdown.final_score
-        risk_band = RiskBand(output.score_breakdown.risk_band)
+        risk_band = RiskBand(output.score_breakdown.risk_band.value)
         rescue_required = _has_rescue_output(output)
 
         # ── Resolve previously active flags not in current output ──
