@@ -119,21 +119,6 @@ async def setup_admin(db=Depends(get_db)):
     db.add(user)
     await db.commit()
     return {"status": "created", "email": "admin@neumlexcounsel.com"}
-
-@router.post("/bootstrap-admin")
-async def bootstrap_admin(db=Depends(get_db)):
-    """Temporary endpoint to create first admin user. Remove after use."""
-    from sqlalchemy import select
-    from app.models.user import User
-    from app.core.security import hash_password
-    import uuid
-    result = await db.execute(select(User).where(User.email == "admin@nlc.com"))
-    existing = result.scalar_one_or_none()
-    if existing:
-        existing.password_hash = hash_password("NLC@Admin2026")
-        existing.is_active = True
-        await db.commit()
-        return {"status": "password reset", "email": "admin@nlc.com"}
     user = User(
         id=uuid.uuid4(),
         email="admin@nlc.com",
