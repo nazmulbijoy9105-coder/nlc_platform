@@ -461,7 +461,6 @@ def get_rule_engine():
         from app.rule_engine import NLCRuleEngine
         _rule_engine_instance = NLCRuleEngine()
     return _rule_engine_instance
-    return _rule_engine_instance
 
 
 # ═══════════════════════════════════════════════════════════════════════
