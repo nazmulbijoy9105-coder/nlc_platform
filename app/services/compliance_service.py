@@ -206,8 +206,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     statutory_basis=flag.statutory_basis,
                     severity=SeverityLevel(flag.severity),
                     score_impact=flag.score_impact,
-                    exposure_band=ExposureBand(getattr(flag, "exposure_band", output.score_breakdown.exposure_band)),
-                    revenue_tier=RevenueTier(flag.revenue_tier),
+                    exposure_band=ExposureBand(getattr(getattr(flag, "exposure_band", None) or output.score_breakdown.exposure_band, "value", getattr(flag, "exposure_band", None) or output.score_breakdown.exposure_band)),
+                    revenue_tier=RevenueTier(flag.revenue_tier.value if hasattr(flag.revenue_tier, 'value') else flag.revenue_tier),
                     flag_status=FlagStatus.ACTIVE,
                     triggered_date=today,
                     description=flag.description,
@@ -232,7 +232,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         existing_snapshot_row = existing_snapshot.scalar_one_or_none()
         if not existing_snapshot_row:
             sb = output.score_breakdown
-            black_flags = len([f for f in output.flags if f.severity == "BLACK"])
+            black_flags = len([f for f in output.flags if (f.severity.value if hasattr(f.severity, 'value') else f.severity) == "BLACK"])
             snapshot = ComplianceScoreHistory(
                 id=uuid.uuid4(),
                 company_id=company_id,
@@ -370,6 +370,21 @@ class ComplianceService(BaseService[ComplianceFlag]):
             }
             for row in rows
         ]
+
+
+    async def get_compliance_calendar(
+        self,
+        company_id: uuid.UUID,
+        days_ahead: int = 90,
+        include_past_days: int = 30,
+    ) -> list[dict]:
+        from app.services.compliance_calendar import ComplianceCalendarService
+        cal = ComplianceCalendarService(self.db)
+        return await cal.get_calendar(
+            company_id,
+            include_past_days=include_past_days,
+            include_future_days=days_ahead,
+        )
 
     async def get_dashboard_kpis(self) -> dict:
         """Aggregate KPIs for admin dashboard from vw_admin_dashboard_kpis."""
