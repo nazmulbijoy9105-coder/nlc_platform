@@ -188,6 +188,7 @@ class CompanyService(BaseService[Company]):
         # Records
         stmt = (
             select(Company)
+            .options(selectinload(Company.compliance_flags))
             .where(*filters)
             .order_by(
                 Company.current_risk_band.desc().nullslast(),
