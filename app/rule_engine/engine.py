@@ -383,7 +383,7 @@ class NLCRuleEngine:
             if c.remittance_amount_usd < FOREIGN_WORK_PERMIT_THRESHOLD_USD and c.bida_registered:
                 self._add_flag(ComplianceFlag(
                     rule_id="INC-006",
-                    flag_code="REMittance_BELOW_WORK_PERMIT_THRESHOLD",
+                    flag_code="REMITTANCE_BELOW_WORK_PERMIT_THRESHOLD",
                     severity=Severity.YELLOW,
                     score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
@@ -725,7 +725,7 @@ class NLCRuleEngine:
                     detail={"transfer_id": transfer.transfer_id}
                 ))
 
-            if not transfer.board_approval and c.aoa_transfer_restriction:
+            if not transfer.board_approval_obtained and c.aoa_transfer_restriction:
                 self._add_flag(ComplianceFlag(
                     rule_id="TR-003",
                     flag_code="TRANSFER_NO_BOARD_APPROVAL",
