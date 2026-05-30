@@ -489,8 +489,8 @@ async def get_flags(
         FlagResponse(
             flag_id=str(f.id),
             rule_id=f.rule_id,
-            rule_name=f.rule_name,
-            severity=f.severity,
+            rule_name=f.flag_code,
+            severity=f.severity.value if hasattr(f.severity, "value") else str(f.severity),
             score_impact=f.score_impact,
             status=f.status,
             is_black_override=f.is_black_override,
