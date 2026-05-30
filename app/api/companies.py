@@ -492,11 +492,11 @@ async def get_flags(
             rule_name=f.flag_code,
             severity=f.severity.value if hasattr(f.severity, "value") else str(f.severity),
             score_impact=f.score_impact,
-            status=f.status,
-            is_black_override=f.is_black_override,
-            triggered_at=f.triggered_at.isoformat(),
-            resolved_at=f.resolved_at.isoformat() if f.resolved_at else None,
-            resolution_note=f.resolution_note,
+            status=f.flag_status.value if hasattr(f.flag_status, "value") else str(f.flag_status),
+            is_black_override=getattr(f, "is_black_override", False),
+            triggered_at=f.triggered_date.isoformat() if f.triggered_date else "",
+            resolved_at=f.resolved_date.isoformat() if getattr(f, "resolved_date", None) else None,
+            resolution_note=getattr(f, "resolution_notes", None),
         )
         for f in flags
     ]
