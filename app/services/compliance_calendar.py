@@ -140,7 +140,7 @@ def _rjsc_events(fy: tuple[date, date]) -> list[dict]:
         {
             "event_type": "agm", "category": "RJSC",
             "title": f"Annual General Meeting FY {label}",
-            "description": f"AGM within 6 months of FY end ({fy_end.strftime(\'%d-%b-%Y\')}). s.81 Companies Act 1994.",
+            "description": f"AGM within 6 months of FY end ({fy_end.strftime("%d-%b-%Y")}). s.81 Companies Act 1994.",
             "due_date": datetime.combine(agm_due, datetime.min.time()),
             "fiscal_year": label, "form": None,
             "priority": _priority("agm", (agm_due - today).days),
@@ -185,7 +185,7 @@ def _tax_events(fy: tuple[date, date], *, has_vat: bool) -> list[dict]:
     events.append({
         "event_type": "corporate_tax_return", "category": "NBR",
         "title": f"Corporate Income Tax Return FY {label}",
-        "description": f"IT-11G due by last day of 6th month after FY end ({tax_due.strftime(\'%d-%b-%Y\')}). Penalty: 2% monthly interest.",
+        "description": f"IT-11G due by last day of 6th month after FY end ({tax_due.strftime("%d-%b-%Y")}). Penalty: 2% monthly interest.",
         "due_date": datetime.combine(tax_due, datetime.min.time()),
         "fiscal_year": label, "form": "IT-11G",
         "priority": _priority("corporate_tax_return", (tax_due - today).days),
@@ -204,7 +204,7 @@ def _tax_events(fy: tuple[date, date], *, has_vat: bool) -> list[dict]:
                 events.append({
                     "event_type": f"advance_tax_{q_label.lower()}", "category": "NBR",
                     "title": f"Advance Tax {q_label} FY {label}",
-                    "description": f"Quarterly advance tax due {adv_date.strftime(\'%d-%b-%Y\')}. Min 25% of prior year liability.",
+                    "description": f"Quarterly advance tax due {adv_date.strftime("%d-%b-%Y")}. Min 25% of prior year liability.",
                     "due_date": datetime.combine(adv_date, datetime.min.time()),
                     "fiscal_year": label, "form": "Challan",
                     "priority": _priority("advance_tax", (adv_date - today).days),
@@ -221,7 +221,7 @@ def _tax_events(fy: tuple[date, date], *, has_vat: bool) -> list[dict]:
             vat_due = (current_month + relativedelta(months=1)).replace(day=15)
             events.append({
                 "event_type": "vat_return", "category": "NBR",
-                "title": f"VAT Return (Mushak 9.1) — {current_month.strftime(\'%b %Y\')}",
+                "title": f"VAT Return (Mushak 9.1) — {current_month.strftime("%b %Y")}",
                 "description": "Monthly VAT return due by 15th of following month. Penalty: BDT 10,000 or 5% of VAT due.",
                 "due_date": datetime.combine(vat_due, datetime.min.time()),
                 "fiscal_year": label, "form": "Mushak 9.1",
@@ -249,7 +249,7 @@ def _bsec_events(fy: tuple[date, date]) -> list[dict]:
         events.append({
             "event_type": f"bsec_{q_label.lower()}_report", "category": "BSEC",
             "title": f"{q_label} Financial Report FY {label}",
-            "description": f"Quarterly report due within 45 days of quarter end ({q_end.strftime(\'%d-%b-%Y\')}).",
+            "description": f"Quarterly report due within 45 days of quarter end ({q_end.strftime("%d-%b-%Y")}).",
             "due_date": datetime.combine(report_due, datetime.min.time()),
             "fiscal_year": label, "form": "BSEC Quarterly Report",
             "priority": _priority("bsec_report", (report_due - today).days),
@@ -282,7 +282,7 @@ def _trade_license_event(company: Company) -> dict | None:
     return {
         "event_type": "trade_license_renewal", "category": "TRADE_LICENSE",
         "title": f"Trade License Renewal — {tl_number}",
-        "description": f"Expires {expiry.strftime(\'%d-%b-%Y\')}. Renew before expiry.",
+        "description": f"Expires {expiry.strftime("%d-%b-%Y")}. Renew before expiry.",
         "due_date": datetime.combine(expiry, datetime.min.time()),
         "fiscal_year": None, "form": "Trade License Application",
         "priority": _priority("trade_license", (expiry - today).days),
