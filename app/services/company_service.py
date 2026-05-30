@@ -326,12 +326,11 @@ class CompanyService(BaseService[Company]):
             from app.rule_engine import DirectorChange
             director_changes.append(DirectorChange(
                 director_id=str(d.id),
-                name=d.full_name,
-                change_type="APPOINTMENT" if d.director_status == "ACTIVE" else "DEPARTURE",
-                change_date=d.appointment_date or d.departure_date,
-                filing_date=d.appointment_filed_date or d.departure_filed_date,
-                delay_days=max(d.appointment_delay_days, d.departure_delay_days),
-                still_shown_as_active=d.departed_still_liable,
+                event_type="appointment" if d.director_status.value == "ACTIVE" else "resignation",
+                event_date=d.appointment_date or d.departure_date or date.today(),
+                form_filed=bool(d.appointment_filed_date or d.departure_filed_date),
+                form_filed_date=d.appointment_filed_date or d.departure_filed_date,
+                form_type="XII",
             ))
 
         # ── Share Transfers ───────────────────────────────────────
@@ -340,16 +339,15 @@ class CompanyService(BaseService[Company]):
             from app.rule_engine import ShareTransfer as EngineTransfer
             share_transfers.append(EngineTransfer(
                 transfer_id=str(t.id),
-                transferor=t.transferor_name,
-                transferee=t.transferee_name,
-                shares=t.shares_transferred,
                 transfer_date=t.transfer_date,
-                has_instrument=t.has_transfer_instrument,
-                stamp_paid=t.stamp_duty_paid,
-                board_approved=t.board_approval_obtained,
-                register_updated=t.register_updated,
-                aoa_violated=t.aoa_restriction_violated,
-                is_irregular=t.is_irregular,
+                instrument_recorded=bool(t.has_transfer_instrument),
+                stamp_duty_paid=bool(t.stamp_duty_paid),
+                stamp_duty_amount=float(t.stamp_duty_amount_bdt) if t.stamp_duty_amount_bdt else None,
+                board_approval=bool(t.board_approval_obtained),
+                board_approval_obtained=bool(t.board_approval_obtained),
+                share_register_updated=bool(t.register_updated),
+                aoa_restriction_apply=bool(t.aoa_restriction_violated),
+                form_117_filed=bool(t.has_transfer_instrument),
             ))
 
         # ── Statutory Registers ───────────────────────────────────
@@ -420,4 +418,16 @@ class CompanyService(BaseService[Company]):
             "capital_increase_resolution": True,
             "charges":                     [],
             "form_viii_filed":             True,
+
+            # Tax & director fields — prevent false positives
+            "tin_obtained":            bool(company.tin_number),
+            "tin_number":              company.tin_number,
+            "vat_registered":          bool(getattr(company, "vat_number", None)),
+            "vat_number":              getattr(company, "vat_number", None),
+            "current_director_count":  len([d for d in company.directors if d.director_status.value == "ACTIVE"]),
+            "agm_minutes_prepared":    latest_agm.agm_held if latest_agm else False,
+            "auditor_reappointed_at_agm": latest_agm.auditor_reappointed if latest_agm else False,
+            "accounts_adopted_at_agm":    latest_agm.agm_held if latest_agm else False,
+            "notice_sent_date":           latest_agm.notice_sent_date if latest_agm else None,
+            "members_present_at_agm":     latest_agm.members_present if latest_agm else 0,
         }
