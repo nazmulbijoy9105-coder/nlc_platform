@@ -489,7 +489,7 @@ async def get_flags(
         FlagResponse(
             flag_id=str(f.id),
             rule_id=f.rule_id,
-            rule_name=f.flag_code,
+            rule_name=getattr(f, 'description', f.flag_code) or f.flag_code,
             severity=f.severity.value if hasattr(f.severity, "value") else str(f.severity),
             score_impact=f.score_impact,
             status=f.flag_status.value if hasattr(f.flag_status, "value") else str(f.flag_status),
