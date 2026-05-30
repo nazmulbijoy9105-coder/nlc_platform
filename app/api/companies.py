@@ -194,10 +194,10 @@ def _company_to_response(company) -> CompanyResponse:
         is_fdi_registered=company.is_fdi_registered if hasattr(company, 'is_fdi_registered') else False,
         is_dormant=company.company_status == CompanyStatus.DORMANT,
         created_at=company.created_at.isoformat() if company.created_at else None,
-        active_flags=0,
-        black_flags=0,
-        red_flags=0,
-        yellow_flags=0,
+        active_flags=len([f for f in getattr(company, 'compliance_flags', []) if str(getattr(f, 'flag_status', '')) in ('ACTIVE', 'FlagStatus.ACTIVE')]),
+        black_flags=len([f for f in getattr(company, 'compliance_flags', []) if str(getattr(f, 'flag_status', '')) in ('ACTIVE', 'FlagStatus.ACTIVE') and str(getattr(f, 'severity', '')) in ('BLACK', 'Severity.BLACK')]),
+        red_flags=len([f for f in getattr(company, 'compliance_flags', []) if str(getattr(f, 'flag_status', '')) in ('ACTIVE', 'FlagStatus.ACTIVE') and str(getattr(f, 'severity', '')) in ('RED', 'Severity.RED')]),
+        yellow_flags=len([f for f in getattr(company, 'compliance_flags', []) if str(getattr(f, 'flag_status', '')) in ('ACTIVE', 'FlagStatus.ACTIVE') and str(getattr(f, 'severity', '')) in ('YELLOW', 'Severity.YELLOW')]),
     )
 
 
