@@ -28,8 +28,8 @@ logger = logging.getLogger("nlc.rule_engine")
 # RULE ENGINE VERSION — Immutable in production
 # Every score snapshot records this version for legal defensibility
 # ───────────────────────────────────────────────────────────────────────
-RULE_ENGINE_VERSION = "2.0"
-ILRMF_VERSION = "2.0"
+RULE_ENGINE_VERSION = "2.1"
+ILRMF_VERSION = "2.1"
 
 # ═══════════════════════════════════════════════════════════════════════
 # ENUMERATIONS
@@ -344,13 +344,19 @@ class NLCRuleEngine:
     # MODULE 0: INCORPORATION
     def _run_incorporation_rules(self, c: CompanyProfile) -> None:
         if c.current_director_count < 2:
+            inc003_impact = 20 if c.current_director_count == 0 else 10
+            inc003_desc = (
+                "Private company has NO directors. Section 90(2) requires minimum 2. Company cannot legally act."
+                if c.current_director_count == 0
+                else "Private company has only 1 director. Section 90(2) requires minimum 2."
+            )
             self._add_flag(ComplianceFlag(
                 rule_id="INC-003",
                 flag_code="MINIMUM_DIRECTORS_NOT_MET",
                 severity=Severity.RED,
-                score_impact=15,
+                score_impact=inc003_impact,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=f"Private company has only {c.current_director_count} director(s). Section 90(2) requires minimum 2.",
+                description=inc003_desc,
                 statutory_basis="Companies Act 1994, Section 90(2)",
                 detail={"current_count": c.current_director_count, "required": 2}
             ))
@@ -399,14 +405,17 @@ class NLCRuleEngine:
             deadline = c.incorporation_date + timedelta(days=FIRST_AUDITOR_DEADLINE_DAYS)
             if self.today > deadline:
                 delay = (self.today - deadline).days
-                severity = Severity.RED if delay > 60 else Severity.YELLOW
+                if delay <= 60: aud_impact, aud_sev = 5, Severity.YELLOW
+                elif delay <= 365: aud_impact, aud_sev = 10, Severity.RED
+                elif delay <= 730: aud_impact, aud_sev = 15, Severity.RED
+                else: aud_impact, aud_sev = 20, Severity.BLACK
                 self._add_flag(ComplianceFlag(
                     rule_id="AUD-001",
                     flag_code="FIRST_AUDITOR_NOT_APPOINTED",
-                    severity=severity,
-                    score_impact=10,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"First auditor not appointed within 30 days. Section 210(1): overdue by {delay} days.",
+                    severity=aud_sev,
+                    score_impact=aud_impact,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE if delay <= 365 else RevenueTier.STRUCTURED_REGULARIZATION,
+                    description="First auditor not appointed within 30 days. Section 210(1): overdue by " + str(delay) + " days.",
                     statutory_basis="Companies Act 1994, Section 210(1)",
                     detail={"delay_days": delay}
                 ))
@@ -788,16 +797,18 @@ class NLCRuleEngine:
         }
         normalized = {aliases.get(r, r) for r in c.maintained_registers}
         missing = [r for r in REQUIRED_REGISTERS if r not in normalized]
+        core_missing_check = [r for r in CORE_REGISTERS if r not in normalized]
+        reg001_impact = 0 if core_missing_check else 5
         if missing:
             self._add_flag(ComplianceFlag(
                 rule_id="REG-001",
                 flag_code="STATUTORY_REGISTER_INCOMPLETE",
                 severity=Severity.YELLOW,
-                score_impact=5,
+                score_impact=reg001_impact,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=f"{len(missing)} registers missing: {', '.join(missing)}. Sections 34, 90, 87: all required.",
+                description=str(len(missing)) + " registers missing: " + ", ".join(missing) + ". Sections 34, 90, 87: all required.",
                 statutory_basis="Companies Act 1994, Sections 34, 90, 87",
-                detail={"missing": missing}
+                detail={"missing": missing, "penalty_suppressed": bool(core_missing_check)}
             ))
 
         core_missing = [r for r in CORE_REGISTERS if r not in normalized]
@@ -942,13 +953,14 @@ class NLCRuleEngine:
 
         black_flags = [f for f in self._flags if f.severity == Severity.BLACK]
         if len(black_flags) >= 2:
+            esc003_impact = 10 if len(black_flags) == 2 else (25 if len(black_flags) == 3 else 35)
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-003",
                 flag_code="RESCUE_REQUIRED_MANDATORY",
                 severity=Severity.BLACK,
-                score_impact=25,
+                score_impact=esc003_impact,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description=f"Multiple BLACK flags ({len(black_flags)}). Corporate Rescue mandatory. Systemic failure detected.",
+                description="Multiple BLACK flags (" + str(len(black_flags)) + "). Corporate Rescue mandatory. Systemic failure detected.",
                 statutory_basis="Companies Act 1994, Section 304",
                 detail={"black_count": len(black_flags)},
                 is_black_override=True,
@@ -961,7 +973,7 @@ class NLCRuleEngine:
         agm_ded = sum(f.score_impact for f in active if f.rule_id.startswith("AGM-"))
         aud_ded = sum(f.score_impact for f in active if f.rule_id.startswith("AUD-"))
         ret_ded = sum(f.score_impact for f in active if f.rule_id.startswith("AR-"))
-        dir_ded = sum(f.score_impact for f in active if f.rule_id.startswith("DIR-"))
+        dir_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("DIR-", "INC-")))
         shr_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("SH-", "TR-")))
         cap_ded = sum(f.score_impact for f in active if f.rule_id.startswith("CAP-"))
         off_ded = sum(f.score_impact for f in active if f.rule_id.startswith("OFF-"))
@@ -1096,7 +1108,9 @@ class NLCRuleEngine:
         if delay_days <= 30: return 5
         if delay_days <= 90: return 12
         if delay_days <= 365: return 20
-        return 25
+        if delay_days <= 730: return 25
+        if delay_days <= 1095: return 28
+        return 30
 
     def _graduated_ar_deduction(self, delay_days: int) -> int:
         if delay_days <= 90: return 5
