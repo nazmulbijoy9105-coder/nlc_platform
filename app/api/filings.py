@@ -302,8 +302,7 @@ async def create_agm(
     agm = await svc.create_agm(
         company_id=body.company_id,
         financial_year=body.financial_year,
-        agm_due_date=body.agm_due_date,
-        scheduled_date=body.scheduled_date,
+        agm_deadline=body.agm_due_date,
         notice_sent_date=body.notice_sent_date,
     )
 
@@ -423,7 +422,7 @@ async def create_audit(
         company_id=body.company_id,
         financial_year=body.financial_year,
         auditor_firm=body.auditor_firm,
-        auditor_icab_number=body.auditor_icab_number,
+        icab_number=body.auditor_icab_number,
     )
     return _audit_to_response(audit)
 
@@ -463,7 +462,7 @@ async def mark_audit_complete(
         audit_id=audit_id,
         signed_date=body.signed_date,
         auditor_firm=body.auditor_firm,
-        auditor_icab_number=body.auditor_icab_number,
+        icab_number=body.auditor_icab_number,
         audit_opinion=body.audit_opinion,
         report_document_id=body.report_document_id,
     )
@@ -503,7 +502,6 @@ async def create_annual_return(
     annual_return = await svc.create_return(
         company_id=body.company_id,
         financial_year=body.financial_year,
-        agm_date=body.agm_date,
     )
     return _return_to_response(annual_return)
 
