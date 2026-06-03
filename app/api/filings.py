@@ -663,11 +663,11 @@ def _agm_to_response(agm) -> AGMResponse:
         financial_year=agm.financial_year,
         agm_due_date=agm.agm_deadline.isoformat() if agm.agm_deadline else '2099-12-31',
         held_date=agm.agm_date.isoformat() if agm.agm_date else None,
-        filed_date=agm.filed_date.isoformat() if agm.filed_date else None,
+        filed_date=agm.rjsc_filing_date.isoformat() if agm.rjsc_filing_date else None,
         quorum_met=agm.quorum_met,
         auditor_reappointed=agm.auditor_reappointed,
-        accounts_adopted=getattr(agm, 'accounts_adopted', None),
-        agm_held_without_audit=getattr(agm, 'agm_held_without_audit', False),
+        accounts_adopted=None,
+        agm_held_without_audit=agm.agm_held and not agm.auditor_reappointed,
         is_default=agm.is_default,
         created_at=agm.created_at.isoformat() if hasattr(agm, 'created_at') and agm.created_at else '',
     )
@@ -682,7 +682,7 @@ def _audit_to_response(audit) -> AuditResponse:
         signed_date=audit.signed_date.isoformat() if audit.signed_date else None,
         auditor_firm=audit.auditor_firm,
         audit_opinion=audit.audit_opinion,
-        created_at=audit.created_at.isoformat(),
+        created_at=audit.created_at.isoformat() if audit.created_at else '',
     )
 
 
@@ -695,7 +695,7 @@ def _return_to_response(r) -> AnnualReturnResponse:
         filed_date=r.filed_date.isoformat() if r.filed_date else None,
         rjsc_acknowledgment_number=r.rjsc_acknowledgment_number,
         late_fee_paid=r.late_fee_paid,
-        created_at=r.created_at.isoformat(),
+        created_at=r.created_at.isoformat() if r.created_at else '',
     )
 
 
