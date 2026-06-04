@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import NullPool
+from fastapi import Request
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -89,6 +90,34 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     async with AsyncSessionLocal() as session:
         try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
+
+
+async def get_db_for_user(request: Request) -> AsyncGenerator[AsyncSession, None]:
+    """
+    FastAPI dependency: session with RLS context for the authenticated user.
+    Extracts user_id from JWT Bearer token. Falls back to ANONYMOUS.
+    """
+    from app.core.security import decode_token
+
+    user_id = "ANONYMOUS"
+    auth_header = request.headers.get("authorization", "")
+    if auth_header.startswith("Bearer "):
+        payload = decode_token(auth_header[7:])
+        if payload and payload.get("type") == "access":
+            user_id = payload.get("sub") or payload.get("user_id") or "ANONYMOUS"
+
+    async with AsyncSessionLocal() as session:
+        try:
+            await set_rls_context(session, user_id)
             yield session
             await session.commit()
         except Exception:
