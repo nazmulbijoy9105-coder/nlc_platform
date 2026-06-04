@@ -77,6 +77,43 @@ async def lifespan(app: FastAPI):
         logger.error("db_connectivity_failed", error=str(e))
         raise RuntimeError(f"Cannot connect to database on startup: {e}")
 
+
+    # Run pending migrations (0003-0004) directly — alembic.ini has no URL on Render
+    try:
+        import sqlalchemy as _sa
+        from app.models.database import engine
+        async with engine.connect() as _conn:
+            # Migration 0004: Add enum values needed by ILRMF v2.0 rules
+            for ev in ['DEADLINE', 'DEPENDENCY', 'THRESHOLD', 'CONDITIONAL', 'ESCALATION']:
+                try:
+                    await _conn.execute(_sa.text(f"ALTER TYPE rule_type ADD VALUE IF NOT EXISTS '{ev}'"))
+                except Exception:
+                    pass
+            # Migration 0004: Add v2 compliance columns to companies
+            v2_cols = [
+                ("has_foreign_shareholder", "BOOLEAN NOT NULL DEFAULT false"),
+                ("foreign_shareholding_pct", "FLOAT"),
+                ("bida_registered", "BOOLEAN NOT NULL DEFAULT false"),
+                ("remittance_amount_usd", "FLOAT"),
+                ("encashment_certificate_uploaded", "BOOLEAN NOT NULL DEFAULT false"),
+                ("tin_obtained", "BOOLEAN NOT NULL DEFAULT false"),
+                ("vat_registered", "BOOLEAN NOT NULL DEFAULT false"),
+                ("form_xv_filed", "BOOLEAN NOT NULL DEFAULT false"),
+                ("form_iv_filed", "BOOLEAN NOT NULL DEFAULT false"),
+                ("special_resolution_date", "DATE"),
+                ("maintained_registers", "TEXT[]"),
+                ("register_location", "VARCHAR NOT NULL DEFAULT 'registered_office'"),
+            ]
+            for col_name, col_type in v2_cols:
+                try:
+                    await _conn.execute(_sa.text(f"ALTER TABLE companies ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
+                except Exception:
+                    pass
+            await _conn.commit()
+            logger.info("migrations_applied")
+    except Exception as _e:
+        logger.warning("migration_failed", error=str(_e))
+
     # Auto-create or sync admin password from env vars
     try:
         _ae = settings.ADMIN_EMAIL
