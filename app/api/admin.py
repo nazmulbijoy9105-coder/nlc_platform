@@ -8,79 +8,46 @@ from app.models.database import get_db_for_user
 router = APIRouter()
 
 
-@router.get("/dashboard")
-async def admin_dashboard(
-    admin=Depends(require_admin),
-    db: AsyncSession = Depends(get_db_for_user),
-):
-    """Recent activity feed for admin dashboard."""
-    from sqlalchemy import select, func
-    from app.models.company import Company
-    from app.models.filings import Filing
-    from app.models.documents import GeneratedDocument
-    from datetime import datetime, timezone
-
-    activities = []
-
-    # Recent company evaluations
-    result = await db.execute(
-        select(Company).where(Company.last_evaluated_at.isnot(None)).order_by(Company.last_evaluated_at.desc()).limit(5)
-    )
-    for co in result.scalars().all():
-        band = co.current_risk_band or co.band or "GREEN"
-        score = co.current_compliance_score or co.compliance_score or 0
-        activities.append({
-            "id": str(co.id),
-            "message": f"Compliance evaluation for {co.name or co.company_name or 'Unknown'} — Score: {score}/100",
-            "actor": "Rule Engine",
-            "created_at": co.last_evaluated_at.isoformat() if co.last_evaluated_at else "",
-            "type": "EVALUATION" if score >= 50 else "VIOLATION",
-        })
-
-    # Recent filings
-    try:
-        result = await db.execute(
-            select(Filing).order_by(Filing.created_at.desc()).limit(5)
-        )
-        for fl in result.scalars().all():
-            activities.append({
-                "id": str(fl.id),
-                "message": f"{fl.filing_type or 'Filing'} {'filed' if fl.status == 'FILED' else 'created'}" + (f" for {fl.company_name}" if hasattr(fl, 'company_name') and fl.company_name else ""),
-                "actor": "System",
-                "created_at": fl.created_at.isoformat() if hasattr(fl, 'created_at') and fl.created_at else "",
-                "type": "FILING",
-            })
-    except Exception:
-        pass
-
-    # Recent documents
-    try:
-        result = await db.execute(
-            select(GeneratedDocument).order_by(GeneratedDocument.created_at.desc()).limit(5)
-        )
-        for doc in result.scalars().all():
-            activities.append({
-                "id": str(doc.id),
-                "message": f"Document '{doc.title or 'Untitled'}' — {doc.status or 'DRAFT'}",
-                "actor": "AI Assistant",
-                "created_at": doc.created_at.isoformat() if hasattr(doc, 'created_at') and doc.created_at else "",
-                "type": "DOCUMENT",
-            })
-    except Exception:
-        pass
-
-    # Sort by created_at descending
-    activities.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-    return activities[:15]
-
-
-
 async def require_admin(current_user=Depends(get_current_user)):
     role = current_user.role if hasattr(current_user, "role") else current_user.get("role", "")
     if str(role) not in ("SUPER_ADMIN", "ADMIN_STAFF"):
         raise HTTPException(status_code=403, detail="Admin access required")
     return current_user
 
+
+
+
+@router.get("/dashboard")
+async def admin_dashboard(
+    admin=Depends(require_admin),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    from sqlalchemy import select
+    from app.models.company import Company
+    activities = []
+    try:
+        r = await db.execute(select(Company).where(Company.last_evaluated_at.isnot(None)).order_by(Company.last_evaluated_at.desc()).limit(5))
+        for co in r.scalars().all():
+            score = co.current_compliance_score or co.compliance_score or 0
+            activities.append({"id": str(co.id), "message": f"Evaluation for {co.name or co.company_name or 'Unknown'} - Score: {score}/100", "actor": "Rule Engine", "created_at": co.last_evaluated_at.isoformat() if co.last_evaluated_at else "", "type": "EVALUATION" if score >= 50 else "VIOLATION"})
+    except Exception:
+        pass
+    try:
+        from app.models.filings import Filing
+        r = await db.execute(select(Filing).order_by(Filing.created_at.desc()).limit(5))
+        for fl in r.scalars().all():
+            activities.append({"id": str(fl.id), "message": f"{fl.filing_type or 'Filing'} created", "actor": "System", "created_at": fl.created_at.isoformat() if hasattr(fl, 'created_at') and fl.created_at else "", "type": "FILING"})
+    except Exception:
+        pass
+    try:
+        from app.models.documents import GeneratedDocument
+        r = await db.execute(select(GeneratedDocument).order_by(GeneratedDocument.created_at.desc()).limit(5))
+        for doc in r.scalars().all():
+            activities.append({"id": str(doc.id), "message": f"Document '{doc.title or 'Untitled'} - {doc.status or 'DRAFT'}", "actor": "AI Assistant", "created_at": doc.created_at.isoformat() if hasattr(doc, 'created_at') and doc.created_at else "", "type": "DOCUMENT"})
+    except Exception:
+        pass
+    activities.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return activities[:15]
 
 class UserListItem(BaseModel):
     id: str
