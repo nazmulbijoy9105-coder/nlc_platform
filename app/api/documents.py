@@ -40,8 +40,6 @@ from app.models.user import User
 from app.services.document_service import DocumentService, PromptTemplateService
 from app.services.notification_service import ActivityService
 
-import uuid
-from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.enums import DocumentType
 from app.models.user import User
 if TYPE_CHECKING:
