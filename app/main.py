@@ -104,6 +104,49 @@ async def lifespan(app: FastAPI):
     except Exception as _e:
         logger.warning("admin_auto_sync_failed", error=str(_e))
 
+
+    # Auto-seed ILRMF rules if table is empty
+    try:
+        import json as _json
+        from datetime import datetime, timezone
+        from scripts.seed_rules import ILRMF_RULES, EXPECTED_RULE_COUNT
+        from app.models.database import AsyncSessionLocal
+        import sqlalchemy as _sa
+
+        async with AsyncSessionLocal() as _sdb:
+            _cnt = await _sdb.execute(_sa.text("SELECT COUNT(*) FROM legal_rules WHERE is_active = TRUE"))
+            _existing = _cnt.scalar()
+            if _existing < EXPECTED_RULE_COUNT:
+                _now = datetime.now(timezone.utc)
+                for _r in ILRMF_RULES:
+                    await _sdb.execute(_sa.text("""
+                        INSERT INTO legal_rules (id, rule_id, rule_name, rule_type, statutory_basis,
+                            description, rule_condition, default_severity, score_impact,
+                            revenue_tier, is_black_override, rule_version, is_active,
+                            created_at, updated_at)
+                        VALUES (uuid_generate_v4(), :rid, :rn, CAST(:rt AS rule_type), :sb,
+                            :desc, CAST(:rc AS jsonb), CAST(:ds AS severity_level), :si,
+                            CAST(:rev AS revenue_tier), :ibo, '2.0', TRUE, :now, :now)
+                        ON CONFLICT (rule_id) DO UPDATE SET
+                            rule_name=EXCLUDED.rule_name, rule_type=EXCLUDED.rule_type,
+                            statutory_basis=EXCLUDED.statutory_basis, description=EXCLUDED.description,
+                            rule_condition=EXCLUDED.rule_condition, default_severity=EXCLUDED.default_severity,
+                            score_impact=EXCLUDED.score_impact, revenue_tier=EXCLUDED.revenue_tier,
+                            is_black_override=EXCLUDED.is_black_override, updated_at=EXCLUDED.updated_at
+                    """), {
+                        "rid": _r["rule_id"], "rn": _r["rule_name"], "rt": _r["rule_type"],
+                        "sb": _r["statutory_basis"], "desc": _r["description"],
+                        "rc": _json.dumps(_r["rule_condition"]), "ds": _r["default_severity"],
+                        "si": _r["score_impact"], "rev": _r["revenue_tier"],
+                        "ibo": _r["is_black_override"], "now": _now,
+                    })
+                await _sdb.commit()
+                logger.info("rules_auto_seeded", count=len(ILRMF_RULES))
+            else:
+                logger.info("rules_already_seeded", count=_existing)
+    except Exception as _e:
+        logger.warning("rules_auto_seed_failed", error=str(_e))
+
     # Verify Redis/Celery broker is reachable (non-fatal — workers may not be up yet)
     try:
         import redis.asyncio as aioredis
