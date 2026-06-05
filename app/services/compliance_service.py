@@ -28,6 +28,7 @@ from datetime import UTC, date, datetime
 from sqlalchemy import select, text, update
 
 from app.models.company import Company
+from app.services.notification_service import NotificationService
 from app.models.compliance import ComplianceFlag, ComplianceScoreHistory
 from app.models.enums import (
     ExposureBand,
@@ -181,6 +182,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
         # ── Insert new flags (upsert by company_id + rule_id) ──────
         for flag in output.flags:
+        collected_new_flags: list = []
+
             # Check if this flag already exists as ACTIVE
             existing = await self.db.execute(
                 select(ComplianceFlag).where(
@@ -215,6 +218,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     notification_sent=False,
                 )
                 self.db.add(new_flag)
+                collected_new_flags.append(new_flag)
 
         # ── Score snapshot (monthly, append-only, tamper-evident) ──
         snapshot_month = today.replace(day=1)
@@ -270,6 +274,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
             .values(**company_svc_update)
         )
         await self.db.flush()
+
+        # ── Queue notifications for new RED/BLACK flags ─────────
+        if collected_new_flags:
+            notif_svc = NotificationService(self.db)
+            await notif_svc.queue_for_new_flags(company_id, collected_new_flags)
 
     # ── Flag Management ───────────────────────────────────────────
 
