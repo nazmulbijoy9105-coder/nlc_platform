@@ -181,8 +181,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
 
         # ── Insert new flags (upsert by company_id + rule_id) ──────
-        for flag in output.flags:
         collected_new_flags: list = []
+        for flag in output.flags:
 
             # Check if this flag already exists as ACTIVE
             existing = await self.db.execute(
