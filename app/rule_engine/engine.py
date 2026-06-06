@@ -216,6 +216,25 @@ class CompanyProfile:
     vat_registered: bool = False
     vat_number: Optional[str] = None
     last_tax_return_filed: Optional[date] = None
+    trade_license_obtained: bool = False
+    trade_license_expiry: Optional[date] = None
+    last_tax_return_filed_year: Optional[int] = None
+    tax_return_filed_for_current_fy: bool = False
+    advance_tax_q1_paid: bool = False
+    advance_tax_q2_paid: bool = False
+    advance_tax_q3_paid: bool = False
+    advance_tax_q4_paid: bool = False
+    tds_deposited_up_to_date: bool = True
+    last_tds_deposit_date: Optional[date] = None
+    last_vat_return_filed: Optional[date] = None
+    vat_annual_return_filed_for_fy: bool = False
+    minimum_tax_paid: bool = True
+    tax_clearance_obtained: bool = False
+    tax_return_deadline_extended: bool = False
+    any_director_disqualified: bool = False
+    disqualification_details: List[str] = field(default_factory=list)
+    penalty_notices_received: int = 0
+    penalty_notices_resolved: int = 0
 
 @dataclass
 class ScoreBreakdown:
@@ -227,6 +246,7 @@ class ScoreBreakdown:
     capital_score: int
     office_score: int
     register_score: int
+    tax_score: int
     raw_total: int
     final_score: int
     override_applied: bool
@@ -277,10 +297,11 @@ CORE_REGISTERS = ["members", "directors", "charges", "minutes_agm"]
 
 SCORE_WEIGHTS = {
     "agm": 20, "audit": 20, "annual_return": 20, "director": 10,
-    "shareholding": 10, "capital": 5, "office": 5, "register": 10,
+    "shareholding": 10, "capital": 5, "office": 5, "register": 5,
+    "tax": 5,
 }
 
-BLACK_OVERRIDE_RULES = {"AUD-003", "TR-005", "ESC-002", "ESC-003"}
+BLACK_OVERRIDE_RULES = {"AUD-003", "TR-005", "ESC-002", "ESC-003", "DEF-001", "CAP-003"}
 
 REVENUE_TIER_MAP = {
     Severity.GREEN: RevenueTier.COMPLIANCE_PACKAGE,
@@ -319,6 +340,7 @@ class NLCRuleEngine:
         self._run_office_rules(company)
         self._run_capital_rules(company)
         self._run_tax_rules(company)
+        self._run_structural_change_rules(company)
         self._run_escalation_rules(company)
 
         stage = self._determine_lifecycle_stage(company)
@@ -398,6 +420,34 @@ class NLCRuleEngine:
                     detail={"remittance_usd": c.remittance_amount_usd, "threshold": FOREIGN_WORK_PERMIT_THRESHOLD_USD},
                     conditional_applies=True
                 ))
+
+
+        # INC-001: Trade License
+        if not c.trade_license_obtained:
+            self._add_flag(ComplianceFlag(
+                rule_id="INC-001",
+                flag_code="TRADE_LICENSE_NOT_OBTAINED",
+                severity=Severity.YELLOW,
+                score_impact=3,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Trade License not obtained from City Corporation/Municipality.",
+                statutory_basis="City Corporation Act 2009",
+                detail={"trade_license": False},
+            ))
+        elif c.trade_license_expiry and c.trade_license_expiry < self.today:
+            days_expired = (self.today - c.trade_license_expiry).days
+            sev = Severity.RED if days_expired > 90 else Severity.YELLOW
+            imp = 5 if days_expired > 90 else 3
+            self._add_flag(ComplianceFlag(
+                rule_id="INC-001",
+                flag_code="TRADE_LICENSE_EXPIRED",
+                severity=sev,
+                score_impact=imp,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=f"Trade License expired {days_expired} days ago.",
+                statutory_basis="City Corporation Act 2009",
+                detail={"expired_days": days_expired},
+            ))
 
     # MODULE 1: AUDITOR
     def _run_auditor_rules(self, c: CompanyProfile) -> None:
@@ -895,6 +945,22 @@ class NLCRuleEngine:
                     detail={"delay": delay}
                 ))
 
+
+        # CHG-001: Charge Satisfaction Not Filed (Form XIX)
+        for charge in c.charges:
+            if hasattr(charge, 'satisfied') and charge.satisfied:
+                if hasattr(charge, 'satisfaction_filed') and not charge.satisfaction_filed:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="CHG-001",
+                        flag_code="CHARGE_SATISFACTION_NOT_FILED",
+                        severity=Severity.YELLOW,
+                        score_impact=3,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="Charge satisfaction not filed via Form XIX. Sec 87.",
+                        statutory_basis="Companies Act 1994, Section 87",
+                        detail={"charge_type": getattr(charge, 'charge_type', 'unknown')}
+                    ))
+
     # MODULE 10: TAX COMPLIANCE — Income Tax Act 2023, VAT Act 2012
     def _run_tax_rules(self, c: CompanyProfile) -> None:
         if not c.tin_obtained:
@@ -918,6 +984,113 @@ class NLCRuleEngine:
                 description="Likely VAT threshold exceeded but not registered. VAT Act 2012: registration required above threshold.",
                 statutory_basis="Value Added Tax Act 2012 (Bangladesh)",
                 detail={"capital": c.paid_up_capital_bdt, "note": "Threshold verification required"}
+            ))
+
+
+        # TAX-003: Annual Tax Return Overdue (ITA 2023 Sec 75)
+        if c.tin_obtained and not c.tax_return_filed_for_current_fy:
+            if self.today.month <= 6:
+                fy_end_year = self.today.year - 1
+            else:
+                fy_end_year = self.today.year
+            if c.tax_return_deadline_extended:
+                deadline = date(fy_end_year + 1, 11, 30)
+            else:
+                deadline = date(fy_end_year + 1, 7, 31)
+            if self.today > deadline:
+                delay = (self.today - deadline).days
+                if delay <= 90:
+                    t3_sev, t3_imp = Severity.YELLOW, 3
+                elif delay <= 180:
+                    t3_sev, t3_imp = Severity.RED, 5
+                else:
+                    t3_sev, t3_imp = Severity.RED, 8
+                self._add_flag(ComplianceFlag(
+                    rule_id="TAX-003",
+                    flag_code="ANNUAL_TAX_RETURN_OVERDUE",
+                    severity=t3_sev,
+                    score_impact=t3_imp,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE if delay <= 90 else RevenueTier.STRUCTURED_REGULARIZATION,
+                    description=f"Annual tax return overdue by {delay} days. ITA 2023 Sec 75.",
+                    statutory_basis="Income Tax Act 2023, Section 75",
+                    detail={"delay_days": delay, "fy_year": fy_end_year}
+                ))
+
+
+        # TAX-004: Advance Tax Payment Missed (ITA 2023 Sec 74)
+        if c.tin_obtained:
+            current_q = (self.today.month - 1) // 3 + 1
+            missed = []
+            if current_q >= 2 and not c.advance_tax_q1_paid: missed.append("Q1")
+            if current_q >= 3 and not c.advance_tax_q2_paid: missed.append("Q2")
+            if current_q >= 4 and not c.advance_tax_q3_paid: missed.append("Q3")
+            if missed:
+                self._add_flag(ComplianceFlag(
+                    rule_id="TAX-004",
+                    flag_code="ADVANCE_TAX_MISSED",
+                    severity=Severity.YELLOW,
+                    score_impact=min(len(missed) * 2, 5),
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=f"Advance tax missed: {', '.join(missed)}. ITA 2023 Sec 74.",
+                    statutory_basis="Income Tax Act 2023, Section 74",
+                    detail={"quarters": missed}
+                ))
+
+
+        # DEF-002: Penalty Prosecution Risk (Sec 447)
+        unresolved = c.penalty_notices_received - c.penalty_notices_resolved
+        if unresolved > 0:
+            sev = Severity.RED if unresolved >= 3 else Severity.YELLOW
+            self._add_flag(ComplianceFlag(
+                rule_id="DEF-002",
+                flag_code="PENALTY_PROSECUTION_RISK",
+                severity=sev,
+                score_impact=8 if unresolved >= 3 else 5,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                description=f"{unresolved} unresolved penalties. Sec 447: fine up to Tk 10,000.",
+                statutory_basis="Companies Act 1994, Section 447",
+                detail={"unresolved": unresolved}
+            ))
+
+
+    def _run_structural_change_rules(self, c: CompanyProfile) -> None:
+        """Event-based structural change rules (low frequency)."""
+        # STR-001: Name Change Not Filed
+        if getattr(c, 'name_change_pending', False):
+            self._add_flag(ComplianceFlag(
+                rule_id="STR-001", flag_code="NAME_CHANGE_NOT_FILED",
+                severity=Severity.YELLOW, score_impact=3,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Name change not filed. Sec 20: Special Resolution + RJSC filing.",
+                statutory_basis="Companies Act 1994, Section 20",
+            ))
+        # STR-002: Object Clause Change Not Filed
+        if getattr(c, 'object_clause_change_pending', False):
+            self._add_flag(ComplianceFlag(
+                rule_id="STR-002", flag_code="OBJECT_CLAUSE_CHANGE_NOT_FILED",
+                severity=Severity.YELLOW, score_impact=3,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="MoA object clause change not filed. Sec 17.",
+                statutory_basis="Companies Act 1994, Section 17",
+            ))
+        # STR-003: AoA Alteration Not Filed
+        if getattr(c, 'aoa_alteration_pending', False):
+            self._add_flag(ComplianceFlag(
+                rule_id="STR-003", flag_code="AOA_ALTERATION_NOT_FILED",
+                severity=Severity.YELLOW, score_impact=3,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="AoA alteration not filed. Sec 17.",
+                statutory_basis="Companies Act 1994, Section 17",
+            ))
+        # CAP-003: Capital Reduction Without Court Order
+        if getattr(c, 'capital_reduction_pending', False):
+            self._add_flag(ComplianceFlag(
+                rule_id="CAP-003", flag_code="CAPITAL_REDUCTION_WITHOUT_COURT",
+                severity=Severity.BLACK, score_impact=15,
+                revenue_tier=RevenueTier.CORPORATE_RESCUE,
+                description="Capital reduction without court order. Sec 100.",
+                statutory_basis="Companies Act 1994, Section 100",
+                is_black_override=True,
             ))
 
     # MODULE 11: ESCALATION — Section 304 (NOT 396)
@@ -966,16 +1139,32 @@ class NLCRuleEngine:
                 is_black_override=True,
             ))
 
+
+        # DEF-001: Director Disqualification Risk (Sec 297)
+        if c.any_director_disqualified:
+            self._add_flag(ComplianceFlag(
+                rule_id="DEF-001",
+                flag_code="DIRECTOR_DISQUALIFIED",
+                severity=Severity.BLACK,
+                score_impact=15,
+                revenue_tier=RevenueTier.CORPORATE_RESCUE,
+                description="Director disqualified under Sec 297. Cannot act as director for 5 years.",
+                statutory_basis="Companies Act 1994, Section 297",
+                detail={"disqualifications": c.disqualification_details},
+                is_black_override=True,
+            ))
+
     # SCORING ENGINE — 8 components for 32 rules
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
         active = [f for f in flags if not f.resolved and f.conditional_applies]
 
+        tax_ded = sum(f.score_impact for f in active if f.rule_id.startswith("TAX-"))
         agm_ded = sum(f.score_impact for f in active if f.rule_id.startswith("AGM-"))
         aud_ded = sum(f.score_impact for f in active if f.rule_id.startswith("AUD-"))
         ret_ded = sum(f.score_impact for f in active if f.rule_id.startswith("AR-"))
-        dir_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("DIR-", "INC-")))
+        dir_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("DIR-", "INC-", "DEF-")))
         shr_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("SH-", "TR-")))
-        cap_ded = sum(f.score_impact for f in active if f.rule_id.startswith("CAP-"))
+        cap_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("CAP-", "STR-", "CHG-")))
         off_ded = sum(f.score_impact for f in active if f.rule_id.startswith("OFF-"))
         reg_ded = sum(f.score_impact for f in active if f.rule_id.startswith("REG-"))
 
@@ -987,8 +1176,9 @@ class NLCRuleEngine:
         cap_score = max(0, SCORE_WEIGHTS["capital"] - min(cap_ded, SCORE_WEIGHTS["capital"]))
         off_score = max(0, SCORE_WEIGHTS["office"] - min(off_ded, SCORE_WEIGHTS["office"]))
         reg_score = max(0, SCORE_WEIGHTS["register"] - min(reg_ded, SCORE_WEIGHTS["register"]))
+        tax_score = max(0, SCORE_WEIGHTS["tax"] - min(tax_ded, SCORE_WEIGHTS["tax"]))
 
-        raw = agm_score + audit_score + return_score + dir_score + share_score + cap_score + off_score + reg_score
+        raw = agm_score + audit_score + return_score + dir_score + share_score + cap_score + off_score + reg_score + tax_score
 
         override = False
         reason = None
@@ -1013,7 +1203,7 @@ class NLCRuleEngine:
         return ScoreBreakdown(
             agm_score=agm_score, audit_score=audit_score, return_score=return_score,
             director_score=dir_score, shareholding_score=share_score, capital_score=cap_score,
-            office_score=off_score, register_score=reg_score,
+            office_score=off_score, register_score=reg_score, tax_score=tax_score,
             raw_total=raw, final_score=final, override_applied=override,
             override_reason=reason, risk_band=band, exposure_band=exposure,
             revenue_tier=REVENUE_TIER_MAP[band],
