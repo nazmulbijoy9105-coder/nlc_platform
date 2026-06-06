@@ -588,14 +588,14 @@ async def get_score_history(
     history = await svc.get_score_history(company_id=company_id, months=months)
     return [
         ScoreHistoryEntry(
-            snapshot_month=h.snapshot_month,
-            score=h.score,
-            risk_band=h.risk_band,
-            active_flags=h.active_flags,
-            black_flags=h.black_flags,
-            red_flags=h.red_flags,
-            yellow_flags=h.yellow_flags,
-            snapshot_date=h.created_at.isoformat(),
+            snapshot_month=h["month"],
+            score=h["score"],
+            risk_band=h["risk_band"],
+            active_flags=h["active_flags"],
+            black_flags=h["black_flags"],
+            red_flags=0,
+            yellow_flags=0,
+            snapshot_date=h["calculated_at"],
         )
         for h in history
     ]
