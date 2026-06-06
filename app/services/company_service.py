@@ -308,7 +308,7 @@ class CompanyService(BaseService[Company]):
         # ── AGM State ─────────────────────────────────────────────
         agms_sorted = sorted(company.agms, key=lambda a: a.financial_year, reverse=True)
         latest_agm = agms_sorted[0] if agms_sorted else None
-        agm_count = len([a for a in company.agms if a.agm_held])
+        agm_count = len([a for a in company.agms if a.minutes_prepared])
 
         # ── Audit State ───────────────────────────────────────────
         audits_sorted = sorted(company.audits, key=lambda a: a.financial_year, reverse=True)
@@ -319,7 +319,7 @@ class CompanyService(BaseService[Company]):
             company.annual_returns, key=lambda r: r.financial_year, reverse=True
         )
         latest_return = returns_sorted[0] if returns_sorted else None
-        unfiled_returns = len([r for r in company.annual_returns if r.is_default])
+        unfiled_returns = len([r for r in company.annual_returns if not r.is_filed])
 
         # ── Director Changes ──────────────────────────────────────
         director_changes = []
@@ -369,12 +369,12 @@ class CompanyService(BaseService[Company]):
             # AGM State
             "agm_count":                  agm_count,
             "last_agm_date":              company.last_agm_date,
-            "agm_held_this_cycle":        latest_agm.agm_held if latest_agm else False,
+            "if minutes_prepared_this_cycle":        latest_agm.agm_held if latest_agm else False,
             "agm_scheduled_date":         latest_agm.agm_deadline if latest_agm else None,
             "notice_sent_date":           latest_agm.notice_sent_date if latest_agm else None,
             "members_present_at_agm":     latest_agm.members_present if latest_agm else 0,
             "auditor_reappointed_at_agm": latest_agm.auditor_reappointed if latest_agm else False,
-            "accounts_adopted_at_agm":    latest_agm.agm_held if latest_agm else False,
+            "accounts_adopted_at_agm":    latest_agm.accounts_adopted if latest_agm else False,
 
             # Audit State
             "first_auditor_appointed":    company.first_auditor_appointed,
@@ -426,9 +426,9 @@ class CompanyService(BaseService[Company]):
             "vat_registered":          bool(getattr(company, "vat_number", None)),
             "vat_number":              getattr(company, "vat_number", None),
             "current_director_count":  len([d for d in company.directors if d.director_status.value == "ACTIVE"]),
-            "agm_minutes_prepared":    latest_agm.agm_held if latest_agm else False,
+            "agm_minutes_prepared":    latest_agm.minutes_prepared if latest_agm else False,
             "auditor_reappointed_at_agm": latest_agm.auditor_reappointed if latest_agm else False,
-            "accounts_adopted_at_agm":    latest_agm.agm_held if latest_agm else False,
+            "accounts_adopted_at_agm":    latest_agm.accounts_adopted if latest_agm else False,
             "notice_sent_date":           latest_agm.notice_sent_date if latest_agm else None,
             "members_present_at_agm":     latest_agm.members_present if latest_agm else 0,
         }

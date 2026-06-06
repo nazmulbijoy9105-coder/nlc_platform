@@ -798,7 +798,7 @@ class NLCRuleEngine:
         normalized = {aliases.get(r, r) for r in c.maintained_registers}
         missing = [r for r in REQUIRED_REGISTERS if r not in normalized]
         core_missing_check = [r for r in CORE_REGISTERS if r not in normalized]
-        reg001_impact = 0 if core_missing_check else 5
+        reg001_impact = 5 if core_missing_check else 0
         if missing:
             self._add_flag(ComplianceFlag(
                 rule_id="REG-001",
