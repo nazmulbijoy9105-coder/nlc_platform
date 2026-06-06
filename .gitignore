@@ -8,3 +8,4 @@ venv/
 .vscode/
 .DS_Store
 *.log
+nlc-debug/
