@@ -12,6 +12,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    ARRAY,
     Boolean,
     Date,
     DateTime,
