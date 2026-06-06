@@ -70,6 +70,47 @@ class CompanyUpdateRequest(BaseModel):
     is_dormant: bool | None = None
     assigned_officer_id: uuid.UUID | None = None
     notes: str | None = None
+    # Tax Compliance
+    trade_license_obtained: bool | None = None
+    trade_license_expiry: date | None = None
+    tax_return_filed_for_current_fy: bool | None = None
+    advance_tax_q1_paid: bool | None = None
+    advance_tax_q2_paid: bool | None = None
+    advance_tax_q3_paid: bool | None = None
+    advance_tax_q4_paid: bool | None = None
+    tds_deposited_up_to_date: bool | None = None
+    last_tds_deposit_date: date | None = None
+    last_vat_return_filed: date | None = None
+    vat_annual_return_filed_for_fy: bool | None = None
+    minimum_tax_paid: bool | None = None
+    tax_clearance_obtained: bool | None = None
+    tax_return_deadline_extended: bool | None = None
+    # Enforcement
+    any_director_disqualified: bool | None = None
+    penalty_notices_received: int | None = None
+    penalty_notices_resolved: int | None = None
+    # Tax & Trade License
+    trade_license_obtained: bool | None = None
+    trade_license_expiry: date | None = None
+    tax_return_filed_for_current_fy: bool | None = None
+    last_tax_return_filed: date | None = None
+    advance_tax_q1_paid: bool | None = None
+    advance_tax_q2_paid: bool | None = None
+    advance_tax_q3_paid: bool | None = None
+    advance_tax_q4_paid: bool | None = None
+    tds_deposited_up_to_date: bool | None = None
+    last_tds_deposit_date: date | None = None
+    last_vat_return_filed: date | None = None
+    vat_annual_return_filed_for_fy: bool | None = None
+    minimum_tax_paid: bool | None = None
+    tax_clearance_obtained: bool | None = None
+    tax_return_deadline_extended: bool | None = None
+    # Director Disqualification
+    any_director_disqualified: bool | None = None
+    disqualification_details: list[str] | None = None
+    # Penalty History
+    penalty_notices_received: int | None = None
+    penalty_notices_resolved: int | None = None
 
 
 class FlagResolveRequest(BaseModel):
@@ -107,6 +148,17 @@ class CompanyResponse(BaseModel):
     black_flags: int = 0
     red_flags: int = 0
     yellow_flags: int = 0
+    # V3 Tax & Trade License
+    trade_license_obtained: bool | None = None
+    trade_license_expiry: str | None = None
+    tax_return_filed_for_current_fy: bool | None = None
+    advance_tax_q1_paid: bool | None = None
+    advance_tax_q2_paid: bool | None = None
+    advance_tax_q3_paid: bool | None = None
+    advance_tax_q4_paid: bool | None = None
+    any_director_disqualified: bool | None = None
+    penalty_notices_received: int | None = None
+    penalty_notices_resolved: int | None = None
 
 
 class ComplianceSummaryResponse(BaseModel):

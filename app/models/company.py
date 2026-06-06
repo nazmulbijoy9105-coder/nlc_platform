@@ -125,6 +125,43 @@ class Company(FullMixin, Base):
     last_return_filed_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     unfiled_returns_count: Mapped[int] = mapped_column(Integer, default=0)
 
+    # ── Trade License ───────────────────────────────────────────
+    trade_license_obtained: Mapped[bool] = mapped_column(Boolean, default=False)
+    trade_license_expiry: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    # ── Tax Return Tracking ─────────────────────────────────────
+    tax_return_filed_for_current_fy: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_tax_return_filed: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    # ── Advance Tax (Quarterly) ──────────────────────────────────
+    advance_tax_q1_paid: Mapped[bool] = mapped_column(Boolean, default=False)
+    advance_tax_q2_paid: Mapped[bool] = mapped_column(Boolean, default=False)
+    advance_tax_q3_paid: Mapped[bool] = mapped_column(Boolean, default=False)
+    advance_tax_q4_paid: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # ── TDS ─────────────────────────────────────────────────────
+    tds_deposited_up_to_date: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_tds_deposit_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    # ── VAT Returns ─────────────────────────────────────────────
+    last_vat_return_filed: Mapped[date | None] = mapped_column(Date, nullable=True)
+    vat_annual_return_filed_for_fy: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # ── Minimum Tax & Clearance ──────────────────────────────────
+    minimum_tax_paid: Mapped[bool] = mapped_column(Boolean, default=True)
+    tax_clearance_obtained: Mapped[bool] = mapped_column(Boolean, default=False)
+    tax_return_deadline_extended: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # ── Director Disqualification ────────────────────────────────
+    any_director_disqualified: Mapped[bool] = mapped_column(Boolean, default=False)
+    disqualification_details: Mapped[list[str] | None] = mapped_column(
+        sa.ARRAY(sa.String()), nullable=True
+    )
+
+    # ── Penalty History ─────────────────────────────────────────
+    penalty_notices_received: Mapped[int] = mapped_column(Integer, default=0)
+    penalty_notices_resolved: Mapped[int] = mapped_column(Integer, default=0)
+
     # ── Revenue Intelligence ──────────────────────────────────────
     # Admin-only — never exposed to client-facing roles
     revenue_tier: Mapped[RevenueTier | None] = mapped_column(
