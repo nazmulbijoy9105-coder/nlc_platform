@@ -106,7 +106,7 @@ class Company(FullMixin, Base):
         DateTime(timezone=True), nullable=True
     )
     rescue_required: Mapped[bool] = mapped_column(
-    $    ARRAY,
+        ARRAY,
     Boolean, default=False, index=True
     )
     rescue_triggered_at: Mapped[datetime | None] = mapped_column(
