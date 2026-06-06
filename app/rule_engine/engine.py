@@ -425,7 +425,7 @@ class NLCRuleEngine:
         # INC-001: Trade License
         if not c.trade_license_obtained:
             self._add_flag(ComplianceFlag(
-                rule_id="INC-001",
+                rule_id="INC-007",
                 flag_code="TRADE_LICENSE_NOT_OBTAINED",
                 severity=Severity.YELLOW,
                 score_impact=3,
@@ -439,7 +439,7 @@ class NLCRuleEngine:
             sev = Severity.RED if days_expired > 90 else Severity.YELLOW
             imp = 5 if days_expired > 90 else 3
             self._add_flag(ComplianceFlag(
-                rule_id="INC-001",
+                rule_id="INC-007",
                 flag_code="TRADE_LICENSE_EXPIRED",
                 severity=sev,
                 score_impact=imp,
