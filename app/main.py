@@ -95,6 +95,33 @@ async def lifespan(app: FastAPI):
                     await _conn.execute(_sa.text(f"ALTER TABLE companies ADD COLUMN IF NOT EXISTS {cn} {ct}"))
                 except Exception:
                     pass
+            # v3 columns - tax scoring, director disqualification, penalty tracking
+            v3c = [
+                ("trade_license_obtained", "BOOLEAN NOT NULL DEFAULT false"),
+                ("trade_license_expiry", "DATE"),
+                ("tax_return_filed_for_current_fy", "BOOLEAN NOT NULL DEFAULT false"),
+                ("last_tax_return_filed", "DATE"),
+                ("advance_tax_q1_paid", "BOOLEAN NOT NULL DEFAULT false"),
+                ("advance_tax_q2_paid", "BOOLEAN NOT NULL DEFAULT false"),
+                ("advance_tax_q3_paid", "BOOLEAN NOT NULL DEFAULT false"),
+                ("advance_tax_q4_paid", "BOOLEAN NOT NULL DEFAULT false"),
+                ("tds_deposited_up_to_date", "BOOLEAN NOT NULL DEFAULT true"),
+                ("last_tds_deposit_date", "DATE"),
+                ("last_vat_return_filed", "DATE"),
+                ("vat_annual_return_filed_for_fy", "BOOLEAN NOT NULL DEFAULT false"),
+                ("minimum_tax_paid", "BOOLEAN NOT NULL DEFAULT true"),
+                ("tax_clearance_obtained", "BOOLEAN NOT NULL DEFAULT false"),
+                ("tax_return_deadline_extended", "BOOLEAN NOT NULL DEFAULT false"),
+                ("any_director_disqualified", "BOOLEAN NOT NULL DEFAULT false"),
+                ("disqualification_details", "TEXT[]"),
+                ("penalty_notices_received", "INTEGER NOT NULL DEFAULT 0"),
+                ("penalty_notices_resolved", "INTEGER NOT NULL DEFAULT 0"),
+            ]
+            for cn, ct in v3c:
+                try:
+                    await _conn.execute(_sa.text(f"ALTER TABLE companies ADD COLUMN IF NOT EXISTS {cn} {ct}"))
+                except Exception:
+                    pass
             await _conn.commit()
             logger.info("migrations_applied")
     except Exception as _e:
@@ -394,9 +421,9 @@ def create_app() -> FastAPI:
             "corporate rescue management, and revenue pipeline tracking."
         ),
         version=settings.app_version,
-        openapi_url="/api/v1/openapi.json" if not settings.is_production else None,
-        docs_url="/api/v1/docs" if not settings.is_production else None,
-        redoc_url="/api/v1/redoc" if not settings.is_production else None,
+        openapi_url="/api/v1/openapi.json",
+        docs_url="/api/v1/docs",
+        redoc_url="/api/v1/redoc",
         lifespan=lifespan,
         contact={
             "name": "Neum Lex Counsel",
