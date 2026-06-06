@@ -9,3 +9,5 @@ venv/
 .DS_Store
 *.log
 nlc-debug/
+*.py
+*.png
