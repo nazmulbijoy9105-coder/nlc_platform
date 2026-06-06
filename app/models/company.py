@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     ARRAY,
+$    ARRAY,
     Boolean,
     Date,
     DateTime,
@@ -107,7 +108,8 @@ class Company(FullMixin, Base):
         DateTime(timezone=True), nullable=True
     )
     rescue_required: Mapped[bool] = mapped_column(
-        Boolean, default=False, index=True
+    $    ARRAY,
+    Boolean, default=False, index=True
     )
     rescue_triggered_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
