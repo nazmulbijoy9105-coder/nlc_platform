@@ -23,6 +23,7 @@ async def admin_dashboard(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     from sqlalchemy import select
+
     from app.models.company import Company
     activities = []
     try:
@@ -82,6 +83,7 @@ async def list_users(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     from sqlalchemy import select
+
     from app.models.user import User
     result = await db.execute(
         select(User).order_by(User.created_at.desc()).offset((page - 1) * per_page).limit(per_page)
@@ -96,10 +98,11 @@ async def create_user(
     admin=Depends(require_admin),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    from sqlalchemy import select
-    from app.models.user import User
-    from app.models.enums import UserRole
     import bcrypt
+    from sqlalchemy import select
+
+    from app.models.enums import UserRole
+    from app.models.user import User
 
     valid_roles = {r.value for r in UserRole}
     if body.role not in valid_roles:
@@ -118,7 +121,9 @@ async def create_user(
 @router.patch("/users/{user_id}/deactivate", status_code=200)
 async def deactivate_user(user_id: str, admin=Depends(require_admin), db: AsyncSession = Depends(get_db_for_user)):
     import uuid as _uuid
+
     from sqlalchemy import select
+
     from app.models.user import User
     try:
         uid = _uuid.UUID(user_id)
@@ -138,7 +143,9 @@ async def deactivate_user(user_id: str, admin=Depends(require_admin), db: AsyncS
 @router.patch("/users/{user_id}/reactivate", status_code=200)
 async def reactivate_user(user_id: str, admin=Depends(require_admin), db: AsyncSession = Depends(get_db_for_user)):
     import uuid as _uuid
+
     from sqlalchemy import select
+
     from app.models.user import User
     try:
         uid = _uuid.UUID(user_id)

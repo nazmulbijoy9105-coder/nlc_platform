@@ -40,8 +40,6 @@ from app.models.user import User
 from app.services.document_service import DocumentService, PromptTemplateService
 from app.services.notification_service import ActivityService
 
-from app.models.enums import DocumentType
-from app.models.user import User
 if TYPE_CHECKING:
     pass
 
@@ -162,8 +160,9 @@ async def list_all_documents(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     from sqlalchemy import select
-    from app.models.documents import Document
+
     from app.models.company import CompanyUserAccess
+    from app.models.documents import Document
 
     client_roles = ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY")
     is_client = current_user.role in client_roles

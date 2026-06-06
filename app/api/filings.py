@@ -48,10 +48,6 @@ from app.services.filing_service import (
 )
 from app.services.notification_service import ActivityService
 
-import uuid
-from datetime import date
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.user import User
 if TYPE_CHECKING:
     pass
 
@@ -229,8 +225,9 @@ async def list_all_filings(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     from sqlalchemy import select
-    from app.models.filings import AGM, AnnualReturn, Audit
+
     from app.models.company import Company, CompanyUserAccess
+    from app.models.filings import AGM, AnnualReturn, Audit
 
     # Role-based company filter
     if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):

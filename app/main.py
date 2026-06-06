@@ -81,6 +81,7 @@ async def lifespan(app: FastAPI):
     # Run pending migrations (0003-0004) directly - alembic.ini has no URL on Render
     try:
         import sqlalchemy as _sa
+
         from app.models.database import engine
         async with engine.connect() as _conn:
             for ev in ['DEADLINE', 'DEPENDENCY', 'THRESHOLD', 'CONDITIONAL', 'ESCALATION']:
@@ -104,11 +105,13 @@ async def lifespan(app: FastAPI):
         _ae = settings.ADMIN_EMAIL
         _ap = settings.ADMIN_PASSWORD
         if _ae and _ap:
+            import uuid as _uuid
+
             from sqlalchemy import select as _sel
-            from app.models.user import User as _User
+
             from app.core.security import hash_password as _hp, verify_password as _vp
             from app.models.database import AsyncSessionLocal as _ASL
-            import uuid as _uuid
+            from app.models.user import User as _User
             async with _ASL() as _db:
                 _ex = await _db.execute(_sel(_User).where(_User.email == _ae))
                 _user = _ex.scalar_one_or_none()
@@ -131,9 +134,11 @@ async def lifespan(app: FastAPI):
     try:
         import json as _json
         from datetime import datetime, timezone
-        from scripts.seed_rules import ILRMF_RULES, EXPECTED_RULE_COUNT
-        from app.models.database import AsyncSessionLocal
+
         import sqlalchemy as _sa
+
+        from app.models.database import AsyncSessionLocal
+        from scripts.seed_rules import EXPECTED_RULE_COUNT, ILRMF_RULES
 
         async with AsyncSessionLocal() as _sdb:
             _cnt = await _sdb.execute(_sa.text("SELECT COUNT(*) FROM legal_rules WHERE is_active = TRUE"))

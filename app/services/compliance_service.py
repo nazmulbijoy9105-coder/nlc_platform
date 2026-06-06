@@ -28,7 +28,6 @@ from datetime import UTC, date, datetime
 from sqlalchemy import select, text, update
 
 from app.models.company import Company
-from app.services.notification_service import NotificationService
 from app.models.compliance import ComplianceFlag, ComplianceScoreHistory
 from app.models.enums import (
     ExposureBand,
@@ -38,6 +37,7 @@ from app.models.enums import (
     SeverityLevel,
 )
 from app.services.base import BaseService
+from app.services.notification_service import NotificationService
 
 logger = logging.getLogger("nlc.compliance")
 
