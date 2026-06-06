@@ -38,9 +38,8 @@ from app.services.rescue_service import RescueService
 router = APIRouter()
 
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.user import User
-
-
 
 logger = structlog.get_logger(__name__)
 

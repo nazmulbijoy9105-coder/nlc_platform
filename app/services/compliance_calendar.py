@@ -1,13 +1,17 @@
 """NEUM LEX COUNSEL - Compliance Calendar Service"""
 from __future__ import annotations
+
+import logging
 import uuid
 from datetime import date, datetime, timedelta
+
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.company import Company
 from app.models.enums import CompanyStatus, CompanyType
-import logging
+
 logger = logging.getLogger("nlc.calendar")
 RJSC_DAYS = {"agm": 180, "schedule_x": 21, "balance_sheet": 30}
 TAX_RETURN_MONTHS_AFTER_FY = 6
