@@ -22,7 +22,7 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import TSVECTOR, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -155,7 +155,7 @@ class Company(FullMixin, Base):
     # ── Director Disqualification ────────────────────────────────
     any_director_disqualified: Mapped[bool] = mapped_column(Boolean, default=False)
     disqualification_details: Mapped[list[str] | None] = mapped_column(
-        sa.ARRAY(sa.String()), nullable=True
+        ARRAY(String), nullable=True
     )
 
     # ── Penalty History ─────────────────────────────────────────
