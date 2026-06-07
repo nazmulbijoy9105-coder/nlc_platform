@@ -194,6 +194,12 @@ async def lifespan(app: FastAPI):
                         "si": _r["score_impact"], "rev": _r["revenue_tier"],
                         "ibo": _r["is_black_override"], "now": _now,
                     })
+                # Deactivate orphan rules not in current seed set
+                _known = [r["rule_id"] for r in ILRMF_RULES]
+                _id_list = ",".join(f"'{r}'" for r in _known)
+                await _sdb.execute(_sa.text(
+                    f"UPDATE legal_rules SET is_active = FALSE WHERE rule_id NOT IN ({_id_list})"
+                ))
                 await _sdb.commit()
                 logger.info("rules_auto_seeded", count=len(ILRMF_RULES))
             else:
