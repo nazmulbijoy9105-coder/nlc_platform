@@ -6,7 +6,7 @@ AI Constitution Article 1: Only Super Admin may modify rules.
 Every change creates an immutable legal_rule_versions snapshot.
 
 Endpoints:
-  GET   /rules                    List all 32 ILRMF rules
+  GET   /rules                    List all 58 ILRMF rules
   GET   /rules/{rule_id}          Get single rule with version history
   PATCH /rules/{rule_id}          Update a rule (SUPER_ADMIN only — creates version snapshot)
   GET   /rules/{rule_id}/history  Rule version history
