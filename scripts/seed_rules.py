@@ -3,7 +3,7 @@
 NEUM LEX COUNSEL — Legal Rules Seeder v2.0
 scripts/seed_rules.py
 
-Standalone script to seed all 58 ILRMF v2.0 rules.
+Standalone script to seed all 46 ILRMF v2.0 rules.
 Safe to run multiple times — upserts by rule_id.
 
 USAGE:
@@ -35,7 +35,7 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import create_async_engine
 
 # ═══════════════════════════════════════════════════════════════════════
-# ILRMF v2.0 — 58 Rules
+# ILRMF v2.0 — 32 Rules
 # ALL SECTION NUMBERS VERIFIED against Companies Act 1994 (Bangladesh)
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -109,23 +109,9 @@ ILRMF_RULES: List[Dict[str, Any]] = [
     {"rule_id": "ESC-001", "rule_name": "Strike-Off Risk Elevated", "rule_type": "ESCALATION", "statutory_basis": "Section 304, Companies Act 1994 (Bangladesh)", "description": "Compliance profile shows RJSC strike-off criteria under Section 304: multi-year missed filings, no recent trading, or RED flags across 3+ modules. Section 304 permits strike-off for non-filing or non-trading. Structured Regularization required immediately.", "rule_condition": {"check_fn": "check_esc_001", "trigger": "unfiled_returns_count >= 2 OR (active_red_flags >= 3 AND active_yellow_flags >= 4)", "data_points": ["unfiled_returns_count", "active_red_flags", "active_yellow_flags"]}, "default_severity": "RED", "score_impact": 15, "revenue_tier": "STRUCTURED_REGULARIZATION", "is_black_override": False},
     {"rule_id": "ESC-002", "rule_name": "Strike-Off Imminent — BLACK OVERRIDE", "rule_type": "ESCALATION", "statutory_basis": "Section 304, Companies Act 1994 (Bangladesh)", "description": "Immediate RJSC strike-off risk. Criteria: 3+ years non-filing, strike-off notice received, or on published strike-off list. Once struck off: company ceases to exist, contracts void, accounts frozen. Restoration requires court proceedings under Section 305. Corporate Rescue mandatory. BLACK OVERRIDE: forces score to BLACK band.", "rule_condition": {"check_fn": "check_esc_002", "trigger": "unfiled_returns_count >= 3 OR rjsc_strike_off_notice == True OR on_rjsc_strike_off_list == True", "data_points": ["unfiled_returns_count", "rjsc_strike_off_notice", "on_rjsc_strike_off_list"]}, "default_severity": "BLACK", "score_impact": 25, "revenue_tier": "CORPORATE_RESCUE", "is_black_override": True},
     {"rule_id": "ESC-003", "rule_name": "Corporate Rescue Mandatory — Systemic Failure", "rule_type": "ESCALATION", "statutory_basis": "Section 304, Companies Act 1994 (Bangladesh)", "description": "Score below BLACK threshold (<=29) due to systemic multi-module failures: BLACK overrides from AUD-003, TR-005, ESC-002, or RED/YELLOW across 4+ modules. Legal status, contractual capacity, and director exposure all critical. 10-step Corporate Rescue mandatory within 30 days. BLACK OVERRIDE: maintains BLACK until rescue verified.", "rule_condition": {"check_fn": "check_esc_003", "trigger": "pre_override_score <= 29 OR has_black_override == True", "data_points": ["pre_override_score", "has_black_override", "active_red_flags", "active_black_flags"]}, "default_severity": "BLACK", "score_impact": 25, "revenue_tier": "CORPORATE_RESCUE", "is_black_override": True},
-    # --- v2.1 ADDITIONS: Full RJSC/Tax/VAT coverage ---
-    {"rule_id": "INC-007", "rule_name": "Commencement of Business Certificate Missing", "rule_type": "DEADLINE", "statutory_basis": "Section 10, Companies Act 1994 (Bangladesh)", "description": "Private company commenced business without Commencement of Business Certificate under Section 10. Required before any business activity. All pre-certificate transactions void; directors personally liable.", "rule_condition": {"check_fn": "check_inc_007", "trigger": "commencement_certificate_obtained == False", "data_points": ["commencement_certificate_obtained"]}, "default_severity": "RED", "score_impact": 12, "revenue_tier": "STRUCTURED_REGULARIZATION", "is_black_override": False},
-    {"rule_id": "DIR-005", "rule_name": "Director Consent Not Filed — Form XII", "rule_type": "DEADLINE", "statutory_basis": "Section 92, Companies Act 1994 (Bangladesh)", "description": "Director consent to act not filed with RJSC via Form XII. Section 92 requires consent filing. Without filed consent, director appointment may be challenged; third parties cannot verify authority.", "rule_condition": {"check_fn": "check_dir_005", "trigger": "director_consent_filed == False", "data_points": ["director_consent_filed"]}, "default_severity": "YELLOW", "score_impact": 5, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
-    {"rule_id": "TAX-003", "rule_name": "Tax Return Not Filed for Current Financial Year", "rule_type": "DEADLINE", "statutory_basis": "Section 83, Income Tax Act 2023 (Bangladesh)", "description": "Company has not filed tax return for the current financial year. Section 83 ITA 2023: return due by 15th July for companies. Non-filing attracts penalty, blocks tax clearance, and may trigger prosecution under Section 165.", "rule_condition": {"check_fn": "check_tax_003", "trigger": "tax_return_filed_for_current_fy == False", "data_points": ["tax_return_filed_for_current_fy", "last_tax_return_filed"]}, "default_severity": "RED", "score_impact": 15, "revenue_tier": "STRUCTURED_REGULARIZATION", "is_black_override": False},
-    {"rule_id": "TAX-004", "rule_name": "Advance Tax Q1 Not Paid", "rule_type": "DEADLINE", "statutory_basis": "Section 74, Income Tax Act 2023 (Bangladesh)", "description": "First quarter advance tax installment not paid by 15th July. Section 74 ITA 2023: companies must pay advance tax in quarterly installments. Non-payment attracts penalty at 2% per month of default.", "rule_condition": {"check_fn": "check_tax_004", "trigger": "advance_tax_q1_paid == False", "data_points": ["advance_tax_q1_paid"]}, "default_severity": "YELLOW", "score_impact": 5, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
-    {"rule_id": "TAX-005", "rule_name": "Advance Tax Q2 Not Paid", "rule_type": "DEADLINE", "statutory_basis": "Section 74, Income Tax Act 2023 (Bangladesh)", "description": "Second quarter advance tax installment not paid by 15th October. Section 74 ITA 2023: quarterly advance tax mandatory. Accumulating defaults increase penalty exposure.", "rule_condition": {"check_fn": "check_tax_005", "trigger": "advance_tax_q2_paid == False", "data_points": ["advance_tax_q2_paid"]}, "default_severity": "YELLOW", "score_impact": 5, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
-    {"rule_id": "TAX-006", "rule_name": "Advance Tax Q3 Not Paid", "rule_type": "DEADLINE", "statutory_basis": "Section 74, Income Tax Act 2023 (Bangladesh)", "description": "Third quarter advance tax installment not paid by 15th January. Section 74 ITA 2023: quarterly advance tax mandatory. Three consecutive defaults indicate systemic non-compliance.", "rule_condition": {"check_fn": "check_tax_006", "trigger": "advance_tax_q3_paid == False", "data_points": ["advance_tax_q3_paid"]}, "default_severity": "YELLOW", "score_impact": 5, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
-    {"rule_id": "TAX-007", "rule_name": "Advance Tax Q4 Not Paid", "rule_type": "DEADLINE", "statutory_basis": "Section 74, Income Tax Act 2023 (Bangladesh)", "description": "Fourth quarter advance tax installment not paid by 15th April. Section 74 ITA 2023: final quarterly installment. All four quarters unpaid triggers escalation.", "rule_condition": {"check_fn": "check_tax_007", "trigger": "advance_tax_q4_paid == False", "data_points": ["advance_tax_q4_paid"]}, "default_severity": "YELLOW", "score_impact": 5, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
-    {"rule_id": "TAX-008", "rule_name": "TDS Not Deposited Up to Date", "rule_type": "DEADLINE", "statutory_basis": "Section 51, Income Tax Act 2023 (Bangladesh)", "description": "Tax Deducted at Source not deposited with NBR within prescribed time. Section 51 ITA 2023: TDS must be deposited by 7th of following month. Failure: company liable for tax amount plus penalty; directors may face prosecution.", "rule_condition": {"check_fn": "check_tax_008", "trigger": "tds_deposited_up_to_date == False", "data_points": ["tds_deposited_up_to_date", "last_tds_deposit_date"]}, "default_severity": "RED", "score_impact": 10, "revenue_tier": "STRUCTURED_REGULARIZATION", "is_black_override": False},
-    {"rule_id": "TAX-009", "rule_name": "Minimum Tax Not Paid", "rule_type": "THRESHOLD", "statutory_basis": "Section 82, Income Tax Act 2023 (Bangladesh)", "description": "Company has not paid minimum tax as per Section 82 ITA 2023. All companies must pay minimum tax regardless of profit or loss. Non-payment treated as tax evasion.", "rule_condition": {"check_fn": "check_tax_009", "trigger": "minimum_tax_paid == False", "data_points": ["minimum_tax_paid"]}, "default_severity": "YELLOW", "score_impact": 5, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
-    {"rule_id": "VAT-002", "rule_name": "VAT Monthly Return Not Filed", "rule_type": "DEADLINE", "statutory_basis": "Section 37, Value Added Tax Act 2012 (Bangladesh)", "description": "Monthly VAT return (Mushak-11) not filed within 15th of following month. VAT Act 2012 Sec 37: mandatory monthly filing for registered persons. Non-filing blocks input tax credit and attracts penalty.", "rule_condition": {"check_fn": "check_vat_002", "trigger": "vat_registered == True AND (last_vat_return_filed IS NULL OR months_since_last_vat_return > 1)", "data_points": ["last_vat_return_filed", "vat_registered"], "conditional": True}, "default_severity": "YELLOW", "score_impact": 8, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
-    {"rule_id": "VAT-003", "rule_name": "VAT Annual Return Not Filed", "rule_type": "DEADLINE", "statutory_basis": "Value Added Tax Act 2012 (Bangladesh)", "description": "Annual VAT return not filed for current financial year. VAT Act 2012 requires annual reconciliation of total supply and tax. Non-filing may result in NBR assessment and penalty.", "rule_condition": {"check_fn": "check_vat_003", "trigger": "vat_registered == True AND vat_annual_return_filed_for_fy == False", "data_points": ["vat_annual_return_filed_for_fy", "vat_registered"], "conditional": True}, "default_severity": "YELLOW", "score_impact": 5, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
-    {"rule_id": "TL-001", "rule_name": "Trade License Expired or Not Obtained", "rule_type": "DEADLINE", "statutory_basis": "City Corporation/N Municipality Act (Bangladesh)", "description": "Trade license not obtained from local authority or has expired. Every business in Bangladesh must hold a valid trade license. Operating without is an offence; fines and potential business closure.", "rule_condition": {"check_fn": "check_tl_001", "trigger": "trade_license_obtained == False", "data_points": ["trade_license_obtained", "trade_license_expiry"]}, "default_severity": "YELLOW", "score_impact": 5, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
-
 ]
 
-EXPECTED_RULE_COUNT = 58
+EXPECTED_RULE_COUNT = 46
 
 
 def get_database_url() -> str:
@@ -194,3 +180,83 @@ async def seed_rules(dry_run: bool = False, verbose: bool = False) -> int:
         inserted = updated = 0
         now = datetime.now(timezone.utc)
 
+        for rule in ILRMF_RULES:
+            res = await conn.execute(
+                sa.text("SELECT id FROM legal_rules WHERE rule_id = :rid"),
+                {"rid": rule["rule_id"]}
+            )
+            existing = res.fetchone()
+
+            if existing:
+                await conn.execute(sa.text("""
+                    UPDATE legal_rules SET
+                    rule_name=:rn, rule_type=CAST(:rt AS rule_type),
+                    statutory_basis=:sb, description=:desc,
+                    rule_condition=CAST(:rc AS jsonb),
+                    default_severity=CAST(:ds AS severity_level),
+                    score_impact=:si, revenue_tier=CAST(:rev AS revenue_tier),
+                    is_black_override=:ibo, is_active=TRUE, updated_at=:now
+                    WHERE rule_id=:rid
+                """), {
+                    "rid": rule["rule_id"], "rn": rule["rule_name"], "rt": rule["rule_type"],
+                    "sb": rule["statutory_basis"], "desc": rule["description"],
+                    "rc": json.dumps(rule["rule_condition"]), "ds": rule["default_severity"],
+                    "si": rule["score_impact"], "rev": rule["revenue_tier"],
+                    "ibo": rule["is_black_override"], "now": now,
+                })
+                updated += 1
+                status = "updated"
+            else:
+                await conn.execute(sa.text("""
+                    INSERT INTO legal_rules (
+                        id, rule_id, rule_name, rule_type, statutory_basis,
+                        description, rule_condition, default_severity, score_impact,
+                        revenue_tier, is_black_override, rule_version, is_active,
+                        created_at, updated_at
+                    ) VALUES (
+                        uuid_generate_v4(), :rid, :rn, CAST(:rt AS rule_type), :sb,
+                        :desc, CAST(:rc AS jsonb), CAST(:ds AS severity_level), :si,
+                        CAST(:rev AS revenue_tier), :ibo, '2.0', TRUE, :now, :now
+                    )
+                """), {
+                    "rid": rule["rule_id"], "rn": rule["rule_name"], "rt": rule["rule_type"],
+                    "sb": rule["statutory_basis"], "desc": rule["description"],
+                    "rc": json.dumps(rule["rule_condition"]), "ds": rule["default_severity"],
+                    "si": rule["score_impact"], "rev": rule["revenue_tier"],
+                    "ibo": rule["is_black_override"], "now": now,
+                })
+                inserted += 1
+                status = "inserted"
+
+            if verbose:
+                print(f"  {status:8s} {rule['rule_id']:10s} {rule['default_severity']:7s} {rule['score_impact']:2d}pts")
+
+        cnt_res = await conn.execute(sa.text("SELECT COUNT(*) FROM legal_rules WHERE is_active = TRUE"))
+        db_count = cnt_res.scalar()
+        await engine.dispose()
+
+        print(f"\n{'='*60}")
+        print(f" Done! Inserted: {inserted}, Updated: {updated}")
+        print(f" DB active rules: {db_count}")
+        if db_count >= EXPECTED_RULE_COUNT:
+            print(f"  AI Constitution satisfied: all {db_count} rules active.")
+        else:
+            print(f"  WARNING: expected {EXPECTED_RULE_COUNT}, got {db_count}")
+        print(f"{'='*60}\n")
+        return inserted + updated
+
+
+def main():
+    p = argparse.ArgumentParser(description="Seed ILRMF v2.0 rules")
+    p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--verbose", "-v", action="store_true")
+    args = p.parse_args()
+    try:
+        asyncio.run(seed_rules(dry_run=args.dry_run, verbose=args.verbose))
+    except Exception as e:
+        print(f"\nFAILED: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
