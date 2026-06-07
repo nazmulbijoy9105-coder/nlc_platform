@@ -1,7 +1,7 @@
 # ═══════════════════════════════════════════════════════════════════════
 # NEUM LEX COUNSEL — RJSC COMPLIANCE INTELLIGENCE PLATFORM
 # LAYER C: LEGAL RULE ENGINE — BANGLADESH CA 1994 COMPLIANT v2.0
-# All 32 ILRMF v2.0 Rules | Deterministic | AI-Non-Editable
+# All 46 ILRMF v2.0 Rules | Deterministic | AI-Non-Editable
 # Version: 2.0 | Classification: PROPRIETARY IP — NEUM LEX COUNSEL
 # Governed by: Internal AI Constitution v2.0
 # ═══════════════════════════════════════════════════════════════════════
@@ -1154,7 +1154,7 @@ class NLCRuleEngine:
                 is_black_override=True,
             ))
 
-    # SCORING ENGINE — 8 components for 58 rules
+    # SCORING ENGINE — 8 components for 46 rules
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
         active = [f for f in flags if not f.resolved and f.conditional_applies]
 
