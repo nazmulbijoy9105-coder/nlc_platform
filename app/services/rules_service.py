@@ -28,41 +28,26 @@ from app.services.base import BaseService
 class RulesService(BaseService[LegalRule]):
     model = LegalRule
 
-    async def get_all(
-        self,
-        *,
-        active_only: bool = True,
-        rule_type: str | None = None,
-        severity: str | None = None,
+    async def get_all(self, *, active_only: bool = False,
+        rule_type: str | None = None, severity: str | None = None,
         is_active: bool | None = None,
-        is_black_override: bool | None = None,
-    ) -> list[LegalRule]:
+        is_black_override: bool | None = None) -> list[LegalRule]:
         """Get all ILRMF rules with optional filters."""
-        from app.models.enums import SeverityLevel
-
         filters = []
-        # is_active param overrides active_only default
         if is_active is not None:
-            if is_active:
-                filters.append(LegalRule.is_active == True)
-            else:
-                filters.append(LegalRule.is_active == False)
+            filters.append(LegalRule.is_active == is_active)
         elif active_only:
             filters.append(LegalRule.is_active == True)
-
         if rule_type:
             filters.append(LegalRule.rule_type == rule_type)
         if severity:
             filters.append(LegalRule.default_severity == severity)
         if is_black_override is not None:
             filters.append(LegalRule.is_black_override == is_black_override)
-
-        query = select(LegalRule).order_by(LegalRule.rule_id)
+        q = select(LegalRule).order_by(LegalRule.rule_id)
         if filters:
-            query = query.where(*filters)
-
-        result = await self.db.execute(query)
-        return list(result.scalars().all())
+            q = q.where(*filters)
+        return list((await self.db.execute(q)).scalars().all())
 
     async def get_by_rule_id(self, rule_id: str) -> LegalRule | None:
         """
