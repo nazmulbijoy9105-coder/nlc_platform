@@ -79,7 +79,7 @@ class RuleResponse(BaseModel):
     revenue_tier: str
     is_black_override: bool
     is_active: bool
-    version: int
+    version: str
     created_at: str
     updated_at: str | None
 
@@ -128,7 +128,7 @@ def _rule_to_response(rule) -> RuleResponse:
         revenue_tier=rule.revenue_tier,
         is_black_override=rule.is_black_override,
         is_active=rule.is_active,
-        version=rule.version,
+        version=rule.rule_version,
         created_at=rule.created_at.isoformat(),
         updated_at=rule.updated_at.isoformat() if rule.updated_at else None,
     )
