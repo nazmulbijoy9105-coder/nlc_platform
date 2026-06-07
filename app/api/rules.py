@@ -142,7 +142,7 @@ def _rule_to_response(rule) -> RuleResponse:
     "",
     response_model=list[RuleResponse],
     summary="List all ILRMF legal rules",
-    description="Returns all 32 rules. No auth restriction — clients may see rule metadata.",
+    description="Returns all 58 rules. No auth restriction — clients may see rule metadata.",
 )
 async def list_rules(
     rule_type: str | None = None,

@@ -1154,7 +1154,7 @@ class NLCRuleEngine:
                 is_black_override=True,
             ))
 
-    # SCORING ENGINE — 8 components for 32 rules
+    # SCORING ENGINE — 8 components for 58 rules
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
         active = [f for f in flags if not f.resolved and f.conditional_applies]
 
