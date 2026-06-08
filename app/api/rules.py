@@ -46,6 +46,40 @@ logger = structlog.get_logger(__name__)
 router = APIRouter()
 
 
+@router.get("/debug-test")
+async def debug_test(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Temporary diagnostic — remove after fixing."""
+    import traceback
+    try:
+        from app.models.rules import LegalRule
+        from sqlalchemy import select, text, inspect
+        # 1. Check table exists
+        result = await db.execute(text("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'legal_rules' ORDER BY ordinal_position"))
+        cols = [(r[0], r[1]) for r in result.all()]
+        # 2. Try a simple query
+        result2 = await db.execute(select(LegalRule).limit(1))
+        row = result2.scalar_one_or_none()
+        row_info = "No rows" if not row else f"Found rule: {row.rule_id}"
+        # 3. Try serialization
+        ser_error = None
+        if row:
+            try:
+                _rule_to_response(row)
+                ser_error = "Serialization OK"
+            except Exception as e:
+                ser_error = f"Serialization FAILED: {type(e).__name__}: {e}"
+        return {
+            "table_columns": cols,
+            "query_test": row_info,
+            "serialization_test": ser_error,
+        }
+    except Exception as e:
+        return {"error": type(e).__name__, "detail": str(e), "traceback": traceback.format_exc()}
+
+
 # ---------------------------------------------------------------------------
 # Schemas
 # ---------------------------------------------------------------------------
