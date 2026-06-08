@@ -46,6 +46,29 @@ logger = structlog.get_logger(__name__)
 router = APIRouter()
 
 
+@router.get("/debug-enum-check")
+async def debug_enum_check(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    from sqlalchemy import text
+    r1 = await db.execute(text("SELECT DISTINCT rule_type FROM legal_rules"))
+    r2 = await db.execute(text("SELECT DISTINCT default_severity FROM legal_rules"))
+    r3 = await db.execute(text("SELECT DISTINCT revenue_tier FROM legal_rules"))
+    from app.models.enums import RuleType, SeverityLevel, RevenueTier
+    db_types = [x[0] for x in r1.all()]
+    db_sev = [x[0] for x in r2.all()]
+    db_rev = [x[0] for x in r3.all()]
+    py_types = [e.value for e in RuleType]
+    py_sev = [e.value for e in SeverityLevel]
+    py_rev = [e.value for e in RevenueTier]
+    return {
+        "rule_type": {"db": db_types, "python": py_types, "missing": [x for x in db_types if x not in py_types]},
+        "severity": {"db": db_sev, "python": py_sev, "missing": [x for x in db_sev if x not in py_sev]},
+        "revenue_tier": {"db": db_rev, "python": py_rev, "missing": [x for x in db_rev if x not in py_rev]},
+    }
+
+
 @router.get("/debug-test")
 async def debug_test(
     current_user: User = Depends(get_current_user),
