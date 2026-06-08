@@ -186,6 +186,7 @@ class RuleType(enum.StrEnum):
     REGISTER   = "REGISTER"
     ESCALATION = "ESCALATION"
     CASCADE    = "CASCADE"
+    DEADLINE   = "DEADLINE"
 
 
 # ── AI ───────────────────────────────────────────────────────────────
