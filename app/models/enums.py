@@ -187,7 +187,6 @@ class RuleType(enum.StrEnum):
     ESCALATION = "ESCALATION"
     CASCADE    = "CASCADE"
     DEADLINE   = "DEADLINE"
-    DEADLINE   = "DEADLINE"
 
 
 # ── AI ───────────────────────────────────────────────────────────────
