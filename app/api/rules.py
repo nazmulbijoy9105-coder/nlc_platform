@@ -89,6 +89,8 @@ async def debug_test(
         return {"error": type(e).__name__, "detail": str(e), "traceback": traceback.format_exc()}
     except Exception as e:
         return {"error": type(e).__name__, "detail": str(e), "traceback": traceback.format_exc()}
+    except Exception as e:
+        return {"error": type(e).__name__, "detail": str(e), "traceback": traceback.format_exc()}
 
 
 # ---------------------------------------------------------------------------
