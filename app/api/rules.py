@@ -208,7 +208,12 @@ async def list_rules(
         is_active=is_active,
         is_black_override=is_black_override,
     )
+    import traceback as _tb
+try:
     return [_rule_to_response(r) for r in rules]
+except Exception as _e:
+    raise HTTPException(status_code=500, detail=str(_e) + "
+" + _tb.format_exc()[-500:])
 
 
 # ---------------------------------------------------------------------------
