@@ -78,6 +78,7 @@ async def debug_test(
     try:
         from sqlalchemy import select
         from app.models.rules import LegalRule
+        from app.models.rules import LegalRule
         rows = (await db.execute(select(LegalRule).order_by(LegalRule.rule_id))).scalars().all()
         errors = []
         for row in rows:
