@@ -1292,7 +1292,8 @@ class NLCRuleEngine:
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:
         if c.last_agm_date:
             return max(0, (self.today - c.last_agm_date).days // 365 - 1)
-        return max(0, (self.today - c.incorporation_date).days // 365 - 1)
+        # FIX: No AGM data ≠ evidence of default. AGM-001 handles first-AGM case.
+            return 0
 
     def _graduated_agm_deduction(self, delay_days: int) -> int:
         if delay_days <= 30: return 5
