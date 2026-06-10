@@ -301,7 +301,7 @@ SCORE_WEIGHTS = {
     "tax": 5,
 }
 
-BLACK_OVERRIDE_RULES = {"AUD-003", "TR-005", "ESC-002", "ESC-003", "DEF-001", "CAP-003"}
+BLACK_OVERRIDE_RULES = {"INC-002", "INC-003", "INC-004", "AUD-003", "AR-003", "TR-005", "ESC-002", "ESC-003", "DEF-001", "CAP-003"}
 
 REVENUE_TIER_MAP = {
     Severity.GREEN: RevenueTier.COMPLIANCE_PACKAGE,
@@ -375,8 +375,9 @@ class NLCRuleEngine:
             self._add_flag(ComplianceFlag(
                 rule_id="INC-003",
                 flag_code="MINIMUM_DIRECTORS_NOT_MET",
-                severity=Severity.RED,
-                score_impact=inc003_impact,
+                severity=Severity.BLACK,
+                score_impact=20,
+                is_black_override=True,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=inc003_desc,
                 statutory_basis="Companies Act 1994, Section 90(2)",
@@ -422,30 +423,31 @@ class NLCRuleEngine:
                 ))
 
 
-        # INC-001: Trade License
+        # TL-001: Trade License Not Obtained
+        # TL-002: Trade License Expired (renewal lapse)
         if not c.trade_license_obtained:
             self._add_flag(ComplianceFlag(
-                rule_id="INC-007",
+                rule_id="TL-001",
                 flag_code="TRADE_LICENSE_NOT_OBTAINED",
                 severity=Severity.YELLOW,
-                score_impact=3,
+                score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="Trade License not obtained from City Corporation/Municipality.",
-                statutory_basis="City Corporation Act 2009",
+                statutory_basis="City Corporation Ordinance 1983 / Pourashava Act 2009",
                 detail={"trade_license": False},
             ))
         elif c.trade_license_expiry and c.trade_license_expiry < self.today:
             days_expired = (self.today - c.trade_license_expiry).days
             sev = Severity.RED if days_expired > 90 else Severity.YELLOW
-            imp = 5 if days_expired > 90 else 3
+            imp = 10 if days_expired > 90 else 5
             self._add_flag(ComplianceFlag(
-                rule_id="INC-007",
+                rule_id="TL-002",
                 flag_code="TRADE_LICENSE_EXPIRED",
                 severity=sev,
                 score_impact=imp,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=f"Trade License expired {days_expired} days ago.",
-                statutory_basis="City Corporation Act 2009",
+                description=f"Trade License expired {days_expired} days ago. Must renew by 31 March annually.",
+                statutory_basis="City Corporation Ordinance 1983 / Pourashava Act 2009",
                 detail={"expired_days": days_expired},
             ))
 
@@ -847,21 +849,20 @@ class NLCRuleEngine:
         }
         normalized = {aliases.get(r, r) for r in c.maintained_registers}
         missing = [r for r in REQUIRED_REGISTERS if r not in normalized]
-        core_missing_check = [r for r in CORE_REGISTERS if r not in normalized]
-        reg001_impact = 5 if core_missing_check else 0
-        if missing:
+        core_missing = [r for r in CORE_REGISTERS if r not in normalized]
+        non_core_missing = [r for r in missing if r not in CORE_REGISTERS]
+        if non_core_missing and not core_missing:
             self._add_flag(ComplianceFlag(
                 rule_id="REG-001",
                 flag_code="STATUTORY_REGISTER_INCOMPLETE",
                 severity=Severity.YELLOW,
-                score_impact=reg001_impact,
+                score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=str(len(missing)) + " registers missing: " + ", ".join(missing) + ". Sections 34, 90, 87: all required.",
+                description=f"{len(non_core_missing)} non-core register(s) missing: {', '.join(non_core_missing)}.",
                 statutory_basis="Companies Act 1994, Sections 34, 90, 87",
-                detail={"missing": missing, "penalty_suppressed": bool(core_missing_check)}
+                detail={"missing": non_core_missing}
             ))
 
-        core_missing = [r for r in CORE_REGISTERS if r not in normalized]
         if core_missing:
             severity = Severity.RED if len(core_missing) <= 2 else Severity.BLACK
             self._add_flag(ComplianceFlag(
@@ -1124,7 +1125,8 @@ class NLCRuleEngine:
                 escalation_pending=True,
             ))
 
-        black_flags = [f for f in self._flags if f.severity == Severity.BLACK]
+        _ESC_RULE_IDS = {"ESC-001", "ESC-002", "ESC-003"}
+        black_flags = [f for f in self._flags if f.severity == Severity.BLACK and f.rule_id not in _ESC_RULE_IDS]
         if len(black_flags) >= 2:
             esc003_impact = 10 if len(black_flags) == 2 else (25 if len(black_flags) == 3 else 35)
             self._add_flag(ComplianceFlag(
