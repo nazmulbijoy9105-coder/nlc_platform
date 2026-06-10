@@ -5,6 +5,7 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     target: api
+    preDeployCommand: "alembic upgrade head"
     healthCheckPath: /api/v1/health/live
     envVars:
       - key: DATABASE_URL
