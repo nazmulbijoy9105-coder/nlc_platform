@@ -6,20 +6,13 @@ AI Constitution Article 1: Only Super Admin may modify rules.
 Every change creates an immutable legal_rule_versions snapshot.
 
 Endpoints:
-  GET   /rules                    List all 46 ILRMF rules
+  GET   /rules                    List all ILRMF rules
   GET   /rules/{rule_id}          Get single rule with version history
   PATCH /rules/{rule_id}          Update a rule (SUPER_ADMIN only — creates version snapshot)
   GET   /rules/{rule_id}/history  Rule version history
-  GET   /rules/black-overrides    List the 4 BLACK override rules
+  GET   /rules/black-overrides    List BLACK override rules
   GET   /rules/summary            Aggregate stats per rule type / severity
-
-Governance notes:
-  - rule_id (e.g. "AGM-001") is immutable — cannot be changed after creation
-  - score_impact cannot exceed the pre-set module maximum
-  - Every update records changed_by, changed_at, change_reason
-  - Rule engine picks up changes on next warm-up or cache refresh
 """
-
 
 from typing import TYPE_CHECKING
 
@@ -41,7 +34,6 @@ from app.services.rules_service import RulesService
 if TYPE_CHECKING:
     pass
 
-
 logger = structlog.get_logger(__name__)
 router = APIRouter()
 
@@ -51,16 +43,11 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 class RuleUpdateRequest(BaseModel):
-    """
-    Only the operational fields may be updated.
-    rule_id, rule_type, and statutory_basis are immutable.
-    """
     rule_name: str | None = Field(None, min_length=3, max_length=255)
     description: str | None = None
     default_severity: SeverityLevel | None = None
     score_impact: int | None = Field(None, ge=0, le=50)
     is_active: bool | None = None
-    # Required for audit trail
     change_reason: str = Field(
         min_length=10,
         max_length=500,
@@ -142,7 +129,7 @@ def _rule_to_response(rule) -> RuleResponse:
     "",
     response_model=list[RuleResponse],
     summary="List all ILRMF legal rules",
-    description="Returns all 46 rules. No auth restriction — clients may see rule metadata.",
+    description="Returns all ILRMF rules. Clients may see rule metadata.",
 )
 async def list_rules(
     rule_type: str | None = None,
@@ -185,7 +172,6 @@ async def get_rule_summary(
     active_count = 0
 
     for r in rules:
-        # Module = prefix before first hyphen (AGM-001 → AGM)
         module = r.rule_id.split("-")[0]
         by_module[module] = by_module.get(module, 0) + 1
         by_severity[r.default_severity] = by_severity.get(r.default_severity, 0) + 1
@@ -207,14 +193,13 @@ async def get_rule_summary(
 
 
 # ---------------------------------------------------------------------------
-# GET /rules/black-overrides — The 4 BLACK override rules
+# GET /rules/black-overrides — BLACK override rules
 # ---------------------------------------------------------------------------
 
 @router.get(
     "/black-overrides",
     response_model=list[RuleResponse],
     summary="List all BLACK override rules",
-    description="Returns rules where is_black_override=True (AUD-003, TR-005, ESC-002, ESC-003).",
 )
 async def get_black_overrides(
     current_user: User = Depends(get_current_user),
@@ -226,7 +211,7 @@ async def get_black_overrides(
 
 
 # ---------------------------------------------------------------------------
-# GET /rules/{rule_id} — Single rule with history
+# GET /rules/{rule_id} — Single rule
 # ---------------------------------------------------------------------------
 
 @router.get(
@@ -254,12 +239,7 @@ async def get_rule(
     "/{rule_id}",
     response_model=RuleResponse,
     dependencies=[Depends(require_roles("SUPER_ADMIN"))],
-    summary="Update a legal rule (Super Admin only — creates version snapshot)",
-    description=(
-        "AI Constitution Article 1: Only Super Admin may modify rules. "
-        "Every update creates an immutable version record in legal_rule_versions. "
-        "rule_id and statutory_basis are immutable."
-    ),
+    summary="Update a legal rule (Super Admin only)",
 )
 async def update_rule(
     rule_id: str,
@@ -275,7 +255,6 @@ async def update_rule(
     if not existing:
         raise HTTPException(status_code=404, detail=f"Rule '{rule_id}' not found.")
 
-    # Validate BLACK override rules cannot have severity changed to non-BLACK
     update_data = body.model_dump(exclude={"change_reason"}, exclude_none=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided for update.")
@@ -285,11 +264,7 @@ async def update_rule(
         if new_severity and new_severity != "BLACK":
             raise HTTPException(
                 status_code=422,
-                detail=(
-                    f"Rule '{rule_id}' is a BLACK override rule. "
-                    f"Its severity cannot be changed to a non-BLACK value. "
-                    f"Contact NLC legal technology team if this change is intentional."
-                ),
+                detail=f"Rule '{rule_id}' is a BLACK override rule. Its severity cannot be changed to a non-BLACK value.",
             )
 
     updated_rule = await svc.update_rule(
@@ -303,22 +278,12 @@ async def update_rule(
         action="LEGAL_RULE_UPDATED",
         resource_type="legal_rule",
         resource_id=rule_id,
-        description=(
-            f"Rule '{rule_id}' updated by Super Admin. "
-            f"Fields: {list(update_data.keys())}. "
-            f"Reason: {body.change_reason}"
-        ),
+        description=f"Rule '{rule_id}' updated. Fields: {list(update_data.keys())}. Reason: {body.change_reason}",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
     )
 
-    logger.warning(
-        "legal_rule_updated",
-        rule_id=rule_id,
-        changed_by=str(current_user.id),
-        fields=list(update_data.keys()),
-        change_reason=body.change_reason,
-    )
+    logger.warning("legal_rule_updated", rule_id=rule_id, changed_by=str(current_user.id), fields=list(update_data.keys()), change_reason=body.change_reason)
     return _rule_to_response(updated_rule)
 
 
