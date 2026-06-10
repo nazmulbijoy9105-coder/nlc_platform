@@ -6,7 +6,7 @@ AI Constitution Article 1: Only Super Admin may modify rules.
 Every change creates an immutable legal_rule_versions snapshot.
 
 Endpoints:
-  GET   /rules                    List all ILRMF rules
+  GET   /rules                    List all 46 ILRMF rules
   GET   /rules/{rule_id}          Get single rule with version history
   PATCH /rules/{rule_id}          Update a rule (SUPER_ADMIN only — creates version snapshot)
   GET   /rules/{rule_id}/history  Rule version history
@@ -159,8 +159,7 @@ async def list_rules(
         is_active=is_active,
         is_black_override=is_black_override,
     )
-        return [_rule_to_response(r) for r in rules]
-" + _tb.format_exc()[-500:])
+    return [_rule_to_response(r) for r in rules]
 
 
 # ---------------------------------------------------------------------------
