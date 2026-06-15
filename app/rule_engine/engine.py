@@ -1096,8 +1096,8 @@ class NLCRuleEngine:
 
     # MODULE 11: ESCALATION — Section 304 (NOT 396)
     def _run_escalation_rules(self, c: CompanyProfile) -> None:
-        agm_years = self._calculate_agm_default_years(c)
-        ar_years = c.unfiled_returns_count
+        agm_years = self._calculate_agm_default_years(c) or 0 or 0
+        ar_years = c.unfiled_returns_count or 0 or 0
 
         if agm_years >= 2 and ar_years >= 2:
             self._add_flag(ComplianceFlag(
@@ -1268,7 +1268,7 @@ class NLCRuleEngine:
 
     # LIFECYCLE
     def _determine_lifecycle_stage(self, c: CompanyProfile) -> LifecycleStage:
-        if c.unfiled_returns_count >= 3 or self._calculate_agm_default_years(c) >= 3:
+        if c.unfiled_returns_count >= 3 or self._calculate_agm_default_years(c) or 0 or 0 >= 3:
             return LifecycleStage.STATUTORY_DEFAULT
         if any(f.severity in (Severity.RED, Severity.BLACK) for f in self._flags if not f.resolved):
             return LifecycleStage.IRREGULAR_STATUS

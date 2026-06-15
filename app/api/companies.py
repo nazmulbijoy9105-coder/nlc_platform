@@ -1,24 +1,6 @@
 """
-app/api/companies.py — Companies Router
+app/api/companies.py - Companies Router
 NEUM LEX COUNSEL
-
-Endpoints:
-  POST   /companies                     Create company (ADMIN_STAFF+)
-  GET    /companies                     List companies with filters/pagination
-  GET    /companies/{id}                Get company with full relations
-  PATCH  /companies/{id}                Update company metadata
-  DELETE /companies/{id}                Soft delete (SUPER_ADMIN only)
-
-  POST   /companies/{id}/evaluate       Trigger compliance evaluation
-  GET    /companies/{id}/compliance     Latest compliance state + flags
-  GET    /companies/{id}/flags          Active compliance flags
-  POST   /companies/{id}/flags/{flag_id}/resolve    Resolve a flag
-  POST   /companies/{id}/flags/{flag_id}/acknowledge Acknowledge a flag
-  GET    /companies/{id}/score-history  Score snapshots over time
-
-  GET    /companies/dashboard/kpis      Portfolio-level KPIs (ADMIN_STAFF+)
-  GET    /companies/dashboard/deadlines Upcoming deadlines across portfolio
-  GET    /companies/dashboard/risk      Risk band distribution
 """
 
 import uuid
@@ -46,10 +28,6 @@ logger = structlog.get_logger(__name__)
 router = APIRouter()
 
 
-# ---------------------------------------------------------------------------
-# Schemas — MATCH FRONTEND types/index.ts EXACTLY
-# ---------------------------------------------------------------------------
-
 class CompanyCreateRequest(BaseModel):
     company_name: str = Field(min_length=2, max_length=255)
     registration_number: str = Field(min_length=3, max_length=50)
@@ -58,7 +36,24 @@ class CompanyCreateRequest(BaseModel):
     company_type: CompanyType = Field(default=CompanyType.PRIVATE_LIMITED)
     financial_year_end: date | None = None
     revenue_tier: RevenueTier | None = None
-    assigned_officer_id: uuid.UUID | None = None
+    assigned_staff_id: uuid.UUID | None = None
+    trade_license_obtained: bool = False
+    trade_license_expiry: date | None = None
+    tax_return_filed_for_current_fy: bool = False
+    advance_tax_q1_paid: bool = False
+    advance_tax_q2_paid: bool = False
+    advance_tax_q3_paid: bool = False
+    advance_tax_q4_paid: bool = False
+    tds_deposited_up_to_date: bool = True
+    last_tds_deposit_date: date | None = None
+    last_vat_return_filed: date | None = None
+    vat_annual_return_filed_for_fy: bool = False
+    minimum_tax_paid: bool = True
+    tax_clearance_obtained: bool = False
+    tax_return_deadline_extended: bool = False
+    any_director_disqualified: bool = False
+    penalty_notices_received: int = 0
+    penalty_notices_resolved: int = 0
 
 
 class CompanyUpdateRequest(BaseModel):
@@ -66,30 +61,8 @@ class CompanyUpdateRequest(BaseModel):
     registered_address: str | None = None
     financial_year_end: str | None = None
     revenue_tier: RevenueTier | None = None
-    is_fdi_registered: bool | None = None
-    is_dormant: bool | None = None
-    assigned_officer_id: uuid.UUID | None = None
-    notes: str | None = None
-    # Tax Compliance
-    trade_license_obtained: bool | None = None
-    trade_license_expiry: date | None = None
-    tax_return_filed_for_current_fy: bool | None = None
-    advance_tax_q1_paid: bool | None = None
-    advance_tax_q2_paid: bool | None = None
-    advance_tax_q3_paid: bool | None = None
-    advance_tax_q4_paid: bool | None = None
-    tds_deposited_up_to_date: bool | None = None
-    last_tds_deposit_date: date | None = None
-    last_vat_return_filed: date | None = None
-    vat_annual_return_filed_for_fy: bool | None = None
-    minimum_tax_paid: bool | None = None
-    tax_clearance_obtained: bool | None = None
-    tax_return_deadline_extended: bool | None = None
-    # Enforcement
-    any_director_disqualified: bool | None = None
-    penalty_notices_received: int | None = None
-    penalty_notices_resolved: int | None = None
-    # Tax & Trade License
+    assigned_staff_id: uuid.UUID | None = None
+    internal_notes: str | None = None
     trade_license_obtained: bool | None = None
     trade_license_expiry: date | None = None
     tax_return_filed_for_current_fy: bool | None = None
@@ -105,10 +78,8 @@ class CompanyUpdateRequest(BaseModel):
     minimum_tax_paid: bool | None = None
     tax_clearance_obtained: bool | None = None
     tax_return_deadline_extended: bool | None = None
-    # Director Disqualification
     any_director_disqualified: bool | None = None
     disqualification_details: list[str] | None = None
-    # Penalty History
     penalty_notices_received: int | None = None
     penalty_notices_resolved: int | None = None
 
@@ -119,23 +90,16 @@ class FlagResolveRequest(BaseModel):
 
 
 class CompanyResponse(BaseModel):
-    """
-    MATCHES frontend types/index.ts Company interface EXACTLY.
-    JSON keys: id, name, registration_number, incorporation_date,
-    compliance_score, band, last_evaluated_at, director_count, violation_count
-    """
     model_config = ConfigDict(from_attributes=True)
-
     id: str
-    name: str                              # ← frontend field (was company_name)
+    name: str
     registration_number: str
-    incorporation_date: str               # ISO format string
-    compliance_score: int | None           # ← frontend field (was current_compliance_score)
-    band: str | None                       # ← frontend field (was current_risk_band)
-    last_evaluated_at: str | None          # ISO format string
-    director_count: int = 0                # ← NEW: computed from company.directors
-    violation_count: int = 0               # ← NEW: computed from active flags
-    # Optional backend extras (frontend ignores if not present)
+    incorporation_date: str
+    compliance_score: int | None
+    band: str | None
+    last_evaluated_at: str | None
+    director_count: int = 0
+    violation_count: int = 0
     company_type: str | None = None
     company_status: str | None = None
     financial_year_end: str | None = None
@@ -148,7 +112,6 @@ class CompanyResponse(BaseModel):
     black_flags: int = 0
     red_flags: int = 0
     yellow_flags: int = 0
-    # V3 Tax & Trade License
     trade_license_obtained: bool | None = None
     trade_license_expiry: str | None = None
     tax_return_filed_for_current_fy: bool | None = None
@@ -203,155 +166,84 @@ class MessageResponse(BaseModel):
     success: bool = True
 
 
-# ---------------------------------------------------------------------------
-# Helper: serialise company ORM object → frontend-compatible JSON
-# ---------------------------------------------------------------------------
-
 def _company_to_response(company) -> CompanyResponse:
-    """Convert SQLAlchemy Company ORM → CompanyResponse with frontend field names."""
-    # Compute director_count from loaded relationship
     director_count = 0
-    if hasattr(company, 'directors') and company.directors is not None:
+    if hasattr(company, "directors") and company.directors is not None:
         director_count = len(company.directors)
-
-    # Compute violation_count from active flags
     violation_count = 0
-    if hasattr(company, 'compliance_flags') and company.compliance_flags is not None:
+    if hasattr(company, "compliance_flags") and company.compliance_flags is not None:
         violation_count = len([
             f for f in company.compliance_flags
-            if hasattr(f, 'status') and str(f.status) == 'ACTIVE'
+            if hasattr(f, "status") and str(f.status) == "ACTIVE"
         ])
 
-    # Convert enums to strings
-    def _str_or_none(val):
+    def _s(val):
         if val is None:
             return None
-        return str(val.value if hasattr(val, 'value') else val)
+        return str(val.value if hasattr(val, "value") else val)
 
     return CompanyResponse(
         id=str(company.id),
-        name=company.company_name,                           # ← frontend field
+        name=company.company_name,
         registration_number=company.registration_number,
         incorporation_date=company.incorporation_date.isoformat() if company.incorporation_date else None,
-        compliance_score=company.current_compliance_score,  # ← frontend field
-        band=_str_or_none(company.current_risk_band),       # ← frontend field
+        compliance_score=company.current_compliance_score,
+        band=_s(company.current_risk_band),
         last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
         director_count=director_count,
         violation_count=violation_count,
-        company_type=_str_or_none(company.company_type),
-        company_status=_str_or_none(company.company_status),
+        company_type=_s(company.company_type),
+        company_status=_s(company.company_status),
         financial_year_end=company.financial_year_end.isoformat() if company.financial_year_end else None,
         registered_address=company.registered_address,
-        revenue_tier=_str_or_none(company.revenue_tier),
-        is_fdi_registered=company.is_fdi_registered if hasattr(company, 'is_fdi_registered') else False,
+        revenue_tier=_s(company.revenue_tier),
+        is_fdi_registered=getattr(company, "is_fdi_registered", False),
         is_dormant=company.company_status == CompanyStatus.DORMANT,
         created_at=company.created_at.isoformat() if company.created_at else None,
-        active_flags=len([f for f in getattr(company, 'compliance_flags', []) if str(getattr(f, 'flag_status', '')) in ('ACTIVE', 'FlagStatus.ACTIVE')]),
-        black_flags=len([f for f in getattr(company, 'compliance_flags', []) if str(getattr(f, 'flag_status', '')) in ('ACTIVE', 'FlagStatus.ACTIVE') and str(getattr(f, 'severity', '')) in ('BLACK', 'Severity.BLACK')]),
-        red_flags=len([f for f in getattr(company, 'compliance_flags', []) if str(getattr(f, 'flag_status', '')) in ('ACTIVE', 'FlagStatus.ACTIVE') and str(getattr(f, 'severity', '')) in ('RED', 'Severity.RED')]),
-        yellow_flags=len([f for f in getattr(company, 'compliance_flags', []) if str(getattr(f, 'flag_status', '')) in ('ACTIVE', 'FlagStatus.ACTIVE') and str(getattr(f, 'severity', '')) in ('YELLOW', 'Severity.YELLOW')]),
+        active_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE")]),
+        black_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("BLACK", "Severity.BLACK")]),
+        red_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("RED", "Severity.RED")]),
+        yellow_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("YELLOW", "Severity.YELLOW")]),
     )
 
 
-# ---------------------------------------------------------------------------
-# POST /companies — Create
-# ---------------------------------------------------------------------------
-
-@router.post(
-    "",
-    response_model=CompanyResponse,
-    status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN"))],
-    summary="Create a new company",
-)
-async def create_company(
-    body: CompanyCreateRequest,
-    request: Request,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_for_user),
-):
+@router.post("", response_model=CompanyResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN"))], summary="Create a new company")
+async def create_company(body: CompanyCreateRequest, request: Request, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     svc = CompanyService(db)
     activity = ActivityService(db)
-
     existing = await svc.get_by_registration_number(body.registration_number)
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Company with registration number '{body.registration_number}' already exists.",
-        )
-
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Company with registration number already exists.")
     company = await svc.create_company(
-        company_name=body.company_name,
-        registration_number=body.registration_number,
-        incorporation_date=body.incorporation_date,
-        registered_address=body.registered_address,
-        company_type=body.company_type,
-        financial_year_end=body.financial_year_end,
-        assigned_staff_id=body.assigned_officer_id,
-        created_by=current_user.id,
+        company_name=body.company_name, registration_number=body.registration_number,
+        incorporation_date=body.incorporation_date, registered_address=body.registered_address,
+        company_type=body.company_type, financial_year_end=body.financial_year_end,
+        assigned_staff_id=body.assigned_staff_id, created_by=current_user.id,
     )
-
-    await activity.log(
-        action="COMPANY_CREATED",
-        resource_type="company",
-        resource_id=str(company.id),
-        description=f"Company '{company.company_name}' created (reg: {company.registration_number})",
-        ip_address=request.client.host if request.client else None,
-        actor_user_id=current_user.id,
-    )
-
+    _tax_fields = ["trade_license_obtained", "trade_license_expiry", "tax_return_filed_for_current_fy", "advance_tax_q1_paid", "advance_tax_q2_paid", "advance_tax_q3_paid", "advance_tax_q4_paid", "tds_deposited_up_to_date", "last_tds_deposit_date", "last_vat_return_filed", "vat_annual_return_filed_for_fy", "minimum_tax_paid", "tax_clearance_obtained", "tax_return_deadline_extended", "any_director_disqualified", "penalty_notices_received", "penalty_notices_resolved"]
+    _tax_update = {k: getattr(body, k) for k in _tax_fields if getattr(body, k, None) is not None}
+    if _tax_update:
+        await svc.update_by_id(company.id, _tax_update)
+        await db.refresh(company)
+    await activity.log(action="COMPANY_CREATED", resource_type="company", resource_id=str(company.id), description=f"Company created: {company.company_name}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
+    _tf=["trade_license_obtained","trade_license_expiry","tax_return_filed_for_current_fy","advance_tax_q1_paid","advance_tax_q2_paid","advance_tax_q3_paid","advance_tax_q4_paid","tds_deposited_up_to_date","last_tds_deposit_date","last_vat_return_filed","vat_annual_return_filed_for_fy","minimum_tax_paid","tax_clearance_obtained","tax_return_deadline_extended","any_director_disqualified","penalty_notices_received","penalty_notices_resolved"]
+    _tu={k:getattr(body,k) for k in _tf if getattr(body,k,None) is not None}
+    if _tu:
+        await svc.update_by_id(company.id,_tu)
+        await db.refresh(company)
     logger.info("company_created", company_id=str(company.id), name=company.company_name)
     return _company_to_response(company)
 
 
-# ---------------------------------------------------------------------------
-# GET /companies — List with filters
-# ---------------------------------------------------------------------------
-
-@router.get(
-    "",
-    response_model=list[CompanyResponse],
-    summary="List companies (filtered/paginated)",
-)
-async def list_companies(
-    search: str | None = Query(None, description="Full-text search on name or registration number"),
-    risk_band: RiskBand | None = Query(None),
-    company_status: CompanyStatus | None = Query(None),
-    revenue_tier: RevenueTier | None = Query(None),
-    is_dormant: bool | None = Query(None),
-    pagination: Pagination = Depends(),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_for_user),
-):
+@router.get("", response_model=list[CompanyResponse], summary="List companies")
+async def list_companies(search: str | None = Query(None), risk_band: RiskBand | None = Query(None), company_status: CompanyStatus | None = Query(None), revenue_tier: RevenueTier | None = Query(None), is_dormant: bool | None = Query(None), pagination: Pagination = Depends(), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     svc = CompanyService(db)
-    companies, _total = await svc.list_companies(
-        search=search,
-        risk_band=risk_band,
-        company_status=company_status,
-        revenue_tier=revenue_tier,
-        is_dormant=is_dormant,
-        offset=pagination.offset,
-        limit=pagination.page_size,
-        user_id=current_user.id if current_user.role not in ("SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF") else None,
-    )
+    companies, _total = await svc.list_companies(search=search, risk_band=risk_band, company_status=company_status, revenue_tier=revenue_tier, is_dormant=is_dormant, offset=pagination.offset, limit=pagination.page_size, user_id=current_user.id if current_user.role not in ("SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF") else None)
     return [_company_to_response(c) for c in companies]
 
 
-# ---------------------------------------------------------------------------
-# GET /companies/{company_id} — Get with full relations
-# ---------------------------------------------------------------------------
-
-@router.get(
-    "/{company_id}",
-    response_model=CompanyResponse,
-    dependencies=[Depends(require_company_access("company_id"))],
-    summary="Get a company with full relations",
-)
-async def get_company(
-    company_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_for_user),
-):
+@router.get("/{company_id}", response_model=CompanyResponse, dependencies=[Depends(require_company_access("company_id"))], summary="Get company")
+async def get_company(company_id: uuid.UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     svc = CompanyService(db)
     company = await svc.get_with_relations(company_id)
     if not company:
@@ -359,344 +251,104 @@ async def get_company(
     return _company_to_response(company)
 
 
-# ---------------------------------------------------------------------------
-# PATCH /companies/{company_id} — Update
-# ---------------------------------------------------------------------------
-
-@router.patch(
-    "/{company_id}",
-    response_model=CompanyResponse,
-    dependencies=[
-        Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN")),
-        Depends(require_company_access("company_id")),
-    ],
-    summary="Update company metadata",
-)
-async def update_company(
-    company_id: uuid.UUID,
-    body: CompanyUpdateRequest,
-    request: Request,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_for_user),
-):
+@router.patch("/{company_id}", response_model=CompanyResponse, dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN")), Depends(require_company_access("company_id"))], summary="Update company")
+async def update_company(company_id: uuid.UUID, body: CompanyUpdateRequest, request: Request, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     svc = CompanyService(db)
     activity = ActivityService(db)
-
     update_data = body.model_dump(exclude_none=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided for update.")
-
-    company = await svc.update_by_id(company_id, update_data)
+    _field_map = {"assigned_officer_id": "assigned_staff_id", "notes": "internal_notes"}
+    mapped_data = {}
+    for k, v in update_data.items():
+        mapped_data[_field_map.get(k, k)] = v
+    for _non_model in ("is_fdi_registered", "is_dormant"):
+        mapped_data.pop(_non_model, None)
+    company = await svc.update_by_id(company_id, mapped_data)
     if not company:
         raise HTTPException(status_code=404, detail="Company not found.")
-
-    await activity.log(
-        action="COMPANY_UPDATED",
-        resource_type="company",
-        resource_id=str(company_id),
-        description=f"Updated fields: {list(update_data.keys())}",
-        ip_address=request.client.host if request.client else None,
-        actor_user_id=current_user.id,
-    )
+    await activity.log(action="COMPANY_UPDATED", resource_type="company", resource_id=str(company_id), description=f"Updated fields: {list(update_data.keys())}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     return _company_to_response(company)
 
 
-# ---------------------------------------------------------------------------
-# DELETE /companies/{company_id} — Soft delete
-# ---------------------------------------------------------------------------
-
-@router.delete(
-    "/{company_id}",
-    response_model=MessageResponse,
-    dependencies=[Depends(require_roles("SUPER_ADMIN"))],
-    summary="Soft-delete a company (Super Admin only)",
-)
-async def delete_company(
-    company_id: uuid.UUID,
-    request: Request,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_for_user),
-):
+@router.delete("/{company_id}", response_model=MessageResponse, dependencies=[Depends(require_roles("SUPER_ADMIN"))], summary="Soft-delete company")
+async def delete_company(company_id: uuid.UUID, request: Request, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     svc = CompanyService(db)
     activity = ActivityService(db)
-
     company = await svc.get_by_id_or_404(company_id)
     await svc.soft_delete(company_id)
-
-    await activity.log(
-        action="COMPANY_DELETED",
-        resource_type="company",
-        resource_id=str(company_id),
-        description=f"Company '{company.company_name}' soft-deleted",
-        ip_address=request.client.host if request.client else None,
-        actor_user_id=current_user.id,
-    )
-    return MessageResponse(message=f"Company '{company.company_name}' has been deactivated.")
+    await activity.log(action="COMPANY_DELETED", resource_type="company", resource_id=str(company_id), description=f"Company soft-deleted: {company.company_name}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
+    return MessageResponse(message=f"Company deactivated.")
 
 
-# ---------------------------------------------------------------------------
-# POST /companies/{company_id}/evaluate — Trigger compliance evaluation
-# ---------------------------------------------------------------------------
-
-@router.post(
-    "/{company_id}/evaluate",
-    response_model=ComplianceSummaryResponse,
-    dependencies=[
-        Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")),
-        Depends(require_company_access("company_id")),
-    ],
-    summary="Trigger a full compliance evaluation for a company",
-)
-async def evaluate_company(
-    company_id: uuid.UUID,
-    request: Request,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_for_user),
-):
+@router.post("/{company_id}/evaluate", response_model=ComplianceSummaryResponse, dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_company_access("company_id"))], summary="Trigger compliance evaluation")
+async def evaluate_company(company_id: uuid.UUID, request: Request, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     company_svc = CompanyService(db)
     compliance_svc = ComplianceService(db)
     activity = ActivityService(db)
-
     company = await company_svc.get_by_id_or_404(company_id)
-
-    result = await compliance_svc.evaluate_company(
-        company_id=company_id,
-        trigger_source="API_MANUAL",
-    )
-
-    await activity.log(
-        action="COMPLIANCE_EVALUATED",
-        resource_type="company",
-        resource_id=str(company_id),
-        description=f"Manual evaluation triggered. Score: {result['score']}, Band: {result['risk_band']}",
-        ip_address=request.client.host if request.client else None,
-        actor_user_id=current_user.id,
-    )
-
+    result = await compliance_svc.evaluate_company(company_id=company_id, trigger_source="API_MANUAL")
+    await activity.log(action="COMPLIANCE_EVALUATED", resource_type="company", resource_id=str(company_id), description=f"Evaluation: Score={result['score']}, Band={result['risk_band']}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     flag_summary = await compliance_svc.get_flag_summary(company_id)
-    return ComplianceSummaryResponse(
-        company_id=str(company_id),
-        company_name=company.company_name,
-        current_score=result["score"],
-        risk_band=result["risk_band"],
-        active_flags=flag_summary.get("total_active", 0),
-        black_flags=flag_summary.get("black", 0),
-        red_flags=flag_summary.get("red", 0),
-        yellow_flags=flag_summary.get("yellow", 0),
-        last_evaluated_at=None,
-        evaluation_triggered=True,
-    )
+    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=result["score"], risk_band=result["risk_band"], active_flags=flag_summary.get("total_active", 0), black_flags=flag_summary.get("black", 0), red_flags=flag_summary.get("red", 0), yellow_flags=flag_summary.get("yellow", 0), last_evaluated_at=None, evaluation_triggered=True)
 
 
-# ---------------------------------------------------------------------------
-# GET /companies/{company_id}/compliance — Latest compliance state
-# ---------------------------------------------------------------------------
-
-@router.get(
-    "/{company_id}/compliance",
-    response_model=ComplianceSummaryResponse,
-    dependencies=[Depends(require_company_access("company_id"))],
-    summary="Get the latest compliance state for a company",
-)
-async def get_compliance(
-    company_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db_for_user),
-):
+@router.get("/{company_id}/compliance", response_model=ComplianceSummaryResponse, dependencies=[Depends(require_company_access("company_id"))], summary="Get compliance state")
+async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_db_for_user)):
     company_svc = CompanyService(db)
     compliance_svc = ComplianceService(db)
-
     company = await company_svc.get_by_id_or_404(company_id)
     flag_summary = await compliance_svc.get_flag_summary(company_id)
-
-    return ComplianceSummaryResponse(
-        company_id=str(company_id),
-        company_name=company.company_name,
-        current_score=company.current_compliance_score,
-        risk_band=company.current_risk_band,
-        active_flags=flag_summary.get("total_active", 0),
-        black_flags=flag_summary.get("black", 0),
-        red_flags=flag_summary.get("red", 0),
-        yellow_flags=flag_summary.get("yellow", 0),
-        last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
-    )
+    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=company.current_compliance_score, risk_band=company.current_risk_band, active_flags=flag_summary.get("total_active", 0), black_flags=flag_summary.get("black", 0), red_flags=flag_summary.get("red", 0), yellow_flags=flag_summary.get("yellow", 0), last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None)
 
 
-# ---------------------------------------------------------------------------
-# GET /companies/{company_id}/flags — Active flags
-# ---------------------------------------------------------------------------
-
-@router.get(
-    "/{company_id}/flags",
-    response_model=list[FlagResponse],
-    dependencies=[Depends(require_company_access("company_id"))],
-    summary="Get active compliance flags for a company",
-)
-async def get_flags(
-    company_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db_for_user),
-):
+@router.get("/{company_id}/flags", response_model=list[FlagResponse], dependencies=[Depends(require_company_access("company_id"))], summary="Get active flags")
+async def get_flags(company_id: uuid.UUID, db: AsyncSession = Depends(get_db_for_user)):
     svc = ComplianceService(db)
     flags = await svc.get_active_flags(company_id)
-    return [
-        FlagResponse(
-            flag_id=str(f.id),
-            rule_id=f.rule_id,
-            rule_name=getattr(f, 'description', f.flag_code) or f.flag_code,
-            severity=f.severity.value if hasattr(f.severity, "value") else str(f.severity),
-            score_impact=f.score_impact,
-            status=f.flag_status.value if hasattr(f.flag_status, "value") else str(f.flag_status),
-            is_black_override=getattr(f, "is_black_override", False),
-            triggered_at=f.triggered_date.isoformat() if f.triggered_date else "",
-            resolved_at=f.resolved_date.isoformat() if getattr(f, "resolved_date", None) else None,
-            resolution_note=getattr(f, "resolution_notes", None),
-        )
-        for f in flags
-    ]
+    return [FlagResponse(flag_id=str(f.id), rule_id=f.rule_id, rule_name=getattr(f, "description", f.flag_code) or f.flag_code, severity=f.severity.value if hasattr(f.severity, "value") else str(f.severity), score_impact=f.score_impact, status=f.flag_status.value if hasattr(f.flag_status, "value") else str(f.flag_status), is_black_override=getattr(f, "is_black_override", False), triggered_at=f.triggered_date.isoformat() if f.triggered_date else "", resolved_at=f.resolved_date.isoformat() if getattr(f, "resolved_date", None) else None, resolution_note=getattr(f, "resolution_notes", None)) for f in flags]
 
 
-# ---------------------------------------------------------------------------
-# POST /companies/{company_id}/flags/{flag_id}/resolve
-# ---------------------------------------------------------------------------
-
-@router.post(
-    "/{company_id}/flags/{flag_id}/resolve",
-    response_model=MessageResponse,
-    dependencies=[
-        Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")),
-        Depends(require_company_access("company_id")),
-    ],
-    summary="Resolve a compliance flag with a note",
-)
-async def resolve_flag(
-    company_id: uuid.UUID,
-    flag_id: uuid.UUID,
-    body: FlagResolveRequest,
-    request: Request,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_for_user),
-):
+@router.post("/{company_id}/flags/{flag_id}/resolve", response_model=MessageResponse, dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_company_access("company_id"))], summary="Resolve flag")
+async def resolve_flag(company_id: uuid.UUID, flag_id: uuid.UUID, body: FlagResolveRequest, request: Request, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     svc = ComplianceService(db)
     activity = ActivityService(db)
-
-    flag = await svc.resolve_flag(
-        flag_id=flag_id,
-        resolved_by=current_user.id,
-        resolution_note=body.resolution_note,
-        resolution_document_id=body.resolution_document_id,
-    )
+    flag = await svc.resolve_flag(flag_id=flag_id, resolved_by=current_user.id, resolution_notes=body.resolution_note)
     if not flag:
         raise HTTPException(status_code=404, detail="Flag not found.")
-
-    await activity.log(
-        action="FLAG_RESOLVED",
-        resource_type="compliance_flag",
-        resource_id=str(flag_id),
-        description=f"Flag {flag.rule_id} resolved: {body.resolution_note[:100]}",
-        ip_address=request.client.host if request.client else None,
-        actor_user_id=current_user.id,
-    )
-    return MessageResponse(message=f"Flag '{flag.rule_id}' has been resolved.")
+    await activity.log(action="FLAG_RESOLVED", resource_type="compliance_flag", resource_id=str(flag_id), description=f"Flag {flag.rule_id} resolved", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
+    return MessageResponse(message=f"Flag resolved.")
 
 
-# ---------------------------------------------------------------------------
-# POST /companies/{company_id}/flags/{flag_id}/acknowledge
-# ---------------------------------------------------------------------------
-
-@router.post(
-    "/{company_id}/flags/{flag_id}/acknowledge",
-    response_model=MessageResponse,
-    dependencies=[Depends(require_company_access("company_id"))],
-    summary="Acknowledge a compliance flag",
-)
-async def acknowledge_flag(
-    company_id: uuid.UUID,
-    flag_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_for_user),
-):
+@router.post("/{company_id}/flags/{flag_id}/acknowledge", response_model=MessageResponse, dependencies=[Depends(require_company_access("company_id"))], summary="Acknowledge flag")
+async def acknowledge_flag(company_id: uuid.UUID, flag_id: uuid.UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     svc = ComplianceService(db)
     flag = await svc.acknowledge_flag(flag_id=flag_id, acknowledged_by=current_user.id)
     if not flag:
         raise HTTPException(status_code=404, detail="Flag not found.")
-    return MessageResponse(message=f"Flag '{flag.rule_id}' acknowledged.")
+    return MessageResponse(message=f"Flag acknowledged.")
 
 
-# ---------------------------------------------------------------------------
-# GET /companies/{company_id}/score-history
-# ---------------------------------------------------------------------------
-
-@router.get(
-    "/{company_id}/score-history",
-    response_model=list[ScoreHistoryEntry],
-    dependencies=[Depends(require_company_access("company_id"))],
-    summary="Get compliance score history (monthly snapshots)",
-)
-async def get_score_history(
-    company_id: uuid.UUID,
-    months: int = Query(default=12, ge=1, le=60, description="Number of months to retrieve"),
-    db: AsyncSession = Depends(get_db_for_user),
-):
+@router.get("/{company_id}/score-history", response_model=list[ScoreHistoryEntry], dependencies=[Depends(require_company_access("company_id"))], summary="Score history")
+async def get_score_history(company_id: uuid.UUID, months: int = Query(default=12, ge=1, le=60), db: AsyncSession = Depends(get_db_for_user)):
     svc = ComplianceService(db)
     history = await svc.get_score_history(company_id=company_id, months=months)
-    return [
-        ScoreHistoryEntry(
-            snapshot_month=h["month"],
-            score=h["score"],
-            risk_band=h["risk_band"],
-            active_flags=h["active_flags"],
-            black_flags=h["black_flags"],
-            red_flags=0,
-            yellow_flags=0,
-            snapshot_date=h["calculated_at"],
-        )
-        for h in history
-    ]
+    return [ScoreHistoryEntry(snapshot_month=h["month"], score=h["score"], risk_band=h["risk_band"], active_flags=h["active_flags"], black_flags=h["black_flags"], red_flags=0, yellow_flags=0, snapshot_date=h["calculated_at"]) for h in history]
 
 
-# ---------------------------------------------------------------------------
-# GET /companies/dashboard/kpis — Portfolio KPIs
-# ---------------------------------------------------------------------------
-
-@router.get(
-    "/dashboard/kpis",
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
-    summary="Portfolio-level KPIs for the admin dashboard",
-)
-async def get_dashboard_kpis(
-    db: AsyncSession = Depends(get_db_for_user),
-):
+@router.get("/dashboard/kpis", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Portfolio KPIs")
+async def get_dashboard_kpis(db: AsyncSession = Depends(get_db_for_user)):
     svc = ComplianceService(db)
     return await svc.get_dashboard_kpis()
 
 
-# ---------------------------------------------------------------------------
-# GET /companies/dashboard/deadlines — Upcoming deadlines
-# ---------------------------------------------------------------------------
-
-@router.get(
-    "/dashboard/deadlines",
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
-    summary="Upcoming statutory deadlines across the portfolio",
-)
-async def get_upcoming_deadlines(
-    days_ahead: int = Query(default=30, ge=7, le=90),
-    db: AsyncSession = Depends(get_db_for_user),
-):
+@router.get("/dashboard/deadlines", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Upcoming deadlines")
+async def get_upcoming_deadlines(days_ahead: int = Query(default=30, ge=7, le=90), db: AsyncSession = Depends(get_db_for_user)):
     svc = CompanyService(db)
     return await svc.get_upcoming_deadlines(days_ahead=days_ahead)
 
 
-# ---------------------------------------------------------------------------
-# GET /companies/dashboard/risk — Risk distribution
-# ---------------------------------------------------------------------------
-
-@router.get(
-    "/dashboard/risk",
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
-    summary="Risk band distribution across the portfolio",
-)
-async def get_risk_distribution(
-    db: AsyncSession = Depends(get_db_for_user),
-):
+@router.get("/dashboard/risk", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Risk distribution")
+async def get_risk_distribution(db: AsyncSession = Depends(get_db_for_user)):
     svc = CompanyService(db)
     return await svc.get_risk_distribution()

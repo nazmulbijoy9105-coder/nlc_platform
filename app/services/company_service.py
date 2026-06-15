@@ -369,7 +369,7 @@ class CompanyService(BaseService[Company]):
             # AGM State
             "agm_count":                  agm_count,
             "last_agm_date":              company.last_agm_date,
-            "if minutes_prepared_this_cycle":        latest_agm.agm_held if latest_agm else False,
+            "agm_held_this_cycle":        latest_agm.agm_held if latest_agm else False,
             "agm_scheduled_date":         latest_agm.agm_deadline if latest_agm else None,
             "notice_sent_date":           latest_agm.notice_sent_date if latest_agm else None,
             "members_present_at_agm":     latest_agm.members_present if latest_agm else 0,
