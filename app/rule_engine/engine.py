@@ -1099,7 +1099,7 @@ class NLCRuleEngine:
         agm_years = self._calculate_agm_default_years(c) or 0 or 0
         ar_years = c.unfiled_returns_count or 0 or 0
 
-        if agm_years >= 2 and ar_years >= 2:
+        if (agm_years or 0) >= 2 and (ar_years or 0) >= 2:
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-001",
                 flag_code="STRIKE_OFF_RISK_ELEVATED",
@@ -1268,7 +1268,7 @@ class NLCRuleEngine:
 
     # LIFECYCLE
     def _determine_lifecycle_stage(self, c: CompanyProfile) -> LifecycleStage:
-        if c.unfiled_returns_count >= 3 or self._calculate_agm_default_years(c) or 0 or 0 >= 3:
+        if c.unfiled_returns_count >= 3 or (self._calculate_agm_default_years(c) or 0) >= 3:
             return LifecycleStage.STATUTORY_DEFAULT
         if any(f.severity in (Severity.RED, Severity.BLACK) for f in self._flags if not f.resolved):
             return LifecycleStage.IRREGULAR_STATUS
@@ -1292,10 +1292,10 @@ class NLCRuleEngine:
         return fy_end + timedelta(days=FY_END_AGM_DEADLINE_DAYS)
 
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:
-        if c.last_agm_date:
-            return max(0, (self.today - c.last_agm_date).days // 365 - 1)
-        # FIX: No AGM data ≠ evidence of default. AGM-001 handles first-AGM case.
-            return 0
+    if c.last_agm_date:
+        return max(0, (self.today - c.last_agm_date).days // 365 - 1)
+    # No AGM data ≠ evidence of default. AGM-001 handles first-AGM case.
+    return 0
 
     def _graduated_agm_deduction(self, delay_days: int) -> int:
         if delay_days <= 30: return 5
