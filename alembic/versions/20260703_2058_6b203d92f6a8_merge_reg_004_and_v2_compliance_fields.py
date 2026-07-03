@@ -1,9 +1,9 @@
 """merge reg_004 and v2_compliance fields
 
 NEUM LEX COUNSEL — Database Migration
-Revision:  cdd079901985
-Previous:  6b203d92f6a8
-Created:   2026-07-03 21:01:38.231300+06:00
+Revision:  6b203d92f6a8
+Previous:  0007_fix_tl_inc003_rules
+Created:   2026-07-03 20:58:17.910120+06:00
 
 Release Governance Protocol (Part III §7):
   [ ] Legal review completed
@@ -22,8 +22,8 @@ import sqlalchemy as sa
 
 
 # ── Revision identifiers ──────────────────────────────────────────────
-revision: str = 'cdd079901985'
-down_revision: Union[str, None] = '6b203d92f6a8'
+revision: str = '6b203d92f6a8'
+down_revision: Union[str, None] = '0007_fix_tl_inc003_rules'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
