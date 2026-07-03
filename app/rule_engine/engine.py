@@ -1096,8 +1096,8 @@ class NLCRuleEngine:
 
     # MODULE 11: ESCALATION — Section 304 (NOT 396)
     def _run_escalation_rules(self, c: CompanyProfile) -> None:
-        agm_years = self._calculate_agm_default_years(c) or 0 or 0
-        ar_years = c.unfiled_returns_count or 0 or 0
+        agm_years = self._calculate_agm_default_years(c) or 0
+        ar_years = c.unfiled_returns_count or 0
 
         if (agm_years or 0) >= 2 and (ar_years or 0) >= 2:
             self._add_flag(ComplianceFlag(
@@ -1111,7 +1111,7 @@ class NLCRuleEngine:
                 detail={"agm_years": agm_years, "ar_years": ar_years}
             ))
 
-        if agm_years >= 3 or ar_years >= 3 or c.on_rjsc_strike_off_list:
+        if (agm_years or 0) >= 3 or (ar_years or 0) >= 3 or c.on_rjsc_strike_off_list:
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-002",
                 flag_code="STRIKE_OFF_IMMINENT",
@@ -1292,10 +1292,9 @@ class NLCRuleEngine:
         return fy_end + timedelta(days=FY_END_AGM_DEADLINE_DAYS)
 
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:
-    if c.last_agm_date:
-        return max(0, (self.today - c.last_agm_date).days // 365 - 1)
-    # No AGM data ≠ evidence of default. AGM-001 handles first-AGM case.
-    return 0
+        if c.last_agm_date:
+            return max(0, (self.today - c.last_agm_date).days // 365 - 1)
+        return 0
 
     def _graduated_agm_deduction(self, delay_days: int) -> int:
         if delay_days <= 30: return 5
