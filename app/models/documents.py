@@ -233,7 +233,6 @@ class AIPromptTemplate(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     def __repr__(self) -> str:
         return f"<AIPromptTemplate {self.template_name} v{self.version}>"
 
-
 # ═══════════════════════════════════════════════════════════════════
 # AI OUTPUT LOG
 # ═══════════════════════════════════════════════════════════════════
