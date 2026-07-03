@@ -321,9 +321,8 @@ async def generate_document(
             company_id=body.company_id,
             document_type=body.document_type,
             template_name=body.template_name,
-            template_params=body.template_params,
+            parameters=body.template_params,  # FIXED: service expects "parameters", not "template_params"
             requested_by=current_user.id,
-            notes=body.notes,
         )
         return GenerateJobResponse(
             job_queued=False,
