@@ -134,14 +134,13 @@ def verify_access_token(
     Called as the first step in every authenticated dependency.
     Raises 401 on invalid/expired token.
     """
-    try:
-        payload = decode_token(credentials.credentials, expected_type="access")
-    except JWTError as exc:
+    payload = decode_token(credentials.credentials)
+    if payload is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(exc),
+            detail="Invalid or expired token.",
             headers={"WWW-Authenticate": "Bearer"},
-        ) from exc
+        )
 
     try:
         return TokenData(
@@ -156,30 +155,6 @@ def verify_access_token(
             detail="Malformed token payload.",
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
-
-
-def verify_temp_token(
-    credentials: HTTPAuthorizationCredentials = Security(_bearer),
-) -> TokenData:
-    """
-    Verify a temp (2FA step) JWT.
-    Used only on the /auth/verify-2fa endpoint.
-    """
-    try:
-        payload = decode_token(credentials.credentials, expected_type="temp")
-    except JWTError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired 2FA session. Please login again.",
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from exc
-
-    return TokenData(
-        user_id=payload["user_id"],
-        email=payload["email"],
-        role=payload["role"],
-        company_ids=[],
-    )
 
 
 # ═══════════════════════════════════════════════════════════════════════
