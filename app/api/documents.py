@@ -224,7 +224,7 @@ async def list_templates(
         TemplateResponse(
             template_name=t.template_name,
             document_type=t.document_type,
-            description=t.description,
+            description=t.template_name,
             required_placeholders=t.required_placeholders or [],
             optional_placeholders=t.optional_placeholders,
             is_active=t.is_active,
