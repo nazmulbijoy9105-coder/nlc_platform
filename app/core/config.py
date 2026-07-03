@@ -64,8 +64,8 @@ class Settings(BaseSettings):
     # Uploads & AI
     UPLOAD_DIR: str = "/tmp/uploads"
     MAX_UPLOAD_SIZE_MB: int = 25
-    OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
-    ai_provider: str = os.getenv("AI_PROVIDER", "openai")
+    ai_provider: str = os.getenv("AI_PROVIDER", "groq")
+    ai_key: str = os.getenv("AI_KEY", os.getenv("GROQ_API_KEY", ""))
 
     # FIX 3: Read allowed_origins from Environment Variable
     # This allows you to control it via Render Dashboard
