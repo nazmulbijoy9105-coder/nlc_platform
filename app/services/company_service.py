@@ -310,7 +310,7 @@ class CompanyService(BaseService[Company]):
         # ── AGM State ─────────────────────────────────────────────
         agms_sorted = sorted(company.agms, key=lambda a: a.financial_year, reverse=True)
         latest_agm = agms_sorted[0] if agms_sorted else None
-        agm_count = len([a for a in company.agms if a.minutes_prepared])
+        agm_count = len([a for a in company.agms if a.agm_held])
 
         # ── Audit State ───────────────────────────────────────────
         audits_sorted = sorted(company.audits, key=lambda a: a.financial_year, reverse=True)
@@ -321,7 +321,7 @@ class CompanyService(BaseService[Company]):
             company.annual_returns, key=lambda r: r.financial_year, reverse=True
         )
         latest_return = returns_sorted[0] if returns_sorted else None
-        unfiled_returns = len([r for r in company.annual_returns if not r.is_filed])
+        unfiled_returns = len([r for r in company.annual_returns if r.is_default])
 
         # ── Director Changes ──────────────────────────────────────
         director_changes = []
@@ -394,14 +394,14 @@ class CompanyService(BaseService[Company]):
             # People
             "director_changes": director_changes,
             "shareholder_change_date": None,  # Would come from company_user_access events
-            "form_xv_filed": True,            # Placeholder — implement from events
+            "form_xv_filed": getattr(company, 'form_xv_filed', False),            # Placeholder — implement from events
 
             # Share Transfers
             "share_transfers": share_transfers,
 
             # Office
             "registered_office_change_date": None,
-            "form_vi_filed": True,
+            "form_vi_filed": getattr(company, 'form_vi_filed', False),
 
             # Corporate structure
             "aoa_transfer_restriction": True,
@@ -418,7 +418,7 @@ class CompanyService(BaseService[Company]):
 
             # Capital
             "capital_increase_date":       None,
-            "capital_increase_resolution": True,
+            "capital_increase_resolution": getattr(company, 'capital_increase_resolution', False),
             "charges":                     [],
             "form_viii_filed":             True,
 
@@ -447,9 +447,4 @@ class CompanyService(BaseService[Company]):
             "penalty_notices_received":     company.penalty_notices_received,
             "penalty_notices_resolved":     company.penalty_notices_resolved,
             "current_director_count":  len([d for d in company.directors if d.director_status.value == "ACTIVE"]),
-            "agm_minutes_prepared":    latest_agm.minutes_prepared if latest_agm else False,
-            "auditor_reappointed_at_agm": latest_agm.auditor_reappointed if latest_agm else False,
-            "accounts_adopted_at_agm":    getattr(latest_agm, 'accounts_adopted', False) if latest_agm else False,
-            "notice_sent_date":           latest_agm.notice_sent_date if latest_agm else None,
-            "members_present_at_agm":     latest_agm.members_present if latest_agm else 0,
         }

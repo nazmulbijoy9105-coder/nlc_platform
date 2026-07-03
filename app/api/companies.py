@@ -59,7 +59,7 @@ class CompanyCreateRequest(BaseModel):
 class CompanyUpdateRequest(BaseModel):
     company_name: str | None = Field(None, min_length=2, max_length=255)
     registered_address: str | None = None
-    financial_year_end: str | None = None
+    financial_year_end: date | None = None
     revenue_tier: RevenueTier | None = None
     assigned_staff_id: uuid.UUID | None = None
     internal_notes: str | None = None
@@ -102,7 +102,7 @@ class CompanyResponse(BaseModel):
     violation_count: int = 0
     company_type: str | None = None
     company_status: str | None = None
-    financial_year_end: str | None = None
+    financial_year_end: date | None = None
     registered_address: str | None = None
     revenue_tier: str | None = None
     is_fdi_registered: bool | None = None
@@ -192,14 +192,6 @@ def _company_to_response(company) -> CompanyResponse:
         last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
         director_count=director_count,
         violation_count=violation_count,
-        company_type=_s(company.company_type),
-        company_status=_s(company.company_status),
-        financial_year_end=company.financial_year_end.isoformat() if company.financial_year_end else None,
-        registered_address=company.registered_address,
-        revenue_tier=_s(company.revenue_tier),
-        is_fdi_registered=getattr(company, "is_fdi_registered", False),
-        is_dormant=company.company_status == CompanyStatus.DORMANT,
-        created_at=company.created_at.isoformat() if company.created_at else None,
         active_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE")]),
         black_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("BLACK", "Severity.BLACK")]),
         red_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("RED", "Severity.RED")]),
