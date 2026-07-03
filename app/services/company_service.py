@@ -113,7 +113,6 @@ class CompanyService(BaseService[Company]):
                 selectinload(Company.compliance_flags),
                 selectinload(Company.rescue_plans),
                 selectinload(Company.engagements),
-                selectinload(Company.share_transfers),
                 selectinload(Company.statutory_registers),
             )
             .where(Company.id == company_id)
