@@ -149,6 +149,55 @@ def _doc_to_response(doc) -> DocumentResponse:
 # ---------------------------------------------------------------------------
 
 @router.get(
+    "",
+    response_model=list[DocumentResponse],
+    summary="List all documents across portfolio",
+)
+async def list_all_documents(
+    company_id: uuid.UUID | None = None,
+    document_type: DocumentType | None = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    from sqlalchemy import select
+
+    from app.models.company import CompanyUserAccess
+    from app.models.documents import Document
+
+    client_roles = ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY")
+    is_client = current_user.role in client_roles
+
+    filters = [Document.is_active]
+
+    if company_id:
+        filters.append(Document.company_id == company_id)
+    elif is_client:
+        accessible = select(CompanyUserAccess.company_id).where(
+            CompanyUserAccess.user_id == current_user.id
+        )
+        filters.append(Document.company_id.in_(accessible))
+
+    if document_type:
+        filters.append(Document.document_type == document_type)
+
+    if is_client:
+        filters.append(Document.is_client_visible == True)
+
+    result = await db.execute(
+        select(Document)
+        .where(*filters)
+        .order_by(Document.created_at.desc())
+        .limit(100)
+    )
+    docs = result.scalars().all()
+    return [_doc_to_response(d) for d in docs]
+
+
+# ---------------------------------------------------------------------------
+# GET /documents/templates — List available templates
+# ---------------------------------------------------------------------------
+
+@router.get(
     "/templates",
     response_model=list[TemplateResponse],
     summary="List all available AI document templates",
@@ -175,46 +224,6 @@ async def list_templates(
             description=t.description,
             required_placeholders=t.required_placeholders or [],
             optional_placeholders=t.optional_placeholders or [],
-            is_active=t.is_active,
-        )
-        for t in templates
-    ]
-
-
-# ---------------------------------------------------------------------------
-# GET /documents/templates — List available templates
-# ---------------------------------------------------------------------------
-
-@router.get(
-    "/templates",
-    response_model=list[TemplateResponse],
-    summary="List all available AI document templates",
-)
-async def list_templates(
-    document_type: DocumentType | None = None,
-    db: AsyncSession = Depends(get_db_for_user),
-    current_user: User = Depends(get_current_user),
-):
-    svc = PromptTemplateService(db)
-
-    if document_type:
-        templates = await svc.get_by_document_type(document_type)
-    else:
-        from sqlalchemy import select
-
-        from app.models.documents import AIPromptTemplate
-        result = await db.execute(
-            select(AIPromptTemplate).where(AIPromptTemplate.is_active)
-        )
-        templates = result.scalars().all()
-
-    return [
-        TemplateResponse(
-            template_name=t.template_name,
-            document_type=t.document_type,
-            description=t.template_name,
-            required_placeholders=t.required_placeholders or [],
-            optional_placeholders=t.optional_placeholders,
             is_active=t.is_active,
         )
         for t in templates
