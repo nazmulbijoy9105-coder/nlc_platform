@@ -11,3 +11,21 @@ venv/
 nlc-debug/
 *.py
 *.png
+
+# Security — never commit env files
+.env
+.env.*
+!.env.example
+
+# Python cache
+*.pyc
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+
+# Junk files
+*.png
+*.jpg
+*.jpeg
+nlc-debug/
+2026*
