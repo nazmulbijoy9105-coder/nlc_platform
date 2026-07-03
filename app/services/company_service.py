@@ -113,6 +113,8 @@ class CompanyService(BaseService[Company]):
                 selectinload(Company.compliance_flags),
                 selectinload(Company.rescue_plans),
                 selectinload(Company.engagements),
+                selectinload(Company.share_transfers),
+                selectinload(Company.statutory_registers),
             )
             .where(Company.id == company_id)
         )
@@ -374,7 +376,7 @@ class CompanyService(BaseService[Company]):
             "notice_sent_date":           latest_agm.notice_sent_date if latest_agm else None,
             "members_present_at_agm":     latest_agm.members_present if latest_agm else 0,
             "auditor_reappointed_at_agm": latest_agm.auditor_reappointed if latest_agm else False,
-            "accounts_adopted_at_agm":    latest_agm.accounts_adopted if latest_agm else False,
+            "accounts_adopted_at_agm":    getattr(latest_agm, 'accounts_adopted', False) if latest_agm else False,
 
             # Audit State
             "first_auditor_appointed":    company.first_auditor_appointed,
@@ -447,7 +449,7 @@ class CompanyService(BaseService[Company]):
             "current_director_count":  len([d for d in company.directors if d.director_status.value == "ACTIVE"]),
             "agm_minutes_prepared":    latest_agm.minutes_prepared if latest_agm else False,
             "auditor_reappointed_at_agm": latest_agm.auditor_reappointed if latest_agm else False,
-            "accounts_adopted_at_agm":    latest_agm.accounts_adopted if latest_agm else False,
+            "accounts_adopted_at_agm":    getattr(latest_agm, 'accounts_adopted', False) if latest_agm else False,
             "notice_sent_date":           latest_agm.notice_sent_date if latest_agm else None,
             "members_present_at_agm":     latest_agm.members_present if latest_agm else 0,
         }
