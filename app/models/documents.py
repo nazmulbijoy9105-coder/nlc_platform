@@ -162,6 +162,9 @@ class DocumentAccessLog(AuditMixin, Base):
 # ═══════════════════════════════════════════════════════════════════
 # AI PROMPT TEMPLATE
 # ═══════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════
+# AI PROMPT TEMPLATE
+# ═══════════════════════════════════════════════════════════════════
 class AIPromptTemplate(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     """
     Approved AI prompt templates — stored in DB, not hardcoded.
@@ -192,13 +195,24 @@ class AIPromptTemplate(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     output_format_instructions: Mapped[str | None] = mapped_column(
         Text, nullable=True
     )
+
+    # ── NEW: description & optional_placeholders ─────────────────
+    description: Mapped[str | None] = mapped_column(
+        Text, nullable=True,
+        comment="Short description of what this template generates"
+    )
+    optional_placeholders: Mapped[list | None] = mapped_column(
+        JSONB, nullable=True,
+        comment="Optional {PLACEHOLDER} names this template uses"
+    )
+    # ── END NEW ──────────────────────────────────────────────────
+
     required_placeholders: Mapped[list | None] = mapped_column(
         JSONB, nullable=True,
         comment="List of {PLACEHOLDER} names this template uses"
     )
 
     # ── Disclaimer ────────────────────────────────────────────────
-    # AI Constitution Article 5: Every output includes disclaimer
     liability_disclaimer: Mapped[str] = mapped_column(
         Text, nullable=False,
         comment="AI Constitution Art.5: Appended to every generated document"
