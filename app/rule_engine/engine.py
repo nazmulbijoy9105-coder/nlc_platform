@@ -1185,7 +1185,7 @@ class NLCRuleEngine:
         override = False
         reason = None
         final = raw
-        critical = [f for f in active if f.rule_id in BLACK_OVERRIDE_RULES]
+        critical = [f for f in active if f.rule_id in BLACK_OVERRIDE_RULES or f.is_black_override]
         if critical:
             override = True
             reason = f"BLACK override: {', '.join(f.rule_id for f in critical)}"
