@@ -215,13 +215,13 @@ async def create_company(body: CompanyCreateRequest, request: Request, current_u
     _tax_fields = ["trade_license_obtained", "trade_license_expiry", "tax_return_filed_for_current_fy", "advance_tax_q1_paid", "advance_tax_q2_paid", "advance_tax_q3_paid", "advance_tax_q4_paid", "tds_deposited_up_to_date", "last_tds_deposit_date", "last_vat_return_filed", "vat_annual_return_filed_for_fy", "minimum_tax_paid", "tax_clearance_obtained", "tax_return_deadline_extended", "any_director_disqualified", "penalty_notices_received", "penalty_notices_resolved"]
     _tax_update = {k: getattr(body, k) for k in _tax_fields if getattr(body, k, None) is not None}
     if _tax_update:
-        await svc.update_by_id(company.id, _tax_update)
+        await svc.update_by_id(company.id, **_tax_update)
         await db.refresh(company)
     await activity.log(action="COMPANY_CREATED", resource_type="company", resource_id=str(company.id), description=f"Company created: {company.company_name}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     _tf=["trade_license_obtained","trade_license_expiry","tax_return_filed_for_current_fy","advance_tax_q1_paid","advance_tax_q2_paid","advance_tax_q3_paid","advance_tax_q4_paid","tds_deposited_up_to_date","last_tds_deposit_date","last_vat_return_filed","vat_annual_return_filed_for_fy","minimum_tax_paid","tax_clearance_obtained","tax_return_deadline_extended","any_director_disqualified","penalty_notices_received","penalty_notices_resolved"]
     _tu={k:getattr(body,k) for k in _tf if getattr(body,k,None) is not None}
     if _tu:
-        await svc.update_by_id(company.id,_tu)
+        await svc.update_by_id(company.id, **_tu)
         await db.refresh(company)
     logger.info("company_created", company_id=str(company.id), name=company.company_name)
     return _company_to_response(company)
@@ -256,7 +256,7 @@ async def update_company(company_id: uuid.UUID, body: CompanyUpdateRequest, requ
         mapped_data[_field_map.get(k, k)] = v
     for _non_model in ("is_fdi_registered", "is_dormant"):
         mapped_data.pop(_non_model, None)
-    company = await svc.update_by_id(company_id, mapped_data)
+    company = await svc.update_by_id(company_id, **mapped_data)
     if not company:
         raise HTTPException(status_code=404, detail="Company not found.")
     await activity.log(action="COMPANY_UPDATED", resource_type="company", resource_id=str(company_id), description=f"Updated fields: {list(update_data.keys())}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
