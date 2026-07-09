@@ -440,6 +440,12 @@ def create_app() -> FastAPI:
     def get_parsed_origins():
         raw_origins = settings.allowed_origins
         if isinstance(raw_origins, list):
+            if settings.is_production:
+                for o in raw_origins:
+                    if o == "*":
+                        raise ValueError("CORS wildcard not allowed with credentials in production")
+                    if o.startswith("http://"):
+                        raise ValueError(f"Non-HTTPS origin not allowed in production: {o}")
             return [o.strip() for o in raw_origins if o.strip()]
         if isinstance(raw_origins, str) and raw_origins:
             return [o.strip() for o in raw_origins.split(",") if o.strip()]
