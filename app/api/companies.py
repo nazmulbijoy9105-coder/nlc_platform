@@ -210,13 +210,18 @@ async def create_company(body: CompanyCreateRequest, request: Request, current_u
         company_name=body.company_name, registration_number=body.registration_number,
         incorporation_date=body.incorporation_date, registered_address=body.registered_address,
         company_type=body.company_type, financial_year_end=body.financial_year_end,
-        assigned_staff_id=body.assigned_staff_id, created_by=current_user.id,
+        assigned_staff_id=body.assigned_staff_id,
     )
     _tax_fields = ["trade_license_obtained", "trade_license_expiry", "tax_return_filed_for_current_fy", "advance_tax_q1_paid", "advance_tax_q2_paid", "advance_tax_q3_paid", "advance_tax_q4_paid", "tds_deposited_up_to_date", "last_tds_deposit_date", "last_vat_return_filed", "vat_annual_return_filed_for_fy", "minimum_tax_paid", "tax_clearance_obtained", "tax_return_deadline_extended", "any_director_disqualified", "penalty_notices_received", "penalty_notices_resolved"]
     _tax_update = {k: getattr(body, k) for k in _tax_fields if getattr(body, k, None) is not None}
     if _tax_update:
         await svc.update_by_id(company.id, **_tax_update)
         await db.refresh(company)
+    # Grant creator access to company
+    from app.models.company import CompanyUserAccess
+    db.add(CompanyUserAccess(company_id=company.id, user_id=current_user.id, can_edit=True, can_view_financials=True))
+    await db.commit()
+    
     await activity.log(action="COMPANY_CREATED", resource_type="company", resource_id=str(company.id), description=f"Company created: {company.company_name}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     logger.info("company_created", company_id=str(company.id), name=company.company_name)
     return _company_to_response(company)
