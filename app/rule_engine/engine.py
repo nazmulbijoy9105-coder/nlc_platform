@@ -394,7 +394,7 @@ class NLCRuleEngine:
                 ))
 
         if c.current_director_count < 2:
-            inc003_impact = 20 if c.current_director_count == 0 else 15
+            inc003_impact = 15
             inc003_desc = (
                 "Private company has NO directors. Section 90(2) requires minimum 2. Company cannot legally act."
                 if c.current_director_count == 0
@@ -484,15 +484,11 @@ class NLCRuleEngine:
             deadline = c.incorporation_date + timedelta(days=FIRST_AUDITOR_DEADLINE_DAYS)
             if self.today > deadline:
                 delay = (self.today - deadline).days
-                if delay <= 60: aud_impact, aud_sev = 5, Severity.YELLOW
-                elif delay <= 365: aud_impact, aud_sev = 10, Severity.RED
-                elif delay <= 730: aud_impact, aud_sev = 15, Severity.RED
-                else: aud_impact, aud_sev = 20, Severity.BLACK
                 self._add_flag(ComplianceFlag(
                     rule_id="AUD-001",
                     flag_code="FIRST_AUDITOR_NOT_APPOINTED",
-                    severity=aud_sev,
-                    score_impact=aud_impact,
+                    severity=Severity.YELLOW,
+                    score_impact=10,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE if delay <= 365 else RevenueTier.STRUCTURED_REGULARIZATION,
                     description="First auditor not appointed within 30 days. Section 210(1): overdue by " + str(delay) + " days.",
                     statutory_basis="Companies Act 1994, Section 210(1)",
@@ -614,8 +610,8 @@ class NLCRuleEngine:
                 self._add_flag(ComplianceFlag(
                     rule_id="AGM-004",
                     flag_code="AGM_NOTICE_NOT_ISSUED",
-                    severity=Severity.YELLOW,
-                    score_impact=3,
+                    severity=Severity.RED,
+                    score_impact=15,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"AGM notice not issued. {days_rem} days to AGM. Section 85 requires 21 clear days notice.",
                     statutory_basis="Companies Act 1994, Section 85",
@@ -1094,9 +1090,9 @@ class NLCRuleEngine:
         if c.tin_obtained:
             fiscal_q = self._fiscal_quarter()
             missed = []
-            if fiscal_q > 1 and not c.advance_tax_q1_paid: missed.append("Q1")
-            if fiscal_q > 2 and not c.advance_tax_q2_paid: missed.append("Q2")
-            if fiscal_q > 3 and not c.advance_tax_q3_paid: missed.append("Q3")
+            if fiscal_q >= 1 and not c.advance_tax_q1_paid: missed.append("Q1")
+            if fiscal_q >= 2 and not c.advance_tax_q2_paid: missed.append("Q2")
+            if fiscal_q >= 3 and not c.advance_tax_q3_paid: missed.append("Q3")
             if fiscal_q == 1 and not c.advance_tax_q4_paid: missed.append("Q4")
             
             if missed:
@@ -1118,7 +1114,7 @@ class NLCRuleEngine:
                     rule_id="VAT-002",
                     flag_code="MONTHLY_VAT_RETURN_OVERDUE",
                     severity=Severity.YELLOW,
-                    score_impact=5,
+                    score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description="Monthly/Bi-monthly VAT return overdue. VAT Act 2012.",
                     statutory_basis="Value Added Tax Act 2012 (Bangladesh)",
