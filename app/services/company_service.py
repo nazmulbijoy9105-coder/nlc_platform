@@ -229,12 +229,12 @@ class CompanyService(BaseService[Company]):
             }
         return dict(row)
 
-    async def get_risk_distribution(self) -> list[dict]:
+    async def get_risk_distribution(self, user_id: uuid.UUID | None = None) -> list[dict]:
         """Risk band distribution from vw_risk_distribution view."""
         result = await self.db.execute(text("SELECT * FROM vw_risk_distribution"))
         return [dict(row) for row in result.mappings().all()]
 
-    async def get_upcoming_deadlines(self, days_ahead: int = 30) -> list[dict]:
+    async def get_upcoming_deadlines(self, days_ahead: int = 30, user_id: uuid.UUID | None = None) -> list[dict]:
         """Fetch upcoming AGM and return deadlines within N days."""
         result = await self.db.execute(
             text(
