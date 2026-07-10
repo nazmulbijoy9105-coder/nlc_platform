@@ -407,7 +407,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     COUNT(*) FILTER (WHERE current_risk_band IN ('RED', 'BLACK')) as red_black_count,
                     0 as upcoming_deadlines
                 FROM companies
-                WHERE created_by = :uid AND is_active = true
+                WHERE assigned_staff_id = :uid AND is_active = true
             """),
             {"uid": str(user_id)}
         )
