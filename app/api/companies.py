@@ -225,7 +225,7 @@ async def create_company(body: CompanyCreateRequest, request: Request, current_u
 @router.get("", response_model=list[CompanyResponse], summary="List companies")
 async def list_companies(search: str | None = Query(None), risk_band: RiskBand | None = Query(None), company_status: CompanyStatus | None = Query(None), revenue_tier: RevenueTier | None = Query(None), is_dormant: bool | None = Query(None), pagination: Pagination = Depends(), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     svc = CompanyService(db)
-    companies, _total = await svc.list_companies(search=search, risk_band=risk_band, company_status=company_status, revenue_tier=revenue_tier, is_dormant=is_dormant, offset=pagination.offset, limit=pagination.page_size, user_id=current_user.id if current_user.role not in ("SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF") else None)
+    companies, _total = await svc.list_companies(search=search, risk_band=risk_band, company_status=company_status, revenue_tier=revenue_tier, is_dormant=is_dormant, offset=pagination.offset, limit=pagination.page_size,     user_id=current_user.id)
     return [_company_to_response(c) for c in companies]
 
 
