@@ -438,6 +438,36 @@ def get_rule_engine():
     return _rule_engine_instance
 
 
+async def get_db_for_user(request: Request) -> AsyncSession:
+    """
+    Yield a DB session with user RLS context set.
+    Extracts user_id from JWT Bearer token in request headers.
+    Use for: ALL authenticated API routes.
+    """
+    from app.core.security import decode_token
+    
+    user_id = "ANONYMOUS"
+    auth_header = request.headers.get("authorization", "")
+    if auth_header.startswith("Bearer "):
+        try:
+            payload = decode_token(auth_header[7:])
+            if payload.get("type") == "access":
+                user_id = payload.get("user_id") or payload.get("sub") or "ANONYMOUS"
+        except Exception:
+            pass  # Fall back to ANONYMOUS on any decode failure
+    
+    async with AsyncSessionLocal() as session:
+        try:
+            await set_rls_context(session, user_id)
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
 # ═══════════════════════════════════════════════════════════════════════
 # ANNOTATED SHORTHAND TYPES
 # (Use in function signatures for cleaner code)
@@ -460,5 +490,4 @@ RevenueAccess = Annotated[TokenData, Depends(require_revenue_access)]
 
 
 # Alias for backward compatibility
-get_db_for_user = get_db
 
