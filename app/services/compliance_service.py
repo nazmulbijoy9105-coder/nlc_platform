@@ -395,10 +395,28 @@ class ComplianceService(BaseService[ComplianceFlag]):
             include_future_days=days_ahead,
         )
 
-    async def get_dashboard_kpis(self) -> dict:
-        """Aggregate KPIs for admin dashboard from vw_admin_dashboard_kpis."""
+    async def get_dashboard_kpis(self, user_id=None) -> dict:
+        """Aggregate KPIs for admin dashboard from vw_admin_dashboard_kpis.
+        If user_id is provided, computes per-user KPIs instead."""
+        if user_id is None:
+            result = await self.db.execute(
+                text("SELECT * FROM vw_admin_dashboard_kpis LIMIT 1")
+            )
+            row = result.mappings().one_or_none()
+            return dict(row) if row else {}
+        # Per-user KPIs
         result = await self.db.execute(
-            text("SELECT * FROM vw_admin_dashboard_kpis LIMIT 1")
+            text("""
+                SELECT
+                    COUNT(*) as total_companies,
+                    COUNT(*) FILTER (WHERE current_risk_band = 'GREEN') as green_count,
+                    COUNT(*) FILTER (WHERE current_risk_band = 'YELLOW') as yellow_count,
+                    COUNT(*) FILTER (WHERE current_risk_band IN ('RED', 'BLACK')) as red_black_count,
+                    0 as upcoming_deadlines
+                FROM companies
+                WHERE created_by = :uid AND is_active = true
+            """),
+            {"uid": str(user_id)}
         )
         row = result.mappings().one_or_none()
         return dict(row) if row else {}
