@@ -396,15 +396,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
 
     async def get_dashboard_kpis(self, user_id=None) -> dict:
-        """Aggregate KPIs for admin dashboard from vw_admin_dashboard_kpis.
-        If user_id is provided, computes per-user KPIs instead."""
-        if user_id is None:
-            result = await self.db.execute(
-                text("SELECT * FROM vw_admin_dashboard_kpis LIMIT 1")
-            )
-            row = result.mappings().one_or_none()
-            return dict(row) if row else {}
-        # Per-user KPIs
+        """Aggregate KPIs for admin dashboard."""
+        # Always per-user — no global view
         result = await self.db.execute(
             text("""
                 SELECT

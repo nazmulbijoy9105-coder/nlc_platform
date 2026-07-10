@@ -217,7 +217,7 @@ async def create_company(body: CompanyCreateRequest, request: Request, current_u
     if _tax_update:
         await svc.update_by_id(company.id, **_tax_update)
         await db.refresh(company)
-    await activity.log(action="COMPANY_CREATED", resource_type="company", resource_id=str(company.id), description=f"Company created: {company.company_name}", ip_address=request.client.host if request.client else None, actor_user_id=None if current_user.role == "SUPER_ADMIN" else current_user.id)
+    await activity.log(action="COMPANY_CREATED", resource_type="company", resource_id=str(company.id), description=f"Company created: {company.company_name}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     logger.info("company_created", company_id=str(company.id), name=company.company_name)
     return _company_to_response(company)
 
@@ -225,7 +225,7 @@ async def create_company(body: CompanyCreateRequest, request: Request, current_u
 @router.get("", response_model=list[CompanyResponse], summary="List companies")
 async def list_companies(search: str | None = Query(None), risk_band: RiskBand | None = Query(None), company_status: CompanyStatus | None = Query(None), revenue_tier: RevenueTier | None = Query(None), is_dormant: bool | None = Query(None), pagination: Pagination = Depends(), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     svc = CompanyService(db)
-    companies, _total = await svc.list_companies(search=search, risk_band=risk_band, company_status=company_status, revenue_tier=revenue_tier, is_dormant=is_dormant, offset=pagination.offset, limit=pagination.page_size,     user_id=None if current_user.role == "SUPER_ADMIN" else current_user.id)
+    companies, _total = await svc.list_companies(search=search, risk_band=risk_band, company_status=company_status, revenue_tier=revenue_tier, is_dormant=is_dormant, offset=pagination.offset, limit=pagination.page_size,     user_id=current_user.id)
     return [_company_to_response(c) for c in companies]
 
 
@@ -254,7 +254,7 @@ async def update_company(company_id: uuid.UUID, body: CompanyUpdateRequest, requ
     company = await svc.update_by_id(company_id, **mapped_data)
     if not company:
         raise HTTPException(status_code=404, detail="Company not found.")
-    await activity.log(action="COMPANY_UPDATED", resource_type="company", resource_id=str(company_id), description=f"Updated fields: {list(update_data.keys())}", ip_address=request.client.host if request.client else None, actor_user_id=None if current_user.role == "SUPER_ADMIN" else current_user.id)
+    await activity.log(action="COMPANY_UPDATED", resource_type="company", resource_id=str(company_id), description=f"Updated fields: {list(update_data.keys())}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     return _company_to_response(company)
 
 
@@ -264,7 +264,7 @@ async def delete_company(company_id: uuid.UUID, request: Request, current_user: 
     activity = ActivityService(db)
     company = await svc.get_by_id_or_404(company_id)
     await svc.soft_delete(company_id)
-    await activity.log(action="COMPANY_DELETED", resource_type="company", resource_id=str(company_id), description=f"Company soft-deleted: {company.company_name}", ip_address=request.client.host if request.client else None, actor_user_id=None if current_user.role == "SUPER_ADMIN" else current_user.id)
+    await activity.log(action="COMPANY_DELETED", resource_type="company", resource_id=str(company_id), description=f"Company soft-deleted: {company.company_name}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     return MessageResponse(message=f"Company deactivated.")
 
 
@@ -275,7 +275,7 @@ async def evaluate_company(company_id: uuid.UUID, request: Request, current_user
     activity = ActivityService(db)
     company = await company_svc.get_by_id_or_404(company_id)
     result = await compliance_svc.evaluate_company(company_id=company_id, trigger_source="API_MANUAL")
-    await activity.log(action="COMPLIANCE_EVALUATED", resource_type="company", resource_id=str(company_id), description=f"Evaluation: Score={result['score']}, Band={result['risk_band']}", ip_address=request.client.host if request.client else None, actor_user_id=None if current_user.role == "SUPER_ADMIN" else current_user.id)
+    await activity.log(action="COMPLIANCE_EVALUATED", resource_type="company", resource_id=str(company_id), description=f"Evaluation: Score={result['score']}, Band={result['risk_band']}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     flag_summary = await compliance_svc.get_flag_summary(company_id)
     return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=result["score"], risk_band=result["risk_band"], active_flags=flag_summary.get("total_active", 0), black_flags=flag_summary.get("black", 0), red_flags=flag_summary.get("red", 0), yellow_flags=flag_summary.get("yellow", 0), last_evaluated_at=None, evaluation_triggered=True)
 
@@ -303,7 +303,7 @@ async def resolve_flag(company_id: uuid.UUID, flag_id: uuid.UUID, body: FlagReso
     flag = await svc.resolve_flag(flag_id=flag_id, resolved_by=current_user.id, resolution_notes=body.resolution_note)
     if not flag:
         raise HTTPException(status_code=404, detail="Flag not found.")
-    await activity.log(action="FLAG_RESOLVED", resource_type="compliance_flag", resource_id=str(flag_id), description=f"Flag {flag.rule_id} resolved", ip_address=request.client.host if request.client else None, actor_user_id=None if current_user.role == "SUPER_ADMIN" else current_user.id)
+    await activity.log(action="FLAG_RESOLVED", resource_type="compliance_flag", resource_id=str(flag_id), description=f"Flag {flag.rule_id} resolved", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     return MessageResponse(message=f"Flag resolved.")
 
 
@@ -326,16 +326,16 @@ async def get_score_history(company_id: uuid.UUID, months: int = Query(default=1
 @router.get("/dashboard/kpis", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Portfolio KPIs")
 async def get_dashboard_kpis(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     svc = ComplianceService(db)
-    return await svc.get_dashboard_kpis(user_id=None if current_user.role == "SUPER_ADMIN" else current_user.id)
+    return await svc.get_dashboard_kpis(user_id=current_user.id)
 
 
 @router.get("/dashboard/deadlines", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Upcoming deadlines")
 async def get_upcoming_deadlines(days_ahead: int = Query(default=30, ge=7, le=90), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     svc = CompanyService(db)
-    return await svc.get_upcoming_deadlines(days_ahead=days_ahead, user_id=None if current_user.role == "SUPER_ADMIN" else current_user.id)
+    return await svc.get_upcoming_deadlines(days_ahead=days_ahead, user_id=current_user.id)
 
 
 @router.get("/dashboard/risk", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Risk distribution")
 async def get_risk_distribution(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     svc = CompanyService(db)
-    return await svc.get_risk_distribution(user_id=None if current_user.role == "SUPER_ADMIN" else current_user.id)
+    return await svc.get_risk_distribution(user_id=current_user.id)
