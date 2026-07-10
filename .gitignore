@@ -28,3 +28,6 @@ __pycache__/
 *.jpg
 *.jpeg
 nlc-debug/
+*.v1-backup
+*.fix_backup_*
+__pycache__/
