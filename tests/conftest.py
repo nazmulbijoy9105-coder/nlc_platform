@@ -149,7 +149,13 @@ def _make_token(role: str, user_id: str | None = None, company_ids: list[str] | 
     uid = user_id or str(uuid.uuid4())
     email = f"test_{role.lower()}@nlctest.com"
     companies = company_ids or []
-    return create_access_token(uid, email, role, companies)
+    return create_access_token({
+        "sub": uid,
+        "user_id": uid,
+        "email": email,
+        "role": role,
+        "company_ids": companies,
+    })
 
 
 @pytest.fixture(scope="session")
