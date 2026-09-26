@@ -278,9 +278,24 @@ if __name__ == "__main__":
     tax004 = next((f for f in results[3]['flag_ids'] if f == 'TAX-004'), None)
     print("✅ Test 4: TAX-004 uses Bangladesh FY quarters")
 
-    # Test 5: INC-003 graduated impact
-    # Need to check raw scores since both will be BLACK override
-    print("✅ Test 5: INC-003 graduated impact (0 dir=20, 1 dir=15)")
+    # Test 5: INC-003 flat impact
+    zero_inc003 = next(
+        f for f in NLCRuleEngine().evaluate(zero_directors).flags
+        if f.rule_id == "INC-003"
+    )
+    one_inc003 = next(
+        f for f in NLCRuleEngine().evaluate(one_director).flags
+        if f.rule_id == "INC-003"
+    )
+
+    assert zero_inc003.score_impact == 15, "INC-003 must be 15 points for 0 directors"
+    assert one_inc003.score_impact == 15, "INC-003 must be 15 points for 1 director"
+    assert zero_inc003.severity == Severity.BLACK
+    assert one_inc003.severity == Severity.BLACK
+    assert zero_inc003.is_black_override is True
+    assert one_inc003.is_black_override is True
+
+    print("✅ Test 5: INC-003 flat 15-point BLACK override for 0 and 1 director")
 
     # Test 6: VAT threshold
     assert 'TAX-002' not in results[6]['flag_ids'], "TAX-002 should NOT fire when turnover < 3M"
