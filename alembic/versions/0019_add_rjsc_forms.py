@@ -1,13 +1,13 @@
 """Add RJSC form filings table
 
 Revision ID: 0019_add_rjsc_forms
-Revises: 0018_sync_rule_descriptions
+Revises: 0017_fix_constraints
 """
 from alembic import op
 import sqlalchemy as sa
 
 revision = '0019_add_rjsc_forms'
-down_revision = '0018_sync_rule_descriptions'
+down_revision = '0017_fix_constraints'
 branch_labels = None
 depends_on = None
 
