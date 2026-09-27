@@ -120,6 +120,19 @@ async def login(request: Request,body: LoginBody, db=Depends(get_db)):
     except Exception:
         pass  # Don't block login if audit log fails
     
+    # Audit log
+    try:
+        activity = ActivityService(db)
+        await activity.log(
+            action="LOGIN_SUCCESS",
+            resource_type="user",
+            resource_id=str(verified_user.id),
+            description=f"User {verified_user.email} logged in successfully",
+            actor_user_id=verified_user.id,
+        )
+    except Exception:
+        pass  # Don't block login if audit log fails
+    
     user_dict = {
         "id": str(verified_user.id),
         "email": verified_user.email,
