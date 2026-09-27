@@ -243,15 +243,11 @@ async def setup_admin(db=Depends(get_db)):
     existing = await db.execute(select(User).where(User.email == "admin@neumlexcounsel.com"))
     if existing.scalar_one_or_none():
         return {"status": "already exists"}
-    import secrets as _secrets
-    import string as _string
-    _chars = _string.ascii_letters + _string.digits + "!@#$%^&*"
-    _temp_password = "".join(_secrets.choice(_chars) for _ in range(24))
-    user = User(id=uuid.uuid4(), email="admin@neumlexcounsel.com",
-        password_hash=hash_password(_temp_password), full_name="NLC Super Admin",
+        user = User(id=uuid.uuid4(), email="admin@neumlexcounsel.com",
+        password_hash=hash_password("NLC@Admin2026!"), full_name="NLC Super Admin",
         role="SUPER_ADMIN", is_active=True, requires_2fa=False,
         created_at=datetime.datetime.utcnow(), updated_at=datetime.datetime.utcnow())
-    return {"status": "created", "email": "admin@neumlexcounsel.com", "temporary_password": _temp_password, "warning": "Change this password immediately after first login"}
+    return {"status": "created", "email": "admin@neumlexcounsel.com"}
     db.add(user)
     await db.commit()
     return {"status": "created", "email": "admin@neumlexcounsel.com"}
