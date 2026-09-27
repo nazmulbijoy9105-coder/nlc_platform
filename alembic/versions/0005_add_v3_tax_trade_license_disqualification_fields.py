@@ -1,12 +1,12 @@
 """add_v3_tax_trade_license_disqualification_fields
 
-Revision ID: 0005_add_v3_tax_trade_license_disqualification_fields
+Revision ID: 0005_v3_tax_fields
 Revises: 0004_add_v2_compliance_fields
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = '0005_add_v3_tax_trade_license_disqualification_fields'
+revision = '0005_v3_tax_fields'
 down_revision = '0004_add_v2_compliance_fields'
 
 

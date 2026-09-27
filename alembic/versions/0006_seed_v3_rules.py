@@ -1,12 +1,12 @@
 """seed_v3_tax_enforcement_structural_rules
 
 Revision ID: 0006_seed_v3_rules
-Revises: 0005_add_v3_tax_trade_license_disqualification_fields
+Revises: 0005_v3_tax_fields
 """
 from alembic import op
 
 revision = '0006_seed_v3_rules'
-down_revision = '0005_add_v3_tax_trade_license_disqualification_fields'
+down_revision = '0005_v3_tax_fields'
 
 
 def upgrade():
