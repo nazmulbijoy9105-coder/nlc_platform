@@ -66,15 +66,10 @@ def upgrade():
     
     # Indexes (idempotent)
     for idx_sql in [
-        "CREATE INDEX IF NOT EXISTS idx_compliance_events_company_type ON compliance_events(company_id, event_type)",
-        "CREATE INDEX IF NOT EXISTS idx_documents_company_status ON documents(company_id, status) WHERE is_active = true",
-        "CREATE INDEX IF NOT EXISTS idx_directors_company_status ON directors(company_id, director_status)",
         "CREATE INDEX IF NOT EXISTS idx_shareholders_company ON shareholders(company_id) WHERE is_active = true",
         "CREATE INDEX IF NOT EXISTS idx_rescue_plans_company_active ON rescue_plans(company_id) WHERE is_active = true",
         "CREATE INDEX IF NOT EXISTS idx_engagements_company_active ON engagements(company_id) WHERE is_active = true",
         "CREATE INDEX IF NOT EXISTS idx_companies_type_active ON companies(company_type) WHERE is_active = true",
-        "CREATE INDEX IF NOT EXISTS idx_compliance_flags_triggered ON compliance_flags(triggered_date) WHERE flag_status = 'ACTIVE'",
-        "CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id) WHERE read_at IS NULL",
         "CREATE INDEX IF NOT EXISTS idx_legal_rule_versions_rule ON legal_rule_versions(rule_id)",
     ]:
         op.execute(idx_sql)

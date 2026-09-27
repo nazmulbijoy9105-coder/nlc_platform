@@ -94,17 +94,10 @@ def upgrade():
     op.execute("ALTER TABLE companies DROP CONSTRAINT IF EXISTS check_unfiled_returns")
     op.execute("ALTER TABLE companies ADD CONSTRAINT check_unfiled_returns CHECK (agm_default_count >= 0)")
 
-    # ── 3. Additional indexes for enterprise query patterns ──
-    op.execute("CREATE INDEX IF NOT EXISTS idx_compliance_events_company_type ON compliance_events(company_id, event_type)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_documents_company_status ON documents(company_id, status) WHERE is_active = true")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_directors_company_status ON directors(company_id, director_status)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_shareholders_company ON shareholders(company_id) WHERE is_active = true")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_rescue_plans_company_active ON rescue_plans(company_id) WHERE is_active = true")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_engagements_company_active ON engagements(company_id) WHERE is_active = true")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_companies_type_active ON companies(company_type) WHERE is_active = true")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_compliance_flags_triggered ON compliance_flags(triggered_date) WHERE flag_status = 'ACTIVE'")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id) WHERE read_at IS NULL")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_legal_rule_versions_rule ON legal_rule_versions(rule_id)")
+    # ── 3. Additional indexes (skipped — may reference non-existent columns) ──
+    # Indexes from migration 0014 are already applied.
+    # Additional indexes will be added carefully in a future migration
+    # after verifying column names exist in the actual database.
 
 def downgrade():
     # CHECK constraints
