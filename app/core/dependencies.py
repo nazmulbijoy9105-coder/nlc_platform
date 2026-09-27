@@ -126,19 +126,39 @@ async def get_admin_db() -> AsyncSession:
 # TOKEN VERIFICATION
 # ═══════════════════════════════════════════════════════════════════════
 
+def _check_token_blacklist(jti: str) -> bool:
+    """Check if token is revoked via Redis blacklist. Returns True if revoked."""
+    import os
+    try:
+        import redis
+        r = redis.from_url(os.environ.get("REDIS_URL", "redis://localhost:6379/0"), decode_responses=True)
+        return r.exists(f"blacklist:{jti}") > 0
+    except Exception:
+        return False  # Redis unavailable — don't block auth
+
+
 def verify_access_token(
     credentials: HTTPAuthorizationCredentials = Security(_bearer),
 ) -> TokenData:
     """
     Verify JWT Bearer token and return parsed TokenData.
-    Called as the first step in every authenticated dependency.
-    Raises 401 on invalid/expired token.
+    Checks token blacklist for revoked tokens.
+    Raises 401 on invalid/expired/revoked token.
     """
     payload = decode_token(credentials.credentials)
     if payload is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Check token blacklist (revoked on logout)
+    jti = payload.get("jti", payload.get("user_id", ""))
+    if jti and _check_token_blacklist(jti):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked. Please log in again.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

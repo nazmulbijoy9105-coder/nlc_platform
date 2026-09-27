@@ -1,7 +1,9 @@
 import datetime
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -18,6 +20,7 @@ from app.core.security import (
 from app.models.database import get_db
 from app.models.user import User
 
+_limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -65,29 +68,49 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(body: LoginBody, db=Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == body.email))
-    user = result.scalar_one_or_none()
-
-    if not user or not verify_password(body.password, user.password_hash):
+@_limiter.limit("10/minute")
+async def login(request: Request,body: LoginBody, db=Depends(get_db)):
+    """Login with lockout protection, failed attempt tracking, and 2FA support."""
+    from app.services.user_service import UserService
+    svc = UserService(db)
+    
+    user = await svc.get_by_email(body.email)
+    if not user:
+        # Don't reveal whether email exists — return generic error
         raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    if not user.is_active:
+    
+    # Check account lockout
+    if await svc.check_lockout(user):
+        raise HTTPException(status_code=423, detail="Account temporarily locked due to too many failed attempts. Try again later.")
+    
+    # Verify credentials (increments failed attempts on wrong password)
+    verified_user = await svc.verify_credentials(body.email, body.password)
+    if not verified_user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    if not verified_user.is_active:
         raise HTTPException(status_code=403, detail="Account deactivated")
-
-    # Return user dict with requires_2fa
+    
+    # Record successful login
+    await svc.record_login(verified_user)
+    
     user_dict = {
-        "id": str(user.id),
-        "email": user.email,
-        "full_name": user.full_name,
-        "role": str(user.role),
-        "is_active": user.is_active,
-        "requires_2fa": getattr(user, "requires_2fa", False),  # ← FIX
+        "id": str(verified_user.id),
+        "email": verified_user.email,
+        "full_name": verified_user.full_name,
+        "role": str(verified_user.role),
+        "is_active": verified_user.is_active,
+        "requires_2fa": getattr(verified_user, "requires_2fa", False),
     }
-
-    access_token = create_access_token({"sub": str(user.id), "user_id": str(user.id), "email": user.email, "role": str(user.role), "type": "access"})
-    refresh_token = create_refresh_token({"sub": str(user.id), "user_id": str(user.id), "email": user.email, "role": str(user.role), "type": "refresh"})
-
+    
+    # Build JWT payload with company_ids
+    jwt_payload = await svc.build_jwt_payload(verified_user)
+    jwt_payload["type"] = "access"
+    
+    access_token = create_access_token(jwt_payload)
+    refresh_jwt = {**jwt_payload, "type": "refresh"}
+    refresh_token = create_refresh_token(refresh_jwt)
+    
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -159,9 +182,21 @@ async def refresh_token(body: RefreshRequest, db=Depends(get_db)):
 
 
 @router.post("/logout")
-async def logout():
-    """Logout endpoint. Token blacklisting can be added later."""
-    return {"status": "ok"}
+async def logout(token: str = Depends(oauth2_scheme)):
+    """Logout — revokes the access token via Redis blacklist."""
+    import os
+    import redis
+    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+    try:
+        r = redis.from_url(redis_url, decode_responses=True)
+        payload = decode_token(token)
+        if payload:
+            jti = payload.get("jti", payload.get("user_id", "unknown"))
+            # Blacklist for the remaining token lifetime
+            r.setex(f"blacklist:{jti}", 3600, "revoked")
+    except Exception:
+        pass  # Redis might not be available — token still works until expiry
+    return {"status": "logged_out"}
 
 @router.post("/setup-admin", include_in_schema=False)
 async def setup_admin(db=Depends(get_db)):

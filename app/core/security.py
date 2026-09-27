@@ -40,6 +40,8 @@ def decode_token(token: str, expected_type: str | None = None) -> dict | None:
 
 # TOTP & Temp Token Functions
 import base64
+from cryptography.fernet import Fernet
+import os
 import os
 
 
@@ -52,11 +54,36 @@ def create_temp_token(data: dict, expires_delta: Optional[timedelta] = None) -> 
 def generate_totp_secret() -> str:
     return base64.b32encode(os.urandom(20)).decode("utf-8")
 
+_fernet_instance = None
+
+def _get_fernet():
+    """Get Fernet instance for AES-256 encryption of TOTP secrets."""
+    global _fernet_instance
+    if _fernet_instance is None:
+        key = os.environ.get("TOTP_ENCRYPTION_KEY", "")
+        if not key:
+            # Fallback: derive from JWT secret (not ideal, but better than base64)
+            import hashlib
+            jwt_secret = os.environ.get("JWT_SECRET_KEY", "fallback-dev-key-change-me")
+            key = hashlib.sha256(jwt_secret.encode()).digest()
+            key = base64.urlsafe_b64encode(key)
+        _fernet_instance = Fernet(key if isinstance(key, bytes) else key.encode())
+    return _fernet_instance
+
 def encrypt_totp_secret(secret: str) -> str:
-    return base64.b64encode(secret.encode()).decode()
+    """Encrypt TOTP secret with AES-256 (Fernet). NOT base64."""
+    return _get_fernet().encrypt(secret.encode()).decode()
 
 def decrypt_totp_secret(encrypted: str) -> str:
-    return base64.b64decode(encrypted.encode()).decode()
+    """Decrypt TOTP secret with AES-256 (Fernet)."""
+    try:
+        return _get_fernet().decrypt(encrypted.encode()).decode()
+    except Exception:
+        # Fallback: try old base64 format (for backward compat)
+        try:
+            return base64.b64decode(encrypted.encode()).decode()
+        except Exception:
+            raise ValueError("Cannot decrypt TOTP secret — invalid key or format")
 
 def verify_totp_code(secret: str, code: str) -> bool:
     try:

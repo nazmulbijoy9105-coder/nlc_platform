@@ -157,3 +157,34 @@ async def reactivate_user(user_id: str, admin=Depends(require_admin), db: AsyncS
     user.is_active = True
     await db.commit()
     return {"id": user_id, "is_active": True}
+
+
+from fastapi.responses import StreamingResponse
+import io
+import csv
+
+@router.get("/activity-logs/export")
+async def export_activity_logs(
+    admin=Depends(require_admin),
+    db: AsyncSession = Depends(get_db_for_user),
+    days: int = 30,
+):
+    """Export activity logs as CSV for auditors."""
+    from sqlalchemy import select, text
+    result = await db.execute(
+        text(f"SELECT user_id, company_id, action, resource_type, resource_id, description, ip_address, logged_at FROM user_activity_logs WHERE logged_at >= NOW() - INTERVAL '{days} days' ORDER BY logged_at DESC LIMIT 10000")
+    )
+    rows = result.fetchall()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["user_id", "company_id", "action", "resource_type", "resource_id", "description", "ip_address", "logged_at"])
+    for row in rows:
+        writer.writerow([str(v) if v else "" for v in row])
+    
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=activity_logs_{days}days.csv"}
+    )

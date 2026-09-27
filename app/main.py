@@ -413,6 +413,20 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 # App factory
 # ---------------------------------------------------------------------------
 
+
+# ── Sentry Error Monitoring ──────────────────────────────────────
+import os as _os
+_sentry_dsn = _os.environ.get("SENTRY_DSN", "")
+if _sentry_dsn:
+    import sentry_sdk
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        environment=_os.environ.get("ENVIRONMENT", "development"),
+        traces_sample_rate=0.1,
+        before_send=lambda event, hint: event,
+    )
+    print("Sentry initialized")
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Neum Lex Counsel — RJSC Compliance Intelligence Platform",
