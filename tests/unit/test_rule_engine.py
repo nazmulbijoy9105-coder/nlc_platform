@@ -135,10 +135,9 @@ class TestAGMRules:
     # ── AGM-003: Notice Defective ─────────────────────────────────────────────
 
     def test_AGM003_triggers_when_notice_too_short(self, rule_engine, build_profile):
-        """Notice sent < 21 days before AGM → defective."""
-        today = date.today()
-        agm_date = today + timedelta(days=5)
-        notice_date = today - timedelta(days=5)  # Only 10 days notice
+        """AGM notice with fewer than 21 clear days → AGM-003."""
+        agm_date = date.today() + timedelta(days=5)
+        notice_date = date.today() - timedelta(days=5)
         profile = build_profile(
             agm_scheduled_date=agm_date,
             notice_sent_date=notice_date,
@@ -161,6 +160,7 @@ class TestAGMRules:
     # ── AGM-004: Notice Missing ────────────────────────────────────────────────
 
     def test_AGM004_triggers_when_no_notice_sent(self, rule_engine, build_profile):
+        """AGM scheduled but no notice sent → AGM-004."""
         profile = build_profile(
             agm_scheduled_date=date.today() + timedelta(days=10),
             notice_sent_date=None,
