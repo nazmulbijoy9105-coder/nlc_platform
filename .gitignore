@@ -9,7 +9,6 @@ venv/
 .DS_Store
 *.log
 nlc-debug/
-*.py
 *.png
 
 # Security — never commit env files

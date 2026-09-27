@@ -14,8 +14,8 @@ depends_on = None
 def upgrade():
     op.create_table(
         "rjsc_form_filings",
-        sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("company_id", sa.String(36), sa.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("id", sa.dialects.postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column("company_id", sa.dialects.postgresql.UUID(as_uuid=True), sa.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False),
         sa.Column("form_code", sa.String(20), nullable=False),
         sa.Column("form_number", sa.String(20), nullable=False),
         sa.Column("form_name", sa.String(255), nullable=False),
@@ -26,7 +26,7 @@ def upgrade():
         sa.Column("filed_date", sa.Date, nullable=True),
         sa.Column("rjsc_receipt_number", sa.String(255), nullable=True),
         sa.Column("rjsc_acknowledgment_number", sa.String(255), nullable=True),
-        sa.Column("filed_by", sa.String(36), sa.ForeignKey("users.id"), nullable=True),
+        sa.Column("filed_by", sa.dialects.postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=True),
         sa.Column("notes", sa.Text, nullable=True),
         sa.Column("financial_year", sa.String(20), nullable=True),
         sa.Column("created_at", sa.DateTime, server_default=sa.func.now()),

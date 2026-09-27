@@ -34,7 +34,7 @@ class RJSCFormFiling(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "rjsc_form_filings"
 
     company_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True
+        ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
     # Form identification
@@ -59,7 +59,7 @@ class RJSCFormFiling(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     # Who filed it
     filed_by: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("users.id"), nullable=True
+        ForeignKey("users.id"), nullable=True
     )
 
     # Notes
