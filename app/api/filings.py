@@ -322,6 +322,8 @@ async def create_agm(
 )
 async def list_agms(
     company_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 50,
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = AGMService(db)
@@ -511,6 +513,8 @@ async def create_annual_return(
 )
 async def list_annual_returns(
     company_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 50,
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = AnnualReturnService(db)
