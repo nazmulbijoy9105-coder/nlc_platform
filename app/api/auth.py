@@ -9,6 +9,8 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from app.core.security import (
+    validate_password_strength,
+
     create_access_token,
     create_refresh_token,
     decode_token,
@@ -18,6 +20,7 @@ from app.core.security import (
     verify_totp_code,
 )
 from app.models.database import get_db
+from app.services.notification_service import ActivityService
 from app.models.user import User
 
 _limiter = Limiter(key_func=get_remote_address)
@@ -86,6 +89,16 @@ async def login(request: Request,body: LoginBody, db=Depends(get_db)):
     # Verify credentials (increments failed attempts on wrong password)
     verified_user = await svc.verify_credentials(body.email, body.password)
     if not verified_user:
+        # Audit log failed login
+        try:
+            activity = ActivityService(db)
+            await activity.log(
+                action="LOGIN_FAILED",
+                resource_type="user",
+                description=f"Failed login attempt for {body.email}",
+            )
+        except Exception:
+            pass
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     if not verified_user.is_active:
@@ -93,6 +106,19 @@ async def login(request: Request,body: LoginBody, db=Depends(get_db)):
     
     # Record successful login
     await svc.record_login(verified_user)
+    
+    # Audit log
+    try:
+        activity = ActivityService(db)
+        await activity.log(
+            action="LOGIN_SUCCESS",
+            resource_type="user",
+            resource_id=str(verified_user.id),
+            description=f"User {verified_user.email} logged in successfully",
+            actor_user_id=verified_user.id,
+        )
+    except Exception:
+        pass  # Don't block login if audit log fails
     
     user_dict = {
         "id": str(verified_user.id),
@@ -204,10 +230,51 @@ async def setup_admin(db=Depends(get_db)):
     existing = await db.execute(select(User).where(User.email == "admin@neumlexcounsel.com"))
     if existing.scalar_one_or_none():
         return {"status": "already exists"}
+    import secrets as _secrets
+    import string as _string
+    _chars = _string.ascii_letters + _string.digits + "!@#$%^&*"
+    _temp_password = "".join(_secrets.choice(_chars) for _ in range(24))
     user = User(id=uuid.uuid4(), email="admin@neumlexcounsel.com",
-        password_hash=hash_password("NLC@Admin2026!"), full_name="NLC Super Admin",
+        password_hash=hash_password(_temp_password), full_name="NLC Super Admin",
         role="SUPER_ADMIN", is_active=True, requires_2fa=False,
         created_at=datetime.datetime.utcnow(), updated_at=datetime.datetime.utcnow())
+    return {"status": "created", "email": "admin@neumlexcounsel.com", "temporary_password": _temp_password, "warning": "Change this password immediately after first login"}
     db.add(user)
     await db.commit()
     return {"status": "created", "email": "admin@neumlexcounsel.com"}
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/change-password", response_model=dict)
+async def change_password(
+    body: ChangePasswordRequest,
+    token: str = Depends(oauth2_scheme),
+    db=Depends(get_db),
+):
+    """Change password with strength validation."""
+    payload = decode_token(token)
+    if not payload or payload.get("type") != "access":
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    result = await db.execute(select(User).where(User.id == payload["sub"]))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if not verify_password(body.current_password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Current password incorrect")
+    
+    # Validate new password strength
+    is_strong, msg = validate_password_strength(body.new_password)
+    if not is_strong:
+        raise HTTPException(status_code=422, detail=msg)
+    
+    # Update password
+    user.password_hash = hash_password(body.new_password)
+    await db.commit()
+    
+    return {"status": "password_changed"}

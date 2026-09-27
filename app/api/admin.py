@@ -99,6 +99,7 @@ async def create_user(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     import bcrypt
+from app.core.security import validate_password_strength, hash_password
     from sqlalchemy import select
 
     from app.models.enums import UserRole
@@ -110,7 +111,11 @@ async def create_user(
     existing = (await db.execute(select(User).where(User.email == body.email))).scalar_one_or_none()
     if existing:
         raise HTTPException(status_code=409, detail="Email already registered")
-    hashed = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
+    # Validate password strength
+    is_strong, msg = validate_password_strength(body.password)
+    if not is_strong:
+        raise HTTPException(status_code=422, detail=msg)
+    hashed = hash_password(body.password)
     user = User(email=body.email, full_name=body.full_name, role=UserRole(body.role), password_hash=hashed, is_active=True)
     db.add(user)
     await db.commit()

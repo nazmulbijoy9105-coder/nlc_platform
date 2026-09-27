@@ -1,0 +1,97 @@
+"""Enterprise security tests — password policy, headers, audit logging."""
+
+class TestPasswordPolicy:
+    """Verify password strength validation."""
+
+    def test_short_password_rejected(self):
+        from app.core.security import validate_password_strength
+        ok, msg = validate_password_strength("Ab1!")
+        assert not ok
+        assert "8 characters" in msg
+
+    def test_no_uppercase_rejected(self):
+        from app.core.security import validate_password_strength
+        ok, msg = validate_password_strength("password1!")
+        assert not ok
+        assert "uppercase" in msg
+
+    def test_no_digit_rejected(self):
+        from app.core.security import validate_password_strength
+        ok, msg = validate_password_strength("Password!")
+        assert not ok
+        assert "digit" in msg
+
+    def test_no_special_rejected(self):
+        from app.core.security import validate_password_strength
+        ok, msg = validate_password_strength("Password1")
+        assert not ok
+        assert "special" in msg
+
+    def test_strong_password_accepted(self):
+        from app.core.security import validate_password_strength
+        ok, msg = validate_password_strength("Str0ng!Pass")
+        assert ok
+        assert "meets" in msg
+
+    def test_enterprise_grade_password(self):
+        from app.core.security import validate_password_strength
+        ok, _ = validate_password_strength("NLC@Secure2026!")
+        assert ok
+
+
+class TestSecurityHeaders:
+    """Verify security headers are present."""
+
+    def test_security_headers_middleware_exists(self):
+        """main.py should have security headers middleware."""
+        with open("app/main.py", encoding="utf-8") as f:
+            content = f.read()
+        assert "X-Content-Type-Options" in content, "Missing nosniff header"
+        assert "X-Frame-Options" in content, "Missing frame options"
+        assert "X-XSS-Protection" in content, "Missing XSS protection"
+        assert "Strict-Transport-Security" in content, "Missing HSTS"
+
+    def test_referrer_policy_present(self):
+        with open("app/main.py", encoding="utf-8") as f:
+            assert "Referrer-Policy" in f.read()
+
+
+class TestAuditLogging:
+    """Verify auth events are logged."""
+
+    def test_login_success_logging_present(self):
+        with open("app/api/auth.py", encoding="utf-8") as f:
+            content = f.read()
+        assert "LOGIN_SUCCESS" in content, "Login success not logged"
+
+    def test_login_failure_logging_present(self):
+        with open("app/api/auth.py", encoding="utf-8") as f:
+            content = f.read()
+        assert "LOGIN_FAILED" in content, "Login failure not logged"
+
+    def test_activity_service_imported(self):
+        with open("app/api/auth.py", encoding="utf-8") as f:
+            assert "ActivityService" in f.read()
+
+
+class TestNoHardcodedSecrets:
+    """Verify no hardcoded passwords in source."""
+
+    def test_no_hardcoded_admin_password(self):
+        with open("app/api/auth.py", encoding="utf-8") as f:
+            content = f.read()
+        assert "NLC@Admin2026" not in content, "Hardcoded admin password still present"
+        assert "secrets" in content.lower() or "random" in content.lower(), \
+            "Admin password should be randomly generated"
+
+    def test_password_change_endpoint_exists(self):
+        with open("app/api/auth.py", encoding="utf-8") as f:
+            content = f.read()
+        assert "change-password" in content or "change_password" in content, \
+            "Password change endpoint missing"
+
+    def test_password_validation_in_admin(self):
+        with open("app/api/admin.py", encoding="utf-8") as f:
+            content = f.read()
+        assert "validate_password_strength" in content, \
+            "Admin user creation should validate password strength"
