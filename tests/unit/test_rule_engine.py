@@ -982,3 +982,86 @@ class TestScoreImmutability:
             f"Expected flags from multiple modules, only got: {modules_triggered}"
         )
 
+
+
+class TestUntestedRules:
+    def test_INC001_triggers(self, rule_engine, build_profile):
+        profile = build_profile(moa_aoa_filed=False, paid_up_capital_bdt=100000)
+        assert_flag_triggered(rule_engine.evaluate(profile), "INC-001")
+
+    def test_INC003_triggers(self, rule_engine, build_profile):
+        assert_flag_triggered(rule_engine.evaluate(build_profile(current_director_count=0)), "INC-003")
+
+    def test_INC004_triggers(self, rule_engine, build_profile):
+        assert_flag_triggered(rule_engine.evaluate(build_profile(paid_up_capital_bdt=200000, authorized_capital_bdt=100000)), "INC-004")
+
+    def test_SH002_triggers(self, rule_engine, build_profile):
+        profile = build_profile(last_allotment_date=date.today() - timedelta(days=90), share_certificates_issued=False)
+        assert_flag_triggered(rule_engine.evaluate(profile), "SH-002")
+
+    def test_SH003_triggers(self, rule_engine, build_profile):
+        profile = build_profile(capital_increase_date=date.today() - timedelta(days=60), form_iv_filed=False)
+        assert_flag_triggered(rule_engine.evaluate(profile), "SH-003")
+
+    def test_TAX001_triggers(self, rule_engine, build_profile):
+        assert_flag_triggered(rule_engine.evaluate(build_profile(tin_obtained=False)), "TAX-001")
+
+    def test_TAX002_triggers(self, rule_engine, build_profile):
+        assert_flag_triggered(rule_engine.evaluate(build_profile(vat_registered=False, annual_turnover_bdt=5000000)), "TAX-002")
+
+    def test_REG003_triggers(self, rule_engine, build_profile):
+        assert_flag_triggered(rule_engine.evaluate(build_profile(register_location="other_office")), "REG-003")
+
+    def test_CAP003_triggers(self, rule_engine, build_profile):
+        profile = build_profile(capital_reduction_pending=True, capital_reduction_court_order_obtained=False)
+        assert_flag_triggered(rule_engine.evaluate(profile), "CAP-003")
+
+    def test_DEF001_triggers(self, rule_engine, build_profile):
+        assert_flag_triggered(rule_engine.evaluate(build_profile(any_director_disqualified=True)), "DEF-001")
+
+    def test_TL001_triggers(self, rule_engine, build_profile):
+        assert_flag_triggered(rule_engine.evaluate(build_profile(trade_license_obtained=False)), "TL-001")
+
+    def test_AGM007_triggers(self, rule_engine, build_profile):
+        assert_flag_triggered(rule_engine.evaluate(build_profile(agm_adjourned_without_notice=True)), "AGM-007")
+
+    def test_DIR005_triggers(self, rule_engine, build_profile):
+        assert_flag_triggered(rule_engine.evaluate(build_profile(register_of_directors_interests=False)), "DIR-005")
+
+    def test_DIR006_triggers(self, rule_engine, build_profile):
+        assert_flag_triggered(rule_engine.evaluate(build_profile(register_of_contracts=False)), "DIR-006")
+
+    def test_ESC004_triggers(self, rule_engine, build_profile):
+        assert_flag_triggered(rule_engine.evaluate(build_profile(voluntary_winding_up=True)), "ESC-004")
+
+    def test_ESC005_triggers(self, rule_engine, build_profile):
+        assert_flag_triggered(rule_engine.evaluate(build_profile(investigation_order=True)), "ESC-005")
+
+    def test_BSEC001_triggers(self, rule_engine, build_profile):
+        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, bsec_quarterly_report_filed=False)), "BSEC-001")
+
+    def test_BSEC002_triggers(self, rule_engine, build_profile):
+        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, cg_certificate_obtained=False)), "BSEC-002")
+
+    def test_BSEC003_triggers(self, rule_engine, build_profile):
+        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, board_independent_director=False)), "BSEC-003")
+
+    def test_BSEC004_triggers(self, rule_engine, build_profile):
+        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, audit_committee_established=False)), "BSEC-004")
+
+    def test_FX001_triggers(self, rule_engine, build_profile):
+        assert_flag_triggered(rule_engine.evaluate(build_profile(foreign_exchange_violation=True)), "FX-001")
+
+    def test_all_rules_have_tests(self, rule_engine, build_profile):
+        import re
+        with open("tests/unit/test_rule_engine.py", encoding="utf-8") as f:
+            test_content = f.read()
+        with open("app/rule_engine/engine.py", encoding="utf-8") as f:
+            engine_content = f.read()
+        engine_rules = set(re.findall(r'rule_id="([^"]+)"', engine_content))
+        tested_rules = set(re.findall(r'assert_flag_triggered\([^)]+, "([^"]+)"\)', test_content))
+        untested = engine_rules - tested_rules
+        print(f"\n  Engine: {len(engine_rules)} rules, Tests: {len(tested_rules)} rules")
+        if untested:
+            print(f"  Untested: {sorted(untested)}")
+        print(f"  Coverage: {len(tested_rules)}/{len(engine_rules)} = {len(tested_rules)*100//max(len(engine_rules),1)}%")

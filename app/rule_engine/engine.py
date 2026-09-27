@@ -249,6 +249,20 @@ class CompanyProfile:
     factory_license_expiry: Optional[date] = None
     worker_compensation_filed: bool = True
     labour_court_order_pending: bool = False
+    # -- Additional Companies Act 1994 --
+    agm_adjourned_without_notice: bool = False
+    register_of_directors_interests: bool = True
+    register_of_contracts: bool = True
+    voluntary_winding_up: bool = False
+    investigation_order: bool = False
+    # -- BSEC Corporate Governance Code 2023 --
+    bsec_listed: bool = False
+    bsec_quarterly_report_filed: bool = True
+    cg_certificate_obtained: bool = True
+    board_independent_director: bool = True
+    audit_committee_established: bool = True
+    # -- Bangladesh Bank / Foreign Exchange --
+    foreign_exchange_violation: bool = False
 
 @dataclass
 class ScoreBreakdown:
@@ -352,6 +366,9 @@ class NLCRuleEngine:
         self._run_capital_rules(company)
         self._run_insolvency_rules(company)
         self._run_labour_rules(company)
+        self._run_companies_act_extended_rules(company)
+        self._run_bsec_rules(company)
+        self._run_fx_rules(company)
         self._run_tax_rules(company)
         self._run_structural_change_rules(company)
         self._run_escalation_rules(company)
@@ -1280,6 +1297,87 @@ class NLCRuleEngine:
                 statutory_basis="Labour Act 2006 (Bangladesh), Section 209"
             ))
 
+    # MODULE 14: ADDITIONAL COMPANIES ACT 1994
+    def _run_companies_act_extended_rules(self, c: CompanyProfile) -> None:
+        if c.agm_adjourned_without_notice:
+            self._add_flag(ComplianceFlag(
+                rule_id="AGM-007", flag_code="AGM_ADJOURNED_WITHOUT_NOTICE",
+                severity=Severity.YELLOW, score_impact=5,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="AGM adjourned without proper notice. Section 84.",
+                statutory_basis="Companies Act 1994, Section 84"))
+        if not c.register_of_directors_interests:
+            self._add_flag(ComplianceFlag(
+                rule_id="DIR-005", flag_code="REGISTER_OF_DIRECTORS_INTERESTS_MISSING",
+                severity=Severity.YELLOW, score_impact=5,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Register of directors interests not maintained. Section 97.",
+                statutory_basis="Companies Act 1994, Section 97"))
+        if not c.register_of_contracts:
+            self._add_flag(ComplianceFlag(
+                rule_id="DIR-006", flag_code="REGISTER_OF_CONTRACTS_MISSING",
+                severity=Severity.YELLOW, score_impact=5,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Register of contracts not maintained. Section 98.",
+                statutory_basis="Companies Act 1994, Section 98"))
+        if c.voluntary_winding_up:
+            self._add_flag(ComplianceFlag(
+                rule_id="ESC-004", flag_code="VOLUNTARY_WINDING_UP",
+                severity=Severity.BLACK, score_impact=30,
+                revenue_tier=RevenueTier.CORPORATE_RESCUE,
+                description="Voluntary winding up. Section 196.",
+                statutory_basis="Companies Act 1994, Section 196",
+                is_black_override=True))
+        if c.investigation_order:
+            self._add_flag(ComplianceFlag(
+                rule_id="ESC-005", flag_code="INVESTIGATION_ORDER_PENDING",
+                severity=Severity.RED, score_impact=20,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                description="Investigation order pending. Section 199.",
+                statutory_basis="Companies Act 1994, Section 199"))
+
+    # MODULE 15: BSEC CG CODE 2023
+    def _run_bsec_rules(self, c: CompanyProfile) -> None:
+        if c.bsec_listed:
+            if not c.bsec_quarterly_report_filed:
+                self._add_flag(ComplianceFlag(
+                    rule_id="BSEC-001", flag_code="QUARTERLY_REPORT_NOT_FILED",
+                    severity=Severity.RED, score_impact=10,
+                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                    description="BSEC quarterly report not filed.",
+                    statutory_basis="BSEC Corporate Governance Code 2023, Para 8"))
+            if not c.cg_certificate_obtained:
+                self._add_flag(ComplianceFlag(
+                    rule_id="BSEC-002", flag_code="CG_CERTIFICATE_NOT_OBTAINED",
+                    severity=Severity.RED, score_impact=10,
+                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                    description="CG certificate not obtained.",
+                    statutory_basis="BSEC Corporate Governance Code 2023, Para 9"))
+            if not c.board_independent_director:
+                self._add_flag(ComplianceFlag(
+                    rule_id="BSEC-003", flag_code="BOARD_COMPOSITION_NON_COMPLIANT",
+                    severity=Severity.YELLOW, score_impact=8,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="Board composition non-compliant.",
+                    statutory_basis="BSEC Corporate Governance Code 2023, Para 5"))
+            if not c.audit_committee_established:
+                self._add_flag(ComplianceFlag(
+                    rule_id="BSEC-004", flag_code="AUDIT_COMMITTEE_NOT_ESTABLISHED",
+                    severity=Severity.YELLOW, score_impact=5,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="Audit committee not established.",
+                    statutory_basis="BSEC Corporate Governance Code 2023, Para 6"))
+
+    # MODULE 16: FOREIGN EXCHANGE
+    def _run_fx_rules(self, c: CompanyProfile) -> None:
+        if c.foreign_exchange_violation:
+            self._add_flag(ComplianceFlag(
+                rule_id="FX-001", flag_code="FOREIGN_EXCHANGE_VIOLATION",
+                severity=Severity.RED, score_impact=15,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                description="Foreign exchange violation. FE Regulation Act 1947.",
+                statutory_basis="Foreign Exchange Regulation Act 1947 (Bangladesh)"))
+
     def _run_escalation_rules(self, c: CompanyProfile) -> None:
         agm_years = self._calculate_agm_default_years(c)
         ar_years = c.unfiled_returns_count
@@ -1371,8 +1469,10 @@ class NLCRuleEngine:
         reg_ded = sum(f.score_impact for f in active if f.rule_id.startswith("REG-"))
         bnk_ded = sum(f.score_impact for f in active if f.rule_id.startswith("BNK-"))
         lbr_ded = sum(f.score_impact for f in active if f.rule_id.startswith("LBR-"))
+        bsec_ded = sum(f.score_impact for f in active if f.rule_id.startswith("BSEC-"))
+        fx_ded = sum(f.score_impact for f in active if f.rule_id.startswith("FX-"))
 
-        raw = 100 - (tax_ded + agm_ded + aud_ded + ret_ded + dir_ded + shr_ded + cap_ded + off_ded + reg_ded + bnk_ded + lbr_ded)
+        raw = 100 - (tax_ded + agm_ded + aud_ded + ret_ded + dir_ded + shr_ded + cap_ded + off_ded + reg_ded + bnk_ded + lbr_ded + bsec_ded + fx_ded)
         raw = max(0, raw)
         
         override = False
