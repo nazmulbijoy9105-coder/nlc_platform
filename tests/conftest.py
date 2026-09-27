@@ -307,7 +307,7 @@ def build_profile():
             "unfiled_returns_count": 0,
             "annual_return_filed": True,
             "annual_return_content_complete": True,
-            "last_agm_filing_date": today - timedelta(days=30),
+            "annual_return_filed_date": today - timedelta(days=30),
             # Directors — no changes pending
             "director_changes": [],
             # Shareholders — no changes
@@ -317,21 +317,27 @@ def build_profile():
             "share_transfers": [],
             # Office — no change
             "registered_office_change_date": None,
-            "form_ix_filed": True,
+            "form_vi_filed": True,
             # Corporate structure
             "aoa_transfer_restriction": True,
             "has_foreign_shareholder": False,
             "is_dormant": False,
             "is_fdi_registered": False,
             # Registers & certificates
-            "maintained_registers": ["members", "directors", "charges", "transfers", "debentures", "mortgages"],
+            "maintained_registers": ["members", "directors", "charges", "transfers", "debentures", "minutes_agm", "minutes_board"],
+            "trade_license_obtained": True,
+            "agm_minutes_prepared": True,
+            "tin_obtained": True,
+            "tax_return_filed_for_current_fy": True,
+            "advance_tax_q1_paid": True,
+            "advance_tax_q2_paid": True,
+            "advance_tax_q3_paid": True,
+            "advance_tax_q4_paid": True,
             "last_allotment_date": None,
-            "share_certificate_issued": True,
+            "share_certificates_issued": True,
             # Capital
             "capital_increase_date": None,
             "capital_increase_resolution": True,
-            "charge_creation_date": None,
-            "form_viii_filed": True,
         }
         defaults.update(overrides)
         return CompanyProfile(**defaults)
@@ -410,6 +416,7 @@ def make_share_transfer():
         aoa_restriction_apply: bool = False,
         board_approval_obtained: bool = True,
         stamp_duty_amount: float | None = 1000.0,
+        form_117_filed: bool = True,
     ) -> ShareTransfer:
         return ShareTransfer(
             transfer_id=str(uuid.uuid4()),
@@ -421,6 +428,7 @@ def make_share_transfer():
             share_register_updated=share_register_updated,
             aoa_restriction_apply=aoa_restriction_apply,
             board_approval_obtained=board_approval_obtained,
+            form_117_filed=form_117_filed,
         )
 
     return _make

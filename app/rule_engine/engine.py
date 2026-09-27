@@ -1258,6 +1258,16 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     # SCORING ENGINE
     # ───────────────────────────────────────────────────────────────────
+    def _score_to_band(self, raw: int, *, force_black: bool = False) -> str:
+        """Map a raw score to a risk band string."""
+        if force_black or raw <= 29:
+            return "BLACK"
+        if raw <= 49:
+            return "RED"
+        if raw <= 69:
+            return "YELLOW"
+        return "GREEN"
+
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
         active = [f for f in flags if not f.resolved and f.conditional_applies]
 
