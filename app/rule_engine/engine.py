@@ -1240,7 +1240,7 @@ class NLCRuleEngine:
                 escalation_pending=True,
             ))
 
-        black_flags = [f for f in self._flags if f.severity == Severity.BLACK and f.rule_id not in self._ESC_RULE_IDS]
+        black_flags = [f for f in self._flags if not f.resolved and f.conditional_applies and f.severity == Severity.BLACK and f.rule_id not in self._ESC_RULE_IDS]
         if len(black_flags) >= 2:
             esc003_impact = 10 if len(black_flags) == 2 else (25 if len(black_flags) == 3 else 35)
             self._add_flag(ComplianceFlag(

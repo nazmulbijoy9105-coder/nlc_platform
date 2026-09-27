@@ -738,6 +738,29 @@ class TestEscalationRules:
 # SCORE BANDING
 # =============================================================================
 
+
+    def test_ESC003_counts_only_active_black_flags(self, rule_engine, build_profile):
+        """ESC-003 uses same filter as _calculate_score for counting BLACK flags.
+
+        _run_escalation_rules must filter on not resolved and conditional_applies,
+        matching _calculate_score's active flag filter. This prevents ESC-003
+        from counting flags that would be filtered out in score calculation.
+        """
+        # Create 2 genuine BLACK override conditions
+        profile = build_profile(
+            agm_held_this_cycle=True,
+            audit_complete=False,       # AUD-003: BLACK override
+            current_director_count=0,   # INC-003: BLACK override
+        )
+        output = rule_engine.evaluate(profile)
+
+        # ESC-003 should fire (2+ active BLACK flags)
+        esc003_fired = any(f.rule_id == "ESC-003" for f in output.flags)
+        assert esc003_fired, "ESC-003 should fire with 2+ active BLACK flags"
+
+        # Score should be BLACK (both paths agree)
+        assert output.score_breakdown.risk_band == "BLACK"
+
 class TestScoreBanding:
     """Verify score → band mapping is correct and non-overlapping."""
 
