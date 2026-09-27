@@ -76,6 +76,7 @@ from .infrastructure import (
 
 # ── People (Directors, Shareholders, Transfers) ──────────────────────
 from .people import Director, Shareholder, ShareTransfer
+from .rjsc_forms import RJSCFormFiling
 
 # ── Rescue (Plans + Steps) ───────────────────────────────────────────
 from .rescue import RescuePlan, RescueStep
@@ -131,7 +132,8 @@ __all__ = [
     "RuleType",
     "SRORegistry",              # TABLE: sro_registry
     "SeverityLevel",
-    "ShareTransfer",            # TABLE: share_transfers
+    "ShareTransfer",
+    "RJSCFormFiling",            # TABLE: share_transfers
     "Shareholder",              # TABLE: shareholders
     "SroType",
     "StatutoryRegister",        # TABLE: statutory_registers

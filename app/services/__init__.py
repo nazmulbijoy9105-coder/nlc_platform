@@ -35,3 +35,5 @@ __all__ = [
     "TaskService",
     "UserService",
 ]
+
+"RJSCFormService",
