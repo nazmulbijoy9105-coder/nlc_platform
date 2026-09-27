@@ -239,6 +239,16 @@ class CompanyProfile:
     capital_reduction_pending: bool = False
     capital_reduction_date: Optional[date] = None
     capital_reduction_court_order_obtained: bool = False
+    # ── Insolvency (Bankruptcy Act 1997) ──
+    winding_up_petition_filed: bool = False
+    winding_up_petition_date: Optional[date] = None
+    liquidator_appointed: bool = False
+    court_ordered_winding_up: bool = False
+    # ── Labour (Labour Act 2006) ──
+    factory_license_obtained: bool = True
+    factory_license_expiry: Optional[date] = None
+    worker_compensation_filed: bool = True
+    labour_court_order_pending: bool = False
 
 @dataclass
 class ScoreBreakdown:
@@ -340,6 +350,8 @@ class NLCRuleEngine:
         self._run_register_rules(company)
         self._run_office_rules(company)
         self._run_capital_rules(company)
+        self._run_insolvency_rules(company)
+        self._run_labour_rules(company)
         self._run_tax_rules(company)
         self._run_structural_change_rules(company)
         self._run_escalation_rules(company)
@@ -1191,6 +1203,83 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     # MODULE 12: ESCALATION
     # ───────────────────────────────────────────────────────────────────
+    # MODULE 12: INSOLVENCY (Bankruptcy Act 1997)
+    def _run_insolvency_rules(self, c: CompanyProfile) -> None:
+        if c.winding_up_petition_filed:
+            self._add_flag(ComplianceFlag(
+                rule_id="BNK-001",
+                flag_code="WINDING_UP_PETITION_FILED",
+                severity=Severity.BLACK,
+                score_impact=25,
+                revenue_tier=RevenueTier.CORPORATE_RESCUE,
+                description="Winding up petition filed against company. Bankruptcy Act 1997, Section 12. Company under court supervision.",
+                statutory_basis="Bankruptcy Act 1997 (Bangladesh), Section 12",
+                is_black_override=True,
+                detail={"petition_filed": True}
+            ))
+
+        if c.liquidator_appointed:
+            self._add_flag(ComplianceFlag(
+                rule_id="BNK-002",
+                flag_code="LIQUIDATOR_APPOINTED",
+                severity=Severity.BLACK,
+                score_impact=25,
+                revenue_tier=RevenueTier.CORPORATE_RESCUE,
+                description="Liquidator appointed. Bankruptcy Act 1997, Section 14. Company under liquidation proceedings.",
+                statutory_basis="Bankruptcy Act 1997 (Bangladesh), Section 14",
+                is_black_override=True,
+                detail={"liquidator_appointed": True}
+            ))
+
+        if c.court_ordered_winding_up:
+            self._add_flag(ComplianceFlag(
+                rule_id="BNK-003",
+                flag_code="COURT_ORDERED_WINDING_UP",
+                severity=Severity.BLACK,
+                score_impact=35,
+                revenue_tier=RevenueTier.CORPORATE_RESCUE,
+                description="Court-ordered winding up. Bankruptcy Act 1997, Section 18. Company being wound up by court order.",
+                statutory_basis="Bankruptcy Act 1997 (Bangladesh), Section 18",
+                is_black_override=True,
+                detail={"court_ordered": True}
+            ))
+
+    # MODULE 13: LABOUR COMPLIANCE (Labour Act 2006)
+    def _run_labour_rules(self, c: CompanyProfile) -> None:
+        if not c.factory_license_obtained:
+            self._add_flag(ComplianceFlag(
+                rule_id="LBR-001",
+                flag_code="FACTORY_LICENSE_MISSING",
+                severity=Severity.RED,
+                score_impact=10,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                description="Factory license not obtained. Labour Act 2006: factory license mandatory for manufacturing entities.",
+                statutory_basis="Labour Act 2006 (Bangladesh), Section 35"
+            ))
+
+        if c.factory_license_expiry and self.today > c.factory_license_expiry:
+            delay = (self.today - c.factory_license_expiry).days
+            self._add_flag(ComplianceFlag(
+                rule_id="LBR-002",
+                flag_code="FACTORY_LICENSE_EXPIRED",
+                severity=Severity.YELLOW,
+                score_impact=5,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=f"Factory license expired. Overdue by {delay} days. Labour Act 2006: renewal required.",
+                statutory_basis="Labour Act 2006 (Bangladesh), Section 35"
+            ))
+
+        if c.labour_court_order_pending:
+            self._add_flag(ComplianceFlag(
+                rule_id="LBR-003",
+                flag_code="LABOUR_COURT_ORDER_PENDING",
+                severity=Severity.RED,
+                score_impact=15,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                description="Labour court order pending against company. Labour Act 2006: compliance with court orders mandatory.",
+                statutory_basis="Labour Act 2006 (Bangladesh), Section 209"
+            ))
+
     def _run_escalation_rules(self, c: CompanyProfile) -> None:
         agm_years = self._calculate_agm_default_years(c)
         ar_years = c.unfiled_returns_count
@@ -1280,8 +1369,10 @@ class NLCRuleEngine:
         cap_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("CAP-", "STR-", "CHG-")))
         off_ded = sum(f.score_impact for f in active if f.rule_id.startswith("OFF-"))
         reg_ded = sum(f.score_impact for f in active if f.rule_id.startswith("REG-"))
+        bnk_ded = sum(f.score_impact for f in active if f.rule_id.startswith("BNK-"))
+        lbr_ded = sum(f.score_impact for f in active if f.rule_id.startswith("LBR-"))
 
-        raw = 100 - (tax_ded + agm_ded + aud_ded + ret_ded + dir_ded + shr_ded + cap_ded + off_ded + reg_ded)
+        raw = 100 - (tax_ded + agm_ded + aud_ded + ret_ded + dir_ded + shr_ded + cap_ded + off_ded + reg_ded + bnk_ded + lbr_ded)
         raw = max(0, raw)
         
         override = False

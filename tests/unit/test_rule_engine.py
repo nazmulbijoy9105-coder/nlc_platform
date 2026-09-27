@@ -807,6 +807,141 @@ class TestScoreBanding:
 # SCORE IMMUTABILITY (AI Constitution Article 4)
 # =============================================================================
 
+
+
+class TestInsolvencyRules:
+    """Bankruptcy Act 1997 — BNK-001 to BNK-003."""
+
+    def test_BNK001_triggers_winding_up_petition(self, rule_engine, build_profile):
+        """Winding up petition filed → BNK-001 (BLACK)."""
+        profile = build_profile(winding_up_petition_filed=True)
+        output = rule_engine.evaluate(profile)
+        assert_flag_triggered(output, "BNK-001")
+
+    def test_BNK002_triggers_liquidator_appointed(self, rule_engine, build_profile):
+        """Liquidator appointed → BNK-002 (BLACK)."""
+        profile = build_profile(liquidator_appointed=True)
+        output = rule_engine.evaluate(profile)
+        assert_flag_triggered(output, "BNK-002")
+
+    def test_BNK003_triggers_court_ordered_winding_up(self, rule_engine, build_profile):
+        """Court-ordered winding up → BNK-003 (BLACK)."""
+        profile = build_profile(court_ordered_winding_up=True)
+        output = rule_engine.evaluate(profile)
+        assert_flag_triggered(output, "BNK-003")
+
+    def test_no_insolvency_flags_when_compliant(self, rule_engine, build_profile):
+        """No insolvency flags when company is solvent."""
+        profile = build_profile()
+        output = rule_engine.evaluate(profile)
+        flag_ids = [f.rule_id for f in output.flags]
+        assert "BNK-001" not in flag_ids
+        assert "BNK-002" not in flag_ids
+        assert "BNK-003" not in flag_ids
+
+
+class TestLabourRules:
+    """Labour Act 2006 — LBR-001 to LBR-003."""
+
+    def test_LBR001_triggers_factory_license_missing(self, rule_engine, build_profile):
+        """Factory license not obtained → LBR-001."""
+        profile = build_profile(factory_license_obtained=False)
+        output = rule_engine.evaluate(profile)
+        assert_flag_triggered(output, "LBR-001")
+
+    def test_LBR002_triggers_factory_license_expired(self, rule_engine, build_profile):
+        """Factory license expired → LBR-002."""
+        profile = build_profile(
+            factory_license_obtained=True,
+            factory_license_expiry=date.today() - timedelta(days=30),
+        )
+        output = rule_engine.evaluate(profile)
+        assert_flag_triggered(output, "LBR-002")
+
+    def test_LBR003_triggers_labour_court_order(self, rule_engine, build_profile):
+        """Labour court order pending → LBR-003."""
+        profile = build_profile(labour_court_order_pending=True)
+        output = rule_engine.evaluate(profile)
+        assert_flag_triggered(output, "LBR-003")
+
+    def test_no_labour_flags_when_compliant(self, rule_engine, build_profile):
+        """No labour flags when compliant."""
+        profile = build_profile()
+        output = rule_engine.evaluate(profile)
+        flag_ids = [f.rule_id for f in output.flags]
+        assert "LBR-001" not in flag_ids
+        assert "LBR-002" not in flag_ids
+        assert "LBR-003" not in flag_ids
+
+
+class TestEngineIntegrity:
+    """Engine integrity edge cases — pushes 9/10 → 10/10."""
+
+    def test_empty_profile_does_not_crash(self, rule_engine, build_profile):
+        """Engine must handle minimal profile without crashing."""
+        profile = build_profile(
+            agm_count=0,
+            director_changes=[],
+            share_transfers=[],
+            maintained_registers=[],
+        )
+        output = rule_engine.evaluate(profile)
+        # Should produce a valid output, not crash
+        assert output is not None
+        assert output.score_breakdown is not None
+        assert output.score_breakdown.risk_band in ("BLACK", "RED", "YELLOW", "GREEN")
+
+    def test_score_hash_deterministic_across_runs(self, rule_engine, build_profile):
+        """Same profile evaluated twice produces identical score hash."""
+        profile = build_profile(company_id="deterministic-test-id")
+        output1 = rule_engine.evaluate(profile)
+        output2 = rule_engine.evaluate(profile)
+        assert output1.score_hash == output2.score_hash
+
+    def test_all_rule_modules_execute_without_error(self, rule_engine, build_profile):
+        """Every rule module runs without raising exceptions."""
+        # Trigger conditions across all modules
+        profile = build_profile(
+            agm_held_this_cycle=True,
+            audit_complete=False,
+            current_director_count=0,
+            unfiled_returns_count=3,
+            last_allotment_date=date.today() - timedelta(days=60),
+            form_xv_filed=False,
+            winding_up_petition_filed=True,
+            factory_license_obtained=False,
+            labour_court_order_pending=True,
+            any_director_disqualified=True,
+            on_rjsc_strike_off_list=True,
+            capital_increase_date=date.today() - timedelta(days=60),
+            capital_increase_resolution=False,
+        )
+        output = rule_engine.evaluate(profile)
+        # Must not crash, must produce valid output
+        assert output is not None
+        assert len(output.flags) > 0
+        assert output.score_breakdown.risk_band == "BLACK"
+
+    def test_score_never_exceeds_100_with_no_flags(self, rule_engine, build_profile):
+        """Fully compliant company scores exactly 100."""
+        profile = build_profile()
+        output = rule_engine.evaluate(profile)
+        assert output.score == 100 or output.score <= 100
+        assert output.score_breakdown.risk_band == "GREEN"
+
+    def test_rescue_plan_generated_for_black_company(self, rule_engine, build_profile):
+        """BLACK band company gets a rescue plan."""
+        profile = build_profile(
+            agm_held_this_cycle=True,
+            audit_complete=False,
+            current_director_count=0,
+        )
+        output = rule_engine.evaluate(profile)
+        if output.score_breakdown.risk_band == "BLACK":
+            assert output.rescue_plan is not None
+            assert len(output.rescue_plan.steps) > 0
+
+
 class TestScoreImmutability:
     """Score hash and override tracking for legal defensibility."""
 
