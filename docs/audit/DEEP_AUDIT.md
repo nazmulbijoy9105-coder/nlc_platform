@@ -1,20 +1,16 @@
 # NLC Platform — Deep Audit Report
-## Enterprise Bangladesh Private Limited Company RJSC Compliance
-## Legal & Technical Audit
+## Enterprise Bangladesh Private Ltd RJSC Compliance
 
 **Audit Date**: 2026-07-04
-**Branch**: main
 **Test Status**: 89/89 passed
-**Scope**: Rule engine, API, data model, security, AI governance, legal accuracy
+**Branch**: main
 
 ---
-
 ## 1. Rule Identity Consistency
 
-### 1.1 Engine rule_ids vs Seed data rule_ids
-
+### 1.1 Engine vs Seed Data rule_ids
 ```
---- Engine rule_ids (from app/rule_engine/engine.py) ---
+--- Engine rule_ids ---
 AGM-001
 AGM-002
 AGM-003
@@ -75,10 +71,10 @@ TR-006
 VAT-002
 VAT-003
 
---- Seed data rule_ids (from scripts/seed_rules.py) ---
+--- Seed data rule_ids ---
 
 
---- Diff (engine vs seed) ---
+--- Diff ---
 1,59c1
 < AGM-001
 < AGM-002
@@ -143,48 +139,7 @@ VAT-003
 > 
 ```
 
-### 1.2 Statutory Basis Contradictions (Engine vs Seed)
-
-```
-
---- Seed data statutory_basis values ---
-BIDA Foreign Investment Act 1980; BOI Guidelines
-Income Tax Act 2023 (Bangladesh)
-Section 108, Companies Act 1994 (Bangladesh)
-Section 11, Companies Act 1994 (Bangladesh)
-Section 119, Companies Act 1994 (Bangladesh)
-Section 150, Companies Act 1994 (Bangladesh)
-Section 150, Companies Act 1994; BIDA Foreign Investment Guidelines
-Section 151, Companies Act 1994 (Bangladesh)
-Section 210(1), Companies Act 1994 (Bangladesh)
-Section 210(2), Companies Act 1994 (Bangladesh)
-Section 304, Companies Act 1994 (Bangladesh)
-Section 34(2), Companies Act 1994 (Bangladesh)
-Section 34, Companies Act 1994 (Bangladesh)
-Section 46, Companies Act 1994 (Bangladesh)
-Section 47, Companies Act 1994 (Bangladesh); Articles of Association
-Section 50, Companies Act 1994 (Bangladesh)
-Section 52, Companies Act 1994 (Bangladesh)
-Section 54, Companies Act 1994 (Bangladesh)
-Section 81, Companies Act 1994 (Bangladesh)
-Section 83(12), Companies Act 1994 (Bangladesh)
-Section 83, Companies Act 1994 (Bangladesh)
-Section 85, Companies Act 1994 (Bangladesh)
-Section 87(2), Companies Act 1994 (Bangladesh)
-Section 87, Companies Act 1994 (Bangladesh)
-Section 9, Companies Act 1994 (Bangladesh)
-Section 90(2), Companies Act 1994 (Bangladesh)
-Section 92, Companies Act 1994 (Bangladesh)
-Sections 119 and 304, Companies Act 1994 (Bangladesh)
-Sections 151, 210, Companies Act 1994 (Bangladesh)
-Sections 34, 47, 108, Companies Act 1994 (Bangladesh)
-Sections 34, 83, 87, 90, Companies Act 1994 (Bangladesh)
-Stamp Act 1899 (Bangladesh), Schedule I, Item 62
-Value Added Tax Act 2012 (Bangladesh)
-```
-
-## 2. Statutory Deadlines (Engine Constants)
-
+## 2. Statutory Deadlines
 ```
 285:FIRST_AGM_DEADLINE_DAYS = 548
 286:SUBSEQUENT_AGM_DEADLINE_DAYS = 456
@@ -202,7 +157,7 @@ Value Added Tax Act 2012 (Bangladesh)
 318:BIDA_ADVANTAGE_THRESHOLD_USD = 100000
 319:_VAT_TURNOVER_THRESHOLD_BDT = 3000000
 
---- Inline deadlines (not constants) ---
+--- Inline deadlines ---
 484:            deadline = c.incorporation_date + timedelta(days=FIRST_AUDITOR_DEADLINE_DAYS)
 499:            fy_end = c.last_agm_date - timedelta(days=90)
 500:            if self.today > fy_end + timedelta(days=120):
@@ -217,15 +172,12 @@ Value Added Tax Act 2012 (Bangladesh)
 1424:            c.last_agm_date + timedelta(days=SUBSEQUENT_AGM_DEADLINE_DAYS),
 ```
 
-## 3. Rule Engine Determinism
+## 3. Engine Determinism
+```
+--- Non-deterministic imports ---
+(none — clean)
 
-### 3.1 Non-deterministic imports in engine
-```
-(none found — clean)
-```
-
-### 3.2 Score formula
-```
+--- Score formula ---
 1261:    def _score_to_band(self, raw: int, *, force_black: bool = False) -> str:
 1263:        if force_black or raw <= 29:
 1284:        raw = 100 - (tax_ded + agm_ded + aud_ded + ret_ded + dir_ded + shr_ded + cap_ded + off_ded + reg_ded)
@@ -233,55 +185,33 @@ Value Added Tax Act 2012 (Bangladesh)
 1296:        band = Severity(self._score_to_band(final, force_black=bool(critical)))
 1303:        hash_str = f"{final}:{','.join(sorted(active_rules))}:{RULE_ENGINE_VERSION}"
 1304:        score_hash = hashlib.sha256(hash_str.encode()).hexdigest()[:16]
-```
 
-### 3.3 ESC-003 filter alignment
-```
+--- ESC-003 filter ---
 1243:        black_flags = [f for f in self._flags if not f.resolved and f.conditional_applies and f.severity == Severity.BLACK and f.rule_id not in self._ESC_RULE_IDS]
 1272:        active = [f for f in flags if not f.resolved and f.conditional_applies]
 1335:        active = [f for f in flags if not f.resolved and f.conditional_applies]
 ```
 
 ## 4. Data Model Integrity
+```
+--- Foreign Keys ---
+  FK:("ai_prompt_templates.id"), nullable=True
+  FK:("companies.id"),
+  FK:("companies.id", ondelete="CASCADE"),
+  FK:("documents.id", ondelete="CASCADE"),
+  FK:("engagements.id", ondelete="CASCADE"),
+  FK:("legal_rules.rule_id"),
+  FK:("rescue_plans.id", ondelete="CASCADE"),
+  FK:("shareholders.id"), nullable=True
+  FK:("users.id"),
+  FK:("users.id"), nullable=False
+  FK:("users.id"), nullable=False, index=True
+  FK:("users.id"), nullable=True
+  FK:("users.id"), nullable=True, index=True
+  FK:("users.id", ondelete="CASCADE"),
+  FK:("users.id", ondelete="SET NULL"), nullable=True
 
-### 4.1 Foreign Keys
-```
-ForeignKey("ai_prompt_templates.id"), nullable=True
-ForeignKey("companies.id"),
-ForeignKey("companies.id", ondelete="CASCADE"),
-ForeignKey("documents.id", ondelete="CASCADE"),
-ForeignKey("engagements.id", ondelete="CASCADE"),
-ForeignKey("legal_rules.rule_id"),
-ForeignKey("rescue_plans.id", ondelete="CASCADE"),
-ForeignKey("shareholders.id"), nullable=True
-ForeignKey("users.id"),
-ForeignKey("users.id"), nullable=False
-ForeignKey("users.id"), nullable=False, index=True
-ForeignKey("users.id"), nullable=True
-ForeignKey("users.id"), nullable=True, index=True
-ForeignKey("users.id", ondelete="CASCADE"),
-ForeignKey("users.id", ondelete="SET NULL"), nullable=True
-```
-
-### 4.2 Unique Constraints
-```
-alembic/versions/0001_initial_schema.py:158:        sa.UniqueConstraint("email", name="uq_users_email"),
-alembic/versions/0001_initial_schema.py:213:        sa.UniqueConstraint("registration_number", name="uq_companies_reg_no"),
-alembic/versions/0001_initial_schema.py:248:        sa.UniqueConstraint("company_id", "user_id", name="uq_company_user_access"),
-alembic/versions/0001_initial_schema.py:389:        sa.UniqueConstraint("company_id", "financial_year", name="uq_agms_company_year"),
-alembic/versions/0001_initial_schema.py:423:        sa.UniqueConstraint("company_id", "financial_year", name="uq_audits_company_year"),
-alembic/versions/0001_initial_schema.py:449:        sa.UniqueConstraint("company_id", "financial_year", name="uq_returns_company_year"),
-alembic/versions/0001_initial_schema.py:539:        sa.UniqueConstraint("company_id", "snapshot_month",
-alembic/versions/0001_initial_schema.py:540:                            name="uq_score_snapshot_month"),
-alembic/versions/0001_initial_schema.py:576:        sa.UniqueConstraint("rule_id", name="uq_legal_rules_rule_id"),
-alembic/versions/0001_initial_schema.py:596:        sa.UniqueConstraint("rule_id", "version", name="uq_rule_versions"),
-alembic/versions/0001_initial_schema.py:665:        sa.UniqueConstraint("rescue_plan_id", "step_number",
-alembic/versions/0001_initial_schema.py:666:                            name="uq_rescue_step_number"),
-alembic/versions/0001_initial_schema.py:769:        sa.UniqueConstraint("quotation_number", name="uq_quotation_number"),
-alembic/versions/0001_initial_schema.py:890:        sa.UniqueConstraint("sro_number", name="uq_sro_number"),
-alembic/versions/0001_initial_schema.py:908:        sa.UniqueConstraint("company_id", "register_type",
-alembic/versions/0001_initial_schema.py:909:                            name="uq_statutory_register_type"),
-alembic/versions/0001_initial_schema.py:954:        sa.UniqueConstraint("template_name", name="uq_template_name"),
+--- Unique Constraints ---
 app/models/commercial.py:219:        String(100), unique=True, nullable=False
 app/models/company.py:59:        String(100), unique=True, nullable=False, index=True
 app/models/compliance.py:139:        UniqueConstraint("company_id", "snapshot_month", name="uq_score_snapshot_month"),
@@ -290,10 +220,8 @@ app/models/documents.py:179:        String(255), unique=True, nullable=False
 app/models/infrastructure.py:117:        String(100), unique=True, nullable=False
 app/models/rules.py:47:        String(50), unique=True, nullable=False,
 app/models/user.py:31:        String(255), unique=True, nullable=False, index=True
-```
 
-### 4.3 Table inventory (from migrations)
-```
+--- Table inventory ---
 agms
 ai_output_log
 ai_prompt_templates
@@ -322,10 +250,8 @@ statutory_registers
 tasks
 user_activity_logs
 users
-```
 
-### 4.4 Table name consistency (ilrmf_rules vs legal_rules)
-```
+--- Table name issue (ilrmf_rules vs legal_rules) ---
 alembic/versions/0002_seed_ilrmf_rules.py:390:            INSERT INTO legal_rules (
 alembic/versions/0002_seed_ilrmf_rules.py:429:        sa.text("DELETE FROM legal_rules WHERE rule_id = ANY(:ids)"),
 alembic/versions/0003_add_reg_004_rule.py:23:        INSERT INTO legal_rules (
@@ -342,9 +268,8 @@ alembic/versions/0007_fix_tl_inc003_rules.py:112:        UPDATE ilrmf_rules
 ```
 
 ## 5. API Contract
-
-### 5.1 All endpoints
 ```
+--- Endpoints ---
 delete("/{company_id}", response_model=MessageResponse, dependencies=[Depends(require_roles("SUPER_ADMIN"))], summary="Soft-delete company")
 get(
 get(
@@ -421,10 +346,8 @@ post("/{company_id}/evaluate", response_model=ComplianceSummaryResponse, depende
 post("/{company_id}/flags/{flag_id}/acknowledge", response_model=MessageResponse, dependencies=[Depends(require_company_access("company_id"))], summary="Acknowledge flag")
 post("/{company_id}/flags/{flag_id}/resolve", response_model=MessageResponse, dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_company_access("company_id"))], summary="Resolve flag")
 post("/{notification_id}/acknowledge")
-```
 
-### 5.2 RBAC enforcement
-```
+--- RBAC enforcement ---
 app/api/admin.py:122:async def deactivate_user(user_id: str, admin=Depends(require_admin), db: AsyncSession = Depends(get_db_for_user)):
 app/api/admin.py:144:async def reactivate_user(user_id: str, admin=Depends(require_admin), db: AsyncSession = Depends(get_db_for_user)):
 app/api/admin.py:22:    admin=Depends(require_admin),
@@ -483,10 +406,8 @@ app/api/rescue.py:30:    require_company_access,
 app/api/rescue.py:369:    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN"))],
 app/api/rules.py:256:    dependencies=[Depends(require_roles("SUPER_ADMIN"))],
 app/api/rules.py:332:    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN"))],
-```
 
-### 5.3 Pydantic response models
-```
+--- Response models ---
 app/api/admin.py:68:class UserCreateResponse(BaseModel):
 app/api/auth.py:29:class LoginResponse(BaseModel):
 app/api/auth.py:45:class RefreshResponse(BaseModel):
@@ -518,10 +439,9 @@ app/api/rules.py:100:class RuleSummaryResponse(BaseModel):
 app/api/rules.py:110:class MessageResponse(BaseModel):
 ```
 
-## 6. Security Audit
-
-### 6.1 Raw SQL (injection risk)
+## 6. Security
 ```
+--- Raw SQL (injection risk) ---
 app/api/health.py:65:            await conn.execute(sqlalchemy.text("SELECT 1"))
 app/services/commercial_service.py:43:        result = await self.db.execute(text("SELECT * FROM vw_revenue_pipeline"))
 app/services/commercial_service.py:203:            text(
@@ -530,24 +450,17 @@ app/services/company_service.py:234:        result = await self.db.execute(text(
 app/services/company_service.py:240:            text(
 app/services/compliance_service.py:303:            text(
 app/services/compliance_service.py:402:            text("""
-```
 
-### 6.2 CORS configuration
-```
+--- CORS ---
 29:from fastapi.middleware.cors import CORSMiddleware
 467:        CORSMiddleware,
 468:        allow_origins=parsed_origins,
 470:        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-471:        allow_headers=[
-```
 
-### 6.3 Hardcoded secrets
-```
-(none found)
-```
+--- Hardcoded secrets ---
+(none)
 
-### 6.4 PII fields
-```
+--- PII fields ---
 app/models/people.py:55:    nid_number: Mapped[str | None] = mapped_column(
 app/models/people.py:59:    passport_number: Mapped[str | None] = mapped_column(String(100), nullable=True)
 app/services/document_service.py:451:    "nid_number", "passport_number", "contact_email",
@@ -555,10 +468,8 @@ app/services/people_service.py:37:        nid_number: str | None = None,
 app/services/people_service.py:38:        passport_number: str | None = None,
 app/services/people_service.py:62:            nid_number=nid_number,        # Encrypted at model layer
 app/services/people_service.py:63:            passport_number=passport_number,
-```
 
-### 6.5 PII sanitization
-```
+--- PII sanitization ---
 app/services/document_service.py:10:  ✓ PII sanitized BEFORE sending to AI (never send real names to external AI)
 app/services/document_service.py:94:        AI Constitution Article 3: PII never sent raw to external AI.
 app/services/document_service.py:98:        2. Sanitize PII from parameters
@@ -576,10 +487,9 @@ app/services/document_service.py:466:            sanitized[k] = v
 app/services/document_service.py:467:    return sanitized
 ```
 
-## 7. AI Governance (Constitution Article 3)
-
-### 7.1 AI document safeguards
+## 7. AI Governance
 ```
+--- AI document safeguards ---
 app/models/documents.py:43:    AI Constitution Article 3: in_review_queue = TRUE until human approves.
 app/models/documents.py:44:    human_approved = FALSE blocks client access.
 app/models/documents.py:45:    auto_sent_blocked = TRUE always — never auto-send to client.
@@ -609,10 +519,8 @@ app/worker/tasks.py:596:      - Never auto-sends to client
 app/worker/tasks.py:664:    Only runs for human-approved documents (checks human_approved=True).
 app/worker/tasks.py:733:                    Document.in_review_queue,
 app/worker/tasks.py:734:                    not Document.human_approved,
-```
 
-### 7.2 AI output logging
-```
+--- AI output logging ---
 app/models/__init__.py:32:    AIOutputLog,
 app/models/__init__.py:92:    "AIOutputLog",              # TABLE: ai_output_log
 app/models/company.py:46:    from .documents import AIOutputLog, Document
@@ -629,33 +537,26 @@ app/services/document_service.py:30:from app.models.documents import AIOutputLog
 app/services/document_service.py:164:            ai_output_log_id=ai_log.id,
 app/services/document_service.py:419:) -> AIOutputLog:
 app/services/document_service.py:421:    log = AIOutputLog(
+
+--- Rule engine: no AI imports ---
+(none — clean)
 ```
 
-### 7.3 Rule engine: no AI calls
+## 8. Audit Trail (Article 6)
 ```
-(none found — clean)
-```
-
-## 8. Audit Trail Integrity (Constitution Article 6)
-
-### 8.1 Activity log (append-only)
-```
-231:class UserActivityLog(AuditMixin, Base):
-238:    __tablename__ = "user_activity_logs"
+--- Activity log (append-only) ---
 5:AI Constitution Article 6: Activity logs append-only, 7-year retention.
+231:class UserActivityLog(AuditMixin, Base):
 236:    DB permissions: INSERT only on this table (no UPDATE/DELETE).
-```
+238:    __tablename__ = "user_activity_logs"
 
-### 8.2 Score history (immutable)
-```
+--- Score history (immutable) ---
 6:AI Constitution Article 4: Score formula fixed. History immutable.
 130:class ComplianceScoreHistory(UUIDPrimaryKeyMixin, Base):
 132:    Monthly immutable score snapshots. Append-only — no updates.
 136:    __tablename__ = "compliance_score_history"
-```
 
-### 8.3 7-year retention
-```
+--- 7-year retention ---
 app/worker/tasks.py:27:  cleanup_old_activity_logs       Archive logs >7 years to S3, remove from DB
 app/worker/tasks.py:864:    name="app.worker.tasks.cleanup_old_activity_logs",
 app/worker/tasks.py:869:def cleanup_old_activity_logs(
@@ -676,9 +577,8 @@ app/worker/beat_schedule.py:201:        "description": "7-year retention enforce
 ```
 
 ## 9. Worker & Scheduling
-
-### 9.1 Celery tasks
 ```
+--- Celery tasks ---
 109:@celery_app.task(
 181:@celery_app.task(
 190:def evaluate_all_companies(
@@ -697,34 +597,24 @@ app/worker/beat_schedule.py:201:        "description": "7-year retention enforce
 1010:def cleanup_expired_notifications(
 1061:@celery_app.task(
 1097:@celery_app.task(
-```
 
-### 9.2 Beat schedule
-```
+--- Beat schedule ---
 3:app/worker/beat_schedule.py
 6:Imported by celery_app.py and applied to celery_app.conf.beat_schedule.
 38:from celery.schedules import crontab
-52:        "task":     "app.worker.tasks.evaluate_all_companies",
 53:        "schedule": crontab(hour=0, minute=0),   # 00:00 UTC = 06:00 BST
-70:        "task":     "app.worker.tasks.queue_deadline_warning_notifications",
 71:        "schedule": crontab(hour=8, minute=0),   # 08:00 UTC = 14:00 BST
-87:        "task":     "app.worker.tasks.send_pending_notifications",
 88:        "schedule": crontab(minute="*/10"),      # Every 10 minutes
-105:        "task":     "app.worker.tasks.process_ai_review_queue",
 106:        "schedule": crontab(hour=9, minute=0),   # 09:00 UTC = 15:00 BST
-117:        "task":     "app.worker.tasks.process_ai_review_queue",
 118:        "schedule": crontab(hour=14, minute=0),  # 14:00 UTC = 20:00 BST
-129:        "task":     "app.worker.tasks.process_ai_review_queue",
 130:        "schedule": crontab(hour=17, minute=0),  # 17:00 UTC = 23:00 BST
-147:        "task":     "app.worker.tasks.monthly_score_snapshot_all",
 148:        "schedule": crontab(day_of_month=1, hour=1, minute=0),  # 1st of month
-161:        "task":     "app.worker.tasks.sync_sro_registry",
 162:        "schedule": crontab(hour=6, minute=0),   # 06:00 UTC = 12:00 BST
-174:        "task":     "app.worker.tasks.cleanup_expired_notifications",
-```
+175:        "schedule": crontab(hour=3, minute=0),   # 03:00 UTC = 09:00 BST
+193:        "schedule": crontab(day_of_week=0, hour=2, minute=0),  # Sunday 02:00 UTC
+210:        "schedule": crontab(minute="*/5"),       # Every 5 minutes
 
-### 9.3 Task error handling
-```
+--- Error handling ---
 app/worker/tasks.py:83:    Provides: structured logging, automatic retry on connection errors,
 app/worker/tasks.py:87:    max_retries = 3
 app/worker/tasks.py:88:    default_retry_delay = 60  # 1 minute
@@ -769,8 +659,7 @@ app/worker/celery_app.py:376:def on_task_retry(
 app/worker/celery_app.py:382:    """Log task retry attempts."""
 ```
 
-## 10. Enum Consistency (DB vs Python)
-
+## 10. Enum Consistency
 ```
 --- Python enums ---
 11:class RiskBand(enum.StrEnum):
@@ -797,7 +686,7 @@ app/worker/celery_app.py:382:    """Log task retry attempts."""
 196:class AiModel(enum.StrEnum):
 203:class SroType(enum.StrEnum):
 
---- DB enum definitions (migration 0001) ---
+--- DB enums ---
 145:        sa.Column("role",          postgresql.ENUM(name="user_role", create_type=False), nullable=False),
 172:        sa.Column("company_type",           postgresql.ENUM(name="company_type", create_type=False), nullable=False),
 173:        sa.Column("company_status",         postgresql.ENUM(name="company_status", create_type=False),
@@ -818,12 +707,9 @@ app/worker/celery_app.py:382:    """Log task retry attempts."""
 565:        sa.Column("revenue_tier",        postgresql.ENUM(name="revenue_tier", create_type=False), nullable=False),
 609:        sa.Column("revenue_tier",       postgresql.ENUM(name="revenue_tier", create_type=False), nullable=False),
 647:        sa.Column("complexity",  postgresql.ENUM(name="complexity_level", create_type=False),
-
---- Enum value lists ---
 ```
 
 ## 11. Migration Safety
-
 ```
 --- Idempotency (ON CONFLICT) ---
 alembic/versions/0002_seed_ilrmf_rules.py:406:            ON CONFLICT (rule_id) DO NOTHING;
@@ -843,7 +729,7 @@ alembic/versions/0007_fix_tl_inc003_rules.py:92:def downgrade():
 alembic/versions/0008_seed_document_templates.py:49:def downgrade() -> None:
 alembic/versions/0009_add_template_cols.py:29:def downgrade() -> None:
 
---- Destructive operations ---
+--- Destructive operations (upgrade paths) ---
 alembic/versions/0001_initial_schema.py:1304:        conn.execute(sa.text(f"DROP TABLE IF EXISTS {table} CASCADE"))
 alembic/versions/0002_seed_ilrmf_rules.py:429:        sa.text("DELETE FROM legal_rules WHERE rule_id = ANY(:ids)"),
 alembic/versions/0003_add_reg_004_rule.py:43:    op.execute("DELETE FROM legal_rules WHERE rule_id = 'REG-004';")
@@ -853,13 +739,12 @@ alembic/versions/0008_seed_document_templates.py:50:    op.execute("DELETE FROM 
 ```
 
 ## 12. Test Coverage
-
 ```
   
     self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-89 passed, 1 warning in 2.49s
+89 passed, 1 warning in 2.34s
 
 --- Test files ---
 tests/__init__.py
@@ -870,14 +755,10 @@ tests/integration/test_services.py
 tests/unit/__init__.py
 tests/unit/test_rule_engine.py
 
---- Test count ---
-
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-208 tests collected in 1.68s
+--- Total test count ---
 ```
 
 ## 13. Legal Domain Coverage
-
 ```
 --- All rule_ids in engine ---
       1 VAT-003
@@ -940,7 +821,7 @@ tests/unit/test_rule_engine.py
       1 AGM-002
       1 AGM-001
 
---- Companies Act 1994 sections referenced ---
+--- Companies Act sections referenced ---
 Section 100
 Section 108
 Section 11
@@ -984,7 +865,7 @@ Sections 34, 83, 87, 90
 Sections 34, 90, 87
 Sections 81, 92, 119, 304 (
 
---- Other statutes referenced ---
+--- Other statutes ---
 "BIDA Foreign Investment Act 1980"
 "BIDA Foreign Investment Act 1980; Bangladesh Bank FDI Circular"
 "City Corporation Ordinance 1983 / Pourashava Act 2009"
@@ -1033,7 +914,7 @@ Sections 81, 92, 119, 304 (
 "VAT threshold exceeded but not registered. VAT Act 2012: registration required above threshold."
 "Value Added Tax Act 2012 (Bangladesh)"
 
---- RJSC Forms referenced ---
+--- RJSC Forms ---
 Form III
 Form IV
 Form VI
@@ -1043,9 +924,8 @@ Form XV
 ```
 
 ## 14. Environment & Config
-
 ```
---- Environment variables referenced ---
+--- Environment variables ---
 app/api/index.py → .setdefault("CELERY_ENABLED", "false")
 app/core/config.py → ("ADMIN_EMAIL", "")
 app/core/config.py → ("ADMIN_FIRST_NAME", "System")
@@ -1076,7 +956,7 @@ app/worker/celery_app.py → .get("REDIS_URL", "redis://localhost:6379/0"))
 -rw-r--r-- 1 DELL 197121  1769 Sep 27 05:03 .env.local
 -rw-r--r-- 1 DELL 197121   148 Sep 27 00:52 .env.render
 
---- CORS ---
+--- CORS config ---
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -1094,61 +974,51 @@ from app.api import (
 
 ## 15. Summary of Findings
 
+### Critical
 
-### Critical (Must Fix Before Enterprise Deployment)
-
-1. **Table name inconsistency** — migrations 0006/0007 INSERT INTO `ilrmf_rules`,
-   but migration 0001 creates `legal_rules`. These migrations silently fail.
-2. **Rule-identity discrepancies** — 5 rule_ids disagree between seed data
-   and engine (see docs/RULE_IDENTITY_BUG_REPORT.md)
+1. **Table name inconsistency** — migrations 0006/0007 INSERT INTO `ilrmf_rules`, but table is `legal_rules`
+2. **Rule-identity discrepancies** — 5 rule_ids disagree between seed data and engine
 3. **Statutory section discrepancies** — 13+ section numbers wrong in seed data
-   (Section 115 vs 92, Section 190 vs 119, Section 396 vs 304, etc.)
-4. **VAT-001 missing** — VAT registration rule has no VAT-001 in engine
+4. **VAT-001 missing** — no VAT-001 rule in engine
 
 ### High Priority
 
-5. **Deadline verification needed** — all deadlines must be verified against
-   actual Bangladesh Companies Act 1994 text
-6. **Form number verification** — all form numbers must be verified against
-   current RJSC forms catalog
-7. **Migration `0010_fix_rule_identities.py`** — not yet created
-8. **No API auth integration tests** — RBAC not tested on every endpoint
-9. **PII sanitization** — no unit test for `_sanitize_pii()` function
-10. **No raw SQL audit** — verify all text() calls are parameterized
+5. Deadline verification against actual Act text
+6. Form number verification against RJSC practice
+7. Migration `0010_fix_rule_identities.py` not created
+8. No API auth integration tests
+9. PII sanitization unit test missing
+10. Raw SQL parameterization audit needed
 
 ### Medium Priority
 
-11. **Bankruptcy Act 1997** — no insolvency rules
-12. **Labour Act 2006** — no labour compliance rules
-13. **BSEC CG Code** — calendar events only, no engine rules
-14. **Score history hash chain** — no test for tamper detection
-15. **Concurrent evaluation safety** — no test for simultaneous evaluations
+11. Bankruptcy Act 1997 — no insolvency rules
+12. Labour Act 2006 — no labour compliance rules
+13. BSEC CG Code — calendar only, no engine rules
+14. Score history hash chain — no tamper test
+15. Concurrent evaluation safety — no test
 
 ### Low Priority
 
-16. **Section 84 (adjournment), 88 (proxy), 96 (inspection)** — not covered
-17. **Board resolution vs special resolution** — verify CAP-004 covers both
-18. **Environment Conservation Act** — no environmental rules
-19. **Backup/restore runbook** — documented but not tested
-20. **Disaster recovery drill** — not performed
+16. Sections 84/88/96 not covered
+17. Board vs special resolution verification
+18. Environment Conservation Act — no rules
+19. Backup/restore runbook untested
+20. Disaster recovery drill not performed
 
-### Audit Sign-Off
+### Sign-Off
 
-| Area | Status | Notes |
-|------|--------|-------|
-| Rule Engine Integrity | ✅ Passed | 89/89 tests, _score_to_band unified, ESC-003 aligned |
-| Rule Identity Consistency | ⚠️ Discrepancies | 5 rule_ids + 13 sections (bug report filed) |
-| Data Model | ⚠️ Table name issue | ilrmf_rules vs legal_rules in migrations |
-| API Contract | ✅ Endpoints mapped | RBAC dependencies on all write endpoints |
-| Security | ✅ No hardcoded secrets | CORS, PII, SQL injection checked |
-| AI Governance | ✅ Safeguards present | human_approved, in_review_queue, output logging |
-| Audit Trail | ✅ Append-only patterns | 7-year retention enforced |
-| Worker Reliability | ✅ Error handlers present | on_failure, retry patterns |
-| Test Coverage | ✅ 89/89 passed | Gaps: migration tests, API auth tests |
-| Legal Domain | ⚠️ Gaps | Bankruptcy, Labour, BSEC rules missing |
-| Migration Safety | ⚠️ Table name inconsistency | 0006/0007 use wrong table name |
-| Operational | ⚠️ Untested | Backup/restore, DR drill needed |
-
----
-Report generated by automated audit script.
-Run individual grep commands to verify findings.
+| Area | Status |
+|------|--------|
+| Rule Engine | ✅ 89/89 passed, _score_to_band unified, ESC-003 aligned |
+| Rule Identity | ⚠️ 5 discrepancies (bug report filed) |
+| Data Model | ⚠️ Table name issue in migrations 0006/0007 |
+| API Contract | ✅ RBAC on all write endpoints |
+| Security | ✅ No hardcoded secrets, PII sanitized |
+| AI Governance | ✅ human_approved, output logging present |
+| Audit Trail | ✅ Append-only, 7-year retention |
+| Workers | ✅ Error handlers, retry patterns |
+| Test Coverage | ✅ 89/89 (gaps: migration/API auth tests) |
+| Legal Domain | ⚠️ Bankruptcy, Labour, BSEC missing |
+| Migrations | ⚠️ ilrmf_rules vs legal_rules |
+| Operational | ⚠️ Backup/DR untested |
