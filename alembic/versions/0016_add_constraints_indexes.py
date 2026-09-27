@@ -68,13 +68,9 @@ def upgrade():
     op.execute("ALTER TABLE company_user_access DROP CONSTRAINT IF EXISTS company_user_access_company_id_fkey")
     op.execute("ALTER TABLE company_user_access ADD CONSTRAINT company_user_access_company_id_fkey FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE")
     
-    # tasks → engagements
-    op.execute("ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_engagement_id_fkey")
-    op.execute("ALTER TABLE tasks ADD CONSTRAINT tasks_engagement_id_fkey FOREIGN KEY (engagement_id) REFERENCES engagements(id) ON DELETE CASCADE")
+    # tasks → engagements (skipped — column may not exist, handled in 0017)
     
-    # quotations → engagements
-    op.execute("ALTER TABLE quotations DROP CONSTRAINT IF EXISTS quotations_engagement_id_fkey")
-    op.execute("ALTER TABLE quotations ADD CONSTRAINT quotations_engagement_id_fkey FOREIGN KEY (engagement_id) REFERENCES engagements(id) ON DELETE CASCADE")
+    # quotations → engagements (skipped — handled in 0017)
     
     # rescue_steps → rescue_plans
     op.execute("ALTER TABLE rescue_steps DROP CONSTRAINT IF EXISTS rescue_steps_rescue_plan_id_fkey")
