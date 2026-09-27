@@ -31,6 +31,17 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api import (
+from app.api.auth import router as auth_router
+from app.api.admin import router as admin_router
+from app.api.companies import router as companies_router
+from app.api.filings import router as filings_router
+from app.api.rules import router as rules_router
+from app.api.rescue import router as rescue_router
+from app.api.documents import router as documents_router
+from app.api.commercial import router as commercial_router
+from app.api.health import router as health_router
+from app.api.notifications import router as notifications_router
+from app.api.rjsc_forms import router as rjsc_forms_router
     admin,
     auth,
     commercial,
@@ -526,6 +537,17 @@ def create_app() -> FastAPI:
     app.include_router(commercial.router, prefix=f"{API_PREFIX}/commercial", tags=["Commercial"])
     app.include_router(rules.router,      prefix=f"{API_PREFIX}/rules",      tags=["Legal Rules"])
     app.include_router(admin.router,      prefix=f"{API_PREFIX}/admin",      tags=["Admin"])
+    app.include_router(auth_router, prefix="/api/v1/auth", tags=["Auth"])
+    app.include_router(admin_router, prefix="/api/v1/admin", tags=["Admin"])
+    app.include_router(companies_router, prefix="/api/v1/companies", tags=["Companies"])
+    app.include_router(filings_router, prefix="/api/v1/filings", tags=["Filings"])
+    app.include_router(rules_router, prefix="/api/v1/rules", tags=["Rules"])
+    app.include_router(rescue_router, prefix="/api/v1/rescue", tags=["Rescue"])
+    app.include_router(documents_router, prefix="/api/v1/documents", tags=["Documents"])
+    app.include_router(commercial_router, prefix="/api/v1/commercial", tags=["Commercial"])
+    app.include_router(health_router, prefix="/api/v1/health", tags=["Health"])
+    app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["Notifications"])
+    app.include_router(rjsc_forms_router, prefix="/api/v1/rjsc-forms", tags=["RJSC Forms"])
 
     # ------------------------------------------------------------------
     # Root redirect
