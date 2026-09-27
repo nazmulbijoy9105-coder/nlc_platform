@@ -98,8 +98,6 @@ async def create_user(
     admin=Depends(require_admin),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-
-from app.core.security import validate_password_strength, hash_password
     from sqlalchemy import select
 
     from app.models.enums import UserRole
