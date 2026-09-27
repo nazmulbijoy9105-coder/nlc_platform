@@ -25,7 +25,8 @@ class TestSecurity:
         """No f-string SQL in API or service files (migrations excluded)."""
         import os, re
         # Only check api/ and services/ directories, not migrations
-        sql_pattern = re.compile(r'f["\'].*(?:SELECT|INSERT|UPDATE|DELETE).*["\']', re.IGNORECASE)
+        # Match actual SQL syntax (keyword + clause), not descriptions containing "delete"
+        sql_pattern = re.compile(r'f["\'].*(?:SELECT.*FROM|INSERT.*INTO|UPDATE.*SET|DELETE.*FROM).*["\']', re.IGNORECASE)
         violations = []
         for check_dir in ["app/api", "app/services"]:
             if not os.path.exists(check_dir):
