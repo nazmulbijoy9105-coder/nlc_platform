@@ -1,0 +1,15 @@
+[run]
+source = app
+omit =
+    app/models/database.py
+    app/worker/celery_app.py
+    */__pycache__/*
+    */__init__.py
+
+[report]
+precision = 2
+show_missing = True
+skip_covered = False
+
+[html]
+directory = htmlcov

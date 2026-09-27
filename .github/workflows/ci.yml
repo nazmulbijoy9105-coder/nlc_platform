@@ -17,8 +17,14 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements-dev.txt 2>/dev/null || pip install pytest sqlalchemy asyncpg
-      - name: Run unit tests
-        run: pytest tests/unit/test_rule_engine.py --tb=short -q
+      - name: Install coverage
+        run: pip install pytest-cov pytest-asyncio
+      - name: Run tests with coverage
+        run: |
+          pytest tests/ --cov=app --cov-report=term-missing --tb=short -q
+          pytest tests/unit/test_rule_engine.py --cov=app/rule_engine --cov-fail-under=90 --tb=short -q
+      - name: Coverage report
+        run: pytest tests/unit/test_rule_engine.py --cov=app/rule_engine --cov-report=term --tb=no -q
       - name: Verify rule count
         run: |
           COUNT=$(grep -oE 'rule_id="[^"]+"' app/rule_engine/engine.py | sed 's/rule_id="//;s/"//' | sort -u | wc -l)
