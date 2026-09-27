@@ -10,6 +10,13 @@ down_revision = '0005_v3_tax_fields'
 
 
 def upgrade():
+    # ── Add new rule_type enum values (PostgreSQL requires autocommit for ALTER TYPE) ──
+    with op.get_context().autocommit_block():
+        op.execute("ALTER TYPE rule_type ADD VALUE IF NOT EXISTS 'DEADLINE'")
+        op.execute("ALTER TYPE rule_type ADD VALUE IF NOT EXISTS 'THRESHOLD'")
+        op.execute("ALTER TYPE rule_type ADD VALUE IF NOT EXISTS 'CONDITIONAL'")
+        op.execute("ALTER TYPE rule_type ADD VALUE IF NOT EXISTS 'DEPENDENCY'")
+
     rules = [
         ('TAX-003', 'Annual Tax Return Overdue', 'DEADLINE', 'Income Tax Act 2023, Section 75', 
          'Annual tax return not filed by deadline. Penalty: Tk 1,000-5,000 + 2%/month.', 

@@ -48,12 +48,6 @@ def upgrade():
 
 
 
-    # ── Add new rule_type enum values (must be committed before 0006 uses them) ──
-    op.execute("ALTER TYPE rule_type ADD VALUE IF NOT EXISTS 'DEADLINE'")
-    op.execute("ALTER TYPE rule_type ADD VALUE IF NOT EXISTS 'THRESHOLD'")
-    op.execute("ALTER TYPE rule_type ADD VALUE IF NOT EXISTS 'CONDITIONAL'")
-    op.execute("ALTER TYPE rule_type ADD VALUE IF NOT EXISTS 'DEPENDENCY'")
-
 def downgrade():
     cols = [
         'trade_license_obtained', 'trade_license_expiry',
