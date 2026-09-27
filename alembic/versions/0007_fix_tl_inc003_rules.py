@@ -15,7 +15,7 @@ def upgrade():
     #    "Commencement of Business Certificate Missing" — Section 10 CA 1994
     #    The engine was writing trade-license content under this ID (bug).
     op.execute("""
-        UPDATE ilrmf_rules
+        UPDATE legal_rules
         SET
             rule_name        = 'Commencement of Business Certificate Missing',
             rule_type        = 'DEADLINE',
@@ -30,7 +30,7 @@ def upgrade():
 
     # 2. Add TL-001 — Trade License Not Obtained (was wrongly written as INC-007)
     op.execute("""
-        INSERT INTO ilrmf_rules
+        INSERT INTO legal_rules
             (rule_id, rule_name, rule_type, statutory_basis, description,
              default_severity, score_impact, revenue_tier, is_black_override, created_at)
         VALUES
@@ -45,7 +45,7 @@ def upgrade():
 
     # 3. Add TL-002 — Trade License Expired (renewal lapse — more common than TL-001)
     op.execute("""
-        INSERT INTO ilrmf_rules
+        INSERT INTO legal_rules
             (rule_id, rule_name, rule_type, statutory_basis, description,
              default_severity, score_impact, revenue_tier, is_black_override, created_at)
         VALUES
@@ -60,7 +60,7 @@ def upgrade():
 
     # 4. Upgrade INC-003 to BLACK (zero directors = structural incapacity, not filing irregularity)
     op.execute("""
-        UPDATE ilrmf_rules
+        UPDATE legal_rules
         SET
             default_severity  = 'BLACK',
             score_impact       = 20,
@@ -93,7 +93,7 @@ def downgrade():
     # Reverse INC-007 to the (incorrect) trade license description
     # that was there before — only do this if rolling back is intentional.
     op.execute("""
-        UPDATE ilrmf_rules
+        UPDATE legal_rules
         SET
             rule_name        = 'Trade License Not Obtained',
             rule_type        = 'DEADLINE',
@@ -106,10 +106,10 @@ def downgrade():
         WHERE rule_id = 'INC-007';
     """)
 
-    op.execute("DELETE FROM ilrmf_rules WHERE rule_id IN ('TL-001', 'TL-002');")
+    op.execute("DELETE FROM legal_rules WHERE rule_id IN ('TL-001', 'TL-002');")
 
     op.execute("""
-        UPDATE ilrmf_rules
+        UPDATE legal_rules
         SET
             default_severity  = 'RED',
             score_impact       = 15,
