@@ -83,11 +83,16 @@ def upgrade():
     op.execute("ALTER TABLE notifications ADD CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE")
 
     # ── 2. CHECK constraints for data integrity ──
-    op.execute("ALTER TABLE companies ADD CONSTRAINT IF NOT EXISTS check_compliance_score_range CHECK (current_compliance_score >= 0 AND current_compliance_score <= 100)")
-    op.execute("ALTER TABLE compliance_score_history ADD CONSTRAINT IF NOT EXISTS check_score_history_range CHECK (score >= 0 AND score <= 100)")
-    op.execute("ALTER TABLE compliance_flags ADD CONSTRAINT IF NOT EXISTS check_score_impact_nonneg CHECK (score_impact >= 0)")
-    op.execute("ALTER TABLE legal_rules ADD CONSTRAINT IF NOT EXISTS check_rule_score_impact CHECK (score_impact >= 0 AND score_impact <= 100)")
-    op.execute("ALTER TABLE companies ADD CONSTRAINT IF NOT EXISTS check_unfiled_returns CHECK (agm_default_count >= 0)")
+    op.execute("ALTER TABLE companies DROP CONSTRAINT IF EXISTS check_compliance_score_range")
+    op.execute("ALTER TABLE companies ADD CONSTRAINT check_compliance_score_range CHECK (current_compliance_score >= 0 AND current_compliance_score <= 100)")
+    op.execute("ALTER TABLE compliance_score_history DROP CONSTRAINT IF EXISTS check_score_history_range")
+    op.execute("ALTER TABLE compliance_score_history ADD CONSTRAINT check_score_history_range CHECK (score >= 0 AND score <= 100)")
+    op.execute("ALTER TABLE compliance_flags DROP CONSTRAINT IF EXISTS check_score_impact_nonneg")
+    op.execute("ALTER TABLE compliance_flags ADD CONSTRAINT check_score_impact_nonneg CHECK (score_impact >= 0)")
+    op.execute("ALTER TABLE legal_rules DROP CONSTRAINT IF EXISTS check_rule_score_impact")
+    op.execute("ALTER TABLE legal_rules ADD CONSTRAINT check_rule_score_impact CHECK (score_impact >= 0 AND score_impact <= 100)")
+    op.execute("ALTER TABLE companies DROP CONSTRAINT IF EXISTS check_unfiled_returns")
+    op.execute("ALTER TABLE companies ADD CONSTRAINT check_unfiled_returns CHECK (agm_default_count >= 0)")
 
     # ── 3. Additional indexes for enterprise query patterns ──
     op.execute("CREATE INDEX IF NOT EXISTS idx_compliance_events_company_type ON compliance_events(company_id, event_type)")
