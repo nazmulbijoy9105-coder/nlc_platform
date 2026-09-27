@@ -8,6 +8,20 @@ from jose import JWTError, jwt
 from app.core.config import settings
 
 
+def validate_password_strength(password: str) -> tuple[bool, str]:
+    """Enterprise password policy: min 8, 1 upper, 1 digit, 1 special."""
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters"
+    if not any(c.isupper() for c in password):
+        return False, "Password must contain at least 1 uppercase letter"
+    if not any(c.isdigit() for c in password):
+        return False, "Password must contain at least 1 digit"
+    if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in password):
+        return False, "Password must contain at least 1 special character (!@#$%^&*)"
+    return True, "Password meets strength requirements"
+
+
+
 def hash_password(password: str) -> str:
     # bcrypt limit is 72 bytes
     pwd = password[:72].encode()
