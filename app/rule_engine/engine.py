@@ -311,7 +311,7 @@ SUBSEQUENT_AGM_DEADLINE_DAYS = 456
 FY_END_AGM_DEADLINE_DAYS = 182
 AGM_NOTICE_MINIMUM_DAYS = 21
 PRIVATE_COMPANY_QUORUM = 2
-ANNUAL_RETURN_DEADLINE_DAYS = 30
+ANNUAL_RETURN_DEADLINE_DAYS = 21   # Companies Act 1994, Section 36 (Schedule X)
 DIRECTOR_FILING_DEADLINE_DAYS = 14
 SHARE_CERTIFICATE_DEADLINE_DAYS = 60
 REGISTERED_OFFICE_DEADLINE_DAYS = 28
@@ -685,8 +685,8 @@ class NLCRuleEngine:
                     severity=severity,
                     score_impact=self._graduated_ar_deduction(delay),
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Annual Return not filed within 30 days of AGM. Overdue by {delay} days.",
-                    statutory_basis="Companies Act 1994, Section 119; RJSC Filing Guidelines",
+                    description=f"Schedule X (Annual Return) not filed within 21 days of AGM. Overdue by {delay} days.",
+                    statutory_basis="Companies Act 1994, Section 36 (Schedule X)",
                     detail={"delay_days": delay}
                 ))
 
@@ -698,7 +698,7 @@ class NLCRuleEngine:
                 score_impact=20,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=f"{c.unfiled_returns_count} Annual Returns unfiled. Section 304: strike-off risk elevated.",
-                statutory_basis="Companies Act 1994, Sections 119, 304",
+                statutory_basis="Companies Act 1994, Sections 36 and 304",
                 detail={"unfiled_count": c.unfiled_returns_count}
             ))
 
@@ -710,7 +710,7 @@ class NLCRuleEngine:
                 score_impact=20,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description=f"{c.unfiled_returns_count} Annual Returns unfiled. Section 304: severe default, director liability.",
-                statutory_basis="Companies Act 1994, Sections 119, 304",
+                statutory_basis="Companies Act 1994, Sections 36 and 304",
                 detail={"unfiled_count": c.unfiled_returns_count}
             ))
 
@@ -727,8 +727,8 @@ class NLCRuleEngine:
                 severity=Severity.YELLOW,
                 score_impact=8,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=f"Annual Return incomplete. Missing: {', '.join(missing)}. Section 119 + Schedule X require complete disclosure.",
-                statutory_basis="Companies Act 1994, Section 119, Schedule X",
+                description=f"Annual Return incomplete. Missing: {', '.join(missing)}. Section 36 + Schedule X require complete disclosure.",
+                statutory_basis="Companies Act 1994, Section 36, Schedule X",
                 detail={"missing": missing}
             ))
 
