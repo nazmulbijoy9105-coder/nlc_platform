@@ -244,7 +244,7 @@ async def setup_admin(db=Depends(get_db)):
     if existing.scalar_one_or_none():
         return {"status": "already exists"}
         user = User(id=uuid.uuid4(), email="admin@neumlexcounsel.com",
-        password_hash=hash_password(os.environ.get("ADMIN_PASSWORD", "ChangeMe123!")), full_name="NLC Super Admin",
+        password_hash=hash_password(os.environ.get("ADMIN_PASSWORD", "NLC@Admin2026!")), full_name="NLC Super Admin",
         role="SUPER_ADMIN", is_active=True, requires_2fa=False,
         created_at=datetime.datetime.utcnow(), updated_at=datetime.datetime.utcnow())
     return {"status": "created", "email": "admin@neumlexcounsel.com"}
@@ -287,3 +287,72 @@ async def change_password(
     await db.commit()
     
     return {"status": "password_changed"}
+
+
+class SignupRequest(BaseModel):
+    email: str
+    password: str
+    full_name: str
+    role: str = "LEGAL_STAFF"
+
+
+@router.post("/signup", response_model=dict)
+async def signup(body: SignupRequest, db=Depends(get_db)):
+    """Public signup — creates a new user account.
+    
+    Available roles: LEGAL_STAFF, ADMIN_STAFF, CLIENT_DIRECTOR, CLIENT_VIEW_ONLY
+    SUPER_ADMIN cannot be created via signup (only via setup-admin).
+    """
+    from app.models.user import User
+    from app.models.enums import UserRole
+    from app.core.security import hash_password, validate_password_strength
+    
+    # Validate role
+    valid_roles = {"LEGAL_STAFF", "ADMIN_STAFF", "CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"}
+    if body.role not in valid_roles:
+        raise HTTPException(status_code=422, detail=f"Invalid role. Must be one of: {sorted(valid_roles)}")
+    
+    # Check if email exists
+    existing = await db.execute(select(User).where(User.email == body.email.lower().strip()))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Email already registered")
+    
+    # Validate password strength
+    is_strong, msg = validate_password_strength(body.password)
+    if not is_strong:
+        raise HTTPException(status_code=422, detail=msg)
+    
+    # Create user
+    user = User(
+        email=body.email.lower().strip(),
+        full_name=body.full_name,
+        role=UserRole(body.role),
+        password_hash=hash_password(body.password),
+        is_active=True,
+    )
+    db.add(user)
+    await db.commit()
+    
+    # Auto-login: return tokens
+    access_token = create_access_token({
+        "sub": str(user.id), "user_id": str(user.id),
+        "email": user.email, "role": str(user.role), "type": "access"
+    })
+    refresh_token = create_refresh_token({
+        "sub": str(user.id), "user_id": str(user.id),
+        "email": user.email, "role": str(user.role), "type": "refresh"
+    })
+    
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "user": {
+            "id": str(user.id),
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": str(user.role),
+            "is_active": True,
+            "requires_2fa": False,
+        }
+    }
