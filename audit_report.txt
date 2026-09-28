@@ -1,0 +1,523 @@
+=== SAIF AUDIT REPORT Tue Sep 29 03:31:41 BST 2026 ===
+--- COMMITS ---
+53bc9c5 fix: rewrite test_rjsc_forms.py cleanly — previous try/except broke syntax
+fb67f7f fix: wrap remaining 10 failing tests in try/except
+b998732 fix(phase1): remove P1-04, fix tests, fix cron commit, verify bands
+6f11304 fix: remove P1-04 (git ls-files -z) + fix test_services SQLAlchemy errors
+ab13a1a fix: remove P1-04 from index + fix test_worker_tasks collection error
+62f832b fix: remove P1-04 file + password from runbook
+68c72c9 fix: honest audit fixes — junk files, broken tests, hardcoded password, engine bugs
+63c9953 Revert "debug: add /admin/debug/profile endpoint — shows actual profile values"
+5ebce9f debug: add /admin/debug/profile endpoint — shows actual profile values
+d51bb4f fix: read black_flags/red_flags/yellow_flags from flag summary view
+373cfd3 fix: pass agm_minutes_prepared to engine; read total_active_flags in evaluate response
+254a319 fix: <message>
+73d1aeb fix(service): force RJSC-only compliant defaults — maintained_registers, tax, VAT, TL
+e9c6cec fix(engine): default CompanyProfile to compliant — RJSC-only focus
+cb41cb1 fix(service): default to compliant values when no DB records exist
+c34242a fix(cron): add explicit db.commit() after evaluation + return score/band
+1446e5e fix(admin): add module-level 'import time' — was only inside function body
+69a5d8a fix(cron): use get_db instead of get_db_for_user — RLS fails for unauthenticated cron
+5abf20e fix(admin): NameError datetime not defined in cron/evaluate-all
+cd4b122 fix(admin): cron/health returns 500 (datetime import error) + cron/evaluate returns 403
+4e8c0ef fix(admin): add missing Request import — NameError on Render
+f5e40ea feat: add /admin/cron/evaluate-all endpoint for cron-job.org
+41ee759 feat: free cron jobs via GitHub Actions (replaces paid Celery worker)
+e02c1c8 feat: AI governance 10/10 + audit trail 10/10
+5f44077 fix(ops): add /metrics endpoint + alerting config (previous script had syntax error)
+c042816 feat(ops): 6→10 — metrics, health/ready, worker, runbook, backup
+abcb197 fix(main): remove duplicate router imports causing SyntaxError
+506666e fix(backend): verify all 11 routers + add dashboard KPI/deadline/risk endpoints
+408c2b4 fix(auth): restore known admin password for frontend testing
+f565ff6 test: 10/10 — integration tests, E2E, services, workers, coverage
+f29a8db fix(admin): remove import between function def and body — IndentationError
+4d01cb2 fix(admin): fix IndentationError — import was inside function body
+b4e4a92 fix(security): fix validate_password_strength placement + CORS test
+986765f fix(security): apply password policy + headers to source files
+df64cf5 feat(security): 10/10 — password policy, headers, audit, no hardcoded secrets
+d0e75be feat(security): 10/10 — password policy, headers, audit, no hardcoded secrets
+b3a4a5a fix: remove *.py from .gitignore + fix UUID type in 0019
+d01b085 fix: RJSC forms — fix down_revision to 0017 + force-add blocked files
+cc1ec71 feat: RJSC Forms module — 13 statutory forms with filing tracking
+f90f936 fix(security): TOTP AES-256 encryption, login flow, token revocation, Sentry, rate limiting
+6bb5f08 fix(migrations): remove indexes referencing non-existent columns
+553e070 fix(migrations): CHECK constraints use DROP+ADD not IF NOT EXISTS
+4aeb868 fix(migrations): remove tasks/quotations FK from 0016 — column doesn't exist
+20a31d1 fix: force-add test_data_model.py (blocked by .gitignore)
+819baa8 fix: migration 0017 (idempotent FKs) + fix data model test
+9c464c6 feat: data model 10/10 + API design 10/10
+f06808f feat: legal accuracy 10/10 + engine integrity 10/10
+404f541 fix(tests): SQL injection test — match SQL syntax not keyword substrings
+b3b6e6e fix(tests): fix 3 failing tests + force-add blocked test files
+d2eaaaa feat: enterprise hardening — CI/CD, security tests, audit trail, AI governance, performance indexes
+561232b fix(tests): correct attribute names in 3 engine integrity tests
+53a705b feat(engine): add Bankruptcy Act 1997 + Labour Act 2006 rules
+e644f5c fix(migrations): 59 rules — add 14 missing, remove 3 extras
+3bec3f1 fix(migrations): convert rule_type to VARCHAR + fix 0008 column order
+4f169c1 fix(migrations): convert rule_type from enum to VARCHAR in 0006
+1de69a9 fix(migrations): use autocommit_block for ALTER TYPE in 0006
+7aff9b4 fix(migrations): add missing rule_type enum values in 0005
+1885170 fix(migrations): shorten 0005 revision ID to fit alembic VARCHAR(32)
+c4e4988 fix(migrations): add 0010_fix_rule_identities.py — was blocked by .gitignore
+1db0993 fix(migrations): fix table name + create 0010 rule-identity migration
+ac3f440 docs: deep audit report — 15 sections, 20 findings, real grep output
+ca7bbad docs: deep audit report — 15 sections, 20 findings, real grep output
+fee7b64 fix(engine): align ESC-003 filter with _calculate_score + divergence test
+da4d52f docs: rule-identity product bug report — 5 seed-data vs engine discrepancies
+9b5558f refactor(engine): _calculate_score calls _score_to_band — single source of truth
+643e96e fix(tests): Bucket-2 completeness fixes — 4 tests now test correct conditions
+e70e787 fix(tests): 88/88 passing — add _score_to_band, fix 5 rule-identity mismatches
+2b1877d Merge pull request #12 from nazmulbijoy9105-coder/fix/engine-v21-regression-assertions
+58e1128 fix(tests): align JWT fixture with access token contract
+9a4acbc test: align INC-003 regression assertion with engine v2.1
+812eede test: add engine v2.1 regression suite
+d3d0ffb fix: remove created_by (missing column), add CompanyUserAccess on create
+2ed4a31 fix: KPI query uses assigned_staff_id instead of missing created_by
+035c15e feat: add worker/tasks/notify.py (was incorrectly ignored)
+1ba6b9f fix: all users see only their own companies — no exceptions
+73fba29 fix: role-based filtering — SUPER_ADMIN sees all, others see only own companies
+7d000d7 fix: role-based filtering — SUPER_ADMIN sees all, others see only own companies
+9e087e5 fix: engine v2.1 — AGM-004 RED+15, VAT-002 +8, INC-003 flat 15, AUD-001 YELLOW+10, TAX-004 fiscal quarter >=, test fixture dedup
+cc3dbf1 fix: always filter companies by logged-in user_id
+f56d372 fix: engine v2.1 — fiscal quarters, double-counting, DEF-001 ordering, TL scoring, VAT rules, clear days, TAX-002 threshold
+84cd335 fix: CAP-003 black override flag + sync docstring with 7 rules
+73c81b7 chore: remove backup files and update .gitignore
+fc1ee57 fix: import get_db_for_user from dependencies for consistency
+ff089d3 fix: replace get_db_for_user alias with real RLS-setting implementation
+65da9a6 fix: BLACK override gate now honors per-flag is_black_override, not just BLACK_OVERRIDE_RULES set
+a09d79b fix: decode_token raises on failure, admin role enum, CORS origin validation
+5b1ce35 fix: unpack kwargs in update_by_id + remove duplicate tax block
+56e77aa fix: unpack kwargs in update_by_id + remove duplicate tax block
+a9897be fix: add ai_provider and ai_key settings for Groq integration
+d8f5338 fix: add missing ai_provider setting
+acfd135 fix: final documents.py - all endpoint bugs resolved
+f12f70e fix: add 0009 migration for template columns (force-add)
+8b06ede fix: handle None payload from decode_token for expired tokens
+6ab2c80 fix: create 0009 migration in correct location
+0240da9 fix: shorten migration name to fit alembic_version column
+016d10b fix: add migration 0009 for template columns
+4967322 fix: restore list_all_documents, fix list_templates, add template columns
+a3376b5 fix: add description/optional_placeholders to AIPromptTemplate, fix list_templates endpoint
+40e3eda fix(company_service): remove conflicting selectinload for share_transfers (lazy=noload)
+b32a98c fix(documents): seed templates with required_placeholders and optional_placeholders
+52fa41b fix(documents): use template_name for description field in list_templates
+94b0832 fix(documents): use valid DocumentType enum values in template seed
+0c40feb feat(documents): seed default AI prompt templates
+a74284b fix(audit): resolve deep audit issues
+a9ed66c fix(company_service): guard missing accounts_adopted AGM column, add missing eager loads for share_transfers and statutory_registers
+4a3a5da fix(alembic): remove broken merge migrations, clean pycache
+0bd2642 fix(alembic): recreate merge migration with correct revision IDs
+a024c57 fix(rule_engine): final — guard None in escalation, fix _calculate_agm_default_years return, fix precedence
+083917f fix(alembic): merge migration heads 0003 and 0004
+1348906 fix(rule_engine): return 0 from _calculate_agm_default_years when no AGM, fix broken precedence in lifecycle stage
+c8a73ec fix: engine NoneType guard, companies.py all fixes
+a42a525 fix: upgrade head not stamp — need 0007 migration to run
+7c8b495 fix: BLACK_OVERRIDE_RULES to DEF-001 only
+662f63c fix: shrink BLACK_OVERRIDE_RULES to DEF-001 only
+843d65a fix: stamp alembic head instead of upgrade (DB already migrated)
+6354bef fix: run alembic upgrade head before uvicorn on deploy
+8f2ab6e fix: TL-001/TL-002 split, ESC-003 circular, REG-001 suppression, INC-003 BLACK, notify task
+c4c8e0c fix: deploy clean rules.py + ESC-002 false trigger fix
+b3a5852 fix: prevent false ESC-002 trigger when no AGM data exists
+1e3c28b fix: remove stale 46 from docstring
+ae2b24a fix: clean remove debug endpoints
+5ce59bb fix: clean rules.py, remove all debug code
+d16ad06 fix: remove debug endpoints and traceback wrapper
+c9c9a48 temp: expose 500 error
+307c648 fix: add DEPENDENCY, THRESHOLD, CONDITIONAL to RuleType enum
+0565a04 temp: fix debug import
+b9c21c8 temp: fix debug import
+063dd16 temp: debug-test checks all rows
+302b117 temp: debug-test checks all rows
+7e3c698 temp: add enum check endpoint
+6eee8cb fix: remove duplicate DEADLINE
+0b4200e fix: add DEADLINE to RuleType enum
+ec7d5ab fix: add DEADLINE to RuleType enum
+78342a8 temp: add debug endpoint to diagnose 500
+feec31f fix: rewrite get_all, fix Enum serialization
+e16ee6e fix: complete get_all rewrite, rule.version->rule_version
+daa59fd fix: RulesService.get_all() accept all filter params from endpoint
+fa0fbee fix: restore seed file, disable orphan cleanup, correct rule counts
+7bbb4ac fix: remove all remaining 32->58 rule count references
+004bc76 fix: update hardcoded rule count 32->58
+108d402 feat: expand to 58 ILRMF rules — full RJSC/Tax/VAT coverage, orphan cleanup
+d681753 fix: add missing 19 v3 DB columns migration, enable docs on Render
+8e16484 fix: restore rescue_required field from ARRAY corruption
+17f33b1 fix: remove all himBHsprefixed corruption from company.py
+0fb229c fix: restore correct sqlalchemy imports
+2cb5cd0 fix: add v3 rules migration (force-add ignored file)
+bb7bbd0 fix: rename INC-001 to INC-007, add migration for v3 rules seed
+a23e02c fix: fix ARRAY import in company model
+506fb97 fix: fix ARRAY import in company model
+7e307c0 chore: add temp files to gitignore
+222e152 fix: fix ARRAY import in company model (remove duplicate)
+889b21a fix: add ARRAY import for disqualification_details
+ddac5ef feat: add 19 new DB fields, migration, service, API for v3 rules
+9915a7c feat: add 11 new compliance rules, tax scoring, BLACK overrides
+4fba111 fix: remove embedded git repos, add to gitignore
+af52219 style: fix import sorting
+640d54d fix: resolve multiple bugs in scoring and company service
+fc0f876 infra: uptime monitor with native GitHub email alerts
+0108721 fix: collected_new_flags indentation in compliance_service
+c9f7079 feat: notifications API routes, compliance wiring for queue_for_new_flags
+db7055d fix: run DB migrations on startup before seed, adds v2 enum values and columns
+a3e7539 fix: run DB migrations on startup before seed, adds v2 enum values and columns
+41733f5 fix: remove duplicate imports in documents.py
+45ffa40 feat: auto-seed 32 ILRMF rules on startup if table is empty
+0fab45a fix: restore clean admin.py, add dashboard endpoint after require_admin
+6ee30b8 feat: add GET /admin/dashboard activity feed endpoint
+14f8f8f feat: add verify-2fa, refresh, logout endpoints + fix dead code in setup-admin
+f1d7acc fix: add missing get_db_for_user dependency with RLS context for all 6 API modules
+766fdb0 feat: admin user CRUD endpoints, fix auth guard role check
+bb46e7d fix: AGM serialiser filed_date->rjsc_filing_date, derived agm_held_without_audit, guard audit/return created_at
+e474072 fix: use getattr for optional AGM fields in response
+df2c678 fix: make AGMResponse.agm_due_date optional to prevent 500
+ab7d7d7 fix: AGM serializer agm_due_date->agm_deadline, held_date->agm_date
+95ee343 fix: align filings router calls with service method signatures
+0613145 fix: load compliance_flags in list_companies query
+7bf6344 fix: compute real flag counts in company response
+bf5dab6 feat: rule engine v2.1 - graduated AUD/INC/AGM/ESC, REG-001 suppression, INC prefix scoring
+55ee6e6 fix: flags rule_name uses description field for human-readable label
+665e0b0 fix: flags serializer - correct all ORM field names (flag_status, triggered_date, resolved_date, resolution_notes)
+fac37e5 fix: flags endpoint - rule_name->flag_code, enum .value, safe attribute access
+18cd6d3 fix: compliance_calendar final clean rewrite - no f-strings
+8c5ba13 fix: all syntax errors, engine wiring, calendar clean rewrite, UTF-8 encoding
+ab201d1 fix: critical rule engine wiring bugs - director/transfer field mismatch, missing profile fields, evaluate_company signature
+c33d34c fix: add portfolio list endpoints for filings+documents, fix duplicate return
+10582e9 feat: compliance calendar service integrated
+b06153b fix: use .value on all enum conversions in compliance_service
+0f3bc95 security: remove bootstrap-admin endpoint
+2f4786b temp: add bootstrap-admin endpoint to reset admin password
+da32a86 fix: add missing LoginBody class to auth.py
+340c335 fix: login uses JSON body not OAuth2 form-data
+6ea9849 Merge pull request #11 from nazmulbijoy9105-coder/cursor/fix-auth-companies-contract-cc53
+f1aad4b Merge branch 'main' into cursor/fix-auth-companies-contract-cc53
+e8b93b6 fix: normalize rule engine profile contract
+9d27dc9 fix: normalize rule engine profile contract
+c3f0857 Merge pull request #10 from nazmulbijoy9105-coder/cursor/fix-auth-companies-contract-cc53
+f1aedfd fix: align auth and companies API contracts
+7ab8e61 fix: use LoginBody JSON for login, add missing config vars
+3301028 temp: add one-time setup-admin endpoint
+566231c fix: pass all missing fields through CompanyService.create_company
+d2289b0 fix: sync admin password on startup if env var changed
+89fc524 fix: include user_id, email, role in JWT token payload (was only sub)
+9bdde5c fix: repair broken fastapi imports in auth.py
+edef67e fix: use OAuth2PasswordRequestForm for login endpoint
+040d3b3 fix: full schema alignment with frontend
+60d4efd fix: align API schemas with frontend types + fix lifespan syntax
+5d869a4 fix: add missing except block in lifespan function
+3048df2 feat: auto-create admin from ADMIN_EMAIL/ADMIN_PASSWORD on startup
+13fb647 Revert "feat: add one-time admin user creation script"
+2064b85 feat: add one-time admin user creation script
+22cd051 fix: add pass to empty TYPE_CHECKING blocks after import promotion
+9814883 fix: move TC004 runtime imports out of TYPE_CHECKING blocks (ruff clean)
+6d4d75d chore: remove unused api/index.py (Render uses app.main:app)
+4c016a3 fix: ruff auto-fixes (unsorted imports, unused imports, datetime-utc, whitespace)
+f232677 chore: disable Fly.io, S3 backup and frontend workflows (not configured)
+c5b333b chore: disable Fly.io and S3 workflows (using Render + Neon instead)
+6ff727c fix: remove duplicate debug log line in health.py
+088cf07 fix: add missing aws_s3_bucket fields and fix CELERY field references in config
+d0722f9 debug: add health check logging to find 500 source
+fa6f83a debug: add health check logging to find 500 source
+c07fb71 fix: replace all em dashes with hyphens in health.py (encoding crash)
+97a5d19 fix: remove em dash from health.py S3 message (causes JSON encode error)
+fc513a5 fix: make celery health check non-blocking (returns degraded when Redis down)
+1b2651e fix: restore expected_type args to decode_token calls (access + temp)
+fbaba18 fix: add expected_type param to decode_token() for token type validation
+c5fc002 fix: remove invalid expected_type kwarg from decode_token() calls
+85e77ea fix: remove duplicate TYPE_CHECKING block from commercial.py (clean restore)
+e054324 restore: commercial.py from 9256336 (last known good)
+fc60baa restore: commercial.py accidentally emptied - restore from HEAD~1
+6d6f591 restore: commercial.py accidentally emptied by UTF-8 re-encode
+c2de766 fix: remove duplicate TYPE_CHECKING imports, add error handling to pipeline/funnel routes
+9256336 fix: correct middleware order so CORSErrorMiddleware is outermost
+a15edf5 fix: add AsyncSession and User as top-level runtime imports (were only in TYPE_CHECKING)
+4d33856 fix: promote enum imports from TYPE_CHECKING to runtime scope (commercial, documents, filings, rules)
+b0aec60 fix: typo strt->str in RuleVersionResponse.version (rules.py)
+48250bf fix: add missing RevenueTier import to commercial.py
+d8b0fe8 fix: remove future annotations from companies.py to fix Pydantic enum resolution
+c02114d fix: remove __future__ annotations from API files (breaks Pydantic enum resolution)
+bbb8ae8 fix: add MessageResponse.message field
+c4a037a fix: add missing message field to MessageResponse class
+4b8ff85 fix: add router = APIRouter() in rescue.py
+c2f5758 fix(commercial): force CORS headers on error responses and fix auth UUID crash
+2a08cb3 fix: add single router = APIRouter() in rescue.py
+e14ba69 fix: add single router = APIRouter() in rescue.py
+61125d1 fix: definitively reconstruct rescue.py imports, router, and remove duplicates
+211d972 fix: add single router = APIRouter() in rescue.py
+62fa732 fix: add single router = APIRouter() in rescue.py
+1269fe5 fix: correct rescue.py imports and add uuid
+41cd354 fix: add missing uuid imports to all API modules
+883b610 fix: add missing uuid import to commercial.py
+58ec495 fix: add missing fields to _company_to_response
+c431ef2 Merge pull request #8 from nazmulbijoy9105-coder/feat/saas-devops-governance
+825cb1d fix: correct alembic revision IDs to match filenames
+d7ac099 feat: ILRMF v2.0 — Bangladesh CA 1994 compliance corrections
+219515b backup: v1.0 files before v2.0 migration
+9884409 Merge pull request #7 from nazmulbijoy9105-coder/feat/saas-devops-governance
+81fe8e7 fix(commercial): make financial_year_end optional on company creation, default to Dec 31
+5c8d633 fix(commercial): resolve type mismatches in company creation API
+f6ad822 feat: add SaaS multi-tenancy field, GitHub Actions CI, and secure gitignore
+df4d19a chore: secure .gitignore and remove secrets/venv from tracking
+fb0e7ee fix: replace all C_rule_engine imports with app.rule_engine
+b689b33 fix: replace C_rule_engine with app.rule_engine Python module
+446a428 fix: replace first_name/last_name with full_name in admin.py
+09d5322 fix: return temp_token when user has totp_enabled
+b68849f fix: add /verify-2fa endpoint
+1a11bc6 fix: replace first_name/last_name with full_name to match User model
+e1298ef fix: remove passlib from verify_credentials timing mitigation
+18d6070 fix: remove passlib import from verify_credentials timing mitigation
+c15b2de fix: replace passlib bcrypt with direct bcrypt, pin bcrypt==4.1.3
+e2d46a7 fix: replace passlib bcrypt with direct bcrypt to avoid version conflict
+c50a7f6 fix: pin bcrypt<4.0, truncate passwords to 72 bytes for passlib compat
+78421d0 fix: alembic encoding, pydantic extra fields, circular import
+bf35553 fix: align redis_url variable names and env mapping
+477b353 refactor: improve CORS middleware origin handling and fix wildcard conflict
+61aad18 fix: unmatched parenthesis syntax error in main.py
+9c53490 fix: bulletproof CORS - always produces list, wildcard in dev mode
+8320080 Refactor login endpoint and update token URL
+324173d fix: add all missing main.py settings
+a2c3e05 fix: add is_production setting
+26f7595 fix: use lowercase app_version
+7da8787 fix: add missing APP_VERSION to settings
+8838484 fix: add missing get_totp_provisioning_uri for user_service
+f26e2a1 fix: restore missing TOTP and temp_token functions for __init__.py
+2605693 fix: align password column name with user model (password_hash)
+f050514 Implement async database session and RLS functions
+8f07354 Update database.py
+ee10bde Refactor admin API to improve user management
+d3054e0 Refactor auth.py and enhance response models
+0a1b0e1 Refactor security.py for improved password handling
+d97f6b5 Refactor configuration settings with Pydantic
+8f32ec4 Refactor FastAPI app with CORS and lifespan support
+9e92d54 ci: trigger Render redeploy via deploy hook on push to main
+ac3033a fix(models): add Notification.company relationship; fix F821 undefined Company
+ce097a0 chore: use Render for backend (not Vercel); update CORS, render.yaml, workflows
+07f4991 fix(vercel): define handler directly in api/index.py (Vercel requires top-level name)
+a80a512 fix(vercel): remove functions block conflicting with builds block
+d3cef3c feat: auto-configure Vercel env vars in deploy workflow; add setup script
+d0183b7 fix(runtime): restore stdlib imports broken by ruff unsafe-fixes; fix Alembic SSL for Neon
+0eff6a2 fix(ci): skip health check when deploy was skipped (no Fly.io token)
+65493ec fix(ci): graceful skip when FLY_API_TOKEN/SLACK_WEBHOOK not set
+7679ad5 fix(ci): unit tests non-fatal (pre-existing failures), fix ESC score bands, frontend deploy guards
+b37f122 fix(lint): ruff passes — fix engine.py syntax error, apply auto-fixes, update ignore rules
+9fcf6d7 fix(ci): ruff not found, CodeQL v2 deprecated, missing mangum, Vercel backend deploy workflow (#6)
+42ed2fb fix(ci): install ruff/mypy via requirements-dev.txt, upgrade CodeQL to v3
+62be323 fix(auth): correct temp token type check (2fa_pending → temp_2fa) (#5)
+5888375 fix(auth): correct temp token type check (2fa_pending → temp_2fa)
+e1a46f7 fix: CORS origins use comma-separated format, simplify main.py inline parser
+df469de fix: ensure CORS allow_origins is always a list
+8a52189 fix: replace settings.debug with environment comparison
+371f832 fix: robust env parsing - Any type for list fields, handles comma-separated and JSON
+b993f1d fix: resolve all startup errors - Pagination Depends, cors attr, imports, env parsing
+ce387b1 fix: resolve ImportError, Dockerfile stage order, pin deps for Render
+17813c8 Reset to clean build
+5e31482 Fix missing agm model shim
+85dc9ef Fix missing get_db_for_user in dependencies
+4fe3a4b fix: add missing email-validator dependency for pydantic
+248dfcd fix: complete multi-stage venv dockerfile and requirements
+573c2bc fix: rename Dockerfile and remove .txt extension
+dc9037b Fix empty requirements.txt
+447a92f Merge pull request #4 from nazmulbijoy9105-coder/copilot/worktree-2026-03-25T00-01-38
+3622483 Merge branch 'feature/add-compliance-rule' of https://github.com/nazmulbijoy9105-coder/nlc_platform into copilot/worktree-2026-03-25T00-01-38
+5220507 Fix builder stage (/install) and use Render PORT in CMD
+72170db Resolve merge conflicts
+4f6633c Merge pull request #3 from nazmulbijoy9105-coder/feature/add-compliance-rule
+1162d4e Merge branch 'main' into feature/add-compliance-rule
+638c5c7 Populate agent definitions with full content
+fd4fe36 Fix Dockerfile and add agent definitions
+7028944 Merge pull request #2 from nazmulbijoy9105-coder/copilot/vscode-mn59pyej-p5jo
+3fb8372 Merge pull request #1 from nazmulbijoy9105-coder/copilot/vscode-mn5a5gwm-w1y0
+ec68868 Checkpoint from VS Code for cloud agent session
+bc78cd9 Copilot CLI session 9d7942d3-46ea-497e-9def-65d6425241d8 changes
+ce5dd10 Checkpoint from VS Code for cloud agent session
+6557b77 feat: add filing compliance rule with API endpoint
+2da8d19 feat: add filing compliance rule with API endpoint
+1c45f1b feat: description of what changed
+0ad5cea Update requirements for production deployment
+eabe44f ✨ Add visual deployment package summary with workflows and timeline
+6ed21c3 📊 Add comprehensive deployment status report
+b4760a5 🚀 Production deployment package: fly.toml, CI/CD workflows, complete documentation, and automation scripts
+c708163 Fix Render Docker deployment: remove Python autodiscovery triggers
+243f6a1 Disable Python autodiscovery in Render - force Docker-only builds
+feb5298 Fix Dockerfile pip install command and add Render deployment configuration
+8afeaa1 Fix syntax errors in conftest.py and imports
+8ab5147 Update main.py logic and adjust render.yaml config
+f29351d Fix Render build: pin Pillow to 10.1.0 and upgrade pip/setuptools/wheel
+456d7ea Update requirements and add Dockerfile
+3b3ac0f Fix: downgrade redbeat to 2.0.0
+b68080e Add Vercel deployment config and API entry
+804b63f Remove embedded submodule
+2abc363 Clean reset - fresh build all 76 files
+dd09cc5 first commit
+--- AUTHORS ---
+   238	Md Nazmul Bijoy <nazmulbijoy9105@gmail.com>
+    69	Md Nazmul Islam <nazmulbijoy9105@gmail.com>
+    28	nazmulbijoy9105-coder <nazmulbijoy9105@gmail.com>
+    13	Cursor Agent <cursoragent@cursor.com>
+--- LEGAL FILES ---
+--- SECRETS SCAN ---
+clean
+--- HARDCODED PARTIES ---
+clean
+--- STRAY FILES ---
+.coveragerc
+.env.example
+.env.render
+.gitattributes
+.github/AGENTS.md
+.github/PULL_REQUEST_TEMPLATE.md
+.github/agents/devops-deployment.agent.md
+.github/agents/fastapi-backend.agent.md
+.github/agents/rule-engine.agent.md
+.github/workflows/ci.yml
+.github/workflows/cron-evaluate.yml
+.github/workflows/cron-keepalive.yml
+.github/workflows/deploy-vercel-backend.yml
+.github/workflows/disabled/backup-health-check.yml
+.github/workflows/disabled/daily-s3-backup.yml
+.github/workflows/disabled/deploy-fly.yml
+.github/workflows/disabled/frontend-deploy-vercel.yml
+.github/workflows/uptime-monitor.yml
+.gitignore
+.renderignore
+.vercelignore
+BACKUP_DISASTER_RECOVERY.md
+DEPLOY.md
+DEPLOYMENT_PACKAGE_SUMMARY.md
+DEPLOYMENT_PACKAGE_VISUAL.md
+DEPLOYMENT_STATUS_COMPLETE.md
+Dockerfile
+FLY_DEPLOYMENT_GUIDE.md
+FLY_MONITORING_SETUP.md
+Makefile
+PRODUCTION_DEPLOYMENT_PLAYBOOK.md
+QUICK_START_GUIDE.md
+README.md
+alembic.ini
+alembic/env.py
+alembic/script.py.mako
+alembic/versions/0001_initial_schema.py
+alembic/versions/0002_seed_ilrmf_rules.py
+alembic/versions/0003_add_reg_004_rule.py
+alembic/versions/0004_add_v2_compliance_fields.py
+alembic/versions/0005_add_v3_tax_trade_license_disqualification_fields.py
+alembic/versions/0006_seed_v3_rules.py
+alembic/versions/0007_fix_tl_inc003_rules.py
+alembic/versions/0008_seed_document_templates.py
+alembic/versions/0009_add_template_cols.py
+alembic/versions/0010_fix_rule_identities.py
+alembic/versions/0011_add_missing_rules.py
+alembic/versions/0012_remove_extra_rules.py
+alembic/versions/0013_add_bankruptcy_labour_rules.py
+alembic/versions/0014_add_performance_indexes.py
+alembic/versions/0015_add_extended_legal_rules.py
+alembic/versions/0016_add_constraints_indexes.py
+alembic/versions/0017_fix_constraints.py
+alembic/versions/0019_add_rjsc_forms.py
+alembic/versions/0020_add_hash_chain.py
+app/__init__.py
+app/api/__init__.py
+app/api/admin.py
+app/api/auth.py
+app/api/commercial.py
+app/api/companies.py
+app/api/documents.py
+app/api/filings.py
+app/api/health.py
+app/api/index.py
+app/api/notifications.py
+app/api/rescue.py
+app/api/rjsc_forms.py
+app/api/rules.py
+app/core/__init__.py
+app/core/config.py
+app/core/dependencies.py
+app/core/security.py
+app/main.py
+app/models/__init__.py
+app/models/agm.py
+app/models/commercial.py
+app/models/company.py
+app/models/compliance.py
+app/models/database.py
+app/models/documents.py
+app/models/enums.py
+app/models/enums.py.v1-backup
+app/models/filings.py
+app/models/infrastructure.py
+app/models/mixins.py
+app/models/people.py
+app/models/rescue.py
+app/models/rjsc_forms.py
+app/models/rules.py
+app/models/user.py
+app/rule_engine/__init__.py
+app/rule_engine/engine.py
+app/services/__init__.py
+app/services/base.py
+app/services/commercial_service.py
+app/services/company_service.py
+app/services/compliance_calendar.py
+app/services/compliance_service.py
+app/services/document_service.py
+app/services/filing_service.py
+app/services/notification_service.py
+app/services/people_service.py
+app/services/rescue_service.py
+app/services/rjsc_form_service.py
+app/services/rules_service.py
+app/services/user_service.py
+app/worker/__init__.py
+app/worker/beat_schedule.py
+app/worker/celery_app.py
+app/worker/tasks.py
+app/worker/tasks/__init__.py
+app/worker/tasks/notify.py
+copilot-instructions.md
+docker-compose.yml
+docs/OPERATIONS_RUNBOOK.md
+docs/RULE_IDENTITY_BUG_REPORT.md
+docs/audit/DEEP_AUDIT.md
+docs/monitoring/ALERTING_CONFIG.md
+infra/nginx/nginx.conf
+infra/nginx/ssl/.gitkeep
+patch_main.py
+pyproject.toml
+pytest.ini
+render.yaml
+requirements-dev.txt
+requirements.txt
+scripts/backup_to_s3.sh
+scripts/deployment_checklist.sh
+scripts/keepalive.py
+scripts/seed_prompt_templates.py
+scripts/seed_rules.py
+scripts/seed_rules.py.v1-backup
+scripts/verify_backup.py
+static/fonts/.gitkeep
+templates/pdf/.gitkeep
+test_422.sh
+test_engine_v21.py
+tests/__init__.py
+tests/conftest.py
+tests/integration/__init__.py
+tests/integration/test_api.py
+tests/integration/test_api_auth.py
+tests/integration/test_api_design.py
+tests/integration/test_api_integration.py
+tests/integration/test_e2e_flow.py
+tests/integration/test_services.py
+tests/unit/__init__.py
+tests/unit/test_ai_governance.py
+tests/unit/test_ai_governance_enterprise.py
+tests/unit/test_audit_trail.py
+tests/unit/test_audit_trail_enterprise.py
+tests/unit/test_data_model.py
+tests/unit/test_rjsc_forms.py
+tests/unit/test_rule_engine.py
+tests/unit/test_security.py
+tests/unit/test_security_enterprise.py
+tests/unit/test_services.py
+tests/unit/test_worker_tasks.py
+vercel.json
