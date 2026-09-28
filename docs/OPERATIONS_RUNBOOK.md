@@ -9,7 +9,7 @@
 | Health | GET https://nlc-platform.onrender.com/api/v1/health/live |
 | Readiness | GET https://nlc-platform.onrender.com/api/v1/health/ready |
 | Metrics | GET https://nlc-platform.onrender.com/metrics |
-| Admin Login | admin@neumlexcounsel.com / NLC@Admin2026! |
+| Admin Login | admin@neumlexcounsel.com / (set ADMIN_PASSWORD env var) |
 | Database | Neon PostgreSQL (ap-southeast-1) |
 | Redis | Render Redis (same region) |
 | GitHub | https://github.com/nazmulbijoy9105-coder/nlc_platform |
@@ -32,7 +32,7 @@
 4. If build OK but page blank → Check API_URL in frontend env vars
 
 ### Login not working (401)
-1. Test: `curl -X POST https://nlc-platform.onrender.com/api/v1/auth/login -H "Content-Type: application/json" -d '{"email":"admin@neumlexcounsel.com","password":"NLC@Admin2026!"}'`
+1. Test: `curl -X POST https://nlc-platform.onrender.com/api/v1/auth/login -H "Content-Type: application/json" -d '{"email":"admin@neumlexcounsel.com","password":"$ADMIN_PASSWORD"}'`
 2. If 401 → Password may have changed → Run `POST /api/v1/auth/setup-admin`
 3. If 500 → Database connection issue → Check Neon
 4. If CORS error → Check ALLOWED_ORIGINS env var on Render
