@@ -205,11 +205,12 @@ async def cron_evaluate_all(
     Example: curl -X POST URL/api/v1/admin/cron/evaluate-all -H "X-Cron-Secret: your_secret"
     """
     import os
+    # CRON_SECRET is optional — if not set, endpoint is open (for free tier)
     cron_secret = os.environ.get("CRON_SECRET", "")
-    provided = request.headers.get("X-Cron-Secret", "")
-    
-    if cron_secret and provided != cron_secret:
-        raise HTTPException(status_code=403, detail="Invalid cron secret")
+    if cron_secret:
+        provided = request.headers.get("X-Cron-Secret", "")
+        if provided != cron_secret:
+            raise HTTPException(status_code=403, detail="Invalid cron secret")
     
     from sqlalchemy import select, text
     from app.models.company import Company
@@ -241,4 +242,5 @@ async def cron_evaluate_all(
 @router.get("/cron/health")
 async def cron_health():
     """Simple health endpoint for cron-job.org (GET request, no auth)."""
-    return {"status": "ok", "service": "nlc-platform", "time": str(datetime.datetime.now(UTC))}
+    import time
+    return {"status": "ok", "service": "nlc-platform", "time": int(time.time())}
