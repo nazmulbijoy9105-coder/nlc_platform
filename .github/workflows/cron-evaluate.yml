@@ -15,7 +15,7 @@ jobs:
           # Login to get token
           TOKEN=$(curl -s -X POST https://nlc-platform.onrender.com/api/v1/auth/login \
             -H "Content-Type: application/json" \
-            -d '{"email":"admin@neumlexcounsel.com","password":"NLC@Admin2026!"}' | \
+            -d '{"email":"${{ secrets.NLC_EMAIL }}","password":"${{ secrets.NLC_PASSWORD }}"}' | \
             python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")
           
           # Trigger daily evaluation

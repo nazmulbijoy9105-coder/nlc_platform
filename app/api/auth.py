@@ -244,7 +244,7 @@ async def setup_admin(db=Depends(get_db)):
     if existing.scalar_one_or_none():
         return {"status": "already exists"}
         user = User(id=uuid.uuid4(), email="admin@neumlexcounsel.com",
-        password_hash=hash_password("NLC@Admin2026!"), full_name="NLC Super Admin",
+        password_hash=hash_password(os.environ.get("ADMIN_PASSWORD", "ChangeMe123!")), full_name="NLC Super Admin",
         role="SUPER_ADMIN", is_active=True, requires_2fa=False,
         created_at=datetime.datetime.utcnow(), updated_at=datetime.datetime.utcnow())
     return {"status": "created", "email": "admin@neumlexcounsel.com"}

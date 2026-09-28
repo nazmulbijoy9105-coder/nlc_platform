@@ -95,7 +95,7 @@ class TestNoHardcodedSecrets:
     def test_no_hardcoded_admin_password(self):
         with open("app/api/auth.py", encoding="utf-8") as f:
             content = f.read()
-        assert "NLC@Admin2026" not in content, "Hardcoded admin password still present"
+        assert "NLC@Admin2026" not in content, "Hardcoded admin password still present in auth.py"
         assert "secrets" in content.lower() or "random" in content.lower(), \
             "Admin password should be randomly generated"
 

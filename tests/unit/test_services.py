@@ -11,7 +11,7 @@ class TestCompanyService:
 
     def test_has_build_profile(self):
         from app.services.company_service import CompanyService
-        assert hasattr(CompanyService, "_build_company_profile") or hasattr(CompanyService, "build_profile")
+        assert hasattr(CompanyService, "build_company_profile") or hasattr(CompanyService, "_build_company_profile")
 
 class TestComplianceService:
     def test_exists(self):

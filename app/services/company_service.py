@@ -385,7 +385,7 @@ class CompanyService(BaseService[Company]):
             "agm_minutes_prepared":       bool(latest_agm.minutes_prepared) if latest_agm else False,
 
             # Audit State
-            "first_auditor_appointed":    company.first_auditor_appointed if company.first_auditor_appointed is not None else True,
+            "first_auditor_appointed":    bool(company.first_auditor_appointed) if company.first_auditor_appointed is not None else True,
             "audit_complete":             latest_audit.audit_complete if latest_audit else True,
             "last_audit_signed_date":     company.last_audit_signed_date,
             "audit_in_progress":          False,
@@ -452,5 +452,5 @@ class CompanyService(BaseService[Company]):
             "any_director_disqualified":    company.any_director_disqualified,
             "penalty_notices_received":     company.penalty_notices_received,
             "penalty_notices_resolved":     company.penalty_notices_resolved,
-            "current_director_count":  max(2, max(2, len([d for d in company.directors if d.director_status.value == "ACTIVE"]))),
+            "current_director_count":  max(2, len([d for d in company.directors if d.director_status.value == "ACTIVE"])),
         }
