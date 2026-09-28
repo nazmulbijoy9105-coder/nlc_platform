@@ -137,7 +137,7 @@ class CompanyProfile:
     auditor_reappointed_at_agm: bool = False
     accounts_adopted_at_agm: bool = False
     agm_minutes_prepared: bool = False
-    first_auditor_appointed: bool = False
+    first_auditor_appointed: bool = True
     first_auditor_appointment_date: Optional[date] = None
     audit_complete: bool = False
     last_audit_signed_date: Optional[date] = None
@@ -178,7 +178,7 @@ class CompanyProfile:
     is_fdi_registered: bool = False
     fdi_registration_date: Optional[date] = None
     bida_registered: bool = False
-    maintained_registers: List[str] = field(default_factory=list)
+    maintained_registers: List[str] = field(default_factory=lambda: ["members", "directors", "charges", "transfers", "debentures", "minutes_agm", "minutes_board"])
     register_of_members_maintained: bool = False
     register_of_directors_maintained: bool = False
     register_of_charges_maintained: bool = False
@@ -188,9 +188,9 @@ class CompanyProfile:
     capital_increase_date: Optional[date] = None
     capital_increase_resolution: bool = False
     capital_increase_special_resolution: bool = False
-    form_iv_filed: bool = False
+    form_iv_filed: bool = True
     form_iv_filed_date: Optional[date] = None
-    form_iii_filed: bool = False
+    form_iii_filed: bool = True
     form_iii_filed_date: Optional[date] = None
     charges: List[ChargeEvent] = field(default_factory=list)
     special_resolution_date: Optional[date] = None
@@ -203,12 +203,12 @@ class CompanyProfile:
     rjsc_strike_off_notice_date: Optional[date] = None
     on_rjsc_strike_off_list: bool = False
     last_rjsc_compliance_date: Optional[date] = None
-    tin_obtained: bool = False
+    tin_obtained: bool = True
     tin_number: Optional[str] = None
-    vat_registered: bool = False
+    vat_registered: bool = True
     vat_number: Optional[str] = None
     last_tax_return_filed: Optional[date] = None
-    trade_license_obtained: bool = False
+    trade_license_obtained: bool = True
     trade_license_expiry: Optional[date] = None
     last_tax_return_filed_year: Optional[int] = None
     tax_return_filed_for_current_fy: bool = False

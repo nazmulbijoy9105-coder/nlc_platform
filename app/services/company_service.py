@@ -311,6 +311,8 @@ class CompanyService(BaseService[Company]):
         latest_agm = agms_sorted[0] if agms_sorted else None
         agm_count = len([a for a in company.agms if a.agm_held])
         if agm_count == 0 and company.last_agm_date:
+            agm_count = 1
+        if agm_count == 0 and company.last_agm_date:
             agm_count = 1  # Company has held at least one AGM (based on last_agm_date)
 
         # ── Audit State ───────────────────────────────────────────
@@ -447,5 +449,5 @@ class CompanyService(BaseService[Company]):
             "any_director_disqualified":    company.any_director_disqualified,
             "penalty_notices_received":     company.penalty_notices_received,
             "penalty_notices_resolved":     company.penalty_notices_resolved,
-            "current_director_count":  max(2, len([d for d in company.directors if d.director_status.value == "ACTIVE"])),
+            "current_director_count":  max(2, max(2, len([d for d in company.directors if d.director_status.value == "ACTIVE"]))),
         }
