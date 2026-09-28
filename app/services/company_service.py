@@ -382,6 +382,7 @@ class CompanyService(BaseService[Company]):
             "members_present_at_agm":     latest_agm.members_present if latest_agm else 0,
             "auditor_reappointed_at_agm": latest_agm.auditor_reappointed if latest_agm else False,
             "accounts_adopted_at_agm":    getattr(latest_agm, 'accounts_adopted', False) if latest_agm else False,
+            "agm_minutes_prepared":       bool(latest_agm.minutes_prepared) if latest_agm else False,
 
             # Audit State
             "first_auditor_appointed":    company.first_auditor_appointed if company.first_auditor_appointed is not None else True,
