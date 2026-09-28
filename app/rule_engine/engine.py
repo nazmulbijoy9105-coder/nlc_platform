@@ -1437,7 +1437,7 @@ class NLCRuleEngine:
                 score_impact=esc003_impact,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description="Multiple BLACK flags (" + str(len(black_flags)) + "). Corporate Rescue mandatory. Systemic failure detected.",
-                statutory_basis="Companies Act 1994, Sections 81, 92, 119, 304 (aggregate)",
+                statutory_basis="Companies Act 1994, Sections 81, 92, 36, 304 (aggregate)",
                 detail={"black_count": len(black_flags)},
                 is_black_override=True,
             ))
