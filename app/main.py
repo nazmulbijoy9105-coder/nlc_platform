@@ -539,6 +539,13 @@ def create_app() -> FastAPI:
             "health": "/api/v1/health/live",
         }
 
+    # Wire Prometheus metrics
+    try:
+        from prometheus_fastapi_instrumentator import Instrumentator
+        Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+    except ImportError:
+        pass  # prometheus not installed
+
     return app
 
 
