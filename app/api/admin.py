@@ -222,20 +222,31 @@ async def cron_evaluate_all(
     
     evaluated = 0
     errors = 0
+    results = []
     for company_id in company_ids:
         try:
             from app.services.compliance_service import ComplianceService
             svc = ComplianceService(db)
-            await svc.evaluate_company(company_id)
+            result = await svc.evaluate_company(company_id)
             evaluated += 1
-        except Exception:
+            results.append({
+                "company_id": str(company_id),
+                "score": result.get("score", 0),
+                "risk_band": str(result.get("risk_band", "—")),
+            })
+        except Exception as e:
             errors += 1
+            results.append({"company_id": str(company_id), "error": str(e)[:100]})
+    
+    # Explicit commit — flush() in service pushes to DB but doesn't commit
+    await db.commit()
     
     return {
         "status": "complete",
         "total_companies": len(company_ids),
         "evaluated": evaluated,
         "errors": errors,
+        "results": results[:5],  # Show first 5 results
         "timestamp": int(time.time()),
     }
 
