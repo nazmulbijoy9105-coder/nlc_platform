@@ -192,3 +192,53 @@ async def export_activity_logs(
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=activity_logs_{days}days.csv"}
     )
+
+
+@router.post("/cron/evaluate-all")
+async def cron_evaluate_all(
+    request: Request,
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Cron-triggered evaluation of all active companies.
+    
+    Protected by CRON_SECRET env var. Use with cron-job.org or GitHub Actions.
+    Example: curl -X POST URL/api/v1/admin/cron/evaluate-all -H "X-Cron-Secret: your_secret"
+    """
+    import os
+    cron_secret = os.environ.get("CRON_SECRET", "")
+    provided = request.headers.get("X-Cron-Secret", "")
+    
+    if cron_secret and provided != cron_secret:
+        raise HTTPException(status_code=403, detail="Invalid cron secret")
+    
+    from sqlalchemy import select, text
+    from app.models.company import Company
+    from app.services.compliance_service import ComplianceService
+    
+    # Get all active company IDs
+    result = await db.execute(text("SELECT id FROM companies WHERE is_active = true"))
+    company_ids = [str(row[0]) for row in result.fetchall()]
+    
+    evaluated = 0
+    errors = 0
+    for company_id in company_ids:
+        try:
+            svc = ComplianceService(db)
+            await svc.evaluate_company(company_id)
+            evaluated += 1
+        except Exception as e:
+            errors += 1
+    
+    return {
+        "status": "complete",
+        "total_companies": len(company_ids),
+        "evaluated": evaluated,
+        "errors": errors,
+        "timestamp": str(datetime.datetime.now(UTC)),
+    }
+
+
+@router.get("/cron/health")
+async def cron_health():
+    """Simple health endpoint for cron-job.org (GET request, no auth)."""
+    return {"status": "ok", "service": "nlc-platform", "time": str(datetime.datetime.now(UTC))}
