@@ -30,3 +30,6 @@ nlc-debug/
 *.v1-backup
 *.fix_backup_*
 __pycache__/
+
+# Junk file
+P1-04*
