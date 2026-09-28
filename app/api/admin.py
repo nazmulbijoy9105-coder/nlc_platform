@@ -256,31 +256,3 @@ async def cron_health():
     """Simple health endpoint for cron-job.org (GET request, no auth)."""
     import time
     return {"status": "ok", "service": "nlc-platform", "time": int(time.time())}
-
-
-@router.get("/debug/profile/{company_id}")
-async def debug_profile(company_id: str, db: AsyncSession = Depends(get_db)):
-    """Debug: show the CompanyProfile dict for a company."""
-    from app.services.company_service import CompanyService
-    svc = CompanyService(db)
-    profile = await svc.build_company_profile(company_id)
-    if not profile:
-        return {"error": "Company not found"}
-    # Show key fields that determine band
-    return {
-        "company_name": profile.get("company_name"),
-        "agm_count": profile.get("agm_count"),
-        "last_agm_date": str(profile.get("last_agm_date")),
-        "agm_held_this_cycle": profile.get("agm_held_this_cycle"),
-        "current_director_count": profile.get("current_director_count"),
-        "audit_complete": profile.get("audit_complete"),
-        "annual_return_filed": profile.get("annual_return_filed"),
-        "maintained_registers": profile.get("maintained_registers"),
-        "first_auditor_appointed": profile.get("first_auditor_appointed"),
-        "tin_obtained": profile.get("tin_obtained"),
-        "trade_license_obtained": profile.get("trade_license_obtained"),
-        "vat_registered": profile.get("vat_registered"),
-        "form_iii_filed": profile.get("form_iii_filed"),
-        "paid_up_capital_bdt": profile.get("paid_up_capital_bdt"),
-        "incorporation_date": str(profile.get("incorporation_date")),
-    }
