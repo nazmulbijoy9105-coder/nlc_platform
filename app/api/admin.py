@@ -3,7 +3,7 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import get_current_user
-from app.core.dependencies import get_db_for_user
+from app.core.dependencies import get_db_for_user, get_db
 
 router = APIRouter()
 
@@ -197,7 +197,7 @@ async def export_activity_logs(
 @router.post("/cron/evaluate-all")
 async def cron_evaluate_all(
     request: Request,
-    db: AsyncSession = Depends(get_db_for_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """Cron-triggered evaluation of all active companies.
     
@@ -212,22 +212,22 @@ async def cron_evaluate_all(
         if provided != cron_secret:
             raise HTTPException(status_code=403, detail="Invalid cron secret")
     
-    from sqlalchemy import select, text
-    from app.models.company import Company
-    from app.services.compliance_service import ComplianceService
-    
-    # Get all active company IDs
-    result = await db.execute(text("SELECT id FROM companies WHERE is_active = true"))
-    company_ids = [str(row[0]) for row in result.fetchall()]
+    try:
+        from sqlalchemy import text
+        result = await db.execute(text("SELECT id FROM companies WHERE is_active = true"))
+        company_ids = [str(row[0]) for row in result.fetchall()]
+    except Exception as e:
+        return {"status": "error", "detail": f"DB query failed: {str(e)[:100]}", "timestamp": int(time.time())}
     
     evaluated = 0
     errors = 0
     for company_id in company_ids:
         try:
+            from app.services.compliance_service import ComplianceService
             svc = ComplianceService(db)
             await svc.evaluate_company(company_id)
             evaluated += 1
-        except Exception as e:
+        except Exception:
             errors += 1
     
     return {
