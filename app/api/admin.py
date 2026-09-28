@@ -235,7 +235,7 @@ async def cron_evaluate_all(
         "total_companies": len(company_ids),
         "evaluated": evaluated,
         "errors": errors,
-        "timestamp": str(datetime.datetime.now(UTC)),
+        "timestamp": int(time.time()),
     }
 
 
