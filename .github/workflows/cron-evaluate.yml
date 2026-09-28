@@ -1,0 +1,26 @@
+name: Daily Compliance Evaluation
+
+on:
+  schedule:
+    # Every day at 00:00 UTC (6:00 AM Bangladesh time)
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger evaluation
+        run: |
+          # Login to get token
+          TOKEN=$(curl -s -X POST https://nlc-platform.onrender.com/api/v1/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"admin@neumlexcounsel.com","password":"NLC@Admin2026!"}' | \
+            python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")
+          
+          # Trigger daily evaluation
+          curl -s -X POST https://nlc-platform.onrender.com/api/v1/cron/evaluate-all \
+            -H "Authorization: Bearer $TOKEN"
+          
+          # Check health
+          curl -s https://nlc-platform.onrender.com/api/v1/health/live

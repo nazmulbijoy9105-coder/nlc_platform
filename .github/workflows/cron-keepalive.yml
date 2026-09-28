@@ -1,0 +1,13 @@
+name: Keep Render Awake
+
+on:
+  schedule:
+    # Every 10 minutes to prevent Render free tier sleeping
+    - cron: '*/10 * * * *'
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: curl -s https://nlc-platform.onrender.com/api/v1/health/live
