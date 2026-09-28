@@ -15,9 +15,41 @@ services:
         sync: false
       - key: JWT_SECRET_KEY
         sync: false
+      - key: SENTRY_DSN
+        sync: false
       - key: ALLOWED_ORIGINS
         value: https://nlc-frontend.vercel.app,http://localhost:3000
-      - key: RULE_ENGINE_VERSION
-        value: "2.1.0"
-      - key: ILRMF_VERSION
-        value: "1.0.0"
+
+  - type: worker
+    name: nlc-worker
+    runtime: docker
+    region: singapore
+    plan: starter
+    dockerCommand: celery -A app.worker.celery_app worker --loglevel=info --concurrency=2
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: CELERY_BROKER_URL
+        sync: false
+      - key: ENVIRONMENT
+        value: production
+
+  - type: worker
+    name: nlc-beat
+    runtime: docker
+    region: singapore
+    plan: starter
+    dockerCommand: celery -A app.worker.celery_app beat --loglevel=info
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: CELERY_BROKER_URL
+        sync: false
+      - key: ENVIRONMENT
+        value: production
