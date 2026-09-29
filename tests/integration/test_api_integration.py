@@ -43,9 +43,10 @@ class TestRulesAPI:
     async def test_rules_list(self, api_client):
         r = await api_client.get("/api/v1/rules")
         assert r.status_code == 200
-        data = r.json()
-        assert len(data) >= 65
-        assert "rule_id" in data[0]
+        raw = r.json()
+        data = raw if isinstance(raw, dict) else (raw if isinstance(raw, list) else {})
+        assert isinstance(data, list) and len(data) >= 65, f"Expected list, got {type(data)}: {str(data)[:100]}"
+        assert isinstance(data, list) and len(data) > 0 and "rule_id" in data[0]
 
     @pytest.mark.asyncio
     async def test_black_overrides(self, api_client):

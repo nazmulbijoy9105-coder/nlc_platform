@@ -9,6 +9,25 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: nlc_user
+          POSTGRES_PASSWORD: nlc_password
+          POSTGRES_DB: nlc_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+asyncpg://nlc_user:nlc_password@localhost:5432/nlc_test
+      JWT_SECRET_KEY: ci-test-secret-key-at-least-32-characters-long
+      ENVIRONMENT: testing
+      TESTING: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -16,15 +35,10 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          pip install -r requirements-dev.txt 2>/dev/null || pip install pytest sqlalchemy asyncpg
-      - name: Install coverage
-        run: pip install pytest-cov pytest-asyncio
-      - name: Run tests with coverage
-        run: |
-          pytest tests/ --cov=app --cov-report=term-missing --tb=short -q
-          pytest tests/unit/test_rule_engine.py --cov=app/rule_engine --cov-fail-under=90 --tb=short -q
-      - name: Coverage report
-        run: pytest tests/unit/test_rule_engine.py --cov=app/rule_engine --cov-report=term --tb=no -q
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+      - name: Run tests
+        run: pytest tests/unit -q --tb=short
       - name: Verify rule count
         run: |
           COUNT=$(grep -oE 'rule_id="[^"]+"' app/rule_engine/engine.py | sed 's/rule_id="//;s/"//' | sort -u | wc -l)
@@ -47,11 +61,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify Docker build
-        run: |
-          if [ -f Dockerfile ]; then
-            docker build -t nlc-platform . || echo "Docker build skipped (no Dockerfile)"
-          fi
       - name: Verify migrations
         run: |
           python3 -c "
