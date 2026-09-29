@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_db_for_user, require_company_access, require_roles
+from app.core.dependencies import get_current_user, get_db_for_user, require_company_access, require_roles
 from app.models.rjsc_forms import RJSC_FORMS_REFERENCE
 from app.services.rjsc_form_service import RJSCFormService
 
@@ -52,7 +52,7 @@ class MarkFiledRequest(BaseModel):
     notes: str | None = None
 
 
-@router.get("/reference")
+@router.get("/reference", dependencies=[Depends(get_current_user)])
 async def get_form_reference():
     """Get all RJSC form types with section references."""
     return {"forms": RJSC_FORMS_REFERENCE, "total": len(RJSC_FORMS_REFERENCE)}
