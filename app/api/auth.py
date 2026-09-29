@@ -307,7 +307,7 @@ async def signup(body: SignupRequest, db=Depends(get_db)):
     user = User(
         email=body.email.lower().strip(),
         full_name=body.full_name,
-        role=UserRole.SUPER_ADMIN,
+        role=UserRole.CLIENT_VIEW_ONLY,
         password_hash=hash_password(body.password),
         is_active=True,
     )
