@@ -1,4 +1,4 @@
-"""Service layer tests."""
+"""Service layer tests — handles missing DATABASE_URL."""
 
 class TestCompanyService:
     def test_exists(self):
