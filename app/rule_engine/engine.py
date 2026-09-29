@@ -32,6 +32,7 @@ class Severity(str, Enum):
     YELLOW = "YELLOW"
     RED = "RED"
     BLACK = "BLACK"
+    NOT_EVALUATED = "NOT_EVALUATED"
 
 class RevenueTier(str, Enum):
     COMPLIANCE_PACKAGE = "COMPLIANCE_PACKAGE"
@@ -337,6 +338,8 @@ REVENUE_TIER_MAP = {
     Severity.YELLOW: RevenueTier.COMPLIANCE_PACKAGE,
     Severity.RED: RevenueTier.STRUCTURED_REGULARIZATION,
     Severity.BLACK: RevenueTier.CORPORATE_RESCUE,
+
+    Severity.NOT_EVALUATED: RevenueTier.COMPLIANCE_PACKAGE,
 }
 
 FOREIGN_WORK_PERMIT_THRESHOLD_USD = 50000
@@ -1495,7 +1498,7 @@ class NLCRuleEngine:
 
         band = Severity(self._score_to_band(final, force_black=bool(critical), coverage=len(active) / 75))
 
-        if band in (Severity.GREEN, Severity.YELLOW): exposure = ExposureBand.LOW
+        if band in (Severity.GREEN, Severity.YELLOW, Severity.NOT_EVALUATED): exposure = ExposureBand.LOW
         elif band == Severity.RED: exposure = ExposureBand.HIGH
         else: exposure = ExposureBand.SEVERE
 
