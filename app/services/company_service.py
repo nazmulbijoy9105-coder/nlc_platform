@@ -450,6 +450,7 @@ class CompanyService(BaseService[Company]):
             "tax_return_deadline_extended": company.tax_return_deadline_extended,
             # Enforcement
             "any_director_disqualified":    company.any_director_disqualified,
+            "disqualification_details": list(company.disqualification_details or []),
             "penalty_notices_received":     company.penalty_notices_received,
             "penalty_notices_resolved":     company.penalty_notices_resolved,
             "current_director_count":  max(2, len([d for d in company.directors if d.director_status.value == "ACTIVE"])),

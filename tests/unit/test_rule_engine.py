@@ -1019,6 +1019,32 @@ class TestUntestedRules:
     def test_DEF001_triggers(self, rule_engine, build_profile):
         assert_flag_triggered(rule_engine.evaluate(build_profile(any_director_disqualified=True)), "DEF-001")
 
+    @staticmethod
+    def _def001(output):
+        return next(f for f in output.flags if f.rule_id == "DEF-001")
+
+    def test_DEF001_reports_single_disqualified_director(self, rule_engine, build_profile):
+        out = rule_engine.evaluate(build_profile(
+            any_director_disqualified=True,
+            disqualification_details=["Director A - Sec 297"],
+        ))
+        flag = self._def001(out)
+        assert flag.score_impact == 20
+        assert flag.description.startswith("1 director(s)")
+
+    def test_DEF001_reports_multiple_disqualified_directors(self, rule_engine, build_profile):
+        out = rule_engine.evaluate(build_profile(
+            any_director_disqualified=True,
+            disqualification_details=["Director A - Sec 297", "Director B - Sec 297"],
+        ))
+        flag = self._def001(out)
+        assert flag.score_impact == 25
+        assert flag.description.startswith("2 director(s)")
+
+    def test_DEF001_not_triggered_without_flag(self, rule_engine, build_profile):
+        out = rule_engine.evaluate(build_profile(any_director_disqualified=False))
+        assert not any(f.rule_id == "DEF-001" for f in out.flags)
+
     def test_TL001_triggers(self, rule_engine, build_profile):
         assert_flag_triggered(rule_engine.evaluate(build_profile(trade_license_obtained=False)), "TL-001")
 
