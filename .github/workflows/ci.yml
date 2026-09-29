@@ -9,6 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
     services:
       postgres:
         image: postgres:16
@@ -19,55 +20,124 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd="pg_isready -U nlc_user -d nlc_test"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
     env:
-      DATABASE_URL: postgresql+asyncpg://nlc_user:nlc_password@localhost:5432/nlc_test
-      JWT_SECRET_KEY: ci-test-secret-key-at-least-32-characters-long
-      ENVIRONMENT: testing
       TESTING: "true"
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+asyncpg://nlc_user:nlc_password@127.0.0.1:5432/nlc_test
+      DATABASE_URL_TEST: postgresql+asyncpg://nlc_user:nlc_password@127.0.0.1:5432/nlc_test
+      JWT_SECRET_KEY: ci-only-secret-key-must-be-at-least-32-characters-long
+      ADMIN_EMAIL: admin@test.local
+      ADMIN_PASSWORD: AdminPass1!
+      CELERY_BROKER_URL: redis://127.0.0.1:6379/0
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
+
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
-          pip install pytest pytest-asyncio
-      - name: Run tests
-        run: pytest tests/unit -q --tb=short
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Wait for PostgreSQL
+        run: |
+          for i in {1..30}; do
+            pg_isready \
+              -h 127.0.0.1 \
+              -p 5432 \
+              -U nlc_user \
+              -d nlc_test && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Run database migrations
+        run: alembic upgrade head
+
+      - name: Seed legal rules
+        run: python scripts/seed_rules.py
+
+      - name: Run tests with coverage
+        run: |
+          pytest tests/ --cov=app --cov-report=term-missing --tb=short -q
+          pytest tests/unit/test_rule_engine.py \
+            --cov=app/rule_engine \
+            --cov-fail-under=90 \
+            --tb=short -q
+
+      - name: Coverage report
+        run: |
+          pytest tests/unit/test_rule_engine.py \
+            --cov=app/rule_engine \
+            --cov-report=term \
+            --tb=no \
+            -q
+
       - name: Verify rule count
         run: |
-          COUNT=$(grep -oE 'rule_id="[^"]+"' app/rule_engine/engine.py | sed 's/rule_id="//;s/"//' | sort -u | wc -l)
+          COUNT=$(grep -oE 'rule_id="[^"]+"' app/rule_engine/engine.py \
+            | sed 's/rule_id="//;s/"//' \
+            | sort -u \
+            | wc -l)
+
           echo "Engine rules: $COUNT"
-          if [ "$COUNT" -lt 59 ]; then echo "✗ Rule count below 59"; exit 1; fi
-          echo "✓ Rule count OK ($COUNT)"
+
+          if [ "$COUNT" -lt 59 ]; then
+            echo "Rule count below 59"
+            exit 1
+          fi
+
+          echo "Rule count OK ($COUNT)"
 
   lint:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      - run: pip install ruff 2>/dev/null || true
+          python-version: "3.11"
+
+      - run: pip install ruff
       - run: ruff check app/ --select=E,F || true
 
   build:
     needs: [test, lint]
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Verify Docker build
+        run: |
+          if [ -f Dockerfile ]; then
+            docker build -t nlc-platform .
+          fi
+
       - name: Verify migrations
         run: |
           python3 -c "
-          import ast, os
-          for f in sorted(os.listdir('alembic/versions')):
-              if f.endswith('.py'):
-                  with open(f'alembic/versions/{f}') as fh:
+          import ast
+          import os
+
+          for filename in sorted(os.listdir('alembic/versions')):
+              if filename.endswith('.py'):
+                  path = os.path.join('alembic/versions', filename)
+                  with open(path) as fh:
                       ast.parse(fh.read())
-          print('✓ All migrations are valid Python')
+
+          print('All migrations are valid Python')
           "
