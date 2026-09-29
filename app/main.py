@@ -436,9 +436,9 @@ def create_app() -> FastAPI:
             "corporate rescue management, and revenue pipeline tracking."
         ),
         version=settings.app_version,
-        openapi_url="/openapi.json",
-        docs_url="/docs",
-        redoc_url="/redoc",
+        openapi_url="/api/v1/openapi.json",
+        docs_url="/api/v1/docs",
+        redoc_url="/api/v1/redoc",
         lifespan=lifespan,
         contact={
             "name": "Neum Lex Counsel",

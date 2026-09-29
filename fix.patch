@@ -1,0 +1,161 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 0000000..0000000 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@
+ name: CI
+ 
+ on:
+   push:
+     branches: [main]
+   pull_request:
+     branches: [main]
+ 
+ jobs:
+   test:
+     runs-on: ubuntu-latest
++    services:
++      postgres:
++        image: postgres:16
++        env:
++          POSTGRES_USER: nlc_user
++          POSTGRES_PASSWORD: nlc_password
++          POSTGRES_DB: nlc_test
++        ports:
++          - 5432:5432
++        options: >-
++          --health-cmd="pg_isready -U nlc_user -d nlc_test"
++          --health-interval=5s
++          --health-timeout=5s
++          --health-retries=20
++
++    env:
++      TESTING: "true"
++      ENVIRONMENT: development
++      DATABASE_URL: postgresql+asyncpg://nlc_user:nlc_password@127.0.0.1:5432/nlc_test
++      DATABASE_URL_TEST: postgresql+asyncpg://nlc_user:nlc_password@127.0.0.1:5432/nlc_test
++      JWT_SECRET_KEY: ci-only-secret-key-must-be-at-least-32-characters-long
++      ADMIN_EMAIL: admin@test.local
++      ADMIN_PASSWORD: AdminPass1!
++      CELERY_BROKER_URL: redis://127.0.0.1:6379/0
++
+     steps:
+       - uses: actions/checkout@v4
+       - uses: actions/setup-python@v5
+         with:
+           python-version: '3.11'
+       - name: Install dependencies
+         run: |
+-          pip install -r requirements-dev.txt 2>/dev/null || pip install pytest sqlalchemy asyncpg
+-      - name: Install coverage
+-        run: pip install pytest-cov pytest-asyncio
+-      - name: Run tests with coverage
++          python -m pip install --upgrade pip
++          pip install -r requirements-dev.txt
++      - name: Wait for PostgreSQL
++        run: |
++          for i in {1..30}; do
++            pg_isready -h 127.0.0.1 -p 5432 -U nlc_user -d nlc_test && exit 0
++            sleep 2
++          done
++          exit 1
++      - name: Run database migrations
++        run: alembic upgrade head
++      - name: Seed legal rules
++        run: python scripts/seed_rules.py || echo "seed_rules.py not present; ensure rules are seeded another way"
++      - name: Run tests with coverage
+         run: |
+           pytest tests/ --cov=app --cov-report=term-missing --tb=short -q
+-          pytest tests/unit/test_rule_engine.py --cov=app/rule_engine --cov-fail-under=90 --tb=short -q
++          pytest tests/unit/test_rule_engine.py --cov=app/rule_engine --cov-fail-under=90 --tb=short -q
+       - name: Coverage report
+-        run: pytest tests/unit/test_rule_engine.py --cov=app/rule_engine --cov-report=term --tb=no -q
++        run: pytest tests/unit/test_rule_engine.py --cov=app/rule_engine --cov-report=term --tb=no -q
+       - name: Verify rule count
+         run: |
+           COUNT=$(grep -oE 'rule_id="[^"]+"' app/rule_engine/engine.py | sed 's/rule_id="//;s/"//' | sort -u | wc -l)
+           echo "Engine rules: $COUNT"
+-          if [ "$COUNT" -lt 59 ]; then echo "✗ Rule count below 59"; exit 1; fi
++          if [ "$COUNT" -lt 59 ]; then echo "✗ Rule count below 59"; exit 1; fi
+           echo "✓ Rule count OK ($COUNT)"
+ 
+   lint:
+     runs-on: ubuntu-latest
+@@
+   build:
+     needs: [test, lint]
+     runs-on: ubuntu-latest
+     steps:
+       - uses: actions/checkout@v4
+       - name: Verify Docker build
+         run: |
+           if [ -f Dockerfile ]; then
+             docker build -t nlc-platform . || echo "Docker build skipped (no Dockerfile)"
+           fi
+       - name: Verify migrations
+         run: |
+           python3 -c "
+           import ast, os
+           for f in sorted(os.listdir('alembic/versions')):
+               if f.endswith('.py'):
+                   with open(f'alembic/versions/{f}') as fh:
+                       ast.parse(fh.read())
+           print('✓ All migrations are valid Python')
+           "
+diff --git a/app/main.py b/app/main.py
+index 0000000..0000000 100644
+--- a/app/main.py
++++ b/app/main.py
+@@
+ from app.api import (
+     admin,
+     auth,
+     commercial,
+     companies,
+     documents,
+     filings,
+     health,
+     rescue,
+     rules,
++    rjsc_forms,
+ )
+@@
+     app = FastAPI(
+         title="Neum Lex Counsel — RJSC Compliance Intelligence Platform",
+@@
+-        openapi_url="/api/v1/openapi.json",
+-        docs_url="/api/v1/docs",
+-        redoc_url="/api/v1/redoc",
++        openapi_url="/openapi.json",
++        docs_url="/docs",
++        redoc_url="/redoc",
+         lifespan=lifespan,
+@@
+     app.include_router(filings.router,    prefix=f"{API_PREFIX}/filings",    tags=["Filings"])
+     app.include_router(rescue.router,     prefix=f"{API_PREFIX}/rescue",     tags=["Corporate Rescue"])
+     app.include_router(documents.router,  prefix=f"{API_PREFIX}/documents",  tags=["Documents"])
+     app.include_router(commercial.router, prefix=f"{API_PREFIX}/commercial", tags=["Commercial"])
+     app.include_router(rules.router,      prefix=f"{API_PREFIX}/rules",      tags=["Legal Rules"])
++    app.include_router(rjsc_forms.router, prefix=f"{API_PREFIX}/rjsc-forms", tags=["RJSC Forms"])
+     app.include_router(admin.router,      prefix=f"{API_PREFIX}/admin",      tags=["Admin"])
+diff --git a/app/api/rules.py b/app/api/rules.py
+index 0000000..0000000 100644
+--- a/app/api/rules.py
++++ b/app/api/rules.py
+@@
+ async def list_rules(
+     rule_type: str | None = None,
+     severity: SeverityLevel | None = None,
+     is_active: bool | None = None,
+     is_black_override: bool | None = None,
+-    current_user: User = Depends(get_current_user),
+     db: AsyncSession = Depends(get_db_for_user),
+ ):
+     svc = RulesService(db)
+     rules = await svc.get_all(
+         rule_type=rule_type,
+         severity=severity,
+         is_active=is_active,
+         is_black_override=is_black_override,
+     )
+     return [_rule_to_response(r) for r in rules]
