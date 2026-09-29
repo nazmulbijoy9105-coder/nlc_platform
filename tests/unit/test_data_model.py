@@ -1,4 +1,4 @@
-"""Data model integrity tests."""
+"""Data model tests."""
 
 class TestDataModel:
     def test_all_models_have_tablename(self):

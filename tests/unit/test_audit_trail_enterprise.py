@@ -1,8 +1,6 @@
 """Audit Trail enterprise tests."""
 
 class TestAuditTrailEnterprise:
-    """Verify enterprise-grade audit trail."""
-
     def test_score_history_model_exists(self):
         from app.models.compliance import ComplianceScoreHistory
         assert ComplianceScoreHistory is not None

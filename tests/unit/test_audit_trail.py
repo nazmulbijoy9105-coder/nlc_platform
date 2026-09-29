@@ -1,4 +1,4 @@
-"""Audit trail integrity tests — Article 6 compliance."""
+"""Audit trail tests."""
 
 class TestAuditTrail:
     def test_activity_log_model_exists(self):
