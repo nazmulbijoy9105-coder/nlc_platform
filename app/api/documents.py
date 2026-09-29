@@ -175,7 +175,7 @@ async def list_all_documents(
         filters.append(Document.document_type == document_type)
 
     if is_client:
-        filters.append(Document.is_client_visible == True)
+        filters.append(Document.is_client_visible.is_(True))
 
     result = await db.execute(
         select(Document)

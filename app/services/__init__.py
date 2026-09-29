@@ -11,6 +11,7 @@ from app.services.filing_service import AGMService, AnnualReturnService, AuditSe
 from app.services.notification_service import ActivityService, NotificationService
 from app.services.people_service import DirectorService, ShareholderService, ShareTransferService
 from app.services.rescue_service import RescueService
+from app.services.rjsc_form_service import RJSCFormService
 from app.services.rules_service import RulesService
 from app.services.user_service import UserService
 

@@ -283,6 +283,7 @@ class ScoreBreakdown:
     exposure_band: ExposureBand
     revenue_tier: RevenueTier
     active_flag_count: int
+    coverage: float
     black_flag_count: int
     red_flag_count: int
     yellow_flag_count: int
