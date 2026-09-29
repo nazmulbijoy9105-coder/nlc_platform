@@ -1,10 +1,11 @@
-from fastapi import Request, APIRouter, Depends, HTTPException, Query
 import time
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import get_current_user
-from app.core.dependencies import get_db_for_user, get_db
+from app.core.dependencies import get_db, get_db_for_user
 
 router = APIRouter()
 
@@ -169,10 +170,13 @@ async def reactivate_user(user_id: str, admin=Depends(require_admin), db: AsyncS
     return {"id": user_id, "is_active": True}
 
 
-from fastapi.responses import StreamingResponse
-import io
 import csv
-from app.core.security import validate_password_strength, hash_password
+import io
+
+from fastapi.responses import StreamingResponse
+
+from app.core.security import hash_password, validate_password_strength
+
 
 @router.get("/activity-logs/export")
 async def export_activity_logs(
@@ -181,7 +185,7 @@ async def export_activity_logs(
     days: int = 30,
 ):
     """Export activity logs as CSV for auditors."""
-    from sqlalchemy import select, text
+    from sqlalchemy import text
     result = await db.execute(
         text(f"SELECT user_id, company_id, action, resource_type, resource_id, description, ip_address, logged_at FROM user_activity_logs WHERE logged_at >= NOW() - INTERVAL '{days} days' ORDER BY logged_at DESC LIMIT 10000")
     )

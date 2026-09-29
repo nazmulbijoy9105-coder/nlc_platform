@@ -17,16 +17,12 @@ Maps each RJSC form to its rule, section, and deadline:
 from __future__ import annotations
 
 from datetime import date
-from typing import TYPE_CHECKING
 
-from sqlalchemy import Date, Enum, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Date, ForeignKey, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
 from .database import Base
-from .mixins import UUIDPrimaryKeyMixin, TimestampMixin
-
-if TYPE_CHECKING:
-    pass
+from .mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class RJSCFormFiling(UUIDPrimaryKeyMixin, TimestampMixin, Base):

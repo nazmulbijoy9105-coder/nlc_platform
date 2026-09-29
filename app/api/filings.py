@@ -26,7 +26,6 @@ after update so the company score is always fresh.
 
 import uuid
 from datetime import date
-from typing import TYPE_CHECKING
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -47,11 +46,6 @@ from app.services.filing_service import (
     StatutoryRegisterService,
 )
 from app.services.notification_service import ActivityService
-
-if TYPE_CHECKING:
-    pass
-
-
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()

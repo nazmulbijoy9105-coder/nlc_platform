@@ -21,7 +21,6 @@ Governance notes:
 """
 
 
-from typing import TYPE_CHECKING
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -37,10 +36,6 @@ from app.models.enums import SeverityLevel
 from app.models.user import User
 from app.services.notification_service import ActivityService
 from app.services.rules_service import RulesService
-
-if TYPE_CHECKING:
-    pass
-
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()

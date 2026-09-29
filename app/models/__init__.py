@@ -76,10 +76,10 @@ from .infrastructure import (
 
 # ── People (Directors, Shareholders, Transfers) ──────────────────────
 from .people import Director, Shareholder, ShareTransfer
-from .rjsc_forms import RJSCFormFiling
 
 # ── Rescue (Plans + Steps) ───────────────────────────────────────────
 from .rescue import RescuePlan, RescueStep
+from .rjsc_forms import RJSCFormFiling
 
 # ── Rules (Legal Rules + Version History) ────────────────────────────
 from .rules import LegalRule, LegalRuleVersion

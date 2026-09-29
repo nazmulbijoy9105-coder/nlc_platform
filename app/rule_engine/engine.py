@@ -528,7 +528,7 @@ class NLCRuleEngine:
                     detail={"delay_days": delay}
                 ))
 
-        if c.first_auditor_appointed and c.agm_count > 0 and not c.auditor_reappointed_at_agm and not c.audit_in_progress and not c.last_agm_date is None:
+        if c.first_auditor_appointed and c.agm_count > 0 and not c.auditor_reappointed_at_agm and not c.audit_in_progress and c.last_agm_date is not None:
             fy_end = c.last_agm_date - timedelta(days=90)
             if self.today > fy_end + timedelta(days=120):
                  self._add_flag(ComplianceFlag(
@@ -842,8 +842,8 @@ class NLCRuleEngine:
     def _run_transfer_rules(self, c: CompanyProfile) -> None:
         for transfer in c.share_transfers:
             transfer_is_void = (
-                c.aoa_transfer_restriction 
-                and transfer.aoa_restriction_apply 
+                c.aoa_transfer_restriction
+                and transfer.aoa_restriction_apply
                 and not transfer.board_approval_obtained
             )
 

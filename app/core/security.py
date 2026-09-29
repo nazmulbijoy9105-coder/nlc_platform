@@ -6,6 +6,7 @@ import bcrypt
 from jose import JWTError, jwt
 
 from app.core.config import settings
+
 if len(settings.JWT_SECRET_KEY) < 32:
     raise RuntimeError("JWT_SECRET_KEY missing or shorter than 32 chars; refusing to start")
 
@@ -56,9 +57,9 @@ def decode_token(token: str, expected_type: str | None = None) -> dict | None:
 
 # TOTP & Temp Token Functions
 import base64
+import os
+
 from cryptography.fernet import Fernet
-import os
-import os
 
 
 def create_temp_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:

@@ -21,6 +21,7 @@ from __future__ import annotations
 import time
 import uuid
 from contextlib import asynccontextmanager
+from datetime import UTC
 from typing import TYPE_CHECKING
 
 import structlog
@@ -161,7 +162,7 @@ async def lifespan(app: FastAPI):
     # Auto-seed ILRMF rules if table is empty
     try:
         import json as _json
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         import sqlalchemy as _sa
 
@@ -172,7 +173,7 @@ async def lifespan(app: FastAPI):
             _cnt = await _sdb.execute(_sa.text("SELECT COUNT(*) FROM legal_rules WHERE is_active = TRUE"))
             _existing = _cnt.scalar()
             if _existing < EXPECTED_RULE_COUNT:
-                _now = datetime.now(timezone.utc)
+                _now = datetime.now(UTC)
                 for _r in ILRMF_RULES:
                     await _sdb.execute(_sa.text("""
                         INSERT INTO legal_rules (id, rule_id, rule_name, rule_type, statutory_basis,
@@ -417,6 +418,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 
 # ── Sentry Error Monitoring ──────────────────────────────────────
 import os as _os
+
 _sentry_dsn = _os.environ.get("SENTRY_DSN", "")
 if _sentry_dsn:
     import sentry_sdk

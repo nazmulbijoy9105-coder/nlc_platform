@@ -22,7 +22,6 @@ AI Constitution Article 3 compliance:
 
 
 import uuid
-from typing import TYPE_CHECKING
 
 import structlog
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
@@ -39,11 +38,6 @@ from app.models.enums import DocumentType
 from app.models.user import User
 from app.services.document_service import DocumentService, PromptTemplateService
 from app.services.notification_service import ActivityService
-
-if TYPE_CHECKING:
-    pass
-
-
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -208,6 +202,7 @@ async def list_templates(
     current_user: User = Depends(get_current_user),
 ):
     from sqlalchemy import select
+
     from app.models.documents import AIPromptTemplate
 
     stmt = select(AIPromptTemplate).where(AIPromptTemplate.is_active)

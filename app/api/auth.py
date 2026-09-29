@@ -1,28 +1,25 @@
 import os
-import datetime
-import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy import select
 
 from app.core.security import (
-    validate_password_strength,
-
     create_access_token,
     create_refresh_token,
     decode_token,
     decrypt_totp_secret,
     hash_password,
+    validate_password_strength,
     verify_password,
     verify_totp_code,
 )
 from app.models.database import get_db
-from app.services.notification_service import ActivityService
 from app.models.user import User
+from app.services.notification_service import ActivityService
 
 _limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
@@ -225,6 +222,7 @@ async def refresh_token(body: RefreshRequest, db=Depends(get_db)):
 async def logout(token: str = Depends(oauth2_scheme)):
     """Logout — revokes the access token via Redis blacklist."""
     import os
+
     import redis
     redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
     try:
@@ -288,9 +286,9 @@ async def signup(body: SignupRequest, db=Depends(get_db)):
     Available roles: LEGAL_STAFF, ADMIN_STAFF, CLIENT_DIRECTOR, CLIENT_VIEW_ONLY
     SUPER_ADMIN cannot be created via signup (only via setup-admin).
     """
-    from app.models.user import User
-    from app.models.enums import UserRole
     from app.core.security import hash_password, validate_password_strength
+    from app.models.enums import UserRole
+    from app.models.user import User
     
     if os.environ.get("ALLOW_PUBLIC_SIGNUP", "true").lower() != "true":
         raise HTTPException(status_code=403, detail="Signup is disabled")

@@ -6,7 +6,7 @@ from datetime import date, timedelta
 
 from sqlalchemy import select
 
-from app.models.rjsc_forms import RJSCFormFiling, RJSC_FORMS_REFERENCE
+from app.models.rjsc_forms import RJSC_FORMS_REFERENCE, RJSCFormFiling
 from app.services.base import BaseService
 
 
