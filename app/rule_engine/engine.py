@@ -373,6 +373,10 @@ class NLCRuleEngine:
         self._run_structural_change_rules(company)
         self._run_escalation_rules(company)
 
+        # Calculate coverage
+        total_possible = 75  # Total rules in engine
+        self._coverage = len(self._flags) / total_possible if total_possible > 0 else 0.0
+
         stage = self._determine_lifecycle_stage(company)
         score = self._calculate_score(self._flags, company)
         rescue = self._generate_rescue_sequence(company, self._flags, score)
@@ -1445,8 +1449,12 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     # SCORING ENGINE
     # ───────────────────────────────────────────────────────────────────
-    def _score_to_band(self, raw: int, *, force_black: bool = False) -> str:
-        """Map a raw score to a risk band string."""
+    def _score_to_band(self, raw: int, *, force_black: bool = False, coverage: float = 1.0) -> str:
+        """Map a raw score to a risk band string.
+        coverage = fraction of rules that had data to evaluate (0.0 to 1.0).
+        Below 0.5 → NOT_EVALUATED regardless of score."""
+        if coverage < 0.5:
+            return "NOT_EVALUATED"
         if force_black or raw <= 29:
             return "BLACK"
         if raw <= 49:
@@ -1512,6 +1520,7 @@ class NLCRuleEngine:
             exposure_band=exposure,
             revenue_tier=REVENUE_TIER_MAP[band],
             active_flag_count=len(active),
+            coverage=len(active) / 75,
             black_flag_count=len([f for f in active if f.severity == Severity.BLACK]),
             red_flag_count=len([f for f in active if f.severity == Severity.RED]),
             yellow_flag_count=len([f for f in active if f.severity == Severity.YELLOW]),

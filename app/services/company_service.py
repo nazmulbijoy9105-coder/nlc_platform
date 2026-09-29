@@ -311,7 +311,7 @@ class CompanyService(BaseService[Company]):
         latest_agm = agms_sorted[0] if agms_sorted else None
         agm_count = len([a for a in company.agms if a.agm_held])
         if agm_count == 0 and company.last_agm_date:
-            agm_count = 1  # Has held AGM based on last_agm_date
+            agm_count = 1  # Company has held at least one AGM
         if agm_count == 0 and company.last_agm_date:
             agm_count = 1
         if agm_count == 0 and company.last_agm_date:
@@ -363,7 +363,7 @@ class CompanyService(BaseService[Company]):
             r.register_type for r in company.statutory_registers if r.is_maintained
         ] or ["members", "directors", "charges", "transfers", "debentures", "minutes_agm", "minutes_board"]
 
-        return {
+        profile = {
             # Identity
             "company_id":   str(company.id),
             "company_name": company.company_name,
@@ -386,28 +386,28 @@ class CompanyService(BaseService[Company]):
 
             # Audit State
             "first_auditor_appointed":    bool(company.first_auditor_appointed) if company.first_auditor_appointed is not None else True,
-            "audit_complete":             latest_audit.audit_complete if latest_audit else True,
+            "audit_complete":             latest_audit.audit_complete if latest_audit else None,
             "last_audit_signed_date":     company.last_audit_signed_date,
             "audit_in_progress":          False,
 
             # Annual Return State
             "last_return_filed_year":         company.last_return_filed_year,
             "unfiled_returns_count":          unfiled_returns,
-            "annual_return_filed":            (latest_return is not None and not latest_return.is_default) if latest_return else True,
-            "annual_return_content_complete": latest_return.is_complete if latest_return else True,
+            "annual_return_filed":            (latest_return is not None and not latest_return.is_default) if latest_return else None,
+            "annual_return_content_complete": latest_return.is_complete if latest_return else None,
             "annual_return_filed_date":       latest_return.filed_date if latest_return else None,
 
             # People
             "director_changes": director_changes,
             "shareholder_change_date": None,  # Would come from company_user_access events
-            "form_xv_filed": True,  # RJSC-only: assume filed            # Placeholder — implement from events
+            "form_xv_filed": None,  # Not wired
 
             # Share Transfers
             "share_transfers": share_transfers,
 
             # Office
             "registered_office_change_date": None,
-            "form_vi_filed": True,  # RJSC-only: assume filed
+            "form_vi_filed": None,  # Not wired
 
             # Corporate structure
             "aoa_transfer_restriction": True,
@@ -423,18 +423,20 @@ class CompanyService(BaseService[Company]):
             "share_certificates_issued": all(s.share_certificate_issued for s in company.shareholders) if company.shareholders else True,
 
             # Capital
+            "authorized_capital_bdt":       float(company.authorized_capital_bdt) if company.authorized_capital_bdt else 0.0,
+            "paid_up_capital_bdt":          float(company.paid_up_capital_bdt) if company.paid_up_capital_bdt else 0.0,
             "capital_increase_date":       None,
             "capital_increase_resolution": getattr(company, 'capital_increase_resolution', False),
             "charges":                     [],
-            "form_viii_filed":             True,
+            # form_viii_filed removed — not a CompanyProfile field
 
             # Tax & director fields — prevent false positives
-            "tin_obtained":            True,  # RJSC-only: skip tax rules
+            "tin_obtained":            bool(getattr(company, "tin_number", None))
             "tin_number":              company.tin_number,
-            "vat_registered":          True,  # RJSC-only: skip VAT rules
+            "vat_registered":          bool(getattr(company, "vat_number", None))
             "vat_number":              getattr(company, "vat_number", None),
             # Tax Compliance v3
-            "trade_license_obtained":       True,  # RJSC-only: skip trade license
+            "trade_license_obtained":       bool(getattr(company, "trade_license_obtained", None))
             "trade_license_expiry":         company.trade_license_expiry,
             "tax_return_filed_for_current_fy": company.tax_return_filed_for_current_fy,
             "advance_tax_q1_paid":          company.advance_tax_q1_paid,
@@ -455,3 +457,9 @@ class CompanyService(BaseService[Company]):
             "penalty_notices_resolved":     company.penalty_notices_resolved,
             "current_director_count":  max(2, len([d for d in company.directors if d.director_status.value == "ACTIVE"])),
         }
+
+        # Capital: set only when BOTH are recorded; a single NULL must not become 0.0
+        if company.authorized_capital_bdt is not None and company.paid_up_capital_bdt is not None:
+            profile["authorized_capital_bdt"] = float(company.authorized_capital_bdt)
+            profile["paid_up_capital_bdt"] = float(company.paid_up_capital_bdt)
+        return profile
