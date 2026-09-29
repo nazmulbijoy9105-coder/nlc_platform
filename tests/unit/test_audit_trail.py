@@ -16,16 +16,12 @@ class TestAuditTrail:
         except Exception: assert True
 
     def test_retention_period_configured(self):
-        try:
-            from app.worker.tasks import cleanup_old_activity_logs
-            assert cleanup_old_activity_logs is not None
-        except Exception: assert True
+        from app.worker.tasks import cleanup_old_activity_logs
+        assert cleanup_old_activity_logs is not None
 
     def test_compliance_event_model_exists(self):
-        try:
-            from app.models.compliance import ComplianceEvent
-            assert ComplianceEvent is not None
-        except Exception: assert True
+        from app.models.compliance import ComplianceEvent
+        assert ComplianceEvent is not None
 
     def test_rule_version_model_exists(self):
         try:

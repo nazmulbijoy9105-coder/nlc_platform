@@ -6,6 +6,8 @@ import bcrypt
 from jose import JWTError, jwt
 
 from app.core.config import settings
+if len(settings.JWT_SECRET_KEY) < 32:
+    raise RuntimeError("JWT_SECRET_KEY missing or shorter than 32 chars; refusing to start")
 
 
 def validate_password_strength(password: str) -> tuple[bool, str]:
@@ -78,7 +80,7 @@ def _get_fernet():
         if not key:
             # Fallback: derive from JWT secret (not ideal, but better than base64)
             import hashlib
-            jwt_secret = os.environ.get("JWT_SECRET_KEY", "fallback-dev-key-change-me")
+            jwt_secret = os.environ["JWT_SECRET_KEY"]
             key = hashlib.sha256(jwt_secret.encode()).digest()
             key = base64.urlsafe_b64encode(key)
         _fernet_instance = Fernet(key if isinstance(key, bytes) else key.encode())

@@ -4,28 +4,20 @@ class TestAuditTrailEnterprise:
     """Verify enterprise-grade audit trail."""
 
     def test_score_history_model_exists(self):
-        try:
-            from app.models.compliance import ComplianceScoreHistory
-            assert ComplianceScoreHistory is not None
-        except Exception: assert True
+        from app.models.compliance import ComplianceScoreHistory
+        assert ComplianceScoreHistory is not None
 
     def test_compliance_event_model_exists(self):
-        try:
-            from app.models.compliance import ComplianceEvent
-            assert ComplianceEvent is not None
-        except Exception: assert True
+        from app.models.compliance import ComplianceEvent
+        assert ComplianceEvent is not None
 
     def test_rule_version_model_exists(self):
-        try:
-            from app.models.rules import LegalRuleVersion
-            assert LegalRuleVersion is not None
-        except Exception: assert True
+        from app.models.rules import LegalRuleVersion
+        assert LegalRuleVersion is not None
 
     def test_activity_log_model_exists(self):
-        try:
-            from app.models.infrastructure import UserActivityLog
-            assert UserActivityLog is not None
-        except Exception: assert True
+        from app.models.infrastructure import UserActivityLog
+        assert UserActivityLog is not None
 
     def test_activity_log_has_action_field(self):
         try:
@@ -35,10 +27,8 @@ class TestAuditTrailEnterprise:
         except Exception: assert True
 
     def test_retention_cleanup_task_exists(self):
-        try:
-            from app.worker.tasks import cleanup_old_activity_logs
-            assert cleanup_old_activity_logs is not None
-        except Exception: assert True
+        from app.worker.tasks import cleanup_old_activity_logs
+        assert cleanup_old_activity_logs is not None
 
     def test_score_history_has_unique_constraint(self):
         try:

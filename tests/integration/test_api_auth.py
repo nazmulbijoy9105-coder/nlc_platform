@@ -79,6 +79,8 @@ class TestAPISecurity:
                 txt = f.read_text(encoding="utf-8", errors="ignore")
                 hits += [f"{b} in {f}" for b in bad if b in txt]
         assert not hits, hits
+
+
 class TestAPIResponseFormat:
     """Verify API response consistency."""
 

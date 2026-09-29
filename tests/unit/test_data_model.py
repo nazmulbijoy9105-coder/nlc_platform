@@ -55,31 +55,21 @@ class TestDataModel:
         except Exception: assert True
 
     def test_company_has_compliance_score(self):
-        try:
-            from app.models.company import Company
-            assert hasattr(Company, 'current_compliance_score')
-        except Exception: assert True
+        from app.models.company import Company
+        assert hasattr(Company, 'current_compliance_score')
 
     def test_company_has_risk_band(self):
-        try:
-            from app.models.company import Company
-            assert hasattr(Company, 'current_risk_band')
-        except Exception: assert True
+        from app.models.company import Company
+        assert hasattr(Company, 'current_risk_band')
 
     def test_compliance_flag_has_severity(self):
-        try:
-            from app.models.compliance import ComplianceFlag
-            assert hasattr(ComplianceFlag, 'severity')
-        except Exception: assert True
+        from app.models.compliance import ComplianceFlag
+        assert hasattr(ComplianceFlag, 'severity')
 
     def test_compliance_flag_has_score_impact(self):
-        try:
-            from app.models.compliance import ComplianceFlag
-            assert hasattr(ComplianceFlag, 'score_impact')
-        except Exception: assert True
+        from app.models.compliance import ComplianceFlag
+        assert hasattr(ComplianceFlag, 'score_impact')
 
     def test_rescue_plan_has_steps(self):
-        try:
-            from app.models.rescue import RescuePlan
-            assert hasattr(RescuePlan, 'steps')
-        except Exception: assert True
+        from app.models.rescue import RescuePlan
+        assert hasattr(RescuePlan, 'steps')

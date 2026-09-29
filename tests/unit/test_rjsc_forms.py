@@ -2,10 +2,8 @@
 
 class TestRJSCForms:
     def test_form_reference_has_all_forms(self):
-        try:
-            from app.models.rjsc_forms import RJSC_FORMS_REFERENCE
-            assert len(RJSC_FORMS_REFERENCE) == 13
-        except Exception: assert True
+        from app.models.rjsc_forms import RJSC_FORMS_REFERENCE
+        assert len(RJSC_FORMS_REFERENCE) == 13
 
     def test_form_reference_includes_key_forms(self):
         try:
@@ -31,10 +29,8 @@ class TestRJSCForms:
         except Exception: assert True
 
     def test_model_has_correct_tablename(self):
-        try:
-            from app.models.rjsc_forms import RJSCFormFiling
-            assert RJSCFormFiling.__tablename__ == "rjsc_form_filings"
-        except Exception: assert True
+        from app.models.rjsc_forms import RJSCFormFiling
+        assert RJSCFormFiling.__tablename__ == "rjsc_form_filings"
 
     def test_model_has_required_fields(self):
         try:

@@ -2,22 +2,16 @@
 
 class TestAIGovernance:
     def test_human_approval_required(self):
-        try:
-            from app.models.documents import Document
-            assert hasattr(Document, 'human_approved') or hasattr(Document, 'is_reviewed')
-        except Exception: assert True
+        from app.models.documents import Document
+        assert hasattr(Document, 'human_approved') or hasattr(Document, 'is_reviewed')
 
     def test_review_queue_enforced(self):
-        try:
-            from app.models.documents import Document
-            assert hasattr(Document, 'in_review_queue') or True
-        except Exception: assert True
+        from app.models.documents import Document
+        assert hasattr(Document, 'in_review_queue') or True
 
     def test_ai_output_log_exists(self):
-        try:
-            from app.models.documents import AIOutputLog
-            assert AIOutputLog is not None
-        except Exception: assert True
+        from app.models.documents import AIOutputLog
+        assert AIOutputLog is not None
 
     def test_rule_engine_no_ai_imports(self):
         try:
@@ -28,10 +22,8 @@ class TestAIGovernance:
         except Exception: assert True
 
     def test_prompt_templates_exist(self):
-        try:
-            from app.models.documents import AIPromptTemplate
-            assert hasattr(AIPromptTemplate, 'is_active')
-        except Exception: assert True
+        from app.models.documents import AIPromptTemplate
+        assert hasattr(AIPromptTemplate, 'is_active')
 
     def test_pii_fields_list_exists(self):
         try:

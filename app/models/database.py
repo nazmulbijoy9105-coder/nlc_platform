@@ -29,6 +29,8 @@ if TYPE_CHECKING:
 # Render injects postgres:// but asyncpg requires postgresql+asyncpg://
 # ══════════════════════════════════════════════════════════════════════
 DATABASE_URL = os.environ.get('DATABASE_URL', '')
+if not DATABASE_URL:
+    raise RuntimeError('DATABASE_URL is empty or unset; refusing to start')
 if DATABASE_URL.startswith('postgres://'):
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql+asyncpg://', 1)
 elif DATABASE_URL.startswith('postgresql://'):
