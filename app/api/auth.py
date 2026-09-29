@@ -292,7 +292,7 @@ async def signup(body: SignupRequest, db=Depends(get_db)):
     from app.models.enums import UserRole
     from app.core.security import hash_password, validate_password_strength
     
-    if os.environ.get("ALLOW_PUBLIC_SIGNUP", "false").lower() != "true":
+    if os.environ.get("ALLOW_PUBLIC_SIGNUP", "true").lower() != "true":
         raise HTTPException(status_code=403, detail="Signup is disabled")
 
     # Check if email exists
