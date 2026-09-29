@@ -34,6 +34,5 @@ __all__ = [
     "ShareholderService",
     "TaskService",
     "UserService",
+    "RJSCFormService",
 ]
-
-"RJSCFormService",
