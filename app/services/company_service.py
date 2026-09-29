@@ -431,12 +431,12 @@ class CompanyService(BaseService[Company]):
             # form_viii_filed removed — not a CompanyProfile field
 
             # Tax & director fields — prevent false positives
-            "tin_obtained":            bool(getattr(company, "tin_number", None))
+            "tin_obtained":            bool(getattr(company, "tin_number", None)),
             "tin_number":              company.tin_number,
-            "vat_registered":          bool(getattr(company, "vat_number", None))
+            "vat_registered":          bool(getattr(company, "vat_number", None)),
             "vat_number":              getattr(company, "vat_number", None),
             # Tax Compliance v3
-            "trade_license_obtained":       bool(getattr(company, "trade_license_obtained", None))
+            "trade_license_obtained":       bool(getattr(company, "trade_license_obtained", None)),
             "trade_license_expiry":         company.trade_license_expiry,
             "tax_return_filed_for_current_fy": company.tax_return_filed_for_current_fy,
             "advance_tax_q1_paid":          company.advance_tax_q1_paid,
