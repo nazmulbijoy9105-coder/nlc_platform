@@ -107,6 +107,12 @@ async def create_user(
     valid_roles = {r.value for r in UserRole}
     if body.role not in valid_roles:
         raise HTTPException(status_code=422, detail=f"Invalid role. Must be one of: {sorted(valid_roles)}")
+    caller = getattr(admin, "role", None)
+    caller = str(getattr(caller, "value", caller))
+    if body.role == "SUPER_ADMIN":
+        raise HTTPException(status_code=403, detail="SUPER_ADMIN cannot be created via API")
+    if body.role == "ADMIN_STAFF" and caller != "SUPER_ADMIN":
+        raise HTTPException(status_code=403, detail="Only SUPER_ADMIN can create admin staff")
     existing = (await db.execute(select(User).where(User.email == body.email))).scalar_one_or_none()
     if existing:
         raise HTTPException(status_code=409, detail="Email already registered")

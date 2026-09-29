@@ -237,22 +237,6 @@ async def logout(token: str = Depends(oauth2_scheme)):
         pass  # Redis might not be available — token still works until expiry
     return {"status": "logged_out"}
 
-@router.post("/setup-admin", include_in_schema=False)
-async def setup_admin(db=Depends(get_db)):
-    """One-time admin setup. Delete after use."""
-    existing = await db.execute(select(User).where(User.email == "admin@neumlexcounsel.com"))
-    if existing.scalar_one_or_none():
-        return {"status": "already exists"}
-        user = User(id=uuid.uuid4(), email="admin@neumlexcounsel.com",
-        password_hash=hash_password(os.environ.get("ADMIN_PASSWORD", "NLC@Admin2026!")), full_name="NLC Super Admin",
-        role="SUPER_ADMIN", is_active=True, requires_2fa=False,
-        created_at=datetime.datetime.utcnow(), updated_at=datetime.datetime.utcnow())
-    return {"status": "created", "email": "admin@neumlexcounsel.com"}
-    db.add(user)
-    await db.commit()
-    return {"status": "created", "email": "admin@neumlexcounsel.com"}
-
-
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
@@ -307,11 +291,9 @@ async def signup(body: SignupRequest, db=Depends(get_db)):
     from app.models.enums import UserRole
     from app.core.security import hash_password, validate_password_strength
     
-    # Validate role
-    valid_roles = {"LEGAL_STAFF", "ADMIN_STAFF", "CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"}
-    if body.role not in valid_roles:
-        raise HTTPException(status_code=422, detail=f"Invalid role. Must be one of: {sorted(valid_roles)}")
-    
+    if os.environ.get("ALLOW_PUBLIC_SIGNUP", "false").lower() != "true":
+        raise HTTPException(status_code=403, detail="Signup is disabled")
+
     # Check if email exists
     existing = await db.execute(select(User).where(User.email == body.email.lower().strip()))
     if existing.scalar_one_or_none():
@@ -326,7 +308,7 @@ async def signup(body: SignupRequest, db=Depends(get_db)):
     user = User(
         email=body.email.lower().strip(),
         full_name=body.full_name,
-        role=UserRole(body.role),
+        role=UserRole.CLIENT_VIEW_ONLY,
         password_hash=hash_password(body.password),
         is_active=True,
     )
