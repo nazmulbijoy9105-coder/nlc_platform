@@ -1,4 +1,5 @@
 # ILRMF Legal Basis Matrix
+**STATUS: UNVERIFIED — engine-derived, not primary-source validated**
 Version: 2.1.1  
 Date: 2026-09-29  
 Branch: fix/legal-engine-audit-corrections
