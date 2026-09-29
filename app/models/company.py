@@ -269,6 +269,7 @@ class CompanyUserAccess(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     can_edit: Mapped[bool] = mapped_column(Boolean, default=False)
     can_view_financials: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
     granted_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), nullable=True
     )
