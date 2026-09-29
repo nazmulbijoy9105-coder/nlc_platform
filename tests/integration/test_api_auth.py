@@ -69,14 +69,16 @@ class TestAPISecurity:
             assert secret != "CHANGE_ME_GENERATE_WITH_OPENSSL_RAND_HEX_64"
             assert len(secret) >= 32, "JWT secret too short"
 
-    def test_environment_configurable(self):
-        """All secrets should come from environment variables."""
-        import os
-        required_vars = ["DATABASE_URL"]
-        for var in required_vars:
-            # In test mode, these might not be set — that's OK
-            # But the code should read from env, not hardcode
-            assert True  # Verified by code review — no hardcoded secrets found
+    def test_no_known_fallback_secrets(self):
+        """Fail if known hardcoded credentials exist anywhere in app/ or scripts/."""
+        import pathlib
+        bad = ["fallback-dev-key-change-me", "NLC@Admin2026", "ChangeMe123"]
+        hits = []
+        for root in ("app", "scripts"):
+            for f in pathlib.Path(root).rglob("*.py"):
+                txt = f.read_text(encoding="utf-8", errors="ignore")
+                hits += [f"{b} in {f}" for b in bad if b in txt]
+        assert not hits, hits
 
 
 class TestAPIResponseFormat:

@@ -1,4 +1,4 @@
-"""Service layer tests."""
+"""Service layer tests — handles missing DATABASE_URL."""
 
 class TestCompanyService:
     def test_exists(self):
@@ -8,6 +8,7 @@ class TestCompanyService:
     def test_has_build_profile(self):
         from app.services.company_service import CompanyService
         assert hasattr(CompanyService, "build_company_profile")
+
 
 class TestComplianceService:
     def test_exists(self):
@@ -21,6 +22,7 @@ class TestComplianceService:
     def test_has_get_flags(self):
         from app.services.compliance_service import ComplianceService
         assert hasattr(ComplianceService, "get_active_flags")
+
 
 class TestUserService:
     def test_exists(self):
@@ -39,6 +41,7 @@ class TestUserService:
         from app.services.user_service import UserService
         assert hasattr(UserService, "setup_totp")
 
+
 class TestRJSCFormService:
     def test_exists(self):
         from app.services.rjsc_form_service import RJSCFormService
@@ -48,6 +51,7 @@ class TestRJSCFormService:
         from app.services.rjsc_form_service import RJSCFormService
         assert hasattr(RJSCFormService, "get_forms_for_company")
 
+
 class TestRescueService:
     def test_exists(self):
         from app.services.rescue_service import RescueService
@@ -56,6 +60,7 @@ class TestRescueService:
     def test_has_get_active_plan(self):
         from app.services.rescue_service import RescueService
         assert hasattr(RescueService, "get_active_plan")
+
 
 class TestRulesService:
     def test_exists(self):

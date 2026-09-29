@@ -57,22 +57,20 @@ os.environ.setdefault("LOG_LEVEL", "WARNING")
 # ---------------------------------------------------------------------------
 
 def _get_test_db_url() -> str:
-    """
-    Derive test database URL.
-    Priority: DATABASE_URL_TEST env var → DATABASE_URL with _test suffix.
-    """
-    explicit = os.getenv("DATABASE_URL_TEST")
-    if explicit:
-        return explicit
-    base = os.getenv(
-        "DATABASE_URL",
-        "postgresql+asyncpg://nlc_user:nlc_password@localhost:5432/nlc_db",
+    """Test DB URL. Never derived from DATABASE_URL (it may be production)."""
+    return os.getenv(
+        "DATABASE_URL_TEST",
+        "postgresql+asyncpg://nlc_user:nlc_password@localhost:5432/nlc_test",
     )
-    # Replace database name with test database
-    return base.rsplit("/", 1)[0] + "/nlc_test"
 
 
 TEST_DATABASE_URL = _get_test_db_url()
+
+from sqlalchemy.engine import make_url as _make_url
+assert _make_url(TEST_DATABASE_URL).host in ("localhost", "127.0.0.1"), \
+    "tests must run against a local database"
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+os.environ.setdefault("JWT_SECRET_KEY", "ci-only-" + "x" * 40)
 
 
 # ---------------------------------------------------------------------------
