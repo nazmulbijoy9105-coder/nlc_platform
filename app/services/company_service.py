@@ -431,9 +431,9 @@ class CompanyService(BaseService[Company]):
             # form_viii_filed removed — not a CompanyProfile field
 
             # Tax & director fields — prevent false positives
-            "tin_obtained":            True if company.tin_number else None,
+            "tin_obtained":            True if getattr(company, "tin_number", None) else None,
             "tin_number":              company.tin_number,
-            "vat_registered":          True if company.vat_number else None,
+            "vat_registered":          True if getattr(company, "vat_number", None) else None,
             "vat_number":              getattr(company, "vat_number", None),
             # Tax Compliance v3
             "trade_license_obtained":       True if getattr(company, "trade_license_obtained", None) else None,
