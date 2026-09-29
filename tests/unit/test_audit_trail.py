@@ -2,18 +2,14 @@
 
 class TestAuditTrail:
     def test_activity_log_model_exists(self):
-        try:
-            from app.models.infrastructure import UserActivityLog
-            assert UserActivityLog is not None
-            assert UserActivityLog.__tablename__ == 'user_activity_logs'
-        except Exception: assert True
+        from app.models.infrastructure import UserActivityLog
+        assert UserActivityLog is not None
+        assert UserActivityLog.__tablename__ == 'user_activity_logs'
 
     def test_score_history_model_exists(self):
-        try:
-            from app.models.compliance import ComplianceScoreHistory
-            assert ComplianceScoreHistory is not None
-            assert hasattr(ComplianceScoreHistory, '__tablename__')
-        except Exception: assert True
+        from app.models.compliance import ComplianceScoreHistory
+        assert ComplianceScoreHistory is not None
+        assert hasattr(ComplianceScoreHistory, '__tablename__')
 
     def test_retention_period_configured(self):
         from app.worker.tasks import cleanup_old_activity_logs
@@ -24,24 +20,18 @@ class TestAuditTrail:
         assert ComplianceEvent is not None
 
     def test_rule_version_model_exists(self):
-        try:
-            from app.models.rules import LegalRuleVersion
-            assert LegalRuleVersion is not None
-            assert hasattr(LegalRuleVersion, '__tablename__')
-        except Exception: assert True
+        from app.models.rules import LegalRuleVersion
+        assert LegalRuleVersion is not None
+        assert hasattr(LegalRuleVersion, '__tablename__')
 
     def test_activity_log_has_required_fields(self):
-        try:
-            from app.models.infrastructure import UserActivityLog
-            cols = {c.name for c in UserActivityLog.__table__.columns}
-            assert 'action' in cols
-            assert 'user_id' in cols or 'logged_at' in cols
-        except Exception: assert True
+        from app.models.infrastructure import UserActivityLog
+        cols = {c.name for c in UserActivityLog.__table__.columns}
+        assert 'action' in cols
+        assert 'user_id' in cols or 'logged_at' in cols
 
     def test_no_delete_methods_on_activity_log(self):
-        try:
-            from app.services.notification_service import ActivityService
-            methods = [m for m in dir(ActivityService) if not m.startswith('_')]
-            delete_methods = [m for m in methods if 'delete' in m.lower() or 'remove' in m.lower()]
-            assert len(delete_methods) == 0
-        except Exception: assert True
+        from app.services.notification_service import ActivityService
+        methods = [m for m in dir(ActivityService) if not m.startswith('_')]
+        delete_methods = [m for m in methods if 'delete' in m.lower() or 'remove' in m.lower()]
+        assert len(delete_methods) == 0

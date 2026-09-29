@@ -99,7 +99,8 @@ class TestNoHardcodedSecrets:
                 with open(fname, encoding="utf-8") as f:
                     content = f.read()
                 assert "NLC@Admin2026" not in content, f"Hardcoded password in {fname}"
-        except Exception: assert True
+        except Exception:
+            pass
 
     def test_password_change_endpoint_exists(self):
         with open("app/api/auth.py", encoding="utf-8") as f:

@@ -14,28 +14,26 @@ class TestAIGovernance:
         assert AIOutputLog is not None
 
     def test_rule_engine_no_ai_imports(self):
-        try:
-            with open("app/rule_engine/engine.py", encoding="utf-8") as f:
-                content = f.read()
-            for imp in ["import openai", "import anthropic", "from langchain"]:
-                assert imp not in content
-        except Exception: assert True
+        with open("app/rule_engine/engine.py", encoding="utf-8") as f:
+            content = f.read()
+        for imp in ["import openai", "import anthropic", "from langchain"]:
+            assert imp not in content
 
     def test_prompt_templates_exist(self):
         from app.models.documents import AIPromptTemplate
         assert hasattr(AIPromptTemplate, 'is_active')
 
     def test_pii_fields_list_exists(self):
-        try:
-            import os
-            found = False
-            for root, dirs, files in os.walk("app"):
-                dirs[:] = [d for d in dirs if d != "__pycache__"]
-                for fname in files:
-                    if fname.endswith(".py"):
-                        with open(os.path.join(root, fname), encoding="utf-8", errors="ignore") as f:
-                            if "nid_number" in f.read():
-                                found = True; break
-                if found: break
-            assert found
-        except Exception: assert True
+        import os
+        found = False
+        for root, dirs, files in os.walk("app"):
+            dirs[:] = [d for d in dirs if d != "__pycache__"]
+            for fname in files:
+                if fname.endswith(".py"):
+                    with open(os.path.join(root, fname), encoding="utf-8", errors="ignore") as f:
+                        if "nid_number" in f.read():
+                            found = True
+                            break
+            if found:
+                break
+        assert found
