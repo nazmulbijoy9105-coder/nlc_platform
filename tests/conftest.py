@@ -333,6 +333,9 @@ def build_profile():
             "advance_tax_q4_paid": True,
             "vat_registered": True,
             "vat_annual_return_filed_for_fy": True,
+            "tin_number": "TIN-TEST-001",
+            "trade_license_expiry": today + timedelta(days=200),
+            "last_tax_return_filed_year": today.year - 1,
             "last_allotment_date": None,
             "share_certificates_issued": True,
             # Capital

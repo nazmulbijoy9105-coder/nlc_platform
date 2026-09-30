@@ -347,6 +347,17 @@ BIDA_ADVANTAGE_THRESHOLD_USD = 100000
 _VAT_TURNOVER_THRESHOLD_BDT = 3000000
 
 
+_COVERAGE_FIELDS = (
+    "last_agm_date", "last_audit_signed_date", "last_return_filed_year",
+    "tin_number", "trade_license_expiry", "last_tax_return_filed_year",
+)
+
+
+def _input_coverage(company) -> float:
+    known = sum(1 for n in _COVERAGE_FIELDS if getattr(company, n, None) not in (None, ""))
+    return known / len(_COVERAGE_FIELDS)
+
+
 class NLCRuleEngine:
     _ESC_RULE_IDS: frozenset = frozenset({"ESC-001", "ESC-002", "ESC-003"})
 
@@ -1457,9 +1468,11 @@ class NLCRuleEngine:
         """Map a raw score to a risk band string.
         coverage = fraction of rules that had data to evaluate (0.0 to 1.0).
         Below 0.5 → NOT_EVALUATED regardless of score."""
+        if force_black:
+            return "BLACK"
         if coverage < 0.5:
             return "NOT_EVALUATED"
-        if force_black or raw <= 29:
+        if raw <= 29:
             return "BLACK"
         if raw <= 49:
             return "RED"
@@ -1496,7 +1509,8 @@ class NLCRuleEngine:
             reason = f"BLACK override: {', '.join(f.rule_id for f in critical)}"
             final = 0
 
-        band = Severity(self._score_to_band(final, force_black=bool(critical), coverage=len([f for f in __import__("dataclasses").fields(type(company)) if getattr(company, f.name, None) is not None]) / len(__import__("dataclasses").fields(type(company)))))
+        coverage = _input_coverage(company)
+        band = Severity(self._score_to_band(final, force_black=bool(critical), coverage=coverage))
 
         if band in (Severity.GREEN, Severity.YELLOW, Severity.NOT_EVALUATED): exposure = ExposureBand.LOW
         elif band == Severity.RED: exposure = ExposureBand.HIGH
@@ -1524,7 +1538,7 @@ class NLCRuleEngine:
             exposure_band=exposure,
             revenue_tier=REVENUE_TIER_MAP[band],
             active_flag_count=len(active),
-            coverage=len([f for f in __import__("dataclasses").fields(type(company)) if getattr(company, f.name, None) is not None]) / len(__import__("dataclasses").fields(type(company))),
+            coverage=coverage,
             black_flag_count=len([f for f in active if f.severity == Severity.BLACK]),
             red_flag_count=len([f for f in active if f.severity == Severity.RED]),
             yellow_flag_count=len([f for f in active if f.severity == Severity.YELLOW]),
