@@ -281,9 +281,6 @@ async def evaluate_company(company_id: uuid.UUID, request: Request, current_user
     company = await company_svc.get_by_id_or_404(company_id)
     result = await compliance_svc.evaluate_company(company_id=company_id, trigger_source="API_MANUAL")
     
-    # Update last_evaluated_at timestamp
-    company.last_evaluated_at = datetime.now()
-    await db.commit()
     await db.refresh(company)
     await activity.log(action="COMPLIANCE_EVALUATED", resource_type="company", resource_id=str(company_id), description=f"Evaluation: Score={result['score']}, Band={result['risk_band']}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     flag_summary = await compliance_svc.get_flag_summary(company_id)

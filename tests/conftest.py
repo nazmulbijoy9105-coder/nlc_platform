@@ -331,6 +331,8 @@ def build_profile():
             "advance_tax_q2_paid": True,
             "advance_tax_q3_paid": True,
             "advance_tax_q4_paid": True,
+            "vat_registered": True,
+            "vat_annual_return_filed_for_fy": True,
             "last_allotment_date": None,
             "share_certificates_issued": True,
             # Capital
