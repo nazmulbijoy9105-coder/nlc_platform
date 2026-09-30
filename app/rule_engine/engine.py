@@ -349,7 +349,6 @@ _VAT_TURNOVER_THRESHOLD_BDT = 3000000
 
 _COVERAGE_FIELDS = (
     "last_agm_date", "last_audit_signed_date", "last_return_filed_year",
-    "tin_number", "trade_license_expiry", "last_tax_return_filed_year",
 )
 
 
