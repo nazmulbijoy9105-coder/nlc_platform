@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     # Admin
     ADMIN_EMAIL: str = os.getenv("ADMIN_EMAIL", "")
     ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "")
+    AUDIT_RETENTION_DAYS: int = int(os.getenv("AUDIT_RETENTION_DAYS", "365"))
     ADMIN_FIRST_NAME: str = os.getenv("ADMIN_FIRST_NAME", "System")
     ADMIN_LAST_NAME: str = os.getenv("ADMIN_LAST_NAME", "Admin")
 
