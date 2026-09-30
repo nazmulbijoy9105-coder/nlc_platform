@@ -518,14 +518,17 @@ import os as _os
 
 _sentry_dsn = _os.environ.get("SENTRY_DSN", "")
 if _sentry_dsn:
-    import sentry_sdk
-    sentry_sdk.init(
-        dsn=_sentry_dsn,
-        environment=_os.environ.get("ENVIRONMENT", "development"),
-        traces_sample_rate=0.1,
-        before_send=lambda event, hint: event,
-    )
-    print("Sentry initialized")
+    try:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=_sentry_dsn,
+            environment=_os.environ.get("ENVIRONMENT", "development"),
+            traces_sample_rate=0.1,
+            before_send=lambda event, hint: event,
+        )
+        print("Sentry initialized")
+    except Exception as _sentry_err:
+        print(f"Sentry disabled: {_sentry_err}")
 
 def create_app() -> FastAPI:
     app = FastAPI(
