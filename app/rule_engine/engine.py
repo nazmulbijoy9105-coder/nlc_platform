@@ -354,9 +354,9 @@ class NLCRuleEngine:
         self.today = date.today()
         self._flags: List[ComplianceFlag] = []
 
-    def evaluate(self, company: CompanyProfile) -> EngineOutput:
+    def evaluate(self, company: CompanyProfile, today: date | None = None) -> EngineOutput:
         self._flags = []
-        self.today = date.today()
+        self.today = today or date.today()
 
         self._run_incorporation_rules(company)
         self._run_auditor_rules(company)

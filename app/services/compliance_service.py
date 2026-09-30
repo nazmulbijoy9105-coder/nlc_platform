@@ -163,6 +163,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
         today = date.today()
         score = output.score_breakdown.final_score
         risk_band = RiskBand(output.score_breakdown.risk_band.value)
+        if risk_band.value not in ("GREEN", "YELLOW", "RED", "BLACK"):
+            # DB enum risk_band has no other values; derive from score instead of failing the UPDATE
+            risk_band = RiskBand(
+                "BLACK" if score <= 29 else "RED" if score <= 49 else "YELLOW" if score <= 69 else "GREEN"
+            )
         rescue_required = _has_rescue_output(output)
 
         # ── Resolve previously active flags not in current output ──
