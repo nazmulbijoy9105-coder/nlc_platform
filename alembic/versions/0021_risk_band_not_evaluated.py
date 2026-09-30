@@ -8,8 +8,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    with op.get_context().autocommit_block():
-        op.execute("ALTER TYPE risk_band ADD VALUE IF NOT EXISTS 'NOT_EVALUATED'")
+    op.execute("ALTER TYPE risk_band ADD VALUE IF NOT EXISTS 'NOT_EVALUATED'")
 
 
 def downgrade() -> None:
