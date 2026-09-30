@@ -519,7 +519,10 @@ import os as _os
 _sentry_dsn = _os.environ.get("SENTRY_DSN", "")
 if _sentry_dsn:
     try:
-        import sentry_sdk
+        try:
+    import sentry_sdk
+except ImportError:
+    sentry_sdk = None
         sentry_sdk.init(
             dsn=_sentry_dsn,
             environment=_os.environ.get("ENVIRONMENT", "development"),
