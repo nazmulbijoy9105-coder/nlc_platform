@@ -178,6 +178,127 @@ class Company(FullMixin, Base):
     # ── Notes ─────────────────────────────────────────────────────
     internal_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # ── BSEC Corporate Governance ──────────────────────────────────────
+    bsec_listed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    bsec_quarterly_report_filed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    cg_certificate_obtained: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    board_independent_director: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    audit_committee_established: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
+    # ── Labour Compliance ──────────────────────────────────────────────
+    factory_license_obtained: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    factory_license_expiry: Mapped[date | None] = mapped_column(Date, nullable=True)
+    labour_court_order_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    worker_compensation_filed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
+    # ── Bankruptcy / Winding Up ────────────────────────────────────────
+    winding_up_petition_filed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    winding_up_petition_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    liquidator_appointed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    court_ordered_winding_up: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    voluntary_winding_up: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
+    # ── Escalation / Strike-Off ────────────────────────────────────────
+    on_rjsc_strike_off_list: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    rjsc_strike_off_notice_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    rjsc_status: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    last_rjsc_compliance_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    investigation_order: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
+    # ── Foreign Exchange / FDI ─────────────────────────────────────────
+    foreign_exchange_violation: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    encashment_certificate_uploaded: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    encashment_certificate_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    bida_registered: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    fdi_registration_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    remittance_amount_usd: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
+    foreign_shareholding_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
+
+    # ── RJSC Form Filings ──────────────────────────────────────────────
+    form_iii_filed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    form_iii_filed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    form_iv_filed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    form_iv_filed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    form_vi_filed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    form_vi_filed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    form_xv_filed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    form_xv_filed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    # ── Annual Return Attachments ──────────────────────────────────────
+    balance_sheet_attached: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    schedule_x_attached: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    directors_list_attached: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    shareholders_list_attached: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    profit_loss_attached: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
+    # ── Capital / Resolutions ──────────────────────────────────────────
+    special_resolution_filed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    special_resolution_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    special_resolution_filed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    capital_reduction_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    capital_reduction_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    capital_reduction_court_order_obtained: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    paid_up_ge_authorized: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
+    # ── Corporate Structure Changes ────────────────────────────────────
+    moa_aoa_filed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    name_change_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    name_change_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    name_change_sr_passed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    object_clause_change_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    object_clause_change_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    aoa_alteration_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    aoa_alteration_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    # ── Statutory Registers ────────────────────────────────────────────
+    register_of_members_maintained: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    register_of_directors_maintained: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    register_of_charges_maintained: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    register_of_contracts: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    register_of_directors_interests: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    register_location: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    minutes_book_agm_maintained: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    minutes_book_board_maintained: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+
+    # ── AGM Details ────────────────────────────────────────────────────
+    agm_adjourned_without_notice: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    agm_scheduled_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    notice_sent_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    members_present_at_agm: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    auditor_reappointed_at_agm: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    accounts_adopted_at_agm: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
+    # ── Audit Details ──────────────────────────────────────────────────
+    audit_in_progress: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    first_auditor_appointment_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    auditor_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    auditor_firm_reg_no: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    # ── Office / Address ───────────────────────────────────────────────
+    registered_office_address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    registered_office_change_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    # ── Financial ──────────────────────────────────────────────────────
+    annual_turnover_bdt: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
+    last_tax_return_filed_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # ── Shareholders ───────────────────────────────────────────────────
+    share_certificates_issued: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    share_certificates_issued_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    last_allotment_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    shareholder_change_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    # ── Misc ────────────────────────────────────────────────────────────
+    is_dormant: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    has_foreign_shareholder: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_fdi_registered: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    aoa_transfer_restriction: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    capital_increase_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    capital_increase_special_resolution: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    minimum_directors_met: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
+
+
     # ── Relationships ─────────────────────────────────────────────
     user_access: Mapped[list[CompanyUserAccess]] = relationship(
         "CompanyUserAccess", back_populates="company", lazy="selectin"

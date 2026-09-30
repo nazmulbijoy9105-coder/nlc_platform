@@ -455,7 +455,125 @@ class CompanyService(BaseService[Company]):
             "disqualification_details": list(company.disqualification_details or []),
             "penalty_notices_received":     company.penalty_notices_received,
             "penalty_notices_resolved":     company.penalty_notices_resolved,
-            "current_director_count":  max(2, len([d for d in company.directors if d.director_status.value == "ACTIVE"])),
+            "current_director_count":  len([d for d in company.directors if d.director_status.value == "ACTIVE"]),
+
+            # BSEC Corporate Governance
+            "bsec_listed":                   getattr(company, "bsec_listed", False),
+            "bsec_quarterly_report_filed":  getattr(company, "bsec_quarterly_report_filed", False),
+            "cg_certificate_obtained":     getattr(company, "cg_certificate_obtained", False),
+            "board_independent_director":   getattr(company, "board_independent_director", False),
+            "audit_committee_established":  getattr(company, "audit_committee_established", False),
+
+            # Labour Compliance
+            "factory_license_obtained":     getattr(company, "factory_license_obtained", None),
+            "factory_license_expiry":       getattr(company, "factory_license_expiry", None),
+            "labour_court_order_pending":   getattr(company, "labour_court_order_pending", False),
+            "worker_compensation_filed":    getattr(company, "worker_compensation_filed", False),
+
+            # Bankruptcy / Winding Up
+            "winding_up_petition_filed":    getattr(company, "winding_up_petition_filed", False),
+            "winding_up_petition_date":     getattr(company, "winding_up_petition_date", None),
+            "liquidator_appointed":         getattr(company, "liquidator_appointed", False),
+            "court_ordered_winding_up":     getattr(company, "court_ordered_winding_up", False),
+            "voluntary_winding_up":         getattr(company, "voluntary_winding_up", False),
+
+            # Escalation / Strike-Off
+            "on_rjsc_strike_off_list":      getattr(company, "on_rjsc_strike_off_list", False),
+            "rjsc_strike_off_notice_date":  getattr(company, "rjsc_strike_off_notice_date", None),
+            "rjsc_status":                  getattr(company, "rjsc_status", None),
+            "last_rjsc_compliance_date":    getattr(company, "last_rjsc_compliance_date", None),
+            "investigation_order":          getattr(company, "investigation_order", False),
+
+            # Foreign Exchange / FDI
+            "foreign_exchange_violation":    getattr(company, "foreign_exchange_violation", False),
+            "encashment_certificate_uploaded": getattr(company, "encashment_certificate_uploaded", False),
+            "encashment_certificate_date":  getattr(company, "encashment_certificate_date", None),
+            "bida_registered":              getattr(company, "bida_registered", False),
+            "fdi_registration_date":        getattr(company, "fdi_registration_date", None),
+            "remittance_amount_usd":        float(getattr(company, "remittance_amount_usd", None) or 0),
+            "foreign_shareholding_pct":     float(getattr(company, "foreign_shareholding_pct", None) or 0),
+
+            # RJSC Form Filings
+            "form_iii_filed":               getattr(company, "form_iii_filed", False),
+            "form_iii_filed_date":          getattr(company, "form_iii_filed_date", None),
+            "form_iv_filed":                getattr(company, "form_iv_filed", False),
+            "form_iv_filed_date":           getattr(company, "form_iv_filed_date", None),
+            "form_vi_filed":                getattr(company, "form_vi_filed", None),
+            "form_vi_filed_date":           getattr(company, "form_vi_filed_date", None),
+            "form_xv_filed":                getattr(company, "form_xv_filed", None),
+            "form_xv_filed_date":           getattr(company, "form_xv_filed_date", None),
+
+            # Annual Return Attachments
+            "balance_sheet_attached":       getattr(company, "balance_sheet_attached", False),
+            "schedule_x_attached":          getattr(company, "schedule_x_attached", False),
+            "directors_list_attached":      getattr(company, "directors_list_attached", False),
+            "shareholders_list_attached":   getattr(company, "shareholders_list_attached", False),
+            "profit_loss_attached":         getattr(company, "profit_loss_attached", False),
+
+            # Capital / Resolutions
+            "special_resolution_filed":     getattr(company, "special_resolution_filed", False),
+            "special_resolution_date":      getattr(company, "special_resolution_date", None),
+            "special_resolution_filed_date": getattr(company, "special_resolution_filed_date", None),
+            "capital_reduction_pending":    getattr(company, "capital_reduction_pending", False),
+            "capital_reduction_date":       getattr(company, "capital_reduction_date", None),
+            "capital_reduction_court_order_obtained": getattr(company, "capital_reduction_court_order_obtained", False),
+            "paid_up_ge_authorized":        getattr(company, "paid_up_ge_authorized", False),
+
+            # Corporate Structure Changes
+            "moa_aoa_filed":                getattr(company, "moa_aoa_filed", False),
+            "name_change_pending":          getattr(company, "name_change_pending", False),
+            "name_change_date":             getattr(company, "name_change_date", None),
+            "name_change_sr_passed":         getattr(company, "name_change_sr_passed", False),
+            "object_clause_change_pending": getattr(company, "object_clause_change_pending", False),
+            "object_clause_change_date":    getattr(company, "object_clause_change_date", None),
+            "aoa_alteration_pending":       getattr(company, "aoa_alteration_pending", False),
+            "aoa_alteration_date":          getattr(company, "aoa_alteration_date", None),
+
+            # Statutory Registers
+            "register_of_members_maintained": getattr(company, "register_of_members_maintained", True),
+            "register_of_directors_maintained": getattr(company, "register_of_directors_maintained", True),
+            "register_of_charges_maintained": getattr(company, "register_of_charges_maintained", True),
+            "register_of_contracts":        getattr(company, "register_of_contracts", True),
+            "register_of_directors_interests": getattr(company, "register_of_directors_interests", True),
+            "register_location":            getattr(company, "register_location", None),
+            "minutes_book_agm_maintained":  getattr(company, "minutes_book_agm_maintained", True),
+            "minutes_book_board_maintained": getattr(company, "minutes_book_board_maintained", True),
+
+            # AGM Details
+            "agm_adjourned_without_notice":  getattr(company, "agm_adjourned_without_notice", False),
+            "agm_scheduled_date":            getattr(company, "agm_scheduled_date", None),
+            "notice_sent_date":              getattr(company, "notice_sent_date", None),
+            "members_present_at_agm":        getattr(company, "members_present_at_agm", 0),
+            "auditor_reappointed_at_agm":    getattr(company, "auditor_reappointed_at_agm", False),
+            "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", False),
+
+            # Audit Details
+            "audit_in_progress":             getattr(company, "audit_in_progress", False),
+            "first_auditor_appointment_date": getattr(company, "first_auditor_appointment_date", None),
+            "auditor_name":                  getattr(company, "auditor_name", None),
+            "auditor_firm_reg_no":           getattr(company, "auditor_firm_reg_no", None),
+
+            # Financial
+            "annual_turnover_bdt":          float(getattr(company, "annual_turnover_bdt", None) or 0),
+            "last_tax_return_filed_year":   getattr(company, "last_tax_return_filed_year", None),
+
+            # Shareholders
+            "share_certificates_issued":     getattr(company, "share_certificates_issued", False),
+            "share_certificates_issued_date": getattr(company, "share_certificates_issued_date", None),
+            "last_allotment_date":           getattr(company, "last_allotment_date", None),
+            "shareholder_change_date":       getattr(company, "shareholder_change_date", None),
+
+            # Misc
+            "is_dormant":                    getattr(company, "is_dormant", False),
+            "has_foreign_shareholder":       getattr(company, "has_foreign_shareholder", False),
+            "is_fdi_registered":             getattr(company, "is_fdi_registered", False),
+            "aoa_transfer_restriction":      getattr(company, "aoa_transfer_restriction", False),
+            "capital_increase_date":         getattr(company, "capital_increase_date", None),
+            "capital_increase_special_resolution": getattr(company, "capital_increase_special_resolution", False),
+            "minimum_directors_met":        getattr(company, "minimum_directors_met", False),
+            "registered_office_address":    getattr(company, "registered_office_address", None),
+            "registered_office_change_date": getattr(company, "registered_office_change_date", None),
+
         }
 
         # Capital: set only when BOTH are recorded; a single NULL must not become 0.0
