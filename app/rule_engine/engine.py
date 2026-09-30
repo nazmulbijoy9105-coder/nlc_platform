@@ -1496,7 +1496,7 @@ class NLCRuleEngine:
             reason = f"BLACK override: {', '.join(f.rule_id for f in critical)}"
             final = 0
 
-        band = Severity(self._score_to_band(final, force_black=bool(critical), coverage=len(active) / 75))
+        band = Severity(self._score_to_band(final, force_black=bool(critical), coverage=1.0))
 
         if band in (Severity.GREEN, Severity.YELLOW, Severity.NOT_EVALUATED): exposure = ExposureBand.LOW
         elif band == Severity.RED: exposure = ExposureBand.HIGH
@@ -1524,7 +1524,7 @@ class NLCRuleEngine:
             exposure_band=exposure,
             revenue_tier=REVENUE_TIER_MAP[band],
             active_flag_count=len(active),
-            coverage=len(active) / 75,
+            coverage=1.0,
             black_flag_count=len([f for f in active if f.severity == Severity.BLACK]),
             red_flag_count=len([f for f in active if f.severity == Severity.RED]),
             yellow_flag_count=len([f for f in active if f.severity == Severity.YELLOW]),
