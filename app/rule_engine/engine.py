@@ -1458,7 +1458,7 @@ class NLCRuleEngine:
         coverage = fraction of rules that had data to evaluate (0.0 to 1.0).
         Below 0.5 → NOT_EVALUATED regardless of score."""
         if coverage < 0.5:
-            return "GREEN"  # temporarily disabled — NOT_EVALUATED needs more work
+            return "NOT_EVALUATED"
         if force_black or raw <= 29:
             return "BLACK"
         if raw <= 49:
