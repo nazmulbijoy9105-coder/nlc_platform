@@ -1496,7 +1496,7 @@ class NLCRuleEngine:
             reason = f"BLACK override: {', '.join(f.rule_id for f in critical)}"
             final = 0
 
-        band = Severity(self._score_to_band(final, force_black=bool(critical), coverage=1.0))
+        band = Severity(self._score_to_band(final, force_black=bool(critical), coverage=len([f for f in __import__("dataclasses").fields(type(company)) if getattr(company, f.name, None) is not None]) / len(__import__("dataclasses").fields(type(company)))))
 
         if band in (Severity.GREEN, Severity.YELLOW, Severity.NOT_EVALUATED): exposure = ExposureBand.LOW
         elif band == Severity.RED: exposure = ExposureBand.HIGH
@@ -1524,7 +1524,7 @@ class NLCRuleEngine:
             exposure_band=exposure,
             revenue_tier=REVENUE_TIER_MAP[band],
             active_flag_count=len(active),
-            coverage=1.0,
+            coverage=len([f for f in __import__("dataclasses").fields(type(company)) if getattr(company, f.name, None) is not None]) / len(__import__("dataclasses").fields(type(company))),
             black_flag_count=len([f for f in active if f.severity == Severity.BLACK]),
             red_flag_count=len([f for f in active if f.severity == Severity.RED]),
             yellow_flag_count=len([f for f in active if f.severity == Severity.YELLOW]),
