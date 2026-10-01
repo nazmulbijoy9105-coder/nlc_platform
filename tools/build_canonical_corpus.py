@@ -79,6 +79,7 @@ SOURCE_EXTENSIONS = {
 }
 
 EXCLUDED_DIRS = {
+    "alembic",
     ".git",
     "__pycache__",
     ".pytest_cache",
