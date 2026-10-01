@@ -6,7 +6,6 @@ from typing import Any, Dict
 from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY, ProvisionStatus
 
 # Canonical Legal Reconciliation Registry
-# Tracks the legal source verification status for every rule.
 LEGAL_RECONCILIATION: Dict[str, Dict[str, Any]] = {
     "AGM-001": {
         "rule_id": "AGM-001",
