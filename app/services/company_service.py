@@ -545,6 +545,11 @@ class CompanyService(BaseService[Company]):
 
             # Misc
             "is_dormant":                    getattr(company, "is_dormant", False),
+            "aoa_transfer_restriction":       getattr(company, "aoa_transfer_restriction", False),
+            "is_fdi_registered":              getattr(company, "is_fdi_registered", False),
+            "last_allotment_date":            getattr(company, "last_allotment_date", None),
+            "registered_office_change_date":  getattr(company, "registered_office_change_date", None),
+            "shareholder_change_date":        getattr(company, "shareholder_change_date", None),
             "has_foreign_shareholder":       getattr(company, "has_foreign_shareholder", False),
             "capital_increase_special_resolution": getattr(company, "capital_increase_special_resolution", False),
             "minimum_directors_met":        getattr(company, "minimum_directors_met", False),
