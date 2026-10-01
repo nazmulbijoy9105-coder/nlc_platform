@@ -5,6 +5,13 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    aws_key_id: str | None = None
+    aws_secret: str | None = None
+    ses_region: str | None = None
+    email_from: str | None = None
+    whatsapp_enabled: bool = False
+    whatsapp_api_token: str | None = None
+    s3_backup_bucket: str | None = None
     PROJECT_NAME: str = "NLC Platform"
     app_version: str = "1.0.0"
     is_production: bool = True

@@ -41,7 +41,7 @@ import asyncio
 import logging
 import uuid
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from typing import cast, Any
 
 from celery import Task
 from celery.exceptions import SoftTimeLimitExceeded
@@ -149,7 +149,7 @@ def evaluate_company_compliance(
                 company_id=uuid.UUID(company_id),
                 trigger_source=trigger_source,
             )
-            return result
+            return cast(dict[str, Any], result)
 
     try:
         result = run_async(_run())
@@ -158,7 +158,7 @@ def evaluate_company_compliance(
             f"score={result.get('score')} band={result.get('risk_band')} "
             f"flags={len(result.get('flags', []))}"
         )
-        return result
+        return cast(dict[str, Any], result)
 
     except SoftTimeLimitExceeded:
         logger.error(f"[Compliance] TIMEOUT company={company_id}")
@@ -255,7 +255,7 @@ def evaluate_all_companies(
         logger.info(
             f"[Compliance] Batch dispatch complete: {dispatched}/{total} companies"
         )
-        return result
+        return cast(dict[str, Any], result)
 
     except Exception as exc:
         logger.error(f"[Compliance] Batch evaluation failed: {exc!r}")
@@ -468,7 +468,7 @@ def send_pending_notifications(
             f"[Notifications] Batch complete: "
             f"sent={result['sent']} failed={result['failed']} skipped={result['skipped']}"
         )
-        return result
+        return cast(dict[str, Any], result)
     except Exception as exc:
         if _is_transient_error(exc):
             raise self.retry(exc=exc)
@@ -559,7 +559,7 @@ def queue_deadline_warning_notifications(
             f"[Deadlines] Complete: "
             f"queued={result['queued']} checked={result['deadlines_checked']}"
         )
-        return result
+        return cast(dict[str, Any], result)
     except Exception as exc:
         if _is_transient_error(exc):
             raise self.retry(exc=exc)
@@ -787,7 +787,7 @@ def process_ai_review_queue(
                 f"[AI Review] {result['pending_documents']} docs pending review — "
                 f"sent {result['alerts_sent']} alerts"
             )
-        return result
+        return cast(dict[str, Any], result)
     except Exception as exc:
         if _is_transient_error(exc):
             raise self.retry(exc=exc)
@@ -853,7 +853,7 @@ def monthly_score_snapshot_all(self: Task) -> dict[str, Any]:
             f"[Snapshot] Monthly snapshot dispatched: "
             f"{result['dispatched']}/{result['total']} companies"
         )
-        return result
+        return cast(dict[str, Any], result)
     except Exception:
         raise
 
@@ -994,7 +994,7 @@ def cleanup_old_activity_logs(
             f"[Cleanup] Log cleanup complete: "
             f"archived={result['archived']} deleted={result['deleted']}"
         )
-        return result
+        return cast(dict[str, Any], result)
     except Exception:
         raise
 
@@ -1045,7 +1045,7 @@ def cleanup_expired_notifications(
                     ),
                 )
             )
-            return result.rowcount
+            return result.__dict__.get("rowcount", 0)
 
     try:
         count = run_async(_cleanup())
@@ -1183,7 +1183,7 @@ def sync_sro_registry(self: Task) -> dict[str, Any]:
             logger.warning(
                 f"[SRO] {result['pending_sros']} SROs pending rule update"
             )
-        return result
+        return cast(dict[str, Any], result)
     except Exception as exc:
         if _is_transient_error(exc):
             raise self.retry(exc=exc)

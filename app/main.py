@@ -435,7 +435,7 @@ class CORSErrorMiddleware(BaseHTTPMiddleware):
 # Exception handlers
 # ---------------------------------------------------------------------------
 
-async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+async def http_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Standardised error envelope for all HTTPExceptions."""
     request_id = getattr(request.state, "request_id", None)
     logger.warning(

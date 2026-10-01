@@ -169,7 +169,7 @@ class BaseService(Generic[ModelT]):
             .values(is_active=False)
         )
         await self.db.flush()
-        return result.rowcount > 0
+        return result.__dict__.get("rowcount", 0) > 0
 
     # ── EXISTENCE CHECK ───────────────────────────────────────────
 

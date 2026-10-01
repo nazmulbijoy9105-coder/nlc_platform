@@ -241,7 +241,7 @@ class UserService(BaseService[User]):
             )
             .values(is_active=False)
         )
-        return result.rowcount > 0
+        return result.__dict__.get("rowcount", 0) > 0
 
     # ── User Management ───────────────────────────────────────────
 

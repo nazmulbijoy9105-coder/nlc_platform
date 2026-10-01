@@ -91,7 +91,7 @@ class QuotationCreateRequest(BaseModel):
     government_fee_bdt: float = Field(default=0, ge=0)
     vat_bdt: float = Field(default=0, ge=0)
     line_items: list[dict] | None = None
-    valid_until_days: int = Field(default=30, ge=7, le=90)
+    valid_days: int = Field(default=30, ge=7, le=90)
     notes: str | None = None
 
 
@@ -122,9 +122,9 @@ class TaskCreateRequest(BaseModel):
     title: str = Field(min_length=3, max_length=255)
     description: str | None = None
     due_date: str | None = None
-    assigned_to_id: uuid.UUID | None = None
+    assigned_to: uuid.UUID | None = None
     linked_flag_id: uuid.UUID | None = None
-    linked_rescue_step_id: uuid.UUID | None = None
+    source_rescue_step_id: uuid.UUID | None = None
     priority: str = Field(default="MEDIUM", description="LOW | MEDIUM | HIGH | CRITICAL")
 
 
@@ -140,7 +140,7 @@ class TaskResponse(BaseModel):
     status: str
     priority: str
     due_date: str | None
-    assigned_to_id: str | None
+    assigned_to: str | None
     completed_at: str | None
     created_at: str
 
@@ -195,7 +195,7 @@ def _task_to_response(t) -> TaskResponse:
         status=t.status,
         priority=t.priority,
         due_date=str(t.due_date) if t.due_date else None,
-        assigned_to_id=str(t.assigned_to_id) if t.assigned_to_id else None,
+        assigned_to=str(t.assigned_to) if t.assigned_to else None,
         completed_at=t.completed_at.isoformat() if t.completed_at else None,
         created_at=t.created_at.isoformat(),
     )
@@ -345,7 +345,7 @@ async def create_quotation(
         government_fee_bdt=body.government_fee_bdt,
         vat_bdt=body.vat_bdt,
         line_items=body.line_items,
-        valid_until_days=body.valid_until_days,
+        valid_days=body.valid_days,
         notes=body.notes,
         created_by=current_user.id,
     )
@@ -434,9 +434,9 @@ async def create_task(
         title=body.title,
         description=body.description,
         due_date=body.due_date,
-        assigned_to_id=body.assigned_to_id,
+        assigned_to=body.assigned_to,
         linked_flag_id=body.linked_flag_id,
-        linked_rescue_step_id=body.linked_rescue_step_id,
+        source_rescue_step_id=body.source_rescue_step_id,
         priority=body.priority,
         created_by=current_user.id,
     )
