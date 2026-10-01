@@ -117,7 +117,7 @@ class TestAGMRules:
         today = date.today()
         profile = build_profile(
             agm_count=2,
-            last_agm_date=today - timedelta(days=450),  # >15 months ago
+            last_agm_date=today - timedelta(days=500),  # beyond 456-day (15-month) limit
             agm_held_this_cycle=False,
         )
         output = rule_engine.evaluate(profile)
@@ -687,12 +687,12 @@ class TestEscalationRules:
         """Multiple RED flags + 2+ year backlog → ESC-001 elevated risk."""
         profile = build_profile(
             unfiled_returns_count=2,
-            last_agm_date=date.today() - timedelta(days=365*3),
+            last_agm_date=date(2022, 10, 2),  # pinned: AGM deadline Dec 2023, 2 default years at 2026-10-01
             annual_return_filed=False,
             agm_held_this_cycle=False,
             audit_complete=False,
         )
-        output = rule_engine.evaluate(profile)
+        output = rule_engine.evaluate(profile, today=date(2026, 10, 1))
         assert_flag_triggered(output, "ESC-001")
 
     @pytest.mark.black

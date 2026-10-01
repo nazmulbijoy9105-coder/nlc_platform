@@ -365,6 +365,7 @@ class NLCRuleEngine:
         self._flags: List[ComplianceFlag] = []
 
     def evaluate(self, company: CompanyProfile, today: date | None = None) -> EngineOutput:
+        """Evaluate a company profile. Thread-safety: create a fresh NLCRuleEngine() per call — self._flags is instance state."""
         self._flags = []
         self.today = today or date.today()
 
@@ -387,9 +388,7 @@ class NLCRuleEngine:
         self._run_structural_change_rules(company)
         self._run_escalation_rules(company)
 
-        # Calculate coverage
-        total_possible = 75  # Total rules in engine
-        self._coverage = len(self._flags) / total_possible if total_possible > 0 else 0.0
+        # Coverage is calculated in _calculate_score via _input_coverage(company)
 
         stage = self._determine_lifecycle_stage(company)
         score = self._calculate_score(self._flags, company)
@@ -1053,7 +1052,7 @@ class NLCRuleEngine:
                     detail={"charge_id": charge.charge_id, "charge_type": charge.charge_type}
                 ))
 
-        if c.capital_reduction_pending:
+        if c.capital_reduction_pending and not c.capital_reduction_court_order_obtained:
             self._add_flag(ComplianceFlag(
                 rule_id="CAP-003",
                 flag_code="CAPITAL_REDUCTION_WITHOUT_COURT",
@@ -1495,8 +1494,9 @@ class NLCRuleEngine:
         lbr_ded = sum(f.score_impact for f in active if f.rule_id.startswith("LBR-"))
         bsec_ded = sum(f.score_impact for f in active if f.rule_id.startswith("BSEC-"))
         fx_ded = sum(f.score_impact for f in active if f.rule_id.startswith("FX-"))
+        esc_ded = sum(f.score_impact for f in active if f.rule_id.startswith("ESC-"))
 
-        raw = 100 - (tax_ded + agm_ded + aud_ded + ret_ded + dir_ded + shr_ded + cap_ded + off_ded + reg_ded + bnk_ded + lbr_ded + bsec_ded + fx_ded)
+        raw = 100 - (tax_ded + agm_ded + aud_ded + ret_ded + dir_ded + shr_ded + cap_ded + off_ded + reg_ded + bnk_ded + lbr_ded + bsec_ded + fx_ded + esc_ded)
         raw = max(0, raw)
         
         override = False
@@ -1509,7 +1509,22 @@ class NLCRuleEngine:
             final = 0
 
         coverage = _input_coverage(company)
-        band = Severity(self._score_to_band(final, force_black=bool(critical), coverage=coverage))
+        score_band = Severity(self._score_to_band(final, force_black=bool(critical), coverage=coverage))
+
+        # Band = worst of (score-based band, highest active flag severity)
+        # Prevents false GREEN when a BLACK-severity rule fires but doesn't override
+        if not critical:
+            severity_rank = {Severity.GREEN: 0, Severity.YELLOW: 1, Severity.RED: 2, Severity.BLACK: 3}
+            max_flag_severity = Severity.GREEN
+            for f in active:
+                if f.severity in severity_rank:
+                    if severity_rank[f.severity] > severity_rank.get(max_flag_severity, 0):
+                        max_flag_severity = f.severity
+            band_rank = severity_rank.get(score_band, 0)
+            flag_rank = severity_rank.get(max_flag_severity, 0)
+            band = max_flag_severity if flag_rank > band_rank else score_band
+        else:
+            band = score_band
 
         if band in (Severity.GREEN, Severity.YELLOW, Severity.NOT_EVALUATED): exposure = ExposureBand.LOW
         elif band == Severity.RED: exposure = ExposureBand.HIGH
@@ -1580,6 +1595,9 @@ class NLCRuleEngine:
         if "ESC-002" in active_rules:
             add_step("Defend Strike-Off", "File immediate application to set aside strike-off. Section 304.", ["ESC-002", "AR-002", "AR-003"], "CRITICAL", 1, 7)
 
+        # Sort by priority (CRITICAL first) then min_days (urgent first)
+        priority_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+        steps.sort(key=lambda s: (priority_order.get(s["priority"], 9), s["min_days"]))
         return steps
 
     def _determine_lifecycle_stage(self, c: CompanyProfile) -> LifecycleStage:
@@ -1625,8 +1643,12 @@ class NLCRuleEngine:
         return 10
 
     def _get_fy_end_deadline(self, c: CompanyProfile) -> date:
+        # The AGM held on date X covered the FY ending the previous 30 Jun.
+        # The NEXT AGM deadline is 6 months after the NEXT FY end.
+        # Example: AGM on 15 Dec 2025 covered FY 2024-25 (ending 30 Jun 2025).
+        # Next FY end = 30 Jun 2026. Deadline = 29 Dec 2026.
         fy_year = c.last_agm_date.year if c.last_agm_date.month > 6 else c.last_agm_date.year - 1
-        fy_end = date(fy_year, 6, 30)
+        fy_end = date(fy_year + 1, 6, 30)  # NEXT FY end, not the one already covered
         return fy_end + timedelta(days=FY_END_AGM_DEADLINE_DAYS)
 
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:
