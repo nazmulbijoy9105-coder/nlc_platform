@@ -289,7 +289,7 @@ async def update_rule(
 
     updated_rule = await svc.update_rule(
         rule_id=rule_id,
-        updates=update_data,
+        **update_data,
         change_reason=body.change_reason,
         changed_by=current_user.id,
     )
