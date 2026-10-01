@@ -844,12 +844,14 @@ class TestLabourRules:
     """Labour Act 2006 — LBR-001 to LBR-003."""
 
     def test_LBR001_triggers_factory_license_missing(self, rule_engine, build_profile):
+        profile = build_profile(factory_license_obtained=False
         """Factory license not obtained → LBR-001."""
         profile = build_profile(factory_license_obtained=False)
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "LBR-001")
 
     def test_LBR002_triggers_factory_license_expired(self, rule_engine, build_profile):
+        profile = build_profile(factory_license_obtained=True
         """Factory license expired → LBR-002."""
         profile = build_profile(
             factory_license_obtained=True,
@@ -859,6 +861,7 @@ class TestLabourRules:
         assert_flag_triggered(output, "LBR-002")
 
     def test_LBR003_triggers_labour_court_order(self, rule_engine, build_profile):
+        profile = build_profile(factory_license_obtained=True
         """Labour court order pending → LBR-003."""
         profile = build_profile(labour_court_order_pending=True)
         output = rule_engine.evaluate(profile)
