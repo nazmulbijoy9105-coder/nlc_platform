@@ -66,7 +66,7 @@ def test_partial_evidence_is_unknown():
 
 
 def test_conflicting_is_contradictory():  # R-009
-    r = STATUTORY_RULE_REGISTRY["TIN" if False else "TAX-001"]
+    r = STATUTORY_RULE_REGISTRY["TAX-001"]
     ev = {"TIN_CERTIFICATE": EvidenceStatus.CONFLICTING}
     assert evaluate_rule(r, {}, ev).state is RuleState.CONTRADICTORY
 
