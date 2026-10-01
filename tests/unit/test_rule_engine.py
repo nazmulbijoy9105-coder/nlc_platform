@@ -1111,3 +1111,15 @@ class TestVerdictRegression:
         profile = build_profile(tin_obtained=True, tax_return_filed_for_current_fy=False)
         output = rule_engine.evaluate(profile, today=date(2026, 10, 1))
         assert_flag_triggered(output, "TAX-003")
+
+    def test_routine_red_flag_does_not_escalate_band(self, rule_engine, build_profile):
+        profile = build_profile(trade_license_expiry=date.today() - timedelta(days=100))
+        output = rule_engine.evaluate(profile)
+        assert_flag_triggered(output, "TL-002")
+        assert output.score_breakdown.risk_band.value in ("GREEN", "YELLOW")
+
+    def test_strike_off_risk_flag_escalates_band(self, rule_engine, build_profile):
+        profile = build_profile(unfiled_returns_count=2)
+        output = rule_engine.evaluate(profile)
+        assert_flag_triggered(output, "AR-002")
+        assert output.score_breakdown.risk_band.value in ("RED", "BLACK")

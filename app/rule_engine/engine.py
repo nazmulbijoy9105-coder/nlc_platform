@@ -1517,7 +1517,7 @@ class NLCRuleEngine:
             severity_rank = {Severity.GREEN: 0, Severity.YELLOW: 1, Severity.RED: 2, Severity.BLACK: 3}
             max_flag_severity = Severity.GREEN
             for f in active:
-                if f.severity in severity_rank:
+                if f.severity in severity_rank and (f.severity == Severity.BLACK or f.rule_id in ("AR-002", "ESC-001")):
                     if severity_rank[f.severity] > severity_rank.get(max_flag_severity, 0):
                         max_flag_severity = f.severity
             band_rank = severity_rank.get(score_band, 0)
