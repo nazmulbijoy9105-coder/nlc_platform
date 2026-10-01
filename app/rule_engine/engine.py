@@ -432,7 +432,7 @@ class NLCRuleEngine:
             ))
 
         if c.paid_up_capital_bdt > 0 and not c.form_iii_filed:
-            delay = (self.today - c.incorporation_date).days  # type: ignore
+            delay = (self.today - (c.incorporation_date or self.today)).days  # type: ignore
             if delay > REGISTERED_OFFICE_DEADLINE_DAYS:
                 self._add_flag(ComplianceFlag(
                     rule_id="INC-002",
@@ -445,7 +445,7 @@ class NLCRuleEngine:
                     detail={"delay_days": delay}
                 ))
 
-        if c.current_director_count < 2:  # type: ignore
+        if (c.current_director_count or 0) < 2:  # type: ignore
             inc003_impact = 15
             inc003_desc = (
                 "Private company has NO directors. Section 90(2) requires minimum 2. Company cannot legally act."
@@ -533,7 +533,7 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     def _run_auditor_rules(self, c: CompanyProfile) -> None:
         if not c.first_auditor_appointed:
-            deadline = c.incorporation_date + timedelta(days=FIRST_AUDITOR_DEADLINE_DAYS)  # type: ignore
+            deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AUDITOR_DEADLINE_DAYS)  # type: ignore
             if self.today > deadline:  # type: ignore
                 delay = (self.today - deadline).days  # type: ignore
                 self._add_flag(ComplianceFlag(
@@ -605,7 +605,7 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     def _run_agm_rules(self, c: CompanyProfile) -> None:
         if c.agm_count == 0:
-            deadline = c.incorporation_date + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
+            deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
             if self.today > deadline:  # type: ignore
                 delay = (self.today - deadline).days  # type: ignore
                 severity = Severity.BLACK if delay > 365 else Severity.RED
@@ -670,7 +670,7 @@ class NLCRuleEngine:
                     detail={"days_to_agm": days_rem}
                 ))
 
-        if c.agm_held_this_cycle and c.members_present_at_agm < PRIVATE_COMPANY_QUORUM:  # type: ignore
+        if c.agm_held_this_cycle and (c.members_present_at_agm or 0) < PRIVATE_COMPANY_QUORUM:  # type: ignore
             self._add_flag(ComplianceFlag(
                 rule_id="AGM-005",
                 flag_code="AGM_QUORUM_DEFECTIVE",
@@ -713,7 +713,7 @@ class NLCRuleEngine:
                     detail={"delay_days": delay}
                 ))
 
-        if c.unfiled_returns_count >= 2:  # type: ignore
+        if (c.unfiled_returns_count or 0) >= 2:  # type: ignore
             self._add_flag(ComplianceFlag(
                 rule_id="AR-002",
                 flag_code="ANNUAL_RETURN_BACKLOG_RED",
@@ -725,7 +725,7 @@ class NLCRuleEngine:
                 detail={"unfiled_count": c.unfiled_returns_count}
             ))
 
-        if c.unfiled_returns_count >= 3:  # type: ignore
+        if (c.unfiled_returns_count or 0) >= 3:  # type: ignore
             self._add_flag(ComplianceFlag(
                 rule_id="AR-003",
                 flag_code="ANNUAL_RETURN_BACKLOG_BLACK",
@@ -1144,7 +1144,7 @@ class NLCRuleEngine:
             if fiscal_q >= 1 and not c.advance_tax_q1_paid: missed.append("Q1")
             if fiscal_q >= 2 and not c.advance_tax_q2_paid: missed.append("Q2")
             if fiscal_q >= 3 and not c.advance_tax_q3_paid: missed.append("Q3")
-            if fiscal_q == 1 and not c.advance_tax_q4_paid: missed.append("Q4")
+            if fiscal_q >= 4 and not c.advance_tax_q4_paid: missed.append("Q4")
             
             if missed:
                 self._add_flag(ComplianceFlag(
@@ -1158,11 +1158,11 @@ class NLCRuleEngine:
                     detail={"quarters": missed}
                 ))
 
-        if c.vat_registered and c.last_vat_return_filed:
+        if c.vat_registered:
             fifteenth = self.today.replace(day=15)
             if self.today > fifteenth:
                 last_day_prev = self.today.replace(day=1) - timedelta(days=1)
-                if c.last_vat_return_filed < last_day_prev:
+                if not c.last_vat_return_filed or c.last_vat_return_filed < last_day_prev:
                  self._add_flag(ComplianceFlag(
                     rule_id="VAT-002",
                     flag_code="MONTHLY_VAT_RETURN_OVERDUE",
@@ -1184,7 +1184,7 @@ class NLCRuleEngine:
                 statutory_basis="Value Added Tax Act 2012 (Bangladesh)",
             ))
 
-        unresolved = c.penalty_notices_received - c.penalty_notices_resolved  # type: ignore
+        unresolved = (c.penalty_notices_received or 0) - (c.penalty_notices_resolved or 0)  # type: ignore
         if unresolved > 0:
             sev = Severity.RED if unresolved >= 3 else Severity.YELLOW
             self._add_flag(ComplianceFlag(
@@ -1664,7 +1664,7 @@ class NLCRuleEngine:
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:
         if not c.last_agm_date:
             if c.agm_count == 0:
-                deadline = c.incorporation_date + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
+                deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
                 if self.today > deadline:  # type: ignore
                     return (self.today - deadline).days // 365  # type: ignore
             return 0
