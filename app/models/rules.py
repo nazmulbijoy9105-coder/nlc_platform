@@ -114,12 +114,7 @@ class LegalRule(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         return f"<LegalRule {self.rule_id} v{self.rule_version} [{self.default_severity}]>"
 
 
-class LegalRuleVersion
-    previous_severity: Mapped[str | None] = mapped_column(nullable=True)
-    new_severity: Mapped[str | None] = mapped_column(nullable=True)
-    previous_score_impact: Mapped[int | None] = mapped_column(nullable=True)
-    new_score_impact: Mapped[int | None] = mapped_column(nullable=True)
-    changed_by_id: Mapped[UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)(UUIDPrimaryKeyMixin, Base):
+class LegalRuleVersion(UUIDPrimaryKeyMixin, Base):
     """
     Immutable audit trail of every rule change.
     Previous version stored in full before update.
