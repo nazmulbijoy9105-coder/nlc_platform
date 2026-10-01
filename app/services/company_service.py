@@ -400,7 +400,6 @@ class CompanyService(BaseService[Company]):
             # People
             "director_changes": director_changes,
             "shareholder_change_date": None,  # Would come from company_user_access events
-            "form_xv_filed": None,  # Not wired
 
             # Share Transfers
             "share_transfers": share_transfers,

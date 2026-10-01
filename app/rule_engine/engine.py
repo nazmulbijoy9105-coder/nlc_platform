@@ -379,7 +379,6 @@ class NLCRuleEngine:
         self._run_office_rules(company)
         self._run_capital_rules(company)
         self._run_insolvency_rules(company)
-        self._run_labour_rules(company)
         self._run_companies_act_extended_rules(company)
         self._run_bsec_rules(company)
         self._run_fx_rules(company)
