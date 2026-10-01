@@ -246,7 +246,7 @@ class CompanyProfile:
     liquidator_appointed: bool = False
     court_ordered_winding_up: bool = False
     # ── Labour (Labour Act 2006) ──
-    factory_license_obtained: bool = True
+    factory_license_obtained: bool = False
     factory_license_expiry: Optional[date] = None
     worker_compensation_filed: bool = True
     labour_court_order_pending: bool = False
