@@ -480,6 +480,7 @@ class CompanyService(BaseService[Company]):
             "form_iii_filed_date":          getattr(company, "form_iii_filed_date", None),
             "form_iv_filed":                getattr(company, "form_iv_filed", False),
             "form_iv_filed_date":           getattr(company, "form_iv_filed_date", None),
+            "form_vi_filed":                getattr(company, "form_vi_filed", None),
             "form_vi_filed_date":           getattr(company, "form_vi_filed_date", None),
             "form_xv_filed":                getattr(company, "form_xv_filed", None),
             "form_xv_filed_date":           getattr(company, "form_xv_filed_date", None),
@@ -529,6 +530,7 @@ class CompanyService(BaseService[Company]):
             "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", False),
 
             # Audit Details
+            "audit_in_progress":             getattr(company, "audit_in_progress", False),
             "first_auditor_appointment_date": getattr(company, "first_auditor_appointment_date", None),
             "auditor_name":                  getattr(company, "auditor_name", None),
             "auditor_firm_reg_no":           getattr(company, "auditor_firm_reg_no", None),
