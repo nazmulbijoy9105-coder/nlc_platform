@@ -377,11 +377,6 @@ class CompanyService(BaseService[Company]):
             "agm_count":                  agm_count,
             "last_agm_date":              company.last_agm_date,
             "agm_held_this_cycle":        latest_agm.agm_held if latest_agm else (company.last_agm_date is not None and (date.today() - company.last_agm_date).days <= 456),
-            "agm_scheduled_date":         latest_agm.agm_deadline if latest_agm else None,
-            "notice_sent_date":           latest_agm.notice_sent_date if latest_agm else None,
-            "members_present_at_agm":     latest_agm.members_present if latest_agm else 0,
-            "auditor_reappointed_at_agm": latest_agm.auditor_reappointed if latest_agm else False,
-            "accounts_adopted_at_agm":    getattr(latest_agm, 'accounts_adopted', False) if latest_agm else False,
             "agm_minutes_prepared":       bool(latest_agm.minutes_prepared) if latest_agm else False,
 
             # Audit State
@@ -405,14 +400,11 @@ class CompanyService(BaseService[Company]):
             # Office
 
             # Corporate structure
-            "has_foreign_shareholder":  any(
                 s.shareholder_type == "FOREIGN" for s in company.shareholders
             ),
-            "is_dormant":   company.company_status == "DORMANT",
 
             # Registers
             "maintained_registers":   maintained_registers,
-            "share_certificates_issued": all(s.share_certificate_issued for s in company.shareholders) if company.shareholders else True,
 
             # Capital
             "authorized_capital_bdt":       float(company.authorized_capital_bdt) if company.authorized_capital_bdt else 0.0,
@@ -490,7 +482,6 @@ class CompanyService(BaseService[Company]):
             "form_iii_filed_date":          getattr(company, "form_iii_filed_date", None),
             "form_iv_filed":                getattr(company, "form_iv_filed", False),
             "form_iv_filed_date":           getattr(company, "form_iv_filed_date", None),
-            "form_vi_filed":                getattr(company, "form_vi_filed", None),
             "form_vi_filed_date":           getattr(company, "form_vi_filed_date", None),
             "form_xv_filed":                getattr(company, "form_xv_filed", None),
             "form_xv_filed_date":           getattr(company, "form_xv_filed_date", None),
@@ -540,7 +531,6 @@ class CompanyService(BaseService[Company]):
             "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", False),
 
             # Audit Details
-            "audit_in_progress":             getattr(company, "audit_in_progress", False),
             "first_auditor_appointment_date": getattr(company, "first_auditor_appointment_date", None),
             "auditor_name":                  getattr(company, "auditor_name", None),
             "auditor_firm_reg_no":           getattr(company, "auditor_firm_reg_no", None),
@@ -552,19 +542,14 @@ class CompanyService(BaseService[Company]):
             # Shareholders
             "share_certificates_issued":     getattr(company, "share_certificates_issued", False),
             "share_certificates_issued_date": getattr(company, "share_certificates_issued_date", None),
-            "last_allotment_date":           getattr(company, "last_allotment_date", None),
-            "shareholder_change_date":       getattr(company, "shareholder_change_date", None),
 
             # Misc
             "is_dormant":                    getattr(company, "is_dormant", False),
             "has_foreign_shareholder":       getattr(company, "has_foreign_shareholder", False),
-            "is_fdi_registered":             getattr(company, "is_fdi_registered", False),
-            "aoa_transfer_restriction":      getattr(company, "aoa_transfer_restriction", False),
             "capital_increase_date":         getattr(company, "capital_increase_date", None),
             "capital_increase_special_resolution": getattr(company, "capital_increase_special_resolution", False),
             "minimum_directors_met":        getattr(company, "minimum_directors_met", False),
             "registered_office_address":    getattr(company, "registered_office_address", None),
-            "registered_office_change_date": getattr(company, "registered_office_change_date", None),
 
         }
 
