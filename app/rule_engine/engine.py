@@ -1106,14 +1106,14 @@ class NLCRuleEngine:
             ))
 
         if c.tin_obtained and not c.tax_return_filed_for_current_fy:
-            if self.today.month <= 6:
+            # VERIFY against ITA 2023: company return due 15th day of 7th month after FY end (30 Jun -> 15 Jan)
+            if self.today >= date(self.today.year, 1, 15):
                 fy_end_year = self.today.year - 1
             else:
-                fy_end_year = self.today.year
+                fy_end_year = self.today.year - 2
+            deadline = date(fy_end_year + 1, 1, 15)
             if c.tax_return_deadline_extended:
-                deadline = date(fy_end_year + 1, 11, 30)
-            else:
-                deadline = date(fy_end_year + 1, 7, 31)
+                deadline = deadline + timedelta(days=30)  # VERIFY extension length
             if self.today > deadline:
                 delay = (self.today - deadline).days
                 if delay <= 90:
@@ -1603,15 +1603,13 @@ class NLCRuleEngine:
     def _determine_lifecycle_stage(self, c: CompanyProfile) -> LifecycleStage:
         if c.on_rjsc_strike_off_list or c.is_dormant:
             return LifecycleStage.DORMANT_STRIKE_OFF
-        if c.agm_count == 0:
-            return LifecycleStage.PRE_FIRST_AGM
-        
-        # Check for active defaults
         has_black = any(f.severity == Severity.BLACK and not f.resolved for f in self._flags)
         has_red = any(f.severity == Severity.RED and not f.resolved for f in self._flags)
-        
+
         if has_black:
             return LifecycleStage.STATUTORY_DEFAULT
+        if c.agm_count == 0:
+            return LifecycleStage.PRE_FIRST_AGM
         if has_red:
             return LifecycleStage.IRREGULAR_STATUS
             
