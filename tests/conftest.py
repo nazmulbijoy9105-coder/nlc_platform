@@ -296,7 +296,6 @@ def build_profile():
             "auditor_reappointed_at_agm": True,
             "accounts_adopted_at_agm": True,
             # Audit — fully compliant
-            "first_auditor_appointed": True,
             "audit_complete": True,
             "last_audit_signed_date": today - timedelta(days=90),
             "audit_in_progress": False,
@@ -323,21 +322,17 @@ def build_profile():
             "is_fdi_registered": False,
             # Registers & certificates
             "maintained_registers": ["members", "directors", "charges", "transfers", "debentures", "minutes_agm", "minutes_board"],
-            "trade_license_obtained": True,
             "agm_minutes_prepared": True,
-            "tin_obtained": True,
             "tax_return_filed_for_current_fy": True,
             "advance_tax_q1_paid": True,
             "advance_tax_q2_paid": True,
             "advance_tax_q3_paid": True,
             "advance_tax_q4_paid": True,
-            "vat_registered": True,
             "vat_annual_return_filed_for_fy": True,
             "tin_number": "TIN-TEST-001",
             "trade_license_expiry": today + timedelta(days=200),
             "last_tax_return_filed_year": today.year - 1,
             "last_allotment_date": None,
-            "share_certificates_issued": True,
             # Capital
             "capital_increase_date": None,
             "capital_increase_resolution": True,
@@ -359,7 +354,6 @@ def build_profile():
             "board_independent_director": True,
             "audit_committee_established": True,
             "current_director_count": 3,
-            "factory_license_obtained": True,
             "factory_license_obtained": True,
         }
         defaults.update(overrides)
