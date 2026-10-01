@@ -388,7 +388,6 @@ class CompanyService(BaseService[Company]):
             "first_auditor_appointed":    bool(company.first_auditor_appointed) if company.first_auditor_appointed is not None else True,
             "audit_complete":             latest_audit.audit_complete if latest_audit else None,
             "last_audit_signed_date":     company.last_audit_signed_date,
-            "audit_in_progress":          False,
 
             # Annual Return State
             "last_return_filed_year":         company.last_return_filed_year,
@@ -399,26 +398,20 @@ class CompanyService(BaseService[Company]):
 
             # People
             "director_changes": director_changes,
-            "shareholder_change_date": None,  # Would come from company_user_access events
 
             # Share Transfers
             "share_transfers": share_transfers,
 
             # Office
-            "registered_office_change_date": None,
-            "form_vi_filed": None,  # Not wired
 
             # Corporate structure
-            "aoa_transfer_restriction": True,
             "has_foreign_shareholder":  any(
                 s.shareholder_type == "FOREIGN" for s in company.shareholders
             ),
             "is_dormant":   company.company_status == "DORMANT",
-            "is_fdi_registered": False,
 
             # Registers
             "maintained_registers":   maintained_registers,
-            "last_allotment_date":    None,
             "share_certificates_issued": all(s.share_certificate_issued for s in company.shareholders) if company.shareholders else True,
 
             # Capital
