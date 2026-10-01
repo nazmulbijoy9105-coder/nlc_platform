@@ -1,45 +1,52 @@
 """
-NLC - Legal Compliance & Rescue Platform
-Layer 1: Product Invariants (R-001 ... R-020)
-Governs how the engine is allowed to evaluate, remediate, and audit.
+NLC Layer 1: Product Invariants. Source: architecture diagram, Module 7.
+R-006 and R-016 are absent from the diagram and intentionally undefined
+until confirmed (see DIAGRAM_GAPS).
 """
 from enum import Enum
 
 class Invariant(str, Enum):
-    # Evaluation & Applicability
-    R_001 = "MOA_AOA_LEGAL_MAPPING_VERIFIED"
-    R_002 = "DIR_005_SECTION_97_MAPPING_REVIEW"
-    R_003 = "DIR_006_SECTION_98_MAPPING_REVIEW"
-    R_004 = "DIR_INTEREST_SECTION_130_REVIEW"
-    R_005 = "AGM_MINUTES_SECTION_89_REVIEW"
-    R_006 = "AR_001_SECTION_36_REVIEW"
-    R_007 = "EVALUATION_USES_CANONICAL_RULE"
-    R_008 = "UNKNOWN_IS_NOT_NON_COMPLIANT"
-    R_009 = "LABOUR_FACTORY_SECTION_326_REVIEW"
-    R_010 = "TAX_TIN_INCOME_TAX_ACT_2023_REVIEW"
-    R_011 = "TRADE_LICENSE_LOCAL_AUTHORITY_REVIEW"
-    R_012 = "FINDING_MAPS_TO_REMEDIATION"
-    R_013 = "UNKNOWN_DOES_NOT_TRIGGER_NON_COMPLIANCE"
-    
-    # Rescue & Services
-    R_014 = "RESCUE_DERIVES_FROM_FINDING"
-    R_015 = "RESCUE_DEPENDENCIES_ARE_RESPECTED"
-    R_016 = "SERVICES_DERIVED_FROM_EVALUATOR_FINDINGS"
-    R_017 = "NOTIFICATIONS_DERIVED_FROM_DEADLINES"
-    
-    # Re-evaluation & Audit
-    R_018 = "NEW_EVIDENCE_TRIGGERS_RE_EVALUATION"
-    R_019 = "VERIFIED_CURE_CLOSES_RESCUE"
-    R_020 = "IMMUTABLE_AUDIT_TRAIL_REQUIRED"
+    R_001 = "R-001"
+    R_002 = "R-002"
+    R_003 = "R-003"
+    R_004 = "R-004"
+    R_005 = "R-005"
+    R_007 = "R-007"
+    R_008 = "R-008"
+    R_009 = "R-009"
+    R_010 = "R-010"
+    R_011 = "R-011"
+    R_012 = "R-012"
+    R_013 = "R-013"
+    R_014 = "R-014"
+    R_015 = "R-015"
+    R_017 = "R-017"
+    R_018 = "R-018"
+    R_019 = "R-019"
+    R_020 = "R-020"
+
+DIAGRAM_GAPS = frozenset({"R-006", "R-016"})
 
 INVARIANT_RULES = {
-    Invariant.R_008: "If required evidence is missing, state=UNKNOWN. Do not penalize as NON_COMPLIANT.",
-    Invariant.R_013: "UNKNOWN state must not negatively impact the compliance score.",
-    Invariant.R_014: "Rescue plans must be dynamically generated strictly from active evaluator findings.",
-    Invariant.R_018: "Submission of new documentary evidence automatically triggers re-evaluation of the related rule.",
-    Invariant.R_019: "A rescue case is only closed when verified evidence establishes COMPLIANT state.",
-    Invariant.R_020: "All evaluation state changes, rescue actions, and evidence submissions are permanently recorded.",
+    Invariant.R_001: "Canonical Source: every rule traces to a canonical legal source.",
+    Invariant.R_002: "Source Metadata: every source carries act, provision and verification status.",
+    Invariant.R_003: "Applicability First: applicability is resolved before evaluation.",
+    Invariant.R_004: "Exceptions: exceptions are evaluated and can yield NOT_APPLICABLE.",
+    Invariant.R_005: "Evidence Defined: every rule declares its required evidence.",
+    Invariant.R_007: "Evaluation Logic: evaluation is deterministic from canonical rule + evidence.",
+    Invariant.R_008: "Unknown != Non-Compliance: missing evidence yields UNKNOWN, never NON_COMPLIANT.",
+    Invariant.R_009: "Contradiction State: conflicting evidence yields CONTRADICTORY.",
+    Invariant.R_010: "Score from Findings: score is computed only from evaluated findings.",
+    Invariant.R_011: "Score != Obligation: a score never creates or removes a legal obligation.",
+    Invariant.R_012: "Canonical Remediation: every actionable finding maps to a canonical remediation.",
+    Invariant.R_013: "Unmapped != Auto Rescue: a finding without a mapped rescue does not auto-create one.",
+    Invariant.R_014: "Rescue from Findings: rescue plans derive only from active findings.",
+    Invariant.R_015: "Respect Dependencies: rescue steps honour prerequisites and ordering.",
+    Invariant.R_017: "Deadline -> Services: notifications derive from deadlines (confirm wording).",
+    Invariant.R_018: "Evidence -> Re-evaluation: new evidence re-evaluates the related rule.",
+    Invariant.R_019: "Verified -> Close: rescue closes only when verified evidence yields COMPLIANT.",
+    Invariant.R_020: "Full Audit Trail: all state changes, actions and evidence are recorded.",
 }
 
 def get_invariant_rule(inv: Invariant) -> str:
-    return INVARIANT_RULES.get(inv, "Invariant not defined.")
+    return INVARIANT_RULES[inv]   # KeyError, not a silent default
