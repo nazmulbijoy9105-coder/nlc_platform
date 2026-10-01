@@ -341,6 +341,7 @@ def build_profile():
             # Capital
             "capital_increase_date": None,
             "capital_increase_resolution": True,
+            "factory_license_obtained": True,
         }
         defaults.update(overrides)
         return CompanyProfile(**defaults)
