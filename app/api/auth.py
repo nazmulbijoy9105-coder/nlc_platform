@@ -219,22 +219,14 @@ async def refresh_token(body: RefreshRequest, db=Depends(get_db)):
 
 
 @router.post("/logout")
-async def logout(token: str = Depends(oauth2_scheme)):
-    """Logout — revokes the access token via Redis blacklist."""
-    import os
+def logout(token: str = Depends(oauth2_scheme)):
+    """Logout: revokes this access token (by jti) until its own expiry."""
+    from app.core.token_blacklist import revoke
 
-    import redis
-    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-    try:
-        r = redis.from_url(redis_url, decode_responses=True)
-        payload = decode_token(token)
-        if payload:
-            jti = payload.get("jti", payload.get("user_id", "unknown"))
-            # Blacklist for the remaining token lifetime
-            r.setex(f"blacklist:{jti}", 3600, "revoked")
-    except Exception:
-        pass  # Redis might not be available — token still works until expiry
-    return {"status": "logged_out"}
+    payload = decode_token(token)
+    jti = payload.get("jti") if payload else None
+    revoked = bool(jti) and revoke(jti, payload.get("exp"))
+    return {"status": "logged_out", "revoked": revoked}
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
