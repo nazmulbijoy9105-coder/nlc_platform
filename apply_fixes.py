@@ -68,7 +68,7 @@ if Path(settings_file).exists():
         print(f"Patched {settings_file}")
 
 # 8. Add missing Model attributes automatically
-for root, dirs, files in os.walk("app/models"):
+for root, _dirs, files in os.walk("app/models"):
     for file in files:
         if file.endswith(".py"):
             p = Path(root) / file

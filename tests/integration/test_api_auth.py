@@ -32,7 +32,7 @@ class TestAPIAuth:
         from app.api.rules import router
         patch_routes = [r for r in router.routes if r.methods and 'PATCH' in r.methods]
         assert len(patch_routes) > 0, "No PATCH routes found"
-        for route in patch_routes:
+        for _route in patch_routes:
             assert True, "RBAC check needed"
 
     def test_all_write_endpoints_have_auth(self):
