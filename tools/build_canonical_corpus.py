@@ -99,11 +99,13 @@ def run(
     *args: str,
     check: bool = False,
 ) -> tuple[int, str, str]:
-    proc = subprocess.run(encoding='utf-8', errors='ignore', 
+    proc = subprocess.run(
         list(args),
         cwd=ROOT,
         text=True,
         capture_output=True,
+        encoding='utf-8',
+        errors='ignore',
     )
 
     if check and proc.returncode != 0:
