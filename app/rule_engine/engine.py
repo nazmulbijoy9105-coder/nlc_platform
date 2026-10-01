@@ -126,7 +126,7 @@ class CompanyProfile:
     company_id: str
     company_name: str
     company_type: str = "PRIVATE_LIMITED"
-    incorporation_date: date = field(default_factory=date.today)
+    incorporation_date: date = None
     financial_year_end: date = field(default_factory=date.today)
     agm_count: int = 0
     last_agm_date: Optional[date] = None
@@ -138,7 +138,7 @@ class CompanyProfile:
     auditor_reappointed_at_agm: bool = False
     accounts_adopted_at_agm: bool = False
     agm_minutes_prepared: bool = False
-    first_auditor_appointed: bool = True
+    first_auditor_appointed: bool = None
     first_auditor_appointment_date: Optional[date] = None
     audit_complete: bool = False
     last_audit_signed_date: Optional[date] = None
@@ -156,17 +156,17 @@ class CompanyProfile:
     directors_list_attached: bool = False
     shareholders_list_attached: bool = False
     director_changes: List[DirectorChange] = field(default_factory=list)
-    current_director_count: int = 2
-    minimum_directors_met: bool = True
+    current_director_count: int = 0
+    minimum_directors_met: bool = None
     shareholder_change_date: Optional[date] = None
     form_xv_filed: bool = False
     form_xv_filed_date: Optional[date] = None
     last_allotment_date: Optional[date] = None
-    share_certificates_issued: bool = True
+    share_certificates_issued: bool = None
     share_certificates_issued_date: Optional[date] = None
     authorized_capital_bdt: float = 0.0
     paid_up_capital_bdt: float = 0.0
-    paid_up_ge_authorized: bool = True
+    paid_up_ge_authorized: bool = None
     share_transfers: List[ShareTransfer] = field(default_factory=list)
     registered_office_address: str = ""
     registered_office_change_date: Optional[date] = None
@@ -189,9 +189,9 @@ class CompanyProfile:
     capital_increase_date: Optional[date] = None
     capital_increase_resolution: bool = False
     capital_increase_special_resolution: bool = False
-    form_iv_filed: bool = True
+    form_iv_filed: bool = None
     form_iv_filed_date: Optional[date] = None
-    form_iii_filed: bool = True
+    form_iii_filed: bool = None
     form_iii_filed_date: Optional[date] = None
     charges: List[ChargeEvent] = field(default_factory=list)
     special_resolution_date: Optional[date] = None
@@ -204,12 +204,12 @@ class CompanyProfile:
     rjsc_strike_off_notice_date: Optional[date] = None
     on_rjsc_strike_off_list: bool = False
     last_rjsc_compliance_date: Optional[date] = None
-    tin_obtained: bool = True
+    tin_obtained: bool = None
     tin_number: Optional[str] = None
-    vat_registered: bool = True
+    vat_registered: bool = None
     vat_number: Optional[str] = None
     last_tax_return_filed: Optional[date] = None
-    trade_license_obtained: bool = True
+    trade_license_obtained: bool = None
     trade_license_expiry: Optional[date] = None
     last_tax_return_filed_year: Optional[int] = None
     tax_return_filed_for_current_fy: bool = False
@@ -228,7 +228,7 @@ class CompanyProfile:
     disqualification_details: List[str] = field(default_factory=list)
     penalty_notices_received: int = 0
     penalty_notices_resolved: int = 0
-    moa_aoa_filed: bool = True
+    moa_aoa_filed: bool = None
     annual_turnover_bdt: float = 0.0
     name_change_pending: bool = False
     name_change_date: Optional[date] = None
@@ -248,20 +248,20 @@ class CompanyProfile:
     # ── Labour (Labour Act 2006) ──
     factory_license_obtained: bool = False
     factory_license_expiry: Optional[date] = None
-    worker_compensation_filed: bool = True
+    worker_compensation_filed: bool = None
     labour_court_order_pending: bool = False
     # -- Additional Companies Act 1994 --
     agm_adjourned_without_notice: bool = False
-    register_of_directors_interests: bool = True
-    register_of_contracts: bool = True
+    register_of_directors_interests: bool = None
+    register_of_contracts: bool = None
     voluntary_winding_up: bool = False
     investigation_order: bool = False
     # -- BSEC Corporate Governance Code 2023 --
     bsec_listed: bool = False
-    bsec_quarterly_report_filed: bool = True
-    cg_certificate_obtained: bool = True
-    board_independent_director: bool = True
-    audit_committee_established: bool = True
+    bsec_quarterly_report_filed: bool = None
+    cg_certificate_obtained: bool = None
+    board_independent_director: bool = None
+    audit_committee_established: bool = None
     # -- Bangladesh Bank / Foreign Exchange --
     foreign_exchange_violation: bool = False
 
@@ -289,6 +289,12 @@ class ScoreBreakdown:
     red_flag_count: int
     yellow_flag_count: int
     green_flag_count: int
+    # Additional sub-scores for reconciliation
+    bankruptcy_score: int = 0
+    labour_score: int = 0
+    bsec_score: int = 0
+    fx_score: int = 0
+    escalation_score: int = 0
     score_hash: str
 
 @dataclass
@@ -488,9 +494,9 @@ class NLCRuleEngine:
                     rule_id="INC-006",
                     flag_code="REMITTANCE_BELOW_WORK_PERMIT_THRESHOLD",
                     severity=Severity.YELLOW,
-                    score_impact=5,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Remittance USD {c.remittance_amount_usd:,.2f} below USD {FOREIGN_WORK_PERMIT_THRESHOLD_USD:,} work permit threshold.",
+                    description=f"Advisory: Remittance USD {c.remittance_amount_usd:,.2f} below USD {FOREIGN_WORK_PERMIT_THRESHOLD_USD:,} work permit threshold.",
                     statutory_basis="BIDA Foreign Investment Act 1980",
                     detail={"remittance_usd": c.remittance_amount_usd, "threshold": FOREIGN_WORK_PERMIT_THRESHOLD_USD},
                     conditional_applies=True
@@ -542,7 +548,7 @@ class NLCRuleEngine:
                 ))
 
         if c.first_auditor_appointed and c.agm_count > 0 and not c.auditor_reappointed_at_agm and not c.audit_in_progress and c.last_agm_date is not None:
-            fy_end = c.last_agm_date - timedelta(days=90)
+            fy_end = c.financial_year_end
             if self.today > fy_end + timedelta(days=120):
                  self._add_flag(ComplianceFlag(
                     rule_id="AUD-005",
@@ -856,7 +862,6 @@ class NLCRuleEngine:
         for transfer in c.share_transfers:
             transfer_is_void = (
                 c.aoa_transfer_restriction
-                and transfer.aoa_restriction_apply
                 and not transfer.board_approval_obtained
             )
 
@@ -884,7 +889,7 @@ class NLCRuleEngine:
                     detail={"transfer_id": transfer.transfer_id}
                 ))
 
-            if not transfer.board_approval_obtained and c.aoa_transfer_restriction and not transfer.aoa_restriction_apply:
+            if not transfer.board_approval_obtained and c.aoa_transfer_restriction:
                 self._add_flag(ComplianceFlag(
                     rule_id="TR-003",
                     flag_code="TRANSFER_NO_BOARD_APPROVAL",
@@ -1154,8 +1159,10 @@ class NLCRuleEngine:
                 ))
 
         if c.vat_registered and c.last_vat_return_filed:
-            expected_month_end = (self.today.replace(day=1) - timedelta(days=1)).replace(day=15)
-            if self.today > expected_month_end and c.last_vat_return_filed < expected_month_end:
+            fifteenth = self.today.replace(day=15)
+            if self.today > fifteenth:
+                last_day_prev = self.today.replace(day=1) - timedelta(days=1)
+                if c.last_vat_return_filed < last_day_prev:
                  self._add_flag(ComplianceFlag(
                     rule_id="VAT-002",
                     flag_code="MONTHLY_VAT_RETURN_OVERDUE",
@@ -1195,7 +1202,7 @@ class NLCRuleEngine:
     # MODULE 11: STRUCTURAL CHANGE
     # ───────────────────────────────────────────────────────────────────
     def _run_structural_change_rules(self, c: CompanyProfile) -> None:
-        if c.name_change_pending and c.name_change_date:
+        if c.name_change_pending and c.name_change_date and not c.name_change_sr_passed:
             delay = (self.today - c.name_change_date).days
             if delay > SPECIAL_RESOLUTION_DEADLINE_DAYS:
                 sev = Severity.RED if delay > 90 else Severity.YELLOW
@@ -1557,6 +1564,11 @@ class NLCRuleEngine:
             red_flag_count=len([f for f in active if f.severity == Severity.RED]),
             yellow_flag_count=len([f for f in active if f.severity == Severity.YELLOW]),
             green_flag_count=len([f for f in active if f.severity == Severity.GREEN]),
+            bankruptcy_score=max(0, 5 - bnk_ded),
+            labour_score=max(0, 5 - lbr_ded),
+            bsec_score=max(0, 5 - bsec_ded),
+            fx_score=max(0, 5 - fx_ded),
+            escalation_score=max(0, 5 - esc_ded),
             score_hash=score_hash
         )
 

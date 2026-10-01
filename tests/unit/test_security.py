@@ -1,3 +1,4 @@
+import pytest
 """Security tests."""
 
 class TestSecurity:
@@ -88,4 +89,4 @@ class TestSecurity:
                 main_content = f.read()
             assert "CORSMiddleware" in main_content or "cors" in main_content.lower()
         except Exception:
-            assert True
+            pytest.skip("underlying module not available")
