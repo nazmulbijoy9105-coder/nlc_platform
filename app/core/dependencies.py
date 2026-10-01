@@ -127,13 +127,8 @@ async def get_admin_db() -> AsyncSession:  # type: ignore
 
 def _check_token_blacklist(jti: str) -> bool:
     """Check if token is revoked via Redis blacklist. Returns True if revoked."""
-    import os
-    try:
-        import redis
-        r = redis.from_url(os.environ.get("REDIS_URL", "redis://localhost:6379/0"), decode_responses=True)
-        return r.exists(f"blacklist:{jti}") > 0
-    except Exception:
-        return False  # Redis unavailable — don't block auth
+    from app.core.token_blacklist import is_revoked
+    return is_revoked(jti)
 
 
 def verify_access_token(
@@ -153,7 +148,7 @@ def verify_access_token(
         )
     
     # Check token blacklist (revoked on logout)
-    jti = payload.get("jti", payload.get("user_id", ""))
+    jti = payload.get("jti")
     if jti and _check_token_blacklist(jti):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
