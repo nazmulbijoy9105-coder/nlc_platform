@@ -31,3 +31,9 @@ jobs:
       
       - name: Run tests
         run: python -m pytest tests/unit -q --tb=short
+      
+      - name: Rule parity audit
+        run: python tools/audit_rule_parity.py --no-db
+
+  - name: Rule parity audit
+    run: python tools/audit_rule_parity.py --no-db
