@@ -407,7 +407,7 @@ class CompanyService(BaseService[Company]):
             # Capital
             "authorized_capital_bdt":       float(company.authorized_capital_bdt) if company.authorized_capital_bdt else 0.0,
             "paid_up_capital_bdt":          float(company.paid_up_capital_bdt) if company.paid_up_capital_bdt else 0.0,
-            "capital_increase_date":       None,
+            "capital_increase_date":       getattr(company, "capital_increase_date", None),
             "capital_increase_resolution": getattr(company, 'capital_increase_resolution', False),
             "charges":                     [],
             # form_viii_filed removed — not a CompanyProfile field
