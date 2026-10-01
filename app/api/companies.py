@@ -187,7 +187,7 @@ def _company_to_response(company) -> CompanyResponse:
         id=str(company.id),
         name=company.company_name,
         registration_number=company.registration_number,
-        incorporation_date=company.incorporation_date.isoformat() if company.incorporation_date else None,
+        incorporation_date=company.incorporation_date.isoformat() if company.incorporation_date else None,  # type: ignore
         compliance_score=company.current_compliance_score,
         band=_s(company.current_risk_band),
         last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
@@ -210,7 +210,7 @@ async def create_company(body: CompanyCreateRequest, request: Request, current_u
     company = await svc.create_company(
         company_name=body.company_name, registration_number=body.registration_number,
         incorporation_date=body.incorporation_date, registered_address=body.registered_address,
-        company_type=body.company_type, financial_year_end=body.financial_year_end,
+        company_type=body.company_type, financial_year_end=body.financial_year_end,  # type: ignore
         assigned_staff_id=body.assigned_staff_id,
     )
     _tax_fields = ["trade_license_obtained", "trade_license_expiry", "tax_return_filed_for_current_fy", "advance_tax_q1_paid", "advance_tax_q2_paid", "advance_tax_q3_paid", "advance_tax_q4_paid", "tds_deposited_up_to_date", "last_tds_deposit_date", "last_vat_return_filed", "vat_annual_return_filed_for_fy", "minimum_tax_paid", "tax_clearance_obtained", "tax_return_deadline_extended", "any_director_disqualified", "penalty_notices_received", "penalty_notices_resolved"]
@@ -301,7 +301,7 @@ async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_d
 async def get_flags(company_id: uuid.UUID, db: AsyncSession = Depends(get_db_for_user)):
     svc = ComplianceService(db)
     flags = await svc.get_active_flags(company_id)
-    return [FlagResponse(flag_id=str(f.id), rule_id=f.rule_id, rule_name=getattr(f, "description", f.flag_code) or f.flag_code, severity=f.severity.value if hasattr(f.severity, "value") else str(f.severity), score_impact=f.score_impact, status=f.flag_status.value if hasattr(f.flag_status, "value") else str(f.flag_status), is_black_override=getattr(f, "is_black_override", False), triggered_at=f.triggered_date.isoformat() if f.triggered_date else "", resolved_at=f.resolved_date.isoformat() if getattr(f, "resolved_date", None) else None, resolution_note=getattr(f, "resolution_notes", None)) for f in flags]
+    return [FlagResponse(flag_id=str(f.id), rule_id=f.rule_id, rule_name=getattr(f, "description", f.flag_code) or f.flag_code, severity=f.severity.value if hasattr(f.severity, "value") else str(f.severity), score_impact=f.score_impact, status=f.flag_status.value if hasattr(f.flag_status, "value") else str(f.flag_status), is_black_override=getattr(f, "is_black_override", False), triggered_at=f.triggered_date.isoformat() if f.triggered_date else "", resolved_at=f.resolved_date.isoformat() if getattr(f, "resolved_date", None) else None, resolution_note=getattr(f, "resolution_notes", None)) for f in flags]  # type: ignore
 
 
 @router.post("/{company_id}/flags/{flag_id}/resolve", response_model=MessageResponse, dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_company_access("company_id"))], summary="Resolve flag")

@@ -51,14 +51,14 @@ logger = structlog.get_logger(__name__)
 class RescuePlanCreateRequest(BaseModel):
     company_id: uuid.UUID
     notes: str | None = None
-    assigned_officer_id: uuid.UUID | None = None
+    assigned_staff_id: uuid.UUID | None = None
     estimated_fee_bdt: float | None = Field(None, gt=0)
     target_completion_date: str | None = None
 
 
 class RescueStepUpdateRequest(BaseModel):
     status: str = Field(description="PENDING | IN_PROGRESS | COMPLETED | BLOCKED")
-    completion_note: str | None = None
+    completion_notes: str | None = None
     completion_document_id: uuid.UUID | None = None
 
 
@@ -74,7 +74,7 @@ class RescueStepResponse(BaseModel):
     step_name: str
     description: str
     status: str
-    completion_note: str | None
+    completion_notes: str | None
     started_at: str | None
     completed_at: str | None
     triggers_reevaluation: bool
@@ -89,7 +89,7 @@ class RescuePlanResponse(BaseModel):
     total_steps: int
     completed_steps: int
     estimated_fee_bdt: float | None
-    assigned_officer_id: str | None
+    assigned_staff_id: str | None
     target_completion_date: str | None
     engagement_id: str | None
     steps: list[RescueStepResponse]
@@ -109,7 +109,7 @@ def _step_to_response(step) -> RescueStepResponse:
         step_name=step.step_name,
         description=step.description,
         status=step.status,
-        completion_note=step.completion_note,
+        completion_notes=step.completion_notes,
         started_at=step.started_at.isoformat() if step.started_at else None,
         completed_at=step.completed_at.isoformat() if step.completed_at else None,
         triggers_reevaluation=step.triggers_reevaluation,
@@ -126,7 +126,7 @@ def _plan_to_response(plan, company=None) -> RescuePlanResponse:
         total_steps=plan.total_steps,
         completed_steps=plan.completed_steps,
         estimated_fee_bdt=plan.estimated_fee_bdt,
-        assigned_officer_id=str(plan.assigned_officer_id) if plan.assigned_officer_id else None,
+        assigned_staff_id=str(plan.assigned_staff_id) if plan.assigned_staff_id else None,
         target_completion_date=str(plan.target_completion_date) if plan.target_completion_date else None,
         engagement_id=str(plan.engagement_id) if plan.engagement_id else None,
         steps=[_step_to_response(s) for s in (plan.steps or [])],
@@ -182,10 +182,10 @@ async def create_rescue_plan(
             ),
         )
 
-    plan = await rescue_svc.generate_rescue_plan(
+    plan = await rescue_svc.generate_rescue_plan(  # type: ignore
         company_id=body.company_id,
         created_by=current_user.id,
-        assigned_officer_id=body.assigned_officer_id,
+        assigned_staff_id=body.assigned_staff_id,
         estimated_fee_bdt=body.estimated_fee_bdt,
         target_completion_date=body.target_completion_date,
         notes=body.notes,
@@ -320,11 +320,11 @@ async def update_rescue_step(
             detail=f"Invalid status '{body.status}'. Must be one of: {valid_statuses}",
         )
 
-    plan = await rescue_svc.update_step(
+    plan = await rescue_svc.update_step(  # type: ignore
         plan_id=plan_id,
         step_number=step_number,
         new_status=body.status,
-        completion_note=body.completion_note,
+        completion_notes=body.completion_notes,
         completion_document_id=body.completion_document_id,
         updated_by=current_user.id,
     )
@@ -379,7 +379,7 @@ async def create_engagement_from_rescue(
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
-    engagement = await rescue_svc.create_engagement_from_rescue(
+    engagement = await rescue_svc.create_engagement_from_rescue(  # type: ignore
         plan_id=plan_id,
         confirmed_fee_bdt=body.confirmed_fee_bdt,
         payment_terms=body.payment_terms,

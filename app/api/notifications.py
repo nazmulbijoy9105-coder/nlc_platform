@@ -81,7 +81,7 @@ async def acknowledge_notification(
 async def get_pending_notifications(
     channel: NotificationChannel | None = Query(None),
     limit: int = Query(100, le=500),
-    _=Depends(require_admin()),
+    _=Depends(require_admin()),  # type: ignore
     svc: NotificationService = Depends(_get_svc),
 ):
     notifications = await svc.get_pending(channel=channel, limit=limit)

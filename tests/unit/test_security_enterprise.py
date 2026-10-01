@@ -9,7 +9,7 @@ class TestPasswordPolicy:
 
     def test_strong_password_accepted(self):
         from app.core.security import validate_password_strength
-        ok, msg = validate_password_strength("Str0ng!Pass")
+        ok, _msg = validate_password_strength("Str0ng!Pass")
         assert ok
 
 class TestSecurityHeaders:

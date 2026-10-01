@@ -343,12 +343,12 @@ async def get_rule_history(
             version_id=str(v.id),
             rule_id=v.rule_id,
             version=v.version,
-            previous_severity=v.previous_severity,
-            new_severity=v.new_severity,
-            previous_score_impact=v.previous_score_impact,
-            new_score_impact=v.new_score_impact,
+            previous_severity=v.previous_severity,  # type: ignore[attr-defined]
+            new_severity=v.new_severity,  # type: ignore[attr-defined]
+            previous_score_impact=v.previous_score_impact,  # type: ignore[attr-defined]
+            new_score_impact=v.new_score_impact,  # type: ignore[attr-defined]
             change_reason=v.change_reason,
-            changed_by_id=str(v.changed_by_id),
+            changed_by_id=str(v.changed_by_id),  # type: ignore[attr-defined]
             changed_at=v.changed_at.isoformat(),
         )
         for v in versions

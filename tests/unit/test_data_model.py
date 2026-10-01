@@ -29,7 +29,7 @@ class TestDataModel:
 
     def test_compliance_flag_has_fk_to_companies(self):
         from app.models.compliance import ComplianceFlag
-        fks = [fk for fk in ComplianceFlag.__table__.foreign_keys]
+        fks = list(ComplianceFlag.__table__.foreign_keys)
         company_fks = [fk for fk in fks if 'companies' in str(fk.column.table)]
         assert len(company_fks) >= 1
 

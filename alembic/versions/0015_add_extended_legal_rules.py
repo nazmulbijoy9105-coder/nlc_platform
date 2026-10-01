@@ -26,7 +26,7 @@ def upgrade():
     for r in rules:
         op.execute(f"INSERT INTO legal_rules (id, rule_id, rule_name, rule_type, statutory_basis, description, rule_condition, default_severity, score_impact, revenue_tier, is_black_override, rule_version, is_active, created_at, updated_at) VALUES (gen_random_uuid(), '{r[0]}', '{r[1]}', '{r[2]}', '{r[3]}', '{r[4]}', NULL, '{r[5]}', {r[6]}, '{r[7]}', {str(r[8]).lower()}, 1, true, NOW(), NOW()) ON CONFLICT (rule_id) DO NOTHING;")
     for col in ["agm_adjourned_without_notice BOOLEAN NOT NULL DEFAULT false", "register_of_directors_interests BOOLEAN NOT NULL DEFAULT true", "register_of_contracts BOOLEAN NOT NULL DEFAULT true", "voluntary_winding_up BOOLEAN NOT NULL DEFAULT false", "investigation_order BOOLEAN NOT NULL DEFAULT false", "bsec_listed BOOLEAN NOT NULL DEFAULT false", "bsec_quarterly_report_filed BOOLEAN NOT NULL DEFAULT true", "cg_certificate_obtained BOOLEAN NOT NULL DEFAULT true", "board_independent_director BOOLEAN NOT NULL DEFAULT true", "audit_committee_established BOOLEAN NOT NULL DEFAULT true", "foreign_exchange_violation BOOLEAN NOT NULL DEFAULT false"]:
-        col_name = col.split()[0]
+        col.split()[0]
         op.execute(f"ALTER TABLE companies ADD COLUMN IF NOT EXISTS {col}")
 
 def downgrade():

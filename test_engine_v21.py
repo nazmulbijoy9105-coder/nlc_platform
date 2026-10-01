@@ -1,6 +1,6 @@
 """
 NEUM LEX COUNSEL — ILRMF v2.1 Engine Test Suite
-Tests all 59 rules, fiscal quarters, double-counting suppression, 
+Tests all 59 rules, fiscal quarters, double-counting suppression,
 DEF-001/ESC-003 ordering, and black override logic.
 """
 
@@ -260,7 +260,7 @@ if __name__ == "__main__":
     print("✅ Test 1: Fully compliant = 100/GREEN")
 
     # Test 2: Severe default
-    assert results[1]['override_applied'] == True, "Severe default should trigger override"
+    assert results[1]['override_applied'], "Severe default should trigger override"
     assert results[1]['final_score'] == 0, "Severe default should score 0"
     assert 'ESC-003' in results[1]['flag_ids'], "ESC-003 should fire for multiple black flags"
     assert 'DEF-001' in results[1]['black_ids'], "DEF-001 should be black"

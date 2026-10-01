@@ -394,7 +394,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
     ) -> list[dict]:
         from app.services.compliance_calendar import ComplianceCalendarService
         cal = ComplianceCalendarService(self.db)
-        return await cal.get_calendar(
+        return await cal.get_calendar(  # type: ignore
             company_id,
             include_past_days=include_past_days,
             include_future_days=days_ahead,

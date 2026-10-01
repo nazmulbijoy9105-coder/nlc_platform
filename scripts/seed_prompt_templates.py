@@ -63,29 +63,29 @@ NLC_LIABILITY_DISCLAIMER = """
 IMPORTANT LEGAL NOTICE — NEUM LEX COUNSEL (NLC)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-This document has been prepared by NLC using AI-assisted drafting 
-tools as a starting point for legal documentation. It is a DRAFT 
-and requires review, verification, and approval by a qualified NLC 
+This document has been prepared by NLC using AI-assisted drafting
+tools as a starting point for legal documentation. It is a DRAFT
+and requires review, verification, and approval by a qualified NLC
 legal professional before use.
 
 THIS DOCUMENT:
-• Has NOT been reviewed or approved by a lawyer unless counter-signed 
+• Has NOT been reviewed or approved by a lawyer unless counter-signed
   by an authorised NLC legal officer below.
-• Does NOT constitute legal advice, legal opinion, or a legal document 
+• Does NOT constitute legal advice, legal opinion, or a legal document
   in its current AI-generated form.
 • May contain errors, omissions, or inapplicable provisions.
-• Must be reviewed against the specific facts and circumstances of 
+• Must be reviewed against the specific facts and circumstances of
   your company before finalisation.
-• Must be verified against the current Bangladesh Companies Act 1994 
+• Must be verified against the current Bangladesh Companies Act 1994
   and any applicable SROs, notifications, or RJSC directives.
 
-NLC provides this draft under engagement terms as set out in your 
-Engagement Letter. Use of this draft without professional review 
-constitutes acceptance that NLC's liability is limited to the extent 
+NLC provides this draft under engagement terms as set out in your
+Engagement Letter. Use of this draft without professional review
+constitutes acceptance that NLC's liability is limited to the extent
 set out in those terms.
 
-DO NOT SIGN, FILE, OR ACT ON THIS DOCUMENT without NLC professional 
-approval. Do not send this document to the RJSC, any counterparty, 
+DO NOT SIGN, FILE, OR ACT ON THIS DOCUMENT without NLC professional
+approval. Do not send this document to the RJSC, any counterparty,
 or any third party without NLC sign-off.
 
 For approval, review, or queries, contact your assigned NLC officer.
@@ -105,18 +105,18 @@ PROMPT_TEMPLATES: List[Dict[str, Any]] = [
         "template_name":  "AGM_MINUTES_STANDARD",
         "document_type":  "AGM_MINUTES",
         "version":        "1.0",
-        "system_prompt": """You are a Bangladesh corporate legal specialist with expertise in 
-the Companies Act 1994. You draft formal Annual General Meeting (AGM) minutes for 
+        "system_prompt": """You are a Bangladesh corporate legal specialist with expertise in
+the Companies Act 1994. You draft formal Annual General Meeting (AGM) minutes for
 private limited companies registered with the RJSC.
 
 DRAFTING STANDARDS:
 - Use formal legal language appropriate for board minutes
-- Follow chronological structure: meeting opened → quorum verified → chair elected 
+- Follow chronological structure: meeting opened → quorum verified → chair elected
   → notices confirmed → accounts presented → auditors appointed → any other business → close
 - Include all mandatory elements required by Section 81 and Section 86 of the Companies Act 1994
 - Reference specific sections of the Act where resolutions are passed
 - Use past tense throughout — minutes record what occurred
-- All resolutions must be formally proposed, seconded, and carried by show of hands 
+- All resolutions must be formally proposed, seconded, and carried by show of hands
   unless stated otherwise
 - Do NOT include any legal advice or recommendations — only record facts provided
 - Do NOT fabricate any facts not provided in the input data
@@ -159,7 +159,7 @@ BUSINESS TRANSACTED:
 ADDITIONAL NOTES FROM MEETING:
 {MEETING_NOTES}
 
-Please draft complete, formal AGM minutes incorporating all the above information. 
+Please draft complete, formal AGM minutes incorporating all the above information.
 The minutes must comply with the Bangladesh Companies Act 1994.""",
 
         "output_format_instructions": """Return the complete AGM minutes as plain text with:
@@ -189,7 +189,7 @@ The minutes must comply with the Bangladesh Companies Act 1994.""",
         "template_name":  "BOARD_RESOLUTION_STANDARD",
         "document_type":  "BOARD_RESOLUTION",
         "version":        "1.0",
-        "system_prompt": """You are a Bangladesh corporate legal specialist drafting formal 
+        "system_prompt": """You are a Bangladesh corporate legal specialist drafting formal
 Board of Directors resolutions for private limited companies.
 
 DRAFTING STANDARDS:
@@ -198,7 +198,7 @@ DRAFTING STANDARDS:
 - Include recitals where appropriate (WHEREAS / CONSIDERING THAT)
 - Use the phrase "by majority/unanimous vote" as applicable
 - Include the resolution date, quorum present, and names of directors
-- Where the resolution authorises execution of documents, specify which documents 
+- Where the resolution authorises execution of documents, specify which documents
   and who is authorised to sign
 - Do NOT include legal advice — resolutions are factual records
 - All statutory references must be accurate to Companies Act 1994 Bangladesh
@@ -209,7 +209,7 @@ Authorising signatories, Capital changes, Engaging advisors, Declaring dividends
 Approving audited accounts, Any specific board action.
 
 OUTPUT FORMAT:
-Plain text only. Start with heading "BOARD RESOLUTION OF [COMPANY NAME]". 
+Plain text only. Start with heading "BOARD RESOLUTION OF [COMPANY NAME]".
 No markdown. End with signature blocks for all directors present.""",
 
         "user_prompt_template": """Draft a formal Board Resolution for the following:
@@ -271,21 +271,21 @@ Please draft a complete, formal board resolution covering all the above.""",
         "template_name":  "SHARE_CERTIFICATE_STANDARD",
         "document_type":  "SHARE_CERTIFICATE",
         "version":        "1.0",
-        "system_prompt": """You are a Bangladesh corporate legal specialist drafting formal 
+        "system_prompt": """You are a Bangladesh corporate legal specialist drafting formal
 share certificates for private limited companies registered under the Companies Act 1994.
 
 DRAFTING STANDARDS:
 - The share certificate is a formal company document — not a letter
-- Must state: certificate number, company name and reg. no., shareholder name, 
+- Must state: certificate number, company name and reg. no., shareholder name,
   number of shares, share class, nominal value per share
 - Must reference the company's Articles of Association restrictions (if private company)
 - Must state that shares are subject to the Companies Act 1994 provisions
-- Standard restriction clause for private companies: shares are not freely transferable 
+- Standard restriction clause for private companies: shares are not freely transferable
   and any transfer is subject to Board approval under the Articles
 - Do NOT include advice or recommendations
 
 OUTPUT FORMAT:
-Formal certificate layout in plain text. Single document. All details within the 
+Formal certificate layout in plain text. Single document. All details within the
 certificate — no cover letters or explanatory notes.""",
 
         "user_prompt_template": """Draft a share certificate with the following details:
@@ -348,7 +348,7 @@ Please draft a formal share certificate incorporating all the above details.""",
         "template_name":  "TRANSFER_INSTRUMENT_STANDARD",
         "document_type":  "TRANSFER_INSTRUMENT",
         "version":        "1.0",
-        "system_prompt": """You are a Bangladesh corporate legal specialist drafting 
+        "system_prompt": """You are a Bangladesh corporate legal specialist drafting
 instruments of transfer of shares (Form 117 equivalent) under the Companies Act 1994 Bangladesh.
 
 DRAFTING STANDARDS:
@@ -362,12 +362,12 @@ DRAFTING STANDARDS:
 - Do NOT draft this as a letter — it is a formal executed instrument
 
 STAMP DUTY NOTE:
-For Bangladesh share transfers, stamp duty is payable at 1.5% of consideration 
-or nominal value, whichever is higher. The instrument must be stamped before 
+For Bangladesh share transfers, stamp duty is payable at 1.5% of consideration
+or nominal value, whichever is higher. The instrument must be stamped before
 registration. Note this requirement in the instrument.
 
 OUTPUT FORMAT:
-Formal instrument/deed format in plain text. Complete execution block with 
+Formal instrument/deed format in plain text. Complete execution block with
 transferor signature, witness, and transferee acceptance.""",
 
         "user_prompt_template": """Draft a share transfer instrument for the following transfer:
@@ -448,7 +448,7 @@ Please draft a complete, formal instrument of transfer incorporating all the abo
         "template_name":  "ENGAGEMENT_LETTER_STANDARD",
         "document_type":  "ENGAGEMENT_LETTER",
         "version":        "1.0",
-        "system_prompt": """You are drafting a professional legal services engagement / retainer 
+        "system_prompt": """You are drafting a professional legal services engagement / retainer
 letter for NEUM LEX COUNSEL (NLC), a Bangladeshi corporate law and compliance firm.
 
 DRAFTING STANDARDS:
@@ -456,23 +456,23 @@ DRAFTING STANDARDS:
 - Clearly define scope of services, fees, and client obligations
 - Include limitation of liability clause (NLC standard)
 - Include confidentiality provisions
-- Reference the ILRMF (NEUM LEX RJSC Compliance Master Framework) if engagement 
+- Reference the ILRMF (NEUM LEX RJSC Compliance Master Framework) if engagement
   is compliance-related
 - State clearly what NLC will NOT do (AI limitation clause for AI-assisted services)
-- For Corporate Rescue engagements: prominently note that NLC cannot guarantee 
+- For Corporate Rescue engagements: prominently note that NLC cannot guarantee
   outcome and that results depend on RJSC processing times
 - Include payment terms and retainer conditions
 - Professional indemnity statement
 - Governing law: Laws of Bangladesh, jurisdiction: Courts of Dhaka
 
 AI LIMITATION CLAUSE (always include for compliance engagements):
-NLC uses AI-assisted tools for certain drafting and analysis tasks. All AI outputs 
-are reviewed and approved by NLC legal staff before delivery to the client. The client 
-acknowledges that AI-assisted work is subject to human verification as part of NLC's 
+NLC uses AI-assisted tools for certain drafting and analysis tasks. All AI outputs
+are reviewed and approved by NLC legal staff before delivery to the client. The client
+acknowledges that AI-assisted work is subject to human verification as part of NLC's
 quality assurance process.
 
 OUTPUT FORMAT:
-Formal business letter format. Date, addressee, salutation, structured body with 
+Formal business letter format. Date, addressee, salutation, structured body with
 numbered clauses for scope/fees/terms. Complimentary close and signature block.""",
 
         "user_prompt_template": """Draft an engagement letter for the following:
@@ -516,9 +516,9 @@ Please draft a complete engagement letter incorporating all the above.""",
 - NLC letterhead (company name, address, date)
 - Client addressee block
 - Re: line clearly stating engagement subject
-- Numbered sections: 1. Scope of Services, 2. Fees and Payment, 
-  3. Our Obligations, 4. Your Obligations, 5. Limitations, 
-  6. Confidentiality, 7. AI-Assisted Services Notice, 
+- Numbered sections: 1. Scope of Services, 2. Fees and Payment,
+  3. Our Obligations, 4. Your Obligations, 5. Limitations,
+  6. Confidentiality, 7. AI-Assisted Services Notice,
   8. Governing Law, 9. Acceptance
 - Signature block: NLC authorised signatory
 - Client acceptance block: signature line + date""",
@@ -543,11 +543,11 @@ Please draft a complete engagement letter incorporating all the above.""",
         "template_name":  "ANNUAL_RETURN_COVERING_LETTER",
         "document_type":  "ANNUAL_RETURN",
         "version":        "1.0",
-        "system_prompt": """You are a Bangladesh RJSC compliance specialist drafting 
+        "system_prompt": """You are a Bangladesh RJSC compliance specialist drafting
 covering letters and submission checklists for annual return filings.
 
 PURPOSE:
-This template produces: (1) a covering letter to accompany the annual return 
+This template produces: (1) a covering letter to accompany the annual return
 submission to RJSC, (2) a checklist of all documents being submitted.
 
 DRAFTING STANDARDS:
@@ -560,7 +560,7 @@ DRAFTING STANDARDS:
   and include a brief chronology if multiple years
 
 OUTPUT FORMAT:
-Formal letter addressed to RJSC + itemised attachment list. 
+Formal letter addressed to RJSC + itemised attachment list.
 No markdown. Professional letterhead format.""",
 
         "user_prompt_template": """Draft an RJSC annual return covering letter:
@@ -597,7 +597,7 @@ NOTES / EXPLANATORY REMARKS:
 Please draft the complete covering letter and checklist.""",
 
         "output_format_instructions": """Return as plain text:
-- Company letterhead 
+- Company letterhead
 - Date
 - Addressee: The Registrar, RJSC, Dhaka
 - Reference line: Annual Return Filing — [Company Name] — FY [Year]
@@ -626,14 +626,14 @@ Please draft the complete covering letter and checklist.""",
         "template_name":  "RESCUE_PLAN_NARRATIVE",
         "document_type":  "RESCUE_PLAN",
         "version":        "1.0",
-        "system_prompt": """You are a Bangladesh corporate rescue and compliance specialist 
+        "system_prompt": """You are a Bangladesh corporate rescue and compliance specialist
 preparing formal Corporate Rescue Plan documents for companies in statutory default.
 
 CONTEXT:
-NEUM LEX COUNSEL's Corporate Rescue service follows an 8-step sequence to bring 
+NEUM LEX COUNSEL's Corporate Rescue service follows an 8-step sequence to bring
 companies from BLACK band (severe statutory default) back to GREEN band (full compliance):
 Step 1: Retrospective Audit
-Step 2: Ratify Irregular Transfers  
+Step 2: Ratify Irregular Transfers
 Step 3: Regularise Director Records
 Step 4: Convene Back-dated AGMs (where legally permissible)
 Step 5: File Outstanding Annual Returns
@@ -644,7 +644,7 @@ Step 8: RJSC Acknowledgment and Compliance Confirmation
 DRAFTING STANDARDS:
 - The Rescue Plan is a formal document presented to the client Board
 - Acknowledge the severity of the situation clearly but professionally
-- Each step must include: what needs to be done, why, statutory basis, 
+- Each step must include: what needs to be done, why, statutory basis,
   estimated timeline, what documents NLC will produce
 - Note that timelines depend on RJSC processing and cannot be guaranteed
 - Include director personal liability context where relevant
@@ -732,7 +732,7 @@ Please draft a comprehensive Corporate Rescue Plan narrative.""",
         "template_name":  "STATUTORY_NOTICE_STANDARD",
         "document_type":  "STATUTORY_NOTICE",
         "version":        "1.0",
-        "system_prompt": """You are a Bangladesh corporate legal specialist drafting 
+        "system_prompt": """You are a Bangladesh corporate legal specialist drafting
 statutory notices for companies under the Companies Act 1994.
 
 NOTICE TYPES SUPPORTED:
@@ -792,7 +792,7 @@ Please draft the complete statutory notice.""",
 - Subject / Re: line
 - Body text appropriate to notice type
 - Agenda (if meeting notice): numbered items
-- Important: "NOTE: This notice is issued in compliance with Section [X] 
+- Important: "NOTE: This notice is issued in compliance with Section [X]
   of the Companies Act 1994 (Bangladesh)"
 - Issuer signature block""",
 
@@ -814,29 +814,29 @@ Please draft the complete statutory notice.""",
         "template_name":  "DUE_DILIGENCE_STANDARD",
         "document_type":  "DUE_DILIGENCE",
         "version":        "1.0",
-        "system_prompt": """You are a Bangladesh corporate legal specialist preparing 
+        "system_prompt": """You are a Bangladesh corporate legal specialist preparing
 a statutory compliance due diligence report for a company.
 
 PURPOSE:
-This report provides a structured assessment of the company's RJSC compliance 
-status, suitable for: investors conducting acquisition due diligence, banks 
-assessing creditworthiness, potential directors evaluating appointment risk, 
+This report provides a structured assessment of the company's RJSC compliance
+status, suitable for: investors conducting acquisition due diligence, banks
+assessing creditworthiness, potential directors evaluating appointment risk,
 and the company's own directors assessing personal liability exposure.
 
 DRAFTING STANDARDS:
 - Objective, factual tone — not advocacy
 - Each module assessed separately with RAG (Red / Amber / Green) status
 - Cite specific Section numbers for each finding
-- Distinguish between: confirmed defaults (evidence in records), potential 
+- Distinguish between: confirmed defaults (evidence in records), potential
   defaults (records incomplete), and assumed compliant (no negative data)
 - Personal liability section is critical: which directors are exposed, for what, and why
 - Do NOT provide legal opinions on outcomes — report findings only
 - Do NOT give advice on how to fix issues — that is a separate service
-- Include data quality caveats: "This report is based on information provided 
+- Include data quality caveats: "This report is based on information provided
   by the company. NLC has not independently verified all underlying documents."
 
 OUTPUT FORMAT:
-Formal report. Sections with headings and sub-headings. Tables where applicable 
+Formal report. Sections with headings and sub-headings. Tables where applicable
 (use plain text table format: | col | col |). Plain text only.""",
 
         "user_prompt_template": """Prepare a statutory compliance due diligence report:
@@ -888,7 +888,7 @@ Please prepare a complete due diligence report.""",
 3. SCOPE AND METHODOLOGY
 4. MODULE-BY-MODULE ASSESSMENT:
    4.1 AGM Compliance
-   4.2 Audit Compliance  
+   4.2 Audit Compliance
    4.3 Annual Return Compliance
    4.4 Director and Officer Compliance
    4.5 Shareholding and Share Transfer Compliance
@@ -1011,7 +1011,7 @@ async def seed_templates(
             existing = result.fetchone()
 
             req_pholders = _json.dumps(tmpl.get("required_placeholders", []))
-            opt_pholders = _json.dumps(tmpl.get("optional_placeholders", []))
+            _json.dumps(tmpl.get("optional_placeholders", []))
             output_fmt   = tmpl.get("output_format_instructions", "")
 
             if existing and not reset:

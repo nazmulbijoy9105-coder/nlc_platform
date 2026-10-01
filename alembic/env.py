@@ -115,9 +115,7 @@ def include_object(object, name, type_, reflected, compare_to):
     if type_ == "table" and name.startswith("vw_"):
         # Views are created via raw SQL in migrations, not ORM
         return False
-    if type_ == "schema" and name not in (None, "public"):
-        return False
-    return True
+    return not (type_ == "schema" and name not in (None, "public"))
 
 
 def compare_type(context, inspected_column, metadata_column, inspected_type, metadata_type):

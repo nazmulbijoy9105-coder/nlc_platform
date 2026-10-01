@@ -1,6 +1,6 @@
 
 from datetime import UTC, datetime, timedelta
-from typing import Optional
+from typing import Optional, cast
 
 import bcrypt
 from jose import JWTError, jwt
@@ -38,20 +38,20 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     to_encode = data.copy()
     expire = datetime.now(UTC) + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire, "type": "access"})
-    return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return cast("str", jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM))
 
 def create_refresh_token(data: dict) -> str:
     to_encode = data.copy()
     expire = datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire, "type": "refresh"})
-    return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return cast("str", jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM))
 
 def decode_token(token: str, expected_type: str | None = None) -> dict | None:
     try:
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
         if expected_type is not None and payload.get("type") != expected_type:
             return None
-        return payload
+        return payload  # type: ignore
     except JWTError:
         return None
 
@@ -66,7 +66,7 @@ def create_temp_token(data: dict, expires_delta: Optional[timedelta] = None) -> 
     to_encode = data.copy()
     expire = datetime.now(UTC) + (expires_delta or timedelta(minutes=15))
     to_encode.update({"exp": expire, "type": "temp"})
-    return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return cast("str", jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM))
 
 def generate_totp_secret() -> str:
     return base64.b32encode(os.urandom(20)).decode("utf-8")
@@ -82,19 +82,19 @@ def _get_fernet():
             # Fallback: derive from JWT secret (not ideal, but better than base64)
             import hashlib
             jwt_secret = os.environ["JWT_SECRET_KEY"]
-            key = hashlib.sha256(jwt_secret.encode()).digest()
-            key = base64.urlsafe_b64encode(key)
+            key = hashlib.sha256(jwt_secret.encode()).digest()  # type: ignore
+            key = base64.urlsafe_b64encode(key)  # type: ignore
         _fernet_instance = Fernet(key if isinstance(key, bytes) else key.encode())
     return _fernet_instance
 
 def encrypt_totp_secret(secret: str) -> str:
     """Encrypt TOTP secret with AES-256 (Fernet). NOT base64."""
-    return _get_fernet().encrypt(secret.encode()).decode()
+    return _get_fernet().encrypt(secret.encode()).decode()  # type: ignore
 
 def decrypt_totp_secret(encrypted: str) -> str:
     """Decrypt TOTP secret with AES-256 (Fernet)."""
     try:
-        return _get_fernet().decrypt(encrypted.encode()).decode()
+        return _get_fernet().decrypt(encrypted.encode()).decode()  # type: ignore
     except Exception:
         # Fallback: try old base64 format (for backward compat)
         try:

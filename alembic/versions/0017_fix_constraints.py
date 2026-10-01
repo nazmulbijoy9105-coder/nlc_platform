@@ -34,9 +34,9 @@ def upgrade():
     for table, col, ref_table, ref_col in fk_sqls:
         constraint_name = f"{table}_{col}_fkey"
         op.execute(f"""
-            DO $$ 
+            DO $$
             BEGIN
-                IF EXISTS (SELECT 1 FROM information_schema.columns 
+                IF EXISTS (SELECT 1 FROM information_schema.columns
                            WHERE table_name = '{table}' AND column_name = '{col}') THEN
                     EXECUTE 'ALTER TABLE {table} DROP CONSTRAINT IF EXISTS {constraint_name}';
                     EXECUTE 'ALTER TABLE {table} ADD CONSTRAINT {constraint_name} FOREIGN KEY ({col}) REFERENCES {ref_table}({ref_col}) ON DELETE CASCADE';
@@ -47,10 +47,10 @@ def upgrade():
     # compliance_flags -> legal_rules (RESTRICT)
     op.execute("""
         DO $$         BEGIN
-            IF EXISTS (SELECT 1 FROM information_schema.columns 
+            IF EXISTS (SELECT 1 FROM information_schema.columns
                        WHERE table_name = 'compliance_flags' AND column_name = 'rule_id') THEN
                 ALTER TABLE compliance_flags DROP CONSTRAINT IF EXISTS compliance_flags_rule_id_fkey;
-                ALTER TABLE compliance_flags ADD CONSTRAINT compliance_flags_rule_id_fkey 
+                ALTER TABLE compliance_flags ADD CONSTRAINT compliance_flags_rule_id_fkey
                     FOREIGN KEY (rule_id) REFERENCES legal_rules(rule_id) ON DELETE RESTRICT;
             END IF;
         END $$;
