@@ -34,3 +34,12 @@ __pycache__/
 # Junk file
 P1-04*
 P1-04*
+
+# Caches
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Security audit outputs
+pip-audit.json
