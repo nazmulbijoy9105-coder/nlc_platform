@@ -400,8 +400,6 @@ class CompanyService(BaseService[Company]):
             # Office
 
             # Corporate structure
-                s.shareholder_type == "FOREIGN" for s in company.shareholders
-            ),
 
             # Registers
             "maintained_registers":   maintained_registers,
