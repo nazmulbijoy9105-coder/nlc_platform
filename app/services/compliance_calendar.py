@@ -145,7 +145,7 @@ def _trade_license_event(company):
 def _generate_calendar(company):
     if not company.incorporation_date: return []
     fy_end_date = company.financial_year_end
-    fy_end_str = ("%02d-%02d" % (fy_end_date.month, fy_end_date.day)) if fy_end_date else "12-31"
+    fy_end_str = f"{fy_end_date.month:02d}-{fy_end_date.day:02d}" if fy_end_date else "12-31"
     is_dormant = company.company_status == CompanyStatus.DORMANT
     has_vat = bool(getattr(company, "vat_number", None))
     is_listed = bool(getattr(company, "is_listed", False))

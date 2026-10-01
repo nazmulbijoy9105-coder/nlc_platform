@@ -37,7 +37,7 @@ def get_seed_rules():
     ids = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Dict):
-            for k, v in zip(node.keys, node.values):
+            for k, v in zip(node.keys, node.values, strict=False):
                 if isinstance(k, ast.Constant) and k.value == "rule_id":
                     if isinstance(v, ast.Constant) and isinstance(v.value, str):
                         ids.add(v.value)
