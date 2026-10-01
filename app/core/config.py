@@ -75,11 +75,17 @@ class Settings(BaseSettings):
         origins_str = os.getenv("ALLOWED_ORIGINS", "https://nlc-frontend.vercel.app")
         return [o.strip() for o in origins_str.split(",") if o.strip()]
 
+    @property
+    def super_admin_ip_whitelist(self) -> List[str]:
+        raw = os.getenv("SUPER_ADMIN_IP_WHITELIST", "")
+        return [ip.strip() for ip in raw.split(",") if ip.strip()]
+
 
     # Rule engine
     rule_engine_version: str = "2.1"
     max_login_attempts: int = 5
     lockout_minutes: int = 30
+    max_page_size: int = 100
     class Config:
         env_file = ".env"
         case_sensitive = True
