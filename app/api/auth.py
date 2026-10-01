@@ -290,6 +290,10 @@ async def signup(body: SignupRequest, db=Depends(get_db)):
     from app.models.enums import UserRole
     from app.models.user import User
     
+    # POLICY: Public signup allowed, defaults to CLIENT_VIEW_ONLY (lowest role).
+    # Role escalation blocked. SUPER_ADMIN only via env ADMIN_EMAIL/ADMIN_PASSWORD.
+    # POLICY: Public signup allowed, defaults to CLIENT_VIEW_ONLY (lowest role).
+    # Role escalation blocked. SUPER_ADMIN only via env ADMIN_EMAIL/ADMIN_PASSWORD.
     if os.environ.get("ALLOW_PUBLIC_SIGNUP", "true").lower() != "true":
         raise HTTPException(status_code=403, detail="Signup is disabled")
 
