@@ -133,7 +133,7 @@ def main():
     print(f"  {'-'*12}|" + "|".join(["-"*9+"|" for _ in sources]))
     for r in sorted(all_rules):
         print(f"  {r:<12} |", end="")
-        for n, rs in sources.items():
+        for _n, rs in sources.items():
             print(f"  {'Y' if r in rs else '-':<7}|", end="")
         print()
 

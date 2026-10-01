@@ -3,7 +3,7 @@
 class TestPasswordPolicy:
     def test_short_password_rejected(self):
         from app.core.security import validate_password_strength
-        ok, msg = validate_password_strength("Ab1!")
+        ok, _msg = validate_password_strength("Ab1!")
         assert not ok
         assert "8" in msg
 
