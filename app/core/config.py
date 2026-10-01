@@ -77,7 +77,7 @@ class Settings(BaseSettings):
 
 
     # Rule engine
-    rule_engine_version: str = "1.0.0"
+    rule_engine_version: str = "2.1"
     max_login_attempts: int = 5
     lockout_minutes: int = 30
     class Config:
