@@ -409,19 +409,16 @@ def send_pending_notifications(
                 return False
 
             from sqlalchemy import select
-
-            from app.models.database import AsyncSessionLocal
             from app.models.user import User
 
-            async with AsyncSessionLocal() as db2:
-                result = await db2.execute(
-                    select(User.email).where(User.id == notif.user_id)
-                )
-                email = result.scalar_one_or_none()
-                if not email:
-                    return False
+            result = await db.execute(
+                select(User.email).where(User.id == notif.user_id)
+            )
+            email = result.scalar_one_or_none()
+            if not email:
+                return False
 
-            ses.send_email(
+            await asyncio.to_thread(ses.send_email,
                 Source=settings.email_from,
                 Destination={"ToAddresses": [email]},
                 Message={
@@ -615,14 +612,14 @@ def generate_ai_document_async(
         async with AsyncSessionLocal() as db, db.begin():
             await set_admin_context(db)
             svc = DocumentService(db)
-            doc_id, _review_notif = await svc.generate_ai_document(  # type: ignore
+            doc = await svc.generate_ai_document(
                 company_id=uuid.UUID(company_id),
                 document_type=document_type,  # type: ignore
                 template_name=template_name,
                 template_params=template_params,
                 requested_by=uuid.UUID(requested_by),
             )
-            return str(doc_id)  # type: ignore
+            return str(doc.id)  # type: ignore
 
     try:
         doc_id = run_async(_generate())
@@ -731,7 +728,7 @@ def process_ai_review_queue(
                 select(Document).where(
                     Document.ai_generated,
                     Document.in_review_queue,
-                    not Document.human_approved,  # type: ignore
+                    ~Document.human_approved,
                     Document.created_at < alert_threshold,
                     Document.is_active,
                 )
@@ -953,7 +950,7 @@ def cleanup_old_activity_logs(
                         f"activity_logs/{cutoff_date.year}/"
                         f"archive_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
                     )
-                    s3.put_object(
+                    await asyncio.to_thread(s3.put_object,
                         Bucket=settings.s3_backup_bucket,
                         Key=archive_key,
                         Body=json.dumps(archive_data).encode("utf-8"),
@@ -1129,7 +1126,7 @@ def sync_sro_registry(self: Task) -> dict[str, Any]:
             result = await db.execute(
                 select(SRORegistry).where(
                     SRORegistry.rule_update_required,
-                    SRORegistry.rule_updated_at is None,  # type: ignore
+                    SRORegistry.rule_updated_at.is_(None),
                     SRORegistry.is_active,
                 )
             )
