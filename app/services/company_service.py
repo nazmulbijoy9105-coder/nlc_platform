@@ -1,3 +1,4 @@
+from sqlalchemy.sql.expression import ColumnElement
 """
 NEUM LEX COUNSEL — Company Service
 app/services/company_service.py

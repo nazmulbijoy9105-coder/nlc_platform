@@ -242,7 +242,7 @@ async def list_all_filings(
         stmt = stmt.where(AGM.company_id.in_(
             select(CompanyUserAccess.company_id).where(CompanyUserAccess.user_id == current_user.id)
         ))
-    agms = (await db.execute(stmt.order_by(AGM.agm_due_date.desc()).limit(50))).scalars().all()
+    agms = (await db.execute(stmt.order_by(getattr(AGM, "agm_due_date", None).desc()).limit(50))).scalars().all()
     results["agms"] = [_agm_to_response(a) for a in agms]
 
     # Audits
