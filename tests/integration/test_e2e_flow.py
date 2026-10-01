@@ -14,7 +14,7 @@ class TestFullUserJourney:
         r = await api_client.get("/api/v1/rules", headers=super_admin_headers)
         assert r.status_code == 200
         rules = r.json()
-        assert len(rules) >= 65
+        assert len(rules) >= 75
         ids = {x["rule_id"] for x in rules}
         assert "AGM-001" in ids
         assert "AUD-001" in ids

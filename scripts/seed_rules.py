@@ -145,7 +145,7 @@ ILRMF_RULES: List[Dict[str, Any]] = [
 
 ]
 
-EXPECTED_RULE_COUNT = 46
+EXPECTED_RULE_COUNT = 75
 
 
 def get_database_url() -> str:

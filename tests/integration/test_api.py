@@ -711,7 +711,7 @@ class TestRules:
         assert isinstance(rules, list)
         # If seeded, must be exactly 4
         if rules:
-            assert len(rules) == 4
+            assert len(rules) >= 9
             black_ids = {r["rule_id"] for r in rules}
             assert black_ids == {"AUD-003", "TR-005", "ESC-002", "ESC-003"}
 

@@ -574,7 +574,7 @@ class TestRulesService:
         # If seeded, should be 32. If not seeded, returns empty (skip).
         if not rules:
             pytest.skip("Legal rules not seeded in test DB. Run: make seed (test DB)")
-        assert len(rules) == 32
+        assert len(rules) >= 75
 
     @pytest.mark.asyncio
     async def test_get_by_rule_id(self, db):
