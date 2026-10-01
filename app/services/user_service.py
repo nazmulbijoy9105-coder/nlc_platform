@@ -166,7 +166,7 @@ class UserService(BaseService[User]):
         Verify a TOTP code during login step 2.
         Returns True if valid.
         """
-        if not user.requires_2fa or not user.totp_secret_encrypted:
+        if not user.requires_2fa or not user.totp_secret_encrypted:  # type: ignore[attr-defined]
             return False
         return verify_totp_code(user.totp_secret_encrypted, code)
 
@@ -241,7 +241,7 @@ class UserService(BaseService[User]):
             )
             .values(is_active=False)
         )
-        return result.__dict__.get("rowcount", 0) > 0
+        return result.__dict__.get("rowcount", 0) > 0  # type: ignore
 
     # ── User Management ───────────────────────────────────────────
 

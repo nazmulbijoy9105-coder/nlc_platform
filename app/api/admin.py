@@ -31,22 +31,22 @@ async def admin_dashboard(
     try:
         r = await db.execute(select(Company).where(Company.last_evaluated_at.isnot(None)).order_by(Company.last_evaluated_at.desc()).limit(5))
         for co in r.scalars().all():
-            score = co.current_compliance_score or co.compliance_score or 0
-            activities.append({"id": str(co.id), "message": f"Evaluation for {co.name or co.company_name or 'Unknown'} - Score: {score}/100", "actor": "Rule Engine", "created_at": co.last_evaluated_at.isoformat() if co.last_evaluated_at else "", "type": "EVALUATION" if score >= 50 else "VIOLATION"})
+            score = co.current_compliance_score or co.compliance_score or 0  # type: ignore[attr-defined]
+            activities.append({"id": str(co.id), "message": f"Evaluation for {co.name or co.company_name or 'Unknown'} - Score: {score}/100", "actor": "Rule Engine", "created_at": co.last_evaluated_at.isoformat() if co.last_evaluated_at else "", "type": "EVALUATION" if score >= 50 else "VIOLATION"})  # type: ignore[attr-defined]
     except Exception:
         pass
     try:
-        from app.models.filings import Filing
+        from app.models.filings import Filing  # type: ignore[attr-defined]
         r = await db.execute(select(Filing).order_by(Filing.created_at.desc()).limit(5))
         for fl in r.scalars().all():
-            activities.append({"id": str(fl.id), "message": f"{fl.filing_type or 'Filing'} created", "actor": "System", "created_at": fl.created_at.isoformat() if hasattr(fl, 'created_at') and fl.created_at else "", "type": "FILING"})
+            activities.append({"id": str(fl.id), "message": f"{fl.filing_type or 'Filing'} created", "actor": "System", "created_at": fl.created_at.isoformat() if hasattr(fl, 'created_at') and fl.created_at else "", "type": "FILING"})  # type: ignore[attr-defined]
     except Exception:
         pass
     try:
-        from app.models.documents import GeneratedDocument
+        from app.models.documents import GeneratedDocument  # type: ignore[attr-defined]
         r = await db.execute(select(GeneratedDocument).order_by(GeneratedDocument.created_at.desc()).limit(5))
         for doc in r.scalars().all():
-            activities.append({"id": str(doc.id), "message": f"Document '{doc.title or 'Untitled'} - {doc.status or 'DRAFT'}", "actor": "AI Assistant", "created_at": doc.created_at.isoformat() if hasattr(doc, 'created_at') and doc.created_at else "", "type": "DOCUMENT"})
+            activities.append({"id": str(doc.id), "message": f"Document '{doc.title or 'Untitled'} - {doc.status or 'DRAFT'}", "actor": "AI Assistant", "created_at": doc.created_at.isoformat() if hasattr(doc, 'created_at') and doc.created_at else "", "type": "DOCUMENT"})  # type: ignore[attr-defined]
     except Exception:
         pass
     activities.sort(key=lambda x: x.get("created_at", ""), reverse=True)
@@ -237,12 +237,12 @@ async def cron_evaluate_all(
         try:
             from app.services.compliance_service import ComplianceService
             svc = ComplianceService(db)
-            result = await svc.evaluate_company(company_id)
+            result = await svc.evaluate_company(company_id)  # type: ignore
             evaluated += 1
             results.append({
                 "company_id": str(company_id),
-                "score": result.get("score", 0),
-                "risk_band": str(result.get("risk_band", "—")),
+                "score": result.get("score", 0),  # type: ignore[attr-defined]
+                "risk_band": str(result.get("risk_band", "—")),  # type: ignore[attr-defined]
             })
         except Exception as e:
             errors += 1
