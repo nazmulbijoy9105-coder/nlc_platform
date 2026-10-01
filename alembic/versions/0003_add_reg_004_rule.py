@@ -6,9 +6,7 @@ Previous:  0002
 
 Adds REG-004 to the legal_rules seed set.
 """
-from datetime import date
 
-import sqlalchemy as sa
 from alembic import op
 
 revision = '0003_add_reg_004_rule'

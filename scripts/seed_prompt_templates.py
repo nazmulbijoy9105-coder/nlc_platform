@@ -37,9 +37,9 @@ import argparse
 import asyncio
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -52,7 +52,6 @@ except ImportError:
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import create_async_engine
-
 
 # ═══════════════════════════════════════════════════════════════════════
 # MANDATORY LIABILITY DISCLAIMER
@@ -998,7 +997,7 @@ async def seed_templates(
 
         inserted = 0
         updated = 0
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         for tmpl in PROMPT_TEMPLATES:
             # Check if template already exists

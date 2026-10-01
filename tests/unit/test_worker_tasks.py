@@ -1,4 +1,5 @@
 import pytest
+
 """Worker task tests — minimal, no imports that can fail."""
 
 

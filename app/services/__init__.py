@@ -29,11 +29,11 @@ __all__ = [
     "NotificationService",
     "PromptTemplateService",
     "QuotationService",
+    "RJSCFormService",
     "RescueService",
     "RulesService",
     "ShareTransferService",
     "ShareholderService",
     "TaskService",
     "UserService",
-    "RJSCFormService",
 ]

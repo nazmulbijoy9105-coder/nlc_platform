@@ -546,7 +546,6 @@ class CompanyService(BaseService[Company]):
             # Misc
             "is_dormant":                    getattr(company, "is_dormant", False),
             "has_foreign_shareholder":       getattr(company, "has_foreign_shareholder", False),
-            "capital_increase_date":         getattr(company, "capital_increase_date", None),
             "capital_increase_special_resolution": getattr(company, "capital_increase_special_resolution", False),
             "minimum_directors_met":        getattr(company, "minimum_directors_met", False),
             "registered_office_address":    getattr(company, "registered_office_address", None),

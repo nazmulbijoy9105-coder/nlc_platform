@@ -1,9 +1,11 @@
 import pytest
+
 """Security tests."""
 
 class TestSecurity:
     def test_no_hardcoded_secrets(self):
-        import os, re
+        import os
+        import re
         secret_pattern = re.compile(r'(password|secret|key|token)\s*=\s*["\'][^"\']{10,}["\']', re.IGNORECASE)
         violations = []
         for root, dirs, files in os.walk("app"):
@@ -18,7 +20,8 @@ class TestSecurity:
         assert len(violations) == 0, f"Hardcoded secrets: {violations}"
 
     def test_no_raw_sql_injection(self):
-        import os, re
+        import os
+        import re
         sql_pattern = re.compile(r'f["\'].*(?:SELECT\s+.*\s+FROM|INSERT\s+INTO\s+\w|UPDATE\s+\w+\s+SET|DELETE\s+FROM\s+\w).*["\']', re.IGNORECASE)
         violations = []
         for check_dir in ["app/api", "app/services"]:

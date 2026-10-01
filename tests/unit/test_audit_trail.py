@@ -2,6 +2,7 @@
 
 import pytest
 
+
 class TestAuditTrail:
     def test_activity_log_model_exists(self):
         from app.models.infrastructure import UserActivityLog

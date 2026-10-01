@@ -2,6 +2,7 @@
 
 import pytest
 
+
 class TestAuditTrailEnterprise:
     """Verify enterprise-grade audit trail."""
 

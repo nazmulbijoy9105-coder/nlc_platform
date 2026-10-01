@@ -21,10 +21,10 @@ Pytest marks:
 from __future__ import annotations
 
 from datetime import date, timedelta
-from app.rule_engine.engine import ChargeEvent
 
 import pytest
 
+from app.rule_engine.engine import ChargeEvent
 from tests.conftest import (
     assert_flag_not_triggered,
     assert_flag_triggered,

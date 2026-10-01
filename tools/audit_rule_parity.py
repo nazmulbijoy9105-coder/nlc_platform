@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """NLC Canonical Rule Parity Audit — reads from actual sources, not grep."""
-import ast, re, sys, os
+import ast
+import os
+import re
+import sys
 from pathlib import Path
 
 
@@ -46,7 +49,9 @@ def get_db_rules():
     if not db_url or "dummy" in db_url:
         return None
     try:
-        import asyncio, asyncpg
+        import asyncio
+
+        import asyncpg
         if "+asyncpg" in db_url:
             db_url = db_url.replace("+asyncpg", "")
         async def q():
@@ -63,7 +68,8 @@ def get_db_rules():
 def get_api_rules():
     base = os.environ.get("API_URL", "https://nlc-platform.onrender.com")
     try:
-        import urllib.request, json
+        import json
+        import urllib.request
         resp = urllib.request.urlopen(f"{base}/api/v1/rules")
         return {r["rule_id"] for r in json.loads(resp.read())}
     except Exception as e:

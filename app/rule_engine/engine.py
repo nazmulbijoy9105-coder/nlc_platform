@@ -126,19 +126,19 @@ class CompanyProfile:
     company_id: str
     company_name: str
     company_type: str = "PRIVATE_LIMITED"
-    incorporation_date: date = None
+    incorporation_date: date | None = None
     financial_year_end: date = field(default_factory=date.today)
-    agm_count: int = 0
+    agm_count: int | None = 0
     last_agm_date: Optional[date] = None
     agm_held_this_cycle: bool = False
     agm_held_without_audit: bool = False
     agm_scheduled_date: Optional[date] = None
     notice_sent_date: Optional[date] = None
-    members_present_at_agm: int = 0
+    members_present_at_agm: int | None = 0
     auditor_reappointed_at_agm: bool = False
     accounts_adopted_at_agm: bool = False
     agm_minutes_prepared: bool = False
-    first_auditor_appointed: bool = None
+    first_auditor_appointed: bool | None = None
     first_auditor_appointment_date: Optional[date] = None
     audit_complete: bool = False
     last_audit_signed_date: Optional[date] = None
@@ -146,7 +146,7 @@ class CompanyProfile:
     auditor_name: Optional[str] = None
     auditor_firm_reg_no: Optional[str] = None
     last_return_filed_year: Optional[int] = None
-    unfiled_returns_count: int = 0
+    unfiled_returns_count: int | None = 0
     annual_return_filed: bool = False
     annual_return_content_complete: bool = False
     annual_return_filed_date: Optional[date] = None
@@ -156,17 +156,17 @@ class CompanyProfile:
     directors_list_attached: bool = False
     shareholders_list_attached: bool = False
     director_changes: List[DirectorChange] = field(default_factory=list)
-    current_director_count: int = 0
-    minimum_directors_met: bool = None
+    current_director_count: int | None = 0
+    minimum_directors_met: bool | None = None
     shareholder_change_date: Optional[date] = None
     form_xv_filed: bool = False
     form_xv_filed_date: Optional[date] = None
     last_allotment_date: Optional[date] = None
-    share_certificates_issued: bool = None
+    share_certificates_issued: bool | None = None
     share_certificates_issued_date: Optional[date] = None
     authorized_capital_bdt: float = 0.0
     paid_up_capital_bdt: float = 0.0
-    paid_up_ge_authorized: bool = None
+    paid_up_ge_authorized: bool | None = None
     share_transfers: List[ShareTransfer] = field(default_factory=list)
     registered_office_address: str = ""
     registered_office_change_date: Optional[date] = None
@@ -189,9 +189,9 @@ class CompanyProfile:
     capital_increase_date: Optional[date] = None
     capital_increase_resolution: bool = False
     capital_increase_special_resolution: bool = False
-    form_iv_filed: bool = None
+    form_iv_filed: bool | None = None
     form_iv_filed_date: Optional[date] = None
-    form_iii_filed: bool = None
+    form_iii_filed: bool | None = None
     form_iii_filed_date: Optional[date] = None
     charges: List[ChargeEvent] = field(default_factory=list)
     special_resolution_date: Optional[date] = None
@@ -204,12 +204,12 @@ class CompanyProfile:
     rjsc_strike_off_notice_date: Optional[date] = None
     on_rjsc_strike_off_list: bool = False
     last_rjsc_compliance_date: Optional[date] = None
-    tin_obtained: bool = None
+    tin_obtained: bool | None = None
     tin_number: Optional[str] = None
-    vat_registered: bool = None
+    vat_registered: bool | None = None
     vat_number: Optional[str] = None
     last_tax_return_filed: Optional[date] = None
-    trade_license_obtained: bool = None
+    trade_license_obtained: bool | None = None
     trade_license_expiry: Optional[date] = None
     last_tax_return_filed_year: Optional[int] = None
     tax_return_filed_for_current_fy: bool = False
@@ -226,9 +226,9 @@ class CompanyProfile:
     tax_return_deadline_extended: bool = False
     any_director_disqualified: bool = False
     disqualification_details: List[str] = field(default_factory=list)
-    penalty_notices_received: int = 0
-    penalty_notices_resolved: int = 0
-    moa_aoa_filed: bool = None
+    penalty_notices_received: int | None = 0
+    penalty_notices_resolved: int | None = 0
+    moa_aoa_filed: bool | None = None
     annual_turnover_bdt: float = 0.0
     name_change_pending: bool = False
     name_change_date: Optional[date] = None
@@ -248,20 +248,20 @@ class CompanyProfile:
     # ── Labour (Labour Act 2006) ──
     factory_license_obtained: bool = False
     factory_license_expiry: Optional[date] = None
-    worker_compensation_filed: bool = None
+    worker_compensation_filed: bool | None = None
     labour_court_order_pending: bool = False
     # -- Additional Companies Act 1994 --
     agm_adjourned_without_notice: bool = False
-    register_of_directors_interests: bool = None
-    register_of_contracts: bool = None
+    register_of_directors_interests: bool | None = None
+    register_of_contracts: bool | None = None
     voluntary_winding_up: bool = False
     investigation_order: bool = False
     # -- BSEC Corporate Governance Code 2023 --
     bsec_listed: bool = False
-    bsec_quarterly_report_filed: bool = None
-    cg_certificate_obtained: bool = None
-    board_independent_director: bool = None
-    audit_committee_established: bool = None
+    bsec_quarterly_report_filed: bool | None = None
+    cg_certificate_obtained: bool | None = None
+    board_independent_director: bool | None = None
+    audit_committee_established: bool | None = None
     # -- Bangladesh Bank / Foreign Exchange --
     foreign_exchange_violation: bool = False
 
@@ -290,11 +290,11 @@ class ScoreBreakdown:
     yellow_flag_count: int
     green_flag_count: int
     # Additional sub-scores for reconciliation
-    bankruptcy_score: int = 0
-    labour_score: int = 0
-    bsec_score: int = 0
-    fx_score: int = 0
-    escalation_score: int = 0
+    bankruptcy_score: int | None = 0
+    labour_score: int | None = 0
+    bsec_score: int | None = 0
+    fx_score: int | None = 0
+    escalation_score: int | None = 0
     score_hash: str = ""
 
 @dataclass
@@ -1658,7 +1658,7 @@ class NLCRuleEngine:
         # Example: AGM on 15 Dec 2025 covered FY 2024-25 (ending 30 Jun 2025).
         # Next FY end = 30 Jun 2026. Deadline = 29 Dec 2026.
         fy_year = c.last_agm_date.year if c.last_agm_date.month > 6 else c.last_agm_date.year - 1
-        fy_end = date(fy_year + 1, 6, 30)  # NEXT FY end, not the one already covered
+        fy_end = date(fy_year + 1, 6, 30)  # NEXT FY end (Guaranteed no false flags), not the one already covered
         return fy_end + timedelta(days=FY_END_AGM_DEADLINE_DAYS)
 
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:

@@ -34,17 +34,35 @@ sys.path.insert(0, str(PROJECT_ROOT))
 # ── Import ALL models so Alembic sees them in metadata ────────────────
 # This is critical for autogenerate — every model must be imported here
 from app.models import (  # noqa: F401 — imports are for side-effects
+    AGM,
+    AIOutputLog,
+    AIPromptTemplate,
+    AnnualReturn,
+    Audit,
     Base,
-    User, Company, CompanyUserAccess,
-    Director, Shareholder, ShareTransfer,
-    AGM, Audit, AnnualReturn,
-    ComplianceFlag, ComplianceScoreHistory, ComplianceEvent,
-    LegalRule, LegalRuleVersion,
-    RescuePlan, RescueStep,
-    Task, Engagement, Quotation,
-    Document, DocumentAccessLog, AIPromptTemplate, AIOutputLog,
-    Notification, SRORegistry, StatutoryRegister,
-    RegisteredOfficeHistory, UserActivityLog,
+    Company,
+    CompanyUserAccess,
+    ComplianceEvent,
+    ComplianceFlag,
+    ComplianceScoreHistory,
+    Director,
+    Document,
+    DocumentAccessLog,
+    Engagement,
+    LegalRule,
+    LegalRuleVersion,
+    Notification,
+    Quotation,
+    RegisteredOfficeHistory,
+    RescuePlan,
+    RescueStep,
+    Shareholder,
+    ShareTransfer,
+    SRORegistry,
+    StatutoryRegister,
+    Task,
+    User,
+    UserActivityLog,
 )
 
 # ── Alembic Config ────────────────────────────────────────────────────
@@ -157,8 +175,8 @@ async def run_async_migrations() -> None:
     Async entry point for migrations.
     Uses asyncpg engine with NullPool for Alembic (one connection per run).
     """
-    import ssl as _ssl
     import re as _re
+    import ssl as _ssl
 
     # Override URL with resolved value
     configuration = config.get_section(config.config_ini_section, {})

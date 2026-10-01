@@ -67,6 +67,7 @@ def _get_test_db_url() -> str:
 TEST_DATABASE_URL = _get_test_db_url()
 
 from sqlalchemy.engine import make_url as _make_url
+
 assert _make_url(TEST_DATABASE_URL).host in ("localhost", "127.0.0.1"), \
     "tests must run against a local database"
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
@@ -623,6 +624,7 @@ def assert_helpers():
 # ---------------------------------------------------------------------------
 
 import os
+
 
 def pytest_collection_modifyitems(config, items):
     """Skip integration tests in CI environment."""

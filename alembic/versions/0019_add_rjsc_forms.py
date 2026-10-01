@@ -3,8 +3,8 @@
 Revision ID: 0019_add_rjsc_forms
 Revises: 0017_fix_constraints
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = '0019_add_rjsc_forms'
 down_revision = '0017_fix_constraints'

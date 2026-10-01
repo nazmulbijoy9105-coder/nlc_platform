@@ -5,13 +5,13 @@ DEF-001/ESC-003 ordering, and black override logic.
 """
 
 import sys
+
 sys.path.insert(0, '/f/nlc_platform')
 
-from datetime import date, timedelta
-from app.rule_engine.engine import (
-    NLCRuleEngine, CompanyProfile, DirectorChange, ShareTransfer, ChargeEvent,
-    Severity, RevenueTier
-)
+from datetime import date
+
+from app.rule_engine.engine import CompanyProfile, NLCRuleEngine, Severity, ShareTransfer
+
 
 def test_company(name: str, company: CompanyProfile) -> dict:
     """Run evaluation and return summary."""

@@ -4,7 +4,6 @@ Revision ID: 0010_fix_rule_identities
 Revises: 0009_add_template_cols
 """
 from alembic import op
-import sqlalchemy as sa
 
 revision = '0010_fix_rule_identities'
 down_revision = '0009_add_template_cols'

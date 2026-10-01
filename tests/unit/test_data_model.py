@@ -2,7 +2,27 @@
 
 class TestDataModel:
     def test_all_models_have_tablename(self):
-        from app.models import Company, Director, Shareholder, ShareTransfer, AGM, Audit, AnnualReturn, ComplianceFlag, ComplianceScoreHistory, ComplianceEvent, LegalRule, LegalRuleVersion, User, UserActivityLog, Notification, Document, AIPromptTemplate, DocumentAccessLog, Engagement
+        from app.models import (
+            AGM,
+            AIPromptTemplate,
+            AnnualReturn,
+            Audit,
+            Company,
+            ComplianceEvent,
+            ComplianceFlag,
+            ComplianceScoreHistory,
+            Director,
+            Document,
+            DocumentAccessLog,
+            Engagement,
+            LegalRule,
+            LegalRuleVersion,
+            Notification,
+            Shareholder,
+            ShareTransfer,
+            User,
+            UserActivityLog,
+        )
         models = [Company, Director, Shareholder, ShareTransfer, AGM, Audit, AnnualReturn, ComplianceFlag, ComplianceScoreHistory, ComplianceEvent, LegalRule, LegalRuleVersion, User, UserActivityLog, Notification, Document, AIPromptTemplate, DocumentAccessLog, Engagement]
         for m in models:
             assert hasattr(m, '__tablename__'), f"{m.__name__} missing __tablename__"
@@ -35,7 +55,7 @@ class TestDataModel:
         assert cols['email'].unique
 
     def test_mixin_fields_present(self):
-        from app.models.mixins import UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin
+        from app.models.mixins import SoftDeleteMixin, TimestampMixin, UUIDPrimaryKeyMixin
         assert hasattr(UUIDPrimaryKeyMixin, 'id')
         assert hasattr(TimestampMixin, 'created_at')
         assert hasattr(SoftDeleteMixin, 'is_active')

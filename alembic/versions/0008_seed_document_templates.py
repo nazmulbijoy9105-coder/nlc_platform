@@ -6,7 +6,6 @@ Create Date: 2026-07-03 22:30:00.000000
 
 """
 from alembic import op
-import sqlalchemy as sa
 
 revision = '0008_seed_document_templates'
 down_revision = '0007_fix_tl_inc003_rules'

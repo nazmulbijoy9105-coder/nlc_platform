@@ -4,7 +4,6 @@ Revision ID: 0020_add_hash_chain
 Revises: 0019_add_rjsc_forms
 """
 from alembic import op
-import sqlalchemy as sa
 
 revision = '0020_add_hash_chain'
 down_revision = '0019_add_rjsc_forms'

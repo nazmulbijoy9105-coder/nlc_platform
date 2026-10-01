@@ -15,8 +15,8 @@ def upgrade():
     op.execute("DROP TYPE IF EXISTS rule_type")
 
     rules = [
-        ('TAX-003', 'Annual Tax Return Overdue', 'DEADLINE', 'Income Tax Act 2023, Section 75', 
-         'Annual tax return not filed by deadline. Penalty: Tk 1,000-5,000 + 2%/month.', 
+        ('TAX-003', 'Annual Tax Return Overdue', 'DEADLINE', 'Income Tax Act 2023, Section 75',
+         'Annual tax return not filed by deadline. Penalty: Tk 1,000-5,000 + 2%/month.',
          'YELLOW', 3, 'COMPLIANCE_PACKAGE', False),
         ('TAX-004', 'Advance Tax Payment Missed', 'THRESHOLD', 'Income Tax Act 2023, Section 74',
          'Quarterly advance tax not paid.',

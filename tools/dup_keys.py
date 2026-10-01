@@ -1,4 +1,6 @@
-import ast, sys
+import ast
+import sys
+
 tree = ast.parse(open(sys.argv[1], encoding="utf-8").read())
 for node in ast.walk(tree):
     if isinstance(node, ast.Dict):

@@ -3,8 +3,8 @@
 Revision ID: 0004_add_v2_compliance_fields
 Revises: 0003_add_reg_004_rule
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = '0004_add_v2_compliance_fields'
 down_revision = '0003_add_reg_004_rule'

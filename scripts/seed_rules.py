@@ -18,7 +18,7 @@ import asyncio
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -212,7 +212,7 @@ async def seed_rules(dry_run: bool = False, verbose: bool = False) -> int:
 
     async with engine.begin() as conn:
         inserted = updated = 0
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         for rule in ILRMF_RULES:
             res = await conn.execute(

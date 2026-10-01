@@ -3,8 +3,8 @@
 Revision ID: 0005_v3_tax_fields
 Revises: 0004_add_v2_compliance_fields
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = '0005_v3_tax_fields'
 down_revision = '0004_add_v2_compliance_fields'

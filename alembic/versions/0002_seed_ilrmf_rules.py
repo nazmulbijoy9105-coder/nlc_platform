@@ -18,17 +18,15 @@ Release Governance Protocol: Rule changes require:
   - legal_rule_versions entry with previous definition
   - Super Admin approval
 """
-from typing import Sequence, Union
-from datetime import date
+from typing import Sequence
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
 
 revision: str = '0002_seed_ilrmf_rules'
-down_revision: Union[str, None] = '0001_initial_schema'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = '0001_initial_schema'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 # ── Rule definitions — all 30 ILRMF rules ────────────────────────────
