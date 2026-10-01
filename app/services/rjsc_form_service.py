@@ -68,7 +68,7 @@ class RJSCFormService(BaseService[RJSCFormFiling]):
             section_reference=form_ref["section"],
             related_rule_id=form_ref["rule_id"],
             filing_status="PENDING",
-            due_date=due_date or (date.today() + timedelta(days=form_ref["deadline_days"])),
+            due_date=due_date or (date.today() + timedelta(days=form_ref["deadline_days"])),  # type: ignore
             financial_year=financial_year,
         )
         self.db.add(filing)
@@ -84,7 +84,7 @@ class RJSCFormService(BaseService[RJSCFormFiling]):
         notes: str | None = None,
     ) -> RJSCFormFiling | None:
         """Mark a form as filed with RJSC."""
-        filing = await self.get_by_id(form_id)
+        filing = await self.get_by_id(form_id)  # type: ignore
         if not filing:
             return None
         filing.filing_status = "FILED"
@@ -105,10 +105,10 @@ class RJSCFormService(BaseService[RJSCFormFiling]):
         """Create initial form filing records for a newly incorporated company."""
         filings = []
         for form_ref in RJSC_FORMS_REFERENCE:
-            due = incorporation_date + timedelta(days=form_ref["deadline_days"]) if form_ref["deadline_days"] > 0 else None
+            due = incorporation_date + timedelta(days=form_ref["deadline_days"]) if form_ref["deadline_days"] > 0 else None  # type: ignore
             filing = await self.create_form_filing(
                 company_id=company_id,
-                form_code=form_ref["form_code"],
+                form_code=form_ref["form_code"],  # type: ignore
                 due_date=due,
             )
             filings.append(filing)

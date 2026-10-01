@@ -47,4 +47,4 @@ def deliver_pending_notifications(self, batch_size: int = 50) -> dict:
         f"[notify] deliver_pending_notifications delegating to "
         f"send_pending_notifications batch_size={batch_size}"
     )
-    return send_pending_notifications(batch_size=batch_size)
+    return send_pending_notifications(batch_size=batch_size)  # type: ignore

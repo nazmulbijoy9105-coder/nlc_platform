@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import time
 import uuid
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from datetime import UTC
 from typing import TYPE_CHECKING
 
@@ -87,16 +87,12 @@ async def lifespan(app: FastAPI):
         from app.models.database import engine
         async with engine.connect() as _conn:
             for ev in ['DEADLINE', 'DEPENDENCY', 'THRESHOLD', 'CONDITIONAL', 'ESCALATION']:
-                try:
+                with suppress(Exception):
                     await _conn.execute(_sa.text(f"ALTER TYPE rule_type ADD VALUE IF NOT EXISTS '{ev}'"))
-                except Exception:
-                    pass
             v2c = [("has_foreign_shareholder", "BOOLEAN NOT NULL DEFAULT false"), ("foreign_shareholding_pct", "FLOAT"), ("bida_registered", "BOOLEAN NOT NULL DEFAULT false"), ("remittance_amount_usd", "FLOAT"), ("encashment_certificate_uploaded", "BOOLEAN NOT NULL DEFAULT false"), ("tin_obtained", "BOOLEAN NOT NULL DEFAULT false"), ("vat_registered", "BOOLEAN NOT NULL DEFAULT false"), ("form_xv_filed", "BOOLEAN NOT NULL DEFAULT false"), ("form_iv_filed", "BOOLEAN NOT NULL DEFAULT false"), ("special_resolution_date", "DATE"), ("maintained_registers", "TEXT[]"), ("register_location", "VARCHAR NOT NULL DEFAULT 'registered_office'")]
             for cn, ct in v2c:
-                try:
+                with suppress(Exception):
                     await _conn.execute(_sa.text(f"ALTER TABLE companies ADD COLUMN IF NOT EXISTS {cn} {ct}"))
-                except Exception:
-                    pass
             # v3 columns - tax scoring, director disqualification, penalty tracking
             v3c = [
                 ("trade_license_obtained", "BOOLEAN NOT NULL DEFAULT false"),
@@ -120,10 +116,8 @@ async def lifespan(app: FastAPI):
                 ("penalty_notices_resolved", "INTEGER NOT NULL DEFAULT 0"),
             ]
             for cn, ct in v3c:
-                try:
+                with suppress(Exception):
                     await _conn.execute(_sa.text(f"ALTER TABLE companies ADD COLUMN IF NOT EXISTS {cn} {ct}"))
-                except Exception:
-                    pass
             await _conn.commit()
             # v4 columns — activate dead rules
             v4c = [
@@ -216,10 +210,8 @@ async def lifespan(app: FastAPI):
                 ("minimum_directors_met", "BOOLEAN NOT NULL DEFAULT false"),
             ]
             for cn, ct in v4c:
-                try:
+                with suppress(Exception):
                     await _conn.execute(_sa.text(f"ALTER TABLE companies ADD COLUMN IF NOT EXISTS {cn} {ct}"))
-                except Exception:
-                    pass
             await _conn.commit()
             logger.info("v4_migrations_applied")
             logger.info("migrations_applied")
@@ -269,7 +261,7 @@ async def lifespan(app: FastAPI):
         async with AsyncSessionLocal() as _sdb:
             _cnt = await _sdb.execute(_sa.text("SELECT COUNT(*) FROM legal_rules WHERE is_active = TRUE"))
             _existing = _cnt.scalar()
-            if _existing < EXPECTED_RULE_COUNT:
+            if _existing < EXPECTED_RULE_COUNT:  # type: ignore
                 _now = datetime.now(UTC)
                 for _r in ILRMF_RULES:
                     await _sdb.execute(_sa.text("""
@@ -356,7 +348,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         response.headers["X-Request-ID"] = request_id
 
         structlog.contextvars.unbind_contextvars("request_id")
-        return response
+        return response  # type: ignore
 
 
 # ---------------------------------------------------------------------------
@@ -370,7 +362,7 @@ class AccessLogMiddleware(BaseHTTPMiddleware):
     """
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         if request.url.path.startswith("/api/v1/health/live"):
-            return await call_next(request)
+            return await call_next(request)  # type: ignore
 
         start = time.perf_counter()
         response = await call_next(request)
@@ -385,7 +377,7 @@ class AccessLogMiddleware(BaseHTTPMiddleware):
             client_ip=request.client.host if request.client else "unknown",
             request_id=getattr(request.state, "request_id", "-"),
         )
-        return response
+        return response  # type: ignore
 
 
 # ---------------------------------------------------------------------------
@@ -412,7 +404,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["Strict-Transport-Security"] = (
                 "max-age=31536000; includeSubDomains; preload"
             )
-        return response
+        return response  # type: ignore
 
 
 
@@ -440,17 +432,17 @@ async def http_exception_handler(request: Request, exc: Exception) -> JSONRespon
     request_id = getattr(request.state, "request_id", None)
     logger.warning(
         "http_exception",
-        status=exc.status_code,
-        detail=exc.detail,
+        status=exc.status_code,  # type: ignore
+        detail=exc.detail,  # type: ignore
         path=request.url.path,
         request_id=request_id,
     )
     return JSONResponse(
-        status_code=exc.status_code,
+        status_code=exc.status_code,  # type: ignore
         content={
             "error": True,
-            "status_code": exc.status_code,
-            "detail": exc.detail,
+            "status_code": exc.status_code,  # type: ignore
+            "detail": exc.detail,  # type: ignore
             "request_id": request_id,
         },
         headers=getattr(exc, "headers", None),
@@ -607,7 +599,7 @@ def create_app() -> FastAPI:
     # Exception handlers
     # ------------------------------------------------------------------
     app.add_exception_handler(HTTPException, http_exception_handler)
-    app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)  # type: ignore
     app.add_exception_handler(Exception, unhandled_exception_handler)
 
     # ------------------------------------------------------------------

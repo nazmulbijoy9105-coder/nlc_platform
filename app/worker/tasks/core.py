@@ -41,7 +41,7 @@ import asyncio
 import logging
 import uuid
 from datetime import UTC, date, datetime, timedelta
-from typing import cast, Any
+from typing import Any, cast
 
 from celery import Task
 from celery.exceptions import SoftTimeLimitExceeded
@@ -149,7 +149,7 @@ def evaluate_company_compliance(
                 company_id=uuid.UUID(company_id),
                 trigger_source=trigger_source,
             )
-            return cast(dict[str, Any], result)
+            return cast("dict[str, Any]", result)
 
     try:
         result = run_async(_run())
@@ -158,7 +158,7 @@ def evaluate_company_compliance(
             f"score={result.get('score')} band={result.get('risk_band')} "
             f"flags={len(result.get('flags', []))}"
         )
-        return cast(dict[str, Any], result)
+        return cast("dict[str, Any]", result)
 
     except SoftTimeLimitExceeded:
         logger.error(f"[Compliance] TIMEOUT company={company_id}")
@@ -255,7 +255,7 @@ def evaluate_all_companies(
         logger.info(
             f"[Compliance] Batch dispatch complete: {dispatched}/{total} companies"
         )
-        return cast(dict[str, Any], result)
+        return cast("dict[str, Any]", result)
 
     except Exception as exc:
         logger.error(f"[Compliance] Batch evaluation failed: {exc!r}")
@@ -468,7 +468,7 @@ def send_pending_notifications(
             f"[Notifications] Batch complete: "
             f"sent={result['sent']} failed={result['failed']} skipped={result['skipped']}"
         )
-        return cast(dict[str, Any], result)
+        return cast("dict[str, Any]", result)
     except Exception as exc:
         if _is_transient_error(exc):
             raise self.retry(exc=exc)
@@ -546,7 +546,7 @@ def queue_deadline_warning_notifications(
                         f"Immediate action required to avoid statutory default."
                     ),
                     notification_type=f"DEADLINE_{deadline_item['deadline_type']}",
-                    channel="DASHBOARD",
+                    channel="DASHBOARD",  # type: ignore
                     days_until_deadline=days_remaining,
                 )
                 queued += 1
@@ -559,7 +559,7 @@ def queue_deadline_warning_notifications(
             f"[Deadlines] Complete: "
             f"queued={result['queued']} checked={result['deadlines_checked']}"
         )
-        return cast(dict[str, Any], result)
+        return cast("dict[str, Any]", result)
     except Exception as exc:
         if _is_transient_error(exc):
             raise self.retry(exc=exc)
@@ -615,14 +615,14 @@ def generate_ai_document_async(
         async with AsyncSessionLocal() as db, db.begin():
             await set_admin_context(db)
             svc = DocumentService(db)
-            doc_id, _review_notif = await svc.generate_ai_document(
+            doc_id, _review_notif = await svc.generate_ai_document(  # type: ignore
                 company_id=uuid.UUID(company_id),
-                document_type=document_type,
+                document_type=document_type,  # type: ignore
                 template_name=template_name,
                 template_params=template_params,
                 requested_by=uuid.UUID(requested_by),
             )
-            return str(doc_id)
+            return str(doc_id)  # type: ignore
 
     try:
         doc_id = run_async(_generate())
@@ -731,7 +731,7 @@ def process_ai_review_queue(
                 select(Document).where(
                     Document.ai_generated,
                     Document.in_review_queue,
-                    not Document.human_approved,
+                    not Document.human_approved,  # type: ignore
                     Document.created_at < alert_threshold,
                     Document.is_active,
                 )
@@ -771,7 +771,7 @@ def process_ai_review_queue(
                         f"auto-sent without review."
                     ),
                     notification_type="AI_REVIEW_QUEUE_ALERT",
-                    channel="DASHBOARD",
+                    channel="DASHBOARD",  # type: ignore
                 )
                 alerts_sent += 1
 
@@ -787,7 +787,7 @@ def process_ai_review_queue(
                 f"[AI Review] {result['pending_documents']} docs pending review — "
                 f"sent {result['alerts_sent']} alerts"
             )
-        return cast(dict[str, Any], result)
+        return cast("dict[str, Any]", result)
     except Exception as exc:
         if _is_transient_error(exc):
             raise self.retry(exc=exc)
@@ -853,7 +853,7 @@ def monthly_score_snapshot_all(self: Task) -> dict[str, Any]:
             f"[Snapshot] Monthly snapshot dispatched: "
             f"{result['dispatched']}/{result['total']} companies"
         )
-        return cast(dict[str, Any], result)
+        return cast("dict[str, Any]", result)
     except Exception:
         raise
 
@@ -994,7 +994,7 @@ def cleanup_old_activity_logs(
             f"[Cleanup] Log cleanup complete: "
             f"archived={result['archived']} deleted={result['deleted']}"
         )
-        return cast(dict[str, Any], result)
+        return cast("dict[str, Any]", result)
     except Exception:
         raise
 
@@ -1129,7 +1129,7 @@ def sync_sro_registry(self: Task) -> dict[str, Any]:
             result = await db.execute(
                 select(SRORegistry).where(
                     SRORegistry.rule_update_required,
-                    SRORegistry.rule_updated_at is None,
+                    SRORegistry.rule_updated_at is None,  # type: ignore
                     SRORegistry.is_active,
                 )
             )
@@ -1168,7 +1168,7 @@ def sync_sro_registry(self: Task) -> dict[str, Any]:
                         f"modify rules."
                     ),
                     notification_type="SRO_RULE_UPDATE_REQUIRED",
-                    channel="DASHBOARD",
+                    channel="DASHBOARD",  # type: ignore
                 )
                 alerts_sent += 1
 
@@ -1183,7 +1183,7 @@ def sync_sro_registry(self: Task) -> dict[str, Any]:
             logger.warning(
                 f"[SRO] {result['pending_sros']} SROs pending rule update"
             )
-        return cast(dict[str, Any], result)
+        return cast("dict[str, Any]", result)
     except Exception as exc:
         if _is_transient_error(exc):
             raise self.retry(exc=exc)

@@ -378,7 +378,6 @@ def upgrade() -> None:
     # Get or create a placeholder super admin for seeding
     # In production, this will be replaced by the actual SUPER_ADMIN user ID
     # The seed_super_admin_id is a well-known UUID used only for seeded data
-    seed_super_admin_id = "00000000-0000-0000-0000-000000000001"
 
     # Insert ILRMF rules
     for (rule_id, rule_name, rule_type, statutory_basis, description,

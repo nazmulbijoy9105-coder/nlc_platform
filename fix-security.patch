@@ -1,0 +1,7 @@
+--- a/app/services/base.py
++++ b/app/services/base.py
+@@ -60,7 +60,9 @@
+-    return model.id
++    if hasattr(model, "id"):
++        return model.id
++    raise AttributeError("Model has no id")

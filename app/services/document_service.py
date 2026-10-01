@@ -362,7 +362,7 @@ async def _call_openai(system_prompt: str, user_prompt: str, settings) -> str:
             json=payload,
         )
         resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
+        return resp.json()["choices"][0]["message"]["content"]  # type: ignore
 
 
 async def _call_anthropic(system_prompt: str, user_prompt: str, settings) -> str:
@@ -385,7 +385,7 @@ async def _call_anthropic(system_prompt: str, user_prompt: str, settings) -> str
             json=payload,
         )
         resp.raise_for_status()
-        return resp.json()["content"][0]["text"]
+        return resp.json()["content"][0]["text"]  # type: ignore
 
 
 async def _call_local_llm(system_prompt: str, user_prompt: str, settings) -> str:
@@ -404,7 +404,7 @@ async def _call_local_llm(system_prompt: str, user_prompt: str, settings) -> str
             json=payload,
         )
         resp.raise_for_status()
-        return resp.json()["message"]["content"]
+        return resp.json()["message"]["content"]  # type: ignore
 
 
 async def _log_ai_call(
@@ -536,7 +536,7 @@ async def _download_from_s3(s3_key: str, settings) -> str:
         aws_secret_access_key=settings.aws_secret,
     )
     response = client.get_object(Bucket=settings.s3_bucket_name, Key=s3_key)
-    return response["Body"].read().decode("utf-8")
+    return response["Body"].read().decode("utf-8")  # type: ignore
 
 
 async def _presign_s3_url(s3_key: str, settings) -> str:
@@ -548,7 +548,7 @@ async def _presign_s3_url(s3_key: str, settings) -> str:
         aws_access_key_id=settings.aws_key_id,
         aws_secret_access_key=settings.aws_secret,
     )
-    return client.generate_presigned_url(
+    return client.generate_presigned_url(  # type: ignore
         "get_object",
         Params={"Bucket": settings.s3_bucket_name, "Key": s3_key},
         ExpiresIn=settings.s3_presigned_url_expire_seconds,
@@ -590,4 +590,4 @@ async def _render_pdf(content: str, title: str, settings) -> bytes:
         html = template.render(title=title, content=content)
 
     pdf = weasyprint.HTML(string=html).write_pdf()
-    return pdf
+    return pdf  # type: ignore

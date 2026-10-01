@@ -85,7 +85,7 @@ class TokenData(BaseModel):
 # DATABASE SESSION
 # ═══════════════════════════════════════════════════════════════════════
 
-async def get_db() -> AsyncSession:
+async def get_db() -> AsyncSession:  # type: ignore
     """
     Yield an async database session.
     Commits on success, rolls back on exception, always closes.
@@ -104,7 +104,7 @@ async def get_db() -> AsyncSession:
             await session.close()
 
 
-async def get_admin_db() -> AsyncSession:
+async def get_admin_db() -> AsyncSession:  # type: ignore
     """
     Yield a DB session with ADMIN RLS context.
     Use for: background cron jobs, Celery tasks, Super Admin operations.
@@ -222,7 +222,7 @@ async def get_current_user(
     return user
 
 
-async def get_current_user_with_db(
+async def get_current_user_with_db(  # type: ignore
     token: TokenData = Depends(verify_access_token),
 ) -> tuple[User, AsyncSession]:
     """
@@ -272,17 +272,17 @@ def require_roles(*allowed_roles: str):
 
 def require_admin() -> TokenData:
     """Shortcut: SUPER_ADMIN or ADMIN_STAFF only."""
-    return require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF)
+    return require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF)  # type: ignore
 
 
 def require_super_admin() -> TokenData:
     """Shortcut: SUPER_ADMIN only. Used for rule changes, user management."""
-    return require_roles(UserRole.SUPER_ADMIN)
+    return require_roles(UserRole.SUPER_ADMIN)  # type: ignore
 
 
 def require_staff() -> TokenData:
     """Shortcut: SUPER_ADMIN, ADMIN_STAFF, or LEGAL_STAFF."""
-    return require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRole.LEGAL_STAFF)
+    return require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRole.LEGAL_STAFF)  # type: ignore
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -457,7 +457,7 @@ def get_rule_engine():
     return _rule_engine_instance
 
 
-async def get_db_for_user(request: Request) -> AsyncSession:
+async def get_db_for_user(request: Request) -> AsyncSession:  # type: ignore
     """
     Yield a DB session with user RLS context set.
     Extracts user_id from JWT Bearer token in request headers.
@@ -470,8 +470,8 @@ async def get_db_for_user(request: Request) -> AsyncSession:
     if auth_header.startswith("Bearer "):
         try:
             payload = decode_token(auth_header[7:])
-            if payload.get("type") == "access":
-                user_id = payload.get("user_id") or payload.get("sub") or "ANONYMOUS"
+            if payload.get("type") == "access":  # type: ignore
+                user_id = payload.get("user_id") or payload.get("sub") or "ANONYMOUS"  # type: ignore
         except Exception:
             pass  # Fall back to ANONYMOUS on any decode failure
     

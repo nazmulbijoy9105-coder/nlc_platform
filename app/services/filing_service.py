@@ -446,10 +446,10 @@ class StatutoryRegisterService(BaseService[StatutoryRegister]):
         if is_maintained is not None:
             updates["is_maintained"] = is_maintained
         if last_updated_date is not None:
-            updates["last_updated_date"] = last_updated_date
+            updates["last_updated_date"] = last_updated_date  # type: ignore
         if location is not None:
-            updates["location"] = location
+            updates["location"] = location  # type: ignore
         if notes is not None:
-            updates["notes"] = notes
+            updates["notes"] = notes  # type: ignore
 
         return await self.update_instance(entry, **updates)

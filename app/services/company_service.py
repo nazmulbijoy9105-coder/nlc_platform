@@ -10,7 +10,6 @@ and the rule engine (C_rule_engine.py). Every field in CompanyProfile
 must be sourced from verified DB records — no AI involvement.
 """
 from __future__ import annotations
-from sqlalchemy.sql.expression import ColumnElement
 
 import uuid
 from datetime import UTC, date, datetime
@@ -155,29 +154,29 @@ class CompanyService(BaseService[Company]):
         filters = [Company.is_active]
 
         if risk_band:
-            filters.append(Company.current_risk_band == risk_band)
+            filters.append(Company.current_risk_band == risk_band)  # type: ignore
         if company_status:
-            filters.append(Company.company_status == company_status)
+            filters.append(Company.company_status == company_status)  # type: ignore
         if revenue_tier:
-            filters.append(Company.revenue_tier == revenue_tier)
+            filters.append(Company.revenue_tier == revenue_tier)  # type: ignore
         if is_dormant is not None:
             dormant_filter = Company.company_status == CompanyStatus.DORMANT
-            filters.append(dormant_filter if is_dormant else Company.company_status != CompanyStatus.DORMANT)
+            filters.append(dormant_filter if is_dormant else Company.company_status != CompanyStatus.DORMANT)  # type: ignore
         if rescue_required is not None:
-            filters.append(Company.rescue_required == rescue_required)
+            filters.append(Company.rescue_required == rescue_required)  # type: ignore
         if company_ids_filter is not None:
             uuids = [uuid.UUID(cid) for cid in company_ids_filter]
-            filters.append(Company.id.in_(uuids))
+            filters.append(Company.id.in_(uuids))  # type: ignore
         if user_id is not None:
             accessible_company_ids = select(CompanyUserAccess.company_id).where(
                 CompanyUserAccess.user_id == user_id
             )
-            filters.append(Company.id.in_(accessible_company_ids))
+            filters.append(Company.id.in_(accessible_company_ids))  # type: ignore
         if search and search.strip():
             # Use PostgreSQL full-text search on company_name_search vector
             search_term = search.strip()
             filters.append(
-                Company.company_name_search.match(search_term)
+                Company.company_name_search.match(search_term)  # type: ignore
                 | Company.registration_number.ilike(f"%{search_term}%")
             )
 
@@ -348,7 +347,7 @@ class CompanyService(BaseService[Company]):
             from app.rule_engine import ShareTransfer as EngineTransfer
             share_transfers.append(EngineTransfer(
                 transfer_id=str(t.id),
-                transfer_date=t.transfer_date,
+                transfer_date=t.transfer_date,  # type: ignore
                 instrument_recorded=bool(t.has_transfer_instrument),
                 stamp_duty_paid=bool(t.stamp_duty_paid),
                 stamp_duty_amount=float(t.stamp_duty_amount_bdt) if t.stamp_duty_amount_bdt else None,

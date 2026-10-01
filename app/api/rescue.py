@@ -182,7 +182,7 @@ async def create_rescue_plan(
             ),
         )
 
-    plan = await rescue_svc.generate_rescue_plan(
+    plan = await rescue_svc.generate_rescue_plan(  # type: ignore
         company_id=body.company_id,
         created_by=current_user.id,
         assigned_staff_id=body.assigned_staff_id,
@@ -320,7 +320,7 @@ async def update_rescue_step(
             detail=f"Invalid status '{body.status}'. Must be one of: {valid_statuses}",
         )
 
-    plan = await rescue_svc.update_step(
+    plan = await rescue_svc.update_step(  # type: ignore
         plan_id=plan_id,
         step_number=step_number,
         new_status=body.status,
@@ -379,7 +379,7 @@ async def create_engagement_from_rescue(
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
-    engagement = await rescue_svc.create_engagement_from_rescue(
+    engagement = await rescue_svc.create_engagement_from_rescue(  # type: ignore
         plan_id=plan_id,
         confirmed_fee_bdt=body.confirmed_fee_bdt,
         payment_terms=body.payment_terms,

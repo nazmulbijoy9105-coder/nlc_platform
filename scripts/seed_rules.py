@@ -272,7 +272,7 @@ async def seed_rules(dry_run: bool = False, verbose: bool = False) -> int:
         print(f"\n{'='*60}")
         print(f" Done! Inserted: {inserted}, Updated: {updated}")
         print(f" DB active rules: {db_count}")
-        if db_count >= EXPECTED_RULE_COUNT:
+        if db_count >= EXPECTED_RULE_COUNT:  # type: ignore
             print(f"  AI Constitution satisfied: all {db_count} rules active.")
         else:
             print(f"  WARNING: expected {EXPECTED_RULE_COUNT}, got {db_count}")

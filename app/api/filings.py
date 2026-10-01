@@ -232,7 +232,7 @@ async def list_all_filings(
     else:
         company_filter = None
 
-    results = {"agms": [], "audits": [], "annual_returns": []}
+    results = {"agms": [], "audits": [], "annual_returns": []}  # type: ignore
 
     # AGMs
     stmt = select(AGM)

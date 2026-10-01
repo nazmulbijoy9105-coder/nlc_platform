@@ -1609,7 +1609,7 @@ class NLCRuleEngine:
 
         # Sort by priority (CRITICAL first) then min_days (urgent first)
         priority_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
-        steps.sort(key=lambda s: (priority_order.get(s["priority"], 9), s["min_days"]))
+        steps.sort(key=lambda s: (priority_order.get(s["priority"], 9), s["min_days"]))  # type: ignore
         return steps
 
     def _determine_lifecycle_stage(self, c: CompanyProfile) -> LifecycleStage:

@@ -122,6 +122,7 @@ __all__ = [
     "NotificationChannel",
     "NotificationStatus",
     "Quotation",                # TABLE: quotations
+    "RJSCFormFiling",            # TABLE: share_transfers
     "RegisteredOfficeHistory",  # TABLE: registered_office_history
     "RescuePlan",               # TABLE: rescue_plans
     "RescueStep",               # TABLE: rescue_steps
@@ -133,7 +134,6 @@ __all__ = [
     "SRORegistry",              # TABLE: sro_registry
     "SeverityLevel",
     "ShareTransfer",
-    "RJSCFormFiling",            # TABLE: share_transfers
     "Shareholder",              # TABLE: shareholders
     "SroType",
     "StatutoryRegister",        # TABLE: statutory_registers
