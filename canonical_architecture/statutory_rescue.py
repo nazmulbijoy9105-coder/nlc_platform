@@ -58,6 +58,23 @@ STATUTORY_RESCUE_REGISTRY: Dict[str, Dict[str, Any]] = {
         "notification_required": True,
         "verification": "TIN_CERTIFICATE",
         "closure_condition": "TAX-001 == RuleState.COMPLIANT"
+    },
+    "LBR-001": {
+        "rescue_id": "LBR-RESCUE-001",
+        "triggered_by": "LBR-001",
+        "objective": "Obtain Factory License",
+        "prerequisites": [],
+        "statutory_actions": [
+            "apply for factory license via DIFE",
+            "ensure safety compliance",
+            "submit required fees"
+        ],
+        "authority": "DIFE",
+        "service_workflow": "LABOUR_COMPLIANCE",
+        "deadline_basis": "IMMEDIATE",
+        "notification_required": True,
+        "verification": "FACTORY_LICENSE",
+        "closure_condition": "LBR-001 == RuleState.COMPLIANT"
     }
 }
 
