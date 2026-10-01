@@ -1,5 +1,8 @@
 # ILRMF Legal Basis Matrix
-**STATUS: UNVERIFIED — engine-derived, not primary-source validated**
+**STATUS: UNVERIFIED — engine-derived, not primary-source validated
+PENDING: Bangladesh legal review required before commercial launch
+REVIEWER: [TO BE ASSIGNED]
+TARGET DATE: [TO BE SET]**
 Version: 2.1.1  
 Date: 2026-09-29  
 Branch: fix/legal-engine-audit-corrections
