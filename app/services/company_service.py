@@ -1,4 +1,3 @@
-from sqlalchemy.sql.expression import ColumnElement
 """
 NEUM LEX COUNSEL — Company Service
 app/services/company_service.py
@@ -11,6 +10,7 @@ and the rule engine (C_rule_engine.py). Every field in CompanyProfile
 must be sourced from verified DB records — no AI involvement.
 """
 from __future__ import annotations
+from sqlalchemy.sql.expression import ColumnElement
 
 import uuid
 from datetime import UTC, date, datetime

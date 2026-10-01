@@ -445,7 +445,7 @@ class NLCRuleEngine:
                     detail={"delay_days": delay}
                 ))
 
-        if c.current_director_count < 2:
+if (c.current_director_count or 0)  < 2:
             inc003_impact = 15
             inc003_desc = (
                 "Private company has NO directors. Section 90(2) requires minimum 2. Company cannot legally act."
@@ -547,7 +547,7 @@ class NLCRuleEngine:
                     detail={"delay_days": delay}
                 ))
 
-        if c.first_auditor_appointed and c.agm_count > 0 and not c.auditor_reappointed_at_agm and not c.audit_in_progress and c.last_agm_date is not None:
+if (c.first_auditor_appointed and c.agm_count or 0)  > 0 and not c.auditor_reappointed_at_agm and not c.audit_in_progress and c.last_agm_date is not None:
             fy_end = c.financial_year_end
             if self.today > fy_end + timedelta(days=120):
                  self._add_flag(ComplianceFlag(
@@ -670,7 +670,7 @@ class NLCRuleEngine:
                     detail={"days_to_agm": days_rem}
                 ))
 
-        if c.agm_held_this_cycle and c.members_present_at_agm < PRIVATE_COMPANY_QUORUM:
+if (c.agm_held_this_cycle and c.members_present_at_agm or 0)  < PRIVATE_COMPANY_QUORUM:
             self._add_flag(ComplianceFlag(
                 rule_id="AGM-005",
                 flag_code="AGM_QUORUM_DEFECTIVE",
@@ -713,7 +713,7 @@ class NLCRuleEngine:
                     detail={"delay_days": delay}
                 ))
 
-        if c.unfiled_returns_count >= 2:
+if (c.unfiled_returns_count or 0)  >= 2:
             self._add_flag(ComplianceFlag(
                 rule_id="AR-002",
                 flag_code="ANNUAL_RETURN_BACKLOG_RED",
@@ -725,7 +725,7 @@ class NLCRuleEngine:
                 detail={"unfiled_count": c.unfiled_returns_count}
             ))
 
-        if c.unfiled_returns_count >= 3:
+if (c.unfiled_returns_count or 0)  >= 3:
             self._add_flag(ComplianceFlag(
                 rule_id="AR-003",
                 flag_code="ANNUAL_RETURN_BACKLOG_BLACK",
@@ -1410,7 +1410,7 @@ class NLCRuleEngine:
         if c.any_director_disqualified:
             disq_count = len(c.disqualification_details)
             impact = 20 if disq_count == 1 else 25
-            is_override = disq_count >= (c.current_director_count - 1)
+(is_override = disq_count or 0)  >= (c.current_director_count - 1)
             self._add_flag(ComplianceFlag(
                 rule_id="DEF-001",
                 flag_code="DIRECTOR_DISQUALIFIED",
@@ -1423,7 +1423,7 @@ class NLCRuleEngine:
                 is_black_override=is_override,
             ))
 
-        if agm_years >= 2 and ar_years >= 2:
+if (agm_years or 0)  >= 2 and ar_years >= 2:
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-001",
                 flag_code="STRIKE_OFF_RISK_ELEVATED",
@@ -1435,7 +1435,7 @@ class NLCRuleEngine:
                 detail={"agm_years": agm_years, "ar_years": ar_years}
             ))
 
-        if agm_years >= 3 or ar_years >= 3 or c.on_rjsc_strike_off_list:
+if (agm_years or 0)  >= 3 or ar_years >= 3 or c.on_rjsc_strike_off_list:
             # Suppress ESC-001 if ESC-002 is firing
             self._flags = [f for f in self._flags if f.rule_id != "ESC-001"]
             self._add_flag(ComplianceFlag(
