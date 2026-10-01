@@ -1116,7 +1116,7 @@ class NLCRuleEngine:
                 fy_end_year = self.today.year - 1
             else:
                 fy_end_year = self.today.year - 2
-            deadline = date(fy_end_year + 1, 1, 15)
+            deadline = date(fy_end_year, 1, 15)
             if c.tax_return_deadline_extended:
                 deadline = deadline + timedelta(days=30)  # VERIFY extension length
             if self.today > deadline:
