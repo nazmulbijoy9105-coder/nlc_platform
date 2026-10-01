@@ -187,6 +187,10 @@ class Company(FullMixin, Base):
 
     # ── Labour Compliance ──────────────────────────────────────────────
     factory_license_obtained: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_manufacturing: Mapped[bool | None] = mapped_column(
+        Boolean, nullable=True, default=None,
+        comment="Tri-state applicability: NULL=unknown, FALSE=not a factory, TRUE=manufacturing (R-003/R-008)",
+    )
     factory_license_expiry: Mapped[date | None] = mapped_column(Date, nullable=True)
     labour_court_order_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     worker_compensation_filed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
