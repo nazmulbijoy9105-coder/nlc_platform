@@ -297,6 +297,7 @@ def collect_all_historical_rule_ids() -> dict[str, list[str]]:
             continue
 
         if text is None: continue
+    if not text: continue
     for match in RULE_RE.finditer(text):
             historical[
                 match.group(0).upper()
