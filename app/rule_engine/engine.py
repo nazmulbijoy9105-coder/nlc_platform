@@ -295,7 +295,7 @@ class ScoreBreakdown:
     bsec_score: int = 0
     fx_score: int = 0
     escalation_score: int = 0
-    score_hash: str
+    score_hash: str = ""
 
 @dataclass
 class EngineOutput:
