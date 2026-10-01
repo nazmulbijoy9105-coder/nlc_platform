@@ -44,7 +44,7 @@ STATUTORY_RULE_REGISTRY: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_COMPANIES",
         "exceptions": [],
         "evidence_required": ["MOA_FILED", "AOA_FILED"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT],
+        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
         "severity": "RED",
         "score_impact": 15,
         "invariants": ["R-001", "R-007", "R-014", "R-019"]
@@ -59,7 +59,7 @@ STATUTORY_RULE_REGISTRY: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_COMPANIES",
         "exceptions": [],
         "evidence_required": ["TIN_CERTIFICATE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT],
+        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
         "severity": "RED",
         "score_impact": 10,
         "invariants": ["R-010", "R-014", "R-019"]

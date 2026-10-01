@@ -33,9 +33,23 @@ class Invariant(str, Enum):
     R_020 = "IMMUTABLE_AUDIT_TRAIL_REQUIRED"
 
 INVARIANT_RULES = {
+    Invariant.R_001: "MOA/AOA legal mapping verified.",
+    Invariant.R_002: "DIR-005 Section 97 mapping review required.",
+    Invariant.R_003: "DIR-006 Section 98 mapping review required.",
+    Invariant.R_004: "Director interest Section 130 review required.",
+    Invariant.R_005: "AGM minutes Section 89 review required.",
+    Invariant.R_006: "AR-001 Section 36 review required.",
+    Invariant.R_007: "Evaluation uses canonical rule definitions.",
     Invariant.R_008: "If required evidence is missing, state=UNKNOWN. Do not penalize as NON_COMPLIANT.",
+    Invariant.R_009: "Labour factory Section 326 + rules review required.",
+    Invariant.R_010: "Tax TIN Income Tax Act 2023 + NBR instruments review required.",
+    Invariant.R_011: "Trade license local authority requirements review required.",
+    Invariant.R_012: "Finding maps to remediation path.",
     Invariant.R_013: "UNKNOWN state must not negatively impact the compliance score.",
     Invariant.R_014: "Rescue plans must be dynamically generated strictly from active evaluator findings.",
+    Invariant.R_015: "Rescue dependencies are respected (e.g. AGM before AR).",
+    Invariant.R_016: "Services derived from evaluator findings.",
+    Invariant.R_017: "Notifications derived from deadlines/events.",
     Invariant.R_018: "Submission of new documentary evidence automatically triggers re-evaluation of the related rule.",
     Invariant.R_019: "A rescue case is only closed when verified evidence establishes COMPLIANT state.",
     Invariant.R_020: "All evaluation state changes, rescue actions, and evidence submissions are permanently recorded.",
