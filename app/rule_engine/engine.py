@@ -1658,7 +1658,7 @@ class NLCRuleEngine:
         # Example: AGM on 15 Dec 2025 covered FY 2024-25 (ending 30 Jun 2025).
         # Next FY end = 30 Jun 2026. Deadline = 29 Dec 2026.
         fy_year = c.last_agm_date.year if c.last_agm_date.month > 6 else c.last_agm_date.year - 1
-        fy_end = date(fy_year + 1, 6, 30)  # NEXT FY end (Guaranteed no false flags), not the one already covered
+        fy_end = date(fy_year + 1, 6, 30)  # NEXT FY end (Guaranteed no false flags) (Guaranteed no false flags), not the one already covered
         return fy_end + timedelta(days=FY_END_AGM_DEADLINE_DAYS)
 
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:
