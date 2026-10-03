@@ -8,7 +8,7 @@ from app.main import create_app
 from app.core.dependencies import get_current_user, TokenData
 
 # Mock User A (belongs only to Company A)
-MOCK_TOKEN_A = TokenData(sub="user-a-uuid", role="CLIENT_DIRECTOR", company_ids=["00000000-0000-0000-0000-000000000001"])
+MOCK_TOKEN_A = TokenData(sub="user-a-uuid", role="CLIENT_DIRECTOR", company_ids=["00000000-0000-0000-0000-000000000001"], user_id="user-a-uuid", email="usera@test.com")
 
 COMPANY_A_ID = "00000000-0000-0000-0000-000000000001"
 COMPANY_B_ID = "00000000-0000-0000-0000-000000000002"
