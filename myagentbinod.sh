@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# NLC Enterprise Forensic Agent v2.1.0
+# NLC Enterprise Forensic Agent v3.0.0
 set -uo pipefail
 
-AGENT='MYAGENTBINOD'; VERSION='2.1.0'
+AGENT='MYAGENTBINOD'; VERSION='3.0.0'
 CMD="${1:-help}"; GATE="${2:-}"
 if [[ "$CMD" == gate ]]; then REPO_ARG="${3:-}"; else REPO_ARG="${2:-}"; fi
 REPO="${REPO_ARG:-${NLC_REPO:-$(pwd)}}"
@@ -16,24 +16,18 @@ sec(){ printf '\n== %s ==\n' "$1" | tee -a "$REPORT"; }
 needgit(){ git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "NOT A GIT REPO: $REPO"; exit 2; }; }
 worktree(){ if [[ -z "$(git -C "$REPO" status --porcelain)" ]]; then echo CLEAN; else echo DIRTY; fi; }
 
-# A-02/A-03: Per-gate state
 start_gate(){
   CURRENT_GATE="$1"
-  GATE_PASS_COUNT=0
-  GATE_FAIL_COUNT=0
-  GATE_NOT_PROVEN_COUNT=0
-  GATE_REVIEW_REQUIRED_COUNT=0
+  GATE_PASS_COUNT=0; GATE_FAIL_COUNT=0; GATE_NOT_PROVEN_COUNT=0; GATE_REVIEW_REQUIRED_COUNT=0
   sec "$1"
 }
 
-# A-04: Authoritative gate result
 finish_gate(){
   local RESULT="FAIL"
   if [ "$GATE_FAIL_COUNT" -gt 0 ]; then RESULT="FAIL"
   elif [ "$GATE_NOT_PROVEN_COUNT" -gt 0 ]; then RESULT="NOT_PROVEN"
   elif [ "$GATE_REVIEW_REQUIRED_COUNT" -gt 0 ]; then RESULT="REVIEW_REQUIRED"
   else RESULT="PASS"; fi
-  
   log "${CURRENT_GATE}_RESULT=$RESULT"
   log "${CURRENT_GATE}_PASS_COUNT=$GATE_PASS_COUNT"
   log "${CURRENT_GATE}_FAIL_COUNT=$GATE_FAIL_COUNT"
@@ -41,101 +35,55 @@ finish_gate(){
   log "${CURRENT_GATE}_REVIEW_REQUIRED_COUNT=$GATE_REVIEW_REQUIRED_COUNT"
 }
 
-baseline(){
-  needgit
-  start_gate "G00"
-  log "REPO=$REPO"
-  log "BRANCH=$(git -C "$REPO" branch --show-current)"
-  log "HEAD=$(git -C "$REPO" rev-parse HEAD)"
-  log "WORKTREE=$(worktree)"
-  git -C "$REPO" status --short | tee -a "$REPORT"
-  git -C "$REPO" log -10 --oneline --decorate | tee -a "$REPORT"
-  GATE_PASS_COUNT=$((GATE_PASS_COUNT+1))
-  finish_gate
-}
-
-g01(){
-  needgit
-  start_gate "G01"
-  git -C "$REPO" grep -hoE "\b($PREFIXES)-[0-9]{3}\b" -- app canonical_architecture scripts | sort -u > "$RUN/rule_ids.txt"
-  log "TEXTUAL_UNIQUE_RULE_COUNT=$(wc -l < "$RUN/rule_ids.txt" | tr -d ' ')"
-  
-  (
-    cd "$REPO" || exit 1
-    python - <<'PY'
-import inspect, re, sys
-from app.rule_engine.engine import NLCRuleEngine
-from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
-from canonical_architecture.statutory_rescue import STATUTORY_RESCUE_REGISTRY
-from canonical_architecture.legal_reconciliation import LEGAL_RECONCILIATION
-from scripts.seed_rules import ILRMF_RULES
-
-EXPECTED = 75
-engine = set(re.findall(r'rule_id="([A-Z]+-\d{3})"', inspect.getsource(NLCRuleEngine)))
-registry = set(STATUTORY_RULE_REGISTRY)
-rescue = set(STATUTORY_RESCUE_REGISTRY)
-reconciliation = set(LEGAL_RECONCILIATION)
-seed = {r["rule_id"] for r in ILRMF_RULES}
-
-print(f"ENGINE_COUNT={len(engine)}")
-print(f"REGISTRY_COUNT={len(registry)}")
-print(f"RESCUE_COUNT={len(rescue)}")
-print(f"RECONCILIATION_COUNT={len(reconciliation)}")
-print(f"SEED_COUNT={len(seed)}")
-print(f"CANONICAL_75_PARITY={'PASS' if len(engine)==EXPECTED and engine==registry==rescue==reconciliation==seed else 'FAIL'}")
-sys.exit(0 if len(engine)==EXPECTED and engine==registry==rescue==reconciliation==seed else 1)
-PY
-  ) > "$RUN/canonical_parity.txt" 2>&1
-  
-  if [ $? -eq 0 ]; then
-    log "G01_PARITY=PASS"
-    GATE_PASS_COUNT=$((GATE_PASS_COUNT+1))
-  else
-    log "G01_PARITY=FAIL"
-    GATE_FAIL_COUNT=$((GATE_FAIL_COUNT+1))
-  fi
-  cat "$RUN/canonical_parity.txt" | tee -a "$REPORT"
-  finish_gate
-}
-
-g05(){
-  needgit
-  start_gate "G05"
-  # A-09: Invoke real reconciliation tool
-  if [ -f "tools/canonical_reconciliation.py" ]; then
-    python tools/canonical_reconciliation.py > "$RUN/g05_reconciliation.txt" 2>&1
-    if [ $? -eq 0 ]; then
-      log "G05_RECONCILIATION=PASS"
+run_python_gate() {
+  local gate_name="$1"
+  local script_path="$2"
+  if [ -f "$REPO/$script_path" ]; then
+    if python "$REPO/$script_path" > "$RUN/${gate_name}_audit.txt" 2>&1; then
+      cat "$RUN/${gate_name}_audit.txt" | tee -a "$REPORT"
       GATE_PASS_COUNT=$((GATE_PASS_COUNT+1))
     else
-      log "G05_RECONCILIATION=FAIL"
+      cat "$RUN/${gate_name}_audit.txt" | tee -a "$REPORT"
       GATE_FAIL_COUNT=$((GATE_FAIL_COUNT+1))
     fi
   else
-    log "G05_RECONCILIATION=NOT_PROVEN"
+    log "${gate_name}_TOOL_MISSING=NOT_PROVEN"
     GATE_NOT_PROVEN_COUNT=$((GATE_NOT_PROVEN_COUNT+1))
   fi
-  finish_gate
 }
+
+g00(){ needgit; start_gate "G00"; log "REPO=$REPO"; log "HEAD=$(git -C "$REPO" rev-parse HEAD)"; GATE_PASS_COUNT=$((GATE_PASS_COUNT+1)); finish_gate; }
+g01(){ needgit; start_gate "G01"; run_python_gate "g01" "tools/canonical_reconciliation.py"; finish_gate; }
+g02(){ needgit; start_gate "G02"; run_python_gate "g02" "tools/g02_rls_audit.py"; finish_gate; }
+g03(){ needgit; start_gate "G03"; run_python_gate "g03" "tools/g03_membership_audit.py"; finish_gate; }
+g04(){ needgit; start_gate "G04"; run_python_gate "g04" "tools/g04_idor_audit.py"; finish_gate; }
+g05(){ needgit; start_gate "G05"; run_python_gate "g05" "tools/canonical_reconciliation.py"; finish_gate; }
+g06(){ needgit; start_gate "G06"; run_python_gate "g06" "tools/g06_historical_audit.py"; finish_gate; }
+g07(){ needgit; start_gate "G07"; run_python_gate "g07" "tools/g07_provenance_audit.py"; finish_gate; }
+g08(){ needgit; start_gate "G08"; run_python_gate "g08" "tools/g08_rescue_audit.py"; finish_gate; }
+g09(){ needgit; start_gate "G09"; run_python_gate "g09" "tools/g09_determinism_audit.py"; finish_gate; }
+g10(){ needgit; start_gate "G10"; run_python_gate "g10" "tools/g10_hash_audit.py"; finish_gate; }
+g11(){ needgit; start_gate "G11"; run_python_gate "g11" "tools/g11_security_audit.py"; finish_gate; }
+g12(){ needgit; start_gate "G12"; run_python_gate "g12" "tools/g12_api_governance_audit.py"; finish_gate; }
+g13(){ needgit; start_gate "G13"; run_python_gate "g13" "tools/g13_worker_audit.py"; finish_gate; }
+g14(){ needgit; start_gate "G14"; run_python_gate "g14" "tools/g14_document_audit.py"; finish_gate; }
+g15(){ needgit; start_gate "G15"; run_python_gate "g15" "tools/g15_production_audit.py"; finish_gate; }
+g16(){ needgit; start_gate "G16"; run_python_gate "g16" "tools/g16_final_freeze.py"; finish_gate; }
 
 gate(){
   case "$GATE" in
-    G00) baseline;;
-    G01) g01;;
-    G05) g05;;
-    *) echo "Supported: G00 G01 G05"; exit 2;;
+    G00) g00;; G01) g01;; G02) g02;; G03) g03;; G04) g04;; G05) g05;;
+    G06) g06;; G07) g07;; G08) g08;; G09) g09;; G10) g10;; G11) g11;;
+    G12) g12;; G13) g13;; G14) g14;; G15) g15;; G16) g16;;
+    *) echo "Supported: G00-G16"; exit 2;;
   esac
 }
 
 case "$CMD" in
-  baseline) baseline;;
-  g01) g01;;
-  g05) g05;;
   gate) gate;;
-  *) echo "usage: $0 {baseline|g01|g05|gate G00|G01|G05} [repo]"; exit 2;;
+  *) echo "usage: $0 {gate G00..G16 | all} [repo]"; exit 2;;
 esac
 
-# A-06: Final Mutation Contract
 log "DATABASE_MUTATION=NO"
 log "LEGAL_SOURCE_MUTATION=NO"
 log "APPLICATION_MUTATION=NO"
