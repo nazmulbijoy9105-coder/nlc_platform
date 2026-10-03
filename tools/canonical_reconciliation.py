@@ -113,11 +113,11 @@ def main():
     print("\n[6] FINAL VERIFICATION:")
     missing_from_source = CANONICAL_75 - active_canonical
     if not missing_from_source and not unknown:
-        print("✅ PASS: Exact 75 active canonical rules proven in source code.")
-        print("✅ PASS: All extra IDs explicitly classified as non-active.")
-        print("✅ PASS: 85-source -> 75-canonical reconciliation complete.")
+        print("[PASS] Exact 75 active canonical rules proven in source code.")
+        print("[PASS] All extra IDs explicitly classified as non-active.")
+        print("[PASS] 85-source -> 75-canonical reconciliation complete.")
     else:
-        print("❌ FAIL: Reconciliation failed.")
+        print("[FAIL] Reconciliation failed.")
         if missing_from_source:
             print(f"  Missing from source: {missing_from_source}")
 
