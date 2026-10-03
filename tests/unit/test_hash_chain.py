@@ -33,10 +33,7 @@ def test_tampered_score_detected():
     snapshot_month = "2026-10"
     engine_version = "2.1"
     
-    # The hash stored in the DB (calculated with the original score)
     stored_hash = generate_hash(company_id, original_score, risk_band, snapshot_month, engine_version)
-    
-    # The hash we calculate when verifying the DB record (using the tampered score)
     verification_hash = generate_hash(company_id, tampered_score, risk_band, snapshot_month, engine_version)
     
     assert stored_hash != verification_hash, "Tamper not detected: Hash matched despite altered score!"
