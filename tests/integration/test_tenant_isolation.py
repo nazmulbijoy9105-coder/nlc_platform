@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from app.main import create_app
 from app.core.dependencies import get_current_user, TokenData
+from contextlib import asynccontextmanager
 
 # Mock User A (belongs only to Company A)
 MOCK_TOKEN_A = TokenData(sub="user-a-uuid", role="CLIENT_DIRECTOR", company_ids=["00000000-0000-0000-0000-000000000001"], user_id="user-a-uuid", email="usera@test.com")
@@ -16,6 +17,12 @@ COMPANY_B_ID = "00000000-0000-0000-0000-000000000002"
 @pytest.fixture(scope="module")
 def client():
     app = create_app()
+    
+    # Override the lifespan to prevent database connection during tests
+    @asynccontextmanager
+    async def empty_lifespan(app):
+        yield
+    app.router.lifespan_context = empty_lifespan
     
     # Override the authentication dependency to simulate User A
     async def override_get_current_user():
