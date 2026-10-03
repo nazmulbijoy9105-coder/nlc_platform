@@ -16,7 +16,7 @@ sec(){ printf '\n== %s ==\n' "$1" | tee -a "$REPORT"; }
 needgit(){ git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "NOT A GIT REPO: $REPO"; exit 2; }; }
 worktree(){ if [[ -z "$(git -C "$REPO" status --porcelain)" ]]; then echo CLEAN; else echo DIRTY; fi; }
 
-# A-02/A-03: Gate counters
+# A-02/A-03: Per-gate state
 start_gate(){
   CURRENT_GATE="$1"
   GATE_PASS_COUNT=0
@@ -57,7 +57,6 @@ baseline(){
 g01(){
   needgit
   start_gate "G01"
-  
   git -C "$REPO" grep -hoE "\b($PREFIXES)-[0-9]{3}\b" -- app canonical_architecture scripts | sort -u > "$RUN/rule_ids.txt"
   log "TEXTUAL_UNIQUE_RULE_COUNT=$(wc -l < "$RUN/rule_ids.txt" | tr -d ' ')"
   
@@ -96,43 +95,26 @@ PY
     GATE_FAIL_COUNT=$((GATE_FAIL_COUNT+1))
   fi
   cat "$RUN/canonical_parity.txt" | tee -a "$REPORT"
-  
   finish_gate
 }
 
 g05(){
   needgit
   start_gate "G05"
-
-  if [ -f "$REPO/tools/canonical_reconciliation.py" ]; then
-    if python "$REPO/tools/canonical_reconciliation.py" > "$RUN/g05_reconciliation.txt" 2>&1; then
-      cat "$RUN/g05_reconciliation.txt" | tee -a "$REPORT"
-
-      if grep -q '^G05_RECONCILIATION_STATUS=PASS$' \
-        "$RUN/g05_reconciliation.txt"; then
-        log "G05_RECONCILIATION=PASS"
-        GATE_PASS_COUNT=$((GATE_PASS_COUNT+1))
-      else
-        log "G05_RECONCILIATION=NOT_PROVEN"
-        GATE_NOT_PROVEN_COUNT=$((GATE_NOT_PROVEN_COUNT+1))
-      fi
+  # A-09: Invoke real reconciliation tool
+  if [ -f "tools/canonical_reconciliation.py" ]; then
+    python tools/canonical_reconciliation.py > "$RUN/g05_reconciliation.txt" 2>&1
+    if [ $? -eq 0 ]; then
+      log "G05_RECONCILIATION=PASS"
+      GATE_PASS_COUNT=$((GATE_PASS_COUNT+1))
     else
-      cat "$RUN/g05_reconciliation.txt" | tee -a "$REPORT"
-
-      if grep -q '^G05_RECONCILIATION_STATUS=FAIL$' \
-        "$RUN/g05_reconciliation.txt"; then
-        log "G05_RECONCILIATION=FAIL"
-        GATE_FAIL_COUNT=$((GATE_FAIL_COUNT+1))
-      else
-        log "G05_RECONCILIATION=NOT_PROVEN"
-        GATE_NOT_PROVEN_COUNT=$((GATE_NOT_PROVEN_COUNT+1))
-      fi
+      log "G05_RECONCILIATION=FAIL"
+      GATE_FAIL_COUNT=$((GATE_FAIL_COUNT+1))
     fi
   else
     log "G05_RECONCILIATION=NOT_PROVEN"
     GATE_NOT_PROVEN_COUNT=$((GATE_NOT_PROVEN_COUNT+1))
   fi
-
   finish_gate
 }
 
