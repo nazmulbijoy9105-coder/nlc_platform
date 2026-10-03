@@ -165,7 +165,7 @@ async def list_all_documents(
 
     if company_id:
         filters.append(Document.company_id == company_id)  # type: ignore
-    elif is_client:
+    if is_client:
         accessible = select(CompanyUserAccess.company_id).where(
             CompanyUserAccess.user_id == current_user.id
         )
