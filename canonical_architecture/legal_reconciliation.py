@@ -619,6 +619,8 @@ def get_reconciliation_status(rule_id: str) -> str:
 def verify_provision(rule_id: str, verified_by: str, source: str) -> bool:
     """Marks a rule's provision as legally verified."""
     if rule_id in LEGAL_RECONCILIATION:
+        if not source:
+            return False
         LEGAL_RECONCILIATION[rule_id].update({
             "verified": True,
             "verified_by": verified_by,
