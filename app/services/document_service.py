@@ -262,20 +262,26 @@ class DocumentService(BaseService[Document]):
         """
         Generate a pre-signed S3 URL (15-min expiry) for secure document download.
         Never expose direct S3 paths.
+        AI Constitution Article 3: Unapproved AI documents cannot be downloaded.
         """
         doc = await self.get_by_id_or_404(document_id)
         if not doc.s3_key:
             raise ValueError("Document has not been uploaded to S3 yet.")
+        if doc.ai_generated and not doc.human_approved:
+            raise ValueError("AI Constitution violation: Unapproved AI document cannot be downloaded.")
         return await _presign_s3_url(doc.s3_key, self._settings)
 
     async def generate_pdf_and_presign(self, document_id: uuid.UUID) -> str:
         """
         Generate a branded PDF from the document content and return a presigned URL.
         _generate_pdf_and_presign stub implementation.
+        AI Constitution Article 3: Unapproved AI documents cannot be rendered to PDF.
         """
         doc = await self.get_by_id_or_404(document_id)
         if not doc.s3_key:
             raise ValueError("Document must be uploaded before PDF generation.")
+        if doc.ai_generated and not doc.human_approved:
+            raise ValueError("AI Constitution violation: Unapproved AI document cannot be rendered to PDF.")
 
         # Download current content from S3
         content = await _download_from_s3(doc.s3_key, self._settings)
