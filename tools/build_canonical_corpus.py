@@ -80,6 +80,8 @@ SOURCE_EXTENSIONS = {
 
 EXCLUDED_DIRS = {
     "alembic",
+    "docs",
+    "canonical_architecture/generated",
     ".git",
     "__pycache__",
     ".pytest_cache",
