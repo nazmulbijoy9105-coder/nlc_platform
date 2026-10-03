@@ -1,6 +1,6 @@
 """
-NLC — GATE E2: Tenant & Object Authorization Adversarial Tests
-Proves that User A (Company A) cannot access Company B's resources.
+NLC — GATE E2: Tenant & Object Authorization (IDOR) Adversarial Tests
+Proves that User A (Company A) cannot access Company B's resources by manipulating IDs.
 """
 import pytest
 from fastapi.testclient import TestClient
@@ -21,23 +21,24 @@ COMPANY_B_ID = "00000000-0000-0000-0000-000000000002"
 
 def test_company_a_cannot_get_company_b(client):
     """User A tries to GET Company B's profile."""
-    # In a fully wired test, we would mock the auth dependency to return User A
-    # and attempt to access /api/v1/companies/{COMPANY_B_ID}
-    # Expected: 403 Forbidden or 404 Not Found
-    pass
-
-def test_company_a_cannot_update_company_b(client):
-    """User A tries to PATCH Company B's profile."""
-    pass
+    headers = {"Authorization": f"Bearer {TOKEN_A}"}
+    response = client.get(f"/api/v1/companies/{COMPANY_B_ID}", headers=headers)
+    assert response.status_code in (403, 404), "Tenant boundary breached: User A accessed Company B"
 
 def test_company_a_cannot_access_company_b_documents(client):
     """User A tries to GET documents for Company B."""
-    pass
+    headers = {"Authorization": f"Bearer {TOKEN_A}"}
+    response = client.get(f"/api/v1/documents/{COMPANY_B_ID}", headers=headers)
+    assert response.status_code in (403, 404), "Tenant boundary breached: User A accessed Company B documents"
 
 def test_company_a_cannot_access_company_b_filings(client):
     """User A tries to GET filings for Company B."""
-    pass
+    headers = {"Authorization": f"Bearer {TOKEN_A}"}
+    response = client.get(f"/api/v1/filings/agm/{COMPANY_B_ID}", headers=headers)
+    assert response.status_code in (403, 404), "Tenant boundary breached: User A accessed Company B filings"
 
 def test_company_a_cannot_access_company_b_rescue(client):
     """User A tries to GET rescue plan for Company B."""
-    pass
+    headers = {"Authorization": f"Bearer {TOKEN_A}"}
+    response = client.get(f"/api/v1/rescue/plans/{COMPANY_B_ID}/active", headers=headers)
+    assert response.status_code in (403, 404), "Tenant boundary breached: User A accessed Company B rescue plan"
