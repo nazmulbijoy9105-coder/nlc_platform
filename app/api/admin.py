@@ -61,6 +61,10 @@ class UserListItem(BaseModel):
     class Config:
         from_attributes = True
 
+class GrantAccessRequest(BaseModel):
+    company_id: str
+    access_level: str = "FULL" # FULL or VIEW_ONLY
+
 class UserCreateRequest(BaseModel):
     email: EmailStr
     full_name: str
@@ -170,12 +174,70 @@ async def reactivate_user(user_id: str, admin=Depends(require_admin), db: AsyncS
     return {"id": user_id, "is_active": True}
 
 
+from app.services.user_service import UserService
+
 import csv
 import io
 
 from fastapi.responses import StreamingResponse
 
 from app.core.security import hash_password, validate_password_strength
+
+
+# ---------------------------------------------------------------------------
+# COMPANY ACCESS MANAGEMENT (SUPER_ADMIN ONLY)
+# ---------------------------------------------------------------------------
+
+@router.post("/users/{user_id}/company-access", status_code=200)
+async def grant_company_access(
+    user_id: str,
+    body: GrantAccessRequest,
+    admin=Depends(require_admin),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Grant a user access to a specific company (Admin only)."""
+    import uuid as _uuid
+    from app.services.user_service import UserService
+    
+    try:
+        uid = _uuid.UUID(user_id)
+        cid = _uuid.UUID(body.company_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format for user_id or company_id")
+
+    svc = UserService(db)
+    await svc.grant_company_access(
+        user_id=uid,
+        company_id=cid,
+        can_edit=True,
+        can_view_financials=True,
+        granted_by=admin.id if hasattr(admin, "id") else admin.get("id", _uuid.uuid4())
+    )
+    await db.commit()
+    return {"message": f"Access granted to company {body.company_id} for user {user_id}"}
+
+
+@router.delete("/users/{user_id}/company-access/{company_id}", status_code=200)
+async def revoke_company_access(
+    user_id: str,
+    company_id: str,
+    admin=Depends(require_admin),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Revoke a user's access to a specific company (Admin only)."""
+    import uuid as _uuid
+    from app.services.user_service import UserService
+    
+    try:
+        uid = _uuid.UUID(user_id)
+        cid = _uuid.UUID(company_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
+
+    svc = UserService(db)
+    await svc.revoke_company_access(user_id=uid, company_id=cid)
+    await db.commit()
+    return {"message": f"Access revoked for company {company_id} for user {user_id}"}
 
 
 @router.get("/activity-logs/export")
