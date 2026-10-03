@@ -65,6 +65,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     payload = decode_token(token)
     if not payload or payload.get("type") != "access":
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+    from starlette.concurrency import run_in_threadpool
+
+    from app.core.token_blacklist import is_revoked
+    jti = payload.get("jti")
+    if jti and await run_in_threadpool(is_revoked, jti):
+        raise HTTPException(status_code=401, detail="Token has been revoked")
     return payload
 
 
@@ -240,9 +246,7 @@ async def change_password(
     db=Depends(get_db),
 ):
     """Change password with strength validation."""
-    payload = decode_token(token)
-    if not payload or payload.get("type") != "access":
-        raise HTTPException(status_code=401, detail="Invalid token")
+    payload = await get_current_user(token)
     
     result = await db.execute(select(User).where(User.id == payload["sub"]))
     user = result.scalar_one_or_none()
