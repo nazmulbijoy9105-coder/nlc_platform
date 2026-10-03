@@ -43,3 +43,12 @@ __pycache__/
 
 # Security audit outputs
 pip-audit.json
+
+# Caches
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Security audit outputs
+pip-audit.json

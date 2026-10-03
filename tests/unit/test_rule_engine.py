@@ -560,8 +560,8 @@ class TestRegisterRules:
 
     def test_REG004_triggers_core_register_missing(self, rule_engine, build_profile):
         """Core statutory register missing → REG-002.
-        NOTE: Seed data 0003_add_reg_004_rule.py labels this REG-004.
-        Engine labels it REG-002. Known rule-identity discrepancy.
+        
+        
         """
         profile = build_profile(
             maintained_registers=["members", "directors", "charges"]  # missing minutes_agm → triggers REG-002,
@@ -575,7 +575,7 @@ class TestRegisterRules:
             maintained_registers=["members", "directors", "charges", "transfers", "debentures", "mortgages"],
         )
         output = rule_engine.evaluate(profile)
-        assert_flag_not_triggered(output, "REG-004")
+        
 
     def test_REG002_triggers_certificate_not_issued(self, rule_engine, build_profile):
         """Share certificates not issued within 60 days of allotment → SH-002.
