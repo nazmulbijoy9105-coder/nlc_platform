@@ -2,11 +2,11 @@
 
 Maps each RJSC form to its rule, section, and deadline:
   Form I    → Declaration of Compliance (Section 9)
-  Form III  → MoA/AoA Filing (Section 11)
+  Form III  → Capital consolidation/division notice (Sections 53-54); MoA/AoA are incorporation docs (Section 11)
   Form IV   → Capital Increase (Section 52)
-  Form VI   → Office Change (Section 81)
+  Form VI   → Office Change (Section 77)
   Form VIII → Charge Registration (Section 87)
-  Form IX   → Situation of Office (Section 81)
+  Form IX   → Consent of Director (Section 92)
   Form XII  → Annual Return (Section 119)
   Form XIV  → Director Change (Section 92)
   Form XV   → Return of Allotment (Section 50)
@@ -73,9 +73,9 @@ RJSC_FORMS_REFERENCE = [
     {"form_code": "FORM_I", "form_number": "I", "form_name": "Declaration of Compliance", "section": "Section 9", "rule_id": "INC-001", "deadline_days": 0},
     {"form_code": "FORM_III", "form_number": "III", "form_name": "Memorandum and Articles Filing", "section": "Section 11", "rule_id": "INC-002", "deadline_days": 0},
     {"form_code": "FORM_IV", "form_number": "IV", "form_name": "Notice of Increase in Capital", "section": "Section 52", "rule_id": "SH-003", "deadline_days": 30},
-    {"form_code": "FORM_VI", "form_number": "VI", "form_name": "Notice of Change of Registered Office", "section": "Section 81", "rule_id": "OFF-001", "deadline_days": 28},
+    {"form_code": "FORM_VI", "form_number": "VI", "form_name": "Notice of Change of Registered Office", "section": "Section 77", "rule_id": "OFF-001", "deadline_days": 28},
     {"form_code": "FORM_VIII", "form_number": "VIII", "form_name": "Registration of Charge", "section": "Section 87", "rule_id": "CAP-002", "deadline_days": 30},
-    {"form_code": "FORM_IX", "form_number": "IX", "form_name": "Situation of Registered Office", "section": "Section 81", "rule_id": "OFF-001", "deadline_days": 0},
+    {"form_code": "FORM_IX", "form_number": "IX", "form_name": "Consent of Director to Act", "section": "Section 92", "rule_id": "DIR-001", "deadline_days": 30},
     {"form_code": "FORM_XII", "form_number": "XII", "form_name": "Annual Return", "section": "Section 119", "rule_id": "AR-001", "deadline_days": 30},
     {"form_code": "FORM_XIV", "form_number": "XIV", "form_name": "Notice of Director Change", "section": "Section 92", "rule_id": "DIR-001", "deadline_days": 14},
     {"form_code": "FORM_XV", "form_number": "XV", "form_name": "Return of Allotment", "section": "Section 50", "rule_id": "SH-001", "deadline_days": 30},
