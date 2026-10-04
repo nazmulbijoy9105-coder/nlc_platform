@@ -436,12 +436,12 @@ class NLCRuleEngine:
             if delay > REGISTERED_OFFICE_DEADLINE_DAYS:
                 self._add_flag(ComplianceFlag(
                     rule_id="INC-002",
-                    flag_code="SITURATION_NOTICE_NOT_FILED",
+                    flag_code="MOA_AOA_NOT_FILED",
                     severity=Severity.YELLOW if delay < 90 else Severity.RED,
                     score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Form III (Situation Notice) not filed. Sec 81: 28-day deadline. Overdue by {delay} days.",
-                    statutory_basis="Companies Act 1994, Section 77",
+                    description="Memorandum and Articles of Association not filed with RJSC. Section 11: constitutional documents required.",
+                    statutory_basis="Companies Act 1994, Section 11",
                     detail={"delay_days": delay}
                 ))
 
