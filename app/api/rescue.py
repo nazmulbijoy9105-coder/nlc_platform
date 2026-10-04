@@ -313,7 +313,7 @@ async def update_rescue_step(
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
-    valid_statuses = ("PENDING", "IN_PROGRESS", "COMPLETED", "BLOCKED")
+    valid_statuses = ("PENDING", "IN_PROGRESS", "COMPLETE", "BLOCKED")
     if body.status not in valid_statuses:
         raise HTTPException(
             status_code=400,
@@ -379,8 +379,9 @@ async def create_engagement_from_rescue(
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
+    plan = await rescue_svc.get_by_id_or_404(plan_id)
     engagement = await rescue_svc.create_engagement_from_rescue(  # type: ignore
-        plan_id=plan_id,
+        rescue_plan=plan,
         confirmed_fee_bdt=body.confirmed_fee_bdt,
         payment_terms=body.payment_terms,
         notes=body.notes,
