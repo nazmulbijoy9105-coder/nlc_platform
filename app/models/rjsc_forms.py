@@ -71,7 +71,7 @@ class RJSCFormFiling(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 # Reference data: all RJSC forms for private limited companies
 RJSC_FORMS_REFERENCE = [
     {"form_code": "FORM_I", "form_number": "I", "form_name": "Declaration of Compliance", "section": "Section 9", "rule_id": "INC-001", "deadline_days": 0},
-    {"form_code": "FORM_III", "form_number": "III", "form_name": "Memorandum and Articles Filing", "section": "Section 11", "rule_id": "INC-002", "deadline_days": 0},
+    {"form_code": "FORM_III", "form_number": "III", "form_name": "Notice of Consolidation/Division of Share Capital", "section": "Sections 53-54", "rule_id": "CAP-001", "deadline_days": 15},
     {"form_code": "FORM_IV", "form_number": "IV", "form_name": "Notice of Increase in Capital", "section": "Section 52", "rule_id": "SH-003", "deadline_days": 30},
     {"form_code": "FORM_VI", "form_number": "VI", "form_name": "Notice of Change of Registered Office", "section": "Section 77", "rule_id": "OFF-001", "deadline_days": 28},
     {"form_code": "FORM_VIII", "form_number": "VIII", "form_name": "Registration of Charge", "section": "Section 87", "rule_id": "CAP-002", "deadline_days": 30},

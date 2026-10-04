@@ -172,7 +172,7 @@ STATUTORY_RULE_REGISTRY: Dict[str, Dict[str, Any]] = {
     "AGM-001": {
         "rule_id": "AGM-001",
         "legal_domain": "Corporate",
-        "law": "Section 77, Companies Act 1994 (Bangladesh)",
+        "law": "Section 81, Companies Act 1994 (Bangladesh)",
         "requirement": "First AGM Default - First AGM not held within 18 months (548 days) of incorporation. Section 81 is mandatory; no waiver for private companies. Default counts from day after deadline.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
@@ -187,7 +187,7 @@ STATUTORY_RULE_REGISTRY: Dict[str, Dict[str, Any]] = {
     "AGM-002": {
         "rule_id": "AGM-002",
         "legal_domain": "Corporate",
-        "law": "Section 77, Companies Act 1994 (Bangladesh)",
+        "law": "Section 81, Companies Act 1994 (Bangladesh)",
         "requirement": "Subsequent AGM Default - Subsequent AGM not held within 15 months of preceding AGM, or 6 months of FY end — whichever earlier. Section 81 makes no exception for size or dormancy.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
