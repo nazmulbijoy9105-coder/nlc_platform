@@ -63,6 +63,7 @@ class CompanyService(BaseService[Company]):
             incorporation_date=incorporation_date,
             financial_year_end=financial_year_end,
             registered_address=registered_address,
+            register_location="registered_office",
             industry_sector=industry_sector,
             tin_number=tin_number,
             authorized_capital_bdt=authorized_capital_bdt,
