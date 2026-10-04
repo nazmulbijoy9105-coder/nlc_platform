@@ -249,7 +249,7 @@ async def export_activity_logs(
     """Export activity logs as CSV for auditors."""
     from sqlalchemy import text
     result = await db.execute(
-        text(f"SELECT user_id, company_id, action, resource_type, resource_id, description, ip_address, logged_at FROM user_activity_logs WHERE logged_at >= NOW() - INTERVAL '{days} days' ORDER BY logged_at DESC LIMIT 10000")
+        text("SELECT user_id, company_id, action, resource_type, resource_id, description, ip_address, logged_at FROM user_activity_logs WHERE logged_at >= NOW() - make_interval(days => :days) ORDER BY logged_at DESC LIMIT 10000").bindparams(days=days)
     )
     rows = result.fetchall()
     
@@ -279,7 +279,9 @@ async def cron_evaluate_all(
     """
     import os
     # CRON_SECRET is optional — if not set, endpoint is open (for free tier)
-    cron_secret = os.environ.get("CRON_SECRET", "")
+    cron_secret = os.environ.get("CRON_SECRET")
+    if not cron_secret:
+        raise HTTPException(status_code=403, detail="CRON_SECRET is not configured. Endpoint disabled.")
     if cron_secret:
         provided = request.headers.get("X-Cron-Secret", "")
         if provided != cron_secret:
