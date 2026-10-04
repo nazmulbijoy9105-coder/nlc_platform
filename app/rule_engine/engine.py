@@ -441,7 +441,7 @@ class NLCRuleEngine:
                     score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Form III (Situation Notice) not filed. Sec 81: 28-day deadline. Overdue by {delay} days.",
-                    statutory_basis="Companies Act 1994, Section 81",
+                    statutory_basis="Companies Act 1994, Section 77",
                     detail={"delay_days": delay}
                 ))
 
@@ -1010,8 +1010,8 @@ class NLCRuleEngine:
                     severity=Severity.YELLOW if delay < 90 else Severity.RED,
                     score_impact=3,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Office change not filed via Form VI. Section 81: 28-day deadline. Overdue by {delay} days.",
-                    statutory_basis="Companies Act 1994, Section 81",
+                    description=f"Office change not filed via Form VI. Section 77: 28-day deadline. Overdue by {delay} days.",
+                    statutory_basis="Companies Act 1994, Section 77",
                     detail={"delay": delay, "form": "Form VI"}
                 ))
 
