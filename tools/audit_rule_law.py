@@ -12,6 +12,7 @@ Layers compared (section NUMBERS only, subsection parens stripped):
   alembic   alembic/versions/*.py                       UPDATE legal_rules SET statutory_basis
 """
 import glob
+import os
 import re
 import sys
 from collections import defaultdict
@@ -101,7 +102,7 @@ for rid, text in seed.items():
         report(rid, "forms", base, t)
 for path, rid, text in mig:
     if rid in seed:
-        report(rid, path.split("/")[-1][:8], secs(seed[rid]), text)
+        report(rid, os.path.basename(path)[:12], secs(seed[rid]), text)
 
 only_canon = sorted(set(canon) - set(seed))
 only_seed = sorted(set(seed) - set(canon))
