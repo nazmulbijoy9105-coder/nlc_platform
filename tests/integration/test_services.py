@@ -48,6 +48,7 @@ class TestCompanyService:
         assert company.id is not None
         assert company.company_name == "Integration Test Co Ltd"
         assert company.is_active is True
+        assert company.register_location == "registered_office"
 
     @pytest.mark.asyncio
     async def test_get_by_registration_number(self, db, db_company):

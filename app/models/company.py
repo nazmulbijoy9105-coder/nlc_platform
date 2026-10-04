@@ -256,7 +256,11 @@ class Company(FullMixin, Base):
     register_of_charges_maintained: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     register_of_contracts: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     register_of_directors_interests: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
-    register_location: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    register_location: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+        server_default="registered_office",
+    )
     minutes_book_agm_maintained: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     minutes_book_board_maintained: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
