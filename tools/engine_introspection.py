@@ -17,7 +17,7 @@ from app.rule_engine.engine import (
 )
 from scripts.seed_rules import ILRMF_RULES
 
-today = date(2026, 10, 5)  # Fixed date for reproducibility
+today = date(2026, 10, 20)  # Fixed date for reproducibility
 seed = {r["rule_id"]: r for r in ILRMF_RULES}
 
 # ═══════════════════════════════════════════════════════════════
@@ -167,6 +167,77 @@ profiles = {
         labour_court_order_pending=True,
     ),
 }
+
+    # Profile I: BNK rules (winding up)
+    "bnk_default": make_base(
+        company_id="I",
+        winding_up_petition_filed=True, winding_up_petition_date=today - timedelta(days=30),
+        liquidator_appointed=True, court_ordered_winding_up=True,
+    ),
+
+    # Profile J: Director resignation (DIR-002/003/004)
+    "dir_resignation": make_base(
+        company_id="J",
+        director_changes=[DirectorChange(
+            director_id="D1", event_type="resignation",
+            event_date=today - timedelta(days=100), form_filed=False,
+        )],
+    ),
+
+    # Profile K: ESC-001 trigger (2-year default, not on strike-off)
+    "esc001": make_base(
+        company_id="K",
+        incorporation_date=today - timedelta(days=1500),
+        agm_count=5, last_agm_date=today - timedelta(days=1200),
+        agm_held_this_cycle=False,
+        unfiled_returns_count=2,
+        on_rjsc_strike_off_list=False,
+    ),
+
+    # Profile L: Register defects (REG-001/002/003)
+    "register_defects": make_base(
+        company_id="L",
+        maintained_registers=["members", "directors"],  # missing charges, minutes_agm, etc.
+        register_location="other_office",
+    ),
+
+    # Profile M: Non-void transfer (TR-004 fires, TR-003 is dead code)
+    "transfer_nonvoid": make_base(
+        company_id="M",
+        aoa_transfer_restriction=False,
+        share_transfers=[ShareTransfer(
+            transfer_id="T1", transfer_date=today - timedelta(days=30),
+            instrument_recorded=True, stamp_duty_paid=True,
+            board_approval_obtained=True, share_register_updated=False,
+            form_117_filed=True,
+        )],
+    ),
+
+    # Profile N: AGM-004 (notice missing)
+    "agm_notice_missing": make_base(
+        company_id="N",
+        agm_held_this_cycle=False,
+        agm_scheduled_date=today + timedelta(days=10),
+        notice_sent_date=None,
+    ),
+
+    # Profile O: AUD-005 (subsequent auditor not appointed)
+    "aud005": make_base(
+        company_id="O",
+        first_auditor_appointed=True,
+        auditor_reappointed_at_agm=False,
+        audit_in_progress=False,
+        agm_count=3, last_agm_date=today - timedelta(days=200),
+        financial_year_end=date(2026, 6, 30),
+    ),
+
+    # Profile P: VAT-002 (monthly return overdue)
+    "vat_overdue": make_base(
+        company_id="P",
+        vat_registered=True,
+        vat_annual_return_filed_for_fy=True,
+        last_vat_return_filed=None,
+    ),
 
 # ═══════════════════════════════════════════════════════════════
 # RUN ENGINE ON ALL PROFILES

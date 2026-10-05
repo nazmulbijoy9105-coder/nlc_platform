@@ -1612,6 +1612,38 @@ class NLCRuleEngine:
         if "ESC-002" in active_rules:
             add_step("Defend Strike-Off", "File immediate application to set aside strike-off. Section 304.", ["ESC-002", "AR-002", "AR-003"], "CRITICAL", 1, 7)
 
+        # ── Canonical rescue (additive: only for BLACK-override rules not already covered) ──
+        rules_covered = set()
+        for s in steps:
+            rules_covered.update(s.get("related_rules", []))
+
+        try:
+            from canonical_architecture.statutory_rescue import STATUTORY_RESCUE_REGISTRY
+            for rule_id in sorted(active_rules - rules_covered):
+                # Only generate canonical steps for BLACK-severity override rules
+                flag = next((f for f in active if f.rule_id == rule_id), None)
+                if not flag or flag.severity != Severity.BLACK:
+                    continue
+                if not flag.is_black_override:
+                    continue
+                if rule_id in self._ESC_RULE_IDS:
+                    continue  # ESC rules handled by hardcoded steps
+
+                rescue = STATUTORY_RESCUE_REGISTRY.get(rule_id)
+                if rescue:
+                    actions = rescue.get("statutory_actions", [])
+                    desc = "; ".join(actions) if actions else rescue.get("objective", f"Remediate {rule_id}")
+                    steps.append({
+                        "title": rescue.get("objective", f"Remediate: {rule_id}"),
+                        "description": desc,
+                        "related_rules": [rule_id],
+                        "priority": "CRITICAL",
+                        "min_days": 7,
+                        "max_days": 30,
+                    })
+        except ImportError:
+            pass  # Canonical not available — hardcoded steps only
+
         # Sort by priority (CRITICAL first) then min_days (urgent first)
         priority_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
         steps.sort(key=lambda s: (priority_order.get(s["priority"], 9), s["min_days"]))  # type: ignore
