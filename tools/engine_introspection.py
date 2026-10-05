@@ -106,7 +106,7 @@ profiles = {
         )],
         director_changes=[DirectorChange(
             director_id="D1", event_type="appointment",
-            event_date=today - timedelta(days=100), form_filed=False,
+            event_date=today - timedelta(days=400), form_filed=False,
         )],
         charges=[ChargeEvent(
             charge_id="C1", creation_date=today - timedelta(days=100),
@@ -227,7 +227,7 @@ profiles = {
         auditor_reappointed_at_agm=False,
         audit_in_progress=False,
         agm_count=3, last_agm_date=today - timedelta(days=200),
-        financial_year_end=date(2026, 6, 30),
+        financial_year_end=date(2025, 6, 30),
     ),
 
     # Profile P: VAT-002 (monthly return overdue)
@@ -236,6 +236,13 @@ profiles = {
         vat_registered=True,
         vat_annual_return_filed_for_fy=True,
         last_vat_return_filed=None,
+    ),
+
+    # Profile Q: REG-001 trigger (non-core missing, core complete)
+    "reg_noncore": make_base(
+        company_id="Q",
+        maintained_registers=["members", "directors", "charges", "minutes_agm", "minutes_board"],
+        register_location="registered_office",
     ),
 }
 
