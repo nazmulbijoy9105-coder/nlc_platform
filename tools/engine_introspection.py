@@ -166,7 +166,6 @@ profiles = {
         factory_license_obtained=True, factory_license_expiry=today - timedelta(days=100),
         labour_court_order_pending=True,
     ),
-}
 
     # Profile I: BNK rules (winding up)
     "bnk_default": make_base(
@@ -197,11 +196,11 @@ profiles = {
     # Profile L: Register defects (REG-001/002/003)
     "register_defects": make_base(
         company_id="L",
-        maintained_registers=["members", "directors"],  # missing charges, minutes_agm, etc.
+        maintained_registers=["members", "directors"],
         register_location="other_office",
     ),
 
-    # Profile M: Non-void transfer (TR-004 fires, TR-003 is dead code)
+    # Profile M: Non-void transfer (TR-004 fires)
     "transfer_nonvoid": make_base(
         company_id="M",
         aoa_transfer_restriction=False,
@@ -238,8 +237,8 @@ profiles = {
         vat_annual_return_filed_for_fy=True,
         last_vat_return_filed=None,
     ),
+}
 
-# ═══════════════════════════════════════════════════════════════
 # RUN ENGINE ON ALL PROFILES
 # ═══════════════════════════════════════════════════════════════
 
