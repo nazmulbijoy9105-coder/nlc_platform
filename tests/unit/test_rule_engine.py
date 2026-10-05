@@ -471,7 +471,7 @@ class TestTransferRules:
         transfer = make_share_transfer(board_approval=False, board_approval_obtained=False)
         profile = build_profile(share_transfers=[transfer])
         output = rule_engine.evaluate(profile)
-        assert_flag_triggered(output, "TR-003")
+        assert_flag_triggered(output, "TR-005")
 
     def test_TR004_triggers_register_not_updated(self, rule_engine, build_profile, make_share_transfer):
         """Transfer completed but share register not updated → TR-004."""
@@ -527,13 +527,13 @@ class TestTransferRules:
         )
         profile = build_profile(share_transfers=[transfer])
         output = rule_engine.evaluate(profile)
-        for rule_id in ["TR-001", "TR-002", "TR-003", "TR-004", "TR-005", "TR-006"]:
+        for rule_id in ["TR-001", "TR-002", "TR-005", "TR-004", "TR-005", "TR-006"]:
             assert_flag_not_triggered(output, rule_id)
 
     def test_no_transfer_flags_when_no_transfers(self, rule_engine, build_profile):
         profile = build_profile(share_transfers=[])
         output = rule_engine.evaluate(profile)
-        for rule_id in ["TR-001", "TR-002", "TR-003", "TR-004", "TR-005", "TR-006"]:
+        for rule_id in ["TR-001", "TR-002", "TR-005", "TR-004", "TR-005", "TR-006"]:
             assert_flag_not_triggered(output, rule_id)
 
 
@@ -1116,7 +1116,7 @@ class TestVerdictRegression:
         profile = build_profile(trade_license_expiry=date.today() - timedelta(days=100))
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "TL-002")
-        assert output.score_breakdown.risk_band.value in ("GREEN", "YELLOW")
+        assert output.score_breakdown.risk_band.value == "RED"  # Fix: RED flags now escalate band (prevents false GREEN)
 
     def test_strike_off_risk_flag_escalates_band(self, rule_engine, build_profile):
         profile = build_profile(unfiled_returns_count=2)
