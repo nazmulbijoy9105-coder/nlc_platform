@@ -595,4 +595,44 @@ class CompanyService(BaseService[Company]):
             "annual_turnover_bdt": float(company.annual_turnover_bdt) if company.annual_turnover_bdt else 0.0,
         })
 
+        # ── 0028: Remaining compliance fields + derived fields ──
+        profile.update({
+            # AR-004 attachments
+            "balance_sheet_attached": company.balance_sheet_attached,
+            "directors_list_attached": company.directors_list_attached,
+            "profit_loss_attached": company.profit_loss_attached,
+            "schedule_x_attached": company.schedule_x_attached,
+            "shareholders_list_attached": company.shareholders_list_attached,
+            # FDI / Foreign shareholding
+            "has_foreign_shareholder": company.has_foreign_shareholder,
+            "foreign_shareholding_pct": float(company.foreign_shareholding_pct) if company.foreign_shareholding_pct else 0.0,
+            "encashment_certificate_uploaded": company.encashment_certificate_uploaded,
+            "encashment_certificate_date": company.encashment_certificate_date,
+            "bida_registered": company.bida_registered,
+            "is_fdi_registered": company.is_fdi_registered,
+            "fdi_registration_date": company.fdi_registration_date,
+            "remittance_amount_usd": float(company.remittance_amount_usd) if company.remittance_amount_usd else 0.0,
+            # Form filing status
+            "form_iii_filed": company.form_iii_filed,
+            "form_iv_filed": company.form_iv_filed,
+            # RJSC strike-off
+            "rjsc_status": company.rjsc_status or "ACTIVE",
+            "rjsc_strike_off_notice_date": company.rjsc_strike_off_notice_date,
+            "last_rjsc_compliance_date": company.last_rjsc_compliance_date,
+            # Director disqualification + penalties
+            "any_director_disqualified": company.any_director_disqualified,
+            "disqualification_details": company.disqualification_details or [],
+            "penalty_notices_received": company.penalty_notices_received or 0,
+            "penalty_notices_resolved": company.penalty_notices_resolved or 0,
+            # Capital reduction
+            "capital_reduction_date": company.capital_reduction_date,
+            "capital_reduction_court_order_obtained": company.capital_reduction_court_order_obtained,
+            # Winding up
+            "winding_up_petition_date": company.winding_up_petition_date,
+            # Derived fields (no DB column needed)
+            "tin_obtained": company.tin_number is not None,
+            "vat_registered": company.vat_number is not None,
+            "annual_return_filed": company.last_return_filed_year is not None,
+        })
+
         return profile

@@ -1,0 +1,75 @@
+AGM-001|First AGM Default|Section 81, Companies Act 1994 (Bangladesh)|RED|25|f|t
+AGM-002|Subsequent AGM Default|Section 81, Companies Act 1994 (Bangladesh)|YELLOW|20|f|t
+AGM-003|AGM Notice Defective|Companies Act 1994, Section 85|YELLOW|10|f|t
+AGM-004|AGM Notice Missing|Companies Act 1994, Section 85|RED|20|f|t
+AGM-005|AGM Quorum Not Met|Section 83, Companies Act 1994 (Bangladesh)|YELLOW|15|f|t
+AGM-006|AGM Minutes Not Prepared|Companies Act 1994, Section 83|YELLOW|15|f|t
+AGM-007|AGM Adjourned Without Notice|Companies Act 1994, Section 84|YELLOW|5|f|t
+AR-001|Annual Return Default|Companies Act 1994, Section 119|YELLOW|20|f|t
+AR-002|Annual Return 2-Year Backlog|Companies Act 1994, Sections 119, 304|RED|20|f|t
+AR-003|Annual Return 3-Year Backlog — BLACK ESCALATION|Companies Act 1994, Sections 119, 304|BLACK|20|f|t
+AR-004|Annual Return Filed But Incomplete|Companies Act 1994, Section 119|YELLOW|10|f|t
+AUD-001|First Auditor Not Appointed Within 30 Days|Companies Act 1994, Section 210(1)|RED|20|f|t
+AUD-002|Audit Not Completed Before AGM|Companies Act 1994, Section 151|YELLOW|15|f|t
+AUD-003|AGM Held Without Completed Audit — BLACK OVERRIDE|Section 210, Companies Act 1994 (Bangladesh)|BLACK|25|t|t
+AUD-004|Auditor Not Reappointed at AGM|Companies Act 1994, Section 210(2)|YELLOW|5|f|t
+AUD-005|No Auditor Appointed for Current FY|Companies Act 1994, Section 210(2)|YELLOW|10|f|t
+BNK-001|Winding Up Petition Filed|Bankruptcy Act 1997 (Bangladesh), Section 12|BLACK|25|t|t
+BNK-002|Liquidator Appointed|Bankruptcy Act 1997 (Bangladesh), Section 14|BLACK|25|t|t
+BNK-003|Court-Ordered Winding Up|Bankruptcy Act 1997 (Bangladesh), Section 18|BLACK|35|t|t
+BSEC-001|Quarterly Report Not Filed|BSEC Corporate Governance Code 2023, Para 8|RED|10|f|t
+BSEC-002|CG Certificate Not Obtained|BSEC Corporate Governance Code 2023, Para 9|RED|10|f|t
+BSEC-003|Board Composition Non-Compliant|BSEC Corporate Governance Code 2023, Para 5|YELLOW|8|f|t
+BSEC-004|Audit Committee Not Established|BSEC Corporate Governance Code 2023, Para 6|YELLOW|5|f|t
+CAP-001|Capital Alteration Without Board Resolution|Section 54, Companies Act 1994 (Bangladesh)|YELLOW|10|f|t
+CAP-002|Charge Not Filed with RJSC|Section 107, Companies Act 1994 (Bangladesh)|YELLOW|10|f|t
+CAP-003|Capital Reduction Without Court Order|Companies Act 1994, Section 100|BLACK|15|t|t
+CAP-004|Special Resolution Not Filed|Companies Act 1994, Section 87|YELLOW|8|f|t
+CHG-001|Charge Satisfaction Not Filed|Companies Act 1994, Section 87|YELLOW|3|f|t
+DEF-001|Director Disqualification Risk|Companies Act 1994, Section 297|BLACK|15|t|t
+DEF-002|Penalty Prosecution Risk|Companies Act 1994, Section 447|RED|8|f|t
+DIR-001|Director Appointment Not Filed|Companies Act 1994, Section 92|YELLOW|10|f|t
+DIR-002|Director Resignation Not Filed|Companies Act 1994, Section 92|YELLOW|10|f|t
+DIR-003|Major Director Irregularity — Over 1 Year Unfiled|Companies Act 1994, Section 92|RED|15|f|t
+DIR-004|Departed Director Still Shown as Active|Companies Act 1994, Section 92|RED|15|f|t
+DIR-005|Register of Directors Interests Missing|Companies Act 1994, Section 97|YELLOW|5|f|t
+DIR-006|Register of Contracts Missing|Companies Act 1994, Section 98|YELLOW|5|f|t
+ESC-001|Strike-Off Risk Elevated|Companies Act 1994, Section 304|RED|20|f|t
+ESC-002|Strike-Off Imminent — BLACK OVERRIDE|Companies Act 1994, Section 304|BLACK|30|t|t
+ESC-003|Corporate Rescue Mandatory — BLACK OVERRIDE|Multiple sections, Companies Act 1994 (Bangladesh)|BLACK|30|t|t
+ESC-004|Voluntary Winding Up|Companies Act 1994, Section 196|BLACK|30|t|t
+ESC-005|Investigation Order Pending|Companies Act 1994, Section 199|RED|20|f|t
+FX-001|Foreign Exchange Violation|Foreign Exchange Regulation Act 1947 (Bangladesh)|RED|15|f|t
+INC-001|Memorandum and Articles Not Filed|Companies Act 1994, Section 11|RED|15|f|t
+INC-002|Form III Not Filed|Companies Act 1994, Section 81|BLACK|5|t|t
+INC-003|Minimum Directors Not Appointed|Companies Act 1994, Section 90(2)|BLACK|15|t|t
+INC-004|Paid-Up Capital Exceeds Authorized|Companies Act 1994, Section 150|BLACK|20|t|t
+INC-005|Encashment Certificate Missing|BIDA Foreign Investment Act 1980; Bangladesh Bank FDI Circular|YELLOW|8|f|t
+INC-006|Remittance Below Work Permit Threshold|BIDA Foreign Investment Act 1980|YELLOW|5|f|t
+LBR-001|Factory License Missing|Labour Act 2006 (Bangladesh), Section 35|RED|10|f|t
+LBR-002|Factory License Expired|Labour Act 2006 (Bangladesh), Section 35|YELLOW|5|f|t
+LBR-003|Labour Court Order Pending|Labour Act 2006 (Bangladesh), Section 209|RED|15|f|t
+OFF-001|Registered Office Change Not Filed|Companies Act 1994, Section 81|YELLOW|5|f|t
+REG-001|Statutory Registers Incomplete|Sections 34, 115, 148, Companies Act 1994 (Bangladesh)|YELLOW|10|f|t
+REG-002|Core Statutory Registers Missing|Companies Act 1994, Sections 34, 83, 87, 90|YELLOW|10|f|t
+REG-003|Registers Not at Registered Office|Companies Act 1994, Section 34(2)|YELLOW|3|f|t
+SH-001|Shareholder Change Not Filed|Section 190, Companies Act 1994 (Bangladesh)|YELLOW|10|f|t
+SH-002|Share Certificates Not Issued|Companies Act 1994, Section 46|YELLOW|5|f|t
+SH-003|Capital Increase Not Filed|Companies Act 1994, Section 52|YELLOW|8|f|t
+STR-001|Name Change Not Filed|Companies Act 1994, Section 20|YELLOW|3|f|t
+STR-002|Object Clause Change Not Filed|Companies Act 1994, Section 17|YELLOW|3|f|t
+STR-003|AoA Alteration Not Filed|Companies Act 1994, Section 17|YELLOW|3|f|t
+TAX-001|TIN Not Obtained|Income Tax Act 2023 (Bangladesh)|RED|10|f|t
+TAX-002|VAT Registration Required|Value Added Tax Act 2012 (Bangladesh)|YELLOW|5|f|t
+TAX-003|Annual Tax Return Overdue|Income Tax Act 2023, Section 75|YELLOW|3|f|t
+TAX-004|Advance Tax Payment Missed|Income Tax Act 2023, Section 74|YELLOW|2|f|t
+TL-001|Trade License Not Obtained|City Corporation Ordinance 1983 / Pourashava Act 2009|YELLOW|5|f|t
+TL-002|Trade License Expired — Renewal Not Obtained|City Corporation Ordinance 1983 / Pourashava Act 2009|YELLOW|5|f|t
+TR-001|No Share Transfer Instrument|Companies Act 1994, Section 108|YELLOW|10|f|t
+TR-002|Stamp Duty Not Paid on Transfer|Stamp Act 1899 (Bangladesh), Section 82 Companies Act 1994|YELLOW|10|f|t
+TR-003|No Board Approval for Share Transfer|Articles of Association, Companies Act 1994 (Bangladesh)|YELLOW|10|f|t
+TR-004|Register of Members Not Updated After Transfer|Companies Act 1994, Section 34|YELLOW|10|f|t
+TR-005|Share Transfer Violates AoA Restriction — BLACK OVERRIDE|Articles of Association, Companies Act 1994 (Bangladesh)|BLACK|25|t|t
+TR-006|Composite Irregular Transfer|Multiple sections, Companies Act 1994 (Bangladesh)|RED|20|f|t
+VAT-002|Monthly VAT Return Overdue|Value Added Tax Act 2012 (Bangladesh)|YELLOW|8|f|t
+VAT-003|Annual VAT Return Overdue|Value Added Tax Act 2012 (Bangladesh)|YELLOW|5|f|t
