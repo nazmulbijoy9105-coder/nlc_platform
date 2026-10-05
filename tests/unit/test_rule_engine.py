@@ -425,7 +425,7 @@ class TestShareholderRules:
     def test_SH001_triggers_change_not_in_return(self, rule_engine, build_profile):
         """Share allotment not filed via Form XV → SH-001."""
         profile = build_profile(
-            last_allotment_date=date.today() - timedelta(days=60),
+            last_allotment_date=date.today() - timedelta(days=65),
             form_xv_filed=False,
         )
         output = rule_engine.evaluate(profile)
@@ -583,7 +583,7 @@ class TestRegisterRules:
         Share certificate non-issuance is SH-002 in the engine.
         """
         profile = build_profile(
-            last_allotment_date=date.today() - timedelta(days=90),
+            last_allotment_date=date.today() - timedelta(days=95),
             share_certificates_issued=False,
         )
         output = rule_engine.evaluate(profile)
@@ -634,7 +634,7 @@ class TestCapitalRules:
     def test_CAP001_triggers_capital_change_no_resolution(self, rule_engine, build_profile):
         """Capital altered without board/member resolution → CAP-001."""
         profile = build_profile(
-            capital_increase_date=date.today() - timedelta(days=90),
+            capital_increase_date=date.today() - timedelta(days=95),
             capital_increase_resolution=False,
         )
         output = rule_engine.evaluate(profile)
@@ -642,7 +642,7 @@ class TestCapitalRules:
 
     def test_CAP001_no_trigger_with_resolution(self, rule_engine, build_profile):
         profile = build_profile(
-            capital_increase_date=date.today() - timedelta(days=90),
+            capital_increase_date=date.today() - timedelta(days=95),
             capital_increase_resolution=True,
         )
         output = rule_engine.evaluate(profile)
@@ -908,14 +908,14 @@ class TestEngineIntegrity:
             audit_complete=False,
             current_director_count=0,
             unfiled_returns_count=3,
-            last_allotment_date=date.today() - timedelta(days=60),
+            last_allotment_date=date.today() - timedelta(days=65),
             form_xv_filed=False,
             winding_up_petition_filed=True,
             factory_license_obtained=False,
             labour_court_order_pending=True,
             any_director_disqualified=True,
             on_rjsc_strike_off_list=True,
-            capital_increase_date=date.today() - timedelta(days=60),
+            capital_increase_date=date.today() - timedelta(days=65),
             capital_increase_resolution=False,
         )
         output = rule_engine.evaluate(profile)
@@ -996,11 +996,11 @@ class TestUntestedRules:
         assert_flag_triggered(rule_engine.evaluate(build_profile(paid_up_capital_bdt=200000, authorized_capital_bdt=100000)), "INC-004")
 
     def test_SH002_triggers(self, rule_engine, build_profile):
-        profile = build_profile(last_allotment_date=date.today() - timedelta(days=90), share_certificates_issued=False)
+        profile = build_profile(last_allotment_date=date.today() - timedelta(days=95), share_certificates_issued=False)
         assert_flag_triggered(rule_engine.evaluate(profile), "SH-002")
 
     def test_SH003_triggers(self, rule_engine, build_profile):
-        profile = build_profile(capital_increase_date=date.today() - timedelta(days=60), form_iv_filed=False)
+        profile = build_profile(capital_increase_date=date.today() - timedelta(days=65), form_iv_filed=False)
         assert_flag_triggered(rule_engine.evaluate(profile), "SH-003")
 
     def test_TAX001_triggers(self, rule_engine, build_profile):

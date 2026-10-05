@@ -321,11 +321,11 @@ AGM_NOTICE_MINIMUM_DAYS = 21
 PRIVATE_COMPANY_QUORUM = 2
 ANNUAL_RETURN_DEADLINE_DAYS = 21   # Companies Act 1994, Section 36 (Schedule X)
 DIRECTOR_FILING_DEADLINE_DAYS = 14
-SHARE_CERTIFICATE_DEADLINE_DAYS = 60
+SHARE_CERTIFICATE_DEADLINE_DAYS = 90
 REGISTERED_OFFICE_DEADLINE_DAYS = 28
 FIRST_AUDITOR_DEADLINE_DAYS = 30
 CHARGE_REGISTRATION_DEADLINE_DAYS = 30
-ALLOTMENT_FILING_DEADLINE_DAYS = 30
+ALLOTMENT_FILING_DEADLINE_DAYS = 60
 SPECIAL_RESOLUTION_DEADLINE_DAYS = 30
 
 REQUIRED_REGISTERS = [
@@ -428,7 +428,7 @@ class NLCRuleEngine:
                 score_impact=15,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description="Memorandum and Articles of Association not filed with RJSC.",
-                statutory_basis="Section 11, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 23, Companies Act 1994 (Bangladesh)",
             ))
 
         if c.paid_up_capital_bdt > 0 and not c.form_iii_filed:
@@ -441,7 +441,7 @@ class NLCRuleEngine:
                     score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description="Memorandum and Articles of Association not filed with RJSC. Section 11: constitutional documents required.",
-                    statutory_basis="Section 11, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 23, Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay}
                 ))
 
@@ -472,7 +472,7 @@ class NLCRuleEngine:
                 score_impact=20,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description="Paid-up capital exceeds authorized capital. Section 150: all excess allotments void.",
-                statutory_basis="Section 150, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 53, Companies Act 1994 (Bangladesh)",
                 is_black_override=True,
                 detail={"paid_up": c.paid_up_capital_bdt, "authorized": c.authorized_capital_bdt}
             ))
@@ -679,7 +679,7 @@ class NLCRuleEngine:
                 score_impact=15,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=f"AGM quorum not met. {c.members_present_at_agm} present, need {PRIVATE_COMPANY_QUORUM}. Section 83.",
-                statutory_basis="Section 83, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
                 detail={"present": c.members_present_at_agm, "required": PRIVATE_COMPANY_QUORUM}
             ))
 
@@ -691,7 +691,7 @@ class NLCRuleEngine:
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="AGM held but minutes not prepared. Section 83: minutes are prima facie evidence.",
-                statutory_basis="Section 83, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
             ))
 
     # ───────────────────────────────────────────────────────────────────
@@ -772,7 +772,7 @@ class NLCRuleEngine:
                         score_impact=10 if delay > 90 else 5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=f"Director appointment not filed via Form XII. Section 92: 14-day deadline. Overdue by {delay} days.",
-                        statutory_basis="Section 92, Companies Act 1994 (Bangladesh)",
+                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "delay": delay}
                     ))
                 elif change.event_type in ("resignation", "removal", "death"):
@@ -784,7 +784,7 @@ class NLCRuleEngine:
                         score_impact=10 if delay > 90 else 5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=f"Director {change.event_type} not filed via Form XII. Section 92: 14-day deadline. Overdue by {delay} days.",
-                        statutory_basis="Section 92, Companies Act 1994 (Bangladesh)",
+                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "delay": delay, "type": change.event_type}
                     ))
                     self._add_flag(ComplianceFlag(
@@ -794,7 +794,7 @@ class NLCRuleEngine:
                         score_impact=10,
                         revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                         description="Departed director still liable until Form XII filed. Section 92: filing required to release liability.",
-                        statutory_basis="Section 92, Companies Act 1994 (Bangladesh)",
+                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id}
                     ))
 
@@ -806,7 +806,7 @@ class NLCRuleEngine:
                         score_impact=15,
                         revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                         description=f"Director filing overdue {delay} days. Exceeds 1 year — Major Irregularity.",
-                        statutory_basis="Section 92, Companies Act 1994 (Bangladesh)",
+                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "delay": delay}
                     ))
 
@@ -824,7 +824,7 @@ class NLCRuleEngine:
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Share allotment not filed via Form XV. Section 50: 30-day deadline. Overdue by {delay} days.",
-                    statutory_basis="Section 50, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 151, Companies Act 1994 (Bangladesh)",
                     detail={"delay": delay}
                 ))
 
@@ -838,7 +838,7 @@ class NLCRuleEngine:
                     score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Share certificates not issued within 60 days. Section 46: overdue by {delay - SHARE_CERTIFICATE_DEADLINE_DAYS} days.",
-                    statutory_basis="Section 46, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 158, Companies Act 1994 (Bangladesh)",
                     detail={"delay": delay}
                 ))
 
@@ -852,7 +852,7 @@ class NLCRuleEngine:
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Capital increase not filed via Form IV. Section 52: 30-day deadline. Overdue by {delay} days.",
-                    statutory_basis="Section 52, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 56, Companies Act 1994 (Bangladesh)",
                     detail={"delay": delay}
                 ))
 
@@ -874,7 +874,7 @@ class NLCRuleEngine:
                     score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description="Share transfer without Form 117 instrument. Section 108: proper instrument required.",
-                    statutory_basis="Section 108, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 38, Companies Act 1994 (Bangladesh)",
                     detail={"transfer_id": transfer.transfer_id}
                 ))
 
@@ -898,7 +898,7 @@ class NLCRuleEngine:
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description="Share transfer without board approval. Section 47 + AoA: approval required where restricted.",
-                    statutory_basis="Section 47; AoA, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 38; AoA, Companies Act 1994 (Bangladesh)",
                     detail={"transfer_id": transfer.transfer_id}
                 ))
 
@@ -922,7 +922,7 @@ class NLCRuleEngine:
                     score_impact=15,
                     revenue_tier=RevenueTier.CORPORATE_RESCUE,
                     description="Transfer violated AoA restriction. Section 47: such transfer is void. BLACK override.",
-                    statutory_basis="Section 47; AoA, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 38; AoA, Companies Act 1994 (Bangladesh)",
                     detail={"transfer_id": transfer.transfer_id, "override": True},
                     is_black_override=True,
                 ))
@@ -1028,7 +1028,7 @@ class NLCRuleEngine:
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="Capital increase without shareholder resolution. Section 54: Ordinary/Special Resolution required.",
-                statutory_basis="Section 54, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 53, Companies Act 1994 (Bangladesh)",
             ))
 
         for charge in c.charges:
@@ -1066,7 +1066,7 @@ class NLCRuleEngine:
                 score_impact=15,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description="Capital reduction without court order. Sec 100.",
-                statutory_basis="Section 100, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 59, Companies Act 1994 (Bangladesh)",
                 is_black_override=True,
             ))
 
@@ -1195,7 +1195,7 @@ class NLCRuleEngine:
                 score_impact=8 if unresolved >= 3 else 5,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=f"{unresolved} unresolved penalties. Sec 447: fine up to Tk 10,000.",
-                statutory_basis="Section 447, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 397, Companies Act 1994 (Bangladesh)",
                 detail={"unresolved": unresolved}
             ))
 
@@ -1330,28 +1330,28 @@ class NLCRuleEngine:
                 severity=Severity.YELLOW, score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="AGM adjourned without proper notice. Section 84.",
-                statutory_basis="Section 84, Companies Act 1994 (Bangladesh)"))
+                statutory_basis="Section 85, Companies Act 1994 (Bangladesh)"))
         if c.register_of_directors_interests is False:
             self._add_flag(ComplianceFlag(
                 rule_id="DIR-005", flag_code="REGISTER_OF_DIRECTORS_INTERESTS_MISSING",
                 severity=Severity.YELLOW, score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="Register of directors interests not maintained. Section 97.",
-                statutory_basis="Section 97, Companies Act 1994 (Bangladesh)"))
+                statutory_basis="Section 130, Companies Act 1994 (Bangladesh)"))
         if c.register_of_contracts is False:
             self._add_flag(ComplianceFlag(
                 rule_id="DIR-006", flag_code="REGISTER_OF_CONTRACTS_MISSING",
                 severity=Severity.YELLOW, score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="Register of contracts not maintained. Section 98.",
-                statutory_basis="Section 98, Companies Act 1994 (Bangladesh)"))
+                statutory_basis="Section 130, Companies Act 1994 (Bangladesh)"))
         if c.voluntary_winding_up:
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-004", flag_code="VOLUNTARY_WINDING_UP",
                 severity=Severity.BLACK, score_impact=30,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description="Voluntary winding up. Section 196.",
-                statutory_basis="Section 196, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 286, Companies Act 1994 (Bangladesh)",
                 is_black_override=True))
         if c.investigation_order:
             self._add_flag(ComplianceFlag(
@@ -1359,7 +1359,7 @@ class NLCRuleEngine:
                 severity=Severity.RED, score_impact=20,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description="Investigation order pending. Section 199.",
-                statutory_basis="Section 199, Companies Act 1994 (Bangladesh)"))
+                statutory_basis="Section 195, Companies Act 1994 (Bangladesh)"))
 
     # MODULE 15: BSEC CG CODE 2023
     def _run_bsec_rules(self, c: CompanyProfile) -> None:
@@ -1432,7 +1432,7 @@ class NLCRuleEngine:
                 score_impact=15,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=f"2+ year AGM and Return defaults. Section 304: RJSC strike-off risk elevated.",
-                statutory_basis="Section 304, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 346, Companies Act 1994 (Bangladesh)",
                 detail={"agm_years": agm_years, "ar_years": ar_years}
             ))
 
@@ -1446,7 +1446,7 @@ class NLCRuleEngine:
                 score_impact=25,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description=f"3+ year default or on strike-off list. Section 304: strike-off imminent. Corporate Rescue mandatory.",
-                statutory_basis="Section 304, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 346, Companies Act 1994 (Bangladesh)",
                 detail={"agm_years": agm_years, "ar_years": ar_years, "on_list": c.on_rjsc_strike_off_list},
                 is_black_override=True,
                 escalation_pending=True,
@@ -1462,7 +1462,7 @@ class NLCRuleEngine:
                 score_impact=esc003_impact,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description="Multiple BLACK flags (" + str(len(black_flags)) + "). Corporate Rescue mandatory. Systemic failure detected.",
-                statutory_basis="Sections 81, 92, 36, 304 (aggregate), Companies Act 1994 (Bangladesh)",
+                statutory_basis="Sections 81, 115, 36, 346 (aggregate), Companies Act 1994 (Bangladesh)",
                 detail={"black_count": len(black_flags)},
                 is_black_override=True,
             ))
