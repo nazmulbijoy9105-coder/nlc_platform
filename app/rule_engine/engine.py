@@ -889,7 +889,7 @@ class NLCRuleEngine:
                     detail={"transfer_id": transfer.transfer_id}
                 ))
 
-            if not transfer.board_approval_obtained and c.aoa_transfer_restriction:
+            if not transfer.board_approval_obtained and c.aoa_transfer_restriction and not transfer_is_void:
                 self._add_flag(ComplianceFlag(
                     rule_id="TR-003",
                     flag_code="TRANSFER_NO_BOARD_APPROVAL",
@@ -1510,21 +1510,25 @@ class NLCRuleEngine:
         reason = None
         final = raw
         critical = [f for f in active if f.is_black_override]
+        # Also zero final_score when any BLACK-severity flag fires
+        # (prevents final_score=80 / risk_band=BLACK contradictions)
+        if not critical:
+            critical = [f for f in active if f.severity == Severity.BLACK]
         if critical:
             override = True
-            reason = f"BLACK override: {', '.join(f.rule_id for f in critical)}"
+            reason = f"BLACK: {', '.join(f.rule_id for f in critical)}"
             final = 0
 
         coverage = _input_coverage(company)
         score_band = Severity(self._score_to_band(final, force_black=bool(critical), coverage=coverage))
 
         # Band = worst of (score-based band, highest active flag severity)
-        # Prevents false GREEN when a BLACK-severity rule fires but doesn't override
+        # Prevents false GREEN when a RED-severity rule fires (BLACK handled above)'t override
         if not critical:
             severity_rank = {Severity.GREEN: 0, Severity.YELLOW: 1, Severity.RED: 2, Severity.BLACK: 3}
             max_flag_severity = Severity.GREEN
             for f in active:
-                if f.severity in severity_rank and (f.severity == Severity.BLACK or f.rule_id in ("AR-002", "ESC-001")):
+                if f.severity in severity_rank and (f.severity in (Severity.RED, Severity.BLACK)):
                     if severity_rank[f.severity] > severity_rank.get(max_flag_severity, 0):
                         max_flag_severity = f.severity
             band_rank = severity_rank.get(score_band, 0)

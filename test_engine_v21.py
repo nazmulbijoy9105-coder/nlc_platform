@@ -4,9 +4,10 @@ Tests all 59 rules, fiscal quarters, double-counting suppression,
 DEF-001/ESC-003 ordering, and black override logic.
 """
 
+import os
 import sys
 
-sys.path.insert(0, '/f/nlc_platform')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from datetime import date
 
@@ -69,6 +70,8 @@ compliant = CompanyProfile(
     auditor_reappointed_at_agm=True,
     first_auditor_appointed=True,
     annual_return_filed=True,
+    last_audit_signed_date=date(2025, 6, 10),
+    last_return_filed_year=2025,
     annual_return_content_complete=True,
     current_director_count=3,
     moa_aoa_filed=True,
@@ -79,6 +82,9 @@ compliant = CompanyProfile(
     trade_license_obtained=True,
     trade_license_expiry=date(2027, 3, 31),
     maintained_registers=["members", "directors", "charges", "transfers", "debentures", "minutes_agm", "minutes_board"],
+    register_of_directors_interests=True,
+    register_of_contracts=True,
+    factory_license_obtained=True,
     register_location="registered_office",
     paid_up_capital_bdt=1000000,
     authorized_capital_bdt=5000000,
@@ -257,26 +263,26 @@ if __name__ == "__main__":
     # Test 1: Compliant
     assert results[0]['final_score'] == 100, f"Compliant should score 100, got {results[0]['final_score']}"
     assert results[0]['risk_band'] == Severity.GREEN, "Compliant should be GREEN"
-    print("✅ Test 1: Fully compliant = 100/GREEN")
+    print("[PASS] Test 1: Fully compliant = 100/GREEN")
 
     # Test 2: Severe default
     assert results[1]['override_applied'], "Severe default should trigger override"
     assert results[1]['final_score'] == 0, "Severe default should score 0"
     assert 'ESC-003' in results[1]['flag_ids'], "ESC-003 should fire for multiple black flags"
     assert 'DEF-001' in results[1]['black_ids'], "DEF-001 should be black"
-    print("✅ Test 2: Severe default = 0/BLACK with ESC-003 and DEF-001")
+    print("[PASS] Test 2: Severe default = 0/BLACK with ESC-003 and DEF-001")
 
     # Test 3: Transfer double-counting
     tr_flags = [f for f in results[2]['flag_ids'] if f.startswith('TR-')]
     assert 'TR-005' in tr_flags, "TR-005 should fire for void transfer"
     assert 'TR-003' not in tr_flags, "TR-003 should NOT fire when TR-005 fires"
     assert 'TR-004' not in tr_flags, "TR-004 should NOT fire when transfer is void"
-    print("✅ Test 3: TR-003/TR-004 suppressed when TR-005 fires")
+    print("[PASS] Test 3: TR-003/TR-004 suppressed when TR-005 fires")
 
     # Test 4: Fiscal quarter (September = Q1)
     assert 'TAX-004' in results[3]['flag_ids'], "TAX-004 should fire in September for missed Q1"
     tax004 = next((f for f in results[3]['flag_ids'] if f == 'TAX-004'), None)
-    print("✅ Test 4: TAX-004 uses Bangladesh FY quarters")
+    print("[PASS] Test 4: TAX-004 uses Bangladesh FY quarters")
 
     # Test 5: INC-003 flat impact
     zero_inc003 = next(
@@ -295,11 +301,11 @@ if __name__ == "__main__":
     assert zero_inc003.is_black_override is True
     assert one_inc003.is_black_override is True
 
-    print("✅ Test 5: INC-003 flat 15-point BLACK override for 0 and 1 director")
+    print("[PASS] Test 5: INC-003 flat 15-point BLACK override for 0 and 1 director")
 
     # Test 6: VAT threshold
     assert 'TAX-002' not in results[6]['flag_ids'], "TAX-002 should NOT fire when turnover < 3M"
-    print("✅ Test 6: TAX-002 uses annual_turnover_bdt (not paid_up_capital)")
+    print("[PASS] Test 6: TAX-002 uses annual_turnover_bdt (not paid_up_capital)")
 
     print(f"\n{'='*60}")
     print("ALL TESTS PASSED")

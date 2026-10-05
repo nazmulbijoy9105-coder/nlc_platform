@@ -940,7 +940,7 @@ def upgrade() -> None:
         res = conn.execute(sa.text("""
             UPDATE legal_rules SET
                 rule_name         = :name,
-                rule_type         = CAST(:rtype AS rule_type),
+                rule_type         = :rtype,
                 statutory_basis   = :basis,
                 description       = :descr,
                 rule_condition    = CAST(:cond AS jsonb),
@@ -955,7 +955,7 @@ def upgrade() -> None:
             "rid": rule_id, "name": name, "rtype": rtype, "basis": basis, "descr": descr,
             "cond": cond, "sev": sev, "score": score, "tier": tier, "black": black,
         })
-        if res.rowcount != 1:
+        if res is not None and res.rowcount != 1:
             missing.append(rule_id)
     if missing:
         raise RuntimeError(f"legal_rules missing seed rules: {missing}")
