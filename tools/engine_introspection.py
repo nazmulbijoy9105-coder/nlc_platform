@@ -216,7 +216,7 @@ if not_fired:
     for rid in not_fired:
         print(f"  {rid}: {seed[rid].get('rule_name', '?')}")
 else:
-    print("✅ All 75 rules triggered by test profiles")
+    print("[OK] All 75 rules triggered by test profiles")
 
 print()
 
@@ -258,14 +258,14 @@ if override_mismatches:
     for rid, s_val, e_val in override_mismatches:
         print(f"  {rid}: seed={s_val} engine={e_val}")
 else:
-    print("  ✅ All override flags match")
+    print("  [OK] All override flags match")
 
 print(f"\n=== Severity Mismatches (seed > engine = real) ===")
 if severity_mismatches:
     for rid, s_sev, e_sev in severity_mismatches:
         print(f"  {rid}: seed={s_sev} engine={e_sev}")
 else:
-    print("  ✅ No severity mismatches (seed ≤ engine for all rules)")
+    print("  [OK] No severity mismatches (seed ≤ engine for all rules)")
 
 print(f"\n=== Score Impact Mismatches ===")
 if impact_mismatches:
@@ -275,7 +275,7 @@ if impact_mismatches:
     if len(impact_mismatches) > 10:
         print(f"  ... and {len(impact_mismatches)-10} more")
 else:
-    print("  ✅ All score impacts match")
+    print("  [OK] All score impacts match")
 
 # ═══════════════════════════════════════════════════════════════
 # RESCUE PARITY CHECK
@@ -307,7 +307,7 @@ try:
     if orphan_rescue:
         print(f"\n⚠️ Orphan rescue entries (not in seed): {orphan_rescue}")
     else:
-        print(f"\n✅ No orphan rescue entries")
+        print(f"\n[OK] No orphan rescue entries")
     
     # Check triggered_by == rule_id
     triggered_mismatches = []
@@ -318,7 +318,7 @@ try:
     if triggered_mismatches:
         print(f"⚠️ triggered_by != rule_id: {triggered_mismatches}")
     else:
-        print(f"✅ All triggered_by == rule_id")
+        print(f"[OK] All triggered_by == rule_id")
         
 except Exception as e:
     print(f"  Could not check canonical rescue: {e}")
@@ -332,9 +332,9 @@ print(f"{'='*60}")
 
 print(f"Gate 5 (Seed ↔ Engine):")
 if not override_mismatches and not severity_mismatches:
-    print(f"  ✅ CLOSED — 0 real mismatches (runtime extraction)")
+    print(f"  [OK] CLOSED — 0 real mismatches (runtime extraction)")
 elif len(override_mismatches) <= 2:
-    print(f"  ✅ CLOSED — {len(override_mismatches)} known exceptions (functionally OK)")
+    print(f"  [OK] CLOSED — {len(override_mismatches)} known exceptions (functionally OK)")
 else:
     print(f"  ⚠️ {len(override_mismatches)} override + {len(severity_mismatches)} severity mismatches")
 
@@ -342,6 +342,6 @@ print(f"\nGate 9 (Rescue Parity):")
 if not_fired:
     print(f"  ⚠️ {len(not_fired)} rules not triggered — need more test profiles")
 else:
-    print(f"  ✅ All rules triggered")
+    print(f"  [OK] All rules triggered")
 
 print(f"\nEngine rule coverage: {len(engine_flags)}/75 = {len(engine_flags)/75*100:.0f}%")

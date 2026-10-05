@@ -473,6 +473,7 @@ class NLCRuleEngine:
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description="Paid-up capital exceeds authorized capital. Section 150: all excess allotments void.",
                 statutory_basis="Section 150, Companies Act 1994 (Bangladesh)",
+                is_black_override=True,
                 detail={"paid_up": c.paid_up_capital_bdt, "authorized": c.authorized_capital_bdt}
             ))
 
