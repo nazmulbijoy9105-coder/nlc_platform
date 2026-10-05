@@ -118,6 +118,7 @@ severe = CompanyProfile(
     disqualification_details=["Director A: Convicted under Sec 297"],
     on_rjsc_strike_off_list=True,
     unfiled_returns_count=5,
+    factory_license_obtained=False,
 )
 
 # ═══════════════════════════════════════════════════════════════════════

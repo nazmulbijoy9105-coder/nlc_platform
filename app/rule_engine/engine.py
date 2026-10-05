@@ -156,7 +156,7 @@ class CompanyProfile:
     directors_list_attached: bool = False
     shareholders_list_attached: bool = False
     director_changes: List[DirectorChange] = field(default_factory=list)
-    current_director_count: int | None = 0
+    current_director_count: int | None = None
     minimum_directors_met: bool | None = None
     shareholder_change_date: Optional[date] = None
     form_xv_filed: bool = False
@@ -246,7 +246,7 @@ class CompanyProfile:
     liquidator_appointed: bool = False
     court_ordered_winding_up: bool = False
     # ── Labour (Labour Act 2006) ──
-    factory_license_obtained: bool = False
+    factory_license_obtained: bool | None = None
     factory_license_expiry: Optional[date] = None
     worker_compensation_filed: bool | None = None
     labour_court_order_pending: bool = False
@@ -420,7 +420,7 @@ class NLCRuleEngine:
     # MODULE 0: INCORPORATION
     # ───────────────────────────────────────────────────────────────────
     def _run_incorporation_rules(self, c: CompanyProfile) -> None:
-        if not c.moa_aoa_filed:
+        if c.moa_aoa_filed is False:
             self._add_flag(ComplianceFlag(
                 rule_id="INC-001",
                 flag_code="MOA_AOA_NOT_FILED",
@@ -445,7 +445,7 @@ class NLCRuleEngine:
                     detail={"delay_days": delay}
                 ))
 
-        if (c.current_director_count or 0) < 2:  # type: ignore
+        if c.current_director_count is not None and (c.current_director_count or 0) < 2:  # type: ignore
             inc003_impact = 15
             inc003_desc = (
                 "Private company has NO directors. Section 90(2) requires minimum 2. Company cannot legally act."
@@ -503,7 +503,7 @@ class NLCRuleEngine:
                     conditional_applies=True
                 ))
 
-        if not c.trade_license_obtained:
+        if c.trade_license_obtained is False:
             self._add_flag(ComplianceFlag(
                 rule_id="TL-001",
                 flag_code="TRADE_LICENSE_NOT_OBTAINED",
@@ -1088,7 +1088,7 @@ class NLCRuleEngine:
     # MODULE 10: TAX COMPLIANCE
     # ───────────────────────────────────────────────────────────────────
     def _run_tax_rules(self, c: CompanyProfile) -> None:
-        if not c.tin_obtained:
+        if c.tin_obtained is False:
             self._add_flag(ComplianceFlag(
                 rule_id="TAX-001",
                 flag_code="TIN_NOT_OBTAINED",
@@ -1288,7 +1288,7 @@ class NLCRuleEngine:
 
     # MODULE 13: LABOUR COMPLIANCE (Labour Act 2006)
     def _run_labour_rules(self, c: CompanyProfile) -> None:
-        if not c.factory_license_obtained:
+        if c.factory_license_obtained is False:
             self._add_flag(ComplianceFlag(
                 rule_id="LBR-001",
                 flag_code="FACTORY_LICENSE_MISSING",
@@ -1331,14 +1331,14 @@ class NLCRuleEngine:
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="AGM adjourned without proper notice. Section 84.",
                 statutory_basis="Section 84, Companies Act 1994 (Bangladesh)"))
-        if not c.register_of_directors_interests:
+        if c.register_of_directors_interests is False:
             self._add_flag(ComplianceFlag(
                 rule_id="DIR-005", flag_code="REGISTER_OF_DIRECTORS_INTERESTS_MISSING",
                 severity=Severity.YELLOW, score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="Register of directors interests not maintained. Section 97.",
                 statutory_basis="Section 97, Companies Act 1994 (Bangladesh)"))
-        if not c.register_of_contracts:
+        if c.register_of_contracts is False:
             self._add_flag(ComplianceFlag(
                 rule_id="DIR-006", flag_code="REGISTER_OF_CONTRACTS_MISSING",
                 severity=Severity.YELLOW, score_impact=5,
