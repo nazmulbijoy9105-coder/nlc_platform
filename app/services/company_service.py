@@ -562,4 +562,37 @@ class CompanyService(BaseService[Company]):
         if company.authorized_capital_bdt is not None and company.paid_up_capital_bdt is not None:
             profile["authorized_capital_bdt"] = float(company.authorized_capital_bdt)
             profile["paid_up_capital_bdt"] = float(company.paid_up_capital_bdt)
+        # ── 0027: DEAD rule inputs (from new DB columns) ─────────────
+        profile.update({
+            "moa_aoa_filed": company.moa_aoa_filed,
+            "capital_reduction_pending": company.capital_reduction_pending,
+            "special_resolution_date": company.special_resolution_date,
+            "special_resolution_filed": company.special_resolution_filed,
+            "register_of_directors_interests": company.register_of_directors_interests,
+            "register_of_contracts": company.register_of_contracts,
+            "winding_up_petition_filed": company.winding_up_petition_filed,
+            "liquidator_appointed": company.liquidator_appointed,
+            "court_ordered_winding_up": company.court_ordered_winding_up,
+            "voluntary_winding_up": company.voluntary_winding_up,
+            "investigation_order": company.investigation_order,
+            "factory_license_obtained": company.factory_license_obtained,
+            "factory_license_expiry": company.factory_license_expiry,
+            "labour_court_order_pending": company.labour_court_order_pending,
+            "bsec_listed": company.bsec_listed,
+            "bsec_quarterly_report_filed": company.bsec_quarterly_report_filed,
+            "cg_certificate_obtained": company.cg_certificate_obtained,
+            "board_independent_director": company.board_independent_director,
+            "audit_committee_established": company.audit_committee_established,
+            "agm_adjourned_without_notice": company.agm_adjourned_without_notice,
+            "name_change_pending": company.name_change_pending,
+            "name_change_date": company.name_change_date,
+            "name_change_sr_passed": company.name_change_sr_passed,
+            "object_clause_change_pending": company.object_clause_change_pending,
+            "object_clause_change_date": company.object_clause_change_date,
+            "aoa_alteration_pending": company.aoa_alteration_pending,
+            "aoa_alteration_date": company.aoa_alteration_date,
+            "foreign_exchange_violation": company.foreign_exchange_violation,
+            "annual_turnover_bdt": float(company.annual_turnover_bdt) if company.annual_turnover_bdt else 0.0,
+        })
+
         return profile
