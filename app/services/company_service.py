@@ -635,4 +635,19 @@ class CompanyService(BaseService[Company]):
             "annual_return_filed": company.last_return_filed_year is not None,
         })
 
+        # ── 0031: Board/Accounts/Director extended fields ──
+        profile.update({
+            "last_board_meeting_date": company.last_board_meeting_date,
+            "board_meeting_notice_given": company.board_meeting_notice_given,
+            "board_minutes_prepared": company.board_minutes_prepared,
+            "financial_statements_presented": company.financial_statements_presented,
+            "financial_statements_filed": company.financial_statements_filed,
+            "books_of_account_kept": company.books_of_account_kept,
+            "director_consent_filed": company.director_consent_filed,
+            "director_office_of_profit": company.director_office_of_profit,
+            "managing_director_appointment_date": company.managing_director_appointment_date,
+            "member_count": company.member_count or 0,
+            "business_commencement_declaration_filed": company.business_commencement_declaration_filed,
+        })
+
         return profile

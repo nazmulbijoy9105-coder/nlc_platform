@@ -193,6 +193,22 @@ class CompanyProfile:
     form_iv_filed_date: Optional[date] = None
     form_iii_filed: bool | None = None
     form_iii_filed_date: Optional[date] = None
+    # ── Board meeting (Section 95, 96, 89) ──
+    last_board_meeting_date: Optional[date] = None
+    board_meeting_notice_given: bool | None = None
+    board_minutes_prepared: bool | None = None
+    # ── Accounts (Section 181, 183, 190) ──
+    financial_statements_presented: bool | None = None
+    financial_statements_filed: bool | None = None
+    books_of_account_kept: bool | None = None
+    # ── Director extended (Section 93, 104, 110) ──
+    director_consent_filed: bool | None = None
+    director_office_of_profit: bool = False
+    managing_director_appointment_date: Optional[date] = None
+    # ── Members (Section 222) ──
+    member_count: int | None = None
+    # ── Business commencement (Section 150) ──
+    business_commencement_declaration_filed: bool | None = None
     charges: List[ChargeEvent] = field(default_factory=list)
     special_resolution_date: Optional[date] = None
     special_resolution_filed: bool = False
@@ -326,7 +342,7 @@ REGISTERED_OFFICE_DEADLINE_DAYS = 28
 FIRST_AUDITOR_DEADLINE_DAYS = 30
 CHARGE_REGISTRATION_DEADLINE_DAYS = 30
 ALLOTMENT_FILING_DEADLINE_DAYS = 60
-SPECIAL_RESOLUTION_DEADLINE_DAYS = 30
+SPECIAL_RESOLUTION_DEADLINE_DAYS = 15  # Companies Act 1994, Section 88 (15 days)
 
 REQUIRED_REGISTERS = [
     "members", "directors", "charges", "transfers", "debentures",
@@ -391,6 +407,8 @@ class NLCRuleEngine:
         self._run_bsec_rules(company)
         self._run_fx_rules(company)
         self._run_tax_rules(company)
+        self._run_board_meeting_rules(company)
+        self._run_accounts_rules(company)
         self._run_structural_change_rules(company)
         self._run_escalation_rules(company)
 
@@ -502,6 +520,34 @@ class NLCRuleEngine:
                     detail={"remittance_usd": c.remittance_amount_usd, "threshold": FOREIGN_WORK_PERMIT_THRESHOLD_USD},
                     conditional_applies=True
                 ))
+
+        # MEM-001: Company operating with fewer than minimum members (Section 222)
+        member_count = c.member_count or 0
+        if member_count > 0:
+            min_members = 2 if c.company_type == "PRIVATE_LIMITED" else 7
+            if member_count < min_members:
+                self._add_flag(ComplianceFlag(
+                    rule_id="MEM-001",
+                    flag_code="BELOW_MINIMUM_MEMBERS",
+                    severity=Severity.RED,
+                    score_impact=10,
+                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                    description=f"Company has {member_count} members, below minimum {min_members}. Section 222: members personally liable.",
+                    statutory_basis="Section 222, Companies Act 1994 (Bangladesh)",
+                    detail={"member_count": member_count, "minimum": min_members}
+                ))
+
+        # INC-007: Business commenced without Section 150 declaration (Section 150)
+        if c.business_commencement_declaration_filed is False:
+            self._add_flag(ComplianceFlag(
+                rule_id="INC-007",
+                flag_code="BUSINESS_COMMENCED_WITHOUT_DECLARATION",
+                severity=Severity.RED,
+                score_impact=10,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                description="Business commenced without Section 150 declaration filed with Registrar.",
+                statutory_basis="Section 150, Companies Act 1994 (Bangladesh)",
+            ))
 
         if c.trade_license_obtained is False:
             self._add_flag(ComplianceFlag(
@@ -809,6 +855,18 @@ class NLCRuleEngine:
                         statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "delay": delay}
                     ))
+                # DIR-007: Director consent not filed within 30 days (Section 93)
+                if change.event_type == "appointment" and delay > 30:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="DIR-007",
+                        flag_code="DIRECTOR_CONSENT_NOT_FILED",
+                        severity=Severity.YELLOW,
+                        score_impact=5,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=f"Director consent not filed within 30 days. Section 93(2): overdue by {delay} days.",
+                        statutory_basis="Section 93, Companies Act 1994 (Bangladesh)",
+                        detail={"director_id": change.director_id, "delay": delay}
+                    ))
 
     # ───────────────────────────────────────────────────────────────────
     # MODULE 5: SHAREHOLDING
@@ -1042,7 +1100,7 @@ class NLCRuleEngine:
                         score_impact=5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=f"{charge.charge_type} charge (Tk {charge.amount_bdt:,.2f}) not registered. Section 87: 30-day deadline. Unregistered charge void against liquidator.",
-                        statutory_basis="Section 87, Companies Act 1994 (Bangladesh)",
+                        statutory_basis="Section 88, Companies Act 1994 (Bangladesh)",
                         detail={"charge_id": charge.charge_id, "delay": delay, "amount": charge.amount_bdt}
                     ))
 
@@ -1054,7 +1112,7 @@ class NLCRuleEngine:
                     score_impact=3,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description="Charge satisfaction not filed via Form XIX. Sec 87.",
-                    statutory_basis="Section 87, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 88, Companies Act 1994 (Bangladesh)",
                     detail={"charge_id": charge.charge_id, "charge_type": charge.charge_type}
                 ))
 
@@ -1080,7 +1138,7 @@ class NLCRuleEngine:
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Special resolution not filed. Section 87: 30-day deadline. Unfiled resolution not binding.",
-                    statutory_basis="Section 87, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 88, Companies Act 1994 (Bangladesh)",
                     detail={"delay": delay}
                 ))
 
@@ -1361,6 +1419,26 @@ class NLCRuleEngine:
                 description="Investigation order pending. Section 199.",
                 statutory_basis="Section 195, Companies Act 1994 (Bangladesh)"))
 
+        # DIR-008: Director holding office of profit (Section 104)
+        if c.director_office_of_profit:
+            self._add_flag(ComplianceFlag(
+                rule_id="DIR-008", flag_code="DIRECTOR_OFFICE_OF_PROFIT",
+                severity=Severity.YELLOW, score_impact=8,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Director holding office of profit without company consent. Section 104.",
+                statutory_basis="Section 104, Companies Act 1994 (Bangladesh)"))
+        # DIR-010: Managing director term exceeds 5 years (Section 110)
+        if c.managing_director_appointment_date:
+            md_years = (self.today - c.managing_director_appointment_date).days // 365
+            if md_years > 5:
+                self._add_flag(ComplianceFlag(
+                    rule_id="DIR-010", flag_code="MD_TERM_EXCEEDS_5_YEARS",
+                    severity=Severity.YELLOW, score_impact=5,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=f"Managing director appointed for {md_years} years. Section 110: max 5 years at a time.",
+                    statutory_basis="Section 110, Companies Act 1994 (Bangladesh)",
+                    detail={"years": md_years}))
+
     # MODULE 15: BSEC CG CODE 2023
     def _run_bsec_rules(self, c: CompanyProfile) -> None:
         if c.bsec_listed:
@@ -1402,6 +1480,104 @@ class NLCRuleEngine:
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description="Foreign exchange violation. FE Regulation Act 1947.",
                 statutory_basis="Foreign Exchange Regulation Act 1947 (Bangladesh)"))
+
+    # ───────────────────────────────────────────────────────────────────
+    # MODULE: BOARD MEETINGS (Section 95, 96, 89)
+    # ───────────────────────────────────────────────────────────────────
+    def _run_board_meeting_rules(self, c: CompanyProfile) -> None:
+        # BOD-001: Board meeting not held quarterly (Section 96)
+        if c.last_board_meeting_date is None:
+            if c.incorporation_date and (self.today - c.incorporation_date).days > 90:
+                self._add_flag(ComplianceFlag(
+                    rule_id="BOD-001",
+                    flag_code="BOARD_MEETING_NOT_HELD",
+                    severity=Severity.YELLOW,
+                    score_impact=5,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="Board meeting not held within 3 months. Section 96: minimum 4 board meetings per year.",
+                    statutory_basis="Section 96, Companies Act 1994 (Bangladesh)",
+                    detail={"incorporation_days": (self.today - c.incorporation_date).days}
+                ))
+        else:
+            days_since = (self.today - c.last_board_meeting_date).days
+            if days_since > 90:
+                self._add_flag(ComplianceFlag(
+                    rule_id="BOD-001",
+                    flag_code="BOARD_MEETING_OVERDUE",
+                    severity=Severity.YELLOW,
+                    score_impact=5,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=f"Board meeting overdue by {days_since} days. Section 96: quarterly meeting required.",
+                    statutory_basis="Section 96, Companies Act 1994 (Bangladesh)",
+                    detail={"days_since": days_since}
+                ))
+
+        # BOD-002: Board meeting notice not given (Section 95)
+        if c.last_board_meeting_date and c.board_meeting_notice_given is False:
+            self._add_flag(ComplianceFlag(
+                rule_id="BOD-002",
+                flag_code="BOARD_NOTICE_NOT_GIVEN",
+                severity=Severity.YELLOW,
+                score_impact=3,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Board meeting notice not given to all directors. Section 95 requires written notice.",
+                statutory_basis="Section 95, Companies Act 1994 (Bangladesh)",
+            ))
+
+        # BOD-003: Board minutes not prepared (Section 89)
+        if c.last_board_meeting_date and c.board_minutes_prepared is False:
+            self._add_flag(ComplianceFlag(
+                rule_id="BOD-003",
+                flag_code="BOARD_MINUTES_NOT_PREPARED",
+                severity=Severity.YELLOW,
+                score_impact=5,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Board meeting minutes not prepared. Section 89: minutes of all proceedings must be entered.",
+                statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
+            ))
+
+    # ───────────────────────────────────────────────────────────────────
+    # MODULE: ACCOUNTS & AUDIT FILING (Section 181, 183, 190)
+    # ───────────────────────────────────────────────────────────────────
+    def _run_accounts_rules(self, c: CompanyProfile) -> None:
+        # ACC-001: Financial statements not presented at AGM (Section 183)
+        if c.agm_held_this_cycle and c.financial_statements_presented is False:
+            self._add_flag(ComplianceFlag(
+                rule_id="ACC-001",
+                flag_code="FINANCIAL_STATEMENTS_NOT_PRESENTED",
+                severity=Severity.RED,
+                score_impact=15,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                description="AGM held but balance sheet and P&L not presented. Section 183: Board shall lay before AGM.",
+                statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
+            ))
+
+        # ACC-002: Financial statements not filed with Registrar (Section 190)
+        if c.last_agm_date and c.financial_statements_filed is False:
+            delay = (self.today - c.last_agm_date).days
+            if delay > 30:
+                self._add_flag(ComplianceFlag(
+                    rule_id="ACC-002",
+                    flag_code="FINANCIAL_STATEMENTS_NOT_FILED",
+                    severity=Severity.RED,
+                    score_impact=15,
+                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                    description=f"Balance sheet not filed with Registrar within 30 days of AGM. Overdue by {delay} days. Section 190.",
+                    statutory_basis="Section 190, Companies Act 1994 (Bangladesh)",
+                    detail={"delay": delay}
+                ))
+
+        # ACC-003: Books of account not kept (Section 181)
+        if c.books_of_account_kept is False:
+            self._add_flag(ComplianceFlag(
+                rule_id="ACC-003",
+                flag_code="BOOKS_NOT_KEPT",
+                severity=Severity.RED,
+                score_impact=15,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                description="Proper books of account not maintained. Section 181: every company shall keep proper books.",
+                statutory_basis="Section 181, Companies Act 1994 (Bangladesh)",
+            ))
 
     def _run_escalation_rules(self, c: CompanyProfile) -> None:
         agm_years = self._calculate_agm_default_years(c)

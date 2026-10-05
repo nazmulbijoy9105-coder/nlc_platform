@@ -356,6 +356,17 @@ def build_profile():
             "audit_committee_established": True,
             "current_director_count": 3,
             "factory_license_obtained": True,
+            # New fields (Section 95/96/89/181/183/190/93/104/110/222/150)
+            "last_board_meeting_date": date.today() - timedelta(days=30),
+            "board_meeting_notice_given": True,
+            "board_minutes_prepared": True,
+            "financial_statements_presented": True,
+            "financial_statements_filed": True,
+            "books_of_account_kept": True,
+            "director_consent_filed": True,
+            "director_office_of_profit": False,
+            "member_count": 5,
+            "business_commencement_declaration_filed": True,
         }
         defaults.update(overrides)
         return CompanyProfile(**defaults)

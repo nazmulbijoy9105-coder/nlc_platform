@@ -180,6 +180,18 @@ class Company(FullMixin, Base):
     aoa_alteration_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     foreign_exchange_violation: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
     annual_turnover_bdt: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True)
+    # ── 0031: Board/Accounts/Director extended (Companies Act) ──
+    last_board_meeting_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    board_meeting_notice_given: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    board_minutes_prepared: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    financial_statements_presented: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    financial_statements_filed: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    books_of_account_kept: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    director_consent_filed: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    director_office_of_profit: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
+    managing_director_appointment_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    member_count: Mapped[int | None] = mapped_column(Integer, server_default="0", nullable=True)
+    business_commencement_declaration_filed: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
     tax_return_deadline_extended: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # ── Director Disqualification ────────────────────────────────
