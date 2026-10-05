@@ -219,3 +219,17 @@ websockets==16.0
 Werkzeug==3.1.6
 wrapt==2.1.2
 zopfli==0.4.1
+
+# ═══════════════════════════════════════════════════════════════
+# Known vulnerabilities (require major dependency upgrade)
+# ═══════════════════════════════════════════════════════════════
+# starlette 0.40.0: 7 CVEs (DoS, SSRF, auth bypass, path traversal)
+#   PYSEC-2026-161, 249, 248, 1942, 1941, 2281, 2280
+#   Fix: upgrade fastapi>=0.116.0 + starlette>=1.1.0 (breaking change)
+#   Status: deferred — requires FastAPI major version upgrade + test updates
+#
+# ecdsa 0.19.2: 1 CVE (Minerva timing attack, no fix from project)
+#   PYSEC-2026-1325
+#   Fix: replace python-jose with PyJWT + cryptography
+#   Status: deferred — requires auth library migration
+# ═══════════════════════════════════════════════════════════════
