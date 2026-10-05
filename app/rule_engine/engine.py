@@ -1613,9 +1613,11 @@ class NLCRuleEngine:
             add_step("Defend Strike-Off", "File immediate application to set aside strike-off. Section 304.", ["ESC-002", "AR-002", "AR-003"], "CRITICAL", 1, 7)
 
         # ── Canonical rescue (additive: only for BLACK-override rules not already covered) ──
-        rules_covered = set()
+        rules_covered: set[str] = set()
         for s in steps:
-            rules_covered.update(s.get("related_rules", []))
+            related = s.get("related_rules", [])
+            if isinstance(related, list):
+                rules_covered.update(related)
 
         try:
             from canonical_architecture.statutory_rescue import STATUTORY_RESCUE_REGISTRY
