@@ -672,7 +672,7 @@ STATUTORY_RESCUE_REGISTRY: Dict[str, Dict[str, Any]] = {
     "CAP-003": {
         "rescue_id": "CAP-RESCUE-003",
         "triggered_by": "CAP-003",
-        "objective": "Remediate: Charge Satisfaction Not Filed",
+        "objective": "Remediate: Capital Reduction Without Court Order",
         "prerequisites": [],
         "statutory_actions": [
             "review legal requirement",
@@ -944,7 +944,7 @@ STATUTORY_RESCUE_REGISTRY: Dict[str, Dict[str, Any]] = {
     "CHG-001": {
         "rescue_id": "CHG-RESCUE-001",
         "triggered_by": "CHG-001",
-        "objective": "Remediate: Charge Satisfaction Not Filed",
+        "objective": "Remediate: Capital Reduction Without Court Order",
         "prerequisites": [],
         "statutory_actions": [
             "review legal requirement",

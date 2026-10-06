@@ -61,9 +61,9 @@ class RescueService(BaseService[RescuePlan]):
             .values(is_active=False)
         )
 
-        rescue_data = engine_output.rescue_plan
+        rescue_data = engine_output.rescue_sequence
         if not rescue_data:
-            raise ValueError("Engine output has no rescue plan — company may not be BLACK/RED.")
+            raise ValueError("Engine output has no rescue sequence — company may not be BLACK/RED.")
 
         revenue_tier = RevenueTier.CORPORATE_RESCUE
         score = engine_output.score_breakdown.final_score
@@ -75,24 +75,23 @@ class RescueService(BaseService[RescuePlan]):
             revenue_tier=revenue_tier,
             initial_risk_band=risk_band,
             initial_score=score,
-            years_in_default=getattr(rescue_data, "years_in_default", 0),
+            years_in_default=0,
             is_active=True,
             started_at=datetime.now(UTC),
-            total_steps=len(getattr(rescue_data, "steps", [])),
+            total_steps=len(rescue_data) if isinstance(rescue_data, list) else 0,
             completed_steps=0,
             blocked_steps=0,
             completion_percentage=0,
             assigned_staff_id=assigned_staff_id,
             created_by=created_by,
-            estimated_fee_bdt=estimated_fee_bdt,
+            quoted_fee_bdt=estimated_fee_bdt,
             target_completion_date=target_completion_date,
             notes=notes,
         )
 
         # Create step records
-        steps = getattr(rescue_data, "steps", [])
-        for step_data in steps:
-            await self._create_step(plan.id, company_id, step_data)
+        for i, step_data in enumerate(rescue_data):
+            await self._create_step(plan.id, company_id, step_data, i, len(rescue_data))
 
         # Create tasks from steps
         await self._create_tasks_from_steps(plan.id, company_id, steps, assigned_staff_id)

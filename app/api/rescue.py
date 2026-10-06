@@ -13,7 +13,7 @@ Endpoints:
 Business rules:
   - Rescue plans may only be created for companies in BLACK or RED band
   - Only one active rescue plan per company at a time
-  - Step 8 completion triggers automatic compliance re-evaluation via Celery
+  - Final step completion triggers compliance re-evaluation via Celery
   - Engagement creation is admin-only (revenue tracking)
 """
 
@@ -106,9 +106,9 @@ def _step_to_response(step) -> RescueStepResponse:
     return RescueStepResponse(
         step_id=str(step.id),
         step_number=step.step_number,
-        step_name=step.step_name,
-        description=step.description,
-        status=step.status,
+        step_name=step.step_title,
+        description=step.step_description,
+        status=step.step_status,
         completion_notes=step.completion_notes,
         started_at=step.started_at.isoformat() if step.started_at else None,
         completed_at=step.completed_at.isoformat() if step.completed_at else None,
@@ -125,7 +125,7 @@ def _plan_to_response(plan, company=None) -> RescuePlanResponse:
         completion_percentage=plan.completion_percentage,
         total_steps=plan.total_steps,
         completed_steps=plan.completed_steps,
-        estimated_fee_bdt=plan.estimated_fee_bdt,
+        estimated_fee_bdt=plan.quoted_fee_bdt,
         assigned_staff_id=str(plan.assigned_staff_id) if plan.assigned_staff_id else None,
         target_completion_date=str(plan.target_completion_date) if plan.target_completion_date else None,
         engagement_id=str(plan.engagement_id) if plan.engagement_id else None,
@@ -186,8 +186,8 @@ async def create_rescue_plan(
         company_id=body.company_id,
         created_by=current_user.id,
         assigned_staff_id=body.assigned_staff_id,
-        estimated_fee_bdt=body.estimated_fee_bdt,
-        target_completion_date=body.target_completion_date,
+        quoted_fee_bdt=body.estimated_fee_bdt,
+        target_completion_date=date.fromisoformat(body.target_completion_date) if body.target_completion_date else None,
         notes=body.notes,
     )
 
@@ -266,6 +266,7 @@ async def get_active_plan(
 @router.get(
     "/plans/detail/{plan_id}",
     response_model=RescuePlanResponse,
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
     summary="Get a rescue plan by ID with all steps",
 )
 async def get_rescue_plan(
@@ -340,8 +341,8 @@ async def update_rescue_step(
         actor_user_id=current_user.id,
     )
 
-    # Step 8 COMPLETED → trigger re-evaluation via Celery
-    if step_number == 8 and body.status == "COMPLETED":
+    # Final step COMPLETED → trigger re-evaluation via Celery
+    if step_number == total_steps and body.status.upper() in ("COMPLETED", "COMPLETE"):
         try:
             from app.worker.tasks import trigger_rescue_reevaluation
             trigger_rescue_reevaluation.apply_async(
