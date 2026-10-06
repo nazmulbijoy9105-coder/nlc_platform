@@ -53,3 +53,9 @@ __pycache__/
 # Security audit outputs
 pip-audit.json
 locustfile.py
+
+__pycache__/
+*.pyc
+pip-audit.json
+*.v1-backup
+_audit_out/
