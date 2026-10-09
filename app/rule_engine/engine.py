@@ -1346,7 +1346,7 @@ class NLCRuleEngine:
 
     # MODULE 13: LABOUR COMPLIANCE (Labour Act 2006)
     def _run_labour_rules(self, c: CompanyProfile) -> None:
-        if c.factory_license_obtained is False:
+        if getattr(c, "is_manufacturing", False) and c.factory_license_obtained is False:
             self._add_flag(ComplianceFlag(
                 rule_id="LBR-001",
                 flag_code="FACTORY_LICENSE_MISSING",
