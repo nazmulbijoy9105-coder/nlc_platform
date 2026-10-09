@@ -845,7 +845,7 @@ class TestLabourRules:
 
     def test_LBR001_triggers_factory_license_missing(self, rule_engine, build_profile):
         """Factory license not obtained → LBR-001."""
-        profile = build_profile(factory_license_obtained=False)
+        profile = build_profile(factory_license_obtained=False, is_manufacturing=True)
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "LBR-001")
 
