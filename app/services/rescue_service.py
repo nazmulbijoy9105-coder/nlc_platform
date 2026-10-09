@@ -100,38 +100,25 @@ class RescueService(BaseService[RescuePlan]):
         await self.db.refresh(plan)
         return plan
 
-    async def _create_step(
-        self,
-        plan_id: uuid.UUID,
-        company_id: uuid.UUID,
-        step_data,
-    ) -> RescueStep:
+    async def _create_step(self, plan_id: uuid.UUID, company_id: uuid.UUID, step_data: dict, step_index: int, total_steps: int) -> RescueStep:
         """Create a single rescue step record."""
-        complexity_map = {
-            "LOW": ComplexityLevel.LOW,
-            "MEDIUM": ComplexityLevel.MEDIUM,
-            "HIGH": ComplexityLevel.HIGH,
-            "CRITICAL": ComplexityLevel.CRITICAL,
-        }
+        sd = step_data if isinstance(step_data, dict) else {}
+        cm = {"LOW": ComplexityLevel.LOW, "MEDIUM": ComplexityLevel.MEDIUM, "HIGH": ComplexityLevel.HIGH, "CRITICAL": ComplexityLevel.CRITICAL}
+        dmin, dmax = sd.get("min_days", 7), sd.get("max_days", 21)
         step = RescueStep(
             id=uuid.uuid4(),
             rescue_plan_id=plan_id,
             company_id=company_id,
-            step_number=getattr(step_data, "step_number", 1),
-            step_title=getattr(step_data, "title", f"Step {getattr(step_data, 'step_number', 1)}"),
-            step_description=getattr(step_data, "description", ""),
-            statutory_basis=getattr(step_data, "statutory_basis", None),
-            complexity=complexity_map.get(
-                getattr(step_data, "complexity", "MEDIUM"),
-                ComplexityLevel.MEDIUM
-            ),
-            estimated_days_min=getattr(step_data, "days_min", 7),
-            estimated_days_max=getattr(step_data, "days_max", 21),
-            target_completion_date=date.today() + timedelta(
-                days=getattr(step_data, "days_max", 21)
-            ),
+            step_number=step_index + 1,
+            step_title=sd.get("title", f"Step {step_index+1}"),
+            step_description=sd.get("description", ""),
+            statutory_basis=sd.get("statutory_basis"),
+            complexity=cm.get(sd.get("priority", "MEDIUM"), ComplexityLevel.MEDIUM),
+            estimated_days_min=dmin,
+            estimated_days_max=dmax,
+            target_completion_date=date.today() + timedelta(days=dmax),
             step_status=RescueStepStatus.PENDING,
-            triggers_reevaluation=getattr(step_data, "step_number", 0) == 8,
+            triggers_reevaluation=(step_index + 1) == total_steps,
         )
         self.db.add(step)
         await self.db.flush()
