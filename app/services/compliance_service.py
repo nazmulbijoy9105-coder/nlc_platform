@@ -272,6 +272,20 @@ class ComplianceService(BaseService[ComplianceFlag]):
         }
         if rescue_required:
             company_svc_update["rescue_triggered_at"] = now
+            
+            # Auto-create RescuePlan if not already active
+            from app.services.rescue_service import RescueService
+            rescue_svc = RescueService(self.db)
+            existing_plan = await rescue_svc.get_active_plan(company_id)
+            if not existing_plan:
+                try:
+                    await rescue_svc.create_plan(
+                        company_id=company_id,
+                        triggered_by=user_id if 'user_id' in locals() else None,
+                        engine_output=output
+                    )
+                except Exception as e:
+                    print(f"Failed to auto-create rescue plan: {e}")
 
         await self.db.execute(
             update(Company)
