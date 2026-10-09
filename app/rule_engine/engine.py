@@ -176,6 +176,7 @@ class CompanyProfile:
     has_foreign_shareholder: bool = False
     foreign_shareholding_pct: float = 0.0
     is_dormant: bool = False
+    is_manufacturing: bool = False
     is_fdi_registered: bool = False
     fdi_registration_date: Optional[date] = None
     bida_registered: bool = False
