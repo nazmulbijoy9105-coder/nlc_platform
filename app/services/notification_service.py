@@ -179,7 +179,7 @@ class NotificationService(BaseService[Notification]):
     async def acknowledge(
         self,
         notification_id: uuid.UUID,
-        acknowledged_by: uuid.UUID,
+        user_id: uuid.UUID,
     ) -> Notification | None:
         """
         Mark a notification as acknowledged.

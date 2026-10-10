@@ -60,9 +60,21 @@ class RulesService(BaseService[LegalRule]):
         return result.scalar_one_or_none()
 
     async def update_rule(
+        self,
+        rule_id: str,
+        updates: dict,
+        modified_by: uuid.UUID,
+        change_reason: str = "Rule updated",
+        sro_reference: str | None = None,
+    ) -> LegalRule:
         rule = await self.get_by_rule_id(rule_id)
         if not rule:
             raise ValueError(f"Rule {rule_id} not found")
+
+        # Snapshot previous state BEFORE mutation (append-only history)
+        await self._create_version_snapshot(
+            rule, change_reason, modified_by, sro_reference
+        )
 
         # Increment version
         current_version = int(rule.rule_version.split('.')[0]) if rule.rule_version else 1
