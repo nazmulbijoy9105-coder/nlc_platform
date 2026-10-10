@@ -160,10 +160,15 @@ async def db(test_engine) -> AsyncGenerator[AsyncSession, None]:
 # Security helpers (tokens)
 # ---------------------------------------------------------------------------
 
+def _role_user_id(role: str) -> uuid.UUID:
+    """Stable per-role user id so api_client can seed a matching DB user."""
+    return uuid.uuid5(uuid.NAMESPACE_DNS, f"nlc-test-user-{role}")
+
+
 def _make_token(role: str, user_id: str | None = None, company_ids: list[str] | None = None) -> str:
     """Generate a real JWT token for testing (uses actual security module)."""
     from app.core.security import create_access_token
-    uid = user_id or str(uuid.uuid4())
+    uid = user_id or str(_role_user_id(role))
     email = f"test_{role.lower()}@nlctest.com"
     companies = company_ids or []
     return create_access_token({
@@ -243,6 +248,24 @@ async def api_client(db) -> AsyncGenerator[AsyncClient, None]:
     from app.core.dependencies import get_db, get_db_for_user
     from app.models.database import get_db as auth_get_db
     from app.main import create_app
+
+    from app.models.enums import UserRole
+    from app.models.user import User
+
+    # Seed one DB user per role so role tokens resolve in get_current_user.
+    for _role in UserRole:
+        _uid = _role_user_id(_role.value)
+        if await db.get(User, _uid) is None:
+            db.add(User(
+                id=_uid,
+                email=f"seed_{_role.value.lower()}@nlctest.com",
+                full_name=f"Seed {_role.value}",
+                password_hash="!seeded-no-login",
+                role=_role,
+                is_active=True,
+                totp_enabled=False,
+            ))
+    await db.flush()
 
     app = create_app()
 
