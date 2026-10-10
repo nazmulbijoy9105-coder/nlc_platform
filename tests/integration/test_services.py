@@ -626,7 +626,7 @@ class TestRulesService:
 
         await svc.update_rule(
             rule_id="OFF-001",
-            updates={"description": "Updated description for testing"},
+            description="Updated description for testing",
             change_reason="Integration test — verifying version snapshot creation",
             changed_by=db_super_admin.id,
         )
