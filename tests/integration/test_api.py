@@ -115,7 +115,7 @@ class TestAuth:
     @pytest.mark.asyncio
     async def test_2fa_invalid_temp_token_returns_401(self, api_client):
         resp = await api_client.post(
-            "/api/v1/auth/2fa/verify",
+            "/api/v1/auth/verify-2fa",
             json={"temp_token": "not.a.real.token", "totp_code": "123456"}
         )
         assert resp.status_code == 401

@@ -17,6 +17,8 @@ Coverage:
 from __future__ import annotations
 
 import uuid
+
+from app.models.enums import UserRole
 from datetime import date, timedelta
 from unittest.mock import MagicMock
 
@@ -225,19 +227,20 @@ class TestComplianceService:
 class TestUserService:
 
     @pytest.mark.asyncio
-    async def test_create_user(self, db):
+    async def test_create_user(self, db, db_super_admin):
         from app.services.user_service import UserService
 
         svc = UserService(db)
         user = await svc.create_user(
             email=f"test_{uuid.uuid4().hex[:6]}@nlctest.com",
             full_name="Test User",
-            role="ADMIN_STAFF",
-            password="SecurePassword123!",
+            role=UserRole.ADMIN_STAFF,
+            plain_password="SecurePassword123!",
+            created_by=db_super_admin.id,
         )
 
         assert user.id is not None
-        assert user.hashed_password != "SecurePassword123!"  # must be hashed
+        assert user.password_hash != "SecurePassword123!"  # must be hashed
         assert user.is_active is True
 
     @pytest.mark.asyncio
@@ -258,7 +261,7 @@ class TestUserService:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_verify_credentials_correct_password(self, db):
+    async def test_verify_credentials_correct_password(self, db, db_super_admin):
         from app.services.user_service import UserService
 
         svc = UserService(db)
@@ -266,23 +269,25 @@ class TestUserService:
         user = await svc.create_user(
             email=f"auth_{uuid.uuid4().hex[:6]}@nlctest.com",
             full_name="Auth Test User",
-            role="ADMIN_STAFF",
-            password=password,
+            role=UserRole.ADMIN_STAFF,
+            plain_password=password,
+            created_by=db_super_admin.id,
         )
 
         result = await svc.verify_credentials(user.email, password)
         assert result is not None
 
     @pytest.mark.asyncio
-    async def test_verify_credentials_wrong_password(self, db):
+    async def test_verify_credentials_wrong_password(self, db, db_super_admin):
         from app.services.user_service import UserService
 
         svc = UserService(db)
         user = await svc.create_user(
             email=f"auth_{uuid.uuid4().hex[:6]}@nlctest.com",
             full_name="Auth Test User",
-            role="ADMIN_STAFF",
-            password="CorrectPassword123!",
+            role=UserRole.ADMIN_STAFF,
+            plain_password="CorrectPassword123!",
+            created_by=db_super_admin.id,
         )
 
         result = await svc.verify_credentials(user.email, "WrongPassword!")
