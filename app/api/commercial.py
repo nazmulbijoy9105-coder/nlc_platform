@@ -35,6 +35,7 @@ from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
     require_roles,
+    require_company_access,
 )
 from app.models.enums import EngagementStatus, RevenueTier
 from app.models.user import User
@@ -269,7 +270,7 @@ async def create_engagement(
 @router.get(
     "/engagements/{company_id}",
     response_model=list[EngagementResponse],
-    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
+    dependencies=[Depends(require_company_access("company_id")), Depends(require_roles(*ADMIN_ROLES))],
     summary="List engagements for a company",
 )
 async def list_engagements(
@@ -445,7 +446,7 @@ async def create_task(
 @router.get(
     "/tasks/{company_id}",
     response_model=list[TaskResponse],
-    dependencies=[Depends(require_roles(*STAFF_ROLES))],
+    dependencies=[Depends(require_company_access("company_id")), Depends(require_roles(*STAFF_ROLES))],
     summary="List tasks for a company",
 )
 async def list_tasks(

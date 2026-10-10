@@ -33,19 +33,15 @@ async def require_company_access(
 ):
     """
     Factory that returns a dependency checking CompanyUserAccess.
-
-    Args:
-        company_id_param: The path parameter name that holds the company_id.
-
-    Returns:
-        A dependency function that validates the current user has access
-        to the company specified in the path parameter.
+    Prevents IDOR (Insecure Direct Object Reference) attacks.
     """
+    from fastapi import Request as FastAPIRequest
+
     async def _check_access(
-        request,  # Starlette Request — needed to read path params
-        current_user: User = Depends(get_current_user),
+        request: FastAPIRequest,
+        current_user = Depends(get_current_user),
         db: AsyncSession = Depends(get_db),
-    ) -> User:
+    ):
         # SUPER_ADMIN bypasses company-level checks
         if str(current_user.role) == "SUPER_ADMIN":
             return current_user
@@ -66,12 +62,11 @@ async def require_company_access(
                 detail="Invalid company ID format.",
             )
 
-        # Check CompanyUserAccess
+        # Check CompanyUserAccess — just check the record exists
         result = await db.execute(
             select(CompanyUserAccess).where(
                 CompanyUserAccess.user_id == current_user.id,
                 CompanyUserAccess.company_id == cid,
-                CompanyUserAccess.is_active == True,  # noqa: E712
             )
         )
         access = result.scalar_one_or_none()
@@ -81,10 +76,6 @@ async def require_company_access(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You do not have access to this company.",
             )
-
-        # Optionally check access_level for write operations
-        # if write_required and access.access_level not in ("FULL", "WRITE"):
-        #     raise HTTPException(403, "Write access required for this company.")
 
         return current_user
 
