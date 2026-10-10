@@ -332,16 +332,17 @@ class TestUserService:
         await svc.grant_company_access(
             user_id=db_user.id,
             company_id=db_company.id,
-            access_level="FULL",
+            can_edit=True,
+            can_view_financials=True,
             granted_by=db_user.id,
         )
         ids_after_grant = await svc.get_company_ids(db_user.id)
-        assert db_company.id in ids_after_grant
+        assert str(db_company.id) in ids_after_grant
 
         # Revoke
         await svc.revoke_company_access(user_id=db_user.id, company_id=db_company.id)
         ids_after_revoke = await svc.get_company_ids(db_user.id)
-        assert db_company.id not in ids_after_revoke
+        assert str(db_company.id) not in ids_after_revoke
 
     @pytest.mark.asyncio
     async def test_build_jwt_payload_shape(self, db, db_user):
@@ -371,7 +372,6 @@ class TestFilingService:
             company_id=db_company.id,
             financial_year=2023,
             agm_due_date=date(2024, 6, 30),
-            scheduled_date=date(2024, 6, 15),
         )
 
         assert agm.id is not None
@@ -420,16 +420,13 @@ class TestFilingService:
 
         updated = await svc.mark_held(
             agm_id=agm.id,
-            held_date=date(2022, 5, 15),
+            agm_date=date(2022, 5, 15),
             members_present=3,
-            quorum_met=True,
             auditor_reappointed=True,
-            accounts_adopted=True,
-            agm_held_without_audit=False,
         )
 
-        assert updated.held_date == date(2022, 5, 15)
-        assert updated.quorum_met is True
+        assert updated is not None
+        assert updated.agm_date == date(2022, 5, 15)
         assert updated.auditor_reappointed is True
 
     @pytest.mark.asyncio
@@ -445,7 +442,7 @@ class TestFilingService:
         )
 
         assert audit.id is not None
-        assert audit.is_complete is False
+        assert audit.audit_complete is False
 
     @pytest.mark.asyncio
     async def test_create_annual_return(self, db, db_company):
@@ -459,7 +456,7 @@ class TestFilingService:
         )
 
         assert ret.id is not None
-        assert ret.is_filed is False
+        assert ret.filed_date is None
 
     @pytest.mark.asyncio
     async def test_get_unfiled_count(self, db, db_company):
