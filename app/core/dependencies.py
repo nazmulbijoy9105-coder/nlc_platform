@@ -31,7 +31,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, Security, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,7 +43,7 @@ from app.models.enums import UserRole
 from app.models.user import User
 
 # ── HTTP Bearer scheme ───────────────────────────────────────────────
-_bearer = Bearer401(auto_error=True)
+_bearer = Bearer401(auto_error=True, scheme_name="HTTPBearer")
 
 
 # ═══════════════════════════════════════════════════════════════════════
