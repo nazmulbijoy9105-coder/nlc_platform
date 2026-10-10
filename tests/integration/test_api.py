@@ -319,7 +319,7 @@ class TestFilings:
     def staff_token(self, db_user):
         from app.core.security import create_access_token
         return create_access_token({
-            "sub": str(db_user.id), "type": "access",
+            "sub": str(db_user.id), "user_id": str(db_user.id), "type": "access",
             "role": "ADMIN_STAFF", "email": db_user.email, "company_ids": [],
         })
 

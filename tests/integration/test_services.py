@@ -351,9 +351,9 @@ class TestUserService:
         payload = await svc.build_jwt_payload(db_user)
 
         assert "sub" in payload
+        assert "user_id" in payload
         assert "role" in payload
-        assert "type" in payload
-        assert payload["type"] == "access"
+        assert "company_ids" in payload
 
 
 # =============================================================================
