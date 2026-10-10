@@ -127,7 +127,7 @@ class CompanyProfile:
     company_name: str
     company_type: str = "PRIVATE_LIMITED"
     incorporation_date: date | None = None
-    financial_year_end: date = field(default_factory=date.today)
+    financial_year_end: Optional[date] = field(default=None)
     agm_count: int | None = 0
     last_agm_date: Optional[date] = None
     agm_held_this_cycle: bool = False
@@ -1889,7 +1889,7 @@ class NLCRuleEngine:
         # Example: AGM on 15 Dec 2025 covered FY 2024-25 (ending 30 Jun 2025).
         # Next FY end = 30 Jun 2026. Deadline = 29 Dec 2026.
         fy_year = c.last_agm_date.year if c.last_agm_date.month > 6 else c.last_agm_date.year - 1  # type: ignore
-        fy_end = date(fy_year + 1, 6, 30)  # NEXT FY end (Guaranteed no false flags), not the one already covered
+        fy_end = date(fy_year, 6, 30)  # Current FY end — allows overdue detection when deadline passes
         return fy_end + timedelta(days=FY_END_AGM_DEADLINE_DAYS)
 
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:
