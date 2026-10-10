@@ -1799,14 +1799,19 @@ class NLCRuleEngine:
         try:
             from canonical_architecture.statutory_rescue import STATUTORY_RESCUE_REGISTRY
             for rule_id in sorted(active_rules - rules_covered):
-                # Only generate canonical steps for BLACK-severity override rules
                 flag = next((f for f in active if f.rule_id == rule_id), None)
-                if not flag or flag.severity != Severity.BLACK:
-                    continue
-                if not flag.is_black_override:
+                if not flag:
                     continue
                 if rule_id in self._ESC_RULE_IDS:
                     continue  # ESC rules handled by hardcoded steps
+
+                # Determine priority from severity
+                if flag.severity == Severity.BLACK:
+                    priority = "CRITICAL"
+                elif flag.severity == Severity.RED:
+                    priority = "HIGH"
+                else:
+                    priority = "MEDIUM"
 
                 rescue = STATUTORY_RESCUE_REGISTRY.get(rule_id)
                 if rescue:
@@ -1816,7 +1821,17 @@ class NLCRuleEngine:
                         "title": rescue.get("objective", f"Remediate: {rule_id}"),
                         "description": desc,
                         "related_rules": [rule_id],
-                        "priority": "CRITICAL",
+                        "priority": priority,
+                        "min_days": 7,
+                        "max_days": 30,
+                    })
+                else:
+                    # Generic fallback: one step per uncovered flag
+                    steps.append({
+                        "title": f"Remediate: {flag.flag_code.replace('_', ' ').title()}",
+                        "description": flag.description or f"Remediate {rule_id}",
+                        "related_rules": [rule_id],
+                        "priority": priority,
                         "min_days": 7,
                         "max_days": 30,
                     })

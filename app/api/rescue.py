@@ -32,6 +32,9 @@ from app.core.dependencies import (
 )
 from app.models.enums import RiskBand
 from app.services.company_service import CompanyService
+from app.services.compliance_service import _company_profile_kwargs
+from app.rule_engine import CompanyProfile
+from app.core.dependencies import get_rule_engine
 from app.services.notification_service import ActivityService
 from app.services.rescue_service import RescueService
 
@@ -121,14 +124,14 @@ def _plan_to_response(plan, company=None) -> RescuePlanResponse:
         plan_id=str(plan.id),
         company_id=str(plan.company_id),
         company_name=company.company_name if company else None,
-        status=plan.status,
+        status=("ACTIVE" if getattr(plan, "is_active", True) else "CLOSED"),
         completion_percentage=plan.completion_percentage,
         total_steps=plan.total_steps,
         completed_steps=plan.completed_steps,
         estimated_fee_bdt=plan.quoted_fee_bdt,
         assigned_staff_id=str(plan.assigned_staff_id) if plan.assigned_staff_id else None,
         target_completion_date=str(plan.target_completion_date) if plan.target_completion_date else None,
-        engagement_id=str(plan.engagement_id) if plan.engagement_id else None,
+        engagement_id=str(plan.engagement_id) if getattr(plan, "engagement_id", None) else None,
         steps=[_step_to_response(s) for s in (plan.steps or [])],
         created_at=plan.created_at.isoformat(),
         updated_at=plan.updated_at.isoformat(),
@@ -182,14 +185,20 @@ async def create_rescue_plan(
             ),
         )
 
+    # Fetch engine output to generate finding-driven rescue plan
+    profile_data = await company_svc.build_company_profile(body.company_id)
+    profile = CompanyProfile(**_company_profile_kwargs(profile_data, CompanyProfile))
+    engine = get_rule_engine()
+    engine_output = engine.evaluate(profile)
+
     plan = await rescue_svc.generate_rescue_plan(  # type: ignore
         company_id=body.company_id,
+        engine_output=engine_output,
         created_by=current_user.id,
         assigned_staff_id=body.assigned_staff_id,
-        quoted_fee_bdt=body.estimated_fee_bdt,
+        estimated_fee_bdt=body.estimated_fee_bdt,
         target_completion_date=date.fromisoformat(body.target_completion_date) if body.target_completion_date else None,
-        notes=body.notes,
-    )
+            )
 
     await activity.log(
         action="RESCUE_PLAN_CREATED",
@@ -385,8 +394,7 @@ async def create_engagement_from_rescue(
         rescue_plan=plan,
         confirmed_fee_bdt=body.confirmed_fee_bdt,
         payment_terms=body.payment_terms,
-        notes=body.notes,
-        created_by=current_user.id,
+                created_by=current_user.id,
     )
     if not engagement:
         raise HTTPException(status_code=404, detail="Rescue plan not found.")

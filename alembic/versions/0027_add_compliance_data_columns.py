@@ -20,55 +20,64 @@ branch_labels = None
 depends_on = None
 
 
+def _add(table, column):
+    """Add column only if an earlier migration has not already created it."""
+    existing = {c["name"] for c in sa.inspect(op.get_bind()).get_columns(table)}
+    if column.name in existing:
+        print(f"0027: skip existing {table}.{column.name}")
+        return
+    op.add_column(table, column)
+
+
 def upgrade():
     # ── Incorporation ──
-    op.add_column('companies', sa.Column('moa_aoa_filed', sa.Boolean(), server_default='true', nullable=True))
+    _add('companies', sa.Column('moa_aoa_filed', sa.Boolean(), server_default='true', nullable=True))
 
     # ── Capital & Charges ──
-    op.add_column('companies', sa.Column('capital_reduction_pending', sa.Boolean(), server_default='false', nullable=True))
-    op.add_column('companies', sa.Column('special_resolution_date', sa.Date(), nullable=True))
-    op.add_column('companies', sa.Column('special_resolution_filed', sa.Boolean(), server_default='false', nullable=True))
+    _add('companies', sa.Column('capital_reduction_pending', sa.Boolean(), server_default='false', nullable=True))
+    _add('companies', sa.Column('special_resolution_date', sa.Date(), nullable=True))
+    _add('companies', sa.Column('special_resolution_filed', sa.Boolean(), server_default='false', nullable=True))
 
     # ── Registers ──
-    op.add_column('companies', sa.Column('register_of_directors_interests', sa.Boolean(), server_default='true', nullable=True))
-    op.add_column('companies', sa.Column('register_of_contracts', sa.Boolean(), server_default='true', nullable=True))
+    _add('companies', sa.Column('register_of_directors_interests', sa.Boolean(), server_default='true', nullable=True))
+    _add('companies', sa.Column('register_of_contracts', sa.Boolean(), server_default='true', nullable=True))
 
     # ── Insolvency ──
-    op.add_column('companies', sa.Column('winding_up_petition_filed', sa.Boolean(), server_default='false', nullable=True))
-    op.add_column('companies', sa.Column('liquidator_appointed', sa.Boolean(), server_default='false', nullable=True))
-    op.add_column('companies', sa.Column('court_ordered_winding_up', sa.Boolean(), server_default='false', nullable=True))
-    op.add_column('companies', sa.Column('voluntary_winding_up', sa.Boolean(), server_default='false', nullable=True))
-    op.add_column('companies', sa.Column('investigation_order', sa.Boolean(), server_default='false', nullable=True))
+    _add('companies', sa.Column('winding_up_petition_filed', sa.Boolean(), server_default='false', nullable=True))
+    _add('companies', sa.Column('liquidator_appointed', sa.Boolean(), server_default='false', nullable=True))
+    _add('companies', sa.Column('court_ordered_winding_up', sa.Boolean(), server_default='false', nullable=True))
+    _add('companies', sa.Column('voluntary_winding_up', sa.Boolean(), server_default='false', nullable=True))
+    _add('companies', sa.Column('investigation_order', sa.Boolean(), server_default='false', nullable=True))
 
     # ── Labour ──
-    op.add_column('companies', sa.Column('factory_license_obtained', sa.Boolean(), server_default='false', nullable=True))
-    op.add_column('companies', sa.Column('factory_license_expiry', sa.Date(), nullable=True))
-    op.add_column('companies', sa.Column('labour_court_order_pending', sa.Boolean(), server_default='false', nullable=True))
+    _add('companies', sa.Column('factory_license_obtained', sa.Boolean(), server_default='false', nullable=True))
+    _add('companies', sa.Column('factory_license_expiry', sa.Date(), nullable=True))
+    _add('companies', sa.Column('labour_court_order_pending', sa.Boolean(), server_default='false', nullable=True))
 
     # ── BSEC ──
-    op.add_column('companies', sa.Column('bsec_listed', sa.Boolean(), server_default='false', nullable=True))
-    op.add_column('companies', sa.Column('bsec_quarterly_report_filed', sa.Boolean(), server_default='true', nullable=True))
-    op.add_column('companies', sa.Column('cg_certificate_obtained', sa.Boolean(), server_default='true', nullable=True))
-    op.add_column('companies', sa.Column('board_independent_director', sa.Boolean(), server_default='true', nullable=True))
-    op.add_column('companies', sa.Column('audit_committee_established', sa.Boolean(), server_default='true', nullable=True))
+    _add('companies', sa.Column('bsec_listed', sa.Boolean(), server_default='false', nullable=True))
+    _add('companies', sa.Column('bsec_quarterly_report_filed', sa.Boolean(), server_default='true', nullable=True))
+    _add('companies', sa.Column('cg_certificate_obtained', sa.Boolean(), server_default='true', nullable=True))
+    _add('companies', sa.Column('board_independent_director', sa.Boolean(), server_default='true', nullable=True))
+    _add('companies', sa.Column('audit_committee_established', sa.Boolean(), server_default='true', nullable=True))
 
     # ── AGM Extended ──
-    op.add_column('companies', sa.Column('agm_adjourned_without_notice', sa.Boolean(), server_default='false', nullable=True))
+    _add('companies', sa.Column('agm_adjourned_without_notice', sa.Boolean(), server_default='false', nullable=True))
 
     # ── Structural Change ──
-    op.add_column('companies', sa.Column('name_change_pending', sa.Boolean(), server_default='false', nullable=True))
-    op.add_column('companies', sa.Column('name_change_date', sa.Date(), nullable=True))
-    op.add_column('companies', sa.Column('name_change_sr_passed', sa.Boolean(), server_default='false', nullable=True))
-    op.add_column('companies', sa.Column('object_clause_change_pending', sa.Boolean(), server_default='false', nullable=True))
-    op.add_column('companies', sa.Column('object_clause_change_date', sa.Date(), nullable=True))
-    op.add_column('companies', sa.Column('aoa_alteration_pending', sa.Boolean(), server_default='false', nullable=True))
-    op.add_column('companies', sa.Column('aoa_alteration_date', sa.Date(), nullable=True))
+    _add('companies', sa.Column('name_change_pending', sa.Boolean(), server_default='false', nullable=True))
+    _add('companies', sa.Column('name_change_date', sa.Date(), nullable=True))
+    _add('companies', sa.Column('name_change_sr_passed', sa.Boolean(), server_default='false', nullable=True))
+    _add('companies', sa.Column('object_clause_change_pending', sa.Boolean(), server_default='false', nullable=True))
+    _add('companies', sa.Column('object_clause_change_date', sa.Date(), nullable=True))
+    _add('companies', sa.Column('aoa_alteration_pending', sa.Boolean(), server_default='false', nullable=True))
+    _add('companies', sa.Column('aoa_alteration_date', sa.Date(), nullable=True))
 
     # ── Foreign Exchange ──
-    op.add_column('companies', sa.Column('foreign_exchange_violation', sa.Boolean(), server_default='false', nullable=True))
+    _add('companies', sa.Column('foreign_exchange_violation', sa.Boolean(), server_default='false', nullable=True))
 
     # ── Tax ──
-    op.add_column('companies', sa.Column('annual_turnover_bdt', sa.Numeric(20, 2), nullable=True))
+    _add('companies', sa.Column('annual_turnover_bdt', sa.Numeric(20, 2), nullable=True))
 
 
 def downgrade():
