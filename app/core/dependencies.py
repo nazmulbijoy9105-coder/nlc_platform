@@ -35,6 +35,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.bearer import Bearer401
 from app.core.config import Settings, get_settings
 from app.core.security import decode_token
 from app.models.database import AsyncSessionLocal, set_admin_context, set_rls_context
@@ -42,7 +43,7 @@ from app.models.enums import UserRole
 from app.models.user import User
 
 # ── HTTP Bearer scheme ───────────────────────────────────────────────
-_bearer = HTTPBearer(auto_error=True)
+_bearer = Bearer401(auto_error=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════
