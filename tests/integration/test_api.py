@@ -231,7 +231,7 @@ class TestCompanies:
         """LEGAL_STAFF cannot create companies."""
         from app.core.security import create_access_token
         token = create_access_token({
-            "sub": str(db_user.id), "type": "access",
+            "sub": str(db_user.id), "user_id": str(db_user.id), "type": "access",
             "role": "LEGAL_STAFF", "email": db_user.email, "company_ids": [],
         })
         resp = await api_client.post(
@@ -406,7 +406,7 @@ class TestRescue:
     def super_admin_tok(self, db_user):
         from app.core.security import create_access_token
         return create_access_token({
-            "sub": str(db_user.id), "type": "access",
+            "sub": str(db_user.id), "user_id": str(db_user.id), "type": "access",
             "role": "SUPER_ADMIN", "email": db_user.email, "company_ids": [],
         })
 
@@ -481,7 +481,7 @@ class TestDocuments:
     def legal_tok(self, db_user):
         from app.core.security import create_access_token
         return create_access_token({
-            "sub": str(db_user.id), "type": "access",
+            "sub": str(db_user.id), "user_id": str(db_user.id), "type": "access",
             "role": "LEGAL_STAFF", "email": db_user.email, "company_ids": [],
         })
 
@@ -604,7 +604,7 @@ class TestCommercial:
     def admin_tok(self, db_user):
         from app.core.security import create_access_token
         return create_access_token({
-            "sub": str(db_user.id), "type": "access",
+            "sub": str(db_user.id), "user_id": str(db_user.id), "type": "access",
             "role": "ADMIN_STAFF", "email": db_user.email, "company_ids": [],
         })
 
@@ -741,7 +741,7 @@ class TestRules:
     async def test_update_rule_requires_change_reason(self, api_client, db_user):
         from app.core.security import create_access_token
         sa_token = create_access_token({
-            "sub": str(db_user.id), "type": "access",
+            "sub": str(db_user.id), "user_id": str(db_user.id), "type": "access",
             "role": "SUPER_ADMIN", "email": db_user.email, "company_ids": [],
         })
         resp = await api_client.patch(
@@ -756,7 +756,7 @@ class TestRules:
         """AUD-003 is a BLACK override — severity cannot be changed to non-BLACK."""
         from app.core.security import create_access_token
         sa_token = create_access_token({
-            "sub": str(db_user.id), "type": "access",
+            "sub": str(db_user.id), "user_id": str(db_user.id), "type": "access",
             "role": "SUPER_ADMIN", "email": db_user.email, "company_ids": [],
         })
         resp = await api_client.patch(
@@ -783,7 +783,7 @@ class TestAdmin:
     def super_admin_tok(self, db_user):
         from app.core.security import create_access_token
         return create_access_token({
-            "sub": str(db_user.id), "type": "access",
+            "sub": str(db_user.id), "user_id": str(db_user.id), "type": "access",
             "role": "SUPER_ADMIN", "email": db_user.email, "company_ids": [],
         })
 
@@ -791,7 +791,7 @@ class TestAdmin:
     def admin_tok(self, db_user):
         from app.core.security import create_access_token
         return create_access_token({
-            "sub": str(db_user.id), "type": "access",
+            "sub": str(db_user.id), "user_id": str(db_user.id), "type": "access",
             "role": "ADMIN_STAFF", "email": db_user.email, "company_ids": [],
         })
 
