@@ -807,7 +807,7 @@ class TestAdmin:
         assert resp.status_code == 200
         for user in resp.json():
             assert "password" not in user
-            assert "hashed_password" not in user
+            assert "password_hash" not in user
             assert "totp_secret" not in user
 
     @pytest.mark.asyncio
@@ -841,7 +841,7 @@ class TestAdmin:
         data = resp.json()
         assert data["role"] == "LEGAL_STAFF"
         assert "password" not in data
-        assert "hashed_password" not in data
+        assert "password_hash" not in data
 
     @pytest.mark.asyncio
     async def test_get_user_by_id(self, api_client, admin_tok, db_user):
