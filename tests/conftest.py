@@ -12,7 +12,7 @@ Provides fixtures for:
 
 Test database strategy:
   - Uses separate database: nlc_test (must exist before running tests)
-  - DATABASE_URL_TEST env var or auto-derived from DATABASE_URL with "_test" suffix
+  - DATABASE_URL_TEST env var, else local nlc_test (never derived from DATABASE_URL)
   - Each test gets a transaction that is rolled back — no cleanup needed
   - Alembic migrations run once per session (not per test)
 
@@ -109,6 +109,23 @@ async def test_engine():
             await conn.execute(text("SELECT 1"))
     except Exception as e:
         pytest.skip(f"Test database not reachable: {e}. Run: make migrate (test DB)")
+
+    # Build/upgrade schema from migrations (idempotent: no-op when already at head).
+    # Subprocess avoids event-loop clashes with the async alembic/env.py.
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    db_name = _make_url(TEST_DATABASE_URL).database or ""
+    assert db_name.endswith("_test"), f"refusing to migrate non-test DB: {db_name!r}"
+    proc = subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        cwd=Path(__file__).resolve().parent.parent,
+        env={**os.environ, "DATABASE_URL": TEST_DATABASE_URL},
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+    )
+    if proc.returncode != 0:
+        pytest.fail(f"alembic upgrade head failed:\n{proc.stdout}\n{proc.stderr}", pytrace=False)
 
     yield engine
     await engine.dispose()
