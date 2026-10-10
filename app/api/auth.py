@@ -206,7 +206,7 @@ async def verify_2fa(body: Verify2FARequest, db=Depends(get_db)):
     payload = decode_token(body.temp_token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
-    result = await db.execute(select(User).where(User.id == payload["sub"]))
+    result = await db.execute(select(User).where(User.id == payload.get("sub")))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -235,7 +235,7 @@ async def refresh_token(body: RefreshRequest, db=Depends(get_db)):
     payload = decode_token(body.refresh_token, expected_type="refresh")
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
-    result = await db.execute(select(User).where(User.id == payload["sub"]))
+    result = await db.execute(select(User).where(User.id == payload.get("sub")))
     user = result.scalar_one_or_none()
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or deactivated")
@@ -277,7 +277,7 @@ async def change_password(
     if not payload or payload.get("type") != "access":
         raise HTTPException(status_code=401, detail="Invalid token")
     
-    result = await db.execute(select(User).where(User.id == payload["sub"]))
+    result = await db.execute(select(User).where(User.id == payload.get("sub")))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

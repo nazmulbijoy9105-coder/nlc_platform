@@ -309,6 +309,7 @@ class DocumentService(BaseService[Document]):
         *,
         document_type: DocumentType | None = None,
         include_unapproved: bool = False,
+        client_visible_only: bool = False,
     ) -> list[Document]:
         """Get all documents for a company."""
         filters = [
@@ -317,7 +318,7 @@ class DocumentService(BaseService[Document]):
         ]
         if document_type:
             filters.append(Document.document_type == document_type)
-        if not include_unapproved:
+        if not include_unapproved or client_visible_only:
             filters.append(Document.is_client_visible)
 
         result = await self.db.execute(

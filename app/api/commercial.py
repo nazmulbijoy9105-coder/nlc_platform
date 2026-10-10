@@ -26,6 +26,7 @@ Endpoints:
 import uuid
 
 import structlog
+from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -160,11 +161,11 @@ def _engagement_to_response(e) -> EngagementResponse:
         company_id=str(e.company_id),
         engagement_type=e.engagement_type,
         revenue_tier=e.revenue_tier,
-        status=e.status,
-        description=e.description,
+        status=str(e.engagement_status) if e.engagement_status else None,
+        description=getattr(e, "engagement_title", None),
         estimated_fee_bdt=e.estimated_fee_bdt,
         confirmed_fee_bdt=e.confirmed_fee_bdt,
-        assigned_officer_id=str(e.assigned_officer_id) if e.assigned_officer_id else None,
+        assigned_officer_id=str(getattr(e, "assigned_staff_id", None)) if getattr(e, "assigned_staff_id", None) else None,
         created_at=e.created_at.isoformat(),
         updated_at=e.updated_at.isoformat(),
     )
@@ -192,7 +193,7 @@ def _task_to_response(t) -> TaskResponse:
         company_id=str(t.company_id),
         title=t.title,
         description=t.description,
-        status=t.status,
+        status=str(t.task_status) if t.task_status else None,
         priority=t.priority,
         due_date=str(t.due_date) if t.due_date else None,
         assigned_to=str(t.assigned_to) if t.assigned_to else None,
@@ -249,11 +250,9 @@ async def create_engagement(
         company_id=body.company_id,
         engagement_type=body.engagement_type,
         revenue_tier=body.revenue_tier,
-        description=body.description,
+        engagement_title=body.description,
         estimated_fee_bdt=body.estimated_fee_bdt,
-        assigned_officer_id=body.assigned_officer_id,
-        notes=body.notes,
-        created_by=current_user.id,
+        identified_date=date.today(),
     )
 
     await activity.log(
@@ -435,7 +434,7 @@ async def create_task(
         description=body.description,
         due_date=body.due_date,  # type: ignore
         assigned_to=body.assigned_to,
-        linked_flag_id=body.linked_flag_id,
+        source_flag_id=body.linked_flag_id,
         source_rescue_step_id=body.source_rescue_step_id,
         priority=body.priority,  # type: ignore
         created_by=current_user.id,
@@ -455,7 +454,7 @@ async def list_tasks(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = TaskService(db)
-    tasks = await svc.get_for_company(company_id=company_id, status_filter=status_filter)  # type: ignore
+    tasks = await svc.get_for_company(company_id=company_id, status=status_filter)  # type: ignore
     return [_task_to_response(t) for t in tasks]
 
 

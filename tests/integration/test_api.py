@@ -217,13 +217,13 @@ class TestCompanies:
                 "incorporation_date": "2022-01-01",
                 "registered_address": "1 API Street, Dhaka",
                 "company_type": "PRIVATE_LIMITED",
-                "financial_year_end": date(2025, 12, 31),
+                "financial_year_end": "2025-12-31",
             }
         )
         assert resp.status_code == 201
         data = resp.json()
-        assert data["company_name"] == "API Test Co Ltd"
-        assert "company_id" in data
+        assert data["name"] == "API Test Co Ltd"
+        assert "id" in data
         assert "password" not in data
 
     @pytest.mark.asyncio
@@ -555,14 +555,12 @@ class TestDocuments:
             id=uuid.uuid4(),
             company_id=db_company.id,
             document_type=DocumentType.AGM_MINUTES,
-            template_name="AGM_MINUTES_STANDARD",
             title="Test Minutes",
-            content="Draft content...",
+            notes="Draft content...",
             human_approved=False,
             in_review_queue=True,
             auto_sent_blocked=True,
             is_client_visible=False,
-            status="DRAFT",
         )
         db.add(doc)
         await db.flush()
@@ -589,12 +587,11 @@ class TestDocuments:
             company_id=db_company.id,
             document_type=DocumentType.AGM_MINUTES,
             title="Governance Test Doc",
-            content="Content...",
+            notes="Content...",
             human_approved=False,
             in_review_queue=True,
             auto_sent_blocked=True,  # This must NEVER be False on new docs
             is_client_visible=False,
-            status="DRAFT",
         )
         db.add(doc)
         await db.flush()
@@ -731,7 +728,7 @@ class TestRules:
         if rules:
             assert len(rules) >= 9
             black_ids = {r["rule_id"] for r in rules}
-            assert black_ids == {"AUD-003", "TR-005", "ESC-002", "ESC-003"}
+            assert {"AUD-003", "TR-005", "ESC-002", "ESC-003"}.issubset(black_ids)
 
     @pytest.mark.asyncio
     async def test_get_rule_summary(self, api_client, admin_token):

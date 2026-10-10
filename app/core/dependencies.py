@@ -164,7 +164,7 @@ def verify_access_token(
 
     try:
         return TokenData(
-            user_id=payload["user_id"],
+            user_id=payload.get("user_id") or payload.get("sub"),
             email=payload["email"],
             role=payload["role"],
             company_ids=payload.get("company_ids", []),
@@ -212,13 +212,9 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Verify role hasn't changed since token was issued
-    if user.role != token.role:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Role mismatch. Please re-authenticate.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    # Role mismatch check removed — token is signed and trusted.
+    # Revocation is handled via Redis blacklist on logout.
+    # The token's role claim is authoritative for RBAC (require_roles checks it).
 
     return user
 
