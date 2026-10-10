@@ -61,3 +61,5 @@ pip-audit.json
 _audit_out/
 *.env*
 .env
+*.env*
+.env
