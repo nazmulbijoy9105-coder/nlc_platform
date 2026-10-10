@@ -491,8 +491,10 @@ class TestNotificationService:
         )
 
         assert notification.id is not None
-        assert notification.status == "PENDING"
-        assert notification.is_acknowledged is False
+        from app.models.enums import NotificationStatus
+
+        assert notification.notification_status == NotificationStatus.PENDING
+        assert notification.acknowledged_at is None
 
     @pytest.mark.asyncio
     async def test_acknowledge_notification(self, db, db_user, db_company):
@@ -507,11 +509,12 @@ class TestNotificationService:
             message="Acknowledge me.",
         )
 
-        await svc.acknowledge(notification_id=notification.id, user_id=db_user.id)
-        notifications = await svc.get_for_user(user_id=db_user.id, limit=10, offset=0)
-        acked = [n for n in notifications if n.id == notification.id]
-        if acked:
-            assert acked[0].is_acknowledged is True
+        from app.models.enums import NotificationStatus
+
+        result = await svc.acknowledge(notification_id=notification.id, user_id=db_user.id)
+        assert result is not None
+        assert result.notification_status == NotificationStatus.ACKNOWLEDGED
+        assert result.acknowledged_at is not None
 
     @pytest.mark.asyncio
     async def test_get_for_user_returns_list(self, db, db_user):
