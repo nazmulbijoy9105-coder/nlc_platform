@@ -535,10 +535,8 @@ async def mark_return_filed(
     annual_return = await svc.mark_filed(  # type: ignore
         return_id=return_id,
         filed_date=body.filed_date,
-        rjsc_acknowledgment_number=body.rjsc_acknowledgment_number,
-        late_fee_paid=body.late_fee_paid,
-        late_fee_amount=body.late_fee_amount,
-        filing_document_id=body.filing_document_id,
+        rjsc_receipt_number=body.rjsc_acknowledgment_number,
+        late_fee_paid_bdt=body.late_fee_amount if body.late_fee_paid else None,
     )
     if not annual_return:
         raise HTTPException(status_code=404, detail="Annual return record not found.")
