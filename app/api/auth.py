@@ -2,7 +2,7 @@ import os
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy import select
@@ -20,6 +20,7 @@ from app.core.security import (
 from app.models.database import get_db
 from app.models.user import User
 from app.services.notification_service import ActivityService
+from app.services.user_service import UserService
 
 _limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
@@ -27,8 +28,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 class LoginBody(BaseModel):
-    email: str
-    password: str
+    email: EmailStr
+    password: str = Field(min_length=8)
 
 class LoginResponse(BaseModel):
     access_token: str
@@ -175,6 +176,30 @@ async def me(current_user: dict = Depends(get_current_user), db=Depends(get_db))
 
 
 
+@router.post("/2fa/setup")
+async def setup_2fa(
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    """Start TOTP setup for the authenticated, active user."""
+    user_id = current_user.get("sub") or current_user.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid access token")
+
+    result = await db.execute(
+        select(User).where(User.id == user_id, User.is_active.is_(True))
+    )
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found or inactive")
+
+    setup = await UserService(db).setup_totp(user)
+    return {
+        "message": "TOTP setup initiated. Confirm a code before enabling 2FA.",
+        **setup,
+    }
+
+
 @router.post("/verify-2fa", response_model=LoginResponse)
 async def verify_2fa(body: Verify2FARequest, db=Depends(get_db)):
     """Verify TOTP code and issue full tokens."""
@@ -185,7 +210,7 @@ async def verify_2fa(body: Verify2FARequest, db=Depends(get_db)):
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    totp_secret = getattr(user, "totp_secret", None)
+    totp_secret = user.totp_secret_encrypted
     if not totp_secret:
         raise HTTPException(status_code=400, detail="2FA not configured for this user")
     decrypted = decrypt_totp_secret(totp_secret)

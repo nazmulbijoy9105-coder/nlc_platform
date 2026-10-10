@@ -5,11 +5,11 @@ Proves that User A (Company A) cannot access Company B's resources by manipulati
 import pytest
 from fastapi.testclient import TestClient
 from app.main import create_app
-from app.core.dependencies import get_current_user, TokenData
+from app.core.dependencies import verify_access_token, TokenData
 from contextlib import asynccontextmanager
 
 # Mock User A (belongs only to Company A)
-MOCK_TOKEN_A = TokenData(sub="user-a-uuid", role="CLIENT_DIRECTOR", company_ids=["00000000-0000-0000-0000-000000000001"], user_id="user-a-uuid", email="usera@test.com")
+MOCK_TOKEN_A = TokenData(sub="11111111-1111-1111-1111-111111111111", role="CLIENT_DIRECTOR", company_ids=["00000000-0000-0000-0000-000000000001"], user_id="11111111-1111-1111-1111-111111111111", email="usera@test.com")
 
 COMPANY_A_ID = "00000000-0000-0000-0000-000000000001"
 COMPANY_B_ID = "00000000-0000-0000-0000-000000000002"
@@ -28,7 +28,7 @@ def client():
     async def override_get_current_user():
         return MOCK_TOKEN_A
         
-    app.dependency_overrides[get_current_user] = override_get_current_user
+    app.dependency_overrides[verify_access_token] = override_get_current_user
     
     with TestClient(app) as c:
         yield c
@@ -52,3 +52,9 @@ def test_company_a_cannot_access_company_b_rescue(client):
     """User A tries to GET rescue plan for Company B."""
     response = client.get(f"/api/v1/rescue/plans/{COMPANY_B_ID}/active")
     assert response.status_code in (403, 404), "Tenant boundary breached: User A accessed Company B rescue plan"
+
+
+def test_company_a_can_reach_own_company_route(client):
+    """Positive control: a 401/403 here means the harness is broken, not isolation."""
+    response = client.get(f"/api/v1/companies/{COMPANY_A_ID}/flags")
+    assert response.status_code not in (401, 403), response.text

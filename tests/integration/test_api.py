@@ -25,6 +25,7 @@ Test conventions:
 
 from __future__ import annotations
 
+from datetime import date
 import uuid
 
 import pytest
@@ -216,7 +217,7 @@ class TestCompanies:
                 "incorporation_date": "2022-01-01",
                 "registered_address": "1 API Street, Dhaka",
                 "company_type": "PRIVATE_LIMITED",
-                "financial_year_end": "12-31",
+                "financial_year_end": date(2025, 12, 31),
             }
         )
         assert resp.status_code == 201

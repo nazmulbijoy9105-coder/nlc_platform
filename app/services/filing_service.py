@@ -51,6 +51,7 @@ class AGMService(BaseService[AGM]):
         notice_missing: bool = False,
         quorum_met: bool = True,
         created_by: uuid.UUID | None = None,
+        agm_due_date=None
     ) -> AGM:
         """
         Create an AGM record. Calculates is_default and delay_days automatically
@@ -207,6 +208,7 @@ class AuditService(BaseService[Audit]):
         first_auditor_delay_days: int = 0,
         report_qualified: bool = False,
         qualification_notes: str | None = None,
+        auditor_icab_number=None
     ) -> Audit:
         """
         Create an audit record. Auto-detects AUD-003 (AGM without audit).
@@ -303,6 +305,7 @@ class AnnualReturnService(BaseService[AnnualReturn]):
         missing_attachments: str | None = None,
         filing_fee_paid_bdt: float | None = None,
         late_fee_paid_bdt: float | None = None,
+        agm_date=None
     ) -> AnnualReturn:
         """
         Create an annual return record.

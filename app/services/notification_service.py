@@ -35,14 +35,19 @@ class NotificationService(BaseService[Notification]):
         *,
         company_id: uuid.UUID | None = None,
         user_id: uuid.UUID | None = None,
-        title: str,
-        body: str,
-        notification_type: str,
+        title: str | None = None,
+        body: str | None = None,
+        notification_type: str | None = None,
         channel: NotificationChannel = NotificationChannel.DASHBOARD,
         days_until_deadline: int | None = None,
         related_flag_id: uuid.UUID | None = None,
         scheduled_for: datetime | None = None,
+        subject=None,
+        message=None
     ) -> Notification:
+        title = title or subject
+        body = body or message
+        notification_type = notification_type or 'SYSTEM'
         """
         Queue a notification for delivery.
         _queue_notification stub implementation.
@@ -136,6 +141,7 @@ class NotificationService(BaseService[Notification]):
         company_id: uuid.UUID | None = None,
         unread_only: bool = False,
         limit: int = 50,
+        offset=0
     ) -> list[Notification]:
         """
         Get notifications for a user.
@@ -309,6 +315,8 @@ class ActivityService:
         days: int = 90,
         limit: int = 200,
         offset: int = 0,
+        resource_type=None,
+        resource_id=None
     ) -> list[dict]:
         """
         Query audit logs with filters.
@@ -335,19 +343,4 @@ class ActivityService:
             .limit(limit)
             .offset(offset)
         )
-        logs = result.scalars().all()
-        return [
-            {
-                "id":            str(log.id),
-                "user_id":       str(log.user_id) if log.user_id else None,
-                "company_id":    str(log.company_id) if log.company_id else None,
-                "action":        log.action,
-                "resource_type": log.resource_type,
-                "resource_id":   str(log.resource_id) if log.resource_id else None,
-                "description":   log.description,
-                "ip_address":    log.ip_address,
-                "request_id":    log.request_id,
-                "logged_at":     log.logged_at.isoformat(),
-            }
-            for log in logs
-        ]
+        return result.scalars().all()

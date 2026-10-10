@@ -25,6 +25,7 @@ Usage:
 """
 
 from __future__ import annotations
+from datetime import date
 
 import asyncio
 import os
@@ -36,7 +37,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -240,22 +241,24 @@ async def api_client(db) -> AsyncGenerator[AsyncClient, None]:
     Celery tasks are mocked to run eagerly (no worker needed).
     """
     from app.core.dependencies import get_db, get_db_for_user
+    from app.models.database import get_db as auth_get_db
     from app.main import create_app
 
     app = create_app()
 
-    # Override DB dependency with test session
+    # Override all DB dependency objects used by the API with the test transaction.
     async def _override_db():
         yield db
 
     app.dependency_overrides[get_db] = _override_db
     app.dependency_overrides[get_db_for_user] = _override_db
+    app.dependency_overrides[auth_get_db] = _override_db
 
     # Patch Celery tasks to be no-ops
     with patch("app.worker.tasks.evaluate_company_compliance.apply_async", return_value=MagicMock(id="test-task")), \
          patch("app.worker.tasks.generate_ai_document_async.apply_async", return_value=MagicMock(id="test-task")), \
          patch("app.worker.tasks.render_pdf.apply_async", return_value=MagicMock(id="test-task")):
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             yield client
 
 
@@ -498,7 +501,7 @@ async def db_company(db: AsyncSession) -> Company:
         incorporation_date=today - timedelta(days=365 * 2),
         registered_address="123 Test Street, Dhaka, Bangladesh",
         company_type="PRIVATE_LIMITED",
-        financial_year_end="12-31",
+        financial_year_end=date(2025, 12, 31),
         current_compliance_score=85,
         current_risk_band=RiskBand.GREEN,
         company_status=CompanyStatus.ACTIVE,
@@ -514,7 +517,7 @@ async def db_company(db: AsyncSession) -> Company:
 @pytest_asyncio.fixture
 async def db_user(db: AsyncSession) -> User:
     """Create a User row in the test DB."""
-    from app.core.security import get_password_hash
+    from app.core.security import hash_password
     from app.models.enums import UserRole
     from app.models.user import User
 
@@ -522,7 +525,7 @@ async def db_user(db: AsyncSession) -> User:
         id=uuid.uuid4(),
         email=f"test_{uuid.uuid4().hex[:6]}@nlctest.com",
         full_name="Test User",
-        password_hash=get_password_hash("TestPassword123!"),
+        password_hash=hash_password("TestPassword123!"),
         role=UserRole.ADMIN_STAFF,
         is_active=True,
         totp_enabled=False,
@@ -535,7 +538,7 @@ async def db_user(db: AsyncSession) -> User:
 @pytest_asyncio.fixture
 async def db_super_admin(db: AsyncSession) -> User:
     """Create a Super Admin user in the test DB."""
-    from app.core.security import get_password_hash
+    from app.core.security import hash_password
     from app.models.enums import UserRole
     from app.models.user import User
 
@@ -543,7 +546,7 @@ async def db_super_admin(db: AsyncSession) -> User:
         id=uuid.uuid4(),
         email=f"superadmin_{uuid.uuid4().hex[:6]}@nlctest.com",
         full_name="Super Admin",
-        password_hash=get_password_hash("SuperSecret123!"),
+        password_hash=hash_password("SuperSecret123!"),
         role=UserRole.SUPER_ADMIN,
         is_active=True,
         totp_enabled=False,
