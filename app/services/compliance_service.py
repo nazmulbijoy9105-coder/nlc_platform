@@ -283,10 +283,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
             existing_plan = await rescue_svc.get_active_plan(company_id)
             if not existing_plan:
                 try:
-                    await rescue_svc.create_plan(
+                    await rescue_svc.generate_rescue_plan(
                         company_id=company_id,
-                        triggered_by=user_id if 'user_id' in locals() else None,
-                        engine_output=output
+                        engine_output=output,
+                        created_by=user_id if 'user_id' in locals() else None
                     )
                 except Exception as e:
                     print(f"Failed to auto-create rescue plan: {e}")
