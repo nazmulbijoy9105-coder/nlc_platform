@@ -395,7 +395,7 @@ class AnnualReturnService(BaseService[AnnualReturn]):
     @staticmethod
     def calculate_filing_deadline(agm_date: date) -> date:
         """Section 190: Annual return due within 30 days of AGM."""
-        return agm_date + timedelta(days=30)
+        return agm_date + timedelta(days=21)
 
 
 # ═══════════════════════════════════════════════════════════════════════

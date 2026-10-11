@@ -473,7 +473,7 @@ class NLCRuleEngine:
                     detail={"delay_days": delay}
                 ))
 
-        if c.current_director_count is not None and (c.current_director_count or 0) < 2:  # type: ignore
+        if c.company_type == "PRIVATE_LIMITED" and c.current_director_count is not None and (c.current_director_count or 0) < 2:  # type: ignore
             inc003_impact = 15
             inc003_desc = (
                 "Private company has NO directors. Section 90(2) requires minimum 2. Company cannot legally act."
@@ -1181,13 +1181,12 @@ class NLCRuleEngine:
 
         if c.tin_obtained and not c.tax_return_filed_for_current_fy:
             # VERIFY against ITA 2023: company return due 15th day of 7th month after FY end (30 Jun -> 15 Jan)
-            if self.today >= date(self.today.year, 1, 15):
-                fy_end_year = self.today.year - 1
-            else:
-                fy_end_year = self.today.year - 2
-            deadline = date(fy_end_year, 1, 15)
+            fy_end = c.financial_year_end
+            deadline = date(fy_end.year + 1, fy_end.month + 6, 15)
+            if deadline.month > 12:
+                deadline = date(deadline.year + 1, deadline.month - 12, 15)
             if c.tax_return_deadline_extended:
-                deadline = deadline + timedelta(days=30)  # VERIFY extension length
+                deadline = deadline + timedelta(days=30)
             if self.today > deadline:
                 delay = (self.today - deadline).days
                 if delay <= 90:
@@ -1618,8 +1617,7 @@ class NLCRuleEngine:
                 score_impact=15,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=f"2+ year AGM and Return defaults. Section 304: RJSC strike-off risk elevated.",
-                statutory_basis="Section 346, Companies Act 1994 (Bangladesh)",
-                detail={"agm_years": agm_years, "ar_years": ar_years}
+                statutory_basis="Section 304, Companies Act 1994 (Bangladesh)",
             ))
 
         if agm_years >= 3 or ar_years >= 3 or c.on_rjsc_strike_off_list:  # type: ignore
@@ -1632,8 +1630,7 @@ class NLCRuleEngine:
                 score_impact=25,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description=f"3+ year default or on strike-off list. Section 304: strike-off imminent. Corporate Rescue mandatory.",
-                statutory_basis="Section 346, Companies Act 1994 (Bangladesh)",
-                detail={"agm_years": agm_years, "ar_years": ar_years, "on_list": c.on_rjsc_strike_off_list},
+                statutory_basis="Section 304, Companies Act 1994 (Bangladesh)",,
                 is_black_override=True,
                 escalation_pending=True,
             ))
