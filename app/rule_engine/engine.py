@@ -1182,9 +1182,12 @@ class NLCRuleEngine:
         if c.tin_obtained and not c.tax_return_filed_for_current_fy:
             # VERIFY against ITA 2023: company return due 15th day of 7th month after FY end (30 Jun -> 15 Jan)
             fy_end = c.financial_year_end
-            deadline = date(fy_end.year + 1, fy_end.month + 6, 15)
-            if deadline.month > 12:
-                deadline = date(deadline.year + 1, deadline.month - 12, 15)
+            due_month = fy_end.month + 7
+            due_year = fy_end.year
+            if due_month > 12:
+                due_month -= 12
+                due_year += 1
+            deadline = date(due_year, due_month, 15)
             if c.tax_return_deadline_extended:
                 deadline = deadline + timedelta(days=30)
             if self.today > deadline:
@@ -1203,7 +1206,7 @@ class NLCRuleEngine:
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE if delay <= 90 else RevenueTier.STRUCTURED_REGULARIZATION,
                     description=f"Annual tax return overdue by {delay} days. ITA 2023 Sec 75.",
                     statutory_basis="Income Tax Act 2023, Section 75",
-                    detail={"delay_days": delay, "fy_year": fy_end_year}
+                    detail={"delay_days": delay, "fy_year": fy_end.year}
                 ))
 
         if c.tin_obtained:
@@ -1618,6 +1621,7 @@ class NLCRuleEngine:
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=f"2+ year AGM and Return defaults. Section 304: RJSC strike-off risk elevated.",
                 statutory_basis="Section 304, Companies Act 1994 (Bangladesh)",
+                detail={"agm_years": agm_years, "ar_years": ar_years}
             ))
 
         if agm_years >= 3 or ar_years >= 3 or c.on_rjsc_strike_off_list:  # type: ignore
@@ -1630,7 +1634,8 @@ class NLCRuleEngine:
                 score_impact=25,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description=f"3+ year default or on strike-off list. Section 304: strike-off imminent. Corporate Rescue mandatory.",
-                statutory_basis="Section 304, Companies Act 1994 (Bangladesh)",,
+                statutory_basis="Section 304, Companies Act 1994 (Bangladesh)",
+                detail={"agm_years": agm_years, "ar_years": ar_years, "on_list": c.on_rjsc_strike_off_list},
                 is_black_override=True,
                 escalation_pending=True,
             ))
@@ -1806,7 +1811,7 @@ class NLCRuleEngine:
     # RESCUE & LIFECYCLE SEQUENCING
     # ───────────────────────────────────────────────────────────────────
     def _generate_rescue_sequence(self, c: CompanyProfile, flags: List[ComplianceFlag], score: ScoreBreakdown) -> List[Dict[str, Any]]:
-        """R-014: Rescue derives strictly from active findings."""
+        """R-014: Rescue derives strictly from active, verified findings."""
         active = [f for f in flags if not f.resolved and f.conditional_applies]
         if score.risk_band not in (Severity.RED, Severity.BLACK):
             return []
@@ -1814,11 +1819,13 @@ class NLCRuleEngine:
         try:
             from canonical_architecture.statutory_rescue import STATUTORY_RESCUE_REGISTRY
             for flag in active:
-                if flag.severity not in (Severity.RED, Severity.BLACK):
+                # FIX: Only generate rescue for verified NON_COMPLIANT findings
+                if flag.state != RuleState.NON_COMPLIANT or flag.severity not in (Severity.RED, Severity.BLACK):
                     continue
                 rescue = STATUTORY_RESCUE_REGISTRY.get(flag.rule_id)
                 if not rescue:
-                    continue
+                    raise ValueError(f"Missing statutory rescue mapping for actionable finding: {flag.rule_id}")
+                
                 priority = "CRITICAL" if flag.severity == Severity.BLACK else "HIGH"
                 actions = rescue.get("statutory_actions", [])
                 desc = "; ".join(actions) if actions else rescue.get("objective", f"Remediate {flag.rule_id}")
@@ -1829,6 +1836,7 @@ class NLCRuleEngine:
                             all_missed.extend(f.detail.get("quarters", []))
                     if all_missed:
                         desc = f"Missed quarters: {', '.join(all_missed)}. {desc}"
+                
                 steps.append({
                     "title": rescue.get("objective", f"Remediate: {flag.rule_id}"),
                     "description": desc, "related_rules": [flag.rule_id],
