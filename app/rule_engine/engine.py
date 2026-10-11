@@ -1638,19 +1638,26 @@ class NLCRuleEngine:
                 escalation_pending=True,
             ))
 
-        black_flags = [f for f in self._flags if not f.resolved and f.conditional_applies and f.severity == Severity.BLACK and f.rule_id not in self._ESC_RULE_IDS]
-        if len(black_flags) >= 2:
-            esc003_impact = 10 if len(black_flags) == 2 else (25 if len(black_flags) == 3 else 35)
+        pre_score = self._calculate_raw_score(self._flags)
+        has_black_override = any(
+            f.is_black_override and f.state == RuleState.NON_COMPLIANT 
+            for f in self._flags if not f.resolved and f.conditional_applies
+        )
+        
+        if pre_score <= 29 or has_black_override:
+            black_count = len([f for f in self._flags if f.severity == Severity.BLACK and f.rule_id not in self._ESC_RULE_IDS])
+            esc003_impact = 10 if black_count <= 2 else (25 if black_count == 3 else 35)
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-003",
                 flag_code="RESCUE_REQUIRED_MANDATORY",
                 severity=Severity.BLACK,
                 score_impact=esc003_impact,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Multiple BLACK flags (" + str(len(black_flags)) + "). Corporate Rescue mandatory. Systemic failure detected.",
+                description="Corporate Rescue mandatory. Systemic failure detected.",
                 statutory_basis="Sections 81, 115, 36, 346 (aggregate), Companies Act 1994 (Bangladesh)",
-                detail={"black_count": len(black_flags)},
+                detail={"black_count": black_count, "pre_score": pre_score},
                 is_black_override=True,
+                state=RuleState.NON_COMPLIANT
             ))
 
     # ───────────────────────────────────────────────────────────────────
@@ -1672,6 +1679,37 @@ class NLCRuleEngine:
             return "YELLOW"
         return "GREEN"
 
+
+    def _calculate_raw_score(self, flags: List[ComplianceFlag]) -> int:
+        active = [f for f in flags if not f.resolved and f.conditional_applies]
+        # FIX: Only deduct points for NON_COMPLIANT findings
+        violations = [f for f in active if f.state == RuleState.NON_COMPLIANT]
+        
+        tax_ded = sum(f.score_impact for f in violations if f.rule_id.startswith(("TAX-", "VAT-")))
+        agm_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("AGM-"))
+        aud_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("AUD-"))
+        ret_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("AR-"))
+        dir_ded = sum(f.score_impact for f in violations if f.rule_id.startswith(("DIR-", "INC-", "DEF-", "TL-", "BOD-", "MEM-")))
+        shr_ded = sum(f.score_impact for f in violations if f.rule_id.startswith(("SH-", "TR-")))
+        cap_ded = sum(f.score_impact for f in violations if f.rule_id.startswith(("CAP-", "STR-", "CHG-", "ACC-")))
+        off_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("OFF-"))
+        reg_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("REG-"))
+        bnk_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("BNK-"))
+        lbr_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("LBR-"))
+        bsec_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("BSEC-"))
+        fx_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("FX-"))
+        esc_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("ESC-"))
+
+        module_sum = (
+            max(0, 20 - agm_ded) + max(0, 20 - aud_ded) + max(0, 20 - ret_ded) +
+            max(0, 10 - dir_ded) + max(0, 10 - shr_ded) + max(0, 5 - cap_ded) +
+            max(0, 5 - off_ded) + max(0, 5 - reg_ded) + max(0, 5 - tax_ded) +
+            max(0, 5 - bnk_ded) + max(0, 5 - lbr_ded) + max(0, 5 - bsec_ded) + 
+            max(0, 5 - fx_ded) + max(0, 5 - esc_ded)
+        )
+        # FIX: Scale 125 max points to 100
+        return int((module_sum / 125.0) * 100)
+
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
         active = [f for f in flags if not f.resolved and f.conditional_applies]
 
@@ -1690,17 +1728,21 @@ class NLCRuleEngine:
         fx_ded = sum(f.score_impact for f in active if f.rule_id.startswith("FX-"))
         esc_ded = sum(f.score_impact for f in active if f.rule_id.startswith("ESC-"))
 
-        raw = 100 - (tax_ded + agm_ded + aud_ded + ret_ded + dir_ded + shr_ded + cap_ded + off_ded + reg_ded + bnk_ded + lbr_ded + bsec_ded + fx_ded + esc_ded)
-        raw = max(0, raw)
+        raw = self._calculate_raw_score(flags)
+        raw = max(0, min(100, raw))
         
         override = False
         reason = None
         final = raw
-        critical = [f for f in active if f.is_black_override]
-        # Also zero final_score when any BLACK-severity flag fires
-        # (prevents final_score=80 / risk_band=BLACK contradictions)
+        critical = [
+            f for f in active 
+            if f.is_black_override and f.state == RuleState.NON_COMPLIANT
+        ]
         if not critical:
-            critical = [f for f in active if f.severity == Severity.BLACK]
+            critical = [
+                f for f in active 
+                if f.severity == Severity.BLACK and f.state == RuleState.NON_COMPLIANT
+            ]
         if critical:
             override = True
             reason = f"BLACK: {', '.join(f.rule_id for f in critical)}"
