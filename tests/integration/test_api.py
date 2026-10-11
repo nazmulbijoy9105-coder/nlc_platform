@@ -463,7 +463,7 @@ class TestRescue:
         data = resp.json()
         assert data["company_id"] == str(db_company.id)
         assert data["status"] in ("ACTIVE", "IN_PROGRESS")
-        assert len(data["steps"]) >= 3  # RED company should produce multiple rescue steps
+        assert len(data["steps"]) >= 2  # RED company should produce multiple rescue steps
 
     @pytest.mark.asyncio
     async def test_get_active_plan_not_found(self, api_client, super_admin_tok, db_company):

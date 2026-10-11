@@ -310,13 +310,8 @@ class CompanyService(BaseService[Company]):
         # ── AGM State ─────────────────────────────────────────────
         agms_sorted = sorted(company.agms, key=lambda a: a.financial_year, reverse=True)
         latest_agm = agms_sorted[0] if agms_sorted else None
-        agm_count = len([a for a in company.agms if a.agm_held])
-        if agm_count == 0 and company.last_agm_date:
-            agm_count = 1  # Company has held at least one AGM
-        if agm_count == 0 and company.last_agm_date:
-            agm_count = 1
-        if agm_count == 0 and company.last_agm_date:
-            agm_count = 1  # Company has held at least one AGM (based on last_agm_date)
+        has_agm_records = bool(company.agms) or company.last_agm_date is not None
+        agm_count = (len([a for a in company.agms if a.agm_held]) or (1 if company.last_agm_date else 0)) if has_agm_records else None
 
         # ── Audit State ───────────────────────────────────────────
         audits_sorted = sorted(company.audits, key=lambda a: a.financial_year, reverse=True)
@@ -438,7 +433,7 @@ class CompanyService(BaseService[Company]):
             "disqualification_details": list(company.disqualification_details or []),
             "penalty_notices_received":     company.penalty_notices_received,
             "penalty_notices_resolved":     company.penalty_notices_resolved,
-            "current_director_count":  len([d for d in company.directors if d.director_status.value == "ACTIVE"]),
+            "current_director_count": len([d for d in company.directors if d.director_status.value == "ACTIVE"]) if company.directors else None,
 
             # BSEC Corporate Governance
             "bsec_listed":                   getattr(company, "bsec_listed", False),
