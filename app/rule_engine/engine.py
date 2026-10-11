@@ -67,6 +67,14 @@ class LifecycleStage(str, Enum):
 # DATA STRUCTURES
 # ═══════════════════════════════════════════════════════════════════════
 
+class RuleState(str, Enum):
+    COMPLIANT = "COMPLIANT"
+    NON_COMPLIANT = "NON_COMPLIANT"
+    UNKNOWN = "UNKNOWN"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+    CONDITIONAL = "CONDITIONAL"
+    CONTRADICTORY = "CONTRADICTORY"
+
 @dataclass
 class ComplianceFlag:
     rule_id: str
@@ -82,6 +90,7 @@ class ComplianceFlag:
     resolved: bool = False
     is_black_override: bool = False
     escalation_pending: bool = False
+    state: RuleState = RuleState.NON_COMPLIANT
     conditional_applies: bool = True
 
 @dataclass
