@@ -175,8 +175,8 @@ class CompanyProfile:
     aoa_transfer_restriction: bool = True
     has_foreign_shareholder: bool = False
     foreign_shareholding_pct: float = 0.0
-    is_dormant: bool = False
     is_manufacturing: bool = False
+    is_dormant: bool = False
     is_fdi_registered: bool = False
     fdi_registration_date: Optional[date] = None
     bida_registered: bool = False
@@ -1347,7 +1347,7 @@ class NLCRuleEngine:
 
     # MODULE 13: LABOUR COMPLIANCE (Labour Act 2006)
     def _run_labour_rules(self, c: CompanyProfile) -> None:
-        if getattr(c, "is_manufacturing", False) and c.factory_license_obtained is False:
+        if c.factory_license_obtained is False:
             self._add_flag(ComplianceFlag(
                 rule_id="LBR-001",
                 flag_code="FACTORY_LICENSE_MISSING",
@@ -1499,7 +1499,7 @@ class NLCRuleEngine:
                     statutory_basis="Section 96, Companies Act 1994 (Bangladesh)",
                     detail={"incorporation_days": (self.today - c.incorporation_date).days}
                 ))
-        else:
+        elif c.last_board_meeting_date:
             days_since = (self.today - c.last_board_meeting_date).days
             if days_since > 90:
                 self._add_flag(ComplianceFlag(
@@ -1670,9 +1670,9 @@ class NLCRuleEngine:
         agm_ded = sum(f.score_impact for f in active if f.rule_id.startswith("AGM-"))
         aud_ded = sum(f.score_impact for f in active if f.rule_id.startswith("AUD-"))
         ret_ded = sum(f.score_impact for f in active if f.rule_id.startswith("AR-"))
-        dir_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("DIR-", "INC-", "DEF-", "TL-")))
+        dir_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("DIR-", "INC-", "DEF-", "TL-", "BOD-", "MEM-")))
         shr_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("SH-", "TR-")))
-        cap_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("CAP-", "STR-", "CHG-")))
+        cap_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("CAP-", "STR-", "CHG-", "ACC-")))
         off_ded = sum(f.score_impact for f in active if f.rule_id.startswith("OFF-"))
         reg_ded = sum(f.score_impact for f in active if f.rule_id.startswith("REG-"))
         bnk_ded = sum(f.score_impact for f in active if f.rule_id.startswith("BNK-"))
@@ -1758,90 +1758,43 @@ class NLCRuleEngine:
     # RESCUE & LIFECYCLE SEQUENCING
     # ───────────────────────────────────────────────────────────────────
     def _generate_rescue_sequence(self, c: CompanyProfile, flags: List[ComplianceFlag], score: ScoreBreakdown) -> List[Dict[str, Any]]:
+        """R-014: Rescue derives strictly from active findings."""
         active = [f for f in flags if not f.resolved and f.conditional_applies]
-        active_rules = {f.rule_id for f in active}
-        steps = []
-
-        def add_step(title: str, desc: str, rules: List[str], priority: str, min_days: int, max_days: int):
-            steps.append({"title": title, "description": desc, "related_rules": rules, "priority": priority, "min_days": min_days, "max_days": max_days})
-
         if score.risk_band not in (Severity.RED, Severity.BLACK):
             return []
-
-        if any(r in active_rules for r in {"AGM-001", "AGM-002"}):
-            add_step("Hold Overdue AGM", "Convene AGM immediately. Section 81.", ["AGM-001", "AGM-002"], "CRITICAL", 14, 30)
-
-        if any(r in active_rules for r in {"AUD-001", "AUD-002", "AUD-003"}):
-            add_step("Retrospective Audit", "Engage auditors for all defaulted years. Section 210.", ["AUD-001", "AUD-002", "AUD-003"], "HIGH", 30, 45)
-
-        # TAX-004: Advance Tax Payment Missed — read directly from flags
-        tax004_flags = [f for f in active if f.rule_id == "TAX-004"]
-        if tax004_flags:
-            all_missed = []
-            for f in tax004_flags:
-                all_missed.extend(f.detail.get("quarters", []))
-            if all_missed:
-                add_step("Pay Advance Tax", f"Missed quarters: {', '.join(all_missed)}. ITA 2023 Sec 74.", ["TAX-004"], "MEDIUM", 7, 14)
-
-        if any(r in active_rules for r in {"TR-005", "TR-006"}):
-            add_step("Ratify Irregular Transfers", "Board ratify irregular transfers. Section 47: AoA violations may need court rectification.", ["TR-001", "TR-002", "TR-003", "TR-004", "TR-005"], "HIGH", 10, 21)
-
-        if "ESC-002" in active_rules:
-            add_step("Defend Strike-Off", "File immediate application to set aside strike-off. Section 304.", ["ESC-002", "AR-002", "AR-003"], "CRITICAL", 1, 7)
-
-        # ── Canonical rescue (additive: only for BLACK-override rules not already covered) ──
-        rules_covered: set[str] = set()
-        for s in steps:
-            related = s.get("related_rules", [])
-            if isinstance(related, list):
-                rules_covered.update(related)
-
+        steps = []
         try:
             from canonical_architecture.statutory_rescue import STATUTORY_RESCUE_REGISTRY
-            for rule_id in sorted(active_rules - rules_covered):
-                flag = next((f for f in active if f.rule_id == rule_id), None)
-                if not flag:
+            for flag in active:
+                if flag.severity not in (Severity.RED, Severity.BLACK):
                     continue
-                if rule_id in self._ESC_RULE_IDS:
-                    continue  # ESC rules handled by hardcoded steps
-
-                # Determine priority from severity
-                if flag.severity == Severity.BLACK:
-                    priority = "CRITICAL"
-                elif flag.severity == Severity.RED:
-                    priority = "HIGH"
-                else:
-                    priority = "MEDIUM"
-
-                rescue = STATUTORY_RESCUE_REGISTRY.get(rule_id)
-                if rescue:
-                    actions = rescue.get("statutory_actions", [])
-                    desc = "; ".join(actions) if actions else rescue.get("objective", f"Remediate {rule_id}")
-                    steps.append({
-                        "title": rescue.get("objective", f"Remediate: {rule_id}"),
-                        "description": desc,
-                        "related_rules": [rule_id],
-                        "priority": priority,
-                        "min_days": 7,
-                        "max_days": 30,
-                    })
-                else:
-                    # Generic fallback: one step per uncovered flag
-                    steps.append({
-                        "title": f"Remediate: {flag.flag_code.replace('_', ' ').title()}",
-                        "description": flag.description or f"Remediate {rule_id}",
-                        "related_rules": [rule_id],
-                        "priority": priority,
-                        "min_days": 7,
-                        "max_days": 30,
-                    })
+                rescue = STATUTORY_RESCUE_REGISTRY.get(flag.rule_id)
+                if not rescue:
+                    continue
+                priority = "CRITICAL" if flag.severity == Severity.BLACK else "HIGH"
+                actions = rescue.get("statutory_actions", [])
+                desc = "; ".join(actions) if actions else rescue.get("objective", f"Remediate {flag.rule_id}")
+                if flag.rule_id == "TAX-004":
+                    all_missed = []
+                    for f in active:
+                        if f.rule_id == "TAX-004":
+                            all_missed.extend(f.detail.get("quarters", []))
+                    if all_missed:
+                        desc = f"Missed quarters: {', '.join(all_missed)}. {desc}"
+                steps.append({
+                    "title": rescue.get("objective", f"Remediate: {flag.rule_id}"),
+                    "description": desc, "related_rules": [flag.rule_id],
+                    "priority": priority, "min_days": 7, "max_days": 30,
+                    "rescue_id": rescue.get("rescue_id", ""),
+                    "authority": rescue.get("authority", ""),
+                    "closure_condition": rescue.get("closure_condition", ""),
+                })
         except ImportError:
-            pass  # Canonical not available — hardcoded steps only
-
-        # Sort by priority (CRITICAL first) then min_days (urgent first)
+            pass
         priority_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
-        steps.sort(key=lambda s: (priority_order.get(s["priority"], 9), s["min_days"]))  # type: ignore
+        steps.sort(key=lambda s: (priority_order.get(s["priority"], 9), s["min_days"]))
         return steps
+
 
     def _determine_lifecycle_stage(self, c: CompanyProfile) -> LifecycleStage:
         if c.on_rjsc_strike_off_list or c.is_dormant:
@@ -1889,7 +1842,7 @@ class NLCRuleEngine:
         # Example: AGM on 15 Dec 2025 covered FY 2024-25 (ending 30 Jun 2025).
         # Next FY end = 30 Jun 2026. Deadline = 29 Dec 2026.
         fy_year = c.last_agm_date.year if c.last_agm_date.month > 6 else c.last_agm_date.year - 1  # type: ignore
-        fy_end = date(fy_year, 6, 30)  # Current FY end — allows overdue detection when deadline passes
+        fy_end = date(fy_year + 1, 6, 30)  # NEXT FY end (Guaranteed no false flags), not the one already covered
         return fy_end + timedelta(days=FY_END_AGM_DEADLINE_DAYS)
 
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:

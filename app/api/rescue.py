@@ -13,7 +13,7 @@ Endpoints:
 Business rules:
   - Rescue plans may only be created for companies in BLACK or RED band
   - Only one active rescue plan per company at a time
-  - Final step completion triggers compliance re-evaluation via Celery
+  - Step 8 completion triggers automatic compliance re-evaluation via Celery
   - Engagement creation is admin-only (revenue tracking)
 """
 
@@ -32,9 +32,6 @@ from app.core.dependencies import (
 )
 from app.models.enums import RiskBand
 from app.services.company_service import CompanyService
-from app.services.compliance_service import _company_profile_kwargs
-from app.rule_engine import CompanyProfile
-from app.core.dependencies import get_rule_engine
 from app.services.notification_service import ActivityService
 from app.services.rescue_service import RescueService
 
@@ -185,10 +182,16 @@ async def create_rescue_plan(
             ),
         )
 
-    # Fetch engine output to generate finding-driven rescue plan
+    # Run the rule engine to generate rescue sequence
+    from app.rule_engine import CompanyProfile
+    from app.rule_engine.engine import NLCRuleEngine
+    from app.services.compliance_service import _company_profile_kwargs
+
     profile_data = await company_svc.build_company_profile(body.company_id)
+    if not profile_data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company profile data not found")
     profile = CompanyProfile(**_company_profile_kwargs(profile_data, CompanyProfile))
-    engine = get_rule_engine()
+    engine = NLCRuleEngine()
     engine_output = engine.evaluate(profile)
 
     plan = await rescue_svc.generate_rescue_plan(  # type: ignore
@@ -198,7 +201,7 @@ async def create_rescue_plan(
         assigned_staff_id=body.assigned_staff_id,
         estimated_fee_bdt=body.estimated_fee_bdt,
         target_completion_date=date.fromisoformat(body.target_completion_date) if body.target_completion_date else None,
-            )
+    )
 
     await activity.log(
         action="RESCUE_PLAN_CREATED",
@@ -350,8 +353,8 @@ async def update_rescue_step(
         actor_user_id=current_user.id,
     )
 
-    # Final step COMPLETED → trigger re-evaluation via Celery
-    if step_number == total_steps and body.status.upper() in ("COMPLETED", "COMPLETE"):
+    # Step 8 COMPLETED → trigger re-evaluation via Celery
+    if step_number == 8 and body.status.upper() in ("COMPLETED", "COMPLETE"):
         try:
             from app.worker.tasks import trigger_rescue_reevaluation
             trigger_rescue_reevaluation.apply_async(
@@ -394,7 +397,7 @@ async def create_engagement_from_rescue(
         rescue_plan=plan,
         confirmed_fee_bdt=body.confirmed_fee_bdt,
         payment_terms=body.payment_terms,
-                created_by=current_user.id,
+        created_by=current_user.id,
     )
     if not engagement:
         raise HTTPException(status_code=404, detail="Rescue plan not found.")
