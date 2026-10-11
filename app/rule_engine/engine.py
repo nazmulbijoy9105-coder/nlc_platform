@@ -67,6 +67,14 @@ class LifecycleStage(str, Enum):
 # DATA STRUCTURES
 # ═══════════════════════════════════════════════════════════════════════
 
+class RuleState(str, Enum):
+    COMPLIANT = "COMPLIANT"
+    NON_COMPLIANT = "NON_COMPLIANT"
+    UNKNOWN = "UNKNOWN"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+    CONDITIONAL = "CONDITIONAL"
+    CONTRADICTORY = "CONTRADICTORY"
+
 @dataclass
 class ComplianceFlag:
     rule_id: str
@@ -82,6 +90,7 @@ class ComplianceFlag:
     resolved: bool = False
     is_black_override: bool = False
     escalation_pending: bool = False
+    state: RuleState = RuleState.NON_COMPLIANT
     conditional_applies: bool = True
 
 @dataclass
@@ -464,7 +473,7 @@ class NLCRuleEngine:
                     detail={"delay_days": delay}
                 ))
 
-        if c.current_director_count is not None and (c.current_director_count or 0) < 2:  # type: ignore
+        if c.company_type == "PRIVATE_LIMITED" and c.current_director_count is not None and (c.current_director_count or 0) < 2:  # type: ignore
             inc003_impact = 15
             inc003_desc = (
                 "Private company has NO directors. Section 90(2) requires minimum 2. Company cannot legally act."
@@ -1172,13 +1181,15 @@ class NLCRuleEngine:
 
         if c.tin_obtained and not c.tax_return_filed_for_current_fy:
             # VERIFY against ITA 2023: company return due 15th day of 7th month after FY end (30 Jun -> 15 Jan)
-            if self.today >= date(self.today.year, 1, 15):
-                fy_end_year = self.today.year - 1
-            else:
-                fy_end_year = self.today.year - 2
-            deadline = date(fy_end_year, 1, 15)
+            fy_end = c.financial_year_end
+            due_month = fy_end.month + 7
+            due_year = fy_end.year
+            if due_month > 12:
+                due_month -= 12
+                due_year += 1
+            deadline = date(due_year, due_month, 15)
             if c.tax_return_deadline_extended:
-                deadline = deadline + timedelta(days=30)  # VERIFY extension length
+                deadline = deadline + timedelta(days=30)
             if self.today > deadline:
                 delay = (self.today - deadline).days
                 if delay <= 90:
@@ -1195,7 +1206,7 @@ class NLCRuleEngine:
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE if delay <= 90 else RevenueTier.STRUCTURED_REGULARIZATION,
                     description=f"Annual tax return overdue by {delay} days. ITA 2023 Sec 75.",
                     statutory_basis="Income Tax Act 2023, Section 75",
-                    detail={"delay_days": delay, "fy_year": fy_end_year}
+                    detail={"delay_days": delay, "fy_year": fy_end.year}
                 ))
 
         if c.tin_obtained:
@@ -1609,7 +1620,7 @@ class NLCRuleEngine:
                 score_impact=15,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=f"2+ year AGM and Return defaults. Section 304: RJSC strike-off risk elevated.",
-                statutory_basis="Section 346, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 304, Companies Act 1994 (Bangladesh)",
                 detail={"agm_years": agm_years, "ar_years": ar_years}
             ))
 
@@ -1623,25 +1634,32 @@ class NLCRuleEngine:
                 score_impact=25,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description=f"3+ year default or on strike-off list. Section 304: strike-off imminent. Corporate Rescue mandatory.",
-                statutory_basis="Section 346, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 304, Companies Act 1994 (Bangladesh)",
                 detail={"agm_years": agm_years, "ar_years": ar_years, "on_list": c.on_rjsc_strike_off_list},
                 is_black_override=True,
                 escalation_pending=True,
             ))
 
-        black_flags = [f for f in self._flags if not f.resolved and f.conditional_applies and f.severity == Severity.BLACK and f.rule_id not in self._ESC_RULE_IDS]
-        if len(black_flags) >= 2:
-            esc003_impact = 10 if len(black_flags) == 2 else (25 if len(black_flags) == 3 else 35)
+        pre_score = self._calculate_raw_score(self._flags)
+        has_black_override = any(
+            f.is_black_override and f.state == RuleState.NON_COMPLIANT 
+            for f in self._flags if not f.resolved and f.conditional_applies
+        )
+        
+        if pre_score <= 29 or has_black_override:
+            black_count = len([f for f in self._flags if f.severity == Severity.BLACK and f.rule_id not in self._ESC_RULE_IDS])
+            esc003_impact = 10 if black_count <= 2 else (25 if black_count == 3 else 35)
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-003",
                 flag_code="RESCUE_REQUIRED_MANDATORY",
                 severity=Severity.BLACK,
                 score_impact=esc003_impact,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Multiple BLACK flags (" + str(len(black_flags)) + "). Corporate Rescue mandatory. Systemic failure detected.",
+                description="Corporate Rescue mandatory. Systemic failure detected.",
                 statutory_basis="Sections 81, 115, 36, 346 (aggregate), Companies Act 1994 (Bangladesh)",
-                detail={"black_count": len(black_flags)},
+                detail={"black_count": black_count, "pre_score": pre_score},
                 is_black_override=True,
+                state=RuleState.NON_COMPLIANT
             ))
 
     # ───────────────────────────────────────────────────────────────────
@@ -1663,6 +1681,37 @@ class NLCRuleEngine:
             return "YELLOW"
         return "GREEN"
 
+
+    def _calculate_raw_score(self, flags: List[ComplianceFlag]) -> int:
+        active = [f for f in flags if not f.resolved and f.conditional_applies]
+        # FIX: Only deduct points for NON_COMPLIANT findings
+        violations = [f for f in active if f.state == RuleState.NON_COMPLIANT]
+        
+        tax_ded = sum(f.score_impact for f in violations if f.rule_id.startswith(("TAX-", "VAT-")))
+        agm_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("AGM-"))
+        aud_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("AUD-"))
+        ret_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("AR-"))
+        dir_ded = sum(f.score_impact for f in violations if f.rule_id.startswith(("DIR-", "INC-", "DEF-", "TL-", "BOD-", "MEM-")))
+        shr_ded = sum(f.score_impact for f in violations if f.rule_id.startswith(("SH-", "TR-")))
+        cap_ded = sum(f.score_impact for f in violations if f.rule_id.startswith(("CAP-", "STR-", "CHG-", "ACC-")))
+        off_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("OFF-"))
+        reg_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("REG-"))
+        bnk_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("BNK-"))
+        lbr_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("LBR-"))
+        bsec_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("BSEC-"))
+        fx_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("FX-"))
+        esc_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("ESC-"))
+
+        module_sum = (
+            max(0, 20 - agm_ded) + max(0, 20 - aud_ded) + max(0, 20 - ret_ded) +
+            max(0, 10 - dir_ded) + max(0, 10 - shr_ded) + max(0, 5 - cap_ded) +
+            max(0, 5 - off_ded) + max(0, 5 - reg_ded) + max(0, 5 - tax_ded) +
+            max(0, 5 - bnk_ded) + max(0, 5 - lbr_ded) + max(0, 5 - bsec_ded) + 
+            max(0, 5 - fx_ded) + max(0, 5 - esc_ded)
+        )
+        # FIX: Scale 125 max points to 100
+        return int((module_sum / 125.0) * 100)
+
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
         active = [f for f in flags if not f.resolved and f.conditional_applies]
 
@@ -1681,17 +1730,21 @@ class NLCRuleEngine:
         fx_ded = sum(f.score_impact for f in active if f.rule_id.startswith("FX-"))
         esc_ded = sum(f.score_impact for f in active if f.rule_id.startswith("ESC-"))
 
-        raw = 100 - (tax_ded + agm_ded + aud_ded + ret_ded + dir_ded + shr_ded + cap_ded + off_ded + reg_ded + bnk_ded + lbr_ded + bsec_ded + fx_ded + esc_ded)
-        raw = max(0, raw)
+        raw = self._calculate_raw_score(flags)
+        raw = max(0, min(100, raw))
         
         override = False
         reason = None
         final = raw
-        critical = [f for f in active if f.is_black_override]
-        # Also zero final_score when any BLACK-severity flag fires
-        # (prevents final_score=80 / risk_band=BLACK contradictions)
+        critical = [
+            f for f in active 
+            if f.is_black_override and f.state == RuleState.NON_COMPLIANT
+        ]
         if not critical:
-            critical = [f for f in active if f.severity == Severity.BLACK]
+            critical = [
+                f for f in active 
+                if f.severity == Severity.BLACK and f.state == RuleState.NON_COMPLIANT
+            ]
         if critical:
             override = True
             reason = f"BLACK: {', '.join(f.rule_id for f in critical)}"
@@ -1758,7 +1811,7 @@ class NLCRuleEngine:
     # RESCUE & LIFECYCLE SEQUENCING
     # ───────────────────────────────────────────────────────────────────
     def _generate_rescue_sequence(self, c: CompanyProfile, flags: List[ComplianceFlag], score: ScoreBreakdown) -> List[Dict[str, Any]]:
-        """R-014: Rescue derives strictly from active findings."""
+        """R-014: Rescue derives strictly from active, verified findings."""
         active = [f for f in flags if not f.resolved and f.conditional_applies]
         if score.risk_band not in (Severity.RED, Severity.BLACK):
             return []
@@ -1766,11 +1819,13 @@ class NLCRuleEngine:
         try:
             from canonical_architecture.statutory_rescue import STATUTORY_RESCUE_REGISTRY
             for flag in active:
-                if flag.severity not in (Severity.RED, Severity.BLACK):
+                # FIX: Only generate rescue for verified NON_COMPLIANT findings
+                if flag.state != RuleState.NON_COMPLIANT or flag.severity not in (Severity.RED, Severity.BLACK):
                     continue
                 rescue = STATUTORY_RESCUE_REGISTRY.get(flag.rule_id)
                 if not rescue:
-                    continue
+                    raise ValueError(f"Missing statutory rescue mapping for actionable finding: {flag.rule_id}")
+                
                 priority = "CRITICAL" if flag.severity == Severity.BLACK else "HIGH"
                 actions = rescue.get("statutory_actions", [])
                 desc = "; ".join(actions) if actions else rescue.get("objective", f"Remediate {flag.rule_id}")
@@ -1781,6 +1836,7 @@ class NLCRuleEngine:
                             all_missed.extend(f.detail.get("quarters", []))
                     if all_missed:
                         desc = f"Missed quarters: {', '.join(all_missed)}. {desc}"
+                
                 steps.append({
                     "title": rescue.get("objective", f"Remediate: {flag.rule_id}"),
                     "description": desc, "related_rules": [flag.rule_id],
