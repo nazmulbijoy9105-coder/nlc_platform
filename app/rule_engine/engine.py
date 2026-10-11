@@ -589,7 +589,18 @@ class NLCRuleEngine:
     # MODULE 1: AUDITOR
     # ───────────────────────────────────────────────────────────────────
     def _run_auditor_rules(self, c: CompanyProfile) -> None:
-        if not c.first_auditor_appointed:
+        if c.first_auditor_appointed is None:
+            self._add_flag(ComplianceFlag(
+                rule_id="AUD-001",
+                flag_code="FIRST_AUDITOR_STATUS_UNKNOWN",
+                severity=Severity.YELLOW,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="First auditor status unknown (data missing).",
+                statutory_basis="Section 210(1), Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN
+            ))
+        elif not c.first_auditor_appointed:
             deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AUDITOR_DEADLINE_DAYS)  # type: ignore
             if self.today > deadline:  # type: ignore
                 delay = (self.today - deadline).days  # type: ignore
@@ -661,6 +672,18 @@ class NLCRuleEngine:
     # MODULE 2: AGM
     # ───────────────────────────────────────────────────────────────────
     def _run_agm_rules(self, c: CompanyProfile) -> None:
+        if c.agm_count is None or c.incorporation_date is None:
+            self._add_flag(ComplianceFlag(
+                rule_id="AGM-001",
+                flag_code="AGM_STATUS_UNKNOWN",
+                severity=Severity.YELLOW,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="AGM history unknown (data missing).",
+                statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN
+            ))
+            return
         if c.agm_count == 0:
             deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
             if self.today > deadline:  # type: ignore
@@ -818,7 +841,20 @@ class NLCRuleEngine:
     def _run_director_rules(self, c: CompanyProfile) -> None:
         for change in c.director_changes:
             delay = (self.today - change.event_date).days
-            if not change.form_filed and delay > DIRECTOR_FILING_DEADLINE_DAYS:
+            if change.form_filed is None:
+                self._add_flag(ComplianceFlag(
+                    rule_id="DIR-001",
+                    flag_code="DIRECTOR_FILING_STATUS_UNKNOWN",
+                    severity=Severity.YELLOW,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=f"Director filing status unknown for {change.director_id}.",
+                    statutory_basis="Section 92, Companies Act 1994 (Bangladesh)",
+                    detail={"director_id": change.director_id},
+                    state=RuleState.UNKNOWN
+                ))
+                continue
+            elif not change.form_filed and delay > DIRECTOR_FILING_DEADLINE_DAYS:
                 if change.event_type == "appointment":
                     severity = Severity.RED if delay > 90 else Severity.YELLOW
                     self._add_flag(ComplianceFlag(
@@ -1210,12 +1246,24 @@ class NLCRuleEngine:
                 ))
 
         if c.tin_obtained:
-            fiscal_q = self._fiscal_quarter()
             missed = []
-            if fiscal_q >= 1 and not c.advance_tax_q1_paid: missed.append("Q1")
-            if fiscal_q >= 2 and not c.advance_tax_q2_paid: missed.append("Q2")
-            if fiscal_q >= 3 and not c.advance_tax_q3_paid: missed.append("Q3")
-            if fiscal_q >= 4 and not c.advance_tax_q4_paid: missed.append("Q4")
+            t = self.today
+            # FIX Defect 12: Only flag quarter if deadline has passed
+            if t.month >= 7:
+                q1_deadline = date(t.year, 10, 15)
+                q2_deadline = date(t.year + 1, 1, 15)
+                q3_deadline = date(t.year + 1, 4, 15)
+                q4_deadline = date(t.year + 1, 7, 15)
+            else:
+                q1_deadline = date(t.year - 1, 10, 15)
+                q2_deadline = date(t.year, 1, 15)
+                q3_deadline = date(t.year, 4, 15)
+                q4_deadline = date(t.year, 7, 15)
+                
+            if t > q1_deadline and not c.advance_tax_q1_paid: missed.append("Q1")
+            if t > q2_deadline and not c.advance_tax_q2_paid: missed.append("Q2")
+            if t > q3_deadline and not c.advance_tax_q3_paid: missed.append("Q3")
+            if t > q4_deadline and not c.advance_tax_q4_paid: missed.append("Q4")
             
             if missed:
                 self._add_flag(ComplianceFlag(
@@ -1893,12 +1941,10 @@ class NLCRuleEngine:
         return 10
 
     def _get_fy_end_deadline(self, c: CompanyProfile) -> date:
-        # The AGM held on date X covered the FY ending the previous 30 Jun.
-        # The NEXT AGM deadline is 6 months after the NEXT FY end.
-        # Example: AGM on 15 Dec 2025 covered FY 2024-25 (ending 30 Jun 2025).
-        # Next FY end = 30 Jun 2026. Deadline = 29 Dec 2026.
-        fy_year = c.last_agm_date.year if c.last_agm_date.month > 6 else c.last_agm_date.year - 1  # type: ignore
-        fy_end = date(fy_year + 1, 6, 30)  # NEXT FY end (Guaranteed no false flags), not the one already covered
+        # FIX Defect 20: Use company's actual financial_year_end instead of hardcoded 30 June.
+        fy_end = c.financial_year_end
+        while c.last_agm_date and c.last_agm_date > fy_end:
+            fy_end = date(fy_end.year + 1, fy_end.month, fy_end.day)
         return fy_end + timedelta(days=FY_END_AGM_DEADLINE_DAYS)
 
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:

@@ -1097,7 +1097,7 @@ class TestVerdictRegression:
     """Guards for the v2.1.1 verdict-flip bugs."""
 
     def test_on_time_agm_not_flagged_overdue(self, rule_engine, build_profile):
-        profile = build_profile(agm_count=1, last_agm_date=date(2025, 12, 15), agm_held_this_cycle=False)
+        profile = build_profile(agm_count=1, last_agm_date=date(2026, 2, 15), agm_held_this_cycle=False)
         output = rule_engine.evaluate(profile, today=date(2026, 10, 1))
         assert_flag_not_triggered(output, "AGM-002")
 
