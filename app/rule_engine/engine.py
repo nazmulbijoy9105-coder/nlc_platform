@@ -137,7 +137,7 @@ class CompanyProfile:
     company_type: str = "PRIVATE_LIMITED"
     incorporation_date: date | None = None
     financial_year_end: Optional[date] = field(default=None)
-    agm_count: int | None = 0
+    agm_count: int | None = None
     last_agm_date: Optional[date] = None
     agm_held_this_cycle: bool = False
     agm_held_without_audit: bool = False
@@ -155,7 +155,7 @@ class CompanyProfile:
     auditor_name: Optional[str] = None
     auditor_firm_reg_no: Optional[str] = None
     last_return_filed_year: Optional[int] = None
-    unfiled_returns_count: int | None = 0
+    unfiled_returns_count: int | None = None
     annual_return_filed: bool = False
     annual_return_content_complete: bool = False
     annual_return_filed_date: Optional[date] = None
@@ -615,7 +615,7 @@ class NLCRuleEngine:
                     detail={"delay_days": delay}
                 ))
 
-        if c.first_auditor_appointed and c.agm_count > 0 and not c.auditor_reappointed_at_agm and not c.audit_in_progress and c.last_agm_date is not None:  # type: ignore
+        if c.first_auditor_appointed and c.agm_count is not None and c.agm_count > 0 and not c.auditor_reappointed_at_agm and not c.audit_in_progress and c.last_agm_date is not None:  # type: ignore
             fy_end = c.financial_year_end
             if self.today > fy_end + timedelta(days=120):
                  self._add_flag(ComplianceFlag(
@@ -793,7 +793,7 @@ class NLCRuleEngine:
                     detail={"delay_days": delay}
                 ))
 
-        if (c.unfiled_returns_count or 0) >= 2:  # type: ignore
+        if c.unfiled_returns_count is not None and c.unfiled_returns_count >= 2:  # type: ignore
             self._add_flag(ComplianceFlag(
                 rule_id="AR-002",
                 flag_code="ANNUAL_RETURN_BACKLOG_RED",
@@ -805,7 +805,7 @@ class NLCRuleEngine:
                 detail={"unfiled_count": c.unfiled_returns_count}
             ))
 
-        if (c.unfiled_returns_count or 0) >= 3:  # type: ignore
+        if c.unfiled_returns_count is not None and c.unfiled_returns_count >= 3:  # type: ignore
             self._add_flag(ComplianceFlag(
                 rule_id="AR-003",
                 flag_code="ANNUAL_RETURN_BACKLOG_BLACK",
@@ -1647,7 +1647,7 @@ class NLCRuleEngine:
         if c.any_director_disqualified:
             disq_count = len(c.disqualification_details)
             impact = 20 if disq_count == 1 else 25
-            is_override = disq_count >= (c.current_director_count - 1)  # type: ignore
+            is_override = c.current_director_count is not None and disq_count >= (c.current_director_count - 1)  # type: ignore
             self._add_flag(ComplianceFlag(
                 rule_id="DEF-001",
                 flag_code="DIRECTOR_DISQUALIFIED",
