@@ -286,10 +286,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     await rescue_svc.generate_rescue_plan(
                         company_id=company_id,
                         engine_output=output,
-                        created_by=user_id if 'user_id' in locals() else None
+                        created_by=getattr(self, '_current_user_id', None)
                     )
                 except Exception as e:
-                    print(f"Failed to auto-create rescue plan: {e}")
+                    logger.error(f"Failed to auto-create rescue plan for company {company_id}: {e}", exc_info=True)
 
         await self.db.execute(
             update(Company)
