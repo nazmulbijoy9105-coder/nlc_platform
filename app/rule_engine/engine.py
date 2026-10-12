@@ -1893,8 +1893,10 @@ class NLCRuleEngine:
                     "authority": rescue.get("authority", ""),
                     "closure_condition": rescue.get("closure_condition", ""),
                 })
-        except ImportError:
-            pass
+        except ImportError as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to import STATUTORY_RESCUE_REGISTRY: {e}")
+            return []
         priority_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
         steps.sort(key=lambda s: (priority_order.get(s["priority"], 9), s["min_days"]))
         return steps
