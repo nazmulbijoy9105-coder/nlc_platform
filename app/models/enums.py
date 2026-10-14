@@ -207,3 +207,25 @@ class SroType(enum.StrEnum):
     DEADLINE  = "DEADLINE"
     PROCEDURE = "PROCEDURE"
     EXEMPTION = "EXEMPTION"
+
+
+# ── COMPLIANCE CALENDAR ──────────────────────────────────────────────
+class CalendarEventType(enum.StrEnum):
+    FIRST_AGM              = "FIRST_AGM"
+    SUBSEQUENT_AGM         = "SUBSEQUENT_AGM"
+    ANNUAL_RETURN          = "ANNUAL_RETURN"
+    AUDITOR_APPOINTMENT    = "AUDITOR_APPOINTMENT"
+    FORM_XII               = "FORM_XII"
+    BOARD_MEETING          = "BOARD_MEETING"
+    FINANCIAL_STATEMENTS   = "FINANCIAL_STATEMENTS"
+    TRADE_LICENSE          = "TRADE_LICENSE"
+    TAX_RETURN             = "TAX_RETURN"
+    OTHER                  = "OTHER"
+
+
+class CalendarEventStatus(enum.StrEnum):
+    UPCOMING   = "UPCOMING"
+    DUE_SOON   = "DUE_SOON"
+    OVERDUE    = "OVERDUE"
+    COMPLETED  = "COMPLETED"
+    WAIVED     = "WAIVED"
