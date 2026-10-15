@@ -1218,7 +1218,7 @@ class NLCRuleEngine:
                 detail={"turnover_bdt": c.annual_turnover_bdt}
             ))
 
-        if c.tin_obtained and not c.tax_return_filed_for_current_fy:
+        if c.tin_obtained and not c.tax_return_filed_for_current_fy and c.financial_year_end:
             # VERIFY against ITA 2023: company return due 15th day of 7th month after FY end (30 Jun -> 15 Jan)
             fy_end = c.financial_year_end
             due_month = fy_end.month + 7
