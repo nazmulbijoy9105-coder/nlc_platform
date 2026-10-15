@@ -117,7 +117,7 @@ def _step_to_response(step) -> RescueStepResponse:
         started_at=step.started_at.isoformat() if step.started_at else None,
         completed_at=step.completed_at.isoformat() if step.completed_at else None,
         statutory_basis=getattr(step, "statutory_basis", None),
-        complexity=getattr(step, "complexity", None),
+        complexity=getattr(step.complexity, "value", step.complexity),
         estimated_days_min=getattr(step, "estimated_days_min", None),
         estimated_days_max=getattr(step, "estimated_days_max", None),
         triggers_reevaluation=step.triggers_reevaluation,
