@@ -84,7 +84,7 @@ def _get_celery_broker() -> str:
     try:
         from app.core.config import get_settings
         s = get_settings()
-        return s.celery_broker_url or s.redis_url
+        return s.CELERY_BROKER_URL or s.redis_url
     except Exception:
         return os.environ.get("CELERY_BROKER_URL",
                               os.environ.get("REDIS_URL", "redis://localhost:6379/0"))
@@ -94,7 +94,7 @@ def _get_celery_backend() -> str:
     try:
         from app.core.config import get_settings
         s = get_settings()
-        return s.celery_result_backend or s.redis_url
+        return s.CELERY_RESULT_BACKEND or s.redis_url
     except Exception:
         return os.environ.get("CELERY_RESULT_BACKEND",
                               os.environ.get("REDIS_URL", "redis://localhost:6379/0"))

@@ -3,10 +3,11 @@
 Run weekly to verify disaster recovery readiness.
 Usage: python3 scripts/verify_backup.py
 """
-import os
 import asyncio
-from sqlalchemy.ext.asyncio import create_async_engine
+import os
+
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
 
 DB_URL = os.environ.get("DATABASE_URL", "").replace("postgresql://", "postgresql+asyncpg://")
 

@@ -18,17 +18,15 @@ Release Governance Protocol: Rule changes require:
   - legal_rule_versions entry with previous definition
   - Super Admin approval
 """
-from typing import Sequence, Union
-from datetime import date
+from typing import Sequence
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
 
 revision: str = '0002_seed_ilrmf_rules'
-down_revision: Union[str, None] = '0001_initial_schema'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = '0001_initial_schema'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 # ── Rule definitions — all 30 ILRMF rules ────────────────────────────
@@ -380,7 +378,6 @@ def upgrade() -> None:
     # Get or create a placeholder super admin for seeding
     # In production, this will be replaced by the actual SUPER_ADMIN user ID
     # The seed_super_admin_id is a well-known UUID used only for seeded data
-    seed_super_admin_id = "00000000-0000-0000-0000-000000000001"
 
     # Insert ILRMF rules
     for (rule_id, rule_name, rule_type, statutory_basis, description,

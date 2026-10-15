@@ -60,7 +60,7 @@ class BaseService(Generic[ModelT]):
         self.db.add(instance)
         await self.db.flush()   # Get DB-generated values (created_at etc.)
         await self.db.refresh(instance)
-        logger.debug(f"[{self.model.__tablename__}] Created {instance.id}")
+        logger.debug(f"[{self.model.__tablename__}] Created {instance.id}")  # type: ignore[attr-defined]
         return instance
 
     # ── READ ──────────────────────────────────────────────────────
@@ -68,7 +68,7 @@ class BaseService(Generic[ModelT]):
     async def get_by_id(self, record_id: uuid.UUID) -> ModelT | None:
         """Fetch one record by primary key. Returns None if not found."""
         result = await self.db.execute(
-            select(self.model).where(self.model.id == record_id)
+            select(self.model).where(self.model.id == record_id)  # type: ignore[attr-defined]
         )
         return result.scalar_one_or_none()
 
@@ -133,7 +133,7 @@ class BaseService(Generic[ModelT]):
 
         await self.db.execute(
             update(self.model)
-            .where(self.model.id == record_id)
+            .where(self.model.id == record_id)  # type: ignore[attr-defined]
             .values(**updates)
         )
         await self.db.flush()
@@ -165,11 +165,11 @@ class BaseService(Generic[ModelT]):
         """
         result = await self.db.execute(
             update(self.model)
-            .where(self.model.id == record_id)
+            .where(self.model.id == record_id)  # type: ignore[attr-defined]
             .values(is_active=False)
         )
         await self.db.flush()
-        return result.rowcount > 0
+        return result.__dict__.get("rowcount", 0) > 0  # type: ignore
 
     # ── EXISTENCE CHECK ───────────────────────────────────────────
 

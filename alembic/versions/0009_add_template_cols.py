@@ -5,8 +5,8 @@ Revises: 0008_seed_document_templates
 Create Date: 2026-07-04 04:00:00.000000
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB
 
 revision = '0009_add_template_cols'

@@ -2,11 +2,11 @@
 
 Maps each RJSC form to its rule, section, and deadline:
   Form I    → Declaration of Compliance (Section 9)
-  Form III  → MoA/AoA Filing (Section 11)
+  Form III  → Capital consolidation/division notice (Sections 53-54); MoA/AoA are incorporation docs (Section 11)
   Form IV   → Capital Increase (Section 52)
-  Form VI   → Office Change (Section 81)
+  Form VI   → Office Change (Section 77)
   Form VIII → Charge Registration (Section 87)
-  Form IX   → Situation of Office (Section 81)
+  Form IX   → Consent of Director (Section 92)
   Form XII  → Annual Return (Section 119)
   Form XIV  → Director Change (Section 92)
   Form XV   → Return of Allotment (Section 50)
@@ -17,16 +17,12 @@ Maps each RJSC form to its rule, section, and deadline:
 from __future__ import annotations
 
 from datetime import date
-from typing import TYPE_CHECKING
 
-from sqlalchemy import Date, Enum, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Date, ForeignKey, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
 from .database import Base
-from .mixins import UUIDPrimaryKeyMixin, TimestampMixin
-
-if TYPE_CHECKING:
-    pass
+from .mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class RJSCFormFiling(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -74,15 +70,22 @@ class RJSCFormFiling(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 # Reference data: all RJSC forms for private limited companies
 RJSC_FORMS_REFERENCE = [
-    {"form_code": "FORM_I", "form_number": "I", "form_name": "Declaration of Compliance", "section": "Section 9", "rule_id": "INC-001", "deadline_days": 0},
-    {"form_code": "FORM_III", "form_number": "III", "form_name": "Memorandum and Articles Filing", "section": "Section 11", "rule_id": "INC-002", "deadline_days": 0},
-    {"form_code": "FORM_IV", "form_number": "IV", "form_name": "Notice of Increase in Capital", "section": "Section 52", "rule_id": "SH-003", "deadline_days": 30},
-    {"form_code": "FORM_VI", "form_number": "VI", "form_name": "Notice of Change of Registered Office", "section": "Section 81", "rule_id": "OFF-001", "deadline_days": 28},
+    {"form_code": "FORM_XV", "form_number": "XV", "form_name": "Return of Allotment", "section": "Section 155", "rule_id": "SH-001", "deadline_days": 30},
+    {"form_code": "FORM_117", "form_number": "117", "form_name": "Transfer Instrument", "section": "Section 108", "rule_id": "TR-001", "deadline_days": 0},
     {"form_code": "FORM_VIII", "form_number": "VIII", "form_name": "Registration of Charge", "section": "Section 87", "rule_id": "CAP-002", "deadline_days": 30},
-    {"form_code": "FORM_IX", "form_number": "IX", "form_name": "Situation of Registered Office", "section": "Section 81", "rule_id": "OFF-001", "deadline_days": 0},
-    {"form_code": "FORM_XII", "form_number": "XII", "form_name": "Annual Return", "section": "Section 119", "rule_id": "AR-001", "deadline_days": 30},
-    {"form_code": "FORM_XIV", "form_number": "XIV", "form_name": "Notice of Director Change", "section": "Section 92", "rule_id": "DIR-001", "deadline_days": 14},
-    {"form_code": "FORM_XV", "form_number": "XV", "form_name": "Return of Allotment", "section": "Section 50", "rule_id": "SH-001", "deadline_days": 30},
+    {"form_code": "FORM_IX", "form_number": "IX", "form_name": "Consent of Director to Act", "section": "Section 93", "rule_id": "DIR-007", "deadline_days": 30},
+    {"form_code": "FORM_XII", "form_number": "XII", "form_name": "Annual Return", "section": "Section 36", "rule_id": "AR-001", "deadline_days": 21},
+    {"form_code": "FORM_VI", "form_number": "VI", "form_name": "Notice of Change of Registered Office", "section": "Section 77", "rule_id": "OFF-001", "deadline_days": 28},
+
+    {"form_code": "FORM_I", "form_number": "I", "form_name": "Declaration of Compliance", "section": "Section 9", "rule_id": "INC-001", "deadline_days": 0},
+    {"form_code": "FORM_III", "form_number": "III", "form_name": "Notice of Consolidation/Division of Share Capital", "section": "Sections 53-54", "rule_id": "CAP-001", "deadline_days": 15},
+    {"form_code": "FORM_IV", "form_number": "IV", "form_name": "Notice of Increase in Capital", "section": "Section 56", "rule_id": "SH-003", "deadline_days": 30},
+    {"form_code": "FORM_VI", "form_number": "VI", "form_name": "Notice of Change of Registered Office", "section": "Section 77", "rule_id": "OFF-001", "deadline_days": 28},
+    {"form_code": "FORM_VIII", "form_number": "VIII", "form_name": "Registration of Charge", "section": "Section 87", "rule_id": "CAP-002", "deadline_days": 30},
+    {"form_code": "FORM_IX", "form_number": "IX", "form_name": "Consent of Director to Act", "section": "Section 93", "rule_id": "DIR-007", "deadline_days": 30},
+    {"form_code": "FORM_XII", "form_number": "XII", "form_name": "Annual Return", "section": "Section 36", "rule_id": "AR-001", "deadline_days": 21},
+    {"form_code": "FORM_XIV", "form_number": "XIV", "form_name": "Notice of Director Change", "section": "Section 115", "rule_id": "DIR-001", "deadline_days": 14},
+    {"form_code": "FORM_XV", "form_number": "XV", "form_name": "Return of Allotment", "section": "Section 151", "rule_id": "SH-001", "deadline_days": 30},
     {"form_code": "FORM_XVII", "form_number": "XVII", "form_name": "Share Transfer Registration", "section": "Section 108", "rule_id": "TR-001", "deadline_days": 0},
     {"form_code": "FORM_XIX", "form_number": "XIX", "form_name": "Satisfaction of Charge", "section": "Section 87", "rule_id": "CHG-001", "deadline_days": 30},
     {"form_code": "FORM_117", "form_number": "117", "form_name": "Transfer Instrument (Form 117)", "section": "Section 108", "rule_id": "TR-001", "deadline_days": 0},

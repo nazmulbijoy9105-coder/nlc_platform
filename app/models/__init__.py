@@ -15,6 +15,8 @@ before Alembic migrations are generated.
 # ── Database infrastructure ─────────────────────────────────────────
 # ── Commercial (Tasks, Engagements, Quotations) ──────────────────────
 from .commercial import Engagement, Quotation, Task
+from .compliance_calendar import ComplianceCalendarEvent
+from .regulatory_rule import RegulatoryRule
 
 # ── Companies ────────────────────────────────────────────────────────
 from .company import Company, CompanyUserAccess
@@ -76,10 +78,10 @@ from .infrastructure import (
 
 # ── People (Directors, Shareholders, Transfers) ──────────────────────
 from .people import Director, Shareholder, ShareTransfer
-from .rjsc_forms import RJSCFormFiling
 
 # ── Rescue (Plans + Steps) ───────────────────────────────────────────
 from .rescue import RescuePlan, RescueStep
+from .rjsc_forms import RJSCFormFiling
 
 # ── Rules (Legal Rules + Version History) ────────────────────────────
 from .rules import LegalRule, LegalRuleVersion
@@ -98,6 +100,7 @@ __all__ = [
     # Database
     "Base",
     "Company",                  # TABLE: companies
+    "ComplianceCalendarEvent",  # TABLE: compliance_calendar_events
     "CompanyStatus",
     "CompanyType",
     "CompanyUserAccess",        # TABLE: company_user_access
@@ -122,6 +125,8 @@ __all__ = [
     "NotificationChannel",
     "NotificationStatus",
     "Quotation",                # TABLE: quotations
+    "RegulatoryRule",           # TABLE: regulatory_rules
+    "RJSCFormFiling",            # TABLE: share_transfers
     "RegisteredOfficeHistory",  # TABLE: registered_office_history
     "RescuePlan",               # TABLE: rescue_plans
     "RescueStep",               # TABLE: rescue_steps
@@ -133,7 +138,6 @@ __all__ = [
     "SRORegistry",              # TABLE: sro_registry
     "SeverityLevel",
     "ShareTransfer",
-    "RJSCFormFiling",            # TABLE: share_transfers
     "Shareholder",              # TABLE: shareholders
     "SroType",
     "StatutoryRegister",        # TABLE: statutory_registers

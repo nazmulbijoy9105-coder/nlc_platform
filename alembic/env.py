@@ -31,20 +31,44 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+# Load project .env before importing app.models.
+# Existing shell environment variables always take precedence.
+from dotenv import load_dotenv
+
+load_dotenv(PROJECT_ROOT / ".env", override=False)
+
 # ── Import ALL models so Alembic sees them in metadata ────────────────
 # This is critical for autogenerate — every model must be imported here
 from app.models import (  # noqa: F401 — imports are for side-effects
+    AGM,
+    AIOutputLog,
+    AIPromptTemplate,
+    AnnualReturn,
+    Audit,
     Base,
-    User, Company, CompanyUserAccess,
-    Director, Shareholder, ShareTransfer,
-    AGM, Audit, AnnualReturn,
-    ComplianceFlag, ComplianceScoreHistory, ComplianceEvent,
-    LegalRule, LegalRuleVersion,
-    RescuePlan, RescueStep,
-    Task, Engagement, Quotation,
-    Document, DocumentAccessLog, AIPromptTemplate, AIOutputLog,
-    Notification, SRORegistry, StatutoryRegister,
-    RegisteredOfficeHistory, UserActivityLog,
+    Company,
+    CompanyUserAccess,
+    ComplianceEvent,
+    ComplianceFlag,
+    ComplianceScoreHistory,
+    Director,
+    Document,
+    DocumentAccessLog,
+    Engagement,
+    LegalRule,
+    LegalRuleVersion,
+    Notification,
+    Quotation,
+    RegisteredOfficeHistory,
+    RescuePlan,
+    RescueStep,
+    Shareholder,
+    ShareTransfer,
+    SRORegistry,
+    StatutoryRegister,
+    Task,
+    User,
+    UserActivityLog,
 )
 
 # ── Alembic Config ────────────────────────────────────────────────────
@@ -97,9 +121,7 @@ def include_object(object, name, type_, reflected, compare_to):
     if type_ == "table" and name.startswith("vw_"):
         # Views are created via raw SQL in migrations, not ORM
         return False
-    if type_ == "schema" and name not in (None, "public"):
-        return False
-    return True
+    return not (type_ == "schema" and name not in (None, "public"))
 
 
 def compare_type(context, inspected_column, metadata_column, inspected_type, metadata_type):
@@ -138,6 +160,17 @@ def run_migrations_offline() -> None:
 # ── ONLINE MODE (ASYNC) ───────────────────────────────────────────────
 def do_run_migrations(connection: Connection) -> None:
     """Configure and run migrations using live connection."""
+    # Revision IDs here exceed alembic's default VARCHAR(32) version column.
+    # Create it wide on a fresh DB, widen it on an existing one. Idempotent.
+    connection.execute(text(
+        "CREATE TABLE IF NOT EXISTS alembic_version ("
+        "version_num VARCHAR(255) NOT NULL, "
+        "CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num))"
+    ))
+    connection.execute(text(
+        "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(255)"
+    ))
+    connection.commit()
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
@@ -157,8 +190,8 @@ async def run_async_migrations() -> None:
     Async entry point for migrations.
     Uses asyncpg engine with NullPool for Alembic (one connection per run).
     """
-    import ssl as _ssl
     import re as _re
+    import ssl as _ssl
 
     # Override URL with resolved value
     configuration = config.get_section(config.config_ini_section, {})

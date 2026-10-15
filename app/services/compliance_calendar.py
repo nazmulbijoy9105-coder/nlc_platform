@@ -2,15 +2,13 @@
 from __future__ import annotations
 
 import logging
-import uuid
 from datetime import date, datetime, timedelta
 
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company import Company
-from app.models.enums import CompanyStatus, CompanyType
+from app.models.enums import CompanyStatus
 
 logger = logging.getLogger("nlc.calendar")
 RJSC_DAYS = {"agm": 180, "schedule_x": 21, "balance_sheet": 30}
@@ -147,7 +145,7 @@ def _trade_license_event(company):
 def _generate_calendar(company):
     if not company.incorporation_date: return []
     fy_end_date = company.financial_year_end
-    fy_end_str = ("%02d-%02d" % (fy_end_date.month, fy_end_date.day)) if fy_end_date else "12-31"
+    fy_end_str = f"{fy_end_date.month:02d}-{fy_end_date.day:02d}" if fy_end_date else "12-31"
     is_dormant = company.company_status == CompanyStatus.DORMANT
     has_vat = bool(getattr(company, "vat_number", None))
     is_listed = bool(getattr(company, "is_listed", False))

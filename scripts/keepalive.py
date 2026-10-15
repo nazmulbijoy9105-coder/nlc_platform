@@ -6,8 +6,8 @@ Deploy as a cron job (every 10 minutes) on any external service:
 Or use UptimeRobot / cron-job.org to ping the URL directly.
 """
 import os
-import urllib.request
 import urllib.error
+import urllib.request
 
 URL = os.environ.get("KEEPALIVE_URL", "https://nlc-platform.onrender.com/api/v1/health/live")
 

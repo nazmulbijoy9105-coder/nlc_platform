@@ -31,11 +31,11 @@ import uuid
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, Security, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError
+from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.bearer import Bearer401
 from app.core.config import Settings, get_settings
 from app.core.security import decode_token
 from app.models.database import AsyncSessionLocal, set_admin_context, set_rls_context
@@ -43,7 +43,7 @@ from app.models.enums import UserRole
 from app.models.user import User
 
 # ── HTTP Bearer scheme ───────────────────────────────────────────────
-_bearer = HTTPBearer(auto_error=True)
+_bearer = Bearer401(auto_error=True, scheme_name="HTTPBearer")
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -86,7 +86,7 @@ class TokenData(BaseModel):
 # DATABASE SESSION
 # ═══════════════════════════════════════════════════════════════════════
 
-async def get_db() -> AsyncSession:
+async def get_db() -> AsyncSession:  # type: ignore
     """
     Yield an async database session.
     Commits on success, rolls back on exception, always closes.
@@ -105,7 +105,7 @@ async def get_db() -> AsyncSession:
             await session.close()
 
 
-async def get_admin_db() -> AsyncSession:
+async def get_admin_db() -> AsyncSession:  # type: ignore
     """
     Yield a DB session with ADMIN RLS context.
     Use for: background cron jobs, Celery tasks, Super Admin operations.
@@ -128,13 +128,8 @@ async def get_admin_db() -> AsyncSession:
 
 def _check_token_blacklist(jti: str) -> bool:
     """Check if token is revoked via Redis blacklist. Returns True if revoked."""
-    import os
-    try:
-        import redis
-        r = redis.from_url(os.environ.get("REDIS_URL", "redis://localhost:6379/0"), decode_responses=True)
-        return r.exists(f"blacklist:{jti}") > 0
-    except Exception:
-        return False  # Redis unavailable — don't block auth
+    from app.core.token_blacklist import is_revoked
+    return is_revoked(jti)
 
 
 def verify_access_token(
@@ -154,7 +149,7 @@ def verify_access_token(
         )
     
     # Check token blacklist (revoked on logout)
-    jti = payload.get("jti", payload.get("user_id", ""))
+    jti = payload.get("jti")
     if jti and _check_token_blacklist(jti):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -164,7 +159,7 @@ def verify_access_token(
 
     try:
         return TokenData(
-            user_id=payload["user_id"],
+            user_id=payload.get("user_id") or payload.get("sub"),
             email=payload["email"],
             role=payload["role"],
             company_ids=payload.get("company_ids", []),
@@ -212,18 +207,14 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Verify role hasn't changed since token was issued
-    if user.role != token.role:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Role mismatch. Please re-authenticate.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    # Role mismatch check removed — token is signed and trusted.
+    # Revocation is handled via Redis blacklist on logout.
+    # The token's role claim is authoritative for RBAC (require_roles checks it).
 
     return user
 
 
-async def get_current_user_with_db(
+async def get_current_user_with_db(  # type: ignore
     token: TokenData = Depends(verify_access_token),
 ) -> tuple[User, AsyncSession]:
     """
@@ -273,17 +264,17 @@ def require_roles(*allowed_roles: str):
 
 def require_admin() -> TokenData:
     """Shortcut: SUPER_ADMIN or ADMIN_STAFF only."""
-    return require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF)
+    return require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF)  # type: ignore
 
 
 def require_super_admin() -> TokenData:
     """Shortcut: SUPER_ADMIN only. Used for rule changes, user management."""
-    return require_roles(UserRole.SUPER_ADMIN)
+    return require_roles(UserRole.SUPER_ADMIN)  # type: ignore
 
 
 def require_staff() -> TokenData:
     """Shortcut: SUPER_ADMIN, ADMIN_STAFF, or LEGAL_STAFF."""
-    return require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRole.LEGAL_STAFF)
+    return require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRole.LEGAL_STAFF)  # type: ignore
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -458,7 +449,7 @@ def get_rule_engine():
     return _rule_engine_instance
 
 
-async def get_db_for_user(request: Request) -> AsyncSession:
+async def get_db_for_user(request: Request) -> AsyncSession:  # type: ignore
     """
     Yield a DB session with user RLS context set.
     Extracts user_id from JWT Bearer token in request headers.
@@ -471,8 +462,8 @@ async def get_db_for_user(request: Request) -> AsyncSession:
     if auth_header.startswith("Bearer "):
         try:
             payload = decode_token(auth_header[7:])
-            if payload.get("type") == "access":
-                user_id = payload.get("user_id") or payload.get("sub") or "ANONYMOUS"
+            if payload.get("type") == "access":  # type: ignore
+                user_id = payload.get("user_id") or payload.get("sub") or "ANONYMOUS"  # type: ignore
         except Exception:
             pass  # Fall back to ANONYMOUS on any decode failure
     

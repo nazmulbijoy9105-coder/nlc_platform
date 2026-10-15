@@ -15,8 +15,8 @@ def upgrade():
     op.execute("DROP TYPE IF EXISTS rule_type")
 
     rules = [
-        ('TAX-003', 'Annual Tax Return Overdue', 'DEADLINE', 'Income Tax Act 2023, Section 75', 
-         'Annual tax return not filed by deadline. Penalty: Tk 1,000-5,000 + 2%/month.', 
+        ('TAX-003', 'Annual Tax Return Overdue', 'DEADLINE', 'Income Tax Act 2023, Section 75',
+         'Annual tax return not filed by deadline. Penalty: Tk 1,000-5,000 + 2%/month.',
          'YELLOW', 3, 'COMPLIANCE_PACKAGE', False),
         ('TAX-004', 'Advance Tax Payment Missed', 'THRESHOLD', 'Income Tax Act 2023, Section 74',
          'Quarterly advance tax not paid.',
@@ -49,7 +49,7 @@ def upgrade():
     
     for rule in rules:
         op.execute(f"""
-        INSERT INTO legal_rules (rule_id, rule_name, rule_type, statutory_basis, description, 
+        INSERT INTO legal_rules (rule_id, rule_name, rule_type, statutory_basis, description,
                                   default_severity, score_impact, revenue_tier, is_black_override, created_at)
         VALUES ('{rule[0]}', '{rule[1]}', '{rule[2]}', '{rule[3]}', '{rule[4]}',
                 '{rule[5]}', {rule[6]}, '{rule[7]}', {str(rule[8]).lower()}, NOW())
@@ -59,7 +59,7 @@ def upgrade():
 
 def downgrade():
     op.execute("""
-    DELETE FROM legal_rules WHERE rule_id IN 
-    ('TAX-003', 'TAX-004', 'DEF-001', 'DEF-002', 'CHG-001', 
+    DELETE FROM legal_rules WHERE rule_id IN
+    ('TAX-003', 'TAX-004', 'DEF-001', 'DEF-002', 'CHG-001',
      'STR-001', 'STR-002', 'STR-003', 'CAP-003', 'INC-007');
     """)

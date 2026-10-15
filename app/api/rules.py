@@ -6,11 +6,11 @@ AI Constitution Article 1: Only Super Admin may modify rules.
 Every change creates an immutable legal_rule_versions snapshot.
 
 Endpoints:
-  GET   /rules                    List all 59 ILRMF rules
+  GET   /rules                    List all 86 ILRMF rules
   GET   /rules/{rule_id}          Get single rule with version history
   PATCH /rules/{rule_id}          Update a rule (SUPER_ADMIN only — creates version snapshot)
   GET   /rules/{rule_id}/history  Rule version history
-  GET   /rules/black-overrides    List the 4 BLACK override rules
+  GET   /rules/black-overrides    List all BLACK override rules
   GET   /rules/summary            Aggregate stats per rule type / severity
 
 Governance notes:
@@ -21,7 +21,6 @@ Governance notes:
 """
 
 
-from typing import TYPE_CHECKING
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -37,10 +36,6 @@ from app.models.enums import SeverityLevel
 from app.models.user import User
 from app.services.notification_service import ActivityService
 from app.services.rules_service import RulesService
-
-if TYPE_CHECKING:
-    pass
-
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -142,7 +137,7 @@ def _rule_to_response(rule) -> RuleResponse:
     "",
     response_model=list[RuleResponse],
     summary="List all ILRMF legal rules",
-    description="Returns all 59 rules. No auth restriction — clients may see rule metadata.",
+    description="Returns all 86 rules. No auth restriction — clients may see rule metadata.",
 )
 async def list_rules(
     rule_type: str | None = None,
@@ -294,7 +289,7 @@ async def update_rule(
 
     updated_rule = await svc.update_rule(
         rule_id=rule_id,
-        updates=update_data,
+        **update_data,
         change_reason=body.change_reason,
         changed_by=current_user.id,
     )
@@ -348,12 +343,12 @@ async def get_rule_history(
             version_id=str(v.id),
             rule_id=v.rule_id,
             version=v.version,
-            previous_severity=v.previous_severity,
-            new_severity=v.new_severity,
-            previous_score_impact=v.previous_score_impact,
-            new_score_impact=v.new_score_impact,
+            previous_severity=v.previous_severity,  # type: ignore[attr-defined]
+            new_severity=v.new_severity,  # type: ignore[attr-defined]
+            previous_score_impact=v.previous_score_impact,  # type: ignore[attr-defined]
+            new_score_impact=v.new_score_impact,  # type: ignore[attr-defined]
             change_reason=v.change_reason,
-            changed_by_id=str(v.changed_by_id),
+            changed_by_id=str(v.changed_by_id),  # type: ignore[attr-defined]
             changed_at=v.changed_at.isoformat(),
         )
         for v in versions

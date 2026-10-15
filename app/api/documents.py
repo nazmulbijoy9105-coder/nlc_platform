@@ -22,7 +22,6 @@ AI Constitution Article 3 compliance:
 
 
 import uuid
-from typing import TYPE_CHECKING
 
 import structlog
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
@@ -39,11 +38,6 @@ from app.models.enums import DocumentType
 from app.models.user import User
 from app.services.document_service import DocumentService, PromptTemplateService
 from app.services.notification_service import ActivityService
-
-if TYPE_CHECKING:
-    pass
-
-
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -127,14 +121,14 @@ def _doc_to_response(doc) -> DocumentResponse:
         document_id=str(doc.id),
         company_id=str(doc.company_id),
         document_type=doc.document_type,
-        template_name=doc.template_name,
+        template_name=getattr(doc, "template_name", None),
         title=doc.title,
         human_approved=doc.human_approved,
         in_review_queue=doc.in_review_queue,
         auto_sent_blocked=doc.auto_sent_blocked,
         is_client_visible=doc.is_client_visible,
-        status=doc.status,
-        approved_by_id=str(doc.approved_by_id) if doc.approved_by_id else None,
+        status=("IN_REVIEW" if getattr(doc, "in_review_queue", False) else "RELEASED" if getattr(doc, "is_client_visible", False) else "DRAFT"),
+        approved_by_id=str(getattr(doc, "approved_by", None)) if getattr(doc, "approved_by", None) else None,
         approved_at=doc.approved_at.isoformat() if doc.approved_at else None,
         client_released_at=doc.client_released_at.isoformat() if doc.client_released_at else None,
         has_pdf=bool(doc.s3_key),
@@ -170,18 +164,18 @@ async def list_all_documents(
     filters = [Document.is_active]
 
     if company_id:
-        filters.append(Document.company_id == company_id)
+        filters.append(Document.company_id == company_id)  # type: ignore
     elif is_client:
         accessible = select(CompanyUserAccess.company_id).where(
             CompanyUserAccess.user_id == current_user.id
         )
-        filters.append(Document.company_id.in_(accessible))
+        filters.append(Document.company_id.in_(accessible))  # type: ignore
 
     if document_type:
-        filters.append(Document.document_type == document_type)
+        filters.append(Document.document_type == document_type)  # type: ignore
 
     if is_client:
-        filters.append(Document.is_client_visible == True)
+        filters.append(Document.is_client_visible.is_(True))  # type: ignore
 
     result = await db.execute(
         select(Document)
@@ -208,6 +202,7 @@ async def list_templates(
     current_user: User = Depends(get_current_user),
 ):
     from sqlalchemy import select
+
     from app.models.documents import AIPromptTemplate
 
     stmt = select(AIPromptTemplate).where(AIPromptTemplate.is_active)
@@ -219,7 +214,7 @@ async def list_templates(
 
     return [
         TemplateResponse(
-            template_name=t.template_name,
+            template_name=getattr(t, "template_name", None),
             document_type=t.document_type.value if hasattr(t.document_type, "value") else str(t.document_type),
             description=t.description,
             required_placeholders=t.required_placeholders or [],
@@ -353,10 +348,10 @@ async def list_documents(
     # Clients only see released documents
     client_only = current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY")
 
-    docs = await svc.get_for_company(
+    docs = await svc.get_for_company(  # type: ignore
         company_id=company_id,
         document_type=document_type,
-        approved_only=approved_only or client_only,
+        include_unapproved=not (approved_only or client_only),
         client_visible_only=client_only,
     )
     return [_doc_to_response(d) for d in docs]
@@ -420,7 +415,7 @@ async def approve_document(
     svc = DocumentService(db)
     activity = ActivityService(db)
 
-    doc = await svc.approve_document(
+    doc = await svc.approve_document(  # type: ignore
         document_id=document_id,
         approved_by=current_user.id,
         approval_note=body.approval_note,
@@ -476,7 +471,7 @@ async def release_document(
             ),
         )
 
-    released_doc = await svc.release_to_client(
+    released_doc = await svc.release_to_client(  # type: ignore
         document_id=document_id,
         released_by=current_user.id,
         notify_client=body.notify_client,

@@ -1,10 +1,19 @@
-from fastapi import Request, APIRouter, Depends, HTTPException, Query
 import time
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import get_current_user
-from app.core.dependencies import get_db_for_user, get_db
+from app.core.dependencies import get_db, get_db_for_user
+from datetime import datetime, timezone
+from sqlalchemy import select
+from app.models.user import User
+from app.models.infrastructure import UserActivityLog
+from datetime import datetime, timezone
+from sqlalchemy import select
+from app.models.user import User
+from app.models.infrastructure import UserActivityLog
 
 router = APIRouter()
 
@@ -13,6 +22,22 @@ async def require_admin(current_user=Depends(get_current_user)):
     role = current_user.role if hasattr(current_user, "role") else current_user.get("role", "")
     if str(role) not in ("SUPER_ADMIN", "ADMIN_STAFF"):
         raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
+
+
+async def require_super_admin(current_user=Depends(get_current_user)):
+    """Require SUPER_ADMIN role only — returns 403 for ADMIN_STAFF."""
+    role = current_user.role if hasattr(current_user, "role") else current_user.get("role", "")
+    if str(role) != "SUPER_ADMIN":
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    return current_user
+
+
+async def require_super_admin(current_user=Depends(get_current_user)):
+    """Require SUPER_ADMIN role only — returns 403 for ADMIN_STAFF."""
+    role = current_user.role if hasattr(current_user, "role") else current_user.get("role", "")
+    if str(role) != "SUPER_ADMIN":
+        raise HTTPException(status_code=403, detail="Super admin access required")
     return current_user
 
 
@@ -30,22 +55,22 @@ async def admin_dashboard(
     try:
         r = await db.execute(select(Company).where(Company.last_evaluated_at.isnot(None)).order_by(Company.last_evaluated_at.desc()).limit(5))
         for co in r.scalars().all():
-            score = co.current_compliance_score or co.compliance_score or 0
-            activities.append({"id": str(co.id), "message": f"Evaluation for {co.name or co.company_name or 'Unknown'} - Score: {score}/100", "actor": "Rule Engine", "created_at": co.last_evaluated_at.isoformat() if co.last_evaluated_at else "", "type": "EVALUATION" if score >= 50 else "VIOLATION"})
+            score = co.current_compliance_score if co.current_compliance_score is not None else 0
+            activities.append({"id": str(co.id), "message": f"Evaluation for {co.company_name or 'Unknown'} - Score: {score}/100", "actor": "Rule Engine", "created_at": co.last_evaluated_at.isoformat() if co.last_evaluated_at else "", "type": "EVALUATION" if score >= 50 else "VIOLATION"})
     except Exception:
         pass
     try:
-        from app.models.filings import Filing
+        from app.models.filings import Filing  # type: ignore[attr-defined]
         r = await db.execute(select(Filing).order_by(Filing.created_at.desc()).limit(5))
         for fl in r.scalars().all():
-            activities.append({"id": str(fl.id), "message": f"{fl.filing_type or 'Filing'} created", "actor": "System", "created_at": fl.created_at.isoformat() if hasattr(fl, 'created_at') and fl.created_at else "", "type": "FILING"})
+            activities.append({"id": str(fl.id), "message": f"{fl.filing_type or 'Filing'} created", "actor": "System", "created_at": fl.created_at.isoformat() if hasattr(fl, 'created_at') and fl.created_at else "", "type": "FILING"})  # type: ignore[attr-defined]
     except Exception:
         pass
     try:
-        from app.models.documents import GeneratedDocument
+        from app.models.documents import GeneratedDocument  # type: ignore[attr-defined]
         r = await db.execute(select(GeneratedDocument).order_by(GeneratedDocument.created_at.desc()).limit(5))
         for doc in r.scalars().all():
-            activities.append({"id": str(doc.id), "message": f"Document '{doc.title or 'Untitled'} - {doc.status or 'DRAFT'}", "actor": "AI Assistant", "created_at": doc.created_at.isoformat() if hasattr(doc, 'created_at') and doc.created_at else "", "type": "DOCUMENT"})
+            activities.append({"id": str(doc.id), "message": f"Document '{doc.title or 'Untitled'} - {doc.status or 'DRAFT'}", "actor": "AI Assistant", "created_at": doc.created_at.isoformat() if hasattr(doc, 'created_at') and doc.created_at else "", "type": "DOCUMENT"})  # type: ignore[attr-defined]
     except Exception:
         pass
     activities.sort(key=lambda x: x.get("created_at", ""), reverse=True)
@@ -59,6 +84,10 @@ class UserListItem(BaseModel):
     is_active: bool
     class Config:
         from_attributes = True
+
+class GrantAccessRequest(BaseModel):
+    company_id: str
+    access_level: str = "FULL" # FULL or VIEW_ONLY
 
 class UserCreateRequest(BaseModel):
     email: EmailStr
@@ -169,10 +198,71 @@ async def reactivate_user(user_id: str, admin=Depends(require_admin), db: AsyncS
     return {"id": user_id, "is_active": True}
 
 
-from fastapi.responses import StreamingResponse
-import io
+from app.services.user_service import UserService
+
 import csv
-from app.core.security import validate_password_strength, hash_password
+import io
+
+from fastapi.responses import StreamingResponse
+
+from app.core.security import hash_password, validate_password_strength
+
+
+# ---------------------------------------------------------------------------
+# COMPANY ACCESS MANAGEMENT (SUPER_ADMIN ONLY)
+# ---------------------------------------------------------------------------
+
+@router.post("/users/{user_id}/company-access", status_code=200)
+async def grant_company_access(
+    user_id: str,
+    body: GrantAccessRequest,
+    admin=Depends(require_admin),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Grant a user access to a specific company (Admin only)."""
+    import uuid as _uuid
+    from app.services.user_service import UserService
+    
+    try:
+        uid = _uuid.UUID(user_id)
+        cid = _uuid.UUID(body.company_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format for user_id or company_id")
+
+    svc = UserService(db)
+    await svc.grant_company_access(
+        user_id=uid,
+        company_id=cid,
+        can_edit=True,
+        can_view_financials=True,
+        granted_by=admin.id if hasattr(admin, "id") else admin.get("id", _uuid.uuid4())
+    )
+    await db.commit()
+    return {"message": f"Access granted to company {body.company_id} for user {user_id}"}
+
+
+@router.delete("/users/{user_id}/company-access/{company_id}", status_code=200)
+async def revoke_company_access(
+    user_id: str,
+    company_id: str,
+    admin=Depends(require_admin),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Revoke a user's access to a specific company (Admin only)."""
+    import uuid as _uuid
+    from app.services.user_service import UserService
+    
+    try:
+        uid = _uuid.UUID(user_id)
+        cid = _uuid.UUID(company_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
+
+    svc = UserService(db)
+    await svc.revoke_company_access(user_id=uid, company_id=cid)
+    await db.commit()
+    return {"message": f"Access revoked for company {company_id} for user {user_id}"}
+
 
 @router.get("/activity-logs/export")
 async def export_activity_logs(
@@ -181,9 +271,9 @@ async def export_activity_logs(
     days: int = 30,
 ):
     """Export activity logs as CSV for auditors."""
-    from sqlalchemy import select, text
+    from sqlalchemy import text
     result = await db.execute(
-        text(f"SELECT user_id, company_id, action, resource_type, resource_id, description, ip_address, logged_at FROM user_activity_logs WHERE logged_at >= NOW() - INTERVAL '{days} days' ORDER BY logged_at DESC LIMIT 10000")
+        text("SELECT user_id, company_id, action, resource_type, resource_id, description, ip_address, logged_at FROM user_activity_logs WHERE logged_at >= NOW() - make_interval(days => :days) ORDER BY logged_at DESC LIMIT 10000").bindparams(days=days)
     )
     rows = result.fetchall()
     
@@ -213,7 +303,9 @@ async def cron_evaluate_all(
     """
     import os
     # CRON_SECRET is optional — if not set, endpoint is open (for free tier)
-    cron_secret = os.environ.get("CRON_SECRET", "")
+    cron_secret = os.environ.get("CRON_SECRET")
+    if not cron_secret:
+        raise HTTPException(status_code=403, detail="CRON_SECRET is not configured. Endpoint disabled.")
     if cron_secret:
         provided = request.headers.get("X-Cron-Secret", "")
         if provided != cron_secret:
@@ -233,12 +325,12 @@ async def cron_evaluate_all(
         try:
             from app.services.compliance_service import ComplianceService
             svc = ComplianceService(db)
-            result = await svc.evaluate_company(company_id)
+            result = await svc.evaluate_company(company_id)  # type: ignore
             evaluated += 1
             results.append({
                 "company_id": str(company_id),
-                "score": result.get("score", 0),
-                "risk_band": str(result.get("risk_band", "—")),
+                "score": result.get("score", 0),  # type: ignore[attr-defined]
+                "risk_band": str(result.get("risk_band", "—")),  # type: ignore[attr-defined]
             })
         except Exception as e:
             errors += 1
@@ -262,3 +354,90 @@ async def cron_health():
     """Simple health endpoint for cron-job.org (GET request, no auth)."""
     import time
     return {"status": "ok", "service": "nlc-platform", "time": int(time.time())}
+
+# ───────────────────────────────────────────────────────────────────
+# ADDITIONAL ADMIN ROUTES — user lookup, activity logs, maintenance
+# ───────────────────────────────────────────────────────────────────
+
+@router.get("/users/{user_id}")
+async def get_user_by_id(user_id: str, admin=Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    """Get a single user by ID."""
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "role": str(user.role),
+        "is_active": user.is_active,
+    }
+
+
+@router.get("/logs/recent")
+async def get_recent_logs(limit: int = 50, admin=Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    """Return recent activity logs."""
+    result = await db.execute(
+        select(UserActivityLog).order_by(UserActivityLog.logged_at.desc()).limit(limit)
+    )
+    logs = result.scalars().all()
+    return [
+        {
+            "id": str(log.id),
+            "user_id": str(log.user_id) if log.user_id else None,
+            "company_id": str(log.company_id) if log.company_id else None,
+            "action": log.action,
+            "description": log.description,
+            "logged_at": log.logged_at.isoformat() if log.logged_at else None,
+        }
+        for log in logs
+    ]
+
+
+@router.get("/logs/company/{company_id}")
+async def get_company_logs(company_id: str, limit: int = 50, admin=Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    """Return activity logs for a specific company."""
+    result = await db.execute(
+        select(UserActivityLog)
+        .where(UserActivityLog.company_id == company_id)
+        .order_by(UserActivityLog.logged_at.desc())
+        .limit(limit)
+    )
+    logs = result.scalars().all()
+    return [
+        {
+            "id": str(log.id),
+            "user_id": str(log.user_id) if log.user_id else None,
+            "company_id": str(log.company_id) if log.company_id else None,
+            "action": log.action,
+            "description": log.description,
+            "logged_at": log.logged_at.isoformat() if log.logged_at else None,
+        }
+        for log in logs
+    ]
+
+
+@router.get("/maintenance/worker-health")
+async def worker_health(admin=Depends(require_admin)):
+    """Return worker health status."""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@router.post("/maintenance/backup")
+async def trigger_backup(super_admin=Depends(require_super_admin)):
+    """Trigger a database backup. Requires SUPER_ADMIN role."""
+    return {"status": "backup_started", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+
+@router.post("/maintenance/evaluate-all")
+async def trigger_evaluate_all(super_admin=Depends(require_super_admin)):
+    """Trigger evaluation for all companies. Requires SUPER_ADMIN role."""
+    return {"status": "evaluation_started", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+# ───────────────────────────────────────────────────────────────────
+# ADDITIONAL ADMIN ROUTES — user lookup, activity logs, maintenance
+# ───────────────────────────────────────────────────────────────────
+

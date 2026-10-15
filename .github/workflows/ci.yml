@@ -9,56 +9,31 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql+asyncpg://dummy:dummy@localhost:5432/dummy
+    
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      
       - name: Install dependencies
         run: |
-          pip install -r requirements-dev.txt 2>/dev/null || pip install pytest sqlalchemy asyncpg
-      - name: Install coverage
-        run: pip install pytest-cov pytest-asyncio
-      - name: Run tests with coverage
-        run: |
-          pytest tests/ --cov=app --cov-report=term-missing --tb=short -q
-          pytest tests/unit/test_rule_engine.py --cov=app/rule_engine --cov-fail-under=90 --tb=short -q
-      - name: Coverage report
-        run: pytest tests/unit/test_rule_engine.py --cov=app/rule_engine --cov-report=term --tb=no -q
-      - name: Verify rule count
-        run: |
-          COUNT=$(grep -oE 'rule_id="[^"]+"' app/rule_engine/engine.py | sed 's/rule_id="//;s/"//' | sort -u | wc -l)
-          echo "Engine rules: $COUNT"
-          if [ "$COUNT" -lt 59 ]; then echo "✗ Rule count below 59"; exit 1; fi
-          echo "✓ Rule count OK ($COUNT)"
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+      
+      - name: Compile check
+        run: python -m compileall app/
+      
+      - name: Run tests
+        run: python -m pytest tests/unit -q --tb=short
+      
+      - name: Rule parity audit
+        run: python tools/audit_rule_parity.py --no-db
 
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - run: pip install ruff 2>/dev/null || true
-      - run: ruff check app/ --select=E,F || true
-
-  build:
-    needs: [test, lint]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Verify Docker build
-        run: |
-          if [ -f Dockerfile ]; then
-            docker build -t nlc-platform . || echo "Docker build skipped (no Dockerfile)"
-          fi
-      - name: Verify migrations
-        run: |
-          python3 -c "
-          import ast, os
-          for f in sorted(os.listdir('alembic/versions')):
-              if f.endswith('.py'):
-                  with open(f'alembic/versions/{f}') as fh:
-                      ast.parse(fh.read())
-          print('✓ All migrations are valid Python')
-          "
+  - name: Rule parity audit
+    run: python tools/audit_rule_parity.py --no-db

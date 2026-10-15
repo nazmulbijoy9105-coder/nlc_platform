@@ -12,7 +12,7 @@ Provides fixtures for:
 
 Test database strategy:
   - Uses separate database: nlc_test (must exist before running tests)
-  - DATABASE_URL_TEST env var or auto-derived from DATABASE_URL with "_test" suffix
+  - DATABASE_URL_TEST env var, else local nlc_test (never derived from DATABASE_URL)
   - Each test gets a transaction that is rolled back — no cleanup needed
   - Alembic migrations run once per session (not per test)
 
@@ -25,6 +25,7 @@ Usage:
 """
 
 from __future__ import annotations
+from datetime import date
 
 import asyncio
 import os
@@ -36,7 +37,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -57,22 +58,21 @@ os.environ.setdefault("LOG_LEVEL", "WARNING")
 # ---------------------------------------------------------------------------
 
 def _get_test_db_url() -> str:
-    """
-    Derive test database URL.
-    Priority: DATABASE_URL_TEST env var → DATABASE_URL with _test suffix.
-    """
-    explicit = os.getenv("DATABASE_URL_TEST")
-    if explicit:
-        return explicit
-    base = os.getenv(
-        "DATABASE_URL",
-        "postgresql+asyncpg://nlc_user:nlc_password@localhost:5432/nlc_db",
+    """Test DB URL. Never derived from DATABASE_URL (it may be production)."""
+    return os.getenv(
+        "DATABASE_URL_TEST",
+        "postgresql+asyncpg://nlc_user:nlc_password@localhost:5432/nlc_test",
     )
-    # Replace database name with test database
-    return base.rsplit("/", 1)[0] + "/nlc_test"
 
 
 TEST_DATABASE_URL = _get_test_db_url()
+
+from sqlalchemy.engine import make_url as _make_url
+
+assert _make_url(TEST_DATABASE_URL).host in ("localhost", "127.0.0.1"), \
+    "tests must run against a local database"
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+os.environ.setdefault("JWT_SECRET_KEY", "ci-only-" + "x" * 40)
 
 
 # ---------------------------------------------------------------------------
@@ -111,6 +111,23 @@ async def test_engine():
     except Exception as e:
         pytest.skip(f"Test database not reachable: {e}. Run: make migrate (test DB)")
 
+    # Build/upgrade schema from migrations (idempotent: no-op when already at head).
+    # Subprocess avoids event-loop clashes with the async alembic/env.py.
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    db_name = _make_url(TEST_DATABASE_URL).database or ""
+    assert db_name.endswith("_test"), f"refusing to migrate non-test DB: {db_name!r}"
+    proc = subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        cwd=Path(__file__).resolve().parent.parent,
+        env={**os.environ, "DATABASE_URL": TEST_DATABASE_URL},
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+    )
+    if proc.returncode != 0:
+        pytest.fail(f"alembic upgrade head failed:\n{proc.stdout}\n{proc.stderr}", pytrace=False)
+
     yield engine
     await engine.dispose()
 
@@ -143,10 +160,15 @@ async def db(test_engine) -> AsyncGenerator[AsyncSession, None]:
 # Security helpers (tokens)
 # ---------------------------------------------------------------------------
 
+def _role_user_id(role: str) -> uuid.UUID:
+    """Stable per-role user id so api_client can seed a matching DB user."""
+    return uuid.uuid5(uuid.NAMESPACE_DNS, f"nlc-test-user-{role}")
+
+
 def _make_token(role: str, user_id: str | None = None, company_ids: list[str] | None = None) -> str:
     """Generate a real JWT token for testing (uses actual security module)."""
     from app.core.security import create_access_token
-    uid = user_id or str(uuid.uuid4())
+    uid = user_id or str(_role_user_id(role))
     email = f"test_{role.lower()}@nlctest.com"
     companies = company_ids or []
     return create_access_token({
@@ -224,22 +246,42 @@ async def api_client(db) -> AsyncGenerator[AsyncClient, None]:
     Celery tasks are mocked to run eagerly (no worker needed).
     """
     from app.core.dependencies import get_db, get_db_for_user
+    from app.models.database import get_db as auth_get_db
     from app.main import create_app
+
+    from app.models.enums import UserRole
+    from app.models.user import User
+
+    # Seed one DB user per role so role tokens resolve in get_current_user.
+    for _role in UserRole:
+        _uid = _role_user_id(_role.value)
+        if await db.get(User, _uid) is None:
+            db.add(User(
+                id=_uid,
+                email=f"seed_{_role.value.lower()}@nlctest.com",
+                full_name=f"Seed {_role.value}",
+                password_hash="!seeded-no-login",
+                role=_role,
+                is_active=True,
+                totp_enabled=False,
+            ))
+    await db.flush()
 
     app = create_app()
 
-    # Override DB dependency with test session
+    # Override all DB dependency objects used by the API with the test transaction.
     async def _override_db():
         yield db
 
     app.dependency_overrides[get_db] = _override_db
     app.dependency_overrides[get_db_for_user] = _override_db
+    app.dependency_overrides[auth_get_db] = _override_db
 
     # Patch Celery tasks to be no-ops
     with patch("app.worker.tasks.evaluate_company_compliance.apply_async", return_value=MagicMock(id="test-task")), \
          patch("app.worker.tasks.generate_ai_document_async.apply_async", return_value=MagicMock(id="test-task")), \
          patch("app.worker.tasks.render_pdf.apply_async", return_value=MagicMock(id="test-task")):
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             yield client
 
 
@@ -298,7 +340,6 @@ def build_profile():
             "auditor_reappointed_at_agm": True,
             "accounts_adopted_at_agm": True,
             # Audit — fully compliant
-            "first_auditor_appointed": True,
             "audit_complete": True,
             "last_audit_signed_date": today - timedelta(days=90),
             "audit_in_progress": False,
@@ -325,19 +366,50 @@ def build_profile():
             "is_fdi_registered": False,
             # Registers & certificates
             "maintained_registers": ["members", "directors", "charges", "transfers", "debentures", "minutes_agm", "minutes_board"],
-            "trade_license_obtained": True,
             "agm_minutes_prepared": True,
-            "tin_obtained": True,
             "tax_return_filed_for_current_fy": True,
             "advance_tax_q1_paid": True,
             "advance_tax_q2_paid": True,
             "advance_tax_q3_paid": True,
             "advance_tax_q4_paid": True,
+            "vat_annual_return_filed_for_fy": True,
+            "tin_number": "TIN-TEST-001",
+            "trade_license_expiry": today + timedelta(days=200),
+            "last_tax_return_filed_year": today.year - 1,
             "last_allotment_date": None,
-            "share_certificates_issued": True,
             # Capital
             "capital_increase_date": None,
             "capital_increase_resolution": True,
+            "first_auditor_appointed": True,
+            "tin_obtained": True,
+            "vat_registered": True,
+            "trade_license_obtained": True,
+            "form_iii_filed": True,
+            "form_iv_filed": True,
+            "moa_aoa_filed": True,
+            "share_certificates_issued": True,
+            "minimum_directors_met": True,
+            "paid_up_ge_authorized": True,
+            "register_of_directors_interests": True,
+            "register_of_contracts": True,
+            "worker_compensation_filed": True,
+            "bsec_quarterly_report_filed": True,
+            "cg_certificate_obtained": True,
+            "board_independent_director": True,
+            "audit_committee_established": True,
+            "current_director_count": 3,
+            "factory_license_obtained": True,
+            # New fields (Section 95/96/89/181/183/190/93/104/110/222/150)
+            "last_board_meeting_date": date.today() - timedelta(days=30),
+            "board_meeting_notice_given": True,
+            "board_minutes_prepared": True,
+            "financial_statements_presented": True,
+            "financial_statements_filed": True,
+            "books_of_account_kept": True,
+            "director_consent_filed": True,
+            "director_office_of_profit": False,
+            "member_count": 5,
+            "business_commencement_declaration_filed": True,
         }
         defaults.update(overrides)
         return CompanyProfile(**defaults)
@@ -452,7 +524,7 @@ async def db_company(db: AsyncSession) -> Company:
         incorporation_date=today - timedelta(days=365 * 2),
         registered_address="123 Test Street, Dhaka, Bangladesh",
         company_type="PRIVATE_LIMITED",
-        financial_year_end="12-31",
+        financial_year_end=date(2025, 12, 31),
         current_compliance_score=85,
         current_risk_band=RiskBand.GREEN,
         company_status=CompanyStatus.ACTIVE,
@@ -468,7 +540,7 @@ async def db_company(db: AsyncSession) -> Company:
 @pytest_asyncio.fixture
 async def db_user(db: AsyncSession) -> User:
     """Create a User row in the test DB."""
-    from app.core.security import get_password_hash
+    from app.core.security import hash_password
     from app.models.enums import UserRole
     from app.models.user import User
 
@@ -476,7 +548,7 @@ async def db_user(db: AsyncSession) -> User:
         id=uuid.uuid4(),
         email=f"test_{uuid.uuid4().hex[:6]}@nlctest.com",
         full_name="Test User",
-        hashed_password=get_password_hash("TestPassword123!"),
+        password_hash=hash_password("TestPassword123!"),
         role=UserRole.ADMIN_STAFF,
         is_active=True,
         totp_enabled=False,
@@ -489,7 +561,7 @@ async def db_user(db: AsyncSession) -> User:
 @pytest_asyncio.fixture
 async def db_super_admin(db: AsyncSession) -> User:
     """Create a Super Admin user in the test DB."""
-    from app.core.security import get_password_hash
+    from app.core.security import hash_password
     from app.models.enums import UserRole
     from app.models.user import User
 
@@ -497,7 +569,7 @@ async def db_super_admin(db: AsyncSession) -> User:
         id=uuid.uuid4(),
         email=f"superadmin_{uuid.uuid4().hex[:6]}@nlctest.com",
         full_name="Super Admin",
-        hashed_password=get_password_hash("SuperSecret123!"),
+        password_hash=hash_password("SuperSecret123!"),
         role=UserRole.SUPER_ADMIN,
         is_active=True,
         totp_enabled=False,
@@ -599,3 +671,19 @@ def assert_helpers():
         "flag_not_triggered": assert_flag_not_triggered,
         "risk_band": assert_risk_band,
     }
+
+
+# ---------------------------------------------------------------------------
+# Skip integration tests in CI environment (requires PostgreSQL)
+# ---------------------------------------------------------------------------
+
+import os
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip integration tests in CI environment."""
+    if os.getenv("CI"):
+        skip_integration = pytest.mark.skip(reason="Requires database in CI")
+        for item in items:
+            if "integration" in str(item.fspath):
+                item.add_marker(skip_integration)

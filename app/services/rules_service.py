@@ -37,7 +37,7 @@ class RulesService(BaseService[LegalRule]):
         if is_active is not None:
             filters.append(LegalRule.is_active == is_active)
         elif active_only:
-            filters.append(LegalRule.is_active == True)
+            filters.append(LegalRule.is_active.is_(True))
         if rule_type:
             filters.append(LegalRule.rule_type == rule_type)
         if severity:

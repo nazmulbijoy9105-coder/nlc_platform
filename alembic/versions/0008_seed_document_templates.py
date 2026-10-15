@@ -6,7 +6,6 @@ Create Date: 2026-07-03 22:30:00.000000
 
 """
 from alembic import op
-import sqlalchemy as sa
 
 revision = '0008_seed_document_templates'
 down_revision = '0007_fix_tl_inc003_rules'
@@ -15,10 +14,10 @@ depends_on = None
 
 def upgrade() -> None:
     op.execute("""
-        INSERT INTO ai_prompt_templates 
-        (id, template_name, document_type, version, system_prompt, user_prompt_template, 
+        INSERT INTO ai_prompt_templates
+        (id, template_name, document_type, version, system_prompt, user_prompt_template,
          liability_disclaimer, is_active, created_at, updated_at)
-        VALUES 
+        VALUES
         (gen_random_uuid(), 'AGM Minutes', 'AGM_MINUTES', '1.0',
          'You are a legal document assistant for Bangladesh companies. Generate AGM minutes compliant with Companies Act 1994 Section 83.',
          'Generate AGM minutes for {COMPANY_NAME} (Company No: {COMPANY_NUMBER}) for FY {FY}. Date: {DATE}. Directors Present: {DIRECTORS}. Resolutions: {RESOLUTIONS}.',

@@ -30,6 +30,7 @@ from app.core.config import get_settings
 from app.models.documents import AIOutputLog, AIPromptTemplate, Document, DocumentAccessLog
 from app.models.enums import AiModel, DocumentType
 from app.services.base import BaseService
+from app.integrations.rjsc_forms_registry import get_form_for_rule
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -153,6 +154,9 @@ class DocumentService(BaseService[Document]):
         # ── Step 6: Append liability disclaimer ───────────────────
         final_content += f"\n\n---\n\n{template.liability_disclaimer}"
 
+        # ── Step 6.5: Attach statutory form mapping (if applicable) ─
+        statutory_form = get_form_for_rule(parameters.get("triggered_rule_id", ""))
+        
         # ── Step 7: Store document (AI Constitution Article 3) ─────
         document = await self.create(
             company_id=company_id,
@@ -262,20 +266,26 @@ class DocumentService(BaseService[Document]):
         """
         Generate a pre-signed S3 URL (15-min expiry) for secure document download.
         Never expose direct S3 paths.
+        AI Constitution Article 3: Unapproved AI documents cannot be downloaded.
         """
         doc = await self.get_by_id_or_404(document_id)
         if not doc.s3_key:
             raise ValueError("Document has not been uploaded to S3 yet.")
+        if doc.ai_generated and not doc.human_approved:
+            raise ValueError("AI Constitution violation: Unapproved AI document cannot be downloaded.")
         return await _presign_s3_url(doc.s3_key, self._settings)
 
     async def generate_pdf_and_presign(self, document_id: uuid.UUID) -> str:
         """
         Generate a branded PDF from the document content and return a presigned URL.
         _generate_pdf_and_presign stub implementation.
+        AI Constitution Article 3: Unapproved AI documents cannot be rendered to PDF.
         """
         doc = await self.get_by_id_or_404(document_id)
         if not doc.s3_key:
             raise ValueError("Document must be uploaded before PDF generation.")
+        if doc.ai_generated and not doc.human_approved:
+            raise ValueError("AI Constitution violation: Unapproved AI document cannot be rendered to PDF.")
 
         # Download current content from S3
         content = await _download_from_s3(doc.s3_key, self._settings)
@@ -299,6 +309,7 @@ class DocumentService(BaseService[Document]):
         *,
         document_type: DocumentType | None = None,
         include_unapproved: bool = False,
+        client_visible_only: bool = False,
     ) -> list[Document]:
         """Get all documents for a company."""
         filters = [
@@ -307,7 +318,7 @@ class DocumentService(BaseService[Document]):
         ]
         if document_type:
             filters.append(Document.document_type == document_type)
-        if not include_unapproved:
+        if not include_unapproved or client_visible_only:
             filters.append(Document.is_client_visible)
 
         result = await self.db.execute(
@@ -362,7 +373,7 @@ async def _call_openai(system_prompt: str, user_prompt: str, settings) -> str:
             json=payload,
         )
         resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
+        return resp.json()["choices"][0]["message"]["content"]  # type: ignore
 
 
 async def _call_anthropic(system_prompt: str, user_prompt: str, settings) -> str:
@@ -385,7 +396,7 @@ async def _call_anthropic(system_prompt: str, user_prompt: str, settings) -> str
             json=payload,
         )
         resp.raise_for_status()
-        return resp.json()["content"][0]["text"]
+        return resp.json()["content"][0]["text"]  # type: ignore
 
 
 async def _call_local_llm(system_prompt: str, user_prompt: str, settings) -> str:
@@ -404,7 +415,7 @@ async def _call_local_llm(system_prompt: str, user_prompt: str, settings) -> str
             json=payload,
         )
         resp.raise_for_status()
-        return resp.json()["message"]["content"]
+        return resp.json()["message"]["content"]  # type: ignore
 
 
 async def _log_ai_call(
@@ -536,7 +547,7 @@ async def _download_from_s3(s3_key: str, settings) -> str:
         aws_secret_access_key=settings.aws_secret,
     )
     response = client.get_object(Bucket=settings.s3_bucket_name, Key=s3_key)
-    return response["Body"].read().decode("utf-8")
+    return response["Body"].read().decode("utf-8")  # type: ignore
 
 
 async def _presign_s3_url(s3_key: str, settings) -> str:
@@ -548,7 +559,7 @@ async def _presign_s3_url(s3_key: str, settings) -> str:
         aws_access_key_id=settings.aws_key_id,
         aws_secret_access_key=settings.aws_secret,
     )
-    return client.generate_presigned_url(
+    return client.generate_presigned_url(  # type: ignore
         "get_object",
         Params={"Bucket": settings.s3_bucket_name, "Key": s3_key},
         ExpiresIn=settings.s3_presigned_url_expire_seconds,
@@ -590,4 +601,4 @@ async def _render_pdf(content: str, title: str, settings) -> bytes:
         html = template.render(title=title, content=content)
 
     pdf = weasyprint.HTML(string=html).write_pdf()
-    return pdf
+    return pdf  # type: ignore

@@ -63,6 +63,7 @@ class CompanyService(BaseService[Company]):
             incorporation_date=incorporation_date,
             financial_year_end=financial_year_end,
             registered_address=registered_address,
+            register_location="registered_office",
             industry_sector=industry_sector,
             tin_number=tin_number,
             authorized_capital_bdt=authorized_capital_bdt,
@@ -154,29 +155,29 @@ class CompanyService(BaseService[Company]):
         filters = [Company.is_active]
 
         if risk_band:
-            filters.append(Company.current_risk_band == risk_band)
+            filters.append(Company.current_risk_band == risk_band)  # type: ignore
         if company_status:
-            filters.append(Company.company_status == company_status)
+            filters.append(Company.company_status == company_status)  # type: ignore
         if revenue_tier:
-            filters.append(Company.revenue_tier == revenue_tier)
+            filters.append(Company.revenue_tier == revenue_tier)  # type: ignore
         if is_dormant is not None:
             dormant_filter = Company.company_status == CompanyStatus.DORMANT
-            filters.append(dormant_filter if is_dormant else Company.company_status != CompanyStatus.DORMANT)
+            filters.append(dormant_filter if is_dormant else Company.company_status != CompanyStatus.DORMANT)  # type: ignore
         if rescue_required is not None:
-            filters.append(Company.rescue_required == rescue_required)
+            filters.append(Company.rescue_required == rescue_required)  # type: ignore
         if company_ids_filter is not None:
             uuids = [uuid.UUID(cid) for cid in company_ids_filter]
-            filters.append(Company.id.in_(uuids))
+            filters.append(Company.id.in_(uuids))  # type: ignore
         if user_id is not None:
             accessible_company_ids = select(CompanyUserAccess.company_id).where(
                 CompanyUserAccess.user_id == user_id
             )
-            filters.append(Company.id.in_(accessible_company_ids))
+            filters.append(Company.id.in_(accessible_company_ids))  # type: ignore
         if search and search.strip():
             # Use PostgreSQL full-text search on company_name_search vector
             search_term = search.strip()
             filters.append(
-                Company.company_name_search.match(search_term)
+                Company.company_name_search.match(search_term)  # type: ignore
                 | Company.registration_number.ilike(f"%{search_term}%")
             )
 
@@ -309,13 +310,8 @@ class CompanyService(BaseService[Company]):
         # ── AGM State ─────────────────────────────────────────────
         agms_sorted = sorted(company.agms, key=lambda a: a.financial_year, reverse=True)
         latest_agm = agms_sorted[0] if agms_sorted else None
-        agm_count = len([a for a in company.agms if a.agm_held])
-        if agm_count == 0 and company.last_agm_date:
-            agm_count = 1  # Has held AGM based on last_agm_date
-        if agm_count == 0 and company.last_agm_date:
-            agm_count = 1
-        if agm_count == 0 and company.last_agm_date:
-            agm_count = 1  # Company has held at least one AGM (based on last_agm_date)
+        has_agm_records = bool(company.agms) or company.last_agm_date is not None
+        agm_count = (len([a for a in company.agms if a.agm_held]) or (1 if company.last_agm_date else 0)) if has_agm_records else None
 
         # ── Audit State ───────────────────────────────────────────
         audits_sorted = sorted(company.audits, key=lambda a: a.financial_year, reverse=True)
@@ -347,7 +343,7 @@ class CompanyService(BaseService[Company]):
             from app.rule_engine import ShareTransfer as EngineTransfer
             share_transfers.append(EngineTransfer(
                 transfer_id=str(t.id),
-                transfer_date=t.transfer_date,
+                transfer_date=t.transfer_date,  # type: ignore
                 instrument_recorded=bool(t.has_transfer_instrument),
                 stamp_duty_paid=bool(t.stamp_duty_paid),
                 stamp_duty_amount=float(t.stamp_duty_amount_bdt) if t.stamp_duty_amount_bdt else None,
@@ -363,7 +359,7 @@ class CompanyService(BaseService[Company]):
             r.register_type for r in company.statutory_registers if r.is_maintained
         ] or ["members", "directors", "charges", "transfers", "debentures", "minutes_agm", "minutes_board"]
 
-        return {
+        profile = {
             # Identity
             "company_id":   str(company.id),
             "company_name": company.company_name,
@@ -377,64 +373,48 @@ class CompanyService(BaseService[Company]):
             "agm_count":                  agm_count,
             "last_agm_date":              company.last_agm_date,
             "agm_held_this_cycle":        latest_agm.agm_held if latest_agm else (company.last_agm_date is not None and (date.today() - company.last_agm_date).days <= 456),
-            "agm_scheduled_date":         latest_agm.agm_deadline if latest_agm else None,
-            "notice_sent_date":           latest_agm.notice_sent_date if latest_agm else None,
-            "members_present_at_agm":     latest_agm.members_present if latest_agm else 0,
-            "auditor_reappointed_at_agm": latest_agm.auditor_reappointed if latest_agm else False,
-            "accounts_adopted_at_agm":    getattr(latest_agm, 'accounts_adopted', False) if latest_agm else False,
             "agm_minutes_prepared":       bool(latest_agm.minutes_prepared) if latest_agm else False,
 
             # Audit State
             "first_auditor_appointed":    bool(company.first_auditor_appointed) if company.first_auditor_appointed is not None else True,
-            "audit_complete":             latest_audit.audit_complete if latest_audit else True,
+            "audit_complete":             latest_audit.audit_complete if latest_audit else None,
             "last_audit_signed_date":     company.last_audit_signed_date,
-            "audit_in_progress":          False,
 
             # Annual Return State
             "last_return_filed_year":         company.last_return_filed_year,
             "unfiled_returns_count":          unfiled_returns,
-            "annual_return_filed":            (latest_return is not None and not latest_return.is_default) if latest_return else True,
-            "annual_return_content_complete": latest_return.is_complete if latest_return else True,
+            "annual_return_filed":            (latest_return is not None and not latest_return.is_default) if latest_return else None,
+            "annual_return_content_complete": latest_return.is_complete if latest_return else None,
             "annual_return_filed_date":       latest_return.filed_date if latest_return else None,
 
             # People
             "director_changes": director_changes,
-            "shareholder_change_date": None,  # Would come from company_user_access events
-            "form_xv_filed": True,  # RJSC-only: assume filed            # Placeholder — implement from events
 
             # Share Transfers
             "share_transfers": share_transfers,
 
             # Office
-            "registered_office_change_date": None,
-            "form_vi_filed": True,  # RJSC-only: assume filed
 
             # Corporate structure
-            "aoa_transfer_restriction": True,
-            "has_foreign_shareholder":  any(
-                s.shareholder_type == "FOREIGN" for s in company.shareholders
-            ),
-            "is_dormant":   company.company_status == "DORMANT",
-            "is_fdi_registered": False,
 
             # Registers
             "maintained_registers":   maintained_registers,
-            "last_allotment_date":    None,
-            "share_certificates_issued": all(s.share_certificate_issued for s in company.shareholders) if company.shareholders else True,
 
             # Capital
-            "capital_increase_date":       None,
+            "authorized_capital_bdt":       float(company.authorized_capital_bdt) if company.authorized_capital_bdt else 0.0,
+            "paid_up_capital_bdt":          float(company.paid_up_capital_bdt) if company.paid_up_capital_bdt else 0.0,
+            "capital_increase_date":       getattr(company, "capital_increase_date", None),
             "capital_increase_resolution": getattr(company, 'capital_increase_resolution', False),
             "charges":                     [],
-            "form_viii_filed":             True,
+            # form_viii_filed removed — not a CompanyProfile field
 
             # Tax & director fields — prevent false positives
-            "tin_obtained":            True,  # RJSC-only: skip tax rules
+            "tin_obtained":            True if getattr(company, "tin_number", None) else None,
             "tin_number":              company.tin_number,
-            "vat_registered":          True,  # RJSC-only: skip VAT rules
+            "vat_registered":          True if getattr(company, "vat_number", None) else None,
             "vat_number":              getattr(company, "vat_number", None),
             # Tax Compliance v3
-            "trade_license_obtained":       True,  # RJSC-only: skip trade license
+            "trade_license_obtained":       True if getattr(company, "trade_license_obtained", None) else None,
             "trade_license_expiry":         company.trade_license_expiry,
             "tax_return_filed_for_current_fy": company.tax_return_filed_for_current_fy,
             "advance_tax_q1_paid":          company.advance_tax_q1_paid,
@@ -450,7 +430,219 @@ class CompanyService(BaseService[Company]):
             "tax_return_deadline_extended": company.tax_return_deadline_extended,
             # Enforcement
             "any_director_disqualified":    company.any_director_disqualified,
+            "disqualification_details": list(company.disqualification_details or []),
             "penalty_notices_received":     company.penalty_notices_received,
             "penalty_notices_resolved":     company.penalty_notices_resolved,
-            "current_director_count":  max(2, len([d for d in company.directors if d.director_status.value == "ACTIVE"])),
+            "current_director_count": len([d for d in company.directors if d.director_status.value == "ACTIVE"]) if company.directors else None,
+
+            # BSEC Corporate Governance
+            "bsec_listed":                   getattr(company, "bsec_listed", False),
+            "bsec_quarterly_report_filed":  getattr(company, "bsec_quarterly_report_filed", False),
+            "cg_certificate_obtained":     getattr(company, "cg_certificate_obtained", False),
+            "board_independent_director":   getattr(company, "board_independent_director", False),
+            "audit_committee_established":  getattr(company, "audit_committee_established", False),
+
+            # Labour Compliance
+            "factory_license_obtained":     getattr(company, "factory_license_obtained", None),
+            "factory_license_expiry":       getattr(company, "factory_license_expiry", None),
+            "labour_court_order_pending":   getattr(company, "labour_court_order_pending", False),
+            "worker_compensation_filed":    getattr(company, "worker_compensation_filed", False),
+
+            # Bankruptcy / Winding Up
+            "winding_up_petition_filed":    getattr(company, "winding_up_petition_filed", False),
+            "winding_up_petition_date":     getattr(company, "winding_up_petition_date", None),
+            "liquidator_appointed":         getattr(company, "liquidator_appointed", False),
+            "court_ordered_winding_up":     getattr(company, "court_ordered_winding_up", False),
+            "voluntary_winding_up":         getattr(company, "voluntary_winding_up", False),
+
+            # Escalation / Strike-Off
+            "on_rjsc_strike_off_list":      getattr(company, "on_rjsc_strike_off_list", False),
+            "rjsc_strike_off_notice_date":  getattr(company, "rjsc_strike_off_notice_date", None),
+            "rjsc_status":                  getattr(company, "rjsc_status", None),
+            "last_rjsc_compliance_date":    getattr(company, "last_rjsc_compliance_date", None),
+            "investigation_order":          getattr(company, "investigation_order", False),
+
+            # Foreign Exchange / FDI
+            "foreign_exchange_violation":    getattr(company, "foreign_exchange_violation", False),
+            "encashment_certificate_uploaded": getattr(company, "encashment_certificate_uploaded", False),
+            "encashment_certificate_date":  getattr(company, "encashment_certificate_date", None),
+            "bida_registered":              getattr(company, "bida_registered", False),
+            "fdi_registration_date":        getattr(company, "fdi_registration_date", None),
+            "remittance_amount_usd":        float(getattr(company, "remittance_amount_usd", None) or 0),
+            "foreign_shareholding_pct":     float(getattr(company, "foreign_shareholding_pct", None) or 0),
+
+            # RJSC Form Filings
+            "form_iii_filed":               getattr(company, "form_iii_filed", False),
+            "form_iii_filed_date":          getattr(company, "form_iii_filed_date", None),
+            "form_iv_filed":                getattr(company, "form_iv_filed", False),
+            "form_iv_filed_date":           getattr(company, "form_iv_filed_date", None),
+            "form_vi_filed":                getattr(company, "form_vi_filed", None),
+            "form_vi_filed_date":           getattr(company, "form_vi_filed_date", None),
+            "form_xv_filed":                getattr(company, "form_xv_filed", None),
+            "form_xv_filed_date":           getattr(company, "form_xv_filed_date", None),
+
+            # Annual Return Attachments
+            "balance_sheet_attached":       getattr(company, "balance_sheet_attached", False),
+            "schedule_x_attached":          getattr(company, "schedule_x_attached", False),
+            "directors_list_attached":      getattr(company, "directors_list_attached", False),
+            "shareholders_list_attached":   getattr(company, "shareholders_list_attached", False),
+            "profit_loss_attached":         getattr(company, "profit_loss_attached", False),
+
+            # Capital / Resolutions
+            "special_resolution_filed":     getattr(company, "special_resolution_filed", False),
+            "special_resolution_date":      getattr(company, "special_resolution_date", None),
+            "special_resolution_filed_date": getattr(company, "special_resolution_filed_date", None),
+            "capital_reduction_pending":    getattr(company, "capital_reduction_pending", False),
+            "capital_reduction_date":       getattr(company, "capital_reduction_date", None),
+            "capital_reduction_court_order_obtained": getattr(company, "capital_reduction_court_order_obtained", False),
+            "paid_up_ge_authorized":        getattr(company, "paid_up_ge_authorized", False),
+
+            # Corporate Structure Changes
+            "moa_aoa_filed":                getattr(company, "moa_aoa_filed", False),
+            "name_change_pending":          getattr(company, "name_change_pending", False),
+            "name_change_date":             getattr(company, "name_change_date", None),
+            "name_change_sr_passed":         getattr(company, "name_change_sr_passed", False),
+            "object_clause_change_pending": getattr(company, "object_clause_change_pending", False),
+            "object_clause_change_date":    getattr(company, "object_clause_change_date", None),
+            "aoa_alteration_pending":       getattr(company, "aoa_alteration_pending", False),
+            "aoa_alteration_date":          getattr(company, "aoa_alteration_date", None),
+
+            # Statutory Registers
+            "register_of_members_maintained": getattr(company, "register_of_members_maintained", True),
+            "register_of_directors_maintained": getattr(company, "register_of_directors_maintained", True),
+            "register_of_charges_maintained": getattr(company, "register_of_charges_maintained", True),
+            "register_of_contracts":        getattr(company, "register_of_contracts", True),
+            "register_of_directors_interests": getattr(company, "register_of_directors_interests", True),
+            "register_location":            getattr(company, "register_location", None),
+            "minutes_book_agm_maintained":  getattr(company, "minutes_book_agm_maintained", True),
+            "minutes_book_board_maintained": getattr(company, "minutes_book_board_maintained", True),
+
+            # AGM Details
+            "agm_adjourned_without_notice":  getattr(company, "agm_adjourned_without_notice", False),
+            "agm_scheduled_date":            getattr(company, "agm_scheduled_date", None),
+            "notice_sent_date":              getattr(company, "notice_sent_date", None),
+            "members_present_at_agm":        getattr(company, "members_present_at_agm", 0),
+            "auditor_reappointed_at_agm":    getattr(company, "auditor_reappointed_at_agm", False),
+            "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", False),
+
+            # Audit Details
+            "audit_in_progress":             getattr(company, "audit_in_progress", False),
+            "first_auditor_appointment_date": getattr(company, "first_auditor_appointment_date", None),
+            "auditor_name":                  getattr(company, "auditor_name", None),
+            "auditor_firm_reg_no":           getattr(company, "auditor_firm_reg_no", None),
+
+            # Financial
+            "annual_turnover_bdt":          float(getattr(company, "annual_turnover_bdt", None) or 0),
+            "last_tax_return_filed_year":   getattr(company, "last_tax_return_filed_year", None),
+
+            # Shareholders
+            "share_certificates_issued":     getattr(company, "share_certificates_issued", False),
+            "share_certificates_issued_date": getattr(company, "share_certificates_issued_date", None),
+
+            # Misc
+            "is_dormant":                    getattr(company, "is_dormant", False),
+            "aoa_transfer_restriction":       getattr(company, "aoa_transfer_restriction", False),
+            "is_fdi_registered":              getattr(company, "is_fdi_registered", False),
+            "last_allotment_date":            getattr(company, "last_allotment_date", None),
+            "registered_office_change_date":  getattr(company, "registered_office_change_date", None),
+            "shareholder_change_date":        getattr(company, "shareholder_change_date", None),
+            "has_foreign_shareholder":       getattr(company, "has_foreign_shareholder", False),
+            "capital_increase_special_resolution": getattr(company, "capital_increase_special_resolution", False),
+            "minimum_directors_met":        getattr(company, "minimum_directors_met", False),
+            "registered_office_address":    getattr(company, "registered_office_address", None),
+
         }
+
+        # Capital: set only when BOTH are recorded; a single NULL must not become 0.0
+        if company.authorized_capital_bdt is not None and company.paid_up_capital_bdt is not None:
+            profile["authorized_capital_bdt"] = float(company.authorized_capital_bdt)
+            profile["paid_up_capital_bdt"] = float(company.paid_up_capital_bdt)
+        # ── 0027: DEAD rule inputs (from new DB columns) ─────────────
+        profile.update({
+            "moa_aoa_filed": getattr(company, "moa_aoa_filed", None),
+            "capital_reduction_pending": getattr(company, "capital_reduction_pending", None),
+            "special_resolution_date": company.special_resolution_date,
+            "special_resolution_filed": getattr(company, "special_resolution_filed", None),
+            "register_of_directors_interests": getattr(company, "register_of_directors_interests", None),
+            "register_of_contracts": getattr(company, "register_of_contracts", None),
+            "winding_up_petition_filed": getattr(company, "winding_up_petition_filed", None),
+            "liquidator_appointed": getattr(company, "liquidator_appointed", None),
+            "court_ordered_winding_up": getattr(company, "court_ordered_winding_up", None),
+            "voluntary_winding_up": getattr(company, "voluntary_winding_up", None),
+            "investigation_order": getattr(company, "investigation_order", None),
+            "factory_license_obtained": getattr(company, "factory_license_obtained", None),
+            "factory_license_expiry": company.factory_license_expiry,
+            "labour_court_order_pending": getattr(company, "labour_court_order_pending", None),
+            "bsec_listed": getattr(company, "bsec_listed", None),
+            "bsec_quarterly_report_filed": getattr(company, "bsec_quarterly_report_filed", None),
+            "cg_certificate_obtained": getattr(company, "cg_certificate_obtained", None),
+            "board_independent_director": getattr(company, "board_independent_director", None),
+            "audit_committee_established": getattr(company, "audit_committee_established", None),
+            "agm_adjourned_without_notice": getattr(company, "agm_adjourned_without_notice", None),
+            "name_change_pending": getattr(company, "name_change_pending", None),
+            "name_change_date": company.name_change_date,
+            "name_change_sr_passed": company.name_change_sr_passed,
+            "object_clause_change_pending": getattr(company, "object_clause_change_pending", None),
+            "object_clause_change_date": company.object_clause_change_date,
+            "aoa_alteration_pending": getattr(company, "aoa_alteration_pending", None),
+            "aoa_alteration_date": company.aoa_alteration_date,
+            "foreign_exchange_violation": getattr(company, "foreign_exchange_violation", None),
+            "annual_turnover_bdt": float(company.annual_turnover_bdt) if company.annual_turnover_bdt else 0.0,
+        })
+
+        # ── 0028: Remaining compliance fields + derived fields ──
+        profile.update({
+            # AR-004 attachments
+            "balance_sheet_attached": company.balance_sheet_attached,
+            "directors_list_attached": company.directors_list_attached,
+            "profit_loss_attached": company.profit_loss_attached,
+            "schedule_x_attached": company.schedule_x_attached,
+            "shareholders_list_attached": company.shareholders_list_attached,
+            # FDI / Foreign shareholding
+            "has_foreign_shareholder": company.has_foreign_shareholder,
+            "foreign_shareholding_pct": float(company.foreign_shareholding_pct) if company.foreign_shareholding_pct else 0.0,
+            "encashment_certificate_uploaded": company.encashment_certificate_uploaded,
+            "encashment_certificate_date": company.encashment_certificate_date,
+            "bida_registered": company.bida_registered,
+            "is_fdi_registered": company.is_fdi_registered,
+            "fdi_registration_date": company.fdi_registration_date,
+            "remittance_amount_usd": float(company.remittance_amount_usd) if company.remittance_amount_usd else 0.0,
+            # Form filing status
+            "form_iii_filed": company.form_iii_filed,
+            "form_iv_filed": company.form_iv_filed,
+            # RJSC strike-off
+            "rjsc_status": company.rjsc_status or "ACTIVE",
+            "rjsc_strike_off_notice_date": company.rjsc_strike_off_notice_date,
+            "last_rjsc_compliance_date": company.last_rjsc_compliance_date,
+            # Director disqualification + penalties
+            "any_director_disqualified": company.any_director_disqualified,
+            "disqualification_details": company.disqualification_details or [],
+            "penalty_notices_received": company.penalty_notices_received or 0,
+            "penalty_notices_resolved": company.penalty_notices_resolved or 0,
+            # Capital reduction
+            "capital_reduction_date": company.capital_reduction_date,
+            "capital_reduction_court_order_obtained": company.capital_reduction_court_order_obtained,
+            # Winding up
+            "winding_up_petition_date": company.winding_up_petition_date,
+            # Derived fields (no DB column needed)
+            "tin_obtained": bool(company.tin_number) if company.tin_number is not None else None,
+            "vat_registered": bool(company.vat_number) if company.vat_number is not None else None,
+            "annual_return_filed": bool(company.last_return_filed_year) if company.last_return_filed_year is not None else None,
+        })
+
+        # ── 0031: Board/Accounts/Director extended fields ──
+        profile.update({
+            "last_board_meeting_date": company.last_board_meeting_date,
+            "board_meeting_notice_given": company.board_meeting_notice_given,
+            "board_minutes_prepared": company.board_minutes_prepared,
+            "financial_statements_presented": company.financial_statements_presented,
+            "financial_statements_filed": company.financial_statements_filed,
+            "books_of_account_kept": company.books_of_account_kept,
+            "director_consent_filed": company.director_consent_filed,
+            "director_office_of_profit": company.director_office_of_profit,
+            "managing_director_appointment_date": company.managing_director_appointment_date,
+            "member_count": company.member_count or 0,
+            "business_commencement_declaration_filed": company.business_commencement_declaration_filed,
+        })
+
+        return profile

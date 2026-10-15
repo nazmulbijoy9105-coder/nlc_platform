@@ -135,6 +135,7 @@ class ComplianceSummaryResponse(BaseModel):
     yellow_flags: int
     last_evaluated_at: str | None
     evaluation_triggered: bool = False
+    disclaimer: str = "Automated compliance screening. Not legal advice. Consult your legal counsel."
 
 
 class FlagResponse(BaseModel):
@@ -186,12 +187,20 @@ def _company_to_response(company) -> CompanyResponse:
         id=str(company.id),
         name=company.company_name,
         registration_number=company.registration_number,
-        incorporation_date=company.incorporation_date.isoformat() if company.incorporation_date else None,
+        incorporation_date=company.incorporation_date.isoformat() if company.incorporation_date else None,  # type: ignore
         compliance_score=company.current_compliance_score,
         band=_s(company.current_risk_band),
         last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
         director_count=director_count,
         violation_count=violation_count,
+        company_type=_s(getattr(company, "company_type", None)),
+        company_status=_s(getattr(company, "company_status", None)),
+        financial_year_end=company.financial_year_end.isoformat() if getattr(company, "financial_year_end", None) else None,
+        registered_address=getattr(company, "registered_address", None),
+        revenue_tier=_s(getattr(company, "revenue_tier", None)),
+        is_fdi_registered=getattr(company, "is_fdi_registered", None),
+        is_dormant=getattr(company, "is_dormant", None),
+        created_at=company.created_at.isoformat() if getattr(company, "created_at", None) else None,
         active_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE")]),
         black_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("BLACK", "Severity.BLACK")]),
         red_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("RED", "Severity.RED")]),
@@ -209,7 +218,7 @@ async def create_company(body: CompanyCreateRequest, request: Request, current_u
     company = await svc.create_company(
         company_name=body.company_name, registration_number=body.registration_number,
         incorporation_date=body.incorporation_date, registered_address=body.registered_address,
-        company_type=body.company_type, financial_year_end=body.financial_year_end,
+        company_type=body.company_type, financial_year_end=body.financial_year_end,  # type: ignore
         assigned_staff_id=body.assigned_staff_id,
     )
     _tax_fields = ["trade_license_obtained", "trade_license_expiry", "tax_return_filed_for_current_fy", "advance_tax_q1_paid", "advance_tax_q2_paid", "advance_tax_q3_paid", "advance_tax_q4_paid", "tds_deposited_up_to_date", "last_tds_deposit_date", "last_vat_return_filed", "vat_annual_return_filed_for_fy", "minimum_tax_paid", "tax_clearance_obtained", "tax_return_deadline_extended", "any_director_disqualified", "penalty_notices_received", "penalty_notices_resolved"]
@@ -280,9 +289,11 @@ async def evaluate_company(company_id: uuid.UUID, request: Request, current_user
     activity = ActivityService(db)
     company = await company_svc.get_by_id_or_404(company_id)
     result = await compliance_svc.evaluate_company(company_id=company_id, trigger_source="API_MANUAL")
+    
+    await db.refresh(company)
     await activity.log(action="COMPLIANCE_EVALUATED", resource_type="company", resource_id=str(company_id), description=f"Evaluation: Score={result['score']}, Band={result['risk_band']}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     flag_summary = await compliance_svc.get_flag_summary(company_id)
-    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=result["score"], risk_band=result["risk_band"], active_flags=flag_summary.get("total_active_flags", 0), black_flags=flag_summary.get("black_flags", 0), red_flags=flag_summary.get("red_flags", 0), yellow_flags=flag_summary.get("yellow_flags", 0), last_evaluated_at=None, evaluation_triggered=True)
+    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=result["score"], risk_band=result["risk_band"], active_flags=flag_summary.get("total_active_flags", 0), black_flags=flag_summary.get("black_flags", 0), red_flags=flag_summary.get("red_flags", 0), yellow_flags=flag_summary.get("yellow_flags", 0), last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, evaluation_triggered=True, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
 
 
 @router.get("/{company_id}/compliance", response_model=ComplianceSummaryResponse, dependencies=[Depends(require_company_access("company_id"))], summary="Get compliance state")
@@ -291,14 +302,14 @@ async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_d
     compliance_svc = ComplianceService(db)
     company = await company_svc.get_by_id_or_404(company_id)
     flag_summary = await compliance_svc.get_flag_summary(company_id)
-    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=company.current_compliance_score, risk_band=company.current_risk_band, active_flags=flag_summary.get("total_active_flags", 0), black_flags=flag_summary.get("black_flags", 0), red_flags=flag_summary.get("red_flags", 0), yellow_flags=flag_summary.get("yellow_flags", 0), last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None)
+    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=company.current_compliance_score, risk_band=company.current_risk_band, active_flags=flag_summary.get("total_active_flags", 0), black_flags=flag_summary.get("black_flags", 0), red_flags=flag_summary.get("red_flags", 0), yellow_flags=flag_summary.get("yellow_flags", 0), last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
 
 
 @router.get("/{company_id}/flags", response_model=list[FlagResponse], dependencies=[Depends(require_company_access("company_id"))], summary="Get active flags")
 async def get_flags(company_id: uuid.UUID, db: AsyncSession = Depends(get_db_for_user)):
     svc = ComplianceService(db)
     flags = await svc.get_active_flags(company_id)
-    return [FlagResponse(flag_id=str(f.id), rule_id=f.rule_id, rule_name=getattr(f, "description", f.flag_code) or f.flag_code, severity=f.severity.value if hasattr(f.severity, "value") else str(f.severity), score_impact=f.score_impact, status=f.flag_status.value if hasattr(f.flag_status, "value") else str(f.flag_status), is_black_override=getattr(f, "is_black_override", False), triggered_at=f.triggered_date.isoformat() if f.triggered_date else "", resolved_at=f.resolved_date.isoformat() if getattr(f, "resolved_date", None) else None, resolution_note=getattr(f, "resolution_notes", None)) for f in flags]
+    return [FlagResponse(flag_id=str(f.id), rule_id=f.rule_id, rule_name=getattr(f, "description", f.flag_code) or f.flag_code, severity=f.severity.value if hasattr(f.severity, "value") else str(f.severity), score_impact=f.score_impact, status=f.flag_status.value if hasattr(f.flag_status, "value") else str(f.flag_status), is_black_override=getattr(f, "is_black_override", False), triggered_at=f.triggered_date.isoformat() if f.triggered_date else "", resolved_at=f.resolved_date.isoformat() if getattr(f, "resolved_date", None) else None, resolution_note=getattr(f, "resolution_notes", None)) for f in flags]  # type: ignore
 
 
 @router.post("/{company_id}/flags/{flag_id}/resolve", response_model=MessageResponse, dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_company_access("company_id"))], summary="Resolve flag")
@@ -325,7 +336,7 @@ async def acknowledge_flag(company_id: uuid.UUID, flag_id: uuid.UUID, current_us
 async def get_score_history(company_id: uuid.UUID, months: int = Query(default=12, ge=1, le=60), db: AsyncSession = Depends(get_db_for_user)):
     svc = ComplianceService(db)
     history = await svc.get_score_history(company_id=company_id, months=months)
-    return [ScoreHistoryEntry(snapshot_month=h["month"], score=h["score"], risk_band=h["risk_band"], active_flags=h["active_flags"], black_flags=h["black_flags"], red_flags=0, yellow_flags=0, snapshot_date=h["calculated_at"]) for h in history]
+    return [ScoreHistoryEntry(snapshot_month=h["month"], score=h["score"], risk_band=h["risk_band"], active_flags=h["active_flags"], black_flags=h["black_flags"], red_flags=h.get('red_flags', 0), yellow_flags=h.get('yellow_flags', 0), snapshot_date=h["calculated_at"]) for h in history]
 
 
 @router.get("/dashboard/kpis", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Portfolio KPIs")
