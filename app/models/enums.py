@@ -229,3 +229,8 @@ class CalendarEventStatus(enum.StrEnum):
     OVERDUE    = "OVERDUE"
     COMPLETED  = "COMPLETED"
     WAIVED     = "WAIVED"
+
+class SubscriptionTier(enum.StrEnum):
+    FREE         = "FREE"
+    PRO          = "PRO"
+    ENTERPRISE   = "ENTERPRISE"

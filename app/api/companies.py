@@ -23,6 +23,7 @@ from app.models.user import User
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
 from app.services.notification_service import ActivityService
+from app.services.pdf_report_service import PDFReportService
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -331,6 +332,15 @@ async def acknowledge_flag(company_id: uuid.UUID, flag_id: uuid.UUID, current_us
         raise HTTPException(status_code=404, detail="Flag not found.")
     return MessageResponse(message=f"Flag acknowledged.")
 
+
+@router.get(
+    "/{company_id}/compliance-pdf",
+    dependencies=[Depends(require_company_access("company_id"))],
+    summary="Download Branded PDF Compliance Report"
+)
+async def download_compliance_pdf(company_id: uuid.UUID, db: AsyncSession = Depends(get_db_for_user)):
+    pdf_svc = PDFReportService(db)
+    return await pdf_svc.generate_company_compliance_pdf(str(company_id))
 
 @router.get("/{company_id}/score-history", response_model=list[ScoreHistoryEntry], dependencies=[Depends(require_company_access("company_id"))], summary="Score history")
 async def get_score_history(company_id: uuid.UUID, months: int = Query(default=12, ge=1, le=60), db: AsyncSession = Depends(get_db_for_user)):
