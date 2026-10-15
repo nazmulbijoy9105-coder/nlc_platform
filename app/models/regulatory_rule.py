@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime
 from sqlalchemy.sql import func
-from app.core.database import Base
+from .database import Base  # Fixed import path
 
 class RegulatoryRule(Base):
     __tablename__ = "regulatory_rules"
