@@ -164,7 +164,7 @@ STATUTORY_RESCUE_REGISTRY: Dict[str, Dict[str, Any]] = {
     "INC-001": {
         "rescue_id": "INC-RESCUE-001",
         "triggered_by": "INC-001",
-        "objective": "Remediate: Certificate of Incorporation Not Obtained",
+        "objective": "Remediate: File Memorandum and Articles of Association with RJSC",
         "prerequisites": [],
         "statutory_actions": [
             "review legal requirement",
