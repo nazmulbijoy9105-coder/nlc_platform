@@ -347,43 +347,43 @@ class Company(FullMixin, Base):
 
     # ── Relationships ─────────────────────────────────────────────
     user_access: Mapped[list[CompanyUserAccess]] = relationship(
-        "CompanyUserAccess", back_populates="company", lazy="selectin"
+        "CompanyUserAccess", back_populates="company", lazy="noload"
     )
     directors: Mapped[list[Director]] = relationship(
-        "Director", back_populates="company", lazy="selectin"
+        "Director", back_populates="company", lazy="noload"
     )
     shareholders: Mapped[list[Shareholder]] = relationship(
-        "Shareholder", back_populates="company", lazy="selectin"
+        "Shareholder", back_populates="company", lazy="noload"
     )
     share_transfers: Mapped[list[ShareTransfer]] = relationship(
         "ShareTransfer", back_populates="company", lazy="noload"
     )
     agms: Mapped[list[AGM]] = relationship(
-        "AGM", back_populates="company", lazy="selectin",
+        "AGM", back_populates="company", lazy="noload",
         order_by="AGM.financial_year.desc()"
     )
     audits: Mapped[list[Audit]] = relationship(
-        "Audit", back_populates="company", lazy="selectin"
+        "Audit", back_populates="company", lazy="noload"
     )
     annual_returns: Mapped[list[AnnualReturn]] = relationship(
-        "AnnualReturn", back_populates="company", lazy="selectin",
+        "AnnualReturn", back_populates="company", lazy="noload",
         order_by="AnnualReturn.financial_year.desc()"
     )
     compliance_flags: Mapped[list[ComplianceFlag]] = relationship(
-        "ComplianceFlag", back_populates="company", lazy="selectin"
+        "ComplianceFlag", back_populates="company", lazy="noload"
     )
     score_history: Mapped[list[ComplianceScoreHistory]] = relationship(
         "ComplianceScoreHistory", back_populates="company", lazy="noload",
         order_by="ComplianceScoreHistory.calculated_at.desc()"
     )
     rescue_plans: Mapped[list[RescuePlan]] = relationship(
-        "RescuePlan", back_populates="company", lazy="selectin"
+        "RescuePlan", back_populates="company", lazy="noload"
     )
     tasks: Mapped[list[Task]] = relationship(
         "Task", back_populates="company", lazy="noload"
     )
     engagements: Mapped[list[Engagement]] = relationship(
-        "Engagement", back_populates="company", lazy="selectin"
+        "Engagement", back_populates="company", lazy="noload"
     )
     documents: Mapped[list[Document]] = relationship(
         "Document", back_populates="company", lazy="noload"
@@ -392,7 +392,7 @@ class Company(FullMixin, Base):
         "Notification", back_populates="company", lazy="noload"
     )
     statutory_registers: Mapped[list[StatutoryRegister]] = relationship(
-        "StatutoryRegister", back_populates="company", lazy="selectin"
+        "StatutoryRegister", back_populates="company", lazy="noload"
     )
     office_history: Mapped[list[RegisteredOfficeHistory]] = relationship(
         "RegisteredOfficeHistory", back_populates="company", lazy="noload"

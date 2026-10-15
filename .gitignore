@@ -63,3 +63,4 @@ _audit_out/
 .env
 *.env*
 .env
+node_modules/
