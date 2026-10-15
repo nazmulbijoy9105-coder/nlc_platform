@@ -281,6 +281,17 @@ class ComplianceService(BaseService[ComplianceFlag]):
             from app.services.rescue_service import RescueService
             rescue_svc = RescueService(self.db)
             existing_plan = await rescue_svc.get_active_plan(company_id)
+            if existing_plan:
+                new_titles = {st.get('title') for st in (getattr(output, 'rescue_sequence', None) or [])}
+                old_titles = {st.step_title for st in existing_plan.steps}
+                untouched = existing_plan.completed_steps == 0 and all(
+                    getattr(st.step_status, 'value', st.step_status) == 'PENDING' for st in existing_plan.steps
+                )
+                if new_titles and new_titles != old_titles:
+                    if untouched:
+                        existing_plan = None
+                    else:
+                        logger.warning(f'Rescue plan out of sync with findings for company {company_id}; plan has progress, not regenerated')
             if not existing_plan:
                 try:
                     await rescue_svc.generate_rescue_plan(
