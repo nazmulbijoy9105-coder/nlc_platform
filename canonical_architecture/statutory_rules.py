@@ -116,8 +116,8 @@ STATUTORY_RULE_REGISTRY: Dict[str, Dict[str, Any]] = {
     "INC-001": {
         "rule_id": "INC-001",
         "legal_domain": "Corporate",
-        "law": "Section 9, Companies Act 1994 (Bangladesh)",
-        "requirement": "Certificate of Incorporation Not Obtained - Company commenced business without Certificate of Incorporation. Section 9: no business until certificate obtained. All pre-certificate contracts void.",
+        "law": "Section 23, Companies Act 1994 (Bangladesh)",
+        "requirement": "Memorandum and Articles of Association not filed with RJSC. Section 23: constitutional documents must be filed.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
