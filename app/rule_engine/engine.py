@@ -1897,6 +1897,10 @@ class NLCRuleEngine:
                     "rescue_id": rescue.get("rescue_id", ""),
                     "authority": rescue.get("authority", ""),
                     "closure_condition": rescue.get("closure_condition", ""),
+                    "statutory_basis": rescue.get("statutory_basis"),
+                    "complexity": rescue.get("complexity"),
+                    "estimated_days_min": rescue.get("estimated_days_min"),
+                    "estimated_days_max": rescue.get("estimated_days_max"),
                 })
         except ImportError as e:
             import logging
