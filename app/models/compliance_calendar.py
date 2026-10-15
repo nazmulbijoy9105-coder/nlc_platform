@@ -66,4 +66,4 @@ class ComplianceCalendarEvent(FullMixin, Base):
     assigned_to: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     reviewer_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
 
-    company: Mapped["Company"] = relationship("Company", back_populates="calendar_events")
+    company: Mapped["Company"] = relationship("Company")
