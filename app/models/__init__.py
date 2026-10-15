@@ -15,6 +15,8 @@ before Alembic migrations are generated.
 # ── Database infrastructure ─────────────────────────────────────────
 # ── Commercial (Tasks, Engagements, Quotations) ──────────────────────
 from .commercial import Engagement, Quotation, Task
+from .compliance_calendar import ComplianceCalendarEvent
+from .regulatory_rule import RegulatoryRule
 
 # ── Companies ────────────────────────────────────────────────────────
 from .company import Company, CompanyUserAccess
@@ -98,6 +100,7 @@ __all__ = [
     # Database
     "Base",
     "Company",                  # TABLE: companies
+    "ComplianceCalendarEvent",  # TABLE: compliance_calendar_events
     "CompanyStatus",
     "CompanyType",
     "CompanyUserAccess",        # TABLE: company_user_access
@@ -122,6 +125,7 @@ __all__ = [
     "NotificationChannel",
     "NotificationStatus",
     "Quotation",                # TABLE: quotations
+    "RegulatoryRule",           # TABLE: regulatory_rules
     "RJSCFormFiling",            # TABLE: share_transfers
     "RegisteredOfficeHistory",  # TABLE: registered_office_history
     "RescuePlan",               # TABLE: rescue_plans

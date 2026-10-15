@@ -31,6 +31,12 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+# Load project .env before importing app.models.
+# Existing shell environment variables always take precedence.
+from dotenv import load_dotenv
+
+load_dotenv(PROJECT_ROOT / ".env", override=False)
+
 # ── Import ALL models so Alembic sees them in metadata ────────────────
 # This is critical for autogenerate — every model must be imported here
 from app.models import (  # noqa: F401 — imports are for side-effects
@@ -154,6 +160,17 @@ def run_migrations_offline() -> None:
 # ── ONLINE MODE (ASYNC) ───────────────────────────────────────────────
 def do_run_migrations(connection: Connection) -> None:
     """Configure and run migrations using live connection."""
+    # Revision IDs here exceed alembic's default VARCHAR(32) version column.
+    # Create it wide on a fresh DB, widen it on an existing one. Idempotent.
+    connection.execute(text(
+        "CREATE TABLE IF NOT EXISTS alembic_version ("
+        "version_num VARCHAR(255) NOT NULL, "
+        "CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num))"
+    ))
+    connection.execute(text(
+        "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(255)"
+    ))
+    connection.commit()
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
