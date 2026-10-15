@@ -8,7 +8,7 @@ Populated with canonical legal data from seed corpus.
 """
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 
 class RuleState(str, Enum):
@@ -110,6 +110,8 @@ if len(STATUTORY_RULE_REGISTRY) != len(_RULES):
 
 
 def get_rule(rule_id: str) -> Optional[StatutoryRule]:
+    """Retrieve a statutory rule by its ID."""
+    return STATUTORY_RULE_REGISTRY.get(rule_id)
 STATUTORY_RULE_REGISTRY: Dict[str, Dict[str, Any]] = {
     "INC-001": {
         "rule_id": "INC-001",
