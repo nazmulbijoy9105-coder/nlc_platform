@@ -157,9 +157,6 @@ def get_rescue_plan(findings: Iterable[Finding],
 def can_close(rule_state: RuleState, verification_recorded: bool) -> bool:
     """R-019: close only on verified evidence that yields COMPLIANT."""
     return rule_state is RuleState.COMPLIANT and verification_recorded
-NLC - Legal Compliance & Rescue Platform
-Layer 3: Statutory Rescue Registry
-"""
 from typing import Any, Dict, List
 from canonical_architecture.statutory_rules import RuleState
 
