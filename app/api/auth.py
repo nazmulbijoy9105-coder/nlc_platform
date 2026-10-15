@@ -17,7 +17,7 @@ from app.core.security import (
     verify_password,
     verify_totp_code,
 )
-from app.models.database import get_db
+from app.models.database import get_db, set_rls_context
 from app.models.user import User
 from app.services.notification_service import ActivityService
 from app.services.user_service import UserService
@@ -111,6 +111,7 @@ async def login(request: Request,body: LoginBody, db=Depends(get_db)):
     
     # Record successful login
     await svc.record_login(verified_user)
+    await set_rls_context(db, str(verified_user.id))
     
     # Audit log
     try:
