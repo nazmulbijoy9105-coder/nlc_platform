@@ -196,7 +196,7 @@ class StatutoryRegister(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 class RegisteredOfficeHistory(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     """
     OFF-001: Every change to registered office address must be filed
-    with RJSC within 30 days.
+    with RJSC within 28 days.
     """
     __tablename__ = "registered_office_history"
 
@@ -212,7 +212,7 @@ class RegisteredOfficeHistory(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     change_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # ── Filing ────────────────────────────────────────────────────
-    # OFF-001: change not filed within 30 days
+    # OFF-001: change not filed within 28 days
     filed_with_rjsc: Mapped[bool] = mapped_column(Boolean, default=False)
     rjsc_filing_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     filing_delay_days: Mapped[int] = mapped_column(Integer, default=0)

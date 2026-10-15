@@ -537,10 +537,8 @@ async def mark_return_filed(
     annual_return = await svc.mark_filed(  # type: ignore
         return_id=return_id,
         filed_date=body.filed_date,
-        rjsc_acknowledgment_number=body.rjsc_acknowledgment_number,
-        late_fee_paid=body.late_fee_paid,
-        late_fee_amount=body.late_fee_amount,
-        filing_document_id=body.filing_document_id,
+        rjsc_receipt_number=body.rjsc_acknowledgment_number,
+        late_fee_paid_bdt=body.late_fee_amount if body.late_fee_paid else None,
     )
     if not annual_return:
         raise HTTPException(status_code=404, detail="Annual return record not found.")
@@ -675,10 +673,13 @@ def _audit_to_response(audit) -> AuditResponse:
         audit_id=str(audit.id),
         company_id=str(audit.company_id),
         financial_year=audit.financial_year,
-        is_complete=audit.is_complete,
-        signed_date=audit.signed_date.isoformat() if audit.signed_date else None,
+        is_complete=audit.audit_complete,
+        signed_date=audit.audit_signed_date.isoformat() if audit.audit_signed_date else None,
         auditor_firm=audit.auditor_firm,
-        audit_opinion=audit.audit_opinion,
+        audit_opinion=(
+            ("QUALIFIED" if audit.report_qualified else "UNQUALIFIED")
+            if audit.audit_complete else None
+        ),
         created_at=audit.created_at.isoformat() if audit.created_at else '',
     )
 
@@ -688,10 +689,10 @@ def _return_to_response(r) -> AnnualReturnResponse:
         return_id=str(r.id),
         company_id=str(r.company_id),
         financial_year=r.financial_year,
-        is_filed=r.is_filed,
+        is_filed=r.filed_date is not None,
         filed_date=r.filed_date.isoformat() if r.filed_date else None,
-        rjsc_acknowledgment_number=r.rjsc_acknowledgment_number,
-        late_fee_paid=r.late_fee_paid,
+        rjsc_acknowledgment_number=r.rjsc_receipt_number,
+        late_fee_paid=bool(r.late_fee_paid_bdt),
         created_at=r.created_at.isoformat() if r.created_at else '',
     )
 

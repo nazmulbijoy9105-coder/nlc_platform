@@ -67,6 +67,14 @@ class LifecycleStage(str, Enum):
 # DATA STRUCTURES
 # ═══════════════════════════════════════════════════════════════════════
 
+class RuleState(str, Enum):
+    COMPLIANT = "COMPLIANT"
+    NON_COMPLIANT = "NON_COMPLIANT"
+    UNKNOWN = "UNKNOWN"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+    CONDITIONAL = "CONDITIONAL"
+    CONTRADICTORY = "CONTRADICTORY"
+
 @dataclass
 class ComplianceFlag:
     rule_id: str
@@ -82,6 +90,7 @@ class ComplianceFlag:
     resolved: bool = False
     is_black_override: bool = False
     escalation_pending: bool = False
+    state: RuleState = RuleState.NON_COMPLIANT
     conditional_applies: bool = True
 
 @dataclass
@@ -127,8 +136,8 @@ class CompanyProfile:
     company_name: str
     company_type: str = "PRIVATE_LIMITED"
     incorporation_date: date | None = None
-    financial_year_end: date = field(default_factory=date.today)
-    agm_count: int | None = 0
+    financial_year_end: Optional[date] = field(default=None)
+    agm_count: int | None = None
     last_agm_date: Optional[date] = None
     agm_held_this_cycle: bool = False
     agm_held_without_audit: bool = False
@@ -146,7 +155,7 @@ class CompanyProfile:
     auditor_name: Optional[str] = None
     auditor_firm_reg_no: Optional[str] = None
     last_return_filed_year: Optional[int] = None
-    unfiled_returns_count: int | None = 0
+    unfiled_returns_count: int | None = None
     annual_return_filed: bool = False
     annual_return_content_complete: bool = False
     annual_return_filed_date: Optional[date] = None
@@ -156,7 +165,7 @@ class CompanyProfile:
     directors_list_attached: bool = False
     shareholders_list_attached: bool = False
     director_changes: List[DirectorChange] = field(default_factory=list)
-    current_director_count: int | None = 0
+    current_director_count: int | None = None
     minimum_directors_met: bool | None = None
     shareholder_change_date: Optional[date] = None
     form_xv_filed: bool = False
@@ -175,6 +184,7 @@ class CompanyProfile:
     aoa_transfer_restriction: bool = True
     has_foreign_shareholder: bool = False
     foreign_shareholding_pct: float = 0.0
+    is_manufacturing: bool = False
     is_dormant: bool = False
     is_fdi_registered: bool = False
     fdi_registration_date: Optional[date] = None
@@ -193,6 +203,22 @@ class CompanyProfile:
     form_iv_filed_date: Optional[date] = None
     form_iii_filed: bool | None = None
     form_iii_filed_date: Optional[date] = None
+    # ── Board meeting (Section 95, 96, 89) ──
+    last_board_meeting_date: Optional[date] = None
+    board_meeting_notice_given: bool | None = None
+    board_minutes_prepared: bool | None = None
+    # ── Accounts (Section 181, 183, 190) ──
+    financial_statements_presented: bool | None = None
+    financial_statements_filed: bool | None = None
+    books_of_account_kept: bool | None = None
+    # ── Director extended (Section 93, 104, 110) ──
+    director_consent_filed: bool | None = None
+    director_office_of_profit: bool = False
+    managing_director_appointment_date: Optional[date] = None
+    # ── Members (Section 222) ──
+    member_count: int | None = None
+    # ── Business commencement (Section 150) ──
+    business_commencement_declaration_filed: bool | None = None
     charges: List[ChargeEvent] = field(default_factory=list)
     special_resolution_date: Optional[date] = None
     special_resolution_filed: bool = False
@@ -249,6 +275,7 @@ class CompanyProfile:
     factory_license_obtained: bool = False
     # Tri-state applicability (R-003/R-008): None = unknown, False = not a factory, True = manufacturing.
     is_manufacturing: bool | None = None
+    factory_license_obtained: bool | None = None
     factory_license_expiry: Optional[date] = None
     worker_compensation_filed: bool | None = None
     labour_court_order_pending: bool = False
@@ -323,12 +350,12 @@ AGM_NOTICE_MINIMUM_DAYS = 21
 PRIVATE_COMPANY_QUORUM = 2
 ANNUAL_RETURN_DEADLINE_DAYS = 21   # Companies Act 1994, Section 36 (Schedule X)
 DIRECTOR_FILING_DEADLINE_DAYS = 14
-SHARE_CERTIFICATE_DEADLINE_DAYS = 60
+SHARE_CERTIFICATE_DEADLINE_DAYS = 90
 REGISTERED_OFFICE_DEADLINE_DAYS = 28
 FIRST_AUDITOR_DEADLINE_DAYS = 30
 CHARGE_REGISTRATION_DEADLINE_DAYS = 30
-ALLOTMENT_FILING_DEADLINE_DAYS = 30
-SPECIAL_RESOLUTION_DEADLINE_DAYS = 30
+ALLOTMENT_FILING_DEADLINE_DAYS = 60
+SPECIAL_RESOLUTION_DEADLINE_DAYS = 15  # Companies Act 1994, Section 88 (15 days)
 
 REQUIRED_REGISTERS = [
     "members", "directors", "charges", "transfers", "debentures",
@@ -393,6 +420,8 @@ class NLCRuleEngine:
         self._run_bsec_rules(company)
         self._run_fx_rules(company)
         self._run_tax_rules(company)
+        self._run_board_meeting_rules(company)
+        self._run_accounts_rules(company)
         self._run_structural_change_rules(company)
         self._run_escalation_rules(company)
 
@@ -422,7 +451,7 @@ class NLCRuleEngine:
     # MODULE 0: INCORPORATION
     # ───────────────────────────────────────────────────────────────────
     def _run_incorporation_rules(self, c: CompanyProfile) -> None:
-        if not c.moa_aoa_filed:
+        if c.moa_aoa_filed is False:
             self._add_flag(ComplianceFlag(
                 rule_id="INC-001",
                 flag_code="MOA_AOA_NOT_FILED",
@@ -430,7 +459,7 @@ class NLCRuleEngine:
                 score_impact=15,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description="Memorandum and Articles of Association not filed with RJSC.",
-                statutory_basis="Companies Act 1994, Section 11",
+                statutory_basis="Section 23, Companies Act 1994 (Bangladesh)",
             ))
 
         if c.paid_up_capital_bdt > 0 and not c.form_iii_filed:
@@ -438,16 +467,17 @@ class NLCRuleEngine:
             if delay > REGISTERED_OFFICE_DEADLINE_DAYS:
                 self._add_flag(ComplianceFlag(
                     rule_id="INC-002",
-                    flag_code="SITURATION_NOTICE_NOT_FILED",
+                    flag_code="MOA_AOA_NOT_FILED",
                     severity=Severity.YELLOW if delay < 90 else Severity.RED,
                     score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Form III (Situation Notice) not filed. Sec 81: 28-day deadline. Overdue by {delay} days.",
-                    statutory_basis="Companies Act 1994, Section 81",
+                    description="Memorandum and Articles of Association not filed with RJSC. Section 11: constitutional documents required.",
+                    statutory_basis="Companies Act 1994, Section 11",
+                    statutory_basis="Section 23, Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay}
                 ))
 
-        if (c.current_director_count or 0) < 2:  # type: ignore
+        if c.company_type == "PRIVATE_LIMITED" and c.current_director_count is not None and (c.current_director_count or 0) < 2:  # type: ignore
             inc003_impact = 15
             inc003_desc = (
                 "Private company has NO directors. Section 90(2) requires minimum 2. Company cannot legally act."
@@ -462,7 +492,7 @@ class NLCRuleEngine:
                 is_black_override=True,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=inc003_desc,
-                statutory_basis="Companies Act 1994, Section 90(2)",
+                statutory_basis="Section 90(2), Companies Act 1994 (Bangladesh)",
                 detail={"current_count": c.current_director_count, "required": 2}
             ))
 
@@ -474,7 +504,8 @@ class NLCRuleEngine:
                 score_impact=20,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description="Paid-up capital exceeds authorized capital. Section 150: all excess allotments void.",
-                statutory_basis="Companies Act 1994, Section 150",
+                statutory_basis="Section 53, Companies Act 1994 (Bangladesh)",
+                is_black_override=True,
                 detail={"paid_up": c.paid_up_capital_bdt, "authorized": c.authorized_capital_bdt}
             ))
 
@@ -504,7 +535,35 @@ class NLCRuleEngine:
                     conditional_applies=True
                 ))
 
-        if not c.trade_license_obtained:
+        # MEM-001: Company operating with fewer than minimum members (Section 222)
+        member_count = c.member_count or 0
+        if member_count > 0:
+            min_members = 2 if c.company_type == "PRIVATE_LIMITED" else 7
+            if member_count < min_members:
+                self._add_flag(ComplianceFlag(
+                    rule_id="MEM-001",
+                    flag_code="BELOW_MINIMUM_MEMBERS",
+                    severity=Severity.RED,
+                    score_impact=10,
+                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                    description=f"Company has {member_count} members, below minimum {min_members}. Section 222: members personally liable.",
+                    statutory_basis="Section 222, Companies Act 1994 (Bangladesh)",
+                    detail={"member_count": member_count, "minimum": min_members}
+                ))
+
+        # INC-007: Business commenced without Section 150 declaration (Section 150)
+        if c.business_commencement_declaration_filed is False:
+            self._add_flag(ComplianceFlag(
+                rule_id="INC-007",
+                flag_code="BUSINESS_COMMENCED_WITHOUT_DECLARATION",
+                severity=Severity.RED,
+                score_impact=10,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                description="Business commenced without Section 150 declaration filed with Registrar.",
+                statutory_basis="Section 150, Companies Act 1994 (Bangladesh)",
+            ))
+
+        if c.trade_license_obtained is False:
             self._add_flag(ComplianceFlag(
                 rule_id="TL-001",
                 flag_code="TRADE_LICENSE_NOT_OBTAINED",
@@ -534,7 +593,18 @@ class NLCRuleEngine:
     # MODULE 1: AUDITOR
     # ───────────────────────────────────────────────────────────────────
     def _run_auditor_rules(self, c: CompanyProfile) -> None:
-        if not c.first_auditor_appointed:
+        if c.first_auditor_appointed is None:
+            self._add_flag(ComplianceFlag(
+                rule_id="AUD-001",
+                flag_code="FIRST_AUDITOR_STATUS_UNKNOWN",
+                severity=Severity.YELLOW,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="First auditor status unknown (data missing).",
+                statutory_basis="Section 210(1), Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN
+            ))
+        elif not c.first_auditor_appointed:
             deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AUDITOR_DEADLINE_DAYS)  # type: ignore
             if self.today > deadline:  # type: ignore
                 delay = (self.today - deadline).days  # type: ignore
@@ -545,11 +615,11 @@ class NLCRuleEngine:
                     score_impact=10,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE if delay <= 365 else RevenueTier.STRUCTURED_REGULARIZATION,
                     description="First auditor not appointed within 30 days. Section 210(1): overdue by " + str(delay) + " days.",
-                    statutory_basis="Companies Act 1994, Section 210(1)",
+                    statutory_basis="Section 210(1), Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay}
                 ))
 
-        if c.first_auditor_appointed and c.agm_count > 0 and not c.auditor_reappointed_at_agm and not c.audit_in_progress and c.last_agm_date is not None:  # type: ignore
+        if c.first_auditor_appointed and c.agm_count is not None and c.agm_count > 0 and not c.auditor_reappointed_at_agm and not c.audit_in_progress and c.last_agm_date is not None:  # type: ignore
             fy_end = c.financial_year_end
             if self.today > fy_end + timedelta(days=120):
                  self._add_flag(ComplianceFlag(
@@ -559,7 +629,7 @@ class NLCRuleEngine:
                     score_impact=10,
                     revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                     description="No auditor appointed for current FY. Section 210(2): mandatory at every AGM.",
-                    statutory_basis="Companies Act 1994, Section 210(2)",
+                    statutory_basis="Section 210(2), Companies Act 1994 (Bangladesh)",
                 ))
 
         if c.agm_scheduled_date and not c.audit_complete:
@@ -574,7 +644,7 @@ class NLCRuleEngine:
                     score_impact=12,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Audit not complete. AGM in {days_to} days. Section 151 requires audited accounts at AGM.",
-                    statutory_basis="Companies Act 1994, Section 151",
+                    statutory_basis="Section 151, Companies Act 1994 (Bangladesh)",
                     detail={"days_to_agm": days_to}
                 ))
 
@@ -586,7 +656,7 @@ class NLCRuleEngine:
                 score_impact=25,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description="AGM held without completed audit. Section 151: AGM procedurally defective, potentially void.",
-                statutory_basis="Companies Act 1994, Sections 151, 210",
+                statutory_basis="Sections 151, 210, Companies Act 1994 (Bangladesh)",
                 detail={"override_to_black": True},
                 is_black_override=True,
             ))
@@ -599,13 +669,25 @@ class NLCRuleEngine:
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="Auditor not reappointed at AGM. Section 210(2): mandatory at every AGM.",
-                statutory_basis="Companies Act 1994, Section 210(2)",
+                statutory_basis="Section 210(2), Companies Act 1994 (Bangladesh)",
             ))
 
     # ───────────────────────────────────────────────────────────────────
     # MODULE 2: AGM
     # ───────────────────────────────────────────────────────────────────
     def _run_agm_rules(self, c: CompanyProfile) -> None:
+        if c.agm_count is None or c.incorporation_date is None:
+            self._add_flag(ComplianceFlag(
+                rule_id="AGM-001",
+                flag_code="AGM_STATUS_UNKNOWN",
+                severity=Severity.YELLOW,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="AGM history unknown (data missing).",
+                statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN
+            ))
+            return
         if c.agm_count == 0:
             deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
             if self.today > deadline:  # type: ignore
@@ -618,7 +700,7 @@ class NLCRuleEngine:
                     score_impact=self._graduated_agm_deduction(delay),
                     revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                     description=f"First AGM not held within 18 months. Section 81: overdue by {delay} days.",
-                    statutory_basis="Companies Act 1994, Section 81",
+                    statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay, "deadline": str(deadline)}
                 ))
             return
@@ -639,7 +721,7 @@ class NLCRuleEngine:
                     score_impact=self._graduated_agm_deduction(delay),
                     revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                     description=f"AGM overdue by {delay} days. Section 81: deadline by {basis} rule.",
-                    statutory_basis="Companies Act 1994, Section 81",
+                    statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay, "basis": basis}
                 ))
 
@@ -653,7 +735,7 @@ class NLCRuleEngine:
                     score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"AGM notice issued with {clear_days} clear days. Section 85 requires 21 clear days.",
-                    statutory_basis="Companies Act 1994, Section 85",
+                    statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
                     detail={"clear_days": clear_days}
                 ))
 
@@ -668,7 +750,7 @@ class NLCRuleEngine:
                     score_impact=15,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"AGM notice not issued. {days_rem} days to AGM. Section 85 requires 21 clear days notice.",
-                    statutory_basis="Companies Act 1994, Section 85",
+                    statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
                     detail={"days_to_agm": days_rem}
                 ))
 
@@ -680,7 +762,7 @@ class NLCRuleEngine:
                 score_impact=15,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=f"AGM quorum not met. {c.members_present_at_agm} present, need {PRIVATE_COMPANY_QUORUM}. Section 83.",
-                statutory_basis="Companies Act 1994, Section 83",
+                statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
                 detail={"present": c.members_present_at_agm, "required": PRIVATE_COMPANY_QUORUM}
             ))
 
@@ -692,7 +774,7 @@ class NLCRuleEngine:
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="AGM held but minutes not prepared. Section 83: minutes are prima facie evidence.",
-                statutory_basis="Companies Act 1994, Section 83",
+                statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
             ))
 
     # ───────────────────────────────────────────────────────────────────
@@ -711,11 +793,11 @@ class NLCRuleEngine:
                     score_impact=self._graduated_ar_deduction(delay),
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Schedule X (Annual Return) not filed within 21 days of AGM. Overdue by {delay} days.",
-                    statutory_basis="Companies Act 1994, Section 36 (Schedule X)",
+                    statutory_basis="Section 36 (Schedule X), Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay}
                 ))
 
-        if (c.unfiled_returns_count or 0) >= 2:  # type: ignore
+        if c.unfiled_returns_count is not None and c.unfiled_returns_count >= 2:  # type: ignore
             self._add_flag(ComplianceFlag(
                 rule_id="AR-002",
                 flag_code="ANNUAL_RETURN_BACKLOG_RED",
@@ -723,11 +805,11 @@ class NLCRuleEngine:
                 score_impact=20,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=f"{c.unfiled_returns_count} Annual Returns unfiled. Section 304: strike-off risk elevated.",
-                statutory_basis="Companies Act 1994, Sections 36 and 304",
+                statutory_basis="Sections 36 and 304, Companies Act 1994 (Bangladesh)",
                 detail={"unfiled_count": c.unfiled_returns_count}
             ))
 
-        if (c.unfiled_returns_count or 0) >= 3:  # type: ignore
+        if c.unfiled_returns_count is not None and c.unfiled_returns_count >= 3:  # type: ignore
             self._add_flag(ComplianceFlag(
                 rule_id="AR-003",
                 flag_code="ANNUAL_RETURN_BACKLOG_BLACK",
@@ -735,7 +817,7 @@ class NLCRuleEngine:
                 score_impact=20,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description=f"{c.unfiled_returns_count} Annual Returns unfiled. Section 304: severe default, director liability.",
-                statutory_basis="Companies Act 1994, Sections 36 and 304",
+                statutory_basis="Sections 36 and 304, Companies Act 1994 (Bangladesh)",
                 detail={"unfiled_count": c.unfiled_returns_count}
             ))
 
@@ -753,7 +835,7 @@ class NLCRuleEngine:
                 score_impact=8,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description=f"Annual Return incomplete. Missing: {', '.join(missing)}. Section 36 + Schedule X require complete disclosure.",
-                statutory_basis="Companies Act 1994, Section 36, Schedule X",
+                statutory_basis="Section 36, Schedule X, Companies Act 1994 (Bangladesh)",
                 detail={"missing": missing}
             ))
 
@@ -763,7 +845,20 @@ class NLCRuleEngine:
     def _run_director_rules(self, c: CompanyProfile) -> None:
         for change in c.director_changes:
             delay = (self.today - change.event_date).days
-            if not change.form_filed and delay > DIRECTOR_FILING_DEADLINE_DAYS:
+            if change.form_filed is None:
+                self._add_flag(ComplianceFlag(
+                    rule_id="DIR-001",
+                    flag_code="DIRECTOR_FILING_STATUS_UNKNOWN",
+                    severity=Severity.YELLOW,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=f"Director filing status unknown for {change.director_id}.",
+                    statutory_basis="Section 92, Companies Act 1994 (Bangladesh)",
+                    detail={"director_id": change.director_id},
+                    state=RuleState.UNKNOWN
+                ))
+                continue
+            elif not change.form_filed and delay > DIRECTOR_FILING_DEADLINE_DAYS:
                 if change.event_type == "appointment":
                     severity = Severity.RED if delay > 90 else Severity.YELLOW
                     self._add_flag(ComplianceFlag(
@@ -773,7 +868,7 @@ class NLCRuleEngine:
                         score_impact=10 if delay > 90 else 5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=f"Director appointment not filed via Form XII. Section 92: 14-day deadline. Overdue by {delay} days.",
-                        statutory_basis="Companies Act 1994, Section 92",
+                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "delay": delay}
                     ))
                 elif change.event_type in ("resignation", "removal", "death"):
@@ -785,7 +880,7 @@ class NLCRuleEngine:
                         score_impact=10 if delay > 90 else 5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=f"Director {change.event_type} not filed via Form XII. Section 92: 14-day deadline. Overdue by {delay} days.",
-                        statutory_basis="Companies Act 1994, Section 92",
+                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "delay": delay, "type": change.event_type}
                     ))
                     self._add_flag(ComplianceFlag(
@@ -795,7 +890,7 @@ class NLCRuleEngine:
                         score_impact=10,
                         revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                         description="Departed director still liable until Form XII filed. Section 92: filing required to release liability.",
-                        statutory_basis="Companies Act 1994, Section 92",
+                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id}
                     ))
 
@@ -807,7 +902,19 @@ class NLCRuleEngine:
                         score_impact=15,
                         revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                         description=f"Director filing overdue {delay} days. Exceeds 1 year — Major Irregularity.",
-                        statutory_basis="Companies Act 1994, Section 92",
+                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
+                        detail={"director_id": change.director_id, "delay": delay}
+                    ))
+                # DIR-007: Director consent not filed within 30 days (Section 93)
+                if change.event_type == "appointment" and delay > 30:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="DIR-007",
+                        flag_code="DIRECTOR_CONSENT_NOT_FILED",
+                        severity=Severity.YELLOW,
+                        score_impact=5,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=f"Director consent not filed within 30 days. Section 93(2): overdue by {delay} days.",
+                        statutory_basis="Section 93, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "delay": delay}
                     ))
 
@@ -825,7 +932,7 @@ class NLCRuleEngine:
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Share allotment not filed via Form XV. Section 50: 30-day deadline. Overdue by {delay} days.",
-                    statutory_basis="Companies Act 1994, Section 50",
+                    statutory_basis="Section 151, Companies Act 1994 (Bangladesh)",
                     detail={"delay": delay}
                 ))
 
@@ -839,7 +946,7 @@ class NLCRuleEngine:
                     score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Share certificates not issued within 60 days. Section 46: overdue by {delay - SHARE_CERTIFICATE_DEADLINE_DAYS} days.",
-                    statutory_basis="Companies Act 1994, Section 46",
+                    statutory_basis="Section 158, Companies Act 1994 (Bangladesh)",
                     detail={"delay": delay}
                 ))
 
@@ -853,7 +960,7 @@ class NLCRuleEngine:
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Capital increase not filed via Form IV. Section 52: 30-day deadline. Overdue by {delay} days.",
-                    statutory_basis="Companies Act 1994, Section 52",
+                    statutory_basis="Section 56, Companies Act 1994 (Bangladesh)",
                     detail={"delay": delay}
                 ))
 
@@ -875,7 +982,7 @@ class NLCRuleEngine:
                     score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description="Share transfer without Form 117 instrument. Section 108: proper instrument required.",
-                    statutory_basis="Companies Act 1994, Section 108",
+                    statutory_basis="Section 38, Companies Act 1994 (Bangladesh)",
                     detail={"transfer_id": transfer.transfer_id}
                 ))
 
@@ -891,7 +998,7 @@ class NLCRuleEngine:
                     detail={"transfer_id": transfer.transfer_id}
                 ))
 
-            if not transfer.board_approval_obtained and c.aoa_transfer_restriction:
+            if not transfer.board_approval_obtained and c.aoa_transfer_restriction and not transfer_is_void:
                 self._add_flag(ComplianceFlag(
                     rule_id="TR-003",
                     flag_code="TRANSFER_NO_BOARD_APPROVAL",
@@ -899,7 +1006,7 @@ class NLCRuleEngine:
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description="Share transfer without board approval. Section 47 + AoA: approval required where restricted.",
-                    statutory_basis="Companies Act 1994, Section 47; AoA",
+                    statutory_basis="Section 38; AoA, Companies Act 1994 (Bangladesh)",
                     detail={"transfer_id": transfer.transfer_id}
                 ))
 
@@ -911,7 +1018,7 @@ class NLCRuleEngine:
                     score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description="Register of Members not updated after transfer. Section 34: register is legal record of ownership.",
-                    statutory_basis="Companies Act 1994, Section 34",
+                    statutory_basis="Section 34, Companies Act 1994 (Bangladesh)",
                     detail={"transfer_id": transfer.transfer_id}
                 ))
 
@@ -923,7 +1030,7 @@ class NLCRuleEngine:
                     score_impact=15,
                     revenue_tier=RevenueTier.CORPORATE_RESCUE,
                     description="Transfer violated AoA restriction. Section 47: such transfer is void. BLACK override.",
-                    statutory_basis="Companies Act 1994, Section 47; AoA",
+                    statutory_basis="Section 38; AoA, Companies Act 1994 (Bangladesh)",
                     detail={"transfer_id": transfer.transfer_id, "override": True},
                     is_black_override=True,
                 ))
@@ -943,7 +1050,7 @@ class NLCRuleEngine:
                     score_impact=0,
                     revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                     description=f"Transfer has {len(tr_flags)} deficiencies. Composite irregularity requiring structured remediation.",
-                    statutory_basis="Companies Act 1994, Sections 34, 47, 108",
+                    statutory_basis="Sections 34, 47, 108, Companies Act 1994 (Bangladesh)",
                     detail={"transfer_id": transfer.transfer_id, "count": len(tr_flags)}
                 ))
 
@@ -970,7 +1077,7 @@ class NLCRuleEngine:
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description=f"{len(non_core_missing)} non-core register(s) missing: {', '.join(non_core_missing)}.",
-                statutory_basis="Companies Act 1994, Sections 34, 90, 87",
+                statutory_basis="Sections 34, 90, 87, Companies Act 1994 (Bangladesh)",
                 detail={"missing": non_core_missing}
             ))
 
@@ -983,7 +1090,7 @@ class NLCRuleEngine:
                 score_impact=10 if len(core_missing) <= 2 else 20,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION if severity == Severity.RED else RevenueTier.CORPORATE_RESCUE,
                 description=f"Core registers missing: {', '.join(core_missing)}. Members (Sec 34), Directors (Sec 90), Charges (Sec 87), AGM Minutes (Sec 83).",
-                statutory_basis="Companies Act 1994, Sections 34, 83, 87, 90",
+                statutory_basis="Sections 34, 83, 87, 90, Companies Act 1994 (Bangladesh)",
                 detail={"missing_core": core_missing}
             ))
 
@@ -995,7 +1102,7 @@ class NLCRuleEngine:
                 score_impact=3,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description=f"Registers at '{c.register_location}', not registered office. Section 34(2): must be at registered office.",
-                statutory_basis="Companies Act 1994, Section 34(2)",
+                statutory_basis="Section 34(2), Companies Act 1994 (Bangladesh)",
                 detail={"location": c.register_location}
             ))
 
@@ -1012,8 +1119,9 @@ class NLCRuleEngine:
                     severity=Severity.YELLOW if delay < 90 else Severity.RED,
                     score_impact=3,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Office change not filed via Form VI. Section 81: 28-day deadline. Overdue by {delay} days.",
-                    statutory_basis="Companies Act 1994, Section 81",
+                    description=f"Office change not filed via Form VI. Section 77: 28-day deadline. Overdue by {delay} days.",
+                    statutory_basis="Companies Act 1994, Section 77",
+                    statutory_basis="Section 77, Companies Act 1994 (Bangladesh)",
                     detail={"delay": delay, "form": "Form VI"}
                 ))
 
@@ -1029,7 +1137,7 @@ class NLCRuleEngine:
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="Capital increase without shareholder resolution. Section 54: Ordinary/Special Resolution required.",
-                statutory_basis="Companies Act 1994, Section 54",
+                statutory_basis="Section 53, Companies Act 1994 (Bangladesh)",
             ))
 
         for charge in c.charges:
@@ -1043,7 +1151,7 @@ class NLCRuleEngine:
                         score_impact=5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=f"{charge.charge_type} charge (Tk {charge.amount_bdt:,.2f}) not registered. Section 87: 30-day deadline. Unregistered charge void against liquidator.",
-                        statutory_basis="Companies Act 1994, Section 87",
+                        statutory_basis="Section 88, Companies Act 1994 (Bangladesh)",
                         detail={"charge_id": charge.charge_id, "delay": delay, "amount": charge.amount_bdt}
                     ))
 
@@ -1055,7 +1163,7 @@ class NLCRuleEngine:
                     score_impact=3,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description="Charge satisfaction not filed via Form XIX. Sec 87.",
-                    statutory_basis="Companies Act 1994, Section 87",
+                    statutory_basis="Section 88, Companies Act 1994 (Bangladesh)",
                     detail={"charge_id": charge.charge_id, "charge_type": charge.charge_type}
                 ))
 
@@ -1067,7 +1175,7 @@ class NLCRuleEngine:
                 score_impact=15,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description="Capital reduction without court order. Sec 100.",
-                statutory_basis="Companies Act 1994, Section 100",
+                statutory_basis="Section 59, Companies Act 1994 (Bangladesh)",
                 is_black_override=True,
             ))
 
@@ -1081,7 +1189,7 @@ class NLCRuleEngine:
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Special resolution not filed. Section 87: 30-day deadline. Unfiled resolution not binding.",
-                    statutory_basis="Companies Act 1994, Section 87",
+                    statutory_basis="Section 88, Companies Act 1994 (Bangladesh)",
                     detail={"delay": delay}
                 ))
 
@@ -1089,7 +1197,7 @@ class NLCRuleEngine:
     # MODULE 10: TAX COMPLIANCE
     # ───────────────────────────────────────────────────────────────────
     def _run_tax_rules(self, c: CompanyProfile) -> None:
-        if not c.tin_obtained:
+        if c.tin_obtained is False:
             self._add_flag(ComplianceFlag(
                 rule_id="TAX-001",
                 flag_code="TIN_NOT_OBTAINED",
@@ -1114,13 +1222,15 @@ class NLCRuleEngine:
 
         if c.tin_obtained and not c.tax_return_filed_for_current_fy:
             # VERIFY against ITA 2023: company return due 15th day of 7th month after FY end (30 Jun -> 15 Jan)
-            if self.today >= date(self.today.year, 1, 15):
-                fy_end_year = self.today.year - 1
-            else:
-                fy_end_year = self.today.year - 2
-            deadline = date(fy_end_year, 1, 15)
+            fy_end = c.financial_year_end
+            due_month = fy_end.month + 7
+            due_year = fy_end.year
+            if due_month > 12:
+                due_month -= 12
+                due_year += 1
+            deadline = date(due_year, due_month, 15)
             if c.tax_return_deadline_extended:
-                deadline = deadline + timedelta(days=30)  # VERIFY extension length
+                deadline = deadline + timedelta(days=30)
             if self.today > deadline:
                 delay = (self.today - deadline).days
                 if delay <= 90:
@@ -1137,16 +1247,28 @@ class NLCRuleEngine:
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE if delay <= 90 else RevenueTier.STRUCTURED_REGULARIZATION,
                     description=f"Annual tax return overdue by {delay} days. ITA 2023 Sec 75.",
                     statutory_basis="Income Tax Act 2023, Section 75",
-                    detail={"delay_days": delay, "fy_year": fy_end_year}
+                    detail={"delay_days": delay, "fy_year": fy_end.year}
                 ))
 
         if c.tin_obtained:
-            fiscal_q = self._fiscal_quarter()
             missed = []
-            if fiscal_q >= 1 and not c.advance_tax_q1_paid: missed.append("Q1")
-            if fiscal_q >= 2 and not c.advance_tax_q2_paid: missed.append("Q2")
-            if fiscal_q >= 3 and not c.advance_tax_q3_paid: missed.append("Q3")
-            if fiscal_q >= 4 and not c.advance_tax_q4_paid: missed.append("Q4")
+            t = self.today
+            # FIX Defect 12: Only flag quarter if deadline has passed
+            if t.month >= 7:
+                q1_deadline = date(t.year, 10, 15)
+                q2_deadline = date(t.year + 1, 1, 15)
+                q3_deadline = date(t.year + 1, 4, 15)
+                q4_deadline = date(t.year + 1, 7, 15)
+            else:
+                q1_deadline = date(t.year - 1, 10, 15)
+                q2_deadline = date(t.year, 1, 15)
+                q3_deadline = date(t.year, 4, 15)
+                q4_deadline = date(t.year, 7, 15)
+                
+            if t > q1_deadline and not c.advance_tax_q1_paid: missed.append("Q1")
+            if t > q2_deadline and not c.advance_tax_q2_paid: missed.append("Q2")
+            if t > q3_deadline and not c.advance_tax_q3_paid: missed.append("Q3")
+            if t > q4_deadline and not c.advance_tax_q4_paid: missed.append("Q4")
             
             if missed:
                 self._add_flag(ComplianceFlag(
@@ -1196,7 +1318,7 @@ class NLCRuleEngine:
                 score_impact=8 if unresolved >= 3 else 5,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=f"{unresolved} unresolved penalties. Sec 447: fine up to Tk 10,000.",
-                statutory_basis="Companies Act 1994, Section 447",
+                statutory_basis="Section 397, Companies Act 1994 (Bangladesh)",
                 detail={"unresolved": unresolved}
             ))
 
@@ -1213,7 +1335,7 @@ class NLCRuleEngine:
                     severity=sev, score_impact=8 if delay > 90 else 3,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Name change not filed. Sec 20: Special Resolution + RJSC filing. Overdue {delay} days.",
-                    statutory_basis="Companies Act 1994, Section 20",
+                    statutory_basis="Section 20, Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay}
                 ))
 
@@ -1226,7 +1348,7 @@ class NLCRuleEngine:
                     severity=sev, score_impact=8 if delay > 90 else 3,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"MoA object clause change not filed. Sec 17. Overdue {delay} days.",
-                    statutory_basis="Companies Act 1994, Section 17",
+                    statutory_basis="Section 17, Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay}
                 ))
 
@@ -1239,7 +1361,7 @@ class NLCRuleEngine:
                     severity=sev, score_impact=8 if delay > 90 else 3,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"AoA alteration not filed. Sec 18. Overdue {delay} days.",
-                    statutory_basis="Companies Act 1994, Section 18",
+                    statutory_basis="Section 18, Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay}
                 ))
 
@@ -1292,6 +1414,7 @@ class NLCRuleEngine:
         # R-003/R-008: LBR-001 applies only to entities confirmed as manufacturing.
         # None (unknown) and False (not a factory) must not raise a flag.
         if c.is_manufacturing is True and not c.factory_license_obtained:
+        if c.factory_license_obtained is False:
             self._add_flag(ComplianceFlag(
                 rule_id="LBR-001",
                 flag_code="FACTORY_LICENSE_MISSING",
@@ -1333,28 +1456,28 @@ class NLCRuleEngine:
                 severity=Severity.YELLOW, score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="AGM adjourned without proper notice. Section 84.",
-                statutory_basis="Companies Act 1994, Section 84"))
-        if not c.register_of_directors_interests:
+                statutory_basis="Section 85, Companies Act 1994 (Bangladesh)"))
+        if c.register_of_directors_interests is False:
             self._add_flag(ComplianceFlag(
                 rule_id="DIR-005", flag_code="REGISTER_OF_DIRECTORS_INTERESTS_MISSING",
                 severity=Severity.YELLOW, score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="Register of directors interests not maintained. Section 97.",
-                statutory_basis="Companies Act 1994, Section 97"))
-        if not c.register_of_contracts:
+                statutory_basis="Section 130, Companies Act 1994 (Bangladesh)"))
+        if c.register_of_contracts is False:
             self._add_flag(ComplianceFlag(
                 rule_id="DIR-006", flag_code="REGISTER_OF_CONTRACTS_MISSING",
                 severity=Severity.YELLOW, score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="Register of contracts not maintained. Section 98.",
-                statutory_basis="Companies Act 1994, Section 98"))
+                statutory_basis="Section 130, Companies Act 1994 (Bangladesh)"))
         if c.voluntary_winding_up:
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-004", flag_code="VOLUNTARY_WINDING_UP",
                 severity=Severity.BLACK, score_impact=30,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description="Voluntary winding up. Section 196.",
-                statutory_basis="Companies Act 1994, Section 196",
+                statutory_basis="Section 286, Companies Act 1994 (Bangladesh)",
                 is_black_override=True))
         if c.investigation_order:
             self._add_flag(ComplianceFlag(
@@ -1362,7 +1485,27 @@ class NLCRuleEngine:
                 severity=Severity.RED, score_impact=20,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description="Investigation order pending. Section 199.",
-                statutory_basis="Companies Act 1994, Section 199"))
+                statutory_basis="Section 195, Companies Act 1994 (Bangladesh)"))
+
+        # DIR-008: Director holding office of profit (Section 104)
+        if c.director_office_of_profit:
+            self._add_flag(ComplianceFlag(
+                rule_id="DIR-008", flag_code="DIRECTOR_OFFICE_OF_PROFIT",
+                severity=Severity.YELLOW, score_impact=8,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Director holding office of profit without company consent. Section 104.",
+                statutory_basis="Section 104, Companies Act 1994 (Bangladesh)"))
+        # DIR-010: Managing director term exceeds 5 years (Section 110)
+        if c.managing_director_appointment_date:
+            md_years = (self.today - c.managing_director_appointment_date).days // 365
+            if md_years > 5:
+                self._add_flag(ComplianceFlag(
+                    rule_id="DIR-010", flag_code="MD_TERM_EXCEEDS_5_YEARS",
+                    severity=Severity.YELLOW, score_impact=5,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=f"Managing director appointed for {md_years} years. Section 110: max 5 years at a time.",
+                    statutory_basis="Section 110, Companies Act 1994 (Bangladesh)",
+                    detail={"years": md_years}))
 
     # MODULE 15: BSEC CG CODE 2023
     def _run_bsec_rules(self, c: CompanyProfile) -> None:
@@ -1406,6 +1549,104 @@ class NLCRuleEngine:
                 description="Foreign exchange violation. FE Regulation Act 1947.",
                 statutory_basis="Foreign Exchange Regulation Act 1947 (Bangladesh)"))
 
+    # ───────────────────────────────────────────────────────────────────
+    # MODULE: BOARD MEETINGS (Section 95, 96, 89)
+    # ───────────────────────────────────────────────────────────────────
+    def _run_board_meeting_rules(self, c: CompanyProfile) -> None:
+        # BOD-001: Board meeting not held quarterly (Section 96)
+        if c.last_board_meeting_date is None:
+            if c.incorporation_date and (self.today - c.incorporation_date).days > 90:
+                self._add_flag(ComplianceFlag(
+                    rule_id="BOD-001",
+                    flag_code="BOARD_MEETING_NOT_HELD",
+                    severity=Severity.YELLOW,
+                    score_impact=5,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="Board meeting not held within 3 months. Section 96: minimum 4 board meetings per year.",
+                    statutory_basis="Section 96, Companies Act 1994 (Bangladesh)",
+                    detail={"incorporation_days": (self.today - c.incorporation_date).days}
+                ))
+        elif c.last_board_meeting_date:
+            days_since = (self.today - c.last_board_meeting_date).days
+            if days_since > 90:
+                self._add_flag(ComplianceFlag(
+                    rule_id="BOD-001",
+                    flag_code="BOARD_MEETING_OVERDUE",
+                    severity=Severity.YELLOW,
+                    score_impact=5,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=f"Board meeting overdue by {days_since} days. Section 96: quarterly meeting required.",
+                    statutory_basis="Section 96, Companies Act 1994 (Bangladesh)",
+                    detail={"days_since": days_since}
+                ))
+
+        # BOD-002: Board meeting notice not given (Section 95)
+        if c.last_board_meeting_date and c.board_meeting_notice_given is False:
+            self._add_flag(ComplianceFlag(
+                rule_id="BOD-002",
+                flag_code="BOARD_NOTICE_NOT_GIVEN",
+                severity=Severity.YELLOW,
+                score_impact=3,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Board meeting notice not given to all directors. Section 95 requires written notice.",
+                statutory_basis="Section 95, Companies Act 1994 (Bangladesh)",
+            ))
+
+        # BOD-003: Board minutes not prepared (Section 89)
+        if c.last_board_meeting_date and c.board_minutes_prepared is False:
+            self._add_flag(ComplianceFlag(
+                rule_id="BOD-003",
+                flag_code="BOARD_MINUTES_NOT_PREPARED",
+                severity=Severity.YELLOW,
+                score_impact=5,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Board meeting minutes not prepared. Section 89: minutes of all proceedings must be entered.",
+                statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
+            ))
+
+    # ───────────────────────────────────────────────────────────────────
+    # MODULE: ACCOUNTS & AUDIT FILING (Section 181, 183, 190)
+    # ───────────────────────────────────────────────────────────────────
+    def _run_accounts_rules(self, c: CompanyProfile) -> None:
+        # ACC-001: Financial statements not presented at AGM (Section 183)
+        if c.agm_held_this_cycle and c.financial_statements_presented is False:
+            self._add_flag(ComplianceFlag(
+                rule_id="ACC-001",
+                flag_code="FINANCIAL_STATEMENTS_NOT_PRESENTED",
+                severity=Severity.RED,
+                score_impact=15,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                description="AGM held but balance sheet and P&L not presented. Section 183: Board shall lay before AGM.",
+                statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
+            ))
+
+        # ACC-002: Financial statements not filed with Registrar (Section 190)
+        if c.last_agm_date and c.financial_statements_filed is False:
+            delay = (self.today - c.last_agm_date).days
+            if delay > 30:
+                self._add_flag(ComplianceFlag(
+                    rule_id="ACC-002",
+                    flag_code="FINANCIAL_STATEMENTS_NOT_FILED",
+                    severity=Severity.RED,
+                    score_impact=15,
+                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                    description=f"Balance sheet not filed with Registrar within 30 days of AGM. Overdue by {delay} days. Section 190.",
+                    statutory_basis="Section 190, Companies Act 1994 (Bangladesh)",
+                    detail={"delay": delay}
+                ))
+
+        # ACC-003: Books of account not kept (Section 181)
+        if c.books_of_account_kept is False:
+            self._add_flag(ComplianceFlag(
+                rule_id="ACC-003",
+                flag_code="BOOKS_NOT_KEPT",
+                severity=Severity.RED,
+                score_impact=15,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                description="Proper books of account not maintained. Section 181: every company shall keep proper books.",
+                statutory_basis="Section 181, Companies Act 1994 (Bangladesh)",
+            ))
+
     def _run_escalation_rules(self, c: CompanyProfile) -> None:
         agm_years = self._calculate_agm_default_years(c)
         ar_years = c.unfiled_returns_count
@@ -1414,7 +1655,7 @@ class NLCRuleEngine:
         if c.any_director_disqualified:
             disq_count = len(c.disqualification_details)
             impact = 20 if disq_count == 1 else 25
-            is_override = disq_count >= (c.current_director_count - 1)  # type: ignore
+            is_override = c.current_director_count is not None and disq_count >= (c.current_director_count - 1)  # type: ignore
             self._add_flag(ComplianceFlag(
                 rule_id="DEF-001",
                 flag_code="DIRECTOR_DISQUALIFIED",
@@ -1422,7 +1663,7 @@ class NLCRuleEngine:
                 score_impact=impact,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description=f"{disq_count} director(s) disqualified under Sec 297. Cannot act as director for 5 years.",
-                statutory_basis="Companies Act 1994, Section 297",
+                statutory_basis="Section 297, Companies Act 1994 (Bangladesh)",
                 detail={"disqualifications": c.disqualification_details, "count": disq_count},
                 is_black_override=is_override,
             ))
@@ -1435,7 +1676,7 @@ class NLCRuleEngine:
                 score_impact=15,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=f"2+ year AGM and Return defaults. Section 304: RJSC strike-off risk elevated.",
-                statutory_basis="Companies Act 1994, Section 304",
+                statutory_basis="Section 304, Companies Act 1994 (Bangladesh)",
                 detail={"agm_years": agm_years, "ar_years": ar_years}
             ))
 
@@ -1449,25 +1690,32 @@ class NLCRuleEngine:
                 score_impact=25,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description=f"3+ year default or on strike-off list. Section 304: strike-off imminent. Corporate Rescue mandatory.",
-                statutory_basis="Companies Act 1994, Section 304",
+                statutory_basis="Section 304, Companies Act 1994 (Bangladesh)",
                 detail={"agm_years": agm_years, "ar_years": ar_years, "on_list": c.on_rjsc_strike_off_list},
                 is_black_override=True,
                 escalation_pending=True,
             ))
 
-        black_flags = [f for f in self._flags if not f.resolved and f.conditional_applies and f.severity == Severity.BLACK and f.rule_id not in self._ESC_RULE_IDS]
-        if len(black_flags) >= 2:
-            esc003_impact = 10 if len(black_flags) == 2 else (25 if len(black_flags) == 3 else 35)
+        pre_score = self._calculate_raw_score(self._flags)
+        has_black_override = any(
+            f.is_black_override and f.state == RuleState.NON_COMPLIANT 
+            for f in self._flags if not f.resolved and f.conditional_applies
+        )
+        
+        if pre_score <= 29 or has_black_override:
+            black_count = len([f for f in self._flags if f.severity == Severity.BLACK and f.rule_id not in self._ESC_RULE_IDS])
+            esc003_impact = 10 if black_count <= 2 else (25 if black_count == 3 else 35)
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-003",
                 flag_code="RESCUE_REQUIRED_MANDATORY",
                 severity=Severity.BLACK,
                 score_impact=esc003_impact,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Multiple BLACK flags (" + str(len(black_flags)) + "). Corporate Rescue mandatory. Systemic failure detected.",
-                statutory_basis="Companies Act 1994, Sections 81, 92, 36, 304 (aggregate)",
-                detail={"black_count": len(black_flags)},
+                description="Corporate Rescue mandatory. Systemic failure detected.",
+                statutory_basis="Sections 81, 115, 36, 346 (aggregate), Companies Act 1994 (Bangladesh)",
+                detail={"black_count": black_count, "pre_score": pre_score},
                 is_black_override=True,
+                state=RuleState.NON_COMPLIANT
             ))
 
     # ───────────────────────────────────────────────────────────────────
@@ -1489,6 +1737,37 @@ class NLCRuleEngine:
             return "YELLOW"
         return "GREEN"
 
+
+    def _calculate_raw_score(self, flags: List[ComplianceFlag]) -> int:
+        active = [f for f in flags if not f.resolved and f.conditional_applies]
+        # FIX: Only deduct points for NON_COMPLIANT findings
+        violations = [f for f in active if f.state == RuleState.NON_COMPLIANT]
+        
+        tax_ded = sum(f.score_impact for f in violations if f.rule_id.startswith(("TAX-", "VAT-")))
+        agm_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("AGM-"))
+        aud_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("AUD-"))
+        ret_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("AR-"))
+        dir_ded = sum(f.score_impact for f in violations if f.rule_id.startswith(("DIR-", "INC-", "DEF-", "TL-", "BOD-", "MEM-")))
+        shr_ded = sum(f.score_impact for f in violations if f.rule_id.startswith(("SH-", "TR-")))
+        cap_ded = sum(f.score_impact for f in violations if f.rule_id.startswith(("CAP-", "STR-", "CHG-", "ACC-")))
+        off_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("OFF-"))
+        reg_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("REG-"))
+        bnk_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("BNK-"))
+        lbr_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("LBR-"))
+        bsec_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("BSEC-"))
+        fx_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("FX-"))
+        esc_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("ESC-"))
+
+        module_sum = (
+            max(0, 20 - agm_ded) + max(0, 20 - aud_ded) + max(0, 20 - ret_ded) +
+            max(0, 10 - dir_ded) + max(0, 10 - shr_ded) + max(0, 5 - cap_ded) +
+            max(0, 5 - off_ded) + max(0, 5 - reg_ded) + max(0, 5 - tax_ded) +
+            max(0, 5 - bnk_ded) + max(0, 5 - lbr_ded) + max(0, 5 - bsec_ded) + 
+            max(0, 5 - fx_ded) + max(0, 5 - esc_ded)
+        )
+        # FIX: Scale 125 max points to 100
+        return int((module_sum / 125.0) * 100)
+
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
         active = [f for f in flags if not f.resolved and f.conditional_applies]
 
@@ -1496,9 +1775,9 @@ class NLCRuleEngine:
         agm_ded = sum(f.score_impact for f in active if f.rule_id.startswith("AGM-"))
         aud_ded = sum(f.score_impact for f in active if f.rule_id.startswith("AUD-"))
         ret_ded = sum(f.score_impact for f in active if f.rule_id.startswith("AR-"))
-        dir_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("DIR-", "INC-", "DEF-", "TL-")))
+        dir_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("DIR-", "INC-", "DEF-", "TL-", "BOD-", "MEM-")))
         shr_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("SH-", "TR-")))
-        cap_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("CAP-", "STR-", "CHG-")))
+        cap_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("CAP-", "STR-", "CHG-", "ACC-")))
         off_ded = sum(f.score_impact for f in active if f.rule_id.startswith("OFF-"))
         reg_ded = sum(f.score_impact for f in active if f.rule_id.startswith("REG-"))
         bnk_ded = sum(f.score_impact for f in active if f.rule_id.startswith("BNK-"))
@@ -1507,28 +1786,36 @@ class NLCRuleEngine:
         fx_ded = sum(f.score_impact for f in active if f.rule_id.startswith("FX-"))
         esc_ded = sum(f.score_impact for f in active if f.rule_id.startswith("ESC-"))
 
-        raw = 100 - (tax_ded + agm_ded + aud_ded + ret_ded + dir_ded + shr_ded + cap_ded + off_ded + reg_ded + bnk_ded + lbr_ded + bsec_ded + fx_ded + esc_ded)
-        raw = max(0, raw)
+        raw = self._calculate_raw_score(flags)
+        raw = max(0, min(100, raw))
         
         override = False
         reason = None
         final = raw
-        critical = [f for f in active if f.is_black_override]
+        critical = [
+            f for f in active 
+            if f.is_black_override and f.state == RuleState.NON_COMPLIANT
+        ]
+        if not critical:
+            critical = [
+                f for f in active 
+                if f.severity == Severity.BLACK and f.state == RuleState.NON_COMPLIANT
+            ]
         if critical:
             override = True
-            reason = f"BLACK override: {', '.join(f.rule_id for f in critical)}"
+            reason = f"BLACK: {', '.join(f.rule_id for f in critical)}"
             final = 0
 
         coverage = _input_coverage(company)
         score_band = Severity(self._score_to_band(final, force_black=bool(critical), coverage=coverage))
 
         # Band = worst of (score-based band, highest active flag severity)
-        # Prevents false GREEN when a BLACK-severity rule fires but doesn't override
+        # Prevents false GREEN when a RED-severity rule fires (BLACK handled above)'t override
         if not critical:
             severity_rank = {Severity.GREEN: 0, Severity.YELLOW: 1, Severity.RED: 2, Severity.BLACK: 3}
             max_flag_severity = Severity.GREEN
             for f in active:
-                if f.severity in severity_rank and (f.severity == Severity.BLACK or f.rule_id in ("AR-002", "ESC-001")):
+                if f.severity in severity_rank and (f.severity in (Severity.RED, Severity.BLACK)):
                     if severity_rank[f.severity] > severity_rank.get(max_flag_severity, 0):
                         max_flag_severity = f.severity
             band_rank = severity_rank.get(score_band, 0)
@@ -1580,41 +1867,48 @@ class NLCRuleEngine:
     # RESCUE & LIFECYCLE SEQUENCING
     # ───────────────────────────────────────────────────────────────────
     def _generate_rescue_sequence(self, c: CompanyProfile, flags: List[ComplianceFlag], score: ScoreBreakdown) -> List[Dict[str, Any]]:
+        """R-014: Rescue derives strictly from active, verified findings."""
         active = [f for f in flags if not f.resolved and f.conditional_applies]
-        active_rules = {f.rule_id for f in active}
-        steps = []
-
-        def add_step(title: str, desc: str, rules: List[str], priority: str, min_days: int, max_days: int):
-            steps.append({"title": title, "description": desc, "related_rules": rules, "priority": priority, "min_days": min_days, "max_days": max_days})
-
         if score.risk_band not in (Severity.RED, Severity.BLACK):
             return []
-
-        if any(r in active_rules for r in {"AGM-001", "AGM-002"}):
-            add_step("Hold Overdue AGM", "Convene AGM immediately. Section 81.", ["AGM-001", "AGM-002"], "CRITICAL", 14, 30)
-
-        if any(r in active_rules for r in {"AUD-001", "AUD-002", "AUD-003"}):
-            add_step("Retrospective Audit", "Engage auditors for all defaulted years. Section 210.", ["AUD-001", "AUD-002", "AUD-003"], "HIGH", 30, 45)
-
-        # TAX-004: Advance Tax Payment Missed — read directly from flags
-        tax004_flags = [f for f in active if f.rule_id == "TAX-004"]
-        if tax004_flags:
-            all_missed = []
-            for f in tax004_flags:
-                all_missed.extend(f.detail.get("quarters", []))
-            if all_missed:
-                add_step("Pay Advance Tax", f"Missed quarters: {', '.join(all_missed)}. ITA 2023 Sec 74.", ["TAX-004"], "MEDIUM", 7, 14)
-
-        if any(r in active_rules for r in {"TR-005", "TR-006"}):
-            add_step("Ratify Irregular Transfers", "Board ratify irregular transfers. Section 47: AoA violations may need court rectification.", ["TR-001", "TR-002", "TR-003", "TR-004", "TR-005"], "HIGH", 10, 21)
-
-        if "ESC-002" in active_rules:
-            add_step("Defend Strike-Off", "File immediate application to set aside strike-off. Section 304.", ["ESC-002", "AR-002", "AR-003"], "CRITICAL", 1, 7)
-
-        # Sort by priority (CRITICAL first) then min_days (urgent first)
+        steps = []
+        try:
+            from canonical_architecture.statutory_rescue import STATUTORY_RESCUE_REGISTRY
+            for flag in active:
+                # FIX: Only generate rescue for verified NON_COMPLIANT findings
+                if flag.state != RuleState.NON_COMPLIANT or flag.severity not in (Severity.RED, Severity.BLACK):
+                    continue
+                rescue = STATUTORY_RESCUE_REGISTRY.get(flag.rule_id)
+                if not rescue:
+                    raise ValueError(f"Missing statutory rescue mapping for actionable finding: {flag.rule_id}")
+                
+                priority = "CRITICAL" if flag.severity == Severity.BLACK else "HIGH"
+                actions = rescue.get("statutory_actions", [])
+                desc = "; ".join(actions) if actions else rescue.get("objective", f"Remediate {flag.rule_id}")
+                if flag.rule_id == "TAX-004":
+                    all_missed = []
+                    for f in active:
+                        if f.rule_id == "TAX-004":
+                            all_missed.extend(f.detail.get("quarters", []))
+                    if all_missed:
+                        desc = f"Missed quarters: {', '.join(all_missed)}. {desc}"
+                
+                steps.append({
+                    "title": rescue.get("objective", f"Remediate: {flag.rule_id}"),
+                    "description": desc, "related_rules": [flag.rule_id],
+                    "priority": priority, "min_days": 7, "max_days": 30,
+                    "rescue_id": rescue.get("rescue_id", ""),
+                    "authority": rescue.get("authority", ""),
+                    "closure_condition": rescue.get("closure_condition", ""),
+                })
+        except ImportError as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to import STATUTORY_RESCUE_REGISTRY: {e}")
+            return []
         priority_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
-        steps.sort(key=lambda s: (priority_order.get(s["priority"], 9), s["min_days"]))  # type: ignore
+        steps.sort(key=lambda s: (priority_order.get(s["priority"], 9), s["min_days"]))
         return steps
+
 
     def _determine_lifecycle_stage(self, c: CompanyProfile) -> LifecycleStage:
         if c.on_rjsc_strike_off_list or c.is_dormant:
@@ -1657,12 +1951,10 @@ class NLCRuleEngine:
         return 10
 
     def _get_fy_end_deadline(self, c: CompanyProfile) -> date:
-        # The AGM held on date X covered the FY ending the previous 30 Jun.
-        # The NEXT AGM deadline is 6 months after the NEXT FY end.
-        # Example: AGM on 15 Dec 2025 covered FY 2024-25 (ending 30 Jun 2025).
-        # Next FY end = 30 Jun 2026. Deadline = 29 Dec 2026.
-        fy_year = c.last_agm_date.year if c.last_agm_date.month > 6 else c.last_agm_date.year - 1  # type: ignore
-        fy_end = date(fy_year + 1, 6, 30)  # NEXT FY end (Guaranteed no false flags), not the one already covered
+        # FIX Defect 20: Use company's actual financial_year_end instead of hardcoded 30 June.
+        fy_end = c.financial_year_end
+        while c.last_agm_date and c.last_agm_date > fy_end:
+            fy_end = date(fy_end.year + 1, fy_end.month, fy_end.day)
         return fy_end + timedelta(days=FY_END_AGM_DEADLINE_DAYS)
 
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:

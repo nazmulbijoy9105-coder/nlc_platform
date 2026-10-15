@@ -193,6 +193,14 @@ def _company_to_response(company) -> CompanyResponse:
         last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
         director_count=director_count,
         violation_count=violation_count,
+        company_type=_s(getattr(company, "company_type", None)),
+        company_status=_s(getattr(company, "company_status", None)),
+        financial_year_end=company.financial_year_end.isoformat() if getattr(company, "financial_year_end", None) else None,
+        registered_address=getattr(company, "registered_address", None),
+        revenue_tier=_s(getattr(company, "revenue_tier", None)),
+        is_fdi_registered=getattr(company, "is_fdi_registered", None),
+        is_dormant=getattr(company, "is_dormant", None),
+        created_at=company.created_at.isoformat() if getattr(company, "created_at", None) else None,
         active_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE")]),
         black_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("BLACK", "Severity.BLACK")]),
         red_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("RED", "Severity.RED")]),
@@ -294,7 +302,7 @@ async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_d
     compliance_svc = ComplianceService(db)
     company = await company_svc.get_by_id_or_404(company_id)
     flag_summary = await compliance_svc.get_flag_summary(company_id)
-    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=company.current_compliance_score, risk_band=company.current_risk_band, active_flags=flag_summary.get("total_active_flags", 0), black_flags=flag_summary.get("black_flags", 0), red_flags=flag_summary.get("red_flags", 0), yellow_flags=flag_summary.get("yellow_flags", 0), last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None)
+    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=company.current_compliance_score, risk_band=company.current_risk_band, active_flags=flag_summary.get("total_active_flags", 0), black_flags=flag_summary.get("black_flags", 0), red_flags=flag_summary.get("red_flags", 0), yellow_flags=flag_summary.get("yellow_flags", 0), last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
 
 
 @router.get("/{company_id}/flags", response_model=list[FlagResponse], dependencies=[Depends(require_company_access("company_id"))], summary="Get active flags")

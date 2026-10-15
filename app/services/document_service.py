@@ -30,6 +30,7 @@ from app.core.config import get_settings
 from app.models.documents import AIOutputLog, AIPromptTemplate, Document, DocumentAccessLog
 from app.models.enums import AiModel, DocumentType
 from app.services.base import BaseService
+from app.integrations.rjsc_forms_registry import get_form_for_rule
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -153,6 +154,9 @@ class DocumentService(BaseService[Document]):
         # ── Step 6: Append liability disclaimer ───────────────────
         final_content += f"\n\n---\n\n{template.liability_disclaimer}"
 
+        # ── Step 6.5: Attach statutory form mapping (if applicable) ─
+        statutory_form = get_form_for_rule(parameters.get("triggered_rule_id", ""))
+        
         # ── Step 7: Store document (AI Constitution Article 3) ─────
         document = await self.create(
             company_id=company_id,
@@ -305,6 +309,7 @@ class DocumentService(BaseService[Document]):
         *,
         document_type: DocumentType | None = None,
         include_unapproved: bool = False,
+        client_visible_only: bool = False,
     ) -> list[Document]:
         """Get all documents for a company."""
         filters = [
@@ -313,7 +318,7 @@ class DocumentService(BaseService[Document]):
         ]
         if document_type:
             filters.append(Document.document_type == document_type)
-        if not include_unapproved:
+        if not include_unapproved or client_visible_only:
             filters.append(Document.is_client_visible)
 
         result = await self.db.execute(

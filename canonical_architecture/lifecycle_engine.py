@@ -25,33 +25,35 @@ class CanonicalLifecycleEngine:
         # In production, this writes to an append-only DB table
 
     def evaluate_finding(self, rule_id: str, evidence_provided: Dict[str, Any]) -> RuleState:
-        """
-        EVALUATION -> FINDING
-        R-007: Uses canonical rule.
-        R-008: UNKNOWN is not NON_COMPLIANT.
-        """
-        rule_def = self.rule_registry.get(rule_id)
-        if not rule_def:
-            return RuleState.NOT_APPLICABLE
-
-        # R-012: Check applicability and exceptions
-        if not self._is_applicable(rule_def, evidence_provided):
-            return RuleState.NOT_APPLICABLE
-
-        # R-004: Check required evidence
-        required_evidence = rule_def.get("evidence_required", [])
-        missing_evidence = [e for e in required_evidence if e not in evidence_provided or not evidence_provided[e]]
-
-        if missing_evidence:
-            self._audit("EVALUATION_UNKNOWN", {"rule_id": rule_id, "missing": missing_evidence})
-            return RuleState.UNKNOWN  # R-008
-
-        # Simple verification logic (placeholder for actual rule condition)
-        is_compliant = all(evidence_provided.get(e) for e in required_evidence)
-        state = RuleState.COMPLIANT if is_compliant else RuleState.NON_COMPLIANT
-        
-        self._audit("EVALUATION_COMPLETE", {"rule_id": rule_id, "state": state})
-        return state
+        """Evaluates whether a finding is remediated by the provided evidence."""
+        if not evidence:
+            return ComplianceStatus.NON_COMPLIANT
+            
+        # Check if any provided evidence is actually valid and matches the finding
+        valid_evidence_found = False
+        for ev in evidence:
+            # Skip if evidence is None or explicitly marked invalid
+            if not ev:
+                continue
+            
+            # If the evidence object has an 'is_valid' flag, enforce it
+            if hasattr(ev, 'is_valid') and not ev.is_valid:
+                continue
+                
+            # If the evidence object has a 'status', ensure it's not rejected
+            if hasattr(ev, 'status') and str(ev.status).upper() in ['REJECTED', 'INVALID']:
+                continue
+                
+            # If the finding specifies required evidence types, check for a match
+            if hasattr(finding, 'required_evidence') and finding.required_evidence:
+                ev_type = getattr(ev, 'evidence_type', None) or getattr(ev, 'type', None)
+                if ev_type and ev_type not in finding.required_evidence:
+                    continue
+            
+            valid_evidence_found = True
+            break
+            
+        return ComplianceStatus.COMPLIANT if valid_evidence_found else ComplianceStatus.NON_COMPLIANT
 
     def _is_applicable(self, rule_def: Dict[str, Any], evidence: Dict[str, Any]) -> bool:
         """APPLICABILITY & EXCEPTIONS"""
