@@ -310,13 +310,8 @@ class CompanyService(BaseService[Company]):
         # ── AGM State ─────────────────────────────────────────────
         agms_sorted = sorted(company.agms, key=lambda a: a.financial_year, reverse=True)
         latest_agm = agms_sorted[0] if agms_sorted else None
-        agm_count = len([a for a in company.agms if a.agm_held])
-        if agm_count == 0 and company.last_agm_date:
-            agm_count = 1  # Company has held at least one AGM
-        if agm_count == 0 and company.last_agm_date:
-            agm_count = 1
-        if agm_count == 0 and company.last_agm_date:
-            agm_count = 1  # Company has held at least one AGM (based on last_agm_date)
+        has_agm_records = bool(company.agms) or company.last_agm_date is not None
+        agm_count = (len([a for a in company.agms if a.agm_held]) or (1 if company.last_agm_date else 0)) if has_agm_records else None
 
         # ── Audit State ───────────────────────────────────────────
         audits_sorted = sorted(company.audits, key=lambda a: a.financial_year, reverse=True)
@@ -438,7 +433,7 @@ class CompanyService(BaseService[Company]):
             "disqualification_details": list(company.disqualification_details or []),
             "penalty_notices_received":     company.penalty_notices_received,
             "penalty_notices_resolved":     company.penalty_notices_resolved,
-            "current_director_count":  len([d for d in company.directors if d.director_status.value == "ACTIVE"]),
+            "current_director_count": len([d for d in company.directors if d.director_status.value == "ACTIVE"]) if company.directors else None,
 
             # BSEC Corporate Governance
             "bsec_listed":                   getattr(company, "bsec_listed", False),
@@ -562,4 +557,92 @@ class CompanyService(BaseService[Company]):
         if company.authorized_capital_bdt is not None and company.paid_up_capital_bdt is not None:
             profile["authorized_capital_bdt"] = float(company.authorized_capital_bdt)
             profile["paid_up_capital_bdt"] = float(company.paid_up_capital_bdt)
+        # ── 0027: DEAD rule inputs (from new DB columns) ─────────────
+        profile.update({
+            "moa_aoa_filed": getattr(company, "moa_aoa_filed", None),
+            "capital_reduction_pending": getattr(company, "capital_reduction_pending", None),
+            "special_resolution_date": company.special_resolution_date,
+            "special_resolution_filed": getattr(company, "special_resolution_filed", None),
+            "register_of_directors_interests": getattr(company, "register_of_directors_interests", None),
+            "register_of_contracts": getattr(company, "register_of_contracts", None),
+            "winding_up_petition_filed": getattr(company, "winding_up_petition_filed", None),
+            "liquidator_appointed": getattr(company, "liquidator_appointed", None),
+            "court_ordered_winding_up": getattr(company, "court_ordered_winding_up", None),
+            "voluntary_winding_up": getattr(company, "voluntary_winding_up", None),
+            "investigation_order": getattr(company, "investigation_order", None),
+            "factory_license_obtained": getattr(company, "factory_license_obtained", None),
+            "factory_license_expiry": company.factory_license_expiry,
+            "labour_court_order_pending": getattr(company, "labour_court_order_pending", None),
+            "bsec_listed": getattr(company, "bsec_listed", None),
+            "bsec_quarterly_report_filed": getattr(company, "bsec_quarterly_report_filed", None),
+            "cg_certificate_obtained": getattr(company, "cg_certificate_obtained", None),
+            "board_independent_director": getattr(company, "board_independent_director", None),
+            "audit_committee_established": getattr(company, "audit_committee_established", None),
+            "agm_adjourned_without_notice": getattr(company, "agm_adjourned_without_notice", None),
+            "name_change_pending": getattr(company, "name_change_pending", None),
+            "name_change_date": company.name_change_date,
+            "name_change_sr_passed": company.name_change_sr_passed,
+            "object_clause_change_pending": getattr(company, "object_clause_change_pending", None),
+            "object_clause_change_date": company.object_clause_change_date,
+            "aoa_alteration_pending": getattr(company, "aoa_alteration_pending", None),
+            "aoa_alteration_date": company.aoa_alteration_date,
+            "foreign_exchange_violation": getattr(company, "foreign_exchange_violation", None),
+            "annual_turnover_bdt": float(company.annual_turnover_bdt) if company.annual_turnover_bdt else 0.0,
+        })
+
+        # ── 0028: Remaining compliance fields + derived fields ──
+        profile.update({
+            # AR-004 attachments
+            "balance_sheet_attached": company.balance_sheet_attached,
+            "directors_list_attached": company.directors_list_attached,
+            "profit_loss_attached": company.profit_loss_attached,
+            "schedule_x_attached": company.schedule_x_attached,
+            "shareholders_list_attached": company.shareholders_list_attached,
+            # FDI / Foreign shareholding
+            "has_foreign_shareholder": company.has_foreign_shareholder,
+            "foreign_shareholding_pct": float(company.foreign_shareholding_pct) if company.foreign_shareholding_pct else 0.0,
+            "encashment_certificate_uploaded": company.encashment_certificate_uploaded,
+            "encashment_certificate_date": company.encashment_certificate_date,
+            "bida_registered": company.bida_registered,
+            "is_fdi_registered": company.is_fdi_registered,
+            "fdi_registration_date": company.fdi_registration_date,
+            "remittance_amount_usd": float(company.remittance_amount_usd) if company.remittance_amount_usd else 0.0,
+            # Form filing status
+            "form_iii_filed": company.form_iii_filed,
+            "form_iv_filed": company.form_iv_filed,
+            # RJSC strike-off
+            "rjsc_status": company.rjsc_status or "ACTIVE",
+            "rjsc_strike_off_notice_date": company.rjsc_strike_off_notice_date,
+            "last_rjsc_compliance_date": company.last_rjsc_compliance_date,
+            # Director disqualification + penalties
+            "any_director_disqualified": company.any_director_disqualified,
+            "disqualification_details": company.disqualification_details or [],
+            "penalty_notices_received": company.penalty_notices_received or 0,
+            "penalty_notices_resolved": company.penalty_notices_resolved or 0,
+            # Capital reduction
+            "capital_reduction_date": company.capital_reduction_date,
+            "capital_reduction_court_order_obtained": company.capital_reduction_court_order_obtained,
+            # Winding up
+            "winding_up_petition_date": company.winding_up_petition_date,
+            # Derived fields (no DB column needed)
+            "tin_obtained": bool(company.tin_number) if company.tin_number is not None else None,
+            "vat_registered": bool(company.vat_number) if company.vat_number is not None else None,
+            "annual_return_filed": bool(company.last_return_filed_year) if company.last_return_filed_year is not None else None,
+        })
+
+        # ── 0031: Board/Accounts/Director extended fields ──
+        profile.update({
+            "last_board_meeting_date": company.last_board_meeting_date,
+            "board_meeting_notice_given": company.board_meeting_notice_given,
+            "board_minutes_prepared": company.board_minutes_prepared,
+            "financial_statements_presented": company.financial_statements_presented,
+            "financial_statements_filed": company.financial_statements_filed,
+            "books_of_account_kept": company.books_of_account_kept,
+            "director_consent_filed": company.director_consent_filed,
+            "director_office_of_profit": company.director_office_of_profit,
+            "managing_director_appointment_date": company.managing_director_appointment_date,
+            "member_count": company.member_count or 0,
+            "business_commencement_declaration_filed": company.business_commencement_declaration_filed,
+        })
+
         return profile

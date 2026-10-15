@@ -150,6 +150,48 @@ class Company(FullMixin, Base):
     # ── Minimum Tax & Clearance ──────────────────────────────────
     minimum_tax_paid: Mapped[bool] = mapped_column(Boolean, default=True)
     tax_clearance_obtained: Mapped[bool] = mapped_column(Boolean, default=False)
+    # ── Compliance Data (0027 — DEAD rule inputs) ─────────────────
+    moa_aoa_filed: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    capital_reduction_pending: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
+    special_resolution_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    special_resolution_filed: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
+    register_of_directors_interests: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    register_of_contracts: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    winding_up_petition_filed: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
+    liquidator_appointed: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
+    court_ordered_winding_up: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
+    voluntary_winding_up: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
+    investigation_order: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
+    factory_license_obtained: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
+    factory_license_expiry: Mapped[date | None] = mapped_column(Date, nullable=True)
+    labour_court_order_pending: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
+    bsec_listed: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
+    bsec_quarterly_report_filed: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    cg_certificate_obtained: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    board_independent_director: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    audit_committee_established: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    agm_adjourned_without_notice: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
+    name_change_pending: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
+    name_change_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    name_change_sr_passed: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
+    object_clause_change_pending: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
+    object_clause_change_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    aoa_alteration_pending: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
+    aoa_alteration_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    foreign_exchange_violation: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
+    annual_turnover_bdt: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True)
+    # ── 0031: Board/Accounts/Director extended (Companies Act) ──
+    last_board_meeting_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    board_meeting_notice_given: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    board_minutes_prepared: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    financial_statements_presented: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    financial_statements_filed: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    books_of_account_kept: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    director_consent_filed: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    director_office_of_profit: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
+    managing_director_appointment_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    member_count: Mapped[int | None] = mapped_column(Integer, server_default="0", nullable=True)
+    business_commencement_declaration_filed: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
     tax_return_deadline_extended: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # ── Director Disqualification ────────────────────────────────
@@ -305,43 +347,43 @@ class Company(FullMixin, Base):
 
     # ── Relationships ─────────────────────────────────────────────
     user_access: Mapped[list[CompanyUserAccess]] = relationship(
-        "CompanyUserAccess", back_populates="company", lazy="selectin"
+        "CompanyUserAccess", back_populates="company", lazy="noload"
     )
     directors: Mapped[list[Director]] = relationship(
-        "Director", back_populates="company", lazy="selectin"
+        "Director", back_populates="company", lazy="noload"
     )
     shareholders: Mapped[list[Shareholder]] = relationship(
-        "Shareholder", back_populates="company", lazy="selectin"
+        "Shareholder", back_populates="company", lazy="noload"
     )
     share_transfers: Mapped[list[ShareTransfer]] = relationship(
         "ShareTransfer", back_populates="company", lazy="noload"
     )
     agms: Mapped[list[AGM]] = relationship(
-        "AGM", back_populates="company", lazy="selectin",
+        "AGM", back_populates="company", lazy="noload",
         order_by="AGM.financial_year.desc()"
     )
     audits: Mapped[list[Audit]] = relationship(
-        "Audit", back_populates="company", lazy="selectin"
+        "Audit", back_populates="company", lazy="noload"
     )
     annual_returns: Mapped[list[AnnualReturn]] = relationship(
-        "AnnualReturn", back_populates="company", lazy="selectin",
+        "AnnualReturn", back_populates="company", lazy="noload",
         order_by="AnnualReturn.financial_year.desc()"
     )
     compliance_flags: Mapped[list[ComplianceFlag]] = relationship(
-        "ComplianceFlag", back_populates="company", lazy="selectin"
+        "ComplianceFlag", back_populates="company", lazy="noload"
     )
     score_history: Mapped[list[ComplianceScoreHistory]] = relationship(
         "ComplianceScoreHistory", back_populates="company", lazy="noload",
         order_by="ComplianceScoreHistory.calculated_at.desc()"
     )
     rescue_plans: Mapped[list[RescuePlan]] = relationship(
-        "RescuePlan", back_populates="company", lazy="selectin"
+        "RescuePlan", back_populates="company", lazy="noload"
     )
     tasks: Mapped[list[Task]] = relationship(
         "Task", back_populates="company", lazy="noload"
     )
     engagements: Mapped[list[Engagement]] = relationship(
-        "Engagement", back_populates="company", lazy="selectin"
+        "Engagement", back_populates="company", lazy="noload"
     )
     documents: Mapped[list[Document]] = relationship(
         "Document", back_populates="company", lazy="noload"
@@ -350,7 +392,7 @@ class Company(FullMixin, Base):
         "Notification", back_populates="company", lazy="noload"
     )
     statutory_registers: Mapped[list[StatutoryRegister]] = relationship(
-        "StatutoryRegister", back_populates="company", lazy="selectin"
+        "StatutoryRegister", back_populates="company", lazy="noload"
     )
     office_history: Mapped[list[RegisteredOfficeHistory]] = relationship(
         "RegisteredOfficeHistory", back_populates="company", lazy="noload"

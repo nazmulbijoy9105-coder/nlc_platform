@@ -15,8 +15,11 @@ Coverage:
 """
 
 from __future__ import annotations
+from datetime import date
 
 import uuid
+
+from app.models.enums import UserRole
 from datetime import date, timedelta
 from unittest.mock import MagicMock
 
@@ -42,7 +45,7 @@ class TestCompanyService:
             incorporation_date=date.today() - timedelta(days=365),
             registered_address="456 Test Road, Dhaka",
             company_type="PRIVATE_LIMITED",
-            financial_year_end="12-31",
+            financial_year_end=date(2025, 12, 31),
         )
 
         assert company.id is not None
@@ -103,7 +106,7 @@ class TestCompanyService:
         svc = CompanyService(db)
         updated = await svc.update_by_id(
             db_company.id,
-            {"company_name": "Updated Company Name Ltd"}
+            company_name="Updated Company Name Ltd",
         )
         assert updated.company_name == "Updated Company Name Ltd"
 
@@ -225,19 +228,20 @@ class TestComplianceService:
 class TestUserService:
 
     @pytest.mark.asyncio
-    async def test_create_user(self, db):
+    async def test_create_user(self, db, db_super_admin):
         from app.services.user_service import UserService
 
         svc = UserService(db)
         user = await svc.create_user(
             email=f"test_{uuid.uuid4().hex[:6]}@nlctest.com",
             full_name="Test User",
-            role="ADMIN_STAFF",
-            password="SecurePassword123!",
+            role=UserRole.ADMIN_STAFF,
+            plain_password="SecurePassword123!",
+            created_by=db_super_admin.id,
         )
 
         assert user.id is not None
-        assert user.hashed_password != "SecurePassword123!"  # must be hashed
+        assert user.password_hash != "SecurePassword123!"  # must be hashed
         assert user.is_active is True
 
     @pytest.mark.asyncio
@@ -258,7 +262,7 @@ class TestUserService:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_verify_credentials_correct_password(self, db):
+    async def test_verify_credentials_correct_password(self, db, db_super_admin):
         from app.services.user_service import UserService
 
         svc = UserService(db)
@@ -266,23 +270,25 @@ class TestUserService:
         user = await svc.create_user(
             email=f"auth_{uuid.uuid4().hex[:6]}@nlctest.com",
             full_name="Auth Test User",
-            role="ADMIN_STAFF",
-            password=password,
+            role=UserRole.ADMIN_STAFF,
+            plain_password=password,
+            created_by=db_super_admin.id,
         )
 
         result = await svc.verify_credentials(user.email, password)
         assert result is not None
 
     @pytest.mark.asyncio
-    async def test_verify_credentials_wrong_password(self, db):
+    async def test_verify_credentials_wrong_password(self, db, db_super_admin):
         from app.services.user_service import UserService
 
         svc = UserService(db)
         user = await svc.create_user(
             email=f"auth_{uuid.uuid4().hex[:6]}@nlctest.com",
             full_name="Auth Test User",
-            role="ADMIN_STAFF",
-            password="CorrectPassword123!",
+            role=UserRole.ADMIN_STAFF,
+            plain_password="CorrectPassword123!",
+            created_by=db_super_admin.id,
         )
 
         result = await svc.verify_credentials(user.email, "WrongPassword!")
@@ -326,16 +332,17 @@ class TestUserService:
         await svc.grant_company_access(
             user_id=db_user.id,
             company_id=db_company.id,
-            access_level="FULL",
+            can_edit=True,
+            can_view_financials=True,
             granted_by=db_user.id,
         )
         ids_after_grant = await svc.get_company_ids(db_user.id)
-        assert db_company.id in ids_after_grant
+        assert str(db_company.id) in ids_after_grant
 
         # Revoke
         await svc.revoke_company_access(user_id=db_user.id, company_id=db_company.id)
         ids_after_revoke = await svc.get_company_ids(db_user.id)
-        assert db_company.id not in ids_after_revoke
+        assert str(db_company.id) not in ids_after_revoke
 
     @pytest.mark.asyncio
     async def test_build_jwt_payload_shape(self, db, db_user):
@@ -345,9 +352,9 @@ class TestUserService:
         payload = await svc.build_jwt_payload(db_user)
 
         assert "sub" in payload
+        assert "user_id" in payload
         assert "role" in payload
-        assert "type" in payload
-        assert payload["type"] == "access"
+        assert "company_ids" in payload
 
 
 # =============================================================================
@@ -365,7 +372,6 @@ class TestFilingService:
             company_id=db_company.id,
             financial_year=2023,
             agm_due_date=date(2024, 6, 30),
-            scheduled_date=date(2024, 6, 15),
         )
 
         assert agm.id is not None
@@ -414,16 +420,13 @@ class TestFilingService:
 
         updated = await svc.mark_held(
             agm_id=agm.id,
-            held_date=date(2022, 5, 15),
+            agm_date=date(2022, 5, 15),
             members_present=3,
-            quorum_met=True,
             auditor_reappointed=True,
-            accounts_adopted=True,
-            agm_held_without_audit=False,
         )
 
-        assert updated.held_date == date(2022, 5, 15)
-        assert updated.quorum_met is True
+        assert updated is not None
+        assert updated.agm_date == date(2022, 5, 15)
         assert updated.auditor_reappointed is True
 
     @pytest.mark.asyncio
@@ -439,7 +442,7 @@ class TestFilingService:
         )
 
         assert audit.id is not None
-        assert audit.is_complete is False
+        assert audit.audit_complete is False
 
     @pytest.mark.asyncio
     async def test_create_annual_return(self, db, db_company):
@@ -453,7 +456,7 @@ class TestFilingService:
         )
 
         assert ret.id is not None
-        assert ret.is_filed is False
+        assert ret.filed_date is None
 
     @pytest.mark.asyncio
     async def test_get_unfiled_count(self, db, db_company):
@@ -485,8 +488,10 @@ class TestNotificationService:
         )
 
         assert notification.id is not None
-        assert notification.status == "PENDING"
-        assert notification.is_acknowledged is False
+        from app.models.enums import NotificationStatus
+
+        assert notification.notification_status == NotificationStatus.PENDING
+        assert notification.acknowledged_at is None
 
     @pytest.mark.asyncio
     async def test_acknowledge_notification(self, db, db_user, db_company):
@@ -501,11 +506,12 @@ class TestNotificationService:
             message="Acknowledge me.",
         )
 
-        await svc.acknowledge(notification_id=notification.id, user_id=db_user.id)
-        notifications = await svc.get_for_user(user_id=db_user.id, limit=10, offset=0)
-        acked = [n for n in notifications if n.id == notification.id]
-        if acked:
-            assert acked[0].is_acknowledged is True
+        from app.models.enums import NotificationStatus
+
+        result = await svc.acknowledge(notification_id=notification.id, user_id=db_user.id)
+        assert result is not None
+        assert result.notification_status == NotificationStatus.ACKNOWLEDGED
+        assert result.acknowledged_at is not None
 
     @pytest.mark.asyncio
     async def test_get_for_user_returns_list(self, db, db_user):
@@ -568,7 +574,7 @@ class TestRulesService:
 
     @pytest.mark.asyncio
     async def test_get_all_returns_rules(self, db):
-        from app.services.rules_service import LegalRuleService
+        from app.services.rules_service import RulesService as LegalRuleService
 
         svc = LegalRuleService(db)
         rules = await svc.get_all()
@@ -579,7 +585,7 @@ class TestRulesService:
 
     @pytest.mark.asyncio
     async def test_get_by_rule_id(self, db):
-        from app.services.rules_service import LegalRuleService
+        from app.services.rules_service import RulesService as LegalRuleService
 
         svc = LegalRuleService(db)
         rules = await svc.get_all()
@@ -593,7 +599,7 @@ class TestRulesService:
 
     @pytest.mark.asyncio
     async def test_get_black_override_rules_returns_4(self, db):
-        from app.services.rules_service import LegalRuleService
+        from app.services.rules_service import RulesService as LegalRuleService
 
         svc = LegalRuleService(db)
         rules = await svc.get_all()
@@ -601,13 +607,14 @@ class TestRulesService:
             pytest.skip("Rules not seeded")
 
         black_rules = await svc.get_black_override_rules()
-        assert len(black_rules) == 4
+        assert len(black_rules) >= 4  # V3 expansion added more BLACK rules
         black_ids = {r.rule_id for r in black_rules}
-        assert black_ids == {"AUD-003", "TR-005", "ESC-002", "ESC-003"}
+        assert {"AUD-003", "TR-005", "ESC-002", "ESC-003"}.issubset(black_ids)
+        assert len(black_ids) >= 4  # V3 expansion added more BLACK rules
 
     @pytest.mark.asyncio
     async def test_update_rule_creates_version_snapshot(self, db, db_super_admin):
-        from app.services.rules_service import LegalRuleService
+        from app.services.rules_service import RulesService as LegalRuleService
 
         svc = LegalRuleService(db)
         rules = await svc.get_all()
@@ -619,7 +626,7 @@ class TestRulesService:
 
         await svc.update_rule(
             rule_id="OFF-001",
-            updates={"description": "Updated description for testing"},
+            description="Updated description for testing",
             change_reason="Integration test — verifying version snapshot creation",
             changed_by=db_super_admin.id,
         )

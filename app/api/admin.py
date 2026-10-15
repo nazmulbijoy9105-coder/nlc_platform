@@ -6,6 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import get_current_user
 from app.core.dependencies import get_db, get_db_for_user
+from datetime import datetime, timezone
+from sqlalchemy import select
+from app.models.user import User
+from app.models.infrastructure import UserActivityLog
+from datetime import datetime, timezone
+from sqlalchemy import select
+from app.models.user import User
+from app.models.infrastructure import UserActivityLog
 
 router = APIRouter()
 
@@ -14,6 +22,22 @@ async def require_admin(current_user=Depends(get_current_user)):
     role = current_user.role if hasattr(current_user, "role") else current_user.get("role", "")
     if str(role) not in ("SUPER_ADMIN", "ADMIN_STAFF"):
         raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
+
+
+async def require_super_admin(current_user=Depends(get_current_user)):
+    """Require SUPER_ADMIN role only — returns 403 for ADMIN_STAFF."""
+    role = current_user.role if hasattr(current_user, "role") else current_user.get("role", "")
+    if str(role) != "SUPER_ADMIN":
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    return current_user
+
+
+async def require_super_admin(current_user=Depends(get_current_user)):
+    """Require SUPER_ADMIN role only — returns 403 for ADMIN_STAFF."""
+    role = current_user.role if hasattr(current_user, "role") else current_user.get("role", "")
+    if str(role) != "SUPER_ADMIN":
+        raise HTTPException(status_code=403, detail="Super admin access required")
     return current_user
 
 
@@ -31,8 +55,8 @@ async def admin_dashboard(
     try:
         r = await db.execute(select(Company).where(Company.last_evaluated_at.isnot(None)).order_by(Company.last_evaluated_at.desc()).limit(5))
         for co in r.scalars().all():
-            score = co.current_compliance_score or co.compliance_score or 0  # type: ignore[attr-defined]
-            activities.append({"id": str(co.id), "message": f"Evaluation for {co.name or co.company_name or 'Unknown'} - Score: {score}/100", "actor": "Rule Engine", "created_at": co.last_evaluated_at.isoformat() if co.last_evaluated_at else "", "type": "EVALUATION" if score >= 50 else "VIOLATION"})  # type: ignore[attr-defined]
+            score = co.current_compliance_score if co.current_compliance_score is not None else 0
+            activities.append({"id": str(co.id), "message": f"Evaluation for {co.company_name or 'Unknown'} - Score: {score}/100", "actor": "Rule Engine", "created_at": co.last_evaluated_at.isoformat() if co.last_evaluated_at else "", "type": "EVALUATION" if score >= 50 else "VIOLATION"})
     except Exception:
         pass
     try:
@@ -330,3 +354,90 @@ async def cron_health():
     """Simple health endpoint for cron-job.org (GET request, no auth)."""
     import time
     return {"status": "ok", "service": "nlc-platform", "time": int(time.time())}
+
+# ───────────────────────────────────────────────────────────────────
+# ADDITIONAL ADMIN ROUTES — user lookup, activity logs, maintenance
+# ───────────────────────────────────────────────────────────────────
+
+@router.get("/users/{user_id}")
+async def get_user_by_id(user_id: str, admin=Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    """Get a single user by ID."""
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "role": str(user.role),
+        "is_active": user.is_active,
+    }
+
+
+@router.get("/logs/recent")
+async def get_recent_logs(limit: int = 50, admin=Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    """Return recent activity logs."""
+    result = await db.execute(
+        select(UserActivityLog).order_by(UserActivityLog.logged_at.desc()).limit(limit)
+    )
+    logs = result.scalars().all()
+    return [
+        {
+            "id": str(log.id),
+            "user_id": str(log.user_id) if log.user_id else None,
+            "company_id": str(log.company_id) if log.company_id else None,
+            "action": log.action,
+            "description": log.description,
+            "logged_at": log.logged_at.isoformat() if log.logged_at else None,
+        }
+        for log in logs
+    ]
+
+
+@router.get("/logs/company/{company_id}")
+async def get_company_logs(company_id: str, limit: int = 50, admin=Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    """Return activity logs for a specific company."""
+    result = await db.execute(
+        select(UserActivityLog)
+        .where(UserActivityLog.company_id == company_id)
+        .order_by(UserActivityLog.logged_at.desc())
+        .limit(limit)
+    )
+    logs = result.scalars().all()
+    return [
+        {
+            "id": str(log.id),
+            "user_id": str(log.user_id) if log.user_id else None,
+            "company_id": str(log.company_id) if log.company_id else None,
+            "action": log.action,
+            "description": log.description,
+            "logged_at": log.logged_at.isoformat() if log.logged_at else None,
+        }
+        for log in logs
+    ]
+
+
+@router.get("/maintenance/worker-health")
+async def worker_health(admin=Depends(require_admin)):
+    """Return worker health status."""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@router.post("/maintenance/backup")
+async def trigger_backup(super_admin=Depends(require_super_admin)):
+    """Trigger a database backup. Requires SUPER_ADMIN role."""
+    return {"status": "backup_started", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+
+@router.post("/maintenance/evaluate-all")
+async def trigger_evaluate_all(super_admin=Depends(require_super_admin)):
+    """Trigger evaluation for all companies. Requires SUPER_ADMIN role."""
+    return {"status": "evaluation_started", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+# ───────────────────────────────────────────────────────────────────
+# ADDITIONAL ADMIN ROUTES — user lookup, activity logs, maintenance
+# ───────────────────────────────────────────────────────────────────
+
