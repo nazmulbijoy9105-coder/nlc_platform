@@ -469,6 +469,7 @@ class NLCRuleEngine:
                     score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description="Memorandum and Articles of Association not filed with RJSC. Section 11: constitutional documents required.",
+                    statutory_basis="Companies Act 1994, Section 11",
                     statutory_basis="Section 23, Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay}
                 ))
@@ -1116,6 +1117,7 @@ class NLCRuleEngine:
                     score_impact=3,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Office change not filed via Form VI. Section 77: 28-day deadline. Overdue by {delay} days.",
+                    statutory_basis="Companies Act 1994, Section 77",
                     statutory_basis="Section 77, Companies Act 1994 (Bangladesh)",
                     detail={"delay": delay, "form": "Form VI"}
                 ))

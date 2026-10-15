@@ -79,6 +79,13 @@ RJSC_FORMS_REFERENCE = [
 
     {"form_code": "FORM_I", "form_number": "I", "form_name": "Declaration of Compliance", "section": "Section 9", "rule_id": "INC-001", "deadline_days": 0},
     {"form_code": "FORM_III", "form_number": "III", "form_name": "Notice of Consolidation/Division of Share Capital", "section": "Sections 53-54", "rule_id": "CAP-001", "deadline_days": 15},
+    {"form_code": "FORM_IV", "form_number": "IV", "form_name": "Notice of Increase in Capital", "section": "Section 52", "rule_id": "SH-003", "deadline_days": 30},
+    {"form_code": "FORM_VI", "form_number": "VI", "form_name": "Notice of Change of Registered Office", "section": "Section 77", "rule_id": "OFF-001", "deadline_days": 28},
+    {"form_code": "FORM_VIII", "form_number": "VIII", "form_name": "Registration of Charge", "section": "Section 87", "rule_id": "CAP-002", "deadline_days": 30},
+    {"form_code": "FORM_IX", "form_number": "IX", "form_name": "Consent of Director to Act", "section": "Section 92", "rule_id": "DIR-001", "deadline_days": 30},
+    {"form_code": "FORM_XII", "form_number": "XII", "form_name": "Annual Return", "section": "Section 119", "rule_id": "AR-001", "deadline_days": 30},
+    {"form_code": "FORM_XIV", "form_number": "XIV", "form_name": "Notice of Director Change", "section": "Section 92", "rule_id": "DIR-001", "deadline_days": 14},
+    {"form_code": "FORM_XV", "form_number": "XV", "form_name": "Return of Allotment", "section": "Section 50", "rule_id": "SH-001", "deadline_days": 30},
     {"form_code": "FORM_IV", "form_number": "IV", "form_name": "Notice of Increase in Capital", "section": "Section 56", "rule_id": "SH-003", "deadline_days": 30},
     {"form_code": "FORM_VI", "form_number": "VI", "form_name": "Notice of Change of Registered Office", "section": "Section 77", "rule_id": "OFF-001", "deadline_days": 28},
     {"form_code": "FORM_VIII", "form_number": "VIII", "form_name": "Registration of Charge", "section": "Section 87", "rule_id": "CAP-002", "deadline_days": 30},
