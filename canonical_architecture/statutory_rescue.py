@@ -176,7 +176,11 @@ STATUTORY_RESCUE_REGISTRY: Dict[str, Dict[str, Any]] = {
         "deadline_basis": "STATUTORY",
         "notification_required": True,
         "verification": "DOCUMENTARY_EVIDENCE",
-        "closure_condition": "INC-001 == RuleState.COMPLIANT"
+        "closure_condition": "INC-001 == RuleState.COMPLIANT",
+        "statutory_basis": "Section 23, Companies Act 1994 (Bangladesh)",
+        "complexity": "HIGH",
+        "estimated_days_min": 7,
+        "estimated_days_max": 21
     },
     "INC-002": {
         "rescue_id": "INC-RESCUE-002",
