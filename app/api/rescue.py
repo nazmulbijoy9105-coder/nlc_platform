@@ -341,16 +341,20 @@ async def update_rescue_step(
             detail=f"Invalid status '{body.status}'. Must be one of: {valid_statuses}",
         )
 
-    plan = await rescue_svc.update_step(  # type: ignore
-        plan_id=plan_id,
-        step_number=step_number,
-        new_status=body.status,
+    from app.models.enums import RescueStepStatus
+    plan = await rescue_svc.get_by_id_or_404(plan_id)
+    step = next((st for st in plan.steps if st.step_number == step_number), None)
+    if step is None:
+        raise HTTPException(status_code=404, detail="Rescue plan or step not found.")
+    updated = await rescue_svc.update_step(
+        step.id,
+        status=RescueStepStatus(body.status),
         completion_notes=body.completion_notes,
-        completion_document_id=body.completion_document_id,
         updated_by=current_user.id,
     )
-    if not plan:
+    if not updated:
         raise HTTPException(status_code=404, detail="Rescue plan or step not found.")
+    await db.refresh(plan)
 
     await activity.log(
         action="RESCUE_STEP_UPDATED",
@@ -362,14 +366,14 @@ async def update_rescue_step(
     )
 
     # Step 8 COMPLETED → trigger re-evaluation via Celery
-    if step_number == 8 and body.status.upper() in ("COMPLETED", "COMPLETE"):
+    if plan.total_steps and plan.completed_steps >= plan.total_steps:
         try:
             from app.worker.tasks import trigger_rescue_reevaluation
             trigger_rescue_reevaluation.apply_async(
                 kwargs={
                     "company_id": str(plan.company_id),
                     "rescue_plan_id": str(plan_id),
-                    "completed_step_number": 8,
+                    "completed_step_number": step_number,
                 },
                 countdown=10,
             )
