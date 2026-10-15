@@ -1,4 +1,162 @@
 """
+NLC Layer 3: Statutory Rescue Registry - WHAT must be corrected when a rule is
+breached, overdue, unsupported or unknown. Derived only from findings (R-014).
+Deadlines are RECONCILE (unverified) and not to be presented as settled law.
+"""
+from dataclasses import dataclass
+from enum import Enum
+from typing import Dict, Iterable, List, Tuple
+
+from .evaluator import Finding
+from .statutory_rules import (ProvisionStatus, RuleState, Severity,
+                              STATUTORY_RULE_REGISTRY)
+
+
+class RescueState(str, Enum):
+    NOT_REQUIRED = "NOT_REQUIRED"
+    IDENTIFIED = "IDENTIFIED"
+    IN_PROGRESS = "IN_PROGRESS"
+    RESOLVED = "RESOLVED"
+    BLOCKED = "BLOCKED"
+    WAITING_EVIDENCE = "WAITING_EVIDENCE"
+    FAILED = "FAILED"
+    SUPERSEDED = "SUPERSEDED"
+
+
+class RescueMode(str, Enum):
+    REMEDIATE = "REMEDIATE"                    # established breach
+    ESTABLISH_EVIDENCE = "ESTABLISH_EVIDENCE"  # UNKNOWN / CONTRADICTORY: no penalty
+
+
+RESCUE_TRIGGER_STATES = frozenset({RuleState.NON_COMPLIANT, RuleState.CONDITIONAL,
+                                   RuleState.CONTRADICTORY, RuleState.UNKNOWN})
+
+
+@dataclass(frozen=True)
+class RescueDef:
+    rescue_id: str
+    triggered_by: str
+    objective: str
+    statutory_actions: Tuple[str, ...]
+    authority: str
+    service_workflow: str
+    deadline_basis: str
+    deadline_status: ProvisionStatus
+    notification_required: bool
+    verification: str
+    prerequisites: Tuple[str, ...] = ()
+
+    @property
+    def closure_condition(self) -> str:
+        return f"{self.triggered_by} == COMPLIANT and {self.verification} recorded"
+
+
+_R = ProvisionStatus.RECONCILE
+
+_RESCUES = (
+    RescueDef("INC-RESCUE-001", "INC-001", "File missing MOA/AOA",
+              ("draft MOA/AOA", "obtain subscriber signatures", "submit to RJSC",
+               "capture acknowledgement", "verify closure"),
+              "RJSC", "RJSC_FILING", "IMMEDIATE", _R, True, "RJSC_CERTIFICATE"),
+    RescueDef("AR-RESCUE-001", "AR-001", "Regularize statutory annual filing deficiency",
+              ("reconstruct missing information", "prepare statutory filing",
+               "obtain required approval/signature", "submit to authority",
+               "capture acknowledgement", "verify closure"),
+              "RJSC", "RJSC_FILING", "21_DAYS_FROM_AGM", _R, True,
+              "FILING_ACKNOWLEDGEMENT", prerequisites=("AGM_HELD",)),
+    RescueDef("TAX-RESCUE-001", "TAX-001", "Obtain TIN from NBR",
+              ("apply for TIN via NBR portal", "verify entity details",
+               "capture TIN certificate", "verify closure"),
+              "NBR", "NBR_TAX", "IMMEDIATE", _R, True, "TIN_CERTIFICATE"),
+    RescueDef("LBR-RESCUE-001", "LBR-001", "Obtain factory license",
+              ("prepare factory license application", "submit to labour authority",
+               "capture license", "verify closure"),
+              "LABOUR_DEPT", "LABOUR_DEPT", "IMMEDIATE", _R, True, "FACTORY_LICENSE"),
+    RescueDef("TL-RESCUE-001", "TL-001", "Obtain or renew trade license",
+              ("apply or renew with local authority", "capture license", "verify closure"),
+              "CITY_CORPORATION", "CITY_CORPORATION", "IMMEDIATE", _R, True, "TRADE_LICENSE"),
+    RescueDef("DIR5-RESCUE-001", "DIR-005", "Establish or update DIR-005 register",
+              ("prepare register", "obtain required signatures",
+               "capture register evidence", "verify closure"),
+              "INTERNAL", "AUDIT_LEGAL", "IMMEDIATE", _R, True, "REGISTER_DIR_005"),
+    RescueDef("DIR6-RESCUE-001", "DIR-006", "Establish or update DIR-006 register",
+              ("prepare register", "obtain required signatures",
+               "capture register evidence", "verify closure"),
+              "INTERNAL", "AUDIT_LEGAL", "IMMEDIATE", _R, True, "REGISTER_DIR_006"),
+)
+
+STATUTORY_RESCUE_REGISTRY: Dict[str, RescueDef] = {r.triggered_by: r for r in _RESCUES}
+if len(STATUTORY_RESCUE_REGISTRY) != len(_RESCUES):
+    raise RuntimeError("duplicate triggered_by in rescue registry")
+
+
+@dataclass(frozen=True)
+class RescueStep:
+    rescue_id: str
+    triggered_by: str
+    mode: RescueMode
+    state: RescueState
+    actions: Tuple[str, ...]
+    authority: str
+    service: str
+    deadline_basis: str
+    deadline_status: ProvisionStatus
+    notification_required: bool
+    verification: str
+    closure_condition: str
+    blocked_by: Tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class RescuePlan:
+    steps: Tuple[RescueStep, ...]
+    unmapped: Tuple[str, ...]   # R-013: surfaced for review, never auto-rescued
+
+
+def _rank(rule_id: str) -> int:
+    rule = STATUTORY_RULE_REGISTRY.get(rule_id)
+    if rule is None:
+        return 2
+    return 0 if rule.severity is Severity.RED else 1
+
+
+def get_rescue_plan(findings: Iterable[Finding],
+                    satisfied_prerequisites=frozenset()) -> RescuePlan:
+    """R-012/R-013/R-014/R-015."""
+    active: List[Finding] = sorted(
+        (f for f in findings if f.state in RESCUE_TRIGGER_STATES),
+        key=lambda f: (_rank(f.rule_id), f.rule_id))
+    steps: List[RescueStep] = []
+    unmapped: List[str] = []
+    for f in active:
+        rd = STATUTORY_RESCUE_REGISTRY.get(f.rule_id)
+        if rd is None:
+            unmapped.append(f.rule_id)
+            continue
+        rule = STATUTORY_RULE_REGISTRY[f.rule_id]
+        evidence = ", ".join(rule.evidence_required)
+        if f.state in (RuleState.UNKNOWN, RuleState.CONTRADICTORY):
+            verb = ("resolve conflicting evidence: " if f.state is RuleState.CONTRADICTORY
+                    else "collect and verify required evidence: ")
+            steps.append(RescueStep(
+                rd.rescue_id, f.rule_id, RescueMode.ESTABLISH_EVIDENCE,
+                RescueState.WAITING_EVIDENCE, (verb + evidence,), rd.authority,
+                rd.service_workflow, "NONE", rd.deadline_status,
+                rd.notification_required, rd.verification, rd.closure_condition))
+            continue
+        blocked = tuple(p for p in rd.prerequisites if p not in satisfied_prerequisites)
+        steps.append(RescueStep(
+            rd.rescue_id, f.rule_id, RescueMode.REMEDIATE,
+            RescueState.BLOCKED if blocked else RescueState.IDENTIFIED,
+            rd.statutory_actions, rd.authority, rd.service_workflow,
+            rd.deadline_basis, rd.deadline_status, rd.notification_required,
+            rd.verification, rd.closure_condition, blocked))
+    return RescuePlan(tuple(steps), tuple(unmapped))
+
+
+def can_close(rule_state: RuleState, verification_recorded: bool) -> bool:
+    """R-019: close only on verified evidence that yields COMPLIANT."""
+    return rule_state is RuleState.COMPLIANT and verification_recorded
 NLC - Legal Compliance & Rescue Platform
 Layer 3: Statutory Rescue Registry
 """
@@ -672,7 +830,7 @@ STATUTORY_RESCUE_REGISTRY: Dict[str, Dict[str, Any]] = {
     "CAP-003": {
         "rescue_id": "CAP-RESCUE-003",
         "triggered_by": "CAP-003",
-        "objective": "Remediate: Charge Satisfaction Not Filed",
+        "objective": "Remediate: Capital Reduction Without Court Order",
         "prerequisites": [],
         "statutory_actions": [
             "review legal requirement",
@@ -944,7 +1102,7 @@ STATUTORY_RESCUE_REGISTRY: Dict[str, Dict[str, Any]] = {
     "CHG-001": {
         "rescue_id": "CHG-RESCUE-001",
         "triggered_by": "CHG-001",
-        "objective": "Remediate: Charge Satisfaction Not Filed",
+        "objective": "Remediate: Capital Reduction Without Court Order",
         "prerequisites": [],
         "statutory_actions": [
             "review legal requirement",
@@ -1281,6 +1439,19 @@ STATUTORY_RESCUE_REGISTRY: Dict[str, Dict[str, Any]] = {
         "verification": "DOCUMENTARY_EVIDENCE",
         "closure_condition": "VAT-003 == RuleState.COMPLIANT"
     },
+
+    "BOD-001": {"rescue_id": "BOD-RESCUE-001", "triggered_by": "BOD-001", "objective": "Remediate: Board Meeting Not Held", "prerequisites": [], "statutory_actions": ["convene board meeting", "prepare agenda", "notify all directors"], "authority": "RJSC", "service_workflow": "GENERAL_LEGAL_SERVICE", "deadline_basis": "STATUTORY", "notification_required": True, "verification": "DOCUMENTARY_EVIDENCE", "closure_condition": "BOD-001 == RuleState.COMPLIANT"},
+    "BOD-002": {"rescue_id": "BOD-RESCUE-002", "triggered_by": "BOD-002", "objective": "Remediate: Board Meeting Notice Not Given", "prerequisites": [], "statutory_actions": ["issue written notice", "circulate to all directors"], "authority": "RJSC", "service_workflow": "GENERAL_LEGAL_SERVICE", "deadline_basis": "STATUTORY", "notification_required": True, "verification": "DOCUMENTARY_EVIDENCE", "closure_condition": "BOD-002 == RuleState.COMPLIANT"},
+    "BOD-003": {"rescue_id": "BOD-RESCUE-003", "triggered_by": "BOD-003", "objective": "Remediate: Board Minutes Not Prepared", "prerequisites": [], "statutory_actions": ["prepare minutes", "have chairman sign"], "authority": "RJSC", "service_workflow": "GENERAL_LEGAL_SERVICE", "deadline_basis": "STATUTORY", "notification_required": True, "verification": "DOCUMENTARY_EVIDENCE", "closure_condition": "BOD-003 == RuleState.COMPLIANT"},
+    "ACC-001": {"rescue_id": "ACC-RESCUE-001", "triggered_by": "ACC-001", "objective": "Remediate: Financial Statements Not Presented", "prerequisites": [], "statutory_actions": ["prepare balance sheet", "prepare P&L account", "present at next AGM"], "authority": "RJSC", "service_workflow": "GENERAL_LEGAL_SERVICE", "deadline_basis": "STATUTORY", "notification_required": True, "verification": "DOCUMENTARY_EVIDENCE", "closure_condition": "ACC-001 == RuleState.COMPLIANT"},
+    "ACC-002": {"rescue_id": "ACC-RESCUE-002", "triggered_by": "ACC-002", "objective": "Remediate: Financial Statements Not Filed", "prerequisites": [], "statutory_actions": ["file balance sheet with Registrar", "pay late fee if applicable"], "authority": "RJSC", "service_workflow": "GENERAL_LEGAL_SERVICE", "deadline_basis": "STATUTORY", "notification_required": True, "verification": "DOCUMENTARY_EVIDENCE", "closure_condition": "ACC-002 == RuleState.COMPLIANT"},
+    "ACC-003": {"rescue_id": "ACC-RESCUE-003", "triggered_by": "ACC-003", "objective": "Remediate: Books Not Kept", "prerequisites": [], "statutory_actions": ["maintain proper books", "engage accountant"], "authority": "RJSC", "service_workflow": "GENERAL_LEGAL_SERVICE", "deadline_basis": "STATUTORY", "notification_required": True, "verification": "DOCUMENTARY_EVIDENCE", "closure_condition": "ACC-003 == RuleState.COMPLIANT"},
+    "DIR-007": {"rescue_id": "DIR-RESCUE-007", "triggered_by": "DIR-007", "objective": "Remediate: Director Consent Not Filed", "prerequisites": [], "statutory_actions": ["obtain director consent", "file with Registrar"], "authority": "RJSC", "service_workflow": "GENERAL_LEGAL_SERVICE", "deadline_basis": "STATUTORY", "notification_required": True, "verification": "DOCUMENTARY_EVIDENCE", "closure_condition": "DIR-007 == RuleState.COMPLIANT"},
+    "DIR-008": {"rescue_id": "DIR-RESCUE-008", "triggered_by": "DIR-008", "objective": "Remediate: Director Office of Profit", "prerequisites": [], "statutory_actions": ["obtain company consent", "disclose in general meeting"], "authority": "RJSC", "service_workflow": "GENERAL_LEGAL_SERVICE", "deadline_basis": "STATUTORY", "notification_required": True, "verification": "DOCUMENTARY_EVIDENCE", "closure_condition": "DIR-008 == RuleState.COMPLIANT"},
+    "DIR-010": {"rescue_id": "DIR-RESCUE-010", "triggered_by": "DIR-010", "objective": "Remediate: MD Term Exceeds 5 Years", "prerequisites": [], "statutory_actions": ["review MD appointment", "re-appoint if needed"], "authority": "RJSC", "service_workflow": "GENERAL_LEGAL_SERVICE", "deadline_basis": "STATUTORY", "notification_required": True, "verification": "DOCUMENTARY_EVIDENCE", "closure_condition": "DIR-010 == RuleState.COMPLIANT"},
+    "MEM-001": {"rescue_id": "MEM-RESCUE-001", "triggered_by": "MEM-001", "objective": "Remediate: Below Minimum Members", "prerequisites": [], "statutory_actions": ["recruit new members", "restore minimum"], "authority": "RJSC", "service_workflow": "GENERAL_LEGAL_SERVICE", "deadline_basis": "STATUTORY", "notification_required": True, "verification": "DOCUMENTARY_EVIDENCE", "closure_condition": "MEM-001 == RuleState.COMPLIANT"},
+    "INC-007": {"rescue_id": "INC-RESCUE-007", "triggered_by": "INC-007", "objective": "Remediate: Business Commenced Without Declaration", "prerequisites": [], "statutory_actions": ["file Section 150 declaration", "verify minimum subscription"], "authority": "RJSC", "service_workflow": "GENERAL_LEGAL_SERVICE", "deadline_basis": "STATUTORY", "notification_required": True, "verification": "DOCUMENTARY_EVIDENCE", "closure_condition": "INC-007 == RuleState.COMPLIANT"},
+
 }
 
 def get_rescue_plan(active_findings: List[str]) -> List[Dict[str, Any]]:

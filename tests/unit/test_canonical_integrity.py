@@ -8,6 +8,7 @@ from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
 
 ROOT = Path(__file__).resolve().parents[2]
 EXPECTED = 75
+EXPECTED = 86
 
 
 def _engine_ids():

@@ -76,6 +76,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         self,
         company_id: uuid.UUID,
         trigger_source: str = "API_REQUEST",
+        rule_engine=None,
     ) -> dict:
         """
         Full compliance evaluation pipeline:
@@ -104,7 +105,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
             raise ValueError(f"CompanyProfile assembly failed: {exc}") from exc
 
         # ── Step 2: Run rule engine ────────────────────────────────
-        engine = get_rule_engine()
+        # Explicit injection supports deterministic tests and controlled
+        # evaluation runs. Production callers retain the canonical engine.
+        engine = rule_engine if rule_engine is not None else get_rule_engine()
         output = engine.evaluate(profile)
 
         # ── Step 3: Persist results ────────────────────────────────
@@ -162,7 +165,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
         now = datetime.now(UTC)
         today = date.today()
         score = output.score_breakdown.final_score
-        risk_band = RiskBand(output.score_breakdown.risk_band.value)
+        risk_band_value = getattr(output.score_breakdown.risk_band, 'value', output.score_breakdown.risk_band)
+        risk_band = RiskBand(risk_band_value)
         if risk_band.value not in ("GREEN", "YELLOW", "RED", "BLACK", "NOT_EVALUATED"):
             # DB enum risk_band has no other values; derive from score instead of failing the UPDATE
             risk_band = RiskBand(
@@ -272,6 +276,20 @@ class ComplianceService(BaseService[ComplianceFlag]):
         }
         if rescue_required:
             company_svc_update["rescue_triggered_at"] = now
+            
+            # Auto-create RescuePlan if not already active
+            from app.services.rescue_service import RescueService
+            rescue_svc = RescueService(self.db)
+            existing_plan = await rescue_svc.get_active_plan(company_id)
+            if not existing_plan:
+                try:
+                    await rescue_svc.generate_rescue_plan(
+                        company_id=company_id,
+                        engine_output=output,
+                        created_by=getattr(self, '_current_user_id', None)
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to auto-create rescue plan for company {company_id}: {e}", exc_info=True)
 
         await self.db.execute(
             update(Company)
@@ -301,9 +319,12 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
     async def get_flag_summary(self, company_id: uuid.UUID) -> dict:
         """
-        Flag summary from vw_company_flag_summary view.
-        Fast — single query against pre-aggregated view.
+        Return the existing view metadata plus canonical active-flag counts.
+        Severity counts are calculated from active ORM flags, not inferred
+        from risk-band or score values.
         """
+        from app.models.enums import FlagStatus
+
         result = await self.db.execute(
             text(
                 "SELECT * FROM vw_company_flag_summary WHERE company_id = :cid"
@@ -311,7 +332,26 @@ class ComplianceService(BaseService[ComplianceFlag]):
             {"cid": str(company_id)},
         )
         row = result.mappings().one_or_none()
-        return dict(row) if row else {}
+        summary = dict(row) if row else {}
+
+        flags_result = await self.db.execute(
+            select(ComplianceFlag.severity).where(
+                ComplianceFlag.company_id == company_id,
+                ComplianceFlag.flag_status == FlagStatus.ACTIVE,
+            )
+        )
+        severities = [
+            str(getattr(value, "value", value)).upper()
+            for value in flags_result.scalars().all()
+        ]
+
+        summary.update({
+            "total_active": len(severities),
+            "black": severities.count("BLACK"),
+            "red": severities.count("RED"),
+            "yellow": severities.count("YELLOW"),
+        })
+        return summary
 
     async def resolve_flag(
         self,
@@ -402,9 +442,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
     async def get_dashboard_kpis(self, user_id=None) -> dict:
         """Aggregate KPIs for admin dashboard."""
-        # Always per-user — no global view
-        result = await self.db.execute(
-            text("""
+        # If user_id is provided, filter by it; otherwise return global stats
+        if user_id:
+            query = text("""
                 SELECT
                     COUNT(*) as total_companies,
                     COUNT(*) FILTER (WHERE current_risk_band = 'GREEN') as green_count,
@@ -413,8 +453,19 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     0 as upcoming_deadlines
                 FROM companies
                 WHERE assigned_staff_id = :uid AND is_active = true
-            """),
-            {"uid": str(user_id)}
-        )
+            """)
+            result = await self.db.execute(query, {"uid": str(user_id)})
+        else:
+            query = text("""
+                SELECT
+                    COUNT(*) as total_companies,
+                    COUNT(*) FILTER (WHERE current_risk_band = 'GREEN') as green_count,
+                    COUNT(*) FILTER (WHERE current_risk_band = 'YELLOW') as yellow_count,
+                    COUNT(*) FILTER (WHERE current_risk_band IN ('RED', 'BLACK')) as red_black_count,
+                    0 as upcoming_deadlines
+                FROM companies
+                WHERE is_active = true
+            """)
+            result = await self.db.execute(query)
         row = result.mappings().one_or_none()
         return dict(row) if row else {}
