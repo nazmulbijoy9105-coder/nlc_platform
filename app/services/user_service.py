@@ -21,6 +21,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select, update
 
 from app.core.security import (
+    decrypt_totp_secret,
     encrypt_totp_secret,
     generate_totp_secret,
     get_totp_provisioning_uri,
@@ -156,7 +157,7 @@ class UserService(BaseService[User]):
         """
         if not user.totp_secret_encrypted:
             return False
-        if verify_totp_code(user.totp_secret_encrypted, code):
+        if verify_totp_code(decrypt_totp_secret(user.totp_secret_encrypted), code):
             await self.update_instance(user, totp_enabled=True)
             return True
         return False
@@ -166,9 +167,9 @@ class UserService(BaseService[User]):
         Verify a TOTP code during login step 2.
         Returns True if valid.
         """
-        if not user.requires_2fa or not user.totp_secret_encrypted:  # type: ignore[attr-defined]
+        if not user.totp_enabled or not user.totp_secret_encrypted:
             return False
-        return verify_totp_code(user.totp_secret_encrypted, code)
+        return verify_totp_code(decrypt_totp_secret(user.totp_secret_encrypted), code)
 
     # ── Company Access ────────────────────────────────────────────
 
@@ -307,6 +308,7 @@ class UserService(BaseService[User]):
         else:
             company_ids = await self.get_company_ids(user.id)
         return {
+            "sub":         str(user.id),
             "user_id":     str(user.id),
             "email":       user.email,
             "full_name":   user.full_name,

@@ -30,6 +30,7 @@ from app.core.config import get_settings
 from app.models.documents import AIOutputLog, AIPromptTemplate, Document, DocumentAccessLog
 from app.models.enums import AiModel, DocumentType
 from app.services.base import BaseService
+from app.integrations.rjsc_forms_registry import get_form_for_rule
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -153,6 +154,9 @@ class DocumentService(BaseService[Document]):
         # ── Step 6: Append liability disclaimer ───────────────────
         final_content += f"\n\n---\n\n{template.liability_disclaimer}"
 
+        # ── Step 6.5: Attach statutory form mapping (if applicable) ─
+        statutory_form = get_form_for_rule(parameters.get("triggered_rule_id", ""))
+        
         # ── Step 7: Store document (AI Constitution Article 3) ─────
         document = await self.create(
             company_id=company_id,
@@ -262,20 +266,26 @@ class DocumentService(BaseService[Document]):
         """
         Generate a pre-signed S3 URL (15-min expiry) for secure document download.
         Never expose direct S3 paths.
+        AI Constitution Article 3: Unapproved AI documents cannot be downloaded.
         """
         doc = await self.get_by_id_or_404(document_id)
         if not doc.s3_key:
             raise ValueError("Document has not been uploaded to S3 yet.")
+        if doc.ai_generated and not doc.human_approved:
+            raise ValueError("AI Constitution violation: Unapproved AI document cannot be downloaded.")
         return await _presign_s3_url(doc.s3_key, self._settings)
 
     async def generate_pdf_and_presign(self, document_id: uuid.UUID) -> str:
         """
         Generate a branded PDF from the document content and return a presigned URL.
         _generate_pdf_and_presign stub implementation.
+        AI Constitution Article 3: Unapproved AI documents cannot be rendered to PDF.
         """
         doc = await self.get_by_id_or_404(document_id)
         if not doc.s3_key:
             raise ValueError("Document must be uploaded before PDF generation.")
+        if doc.ai_generated and not doc.human_approved:
+            raise ValueError("AI Constitution violation: Unapproved AI document cannot be rendered to PDF.")
 
         # Download current content from S3
         content = await _download_from_s3(doc.s3_key, self._settings)
@@ -299,6 +309,7 @@ class DocumentService(BaseService[Document]):
         *,
         document_type: DocumentType | None = None,
         include_unapproved: bool = False,
+        client_visible_only: bool = False,
     ) -> list[Document]:
         """Get all documents for a company."""
         filters = [
@@ -307,7 +318,7 @@ class DocumentService(BaseService[Document]):
         ]
         if document_type:
             filters.append(Document.document_type == document_type)
-        if not include_unapproved:
+        if not include_unapproved or client_visible_only:
             filters.append(Document.is_client_visible)
 
         result = await self.db.execute(

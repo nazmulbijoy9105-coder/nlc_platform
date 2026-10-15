@@ -106,9 +106,9 @@ def _step_to_response(step) -> RescueStepResponse:
     return RescueStepResponse(
         step_id=str(step.id),
         step_number=step.step_number,
-        step_name=step.step_name,
-        description=step.description,
-        status=step.status,
+        step_name=step.step_title,
+        description=step.step_description,
+        status=step.step_status,
         completion_notes=step.completion_notes,
         started_at=step.started_at.isoformat() if step.started_at else None,
         completed_at=step.completed_at.isoformat() if step.completed_at else None,
@@ -121,14 +121,14 @@ def _plan_to_response(plan, company=None) -> RescuePlanResponse:
         plan_id=str(plan.id),
         company_id=str(plan.company_id),
         company_name=company.company_name if company else None,
-        status=plan.status,
+        status=("ACTIVE" if getattr(plan, "is_active", True) else "CLOSED"),
         completion_percentage=plan.completion_percentage,
         total_steps=plan.total_steps,
         completed_steps=plan.completed_steps,
-        estimated_fee_bdt=plan.estimated_fee_bdt,
+        estimated_fee_bdt=plan.quoted_fee_bdt,
         assigned_staff_id=str(plan.assigned_staff_id) if plan.assigned_staff_id else None,
         target_completion_date=str(plan.target_completion_date) if plan.target_completion_date else None,
-        engagement_id=str(plan.engagement_id) if plan.engagement_id else None,
+        engagement_id=str(plan.engagement_id) if getattr(plan, "engagement_id", None) else None,
         steps=[_step_to_response(s) for s in (plan.steps or [])],
         created_at=plan.created_at.isoformat(),
         updated_at=plan.updated_at.isoformat(),
@@ -182,13 +182,25 @@ async def create_rescue_plan(
             ),
         )
 
+    # Run the rule engine to generate rescue sequence
+    from app.rule_engine import CompanyProfile
+    from app.rule_engine.engine import NLCRuleEngine
+    from app.services.compliance_service import _company_profile_kwargs
+
+    profile_data = await company_svc.build_company_profile(body.company_id)
+    if not profile_data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company profile data not found")
+    profile = CompanyProfile(**_company_profile_kwargs(profile_data, CompanyProfile))
+    engine = NLCRuleEngine()
+    engine_output = engine.evaluate(profile)
+
     plan = await rescue_svc.generate_rescue_plan(  # type: ignore
         company_id=body.company_id,
+        engine_output=engine_output,
         created_by=current_user.id,
         assigned_staff_id=body.assigned_staff_id,
         estimated_fee_bdt=body.estimated_fee_bdt,
-        target_completion_date=body.target_completion_date,
-        notes=body.notes,
+        target_completion_date=date.fromisoformat(body.target_completion_date) if body.target_completion_date else None,
     )
 
     await activity.log(
@@ -266,6 +278,7 @@ async def get_active_plan(
 @router.get(
     "/plans/detail/{plan_id}",
     response_model=RescuePlanResponse,
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
     summary="Get a rescue plan by ID with all steps",
 )
 async def get_rescue_plan(
@@ -313,7 +326,7 @@ async def update_rescue_step(
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
-    valid_statuses = ("PENDING", "IN_PROGRESS", "COMPLETED", "BLOCKED")
+    valid_statuses = ("PENDING", "IN_PROGRESS", "COMPLETE", "BLOCKED")
     if body.status not in valid_statuses:
         raise HTTPException(
             status_code=400,
@@ -341,7 +354,7 @@ async def update_rescue_step(
     )
 
     # Step 8 COMPLETED → trigger re-evaluation via Celery
-    if step_number == 8 and body.status == "COMPLETED":
+    if step_number == 8 and body.status.upper() in ("COMPLETED", "COMPLETE"):
         try:
             from app.worker.tasks import trigger_rescue_reevaluation
             trigger_rescue_reevaluation.apply_async(
@@ -379,11 +392,11 @@ async def create_engagement_from_rescue(
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
+    plan = await rescue_svc.get_by_id_or_404(plan_id)
     engagement = await rescue_svc.create_engagement_from_rescue(  # type: ignore
-        plan_id=plan_id,
+        rescue_plan=plan,
         confirmed_fee_bdt=body.confirmed_fee_bdt,
         payment_terms=body.payment_terms,
-        notes=body.notes,
         created_by=current_user.id,
     )
     if not engagement:
