@@ -272,6 +272,9 @@ class CompanyProfile:
     liquidator_appointed: bool = False
     court_ordered_winding_up: bool = False
     # ── Labour (Labour Act 2006) ──
+    factory_license_obtained: bool = False
+    # Tri-state applicability (R-003/R-008): None = unknown, False = not a factory, True = manufacturing.
+    is_manufacturing: bool | None = None
     factory_license_obtained: bool | None = None
     factory_license_expiry: Optional[date] = None
     worker_compensation_filed: bool | None = None
@@ -1408,6 +1411,9 @@ class NLCRuleEngine:
 
     # MODULE 13: LABOUR COMPLIANCE (Labour Act 2006)
     def _run_labour_rules(self, c: CompanyProfile) -> None:
+        # R-003/R-008: LBR-001 applies only to entities confirmed as manufacturing.
+        # None (unknown) and False (not a factory) must not raise a flag.
+        if c.is_manufacturing is True and not c.factory_license_obtained:
         if c.factory_license_obtained is False:
             self._add_flag(ComplianceFlag(
                 rule_id="LBR-001",
