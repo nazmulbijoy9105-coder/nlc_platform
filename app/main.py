@@ -34,6 +34,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.api import (
     admin,
     auth,
+    calendar,
     commercial,
     companies,
     documents,
