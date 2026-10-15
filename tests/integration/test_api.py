@@ -450,7 +450,11 @@ class TestRescue:
         await db.execute(
             update(Company)
             .where(Company.id == db_company.id)
-            .values(current_risk_band="RED", current_compliance_score=40)
+            .values(
+                current_risk_band="RED", current_compliance_score=40,
+                any_director_disqualified=True,
+                disqualification_details=["Test director disqualified"],
+            )
         )
         await db.flush()
 
