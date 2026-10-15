@@ -51,6 +51,10 @@ class RescueService(BaseService[RescuePlan]):
         Creates Tasks from rescue steps for staff assignment.
         Triggers Engagement creation in commercial service.
         """
+        rescue_data = engine_output.rescue_sequence
+        if not rescue_data:
+            raise ValueError("Engine output has no rescue sequence — company may not be BLACK/RED.")
+
         # Deactivate existing active plan
         await self.db.execute(
             update(RescuePlan)
@@ -60,10 +64,6 @@ class RescueService(BaseService[RescuePlan]):
             )
             .values(is_active=False)
         )
-
-        rescue_data = engine_output.rescue_sequence
-        if not rescue_data:
-            raise ValueError("Engine output has no rescue sequence — company may not be BLACK/RED.")
 
         revenue_tier = RevenueTier.CORPORATE_RESCUE
         score = engine_output.score_breakdown.final_score
@@ -115,6 +115,8 @@ class RescueService(BaseService[RescuePlan]):
             "HIGH": ComplexityLevel.HIGH,
             "CRITICAL": ComplexityLevel.CRITICAL,
         }
+        days_min = step_data.get("estimated_days_min") or step_data.get("min_days") or 7
+        days_max = step_data.get("estimated_days_max") or step_data.get("max_days") or 21
         step = RescueStep(
             id=uuid.uuid4(),
             rescue_plan_id=plan_id,
@@ -127,11 +129,9 @@ class RescueService(BaseService[RescuePlan]):
                 step_data.get("complexity", "MEDIUM"),
                 ComplexityLevel.MEDIUM
             ),
-            estimated_days_min=step_data.get("days_min", 7),
-            estimated_days_max=step_data.get("days_max", 21),
-            target_completion_date=date.today() + timedelta(
-                days=step_data.get("days_max", 21)
-            ),
+            estimated_days_min=days_min,
+            estimated_days_max=days_max,
+            target_completion_date=date.today() + timedelta(days=days_max),
             step_status=RescueStepStatus.PENDING,
             triggers_reevaluation=step_data.get("step_number", 0) == 8,
         )
