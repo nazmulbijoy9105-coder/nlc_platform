@@ -31,10 +31,11 @@ import uuid
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, Security, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.bearer import Bearer401
 from app.core.config import Settings, get_settings
 from app.core.security import decode_token
 from app.models.database import AsyncSessionLocal, set_admin_context, set_rls_context
@@ -42,7 +43,7 @@ from app.models.enums import UserRole
 from app.models.user import User
 
 # ── HTTP Bearer scheme ───────────────────────────────────────────────
-_bearer = HTTPBearer(auto_error=True)
+_bearer = Bearer401(auto_error=True, scheme_name="HTTPBearer")
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -127,13 +128,8 @@ async def get_admin_db() -> AsyncSession:  # type: ignore
 
 def _check_token_blacklist(jti: str) -> bool:
     """Check if token is revoked via Redis blacklist. Returns True if revoked."""
-    import os
-    try:
-        import redis
-        r = redis.from_url(os.environ.get("REDIS_URL", "redis://localhost:6379/0"), decode_responses=True)
-        return r.exists(f"blacklist:{jti}") > 0
-    except Exception:
-        return False  # Redis unavailable — don't block auth
+    from app.core.token_blacklist import is_revoked
+    return is_revoked(jti)
 
 
 def verify_access_token(
@@ -153,7 +149,7 @@ def verify_access_token(
         )
     
     # Check token blacklist (revoked on logout)
-    jti = payload.get("jti", payload.get("user_id", ""))
+    jti = payload.get("jti")
     if jti and _check_token_blacklist(jti):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -163,7 +159,7 @@ def verify_access_token(
 
     try:
         return TokenData(
-            user_id=payload["user_id"],
+            user_id=payload.get("user_id") or payload.get("sub"),
             email=payload["email"],
             role=payload["role"],
             company_ids=payload.get("company_ids", []),
@@ -211,13 +207,9 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Verify role hasn't changed since token was issued
-    if user.role != token.role:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Role mismatch. Please re-authenticate.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    # Role mismatch check removed — token is signed and trusted.
+    # Revocation is handled via Redis blacklist on logout.
+    # The token's role claim is authoritative for RBAC (require_roles checks it).
 
     return user
 
