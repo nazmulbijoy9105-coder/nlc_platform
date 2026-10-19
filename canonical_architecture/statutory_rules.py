@@ -1294,4 +1294,18 @@ def _statutory_rule_getitem(self, key):
     raise KeyError(key)
 
 StatutoryRule.__getitem__ = _statutory_rule_getitem
+
+
+def _statutory_rule_get(self, key, default=None):
+    """Allow dict-style .get() access: rule.get('exceptions', [])."""
+    if hasattr(self, key):
+        return getattr(self, key)
+    return default
+
+def _statutory_rule_setitem(self, key, value):
+    """Allow dict-style assignment: rule['provision_status'] = VERIFIED."""
+    setattr(self, key, value)
+
+StatutoryRule.get = _statutory_rule_get
+StatutoryRule.__setitem__ = _statutory_rule_setitem
 # --- END NLC FIX: hybrid access ---

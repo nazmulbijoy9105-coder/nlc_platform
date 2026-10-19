@@ -1660,10 +1660,10 @@ class NLCRuleEngine:
         ar_years = c.unfiled_returns_count
 
         # DEF-001 must be evaluated BEFORE ESC-003 black-count snapshot
-        # Issue 1 fix: only fire DEF-001 when there are actual directors to disqualify.
-        # Empty companies (current_director_count=0 or None) with disqualified=True
-        # are likely unassessed data, not real disqualifications.
-        if c.any_director_disqualified and c.current_director_count and c.current_director_count > 0:
+        # Issue 1 fix: only fire DEF-001 when there are actual disqualification details.
+        # The any_director_disqualified flag defaults to False, but when set to True
+        # without any disqualification_details, it's likely seed/test data.
+        if c.any_director_disqualified and c.disqualification_details:
             disq_count = len(c.disqualification_details)
             impact = 20 if disq_count == 1 else 25
             is_override = c.current_director_count is not None and disq_count >= (c.current_director_count - 1)  # type: ignore
