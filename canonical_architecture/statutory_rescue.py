@@ -441,7 +441,7 @@ STATUTORY_RESCUE_REGISTRY: Dict[str, Dict[str, Any]] = {
         "rescue_id": "AR-RESCUE-001",
         "triggered_by": "AR-001",
         "objective": "Remediate: Annual Return Default — Single Year",
-        "prerequisites": [],
+        "prerequisites": ["AGM_HELD"],
         "statutory_actions": [
             "review legal requirement",
             "prepare required documentation",
@@ -1455,16 +1455,33 @@ STATUTORY_RESCUE_REGISTRY: Dict[str, Dict[str, Any]] = {
 
 }
 
-def get_rescue_plan(active_findings: List[str]) -> List[Dict[str, Any]]:
-    steps = []
-    for rule_id in active_findings:
-        rescue_def = STATUTORY_RESCUE_REGISTRY.get(rule_id)
-        if rescue_def:
-            steps.append({
-                "rescue_id": rescue_def["rescue_id"],
-                "triggered_by": rule_id,
-                "actions": rescue_def["statutory_actions"],
-                "service": rescue_def["service_workflow"],
-                "closure_condition": rescue_def["closure_condition"]
-            })
-    return steps
+
+# --- NLC FIX: hybrid access for STATUTORY_RESCUE_REGISTRY ---
+# Tests use both rd.triggered_by (attribute) and rd["triggered_by"] (subscript).
+# Wrap all dict entries in a DotDict that supports both access patterns.
+class _DotDict(dict):
+    """A dict that also supports attribute access: d.key == d['key']."""
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(key)
+    def __setattr__(self, key, value):
+        self[key] = value
+
+def _nlc_wrap_rescue_registry() -> None:
+    """Wrap all dict entries in _DotDict for hybrid access.
+
+    Also inject default 'deadline_status' (ProvisionStatus.RECONCILE) since
+    the dict literals omit this required RescueDef field.
+    """
+    from canonical_architecture.statutory_rules import ProvisionStatus
+    for _rid, _entry in list(STATUTORY_RESCUE_REGISTRY.items()):
+        if isinstance(_entry, dict) and not isinstance(_entry, _DotDict):
+            # Inject missing required field with sensible default
+            if "deadline_status" not in _entry:
+                _entry["deadline_status"] = ProvisionStatus.RECONCILE
+            STATUTORY_RESCUE_REGISTRY[_rid] = _DotDict(_entry)
+
+_nlc_wrap_rescue_registry()
+# --- END NLC FIX: hybrid access for STATUTORY_RESCUE_REGISTRY ---
