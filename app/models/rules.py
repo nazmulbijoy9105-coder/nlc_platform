@@ -62,6 +62,15 @@ class LegalRule(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     description: Mapped[str] = mapped_column(Text, nullable=False)
 
+    # ── Citation Verification (Issue 6) ──────────────────────────
+    verification_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="PENDING",
+        comment="VERIFIED | PENDING | DISPUTED"
+    )
+    verified_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    verified_at: Mapped[date | None] = mapped_column(Date, nullable=True)
+    verification_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # ── Rule Logic ────────────────────────────────────────────────
     # Stored for reference only — actual logic is in Python rule engine
     rule_condition: Mapped[dict | None] = mapped_column(
