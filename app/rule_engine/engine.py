@@ -863,7 +863,7 @@ class NLCRuleEngine:
                     score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Director filing status unknown for {change.director_id}.",
-                    statutory_basis="Section 92, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                     detail={"director_id": change.director_id},
                     state=RuleState.UNKNOWN
                 ))
