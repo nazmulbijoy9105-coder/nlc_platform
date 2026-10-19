@@ -1295,7 +1295,7 @@ class NLCRuleEngine:
             fifteenth = self.today.replace(day=15)
             if self.today > fifteenth:
                 last_day_prev = self.today.replace(day=1) - timedelta(days=1)
-                if not c.last_vat_return_filed or c.last_vat_return_filed < last_day_prev:
+                if c.last_vat_return_filed is not None and c.last_vat_return_filed < last_day_prev:
                  self._add_flag(ComplianceFlag(
                     rule_id="VAT-002",
                     flag_code="MONTHLY_VAT_RETURN_OVERDUE",

@@ -129,6 +129,7 @@ class ComplianceSummaryResponse(BaseModel):
     company_id: str
     company_name: str
     current_score: int | None
+    pre_override_score: int | None = None  # Issue 4: underlying score before BLACK override
     risk_band: str | None
     active_flags: int
     black_flags: int
@@ -294,7 +295,7 @@ async def evaluate_company(company_id: uuid.UUID, request: Request, current_user
     await db.refresh(company)
     await activity.log(action="COMPLIANCE_EVALUATED", resource_type="company", resource_id=str(company_id), description=f"Evaluation: Score={result['score']}, Band={result['risk_band']}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     flag_summary = await compliance_svc.get_flag_summary(company_id)
-    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=result["score"], risk_band=result["risk_band"], active_flags=flag_summary.get("total_active_flags", 0), black_flags=flag_summary.get("black_flags", 0), red_flags=flag_summary.get("red_flags", 0), yellow_flags=flag_summary.get("yellow_flags", 0), last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, evaluation_triggered=True, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
+    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=result["score"], pre_override_score=result.get("raw_total"), risk_band=result["risk_band"], active_flags=flag_summary.get("total_active_flags", 0), black_flags=flag_summary.get("black_flags", 0), red_flags=flag_summary.get("red_flags", 0), yellow_flags=flag_summary.get("yellow_flags", 0), last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, evaluation_triggered=True, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
 
 
 @router.get("/{company_id}/compliance", response_model=ComplianceSummaryResponse, dependencies=[Depends(require_company_access("company_id"))], summary="Get compliance state")
@@ -303,7 +304,7 @@ async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_d
     compliance_svc = ComplianceService(db)
     company = await company_svc.get_by_id_or_404(company_id)
     flag_summary = await compliance_svc.get_flag_summary(company_id)
-    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=company.current_compliance_score, risk_band=company.current_risk_band, active_flags=flag_summary.get("total_active_flags", 0), black_flags=flag_summary.get("black_flags", 0), red_flags=flag_summary.get("red_flags", 0), yellow_flags=flag_summary.get("yellow_flags", 0), last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
+    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=company.current_compliance_score, pre_override_score=None, risk_band=company.current_risk_band, active_flags=flag_summary.get("total_active_flags", 0), black_flags=flag_summary.get("black_flags", 0), red_flags=flag_summary.get("red_flags", 0), yellow_flags=flag_summary.get("yellow_flags", 0), last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
 
 
 @router.get("/{company_id}/flags", response_model=list[FlagResponse], dependencies=[Depends(require_company_access("company_id"))], summary="Get active flags")
