@@ -629,9 +629,21 @@ def verify_provision(rule_id: str, verified_by: str, source: str) -> bool:
         })
         
         # Also update the STATUTORY_RULE_REGISTRY
+        # Note: StatutoryRule is a frozen dataclass, so we use dataclasses.replace
         if rule_id in STATUTORY_RULE_REGISTRY:
-            STATUTORY_RULE_REGISTRY[rule_id]["provision_status"] = ProvisionStatus.VERIFIED
-            if "provision" not in STATUTORY_RULE_REGISTRY[rule_id] or STATUTORY_RULE_REGISTRY[rule_id]["provision"] == "TBD":
-                STATUTORY_RULE_REGISTRY[rule_id]["provision"] = source
+            import dataclasses as _dc
+            rule = STATUTORY_RULE_REGISTRY[rule_id]
+            if _dc.is_dataclass(rule):
+                # Frozen dataclass — create a new instance with updated field
+                STATUTORY_RULE_REGISTRY[rule_id] = _dc.replace(
+                    rule,
+                    provision_status=ProvisionStatus.VERIFIED,
+                    provision=source if (not hasattr(rule, "provision") or rule.provision == "TBD") else rule.provision
+                )
+            else:
+                # Dict or other mutable type — direct assignment
+                rule["provision_status"] = ProvisionStatus.VERIFIED
+                if "provision" not in rule or rule["provision"] == "TBD":
+                    rule["provision"] = source
         return True
     return False
