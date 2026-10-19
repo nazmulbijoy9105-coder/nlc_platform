@@ -50,6 +50,10 @@ class RescueDef:
     def closure_condition(self) -> str:
         return f"{self.triggered_by} == COMPLIANT and {self.verification} recorded"
 
+    def get(self, key, default=None):
+        """Dict-style .get() for backward compatibility."""
+        return getattr(self, key, default)
+
 
 _R = ProvisionStatus.RECONCILE
 
