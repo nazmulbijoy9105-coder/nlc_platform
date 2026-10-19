@@ -118,7 +118,7 @@ class Company(FullMixin, Base):
     agm_default_count: Mapped[int] = mapped_column(Integer, default=0)
 
     # ── Audit State ───────────────────────────────────────────────
-    first_auditor_appointed: Mapped[bool] = mapped_column(Boolean, default=False)
+    first_auditor_appointed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     last_audit_signed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # ── Returns State ─────────────────────────────────────────────
@@ -126,7 +126,7 @@ class Company(FullMixin, Base):
     unfiled_returns_count: Mapped[int] = mapped_column(Integer, default=0)
 
     # ── Trade License ───────────────────────────────────────────
-    trade_license_obtained: Mapped[bool] = mapped_column(Boolean, default=False)
+    trade_license_obtained: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     trade_license_expiry: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # ── Tax Return Tracking ─────────────────────────────────────
@@ -222,20 +222,20 @@ class Company(FullMixin, Base):
 
     # ── BSEC Corporate Governance ──────────────────────────────────────
     bsec_listed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    bsec_quarterly_report_filed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    cg_certificate_obtained: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    board_independent_director: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    audit_committee_established: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    bsec_quarterly_report_filed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    cg_certificate_obtained: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    board_independent_director: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    audit_committee_established: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     # ── Labour Compliance ──────────────────────────────────────────────
-    factory_license_obtained: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    factory_license_obtained: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     is_manufacturing: Mapped[bool | None] = mapped_column(
         Boolean, nullable=True, default=None,
         comment="Tri-state applicability: NULL=unknown, FALSE=not a factory, TRUE=manufacturing (R-003/R-008)",
     )
     factory_license_expiry: Mapped[date | None] = mapped_column(Date, nullable=True)
     labour_court_order_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    worker_compensation_filed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    worker_compensation_filed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     # ── Bankruptcy / Winding Up ────────────────────────────────────────
     winding_up_petition_filed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
@@ -287,8 +287,7 @@ class Company(FullMixin, Base):
     paid_up_ge_authorized: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     # ── Corporate Structure Changes ────────────────────────────────────
-    moa_aoa_filed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    name_change_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+        name_change_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     name_change_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     name_change_sr_passed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     object_clause_change_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
