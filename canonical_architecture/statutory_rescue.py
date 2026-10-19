@@ -1482,5 +1482,4 @@ def _nlc_normalize_rescue_registry() -> None:
 _nlc_normalize_rescue_registry()
 # --- END NLC FIX: convert dict entries to RescueDef ---
 
-_nlc_normalize_rescue_registry()
 # --- END NLC FIX: hybrid access for STATUTORY_RESCUE_REGISTRY ---
