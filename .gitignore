@@ -64,3 +64,6 @@ _audit_out/
 *.env*
 .env
 node_modules/
+
+# Allow brand assets
+!app/static/brand/
