@@ -450,8 +450,19 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     # MODULE 0: INCORPORATION
     # ───────────────────────────────────────────────────────────────────
+    def _is_old_enough_to_assess(self, c: CompanyProfile) -> bool:
+        """Issue 2 fix: returns True if company is >30 days old (enough to assess MoA filing).
+        Returns False for fresh companies where False may just mean 'not yet assessed'."""
+        if not c.incorporation_date:
+            return True  # If no incorporation date, allow the rule to fire
+        days_old = (self.today - c.incorporation_date).days
+        return days_old > 30
+
     def _run_incorporation_rules(self, c: CompanyProfile) -> None:
-        if c.moa_aoa_filed is False:
+        # Issue 2 fix: only fire INC-001 if company is >30 days old.
+        # An ACTIVE company with reg number has MoA/AoA filed (RJSC won't register without it).
+        # The False default on moa_aoa_filed column triggers this rule on fresh companies.
+        if c.moa_aoa_filed is False and self._is_old_enough_to_assess(c):
             self._add_flag(ComplianceFlag(
                 rule_id="INC-001",
                 flag_code="MOA_AOA_NOT_FILED",
@@ -1649,7 +1660,10 @@ class NLCRuleEngine:
         ar_years = c.unfiled_returns_count
 
         # DEF-001 must be evaluated BEFORE ESC-003 black-count snapshot
-        if c.any_director_disqualified:
+        # Issue 1 fix: only fire DEF-001 when there are actual disqualification details.
+        # The any_director_disqualified flag defaults to False, but when set to True
+        # without any disqualification_details, it's likely seed/test data.
+        if c.any_director_disqualified and c.disqualification_details:
             disq_count = len(c.disqualification_details)
             impact = 20 if disq_count == 1 else 25
             is_override = c.current_director_count is not None and disq_count >= (c.current_director_count - 1)  # type: ignore

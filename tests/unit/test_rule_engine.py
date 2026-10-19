@@ -1018,7 +1018,16 @@ class TestUntestedRules:
         assert_flag_triggered(rule_engine.evaluate(profile), "CAP-003")
 
     def test_DEF001_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(any_director_disqualified=True)), "DEF-001")
+        # Issue 1 fix: DEF-001 now requires actual disqualification details, not just the bool flag.
+        # This prevents false positives when any_director_disqualified=True is set but
+        # no disqualification_details are provided (seed/test data scenario).
+        assert_flag_triggered(
+            rule_engine.evaluate(build_profile(
+                any_director_disqualified=True,
+                disqualification_details=["Test director disqualified"],
+            )),
+            "DEF-001"
+        )
 
     @staticmethod
     def _def001(output):
