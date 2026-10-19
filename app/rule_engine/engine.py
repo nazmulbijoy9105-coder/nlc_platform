@@ -453,7 +453,7 @@ class NLCRuleEngine:
     def _is_old_enough_to_assess(self, c: CompanyProfile) -> bool:
         """Issue 2 fix: returns True if company is >30 days old (enough to assess MoA filing).
         Returns False for fresh companies where False may just mean 'not yet assessed'."""
-        if not c.incorporation_date:
+        if c.incorporation_date is False:
             return True  # If no incorporation date, allow the rule to fire
         days_old = (self.today - c.incorporation_date).days
         return days_old > 30
@@ -473,7 +473,7 @@ class NLCRuleEngine:
                 statutory_basis="Section 23, Companies Act 1994 (Bangladesh)",
             ))
 
-        if c.paid_up_capital_bdt > 0 and not c.form_iii_filed:
+        if c.paid_up_capital_bdt > 0 and c.form_iii_filed is False:
             delay = (self.today - (c.incorporation_date or self.today)).days  # type: ignore
             if delay > REGISTERED_OFFICE_DEADLINE_DAYS:
                 self._add_flag(ComplianceFlag(
@@ -520,7 +520,7 @@ class NLCRuleEngine:
             ))
 
         if c.has_foreign_shareholder:
-            if not c.encashment_certificate_uploaded:
+            if c.encashment_certificate_uploaded is False:
                 self._add_flag(ComplianceFlag(
                     rule_id="INC-005",
                     flag_code="ENCASHMENT_CERTIFICATE_MISSING",
@@ -614,7 +614,7 @@ class NLCRuleEngine:
                 statutory_basis="Section 210(1), Companies Act 1994 (Bangladesh)",
                 state=RuleState.UNKNOWN
             ))
-        elif not c.first_auditor_appointed:
+        elif c.first_auditor_appointed is False:
             deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AUDITOR_DEADLINE_DAYS)  # type: ignore
             if self.today > deadline:  # type: ignore
                 delay = (self.today - deadline).days  # type: ignore
@@ -629,7 +629,7 @@ class NLCRuleEngine:
                     detail={"delay_days": delay}
                 ))
 
-        if c.first_auditor_appointed and c.agm_count is not None and c.agm_count > 0 and not c.auditor_reappointed_at_agm and not c.audit_in_progress and c.last_agm_date is not None:  # type: ignore
+        if c.first_auditor_appointed and c.agm_count is not None and c.agm_count > 0 and c.auditor_reappointed_at_agm is False and c.audit_in_progress is False and c.last_agm_date is not None:  # type: ignore
             fy_end = c.financial_year_end
             if self.today > fy_end + timedelta(days=120):
                  self._add_flag(ComplianceFlag(
@@ -642,7 +642,7 @@ class NLCRuleEngine:
                     statutory_basis="Section 210(2), Companies Act 1994 (Bangladesh)",
                 ))
 
-        if c.agm_scheduled_date and not c.audit_complete:
+        if c.agm_scheduled_date and c.audit_complete is False:
             warning = c.agm_scheduled_date - timedelta(days=AGM_NOTICE_MINIMUM_DAYS)
             if self.today >= warning:
                 days_to = (c.agm_scheduled_date - self.today).days
@@ -658,7 +658,7 @@ class NLCRuleEngine:
                     detail={"days_to_agm": days_to}
                 ))
 
-        if c.agm_held_this_cycle and not c.audit_complete:
+        if c.agm_held_this_cycle and c.audit_complete is False:
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-003",
                 flag_code="AGM_HELD_WITHOUT_VALID_AUDIT",
@@ -671,7 +671,7 @@ class NLCRuleEngine:
                 is_black_override=True,
             ))
 
-        if c.agm_held_this_cycle and not c.auditor_reappointed_at_agm:
+        if c.agm_held_this_cycle and c.auditor_reappointed_at_agm is False:
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-004",
                 flag_code="AUDITOR_NOT_REAPPOINTED",
@@ -715,7 +715,7 @@ class NLCRuleEngine:
                 ))
             return
 
-        if c.last_agm_date and not c.agm_held_this_cycle:
+        if c.last_agm_date and c.agm_held_this_cycle is False:
             cond_a = c.last_agm_date + timedelta(days=SUBSEQUENT_AGM_DEADLINE_DAYS)
             cond_b = self._get_fy_end_deadline(c)
             agm_deadline = min(cond_a, cond_b)
@@ -749,7 +749,7 @@ class NLCRuleEngine:
                     detail={"clear_days": clear_days}
                 ))
 
-        if c.agm_scheduled_date and not c.notice_sent_date:
+        if c.agm_scheduled_date and c.notice_sent_date is False:
             warn = c.agm_scheduled_date - timedelta(days=AGM_NOTICE_MINIMUM_DAYS)
             if self.today >= warn:
                 days_rem = (c.agm_scheduled_date - self.today).days
@@ -776,7 +776,7 @@ class NLCRuleEngine:
                 detail={"present": c.members_present_at_agm, "required": PRIVATE_COMPANY_QUORUM}
             ))
 
-        if c.agm_held_this_cycle and not c.agm_minutes_prepared:
+        if c.agm_held_this_cycle and c.agm_minutes_prepared is False:
             self._add_flag(ComplianceFlag(
                 rule_id="AGM-006",
                 flag_code="AGM_MINUTES_NOT_PREPARED",
@@ -791,7 +791,7 @@ class NLCRuleEngine:
     # MODULE 3: ANNUAL RETURNS
     # ───────────────────────────────────────────────────────────────────
     def _run_annual_return_rules(self, c: CompanyProfile) -> None:
-        if c.last_agm_date and not c.annual_return_filed:
+        if c.last_agm_date and c.annual_return_filed is False:
             deadline = c.last_agm_date + timedelta(days=ANNUAL_RETURN_DEADLINE_DAYS)
             if self.today > deadline:
                 delay = (self.today - deadline).days
@@ -831,13 +831,13 @@ class NLCRuleEngine:
                 detail={"unfiled_count": c.unfiled_returns_count}
             ))
 
-        if c.annual_return_filed and not c.annual_return_content_complete:
+        if c.annual_return_filed and c.annual_return_content_complete is False:
             missing = []
-            if not c.schedule_x_attached: missing.append("Schedule X")
-            if not c.balance_sheet_attached: missing.append("Balance Sheet")
-            if not c.profit_loss_attached: missing.append("P&L Account")
-            if not c.directors_list_attached: missing.append("Directors List")
-            if not c.shareholders_list_attached: missing.append("Shareholders List")
+            if c.schedule_x_attached is False: missing.append("Schedule X")
+            if c.balance_sheet_attached is False: missing.append("Balance Sheet")
+            if c.profit_loss_attached is False: missing.append("P&L Account")
+            if c.directors_list_attached is False: missing.append("Directors List")
+            if c.shareholders_list_attached is False: missing.append("Shareholders List")
             self._add_flag(ComplianceFlag(
                 rule_id="AR-004",
                 flag_code="ANNUAL_RETURN_INCOMPLETE",
@@ -932,7 +932,7 @@ class NLCRuleEngine:
     # MODULE 5: SHAREHOLDING
     # ───────────────────────────────────────────────────────────────────
     def _run_shareholder_rules(self, c: CompanyProfile) -> None:
-        if c.last_allotment_date and not c.form_xv_filed:
+        if c.last_allotment_date and c.form_xv_filed is False:
             delay = (self.today - c.last_allotment_date).days
             if delay > ALLOTMENT_FILING_DEADLINE_DAYS:
                 self._add_flag(ComplianceFlag(
@@ -946,7 +946,7 @@ class NLCRuleEngine:
                     detail={"delay": delay}
                 ))
 
-        if c.last_allotment_date and not c.share_certificates_issued:
+        if c.last_allotment_date and c.share_certificates_issued is False:
             delay = (self.today - c.last_allotment_date).days
             if delay > SHARE_CERTIFICATE_DEADLINE_DAYS:
                 self._add_flag(ComplianceFlag(
@@ -960,7 +960,7 @@ class NLCRuleEngine:
                     detail={"delay": delay}
                 ))
 
-        if c.capital_increase_date and not c.form_iv_filed:
+        if c.capital_increase_date and c.form_iv_filed is False:
             delay = (self.today - c.capital_increase_date).days
             if delay > ALLOTMENT_FILING_DEADLINE_DAYS:
                 self._add_flag(ComplianceFlag(
@@ -1120,7 +1120,7 @@ class NLCRuleEngine:
     # MODULE 8: REGISTERED OFFICE
     # ───────────────────────────────────────────────────────────────────
     def _run_office_rules(self, c: CompanyProfile) -> None:
-        if c.registered_office_change_date and not c.form_vi_filed:
+        if c.registered_office_change_date and c.form_vi_filed is False:
             delay = (self.today - c.registered_office_change_date).days
             if delay > REGISTERED_OFFICE_DEADLINE_DAYS:
                 self._add_flag(ComplianceFlag(
@@ -1138,7 +1138,7 @@ class NLCRuleEngine:
     # MODULE 9: CAPITAL & CHARGES
     # ───────────────────────────────────────────────────────────────────
     def _run_capital_rules(self, c: CompanyProfile) -> None:
-        if c.capital_increase_date and not c.capital_increase_resolution:
+        if c.capital_increase_date and c.capital_increase_resolution is False:
             self._add_flag(ComplianceFlag(
                 rule_id="CAP-001",
                 flag_code="CAPITAL_INCREASE_RESOLUTION_MISSING",
@@ -1176,7 +1176,7 @@ class NLCRuleEngine:
                     detail={"charge_id": charge.charge_id, "charge_type": charge.charge_type}
                 ))
 
-        if c.capital_reduction_pending and not c.capital_reduction_court_order_obtained:
+        if c.capital_reduction_pending and c.capital_reduction_court_order_obtained is False:
             self._add_flag(ComplianceFlag(
                 rule_id="CAP-003",
                 flag_code="CAPITAL_REDUCTION_WITHOUT_COURT",
@@ -1188,7 +1188,7 @@ class NLCRuleEngine:
                 is_black_override=True,
             ))
 
-        if c.special_resolution_date and not c.special_resolution_filed:
+        if c.special_resolution_date and c.special_resolution_filed is False:
             delay = (self.today - c.special_resolution_date).days
             if delay > SPECIAL_RESOLUTION_DEADLINE_DAYS:
                 self._add_flag(ComplianceFlag(
@@ -1229,7 +1229,7 @@ class NLCRuleEngine:
                 detail={"turnover_bdt": c.annual_turnover_bdt}
             ))
 
-        if c.tin_obtained and not c.tax_return_filed_for_current_fy and c.financial_year_end:
+        if c.tin_obtained and c.tax_return_filed_for_current_fy is False and c.financial_year_end:
             # VERIFY against ITA 2023: company return due 15th day of 7th month after FY end (30 Jun -> 15 Jan)
             fy_end = c.financial_year_end
             due_month = fy_end.month + 7
@@ -1274,10 +1274,10 @@ class NLCRuleEngine:
                 q3_deadline = date(t.year, 4, 15)
                 q4_deadline = date(t.year, 7, 15)
                 
-            if t > q1_deadline and not c.advance_tax_q1_paid: missed.append("Q1")
-            if t > q2_deadline and not c.advance_tax_q2_paid: missed.append("Q2")
-            if t > q3_deadline and not c.advance_tax_q3_paid: missed.append("Q3")
-            if t > q4_deadline and not c.advance_tax_q4_paid: missed.append("Q4")
+            if t > q1_deadline and c.advance_tax_q1_paid is False: missed.append("Q1")
+            if t > q2_deadline and c.advance_tax_q2_paid is False: missed.append("Q2")
+            if t > q3_deadline and c.advance_tax_q3_paid is False: missed.append("Q3")
+            if t > q4_deadline and c.advance_tax_q4_paid is False: missed.append("Q4")
             
             if missed:
                 self._add_flag(ComplianceFlag(
@@ -1306,7 +1306,7 @@ class NLCRuleEngine:
                     statutory_basis="Value Added Tax Act 2012 (Bangladesh)",
                 ))
 
-        if c.vat_registered and not c.vat_annual_return_filed_for_fy and self.today.month > 9:
+        if c.vat_registered and c.vat_annual_return_filed_for_fy is False and self.today.month > 9:
             self._add_flag(ComplianceFlag(
                 rule_id="VAT-003",
                 flag_code="VAT_ANNUAL_RETURN_OVERDUE",
@@ -1335,7 +1335,7 @@ class NLCRuleEngine:
     # MODULE 11: STRUCTURAL CHANGE
     # ───────────────────────────────────────────────────────────────────
     def _run_structural_change_rules(self, c: CompanyProfile) -> None:
-        if c.name_change_pending and c.name_change_date and not c.name_change_sr_passed:
+        if c.name_change_pending and c.name_change_date and c.name_change_sr_passed is False:
             delay = (self.today - c.name_change_date).days
             if delay > SPECIAL_RESOLUTION_DEADLINE_DAYS:
                 sev = Severity.RED if delay > 90 else Severity.YELLOW
@@ -1422,7 +1422,7 @@ class NLCRuleEngine:
     def _run_labour_rules(self, c: CompanyProfile) -> None:
         # R-003/R-008: LBR-001 applies only to entities confirmed as manufacturing.
         # None (unknown) and False (not a factory) must not raise a flag.
-        if c.is_manufacturing is True and not c.factory_license_obtained:
+        if c.is_manufacturing is True and c.factory_license_obtained is False:
             self._add_flag(ComplianceFlag(
                 rule_id="LBR-001",
                 flag_code="FACTORY_LICENSE_MISSING",
@@ -1518,28 +1518,28 @@ class NLCRuleEngine:
     # MODULE 15: BSEC CG CODE 2023
     def _run_bsec_rules(self, c: CompanyProfile) -> None:
         if c.bsec_listed:
-            if not c.bsec_quarterly_report_filed:
+            if c.bsec_quarterly_report_filed is False:
                 self._add_flag(ComplianceFlag(
                     rule_id="BSEC-001", flag_code="QUARTERLY_REPORT_NOT_FILED",
                     severity=Severity.RED, score_impact=10,
                     revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                     description="BSEC quarterly report not filed.",
                     statutory_basis="BSEC Corporate Governance Code 2023, Para 8"))
-            if not c.cg_certificate_obtained:
+            if c.cg_certificate_obtained is False:
                 self._add_flag(ComplianceFlag(
                     rule_id="BSEC-002", flag_code="CG_CERTIFICATE_NOT_OBTAINED",
                     severity=Severity.RED, score_impact=10,
                     revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                     description="CG certificate not obtained.",
                     statutory_basis="BSEC Corporate Governance Code 2023, Para 9"))
-            if not c.board_independent_director:
+            if c.board_independent_director is False:
                 self._add_flag(ComplianceFlag(
                     rule_id="BSEC-003", flag_code="BOARD_COMPOSITION_NON_COMPLIANT",
                     severity=Severity.YELLOW, score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description="Board composition non-compliant.",
                     statutory_basis="BSEC Corporate Governance Code 2023, Para 5"))
-            if not c.audit_committee_established:
+            if c.audit_committee_established is False:
                 self._add_flag(ComplianceFlag(
                     rule_id="BSEC-004", flag_code="AUDIT_COMMITTEE_NOT_ESTABLISHED",
                     severity=Severity.YELLOW, score_impact=5,
@@ -1973,7 +1973,7 @@ class NLCRuleEngine:
         return fy_end + timedelta(days=FY_END_AGM_DEADLINE_DAYS)
 
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:
-        if not c.last_agm_date:
+        if c.last_agm_date is None:
             if c.agm_count == 0:
                 deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
                 if self.today > deadline:  # type: ignore
