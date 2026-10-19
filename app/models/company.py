@@ -287,7 +287,7 @@ class Company(FullMixin, Base):
     paid_up_ge_authorized: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     # ── Corporate Structure Changes ────────────────────────────────────
-        name_change_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    name_change_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     name_change_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     name_change_sr_passed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     object_clause_change_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
