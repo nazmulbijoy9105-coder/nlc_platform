@@ -1562,6 +1562,13 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     def _run_board_meeting_rules(self, c: CompanyProfile) -> None:
         # BOD-001: Board meeting not held quarterly (Section 96)
+        # Issue 6 follow-up: Gate on bsec_listed until applicability confirmed.
+        # The "4 meetings per year" / "3 months" thresholds may come from the
+        # BSEC Corporate Governance Code, which likely binds only listed companies.
+        # Firing for all companies gives private companies a false violation.
+        if not c.bsec_listed:
+            return  # BOD-001 does not bind non-listed companies (pending legal review)
+
         if c.last_board_meeting_date is None:
             if c.incorporation_date and (self.today - c.incorporation_date).days > 90:
                 self._add_flag(ComplianceFlag(
