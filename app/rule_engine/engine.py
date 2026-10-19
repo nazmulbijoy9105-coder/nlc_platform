@@ -749,7 +749,7 @@ class NLCRuleEngine:
                     detail={"clear_days": clear_days}
                 ))
 
-        if c.agm_scheduled_date and c.notice_sent_date is False:
+        if c.agm_scheduled_date and c.notice_sent_date is None:
             warn = c.agm_scheduled_date - timedelta(days=AGM_NOTICE_MINIMUM_DAYS)
             if self.today >= warn:
                 days_rem = (c.agm_scheduled_date - self.today).days
