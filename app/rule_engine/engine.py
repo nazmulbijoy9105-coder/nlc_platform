@@ -1673,8 +1673,8 @@ class NLCRuleEngine:
                 severity=Severity.BLACK,
                 score_impact=impact,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description=f"{disq_count} director(s) disqualified under Sec 297. Cannot act as director for 5 years.",
-                statutory_basis="Section 297, Companies Act 1994 (Bangladesh)",
+                description=f"{disq_count} director(s) disqualified under Sec 94. Cannot act as director for 5 years.",
+                statutory_basis="Section 94, Companies Act 1994 (Bangladesh)",
                 detail={"disqualifications": c.disqualification_details, "count": disq_count},
                 is_black_override=is_override,
             ))
