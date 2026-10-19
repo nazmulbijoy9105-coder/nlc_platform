@@ -1,3 +1,4 @@
+import uuid
 import pytest
 from datetime import date, timedelta
 from app.models.compliance_calendar import ComplianceCalendarEvent, CalendarEventType, CalendarEventStatus

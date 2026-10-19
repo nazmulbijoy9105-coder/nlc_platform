@@ -26,6 +26,7 @@ class ProvisionStatus(str, Enum):
 
 
 class Severity(str, Enum):
+    BLACK = "BLACK"   # legacy override band; override scoring NOT implemented here
     RED = "RED"
     YELLOW = "YELLOW"
 
@@ -112,7 +113,7 @@ if len(STATUTORY_RULE_REGISTRY) != len(_RULES):
 def get_rule(rule_id: str) -> Optional[StatutoryRule]:
     """Retrieve a statutory rule by its ID."""
     return STATUTORY_RULE_REGISTRY.get(rule_id)
-STATUTORY_RULE_REGISTRY: Dict[str, Dict[str, Any]] = {
+_LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "INC-001": {
         "rule_id": "INC-001",
         "legal_domain": "Corporate",
@@ -1253,5 +1254,44 @@ STATUTORY_RULE_REGISTRY: Dict[str, Dict[str, Any]] = {
 
 }
 
-def get_rule(rule_id: str) -> Dict[str, Any] | None:
-    return STATUTORY_RULE_REGISTRY.get(rule_id)
+_LEGACY_AUTHORITY = {"Corporate": "RJSC", "Tax": "NBR", "Labour": "LABOUR_DEPT"}  # UNVERIFIED default
+_LEGACY_AUTHORITY_OVERRIDE: Dict[str, str] = {}   # rule_id -> authority; fill after review
+_LEGACY_KEYS = frozenset({"rule_id", "legal_domain", "law", "requirement", "provision",
+    "provision_status", "applicability", "exceptions", "evidence_required",
+    "evaluation_states", "severity", "score_impact", "invariants"})
+
+
+def _legacy_rule(key: str, d: Dict[str, Any]) -> StatutoryRule:
+    extra = set(d) - _LEGACY_KEYS
+    if extra:
+        raise RuntimeError(f"{key}: unknown legacy keys {sorted(extra)}")
+    if d["rule_id"] != key:
+        raise RuntimeError(f"{key}: rule_id mismatch {d['rule_id']}")
+    if d["applicability"] != "ALL_ACTIVE_COMPANIES" or d["exceptions"]:
+        raise RuntimeError(f"{key}: narrowed applicability not representable")
+    if list(d["evidence_required"]) != ["DOCUMENTARY_EVIDENCE"]:
+        raise RuntimeError(f"{key}: unexpected legacy evidence keys")
+    auth = _LEGACY_AUTHORITY_OVERRIDE.get(key) or _LEGACY_AUTHORITY[d["legal_domain"]]
+    return StatutoryRule(
+        key, d["legal_domain"], d["law"], d["requirement"], d["provision"],
+        d["provision_status"], auth,
+        (key + ":DOCUMENTARY_EVIDENCE",),   # per-rule key: shared key would couple all rules
+        Severity(d["severity"]), d["score_impact"])
+
+
+for _k, _d in _LEGACY_RULE_DICTS.items():
+    if _k not in STATUTORY_RULE_REGISTRY:   # canonical wins on overlap
+        STATUTORY_RULE_REGISTRY[_k] = _legacy_rule(_k, _d)
+
+
+# --- NLC FIX: hybrid access (attribute + dict subscript) ---
+# Tests use both r.exceptions (attribute) and r["invariants"] (subscript).
+# Add __getitem__ to StatutoryRule to support both access patterns.
+def _statutory_rule_getitem(self, key):
+    """Allow dict-style access: rule['exceptions'] == rule.exceptions."""
+    if hasattr(self, key):
+        return getattr(self, key)
+    raise KeyError(key)
+
+StatutoryRule.__getitem__ = _statutory_rule_getitem
+# --- END NLC FIX: hybrid access ---
