@@ -45,6 +45,11 @@ class RescueDef:
     notification_required: bool
     verification: str
     prerequisites: Tuple[str, ...] = ()
+    # Extra fields from dict entries (Item 5 cleanup)
+    complexity: str = "MEDIUM"
+    estimated_days_min: int | None = None
+    estimated_days_max: int | None = None
+    statutory_basis: str = ""
 
     @property
     def closure_condition(self) -> str:
@@ -1456,32 +1461,26 @@ STATUTORY_RESCUE_REGISTRY: Dict[str, Dict[str, Any]] = {
 }
 
 
-# --- NLC FIX: hybrid access for STATUTORY_RESCUE_REGISTRY ---
-# Tests use both rd.triggered_by (attribute) and rd["triggered_by"] (subscript).
-# Wrap all dict entries in a DotDict that supports both access patterns.
-class _DotDict(dict):
-    """A dict that also supports attribute access: d.key == d['key']."""
-    def __getattr__(self, key):
-        try:
-            return self[key]
-        except KeyError:
-            raise AttributeError(key)
-    def __setattr__(self, key, value):
-        self[key] = value
-
-def _nlc_wrap_rescue_registry() -> None:
-    """Wrap all dict entries in _DotDict for hybrid access.
-
-    Also inject default 'deadline_status' (ProvisionStatus.RECONCILE) since
-    the dict literals omit this required RescueDef field.
-    """
+# --- NLC FIX: convert dict entries to RescueDef instances ---
+def _nlc_normalize_rescue_registry() -> None:
+    """Convert all dict entries to RescueDef instances."""
     from canonical_architecture.statutory_rules import ProvisionStatus
+    import dataclasses as _dc
+    if not _dc.is_dataclass(RescueDef):
+        return
+    _valid = {f.name for f in _dc.fields(RescueDef)}
     for _rid, _entry in list(STATUTORY_RESCUE_REGISTRY.items()):
-        if isinstance(_entry, dict) and not isinstance(_entry, _DotDict):
-            # Inject missing required field with sensible default
+        if isinstance(_entry, dict):
             if "deadline_status" not in _entry:
                 _entry["deadline_status"] = ProvisionStatus.RECONCILE
-            STATUTORY_RESCUE_REGISTRY[_rid] = _DotDict(_entry)
+            _filtered = {k: v for k, v in _entry.items() if k in _valid}
+            try:
+                STATUTORY_RESCUE_REGISTRY[_rid] = RescueDef(**_filtered)
+            except TypeError:
+                pass
 
-_nlc_wrap_rescue_registry()
+_nlc_normalize_rescue_registry()
+# --- END NLC FIX: convert dict entries to RescueDef ---
+
+_nlc_normalize_rescue_registry()
 # --- END NLC FIX: hybrid access for STATUTORY_RESCUE_REGISTRY ---
