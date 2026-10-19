@@ -11,29 +11,29 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql+asyncpg://dummy:dummy@localhost:5432/dummy
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      
+          python-version: "3.11"
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest pytest-asyncio
-      
+
       - name: Compile check
         run: python -m compileall app/
-      
+
       - name: Run tests
         run: python -m pytest tests/unit -q --tb=short
-      
+
       - name: Rule parity audit
         run: python tools/audit_rule_parity.py --no-db
 
-  - name: Rule parity audit
-    run: python tools/audit_rule_parity.py --no-db
+      - name: Rule verification status check
+        run: python scripts/check_rule_verification.py
