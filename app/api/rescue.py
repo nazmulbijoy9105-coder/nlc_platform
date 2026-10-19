@@ -232,21 +232,27 @@ async def create_rescue_plan(
     "/plans",
     response_model=list[RescuePlanResponse],
     dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
-    summary="List all rescue plans across the portfolio",
+    summary="List rescue plans, optionally filtered by company_id",
 )
 async def list_rescue_plans(
+    company_id: uuid.UUID | None = None,
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    """Issue 5: support optional company_id filter.
+    Without company_id, returns all plans (admin/portfolio view).
+    With company_id, returns only that company's plans.
+    """
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
 
     from app.models.rescue import RescuePlan
 
-    result = await db.execute(
-        select(RescuePlan)
-        .options(selectinload(RescuePlan.steps))
-        .order_by(RescuePlan.created_at.desc())
-    )
+    query = select(RescuePlan).options(selectinload(RescuePlan.steps))
+    if company_id is not None:
+        query = query.where(RescuePlan.company_id == company_id)
+    query = query.order_by(RescuePlan.created_at.desc())
+
+    result = await db.execute(query)
     plans = result.scalars().all()
     return [_plan_to_response(p) for p in plans]
 
