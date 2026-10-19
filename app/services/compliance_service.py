@@ -123,6 +123,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         return {
             "company_id":    str(company_id),
             "score":         output.score_breakdown.final_score,
+            "raw_total":     output.score_breakdown.raw_total,
             "risk_band":     output.score_breakdown.risk_band,
             "exposure_band": output.score_breakdown.exposure_band,
             "flags":         [
