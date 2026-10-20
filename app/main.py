@@ -409,21 +409,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 
-class CORSErrorMiddleware(BaseHTTPMiddleware):
-    """
-    Forces CORS headers onto error responses (403, 500, etc).
-    Prevents the browser from masking backend crashes as CORS errors.
-    """
-    async def dispatch(self, request, call_next):
-        response = await call_next(request)
-        origin = request.headers.get("origin")
-        if origin and "access-control-allow-origin" not in response.headers:
-            response.headers["Access-Control-Allow-Origin"] = origin
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-            response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, X-Request-ID"
-        return response
-
 # ---------------------------------------------------------------------------
 # Exception handlers
 # ---------------------------------------------------------------------------
@@ -546,44 +531,18 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
     # CORS
     # ------------------------------------------------------------------
-    # Helper to parse origins cleanly
-    def get_parsed_origins():
-        raw_origins = settings.allowed_origins
-        if isinstance(raw_origins, list):
-            if settings.is_production:
-                for o in raw_origins:
-                    if o == "*":
-                        raise ValueError("CORS wildcard not allowed with credentials in production")
-                    if o.startswith("http://"):
-                        raise ValueError(f"Non-HTTPS origin not allowed in production: {o}")
-            return [o.strip() for o in raw_origins if o.strip()]
-        if isinstance(raw_origins, str) and raw_origins:
-            return [o.strip() for o in raw_origins.split(",") if o.strip()]
-        return []
-
-    parsed_origins = get_parsed_origins()
-
-    # In development, we explicitly add common local URLs.
-    # Note: We avoid "*" because allow_credentials=True is set.
-    if settings.environment == "development":
-        parsed_origins.extend([
-            "http://localhost:3000",
-            "http://localhost:8080",
-            "http://127.0.0.1:3000",
-            "http://127.0.0.1:8080",
-        ])
-
+    # ------------------------------------------------------------------
+    # CORS — allow all nlc-frontend Vercel deployments + localhost dev
+    # ------------------------------------------------------------------
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=parsed_origins,
+        allow_origin_regex=(
+            r"^https://nlc-frontend(-[\w-]+)?\.vercel\.app$"
+            r"|^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
+        ),
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=[
-            "Authorization",
-            "Content-Type",
-            "X-Request-ID",
-            "X-Requested-With",
-        ],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-Requested-With"],
         expose_headers=["X-Request-ID", "X-Total-Count", "X-Page", "X-Page-Size"],
         max_age=3600,
     )
@@ -594,8 +553,6 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(AccessLogMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(CORSErrorMiddleware)
-
     # ------------------------------------------------------------------
     # Exception handlers
     # ------------------------------------------------------------------
