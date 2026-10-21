@@ -2,13 +2,15 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_db, get_current_user
+from app.core.dependencies import require_company_access,
+     get_db, get_current_user
 from app.services.compliance_calendar import ComplianceCalendarService
 
 router = APIRouter(prefix="/calendar", tags=["Compliance Calendar"])
 
 
-@router.post("/companies/{company_id}/generate")
+@router.post("/companies/{company_id}/generate",
+            dependencies=[Depends(require_company_access("company_id"))])
 async def generate_calendar(
     company_id: UUID,
     years_ahead: int = Query(3, ge=1, le=5),
