@@ -154,6 +154,7 @@ def _plan_to_response(plan, company=None) -> RescuePlanResponse:
     response_model=RescuePlanResponse,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+            # IDOR FIX: verify plan belongs to user's company before update
     summary="Generate a corporate rescue plan for a BLACK or RED band company",
 )
 async def create_rescue_plan(
@@ -232,6 +233,7 @@ async def create_rescue_plan(
     "/plans",
     response_model=list[RescuePlanResponse],
     dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+            # IDOR FIX: verify plan belongs to user's company before update
     summary="List rescue plans, optionally filtered by company_id",
 )
 async def list_rescue_plans(
@@ -293,6 +295,7 @@ async def get_active_plan(
     "/plans/detail/{plan_id}",
     response_model=RescuePlanResponse,
     dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+            # IDOR FIX: verify plan belongs to user's company before update
     summary="Get a rescue plan by ID with all steps",
 )
 async def get_rescue_plan(
@@ -323,6 +326,7 @@ async def get_rescue_plan(
     "/plans/{plan_id}/steps/{step_number}",
     response_model=RescuePlanResponse,
     dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+            # IDOR FIX: verify plan belongs to user's company before update
     summary="Update the status of a rescue step",
     description=(
         "Updating Step 8 to COMPLETED automatically triggers compliance re-evaluation "

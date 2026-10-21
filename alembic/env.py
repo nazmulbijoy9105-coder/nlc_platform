@@ -160,17 +160,6 @@ def run_migrations_offline() -> None:
 # ── ONLINE MODE (ASYNC) ───────────────────────────────────────────────
 def do_run_migrations(connection: Connection) -> None:
     """Configure and run migrations using live connection."""
-    # Revision IDs here exceed alembic's default VARCHAR(32) version column.
-    # Create it wide on a fresh DB, widen it on an existing one. Idempotent.
-    connection.execute(text(
-        "CREATE TABLE IF NOT EXISTS alembic_version ("
-        "version_num VARCHAR(255) NOT NULL, "
-        "CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num))"
-    ))
-    connection.execute(text(
-        "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(255)"
-    ))
-    connection.commit()
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
@@ -204,8 +193,6 @@ async def run_async_migrations() -> None:
         db_url = _re.sub(r'[?&]sslmode=require', '', db_url)
         db_url = db_url.rstrip('?').rstrip('&')
         ssl_ctx = _ssl.create_default_context()
-        ssl_ctx.check_hostname = False
-        ssl_ctx.verify_mode = _ssl.CERT_NONE
         connect_args["ssl"] = ssl_ctx
 
     configuration["sqlalchemy.url"] = db_url
