@@ -1673,7 +1673,7 @@ class NLCRuleEngine:
         if c.any_director_disqualified and c.disqualification_details:
             disq_count = len(c.disqualification_details)
             impact = 20 if disq_count == 1 else 25
-            is_override = c.current_director_count is not None and disq_count >= (c.current_director_count - 1)  # type: ignore
+            is_override = c.current_director_count is not None and c.current_director_count > 0 and disq_count >= (c.current_director_count - 1)  # type: ignore
             self._add_flag(ComplianceFlag(
                 rule_id="DEF-001",
                 flag_code="DIRECTOR_DISQUALIFIED",
