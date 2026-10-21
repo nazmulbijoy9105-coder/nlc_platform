@@ -67,3 +67,6 @@ node_modules/
 
 # Allow brand assets
 !app/static/brand/
+fix_*.py
+debug_*.py
+register_*.py
