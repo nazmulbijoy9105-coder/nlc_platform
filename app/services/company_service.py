@@ -433,7 +433,7 @@ class CompanyService(BaseService[Company]):
             "disqualification_details": list(company.disqualification_details or []),
             "penalty_notices_received":     company.penalty_notices_received,
             "penalty_notices_resolved":     company.penalty_notices_resolved,
-            "current_director_count": len([d for d in company.directors if d.director_status.value == "ACTIVE"]) if company.directors else None,
+            "current_director_count": len([d for d in company.directors if d.director_status.value == "ACTIVE"]) if company.directors else 0,
 
             # BSEC Corporate Governance
             "bsec_listed":                   getattr(company, "bsec_listed", False),
