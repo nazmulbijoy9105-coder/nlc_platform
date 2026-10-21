@@ -62,6 +62,10 @@ class User(FullMixin, Base):
         "UserActivityLog", back_populates="user", lazy="noload"
     )
 
+
+    webhook_endpoints: Mapped[list["WebhookEndpoint"]] = relationship(
+        "WebhookEndpoint", back_populates="user", lazy="selectin"
+    )
     # ── Helpers ───────────────────────────────────────────────────
     @property
     def is_admin(self) -> bool:

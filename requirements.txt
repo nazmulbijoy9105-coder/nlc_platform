@@ -234,3 +234,5 @@ zopfli==0.4.1
 #   Fix: replace python-jose with PyJWT + cryptography
 #   Status: deferred — requires auth library migration
 # ═══════════════════════════════════════════════════════════════
+httpx==0.27.0
+httpx==0.27.0
