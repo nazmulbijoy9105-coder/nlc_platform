@@ -485,7 +485,24 @@ class NLCRuleEngine:
                     description="Memorandum and Articles of Association not filed with RJSC. Section 11: constitutional documents required.",
                     statutory_basis="Section 23, Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay}
-                ))
+                ))        # ── DEBUG: INC-003 diagnostic ──────────────────────────────
+        try:
+            import structlog as _sl
+            _dbg = _sl.get_logger(__name__)
+            _dbg.info("INC003_DEBUG",
+                company_type=str(c.company_type),
+                company_type_type=type(c.company_type).__name__,
+                cdc=c.current_director_count,
+                cdc_type=type(c.current_director_count).__name__ if c.current_director_count is not None else "None",
+                cond1_type=str(c.company_type) == "PRIVATE_LIMITED",
+                cond2_notnull=c.current_director_count is not None,
+                cond3_lt2=((c.current_director_count or 0) < 2) if c.current_director_count is not None else False,
+                all_pass=(str(c.company_type) == "PRIVATE_LIMITED" and c.current_director_count is not None and ((c.current_director_count or 0) < 2)),
+            )
+        except Exception:
+            pass
+        # ── END DEBUG ────────────────────────────────────────────────
+
 
         if c.company_type == "PRIVATE_LIMITED" and c.current_director_count is not None and (c.current_director_count or 0) < 2:  # type: ignore
             inc003_impact = 15
