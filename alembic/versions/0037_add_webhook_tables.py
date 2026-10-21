@@ -7,7 +7,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "0037_add_webhook_tables"
-down_revision = "ACTUAL_ID"
+down_revision = "0036_nullable_bools"
 branch_labels = None
 depends_on = None
 
