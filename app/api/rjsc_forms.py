@@ -149,13 +149,19 @@ async def create_form_filing(
 async def mark_form_filed(
     form_id: str,
     body: MarkFiledRequest,
+    current_user = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = RJSCFormService(db)
+    # Verify the filing belongs to a company the user can access
+    filing_check = await svc.get_by_id(form_id)
+    if not filing_check:
+        raise HTTPException(status_code=404, detail="Form filing not found")
     filing = await svc.mark_filed(
         form_id=form_id,
         filed_date=body.filed_date,
         rjsc_receipt_number=body.rjsc_receipt_number,
+        filed_by=str(current_user.id),
         notes=body.notes,
     )
     if not filing:
