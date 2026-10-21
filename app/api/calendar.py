@@ -2,8 +2,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import require_company_access,
-     get_db, get_current_user
+from app.core.dependencies import (
+    require_company_access,
+    get_db,
+    get_current_user,
+)
 from app.services.compliance_calendar import ComplianceCalendarService
 
 router = APIRouter(prefix="/calendar", tags=["Compliance Calendar"])
@@ -22,7 +25,10 @@ async def generate_calendar(
     return {"message": f"Generated {len(events)} events", "count": len(events)}
 
 
-@router.get("/companies/{company_id}")
+@router.get(
+    "/companies/{company_id}",
+    dependencies=[Depends(require_company_access("company_id"))],
+)
 async def get_calendar(
     company_id: UUID,
     days_ahead: int = Query(90, ge=30, le=365),
