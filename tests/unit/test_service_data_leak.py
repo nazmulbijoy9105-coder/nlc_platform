@@ -4,7 +4,7 @@ from app.services.company_service import CompanyService
 from app.rule_engine.engine import NLCRuleEngine, Severity, RuleState
 
 @pytest.mark.asyncio
-async def test_missing_agm_and_directors_does_not_trigger_black(db):
+async def test_zero_directors_triggers_inc003_and_agm_unknown(db):
     company = await CompanyService(db).create_company(
         registration_number="TEST-NO-AGM-01",
         company_name="No AGM Co",
@@ -24,8 +24,8 @@ async def test_missing_agm_and_directors_does_not_trigger_black(db):
     
     flag_ids = [f.rule_id for f in output.flags]
     
-    assert "INC-003" not in flag_ids, "INC-003 fired on missing directors"
-    assert "ESC-003" not in flag_ids, "ESC-003 fired on missing data"
+    assert "INC-003" in flag_ids, "INC-003 should fire for 0 directors (Section 90(2))"
+    assert "ESC-003" in flag_ids, "ESC-003 should fire (INC-003 has is_black_override=True)"
     
     # AGM-001 should fire, but as UNKNOWN (0 points), not as a hard violation
     agm_flags = [f for f in output.flags if f.rule_id == "AGM-001"]
@@ -34,4 +34,6 @@ async def test_missing_agm_and_directors_does_not_trigger_black(db):
     assert agm_flags[0].score_impact == 0
     
     # NOTE: Risk band may be RED due to other DB defaults (moa_aoa_filed=False),
-    # but the key assertion is that AGM-001 and INC-003 do not fire as BLACK violations.
+    # INC-003 correctly fires BLACK for 0 directors (structural deficiency).
+    # AGM-001 correctly fires as UNKNOWN (data missing, per R-008).
+    # ESC-003 fires because INC-003 has is_black_override=True.
