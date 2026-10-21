@@ -42,7 +42,8 @@ from app.api import (
     health,
     rescue,
     rjsc_forms,
-    rules,    webhooks,
+    rules,    notifications,
+    webhooks,
 
 )
 from app.core.config import get_settings
@@ -582,6 +583,7 @@ def create_app() -> FastAPI:
     app.include_router(calendar.router, prefix=API_PREFIX, tags=["Compliance Calendar"])
     app.include_router(rules.router,      prefix=f"{API_PREFIX}/rules",      tags=["Legal Rules"])
     app.include_router(admin.router,      prefix=f"{API_PREFIX}/admin",      tags=["Admin"])
+    app.include_router(notifications.router, prefix=f"{API_PREFIX}/notifications", tags=["Notifications"])
     app.include_router(webhooks.router, prefix=f"{API_PREFIX}/webhooks", tags=["Webhooks"])
 
     # ------------------------------------------------------------------
