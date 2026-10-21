@@ -65,6 +65,7 @@ async def get_form_reference():
 @router.get("/{company_id}", response_model=list[FormFilingResponse],
             dependencies=[Depends(require_company_access("company_id"))],
             summary="List all RJSC form filings for a company")
+async def list_forms(company_id: str, current_user = Depends(get_current_user),
 async def list_forms(company_id: str, db: AsyncSession = Depends(get_db_for_user)):
     svc = RJSCFormService(db)
     forms = await svc.get_forms_for_company(company_id)

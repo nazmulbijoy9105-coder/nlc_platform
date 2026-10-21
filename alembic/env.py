@@ -22,9 +22,57 @@ from logging.config import fileConfig
 from pathlib import Path
 
 from alembic import context
-from sqlalchemy import pool, text
+import alembic.ddl.impl as alembic_ddl_impl
+from alembic.ddl.postgresql import PostgresqlImpl
+from sqlalchemy import (
+    Column,
+    MetaData,
+    PrimaryKeyConstraint,
+    String,
+    Table,
+    pool,
+    text,
+)
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
+
+
+class NLCPostgresqlImpl(PostgresqlImpl):
+    """Use a 255-character Alembic revision column for NLC migrations."""
+
+    def version_table_impl(
+        self,
+        *,
+        version_table,
+        version_table_schema,
+        version_table_pk,
+        **kw,
+    ):
+        table = Table(
+            version_table,
+            MetaData(),
+            Column("version_num", String(255), nullable=False),
+            schema=version_table_schema,
+        )
+        if version_table_pk:
+            table.append_constraint(
+                PrimaryKeyConstraint(
+                    "version_num",
+                    name=f"{version_table}_pkc",
+                )
+            )
+        return table
+
+
+# Alembic 1.20.0 resolves implementations through this module-level registry.
+# This affects only this Alembic process; it does not alter the database.
+if alembic_ddl_impl._impls.get("postgresql") is PostgresqlImpl:
+    alembic_ddl_impl._impls["postgresql"] = NLCPostgresqlImpl
+elif alembic_ddl_impl._impls.get("postgresql") is not NLCPostgresqlImpl:
+    raise RuntimeError(
+        "Unexpected Alembic PostgreSQL implementation; "
+        "refusing to replace another custom implementation."
+    )
 
 # ── Path Setup ───────────────────────────────────────────────────────
 # Ensure project root is on sys.path so app.models can be imported
