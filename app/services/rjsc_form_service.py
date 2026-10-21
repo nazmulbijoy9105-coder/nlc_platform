@@ -23,27 +23,28 @@ class RJSCFormService(BaseService[RJSCFormFiling]):
         return list(result.scalars().all())
 
     async def get_pending_forms(self, company_id: str) -> list[RJSCFormFiling]:
-        """Get forms that are pending or overdue."""
+        """Get forms that are pending (not yet overdue or filed)."""
         result = await self.db.execute(
             select(RJSCFormFiling)
             .where(
                 RJSCFormFiling.company_id == company_id,
-                RJSCFormFiling.filing_status.in_(["PENDING", "OVERDUE"]),
+                RJSCFormFiling.filing_status == "PENDING",
             )
             .order_by(RJSCFormFiling.due_date)
         )
         return list(result.scalars().all())
 
     async def get_overdue_forms(self, company_id: str) -> list[RJSCFormFiling]:
-        """Get forms that are overdue."""
+        """Get forms that are overdue (status=OVERDUE or PENDING past due_date)."""
         today = date.today()
         result = await self.db.execute(
             select(RJSCFormFiling)
             .where(
                 RJSCFormFiling.company_id == company_id,
-                RJSCFormFiling.filing_status == "PENDING",
+                RJSCFormFiling.filing_status.in_(["OVERDUE", "PENDING"]),
                 RJSCFormFiling.due_date < today,
             )
+            .order_by(RJSCFormFiling.due_date)
         )
         return list(result.scalars().all())
 
