@@ -15,7 +15,7 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .mixins import TimestampMixin, UUIDPrimaryKeyMixin
-from .base import Base
+from .database import Base
 
 if TYPE_CHECKING:
     from .user import User
