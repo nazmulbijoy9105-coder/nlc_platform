@@ -225,7 +225,7 @@ celery_app.conf.update(
     task_send_sent_event=True,     # Send 'sent' event for each task
 
     # ── Security ─────────────────────────────────────────────────
-    task_always_eager=False,       # Never run tasks synchronously in production
+    task_always_eager=os.environ.get("CELERY_TASK_ALWAYS_EAGER", "true").lower() == "true",  # true = sync (free tier), false = needs workers       # Never run tasks synchronously in production
                                    # Override in tests: task_always_eager=True
 )
 

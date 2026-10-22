@@ -233,3 +233,5 @@ zopfli==0.4.1
 #   Fix: replace python-jose with PyJWT + cryptography
 #   Status: deferred — requires auth library migration
 # ═══════════════════════════════════════════════════════════════
+apscheduler>=3.11.0
+apscheduler>=3.11.0
