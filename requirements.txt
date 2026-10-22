@@ -234,3 +234,4 @@ zopfli==0.4.1
 #   Fix: replace python-jose with PyJWT + cryptography
 #   Status: deferred — requires auth library migration
 # ═══════════════════════════════════════════════════════════════
+celery-redbeat>=2.2.1
