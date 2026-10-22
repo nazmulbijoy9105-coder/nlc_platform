@@ -9,6 +9,7 @@ Endpoints:
   GET    /rjsc-forms/reference              Get all RJSC form types
 """
 from __future__ import annotations
+import uuid
 
 from datetime import date
 
@@ -147,7 +148,7 @@ async def create_form_filing(
               dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
               summary="Mark RJSC form as filed")
 async def mark_form_filed(
-    form_id: str,
+    form_id: uuid.UUID,
     body: MarkFiledRequest,
     current_user = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
