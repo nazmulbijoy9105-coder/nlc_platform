@@ -70,7 +70,7 @@ async def list_forms(company_id: str, db: AsyncSession = Depends(get_db_for_user
     svc = RJSCFormService(db)
     forms = await svc.get_forms_for_company(company_id)
     return [FormFilingResponse(
-        id=str(f.id), company_id=f.company_id, form_code=f.form_code,
+        id=str(f.id), company_id=str(f.company_id), form_code=f.form_code,
         form_number=f.form_number, form_name=f.form_name,
         section_reference=f.section_reference, related_rule_id=f.related_rule_id,
         filing_status=f.filing_status, due_date=f.due_date.isoformat() if f.due_date else None,
@@ -88,7 +88,7 @@ async def list_pending_forms(company_id: str, db: AsyncSession = Depends(get_db_
     await svc.update_overdue_status(company_id)
     forms = await svc.get_pending_forms(company_id)
     return [FormFilingResponse(
-        id=str(f.id), company_id=f.company_id, form_code=f.form_code,
+        id=str(f.id), company_id=str(f.company_id), form_code=f.form_code,
         form_number=f.form_number, form_name=f.form_name,
         section_reference=f.section_reference, related_rule_id=f.related_rule_id,
         filing_status=f.filing_status, due_date=f.due_date.isoformat() if f.due_date else None,
@@ -105,7 +105,7 @@ async def list_overdue_forms(company_id: str, db: AsyncSession = Depends(get_db_
     svc = RJSCFormService(db)
     forms = await svc.get_overdue_forms(company_id)
     return [FormFilingResponse(
-        id=str(f.id), company_id=f.company_id, form_code=f.form_code,
+        id=str(f.id), company_id=str(f.company_id), form_code=f.form_code,
         form_number=f.form_number, form_name=f.form_name,
         section_reference=f.section_reference, related_rule_id=f.related_rule_id,
         filing_status=f.filing_status, due_date=f.due_date.isoformat() if f.due_date else None,
@@ -135,7 +135,7 @@ async def create_form_filing(
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     return FormFilingResponse(
-        id=str(filing.id), company_id=filing.company_id, form_code=filing.form_code,
+        id=str(filing.id), company_id=str(filing.company_id), form_code=filing.form_code,
         form_number=filing.form_number, form_name=filing.form_name,
         section_reference=filing.section_reference, related_rule_id=filing.related_rule_id,
         filing_status=filing.filing_status, due_date=filing.due_date.isoformat() if filing.due_date else None,
@@ -168,7 +168,7 @@ async def mark_form_filed(
     if not filing:
         raise HTTPException(status_code=404, detail="Form filing not found")
     return FormFilingResponse(
-        id=str(filing.id), company_id=filing.company_id, form_code=filing.form_code,
+        id=str(filing.id), company_id=str(filing.company_id), form_code=filing.form_code,
         form_number=filing.form_number, form_name=filing.form_name,
         section_reference=filing.section_reference, related_rule_id=filing.related_rule_id,
         filing_status=filing.filing_status, due_date=filing.due_date.isoformat() if filing.due_date else None,

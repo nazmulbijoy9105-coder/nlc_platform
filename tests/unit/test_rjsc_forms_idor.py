@@ -5,9 +5,6 @@ import uuid
 from datetime import date
 
 import pytest
-from sqlalchemy import text
-
-from app.models.rjsc_forms import RJSCFormFiling
 
 
 @pytest.fixture
@@ -16,9 +13,10 @@ async def db_company(db):
     company = Company(
         id=str(uuid.uuid4()),
         registration_number=f"REG-{uuid.uuid4().hex[:8].upper()}",
-        f"Test Co {uuid.uuid4().hex[:6]}",
+        company_name=f"Test Co {uuid.uuid4().hex[:6]}",
         company_type="PRIVATE_LIMITED",
         incorporation_date=date(2020, 1, 1),
+        financial_year_end=date(2020, 12, 31),
     )
     db.add(company)
     await db.flush()
@@ -27,6 +25,7 @@ async def db_company(db):
 
 @pytest.fixture
 async def db_filing(db, db_company):
+    from app.models.rjsc_forms import RJSCFormFiling
     filing = RJSCFormFiling(
         id=str(uuid.uuid4()),
         company_id=db_company.id,
@@ -44,9 +43,13 @@ async def db_filing(db, db_company):
     return filing
 
 
-class TestMarkFormFiledBasics:
-    """Tests that work with the default db fixture (RLS bypassed)."""
 
+
+@pytest.fixture
+def client_view_headers(client_view_token) -> dict[str, str]:
+    return {"Authorization": f"Bearer {client_view_token}"}
+
+class TestMarkFormFiledBasics:
     @pytest.mark.asyncio
     async def test_401_without_auth_token(self, api_client, db_filing):
         resp = await api_client.patch(
@@ -85,6 +88,7 @@ class TestMarkFormFiledBasics:
 
     @pytest.mark.asyncio
     async def test_422_for_invalid_form_id_format(self, api_client, admin_headers):
+        """PATCH with a non-UUID string → 422 (FastAPI validates path param type)."""
         resp = await api_client.patch(
             "/api/v1/rjsc-forms/not-a-uuid/filed",
             json={"filed_date": "2024-12-01"},
@@ -125,23 +129,13 @@ class TestMarkFormFiledBasics:
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
 
         await db.refresh(db_filing)
-        assert db_filing.filed_by == expected_user_id, (
+        assert str(db_filing.filed_by) == expected_user_id, (
             f"filed_by should be {expected_user_id}, got {db_filing.filed_by}"
         )
 
 
 class TestMarkFormFiledIDOR:
-    """Cross-tenant IDOR test — requires RLS-enabled fixture."""
-
     @pytest.mark.asyncio
-    @pytest.mark.xfail(
-        reason=(
-            "Default db fixture bypasses RLS (SET app.rls_bypass='true'). "
-            "CLIENT_DIRECTOR gets 403 from require_roles (RBAC), not from IDOR. "
-            "To test IDOR properly, use a fixture that sets app.current_user_id per-request."
-        ),
-        strict=True,
-    )
     async def test_user_cannot_mark_other_companys_filing(
         self, api_client, db_filing, client_headers
     ):
