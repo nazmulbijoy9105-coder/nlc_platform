@@ -73,3 +73,13 @@ register_*.py
 
 # Temp fix scripts
 create_*.py
+
+# Local fix/test/diag scripts — not part of backend
+fix_*.py
+debug_*.py
+register_*.py
+create_*.py
+test_v2_*.py
+test_e2e_*.py
+test_fix_*.py
+diag_*.py
