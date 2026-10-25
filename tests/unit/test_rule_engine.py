@@ -466,7 +466,7 @@ class TestTransferRules:
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "TR-002")
 
-    def test_TR003_triggers_no_board_approval(self, rule_engine, build_profile, make_share_transfer):
+    def test_TR005_triggers_void_transfer_no_approval(self, rule_engine, build_profile, make_share_transfer):
         """Transfer without board approval → TR-003."""
         transfer = make_share_transfer(board_approval=False, board_approval_obtained=False)
         profile = build_profile(share_transfers=[transfer])
@@ -527,13 +527,13 @@ class TestTransferRules:
         )
         profile = build_profile(share_transfers=[transfer])
         output = rule_engine.evaluate(profile)
-        for rule_id in ["TR-001", "TR-002", "TR-005", "TR-004", "TR-005", "TR-006"]:
+        for rule_id in ["TR-001", "TR-002", "TR-003", "TR-004", "TR-005", "TR-006"]:
             assert_flag_not_triggered(output, rule_id)
 
     def test_no_transfer_flags_when_no_transfers(self, rule_engine, build_profile):
         profile = build_profile(share_transfers=[])
         output = rule_engine.evaluate(profile)
-        for rule_id in ["TR-001", "TR-002", "TR-005", "TR-004", "TR-005", "TR-006"]:
+        for rule_id in ["TR-001", "TR-002", "TR-003", "TR-004", "TR-005", "TR-006"]:
             assert_flag_not_triggered(output, rule_id)
 
 
