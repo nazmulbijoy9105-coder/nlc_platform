@@ -138,6 +138,7 @@ def _rule_to_response(rule) -> RuleResponse:
     response_model=list[RuleResponse],
     summary="List all ILRMF legal rules",
     description="Returns all 86 rules. No auth restriction — clients may see rule metadata.",
+    dependencies=[Depends(require_roles("SUPER_ADMIN"))],
 )
 async def list_rules(
     rule_type: str | None = None,
@@ -165,6 +166,7 @@ async def list_rules(
     "/summary",
     response_model=RuleSummaryResponse,
     summary="Rule engine summary statistics",
+    dependencies=[Depends(require_roles("SUPER_ADMIN"))],
 )
 async def get_rule_summary(
     current_user: User = Depends(get_current_user),
@@ -210,6 +212,7 @@ async def get_rule_summary(
     response_model=list[RuleResponse],
     summary="List all BLACK override rules",
     description="Returns rules where is_black_override=True (INC-003, AUD-003, TR-005, ESC-002, ESC-003, DEF-001, CAP-003, INC-002, INC-004).",
+    dependencies=[Depends(require_roles("SUPER_ADMIN"))],
 )
 async def get_black_overrides(
     current_user: User = Depends(get_current_user),
@@ -228,6 +231,7 @@ async def get_black_overrides(
     "/{rule_id}",
     response_model=RuleResponse,
     summary="Get a single rule by its rule_id",
+    dependencies=[Depends(require_roles("SUPER_ADMIN"))],
 )
 async def get_rule(
     rule_id: str,
