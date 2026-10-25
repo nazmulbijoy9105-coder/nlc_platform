@@ -1743,10 +1743,10 @@ class NLCRuleEngine:
         """Map a raw score to a risk band string.
         coverage = fraction of rules that had data to evaluate (0.0 to 1.0).
         Below 0.5 → NOT_EVALUATED regardless of score."""
-        if force_black:
-            return "BLACK"
         if coverage < 0.5:
             return "NOT_EVALUATED"
+        if force_black:
+            return "BLACK"
         if raw <= 29:
             return "BLACK"
         if raw <= 49:
