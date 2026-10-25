@@ -168,6 +168,7 @@ class CompanyProfile:
     shareholders_list_attached: bool = False
     director_changes: List[DirectorChange] = field(default_factory=list)
     current_director_count: int | None = None
+    directors_verified: bool = False  # RULE-001: True only when director count verified against RJSC registry
     minimum_directors_met: bool | None = None
     shareholder_change_date: Optional[date] = None
     form_xv_filed: bool = False
@@ -489,7 +490,7 @@ class NLCRuleEngine:
                     detail={"delay_days": delay}
                 ))
 
-        if c.company_type == "PRIVATE_LIMITED" and c.current_director_count is not None and (c.current_director_count or 0) < 2:  # type: ignore
+        if c.company_type == "PRIVATE_LIMITED" and c.current_director_count is not None and (c.current_director_count or 0) < 2 and c.directors_verified:  # RULE-001: only fire when verified against RJSC
             inc003_impact = 15
             inc003_desc = (
                 "Private company has NO directors. Section 90(2) requires minimum 2. Director records require verification - absence in NLC database does not confirm actual absence."
@@ -1849,7 +1850,8 @@ class NLCRuleEngine:
         else: exposure = ExposureBand.SEVERE
 
         active_rules = {f.rule_id for f in active}
-        hash_str = f"{final}:{','.join(sorted(active_rules))}:{RULE_ENGINE_VERSION}"
+        flag_signatures = sorted(f"{f.rule_id}:{str(f.state)}:{str(f.severity)}:{f.score_impact}" for f in active)  # RULE-009: include state/severity/score_impact
+        hash_str = f"{final}:{','.join(flag_signatures)}:{RULE_ENGINE_VERSION}"
         score_hash = hashlib.sha256(hash_str.encode()).hexdigest()[:16]
 
         return ScoreBreakdown(
