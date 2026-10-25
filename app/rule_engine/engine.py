@@ -181,7 +181,7 @@ class CompanyProfile:
     registered_office_change_date: Optional[date] = None
     form_vi_filed: bool = False
     form_vi_filed_date: Optional[date] = None
-    aoa_transfer_restriction: bool = True
+    aoa_transfer_restriction: bool = False
     has_foreign_shareholder: bool = False
     foreign_shareholding_pct: float = 0.0
     is_manufacturing: bool = False

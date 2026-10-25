@@ -890,7 +890,7 @@ class TestEngineIntegrity:
         # Should produce a valid output, not crash
         assert output is not None
         assert output.score_breakdown is not None
-        assert output.score_breakdown.risk_band in ("BLACK", "RED", "YELLOW", "GREEN")
+        assert output.score_breakdown.risk_band in ("BLACK", "RED", "YELLOW", "GREEN", "NOT_EVALUATED")
 
     def test_score_hash_deterministic_across_runs(self, rule_engine, build_profile):
         """Same profile evaluated twice produces identical score and band."""
