@@ -1,5 +1,3 @@
-cat > app/api/rules.py << 'ENDOFFILE'
-"""
 app/api/rules.py — Legal Rules Router
 NEUM LEX COUNSEL
 
@@ -348,5 +346,3 @@ async def get_rule_history(
             changed_at=v.changed_at.isoformat(),
         )
         for v in versions
-    ]
-ENDOFFILE
