@@ -1008,7 +1008,7 @@ class NLCRuleEngine:
                     detail={"transfer_id": transfer.transfer_id}
                 ))
 
-            if not transfer.board_approval_obtained and c.aoa_transfer_restriction and not transfer_is_void:
+            if not transfer.board_approval_obtained and not transfer_is_void:
                 self._add_flag(ComplianceFlag(
                     rule_id="TR-003",
                     flag_code="TRANSFER_NO_BOARD_APPROVAL",

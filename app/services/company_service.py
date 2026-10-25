@@ -351,13 +351,13 @@ class CompanyService(BaseService[Company]):
                 board_approval_obtained=bool(t.board_approval_obtained),
                 share_register_updated=bool(t.register_updated),
                 aoa_restriction_apply=bool(t.aoa_restriction_violated),
-                form_117_filed=bool(t.has_transfer_instrument),
+                form_117_filed=None,  # TODO: separate from instrument field
             ))
 
         # ── Statutory Registers ───────────────────────────────────
         maintained_registers = [
             r.register_type for r in company.statutory_registers if r.is_maintained
-        ] or ["members", "directors", "charges", "transfers", "debentures", "minutes_agm", "minutes_board"]
+        ]
 
         profile = {
             # Identity
@@ -376,7 +376,7 @@ class CompanyService(BaseService[Company]):
             "agm_minutes_prepared":       bool(latest_agm.minutes_prepared) if latest_agm else False,
 
             # Audit State
-            "first_auditor_appointed":    bool(company.first_auditor_appointed) if company.first_auditor_appointed is not None else True,
+            "first_auditor_appointed":    bool(company.first_auditor_appointed) if company.first_auditor_appointed is not None else None,
             "audit_complete":             latest_audit.audit_complete if latest_audit else None,
             "last_audit_signed_date":     company.last_audit_signed_date,
 
@@ -414,7 +414,7 @@ class CompanyService(BaseService[Company]):
             "vat_registered":          True if getattr(company, "vat_number", None) else None,
             "vat_number":              getattr(company, "vat_number", None),
             # Tax Compliance v3
-            "trade_license_obtained":       True if getattr(company, "trade_license_obtained", None) else None,
+            "trade_license_obtained":       getattr(company, "trade_license_obtained", None),
             "trade_license_expiry":         company.trade_license_expiry,
             "tax_return_filed_for_current_fy": company.tax_return_filed_for_current_fy,
             "advance_tax_q1_paid":          company.advance_tax_q1_paid,
@@ -433,7 +433,7 @@ class CompanyService(BaseService[Company]):
             "disqualification_details": list(company.disqualification_details or []),
             "penalty_notices_received":     company.penalty_notices_received,
             "penalty_notices_resolved":     company.penalty_notices_resolved,
-            "current_director_count": len([d for d in company.directors if d.director_status.value == "ACTIVE"]) if company.directors else 0,
+            "current_director_count": len([d for d in company.directors if d.director_status.value == "ACTIVE"]) if company.directors is not None else None,
 
             # BSEC Corporate Governance
             "bsec_listed":                   getattr(company, "bsec_listed", False),
@@ -508,11 +508,11 @@ class CompanyService(BaseService[Company]):
             "aoa_alteration_date":          getattr(company, "aoa_alteration_date", None),
 
             # Statutory Registers
-            "register_of_members_maintained": getattr(company, "register_of_members_maintained", True),
-            "register_of_directors_maintained": getattr(company, "register_of_directors_maintained", True),
-            "register_of_charges_maintained": getattr(company, "register_of_charges_maintained", True),
+            "register_of_members_maintained": getattr(company, "register_of_members_maintained", None),
+            "register_of_directors_maintained": getattr(company, "register_of_directors_maintained", None),
+            "register_of_charges_maintained": getattr(company, "register_of_charges_maintained", None),
             "register_of_contracts":        getattr(company, "register_of_contracts", True),
-            "register_of_directors_interests": getattr(company, "register_of_directors_interests", True),
+            "register_of_directors_interests": getattr(company, "register_of_directors_interests", None),
             "register_location":            getattr(company, "register_location", None),
             "minutes_book_agm_maintained":  getattr(company, "minutes_book_agm_maintained", True),
             "minutes_book_board_maintained": getattr(company, "minutes_book_board_maintained", True),
