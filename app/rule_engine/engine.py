@@ -980,7 +980,7 @@ class NLCRuleEngine:
     def _run_transfer_rules(self, c: CompanyProfile) -> None:
         for transfer in c.share_transfers:
             transfer_is_void = (
-                c.aoa_transfer_restriction
+                transfer.aoa_restriction_apply
                 and not transfer.board_approval_obtained
             )
 
