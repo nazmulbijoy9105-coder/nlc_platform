@@ -1,3 +1,4 @@
+cat > app/api/rules.py << 'ENDOFFILE'
 """
 app/api/rules.py — Legal Rules Router
 NEUM LEX COUNSEL
@@ -6,12 +7,12 @@ AI Constitution Article 1: Only Super Admin may modify rules.
 Every change creates an immutable legal_rule_versions snapshot.
 
 Endpoints:
-  GET   /rules                    List all 86 ILRMF rules
-  GET   /rules/{rule_id}          Get single rule with version history
-  PATCH /rules/{rule_id}          Update a rule (SUPER_ADMIN only — creates version snapshot)
-  GET   /rules/{rule_id}/history  Rule version history
-  GET   /rules/black-overrides    List all BLACK override rules
-  GET   /rules/summary            Aggregate stats per rule type / severity
+  GET   /rules                    List all 86 ILRMF rules (SUPER_ADMIN only)
+  GET   /rules/{rule_id}          Get single rule (SUPER_ADMIN only)
+  PATCH /rules/{rule_id}          Update a rule (SUPER_ADMIN only)
+  GET   /rules/{rule_id}/history  Rule version history (ADMIN_STAFF+)
+  GET   /rules/black-overrides    List BLACK overrides (SUPER_ADMIN only)
+  GET   /rules/summary            Aggregate stats (SUPER_ADMIN only)
 
 Governance notes:
   - rule_id (e.g. "AGM-001") is immutable — cannot be changed after creation
@@ -19,8 +20,6 @@ Governance notes:
   - Every update records changed_by, changed_at, change_reason
   - Rule engine picks up changes on next warm-up or cache refresh
 """
-
-
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -46,16 +45,11 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 class RuleUpdateRequest(BaseModel):
-    """
-    Only the operational fields may be updated.
-    rule_id, rule_type, and statutory_basis are immutable.
-    """
     rule_name: str | None = Field(None, min_length=3, max_length=255)
     description: str | None = None
     default_severity: SeverityLevel | None = None
     score_impact: int | None = Field(None, ge=0, le=50)
     is_active: bool | None = None
-    # Required for audit trail
     change_reason: str = Field(
         min_length=10,
         max_length=500,
@@ -130,14 +124,15 @@ def _rule_to_response(rule) -> RuleResponse:
 
 
 # ---------------------------------------------------------------------------
-# GET /rules — All rules
+# GET /rules — All rules (SUPER_ADMIN only)
 # ---------------------------------------------------------------------------
 
 @router.get(
     "",
     response_model=list[RuleResponse],
-    summary="List all ILRMF legal rules",
-    description="Returns all 86 rules. No auth restriction — clients may see rule metadata.",
+    summary="List all ILRMF legal rules (SUPER_ADMIN only)",
+    description="Returns all 86 rules. Restricted to SUPER_ADMIN — rule definitions are proprietary.",
+    dependencies=[Depends(require_roles("SUPER_ADMIN"))],
 )
 async def list_rules(
     rule_type: str | None = None,
@@ -158,13 +153,14 @@ async def list_rules(
 
 
 # ---------------------------------------------------------------------------
-# GET /rules/summary — Aggregate stats
+# GET /rules/summary — Aggregate stats (SUPER_ADMIN only)
 # ---------------------------------------------------------------------------
 
 @router.get(
     "/summary",
     response_model=RuleSummaryResponse,
-    summary="Rule engine summary statistics",
+    summary="Rule engine summary statistics (SUPER_ADMIN only)",
+    dependencies=[Depends(require_roles("SUPER_ADMIN"))],
 )
 async def get_rule_summary(
     current_user: User = Depends(get_current_user),
@@ -180,7 +176,6 @@ async def get_rule_summary(
     active_count = 0
 
     for r in rules:
-        # Module = prefix before first hyphen (AGM-001 → AGM)
         module = r.rule_id.split("-")[0]
         by_module[module] = by_module.get(module, 0) + 1
         by_severity[r.default_severity] = by_severity.get(r.default_severity, 0) + 1
@@ -202,14 +197,15 @@ async def get_rule_summary(
 
 
 # ---------------------------------------------------------------------------
-# GET /rules/black-overrides — The 4 BLACK override rules
+# GET /rules/black-overrides (SUPER_ADMIN only)
 # ---------------------------------------------------------------------------
 
 @router.get(
     "/black-overrides",
     response_model=list[RuleResponse],
-    summary="List all BLACK override rules",
-    description="Returns rules where is_black_override=True (INC-003, AUD-003, TR-005, ESC-002, ESC-003, DEF-001, CAP-003, INC-002, INC-004).",
+    summary="List all BLACK override rules (SUPER_ADMIN only)",
+    description="Returns rules where is_black_override=True.",
+    dependencies=[Depends(require_roles("SUPER_ADMIN"))],
 )
 async def get_black_overrides(
     current_user: User = Depends(get_current_user),
@@ -221,13 +217,14 @@ async def get_black_overrides(
 
 
 # ---------------------------------------------------------------------------
-# GET /rules/{rule_id} — Single rule with history
+# GET /rules/{rule_id} — Single rule (SUPER_ADMIN only)
 # ---------------------------------------------------------------------------
 
 @router.get(
     "/{rule_id}",
     response_model=RuleResponse,
-    summary="Get a single rule by its rule_id",
+    summary="Get a single rule by its rule_id (SUPER_ADMIN only)",
+    dependencies=[Depends(require_roles("SUPER_ADMIN"))],
 )
 async def get_rule(
     rule_id: str,
@@ -270,7 +267,6 @@ async def update_rule(
     if not existing:
         raise HTTPException(status_code=404, detail=f"Rule '{rule_id}' not found.")
 
-    # Validate BLACK override rules cannot have severity changed to non-BLACK
     update_data = body.model_dump(exclude={"change_reason"}, exclude_none=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided for update.")
@@ -343,13 +339,14 @@ async def get_rule_history(
             version_id=str(v.id),
             rule_id=v.rule_id,
             version=v.version,
-            previous_severity=v.previous_severity,  # type: ignore[attr-defined]
-            new_severity=v.new_severity,  # type: ignore[attr-defined]
-            previous_score_impact=v.previous_score_impact,  # type: ignore[attr-defined]
-            new_score_impact=v.new_score_impact,  # type: ignore[attr-defined]
+            previous_severity=v.previous_severity,
+            new_severity=v.new_severity,
+            previous_score_impact=v.previous_score_impact,
+            new_score_impact=v.new_score_impact,
             change_reason=v.change_reason,
-            changed_by_id=str(v.changed_by_id),  # type: ignore[attr-defined]
+            changed_by_id=str(v.changed_by_id),
             changed_at=v.changed_at.isoformat(),
         )
         for v in versions
     ]
+ENDOFFILE

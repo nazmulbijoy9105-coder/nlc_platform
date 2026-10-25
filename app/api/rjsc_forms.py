@@ -57,7 +57,7 @@ class MarkFiledRequest(BaseModel):
     notes: str | None = None
 
 
-@router.get("/reference", dependencies=[Depends(get_current_user)])
+@router.get("/reference", dependencies=[Depends(require_roles("SUPER_ADMIN"))])
 async def get_form_reference():
     """Get all RJSC form types with section references."""
     return {"forms": RJSC_FORMS_REFERENCE, "total": len(RJSC_FORMS_REFERENCE)}
