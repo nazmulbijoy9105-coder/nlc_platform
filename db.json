@@ -1,0 +1,94 @@
+{
+  "generated_at": "2026-10-25T22:22:19.458066Z",
+  "repo": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean",
+  "findings": [
+    {
+      "check_id": "DB-001",
+      "file": "(alembic)",
+      "line": 0,
+      "severity": "FAIL",
+      "detail": "Multiple migration heads detected: ['0025_harden_access_table_rls', '0037_add_webhook_tables']. Repo is in inconsistent state -- run `alembic heads` locally and merge.",
+      "suggested_fix": "Run `alembic merge -m merge_heads <head1> <head2>` and commit the merge revision."
+    },
+    {
+      "check_id": "OPS-001",
+      "file": "(worker)",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "No idempotency key handling detected. Re-runs of the same evaluation will produce duplicate compliance_score rows.",
+      "suggested_fix": "Use `target_company_id + rule_engine_version + snapshot_hash` as a unique key; skip if a row already exists for this combination."
+    },
+    {
+      "check_id": "OPS-003",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\alembic\\versions\\0001_initial_schema.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Cleanup task 0001_initial_schema.py has no corresponding test in tests/.",
+      "suggested_fix": "Add a unit test that exercises the cleanup task against fixture data and asserts the expected rows are removed/archived."
+    },
+    {
+      "check_id": "OPS-003",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\alembic\\versions\\0003_add_reg_004_rule.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Cleanup task 0003_add_reg_004_rule.py has no corresponding test in tests/.",
+      "suggested_fix": "Add a unit test that exercises the cleanup task against fixture data and asserts the expected rows are removed/archived."
+    },
+    {
+      "check_id": "OPS-003",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\tasks\\scheduler.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Cleanup task scheduler.py has no corresponding test in tests/.",
+      "suggested_fix": "Add a unit test that exercises the cleanup task against fixture data and asserts the expected rows are removed/archived."
+    },
+    {
+      "check_id": "OPS-003",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\python fix_rjsc_tests_v2.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Cleanup task python fix_rjsc_tests_v2.py has no corresponding test in tests/.",
+      "suggested_fix": "Add a unit test that exercises the cleanup task against fixture data and asserts the expected rows are removed/archived."
+    },
+    {
+      "check_id": "OPS-003",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\test_audit_trail.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Cleanup task test_audit_trail.py has no corresponding test in tests/.",
+      "suggested_fix": "Add a unit test that exercises the cleanup task against fixture data and asserts the expected rows are removed/archived."
+    },
+    {
+      "check_id": "OPS-003",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\test_audit_trail_enterprise.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Cleanup task test_audit_trail_enterprise.py has no corresponding test in tests/.",
+      "suggested_fix": "Add a unit test that exercises the cleanup task against fixture data and asserts the expected rows are removed/archived."
+    },
+    {
+      "check_id": "OPS-003",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\test_worker_tasks.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Cleanup task test_worker_tasks.py has no corresponding test in tests/.",
+      "suggested_fix": "Add a unit test that exercises the cleanup task against fixture data and asserts the expected rows are removed/archived."
+    },
+    {
+      "check_id": "OPS-004",
+      "file": "(score-write)",
+      "line": 0,
+      "severity": "FAIL",
+      "detail": "Score writes appear not to be wrapped in a DB transaction. Partial failures leave stale scores + missing audit records.",
+      "suggested_fix": "Wrap every compliance_score INSERT/UPDATE in `async with db.begin():` so partial failures roll back atomically."
+    },
+    {
+      "check_id": "OPS-004",
+      "file": "(score-write)",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "No visible evaluation_status field. Cannot detect partial evaluations from the data alone.",
+      "suggested_fix": "Add an `evaluation_status` enum column: PENDING / IN_PROGRESS / COMPLETED / FAILED. Set to IN_PROGRESS at start; COMPLETED only after audit row is committed."
+    }
+  ]
+}

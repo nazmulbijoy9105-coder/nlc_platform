@@ -1,0 +1,78 @@
+{
+  "generated_at": "2026-10-25T22:19:10.389402Z",
+  "repo": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean",
+  "findings": [
+    {
+      "check_id": "TR-007",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\services\\company_service.py",
+      "line": 354,
+      "severity": "FAIL",
+      "detail": "Form 117 set to None near a TODO comment -- not an actual fix: form_117_filed=None,  # TODO: separate from instrument field",
+      "suggested_fix": "Implement the real Form 117 data source (lookup against RJSC filings table or NLC import). Use UNKNOWN until verified, do NOT default to None."
+    },
+    {
+      "check_id": "TR-011",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\services\\company_service.py",
+      "line": 350,
+      "severity": "WARN",
+      "detail": "Approval evidence collapsed via truthiness: `bool(t.board_approval`. None (unknown) and False (confirmed no) become indistinguishable.",
+      "suggested_fix": "Replace `if not board_approval:` with explicit 3-valued logic: if board_approval is None -> UNKNOWN; elif board_approval is False -> NON_COMPLIANT; else COMPLIANT."
+    },
+    {
+      "check_id": "TR-011",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\services\\company_service.py",
+      "line": 351,
+      "severity": "WARN",
+      "detail": "Approval evidence collapsed via truthiness: `bool(t.board_approval`. None (unknown) and False (confirmed no) become indistinguishable.",
+      "suggested_fix": "Replace `if not board_approval:` with explicit 3-valued logic: if board_approval is None -> UNKNOWN; elif board_approval is False -> NON_COMPLIANT; else COMPLIANT."
+    },
+    {
+      "check_id": "TR-012",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\conftest.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Transfer test in conftest.py does not clearly cover: confirmed AoA violation case, restriction applies (non-violating) case, missing approval evidence case.",
+      "suggested_fix": "Add explicit test cases for each scenario: (a) restriction violated -> NON_COMPLIANT + BLACK; (b) restriction present but complied with -> COMPLIANT; (c) approval evidence missing -> UNKNOWN (0 pts)."
+    },
+    {
+      "check_id": "TR-012",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\integration\\test_api.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Transfer test in test_api.py does not clearly cover: confirmed AoA violation case, restriction applies (non-violating) case, missing approval evidence case.",
+      "suggested_fix": "Add explicit test cases for each scenario: (a) restriction violated -> NON_COMPLIANT + BLACK; (b) restriction present but complied with -> COMPLIANT; (c) approval evidence missing -> UNKNOWN (0 pts)."
+    },
+    {
+      "check_id": "TR-012",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\integration\\test_services.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Transfer test in test_services.py does not clearly cover: confirmed AoA violation case, restriction applies (non-violating) case, missing approval evidence case.",
+      "suggested_fix": "Add explicit test cases for each scenario: (a) restriction violated -> NON_COMPLIANT + BLACK; (b) restriction present but complied with -> COMPLIANT; (c) approval evidence missing -> UNKNOWN (0 pts)."
+    },
+    {
+      "check_id": "TR-012",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\test_data_model.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Transfer test in test_data_model.py does not clearly cover: confirmed AoA violation case, restriction applies (non-violating) case, missing approval evidence case.",
+      "suggested_fix": "Add explicit test cases for each scenario: (a) restriction violated -> NON_COMPLIANT + BLACK; (b) restriction present but complied with -> COMPLIANT; (c) approval evidence missing -> UNKNOWN (0 pts)."
+    },
+    {
+      "check_id": "TR-012",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\test_rescue_sequence_parity.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Transfer test in test_rescue_sequence_parity.py does not clearly cover: confirmed AoA violation case, restriction applies (non-violating) case, missing approval evidence case.",
+      "suggested_fix": "Add explicit test cases for each scenario: (a) restriction violated -> NON_COMPLIANT + BLACK; (b) restriction present but complied with -> COMPLIANT; (c) approval evidence missing -> UNKNOWN (0 pts)."
+    },
+    {
+      "check_id": "TR-012",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\test_rule_engine.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Transfer test in test_rule_engine.py does not clearly cover: confirmed AoA violation case, restriction applies (non-violating) case, missing approval evidence case.",
+      "suggested_fix": "Add explicit test cases for each scenario: (a) restriction violated -> NON_COMPLIANT + BLACK; (b) restriction present but complied with -> COMPLIANT; (c) approval evidence missing -> UNKNOWN (0 pts)."
+    }
+  ]
+}

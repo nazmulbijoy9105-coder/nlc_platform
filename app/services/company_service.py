@@ -345,13 +345,13 @@ class CompanyService(BaseService[Company]):
                 transfer_id=str(t.id),
                 transfer_date=t.transfer_date,  # type: ignore
                 instrument_recorded=bool(t.has_transfer_instrument),
-                stamp_duty_paid=bool(t.stamp_duty_paid),
+                stamp_duty_paid=t.stamp_duty_paid,
                 stamp_duty_amount=float(t.stamp_duty_amount_bdt) if t.stamp_duty_amount_bdt else None,
-                board_approval=bool(t.board_approval_obtained),
-                board_approval_obtained=bool(t.board_approval_obtained),
-                share_register_updated=bool(t.register_updated),
-                aoa_restriction_apply=bool(t.aoa_restriction_violated),
-                form_117_filed=None,  # TODO: separate from instrument field
+                board_approval=t.board_approval_obtained,
+                board_approval_obtained=t.board_approval_obtained,
+                share_register_updated=t.register_updated,
+                aoa_restriction_apply=t.aoa_restriction_violated,
+                form_117_filed=getattr(t, "form_117_filed", None),  # UNKNOWN until RJSC filings table lookup implemented (TR-007)
             ))
 
         # ── Statutory Registers ───────────────────────────────────

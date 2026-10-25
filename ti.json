@@ -1,0 +1,301 @@
+{
+  "generated_at": "2026-10-25T22:14:10.136581Z",
+  "repo": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean",
+  "findings": [
+    {
+      "check_id": "SEC-004",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\auth.py",
+      "line": 254,
+      "severity": "FAIL",
+      "detail": "POST /logout (logout) is state-changing with no role dependency AND no current_user dep -- any authenticated caller could invoke it.",
+      "suggested_fix": "Add both: `current_user=Depends(get_current_user)` AND a role guard via `Depends(require_roles([...))`."
+    },
+    {
+      "check_id": "SEC-006",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\core\\security.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Refresh token flow detected but no rotate/revoke logic -- refresh token replay risk.",
+      "suggested_fix": ""
+    },
+    {
+      "check_id": "SEC-009",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\worker\\beat_schedule.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Background evaluation endpoint lacks explicit fail-closed (no raise/HTTPException found).",
+      "suggested_fix": ""
+    },
+    {
+      "check_id": "SEC-009",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\worker\\tasks\\__init__.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Background evaluation endpoint lacks explicit fail-closed (no raise/HTTPException found).",
+      "suggested_fix": ""
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\main.py",
+      "line": 84,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"Cannot connect to database on startup: {e}\")\n\n\n    # Run pending migrations (0003-0004) directly - alembic.ini has no ",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\admin.py",
+      "line": 23,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: F\"):\n        raise HTTPException(status_code=403, detail=\"Admin access required\")\n    return current_user\n\n\nasync def re",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\auth.py",
+      "line": 103,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"Failed login attempt for {body.email}\",\n            )\n        except Exception:\n            pass\n        raise HTTPExc",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\commercial.py",
+      "line": 48,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: F\", \"SUPER_ADMIN\"]\nSTAFF_ROLES = [\"ADMIN_STAFF\", \"SUPER_ADMIN\", \"LEGAL_STAFF\"]\n\n\n# -------------------------------------",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\companies.py",
+      "line": 213,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: F\", \"SUPER_ADMIN\"))], summary=\"Create a new company\")\nasync def create_company(body: CompanyCreateRequest, request: Requ",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\documents.py",
+      "line": 237,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: F\", \"SUPER_ADMIN\", \"LEGAL_STAFF\")),\n    ],\n    summary=\"Request AI document generation (asynchronous)\",\n    description=",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\filings.py",
+      "line": 275,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: F\", \"SUPER_ADMIN\", \"LEGAL_STAFF\"))],\n    summary=\"Create an AGM record for a company\",\n)\nasync def create_agm(\n    body:",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\rescue.py",
+      "line": 156,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: F\", \"SUPER_ADMIN\", \"LEGAL_STAFF\"))],\n    summary=\"Generate a corporate rescue plan for a BLACK or RED band company\",\n)\na",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\rules.py",
+      "line": 244,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"Rule '{rule_id}' not found.\")\n    return _rule_to_response(rule)\n\n\n# -------------------------------------------------",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\core\\dependencies.py",
+      "line": 249,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: F\"))\n        ):\n    \"\"\"\n    def _check_role(token: TokenData = Depends(verify_access_token)) -> TokenData:\n        if to",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\models\\commercial.py",
+      "line": 100,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"<Task {self.title[:40]} [{self.task_status}]>\"\n\n\n# \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\models\\company.py",
+      "line": 418,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"<Company {self.registration_number} \u2014 {self.company_name}>\"\n\n\nclass CompanyUserAccess(UUIDPrimaryKeyMixin, TimestampMi",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\models\\compliance.py",
+      "line": 124,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"<ComplianceFlag {self.rule_id} [{self.severity}] company={self.company_id}>\"\n\n\n# \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\models\\documents.py",
+      "line": 126,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"<Document {self.document_type} \u2014 {self.title[:40]} \"\n            f\"approved={self.human_approved}>\"\n        )\n\n\nclass ",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\models\\filings.py",
+      "line": 103,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"<AGM company={self.company_id} FY={self.financial_year} held={self.agm_held}>\"\n\n\n# \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\models\\infrastructure.py",
+      "line": 102,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"<Notification {self.notification_type} [{self.notification_status}]>\"\n\n\n# \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\models\\people.py",
+      "line": 94,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"<Director {self.full_name} [{self.director_status}]>\"\n\n\n# \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\models\\rescue.py",
+      "line": 114,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"<RescuePlan company={self.company_id} \"\n            f\"{self.completed_steps}/{self.total_steps} steps>\"\n        )\n\n\ncl",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\models\\rules.py",
+      "line": 123,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"<LegalRule {self.rule_id} v{self.rule_version} [{self.default_severity}]>\"\n\n\nclass LegalRuleVersion(UUIDPrimaryKeyMixi",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\models\\webhook.py",
+      "line": 81,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"<WebhookEndpoint url={self.url[:50]}... active={self.is_active}>\"\n\n\nclass WebhookDelivery(UUIDPrimaryKeyMixin, Timesta",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\rule_engine\\engine.py",
+      "line": 64,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: F\"\n\n# \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n# DATA STRUCTURES\n# \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\services\\base.py",
+      "line": 63,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"[{self.model.__tablename__}] Created {instance.id}\")  # type: ignore[attr-defined]\n        return instance\n\n    # \u2500\u2500 R",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\services\\company_service.py",
+      "line": 181,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"%{search_term}%\")\n            )\n\n        # Total count\n        count_stmt = select(func.count()).select_from(Company)\n",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\services\\compliance_service.py",
+      "line": 99,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"Company {company_id} not found or inactive.\")\n\n        # Convert dict to CompanyProfile dataclass\n        try:\n       ",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\services\\document_service.py",
+      "line": 117,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"No active AI template for document_type={document_type}. \"\n                f\"Super Admin must create one before genera",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\services\\notification_service.py",
+      "line": 84,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"{'\ud83d\udd34' if severity == 'RED' else '\u26ab'} Compliance Alert: {getattr(flag, 'rule_id', '')}\"\n            body = (\n           ",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\services\\rescue_service.py",
+      "line": 74,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"Corporate Rescue Plan \u2014 {date.today().strftime('%B %Y')}\",\n            revenue_tier=revenue_tier,\n            initial_",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\services\\rules_service.py",
+      "line": 107,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"{major}.{int(minor) + 1}\"\n        except (ValueError, AttributeError):\n            new_version = \"1.1\"\n\n        # \u2500\u2500 S",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\services\\webhook_service.py",
+      "line": 230,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"HTTP {resp.status_code} after {delivery.attempts} attempts\"\n                else:\n                    delay = INITIAL_",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\worker\\celery_app.py",
+      "line": 172,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\":                      {\"queue\": \"documents\"},\n        \"app.worker.tasks.process_ai_review_queue\":         {\"queue\": \"",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\worker\\tasks\\core.py",
+      "line": 93,
+      "severity": "FAIL",
+      "detail": "Possible f-string SQL interpolation: f\"[Task] PERMANENT FAILURE \"\n            f\"task={self.name} id={task_id} error={exc!r:.300}\"\n        )\n\n    def on_retry",
+      "suggested_fix": "Use parameterized queries: cur.execute('SELECT ... WHERE id = %s', (id,))"
+    },
+    {
+      "check_id": "SEC-012",
+      "file": "(tests/integration)",
+      "line": 0,
+      "severity": "FAIL",
+      "detail": "No cross-tenant integration tests detected by heuristic search.",
+      "suggested_fix": "Add at least one test per RJSC/filings/rescue/documents route that calls the route with another tenant's company_id and asserts 404/403."
+    }
+  ],
+  "summary": {
+    "SEC-004": 1,
+    "SEC-006": 1,
+    "SEC-009": 2,
+    "SEC-010": 31,
+    "SEC-012": 1
+  }
+}

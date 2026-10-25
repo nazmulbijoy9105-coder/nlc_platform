@@ -1,0 +1,86 @@
+{
+  "generated_at": "2026-10-25T22:16:07.885503Z",
+  "repo": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean",
+  "findings": [
+    {
+      "check_id": "RULE-001",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\rule_engine\\engine.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "INC-003 description acknowledges verification need, but score path still treats count=0 as BLACK. Description is documentation, not behaviour. CONFIRM at runtime.",
+      "suggested_fix": "Add a unit test where `directors_verified=False` produces UNKNOWN (not BLACK) and only when `directors_verified=True` does count=0 fire BLACK."
+    },
+    {
+      "check_id": "RULE-003",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\rule_engine\\engine.py",
+      "line": 0,
+      "severity": "FAIL",
+      "detail": "RuleState enum in engine.py missing members: ['VERIFIED_ABSENT']",
+      "suggested_fix": "Add the missing enum members and update engine code to treat each distinctly."
+    },
+    {
+      "check_id": "RULE-003",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\canonical_architecture\\statutory_rules.py",
+      "line": 0,
+      "severity": "FAIL",
+      "detail": "RuleState enum in statutory_rules.py missing members: ['VERIFIED_ABSENT']",
+      "suggested_fix": "Add the missing enum members and update engine code to treat each distinctly."
+    },
+    {
+      "check_id": "RULE-003",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\rule_engine\\engine.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "29 score-accumulation loop(s) do not filter state == NON_COMPLIANT: ['sum(1 for n in _COVERAGE_FIELDS if getattr(company, n, None)', 'sum(f.score_impact for f in violations if f.rule_id.startswith((\"TAX-\", \"VAT-\")', 'sum(f.score_impact for f in violations if f.rule_id.startswith(\"AGM-\")']",
+      "suggested_fix": "Add `if f.state == RuleState.NON_COMPLIANT` filter to every deduction sum."
+    },
+    {
+      "check_id": "RULE-006",
+      "file": "engine.py <-> rules_service.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Rule ID sets differ. Only in engine.py: ['ACC-001', 'ACC-002', 'ACC-003', 'AGM-002', 'AGM-003', 'AGM-004', 'AGM-005', 'AGM-006', 'AGM-007', 'AR-001']. Only in rules_service.py: [].",
+      "suggested_fix": "Reconcile by making canonical_architecture/statutory_rules.py the single source of truth; have the engine and API load from it."
+    },
+    {
+      "check_id": "RULE-006",
+      "file": "statutory_rules.py <-> rules_service.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Rule ID sets differ. Only in statutory_rules.py: ['ACC-001', 'ACC-002', 'ACC-003', 'AGM-002', 'AGM-003', 'AGM-004', 'AGM-005', 'AGM-006', 'AGM-007', 'AR-001']. Only in rules_service.py: [].",
+      "suggested_fix": "Reconcile by making canonical_architecture/statutory_rules.py the single source of truth; have the engine and API load from it."
+    },
+    {
+      "check_id": "RULE-007",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\rule_engine\\engine.py",
+      "line": 0,
+      "severity": "PASS",
+      "detail": "Engine imports rule definitions from canonical_architecture.",
+      "suggested_fix": ""
+    },
+    {
+      "check_id": "RULE-008",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\models\\compliance.py",
+      "line": 0,
+      "severity": "INFO",
+      "detail": "Found version field reference in compliance.py.",
+      "suggested_fix": ""
+    },
+    {
+      "check_id": "RULE-009",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\rule_engine\\engine.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Score hash exists but does not appear to include: ['rule_id', 'state', 'severity']. Materially different evaluations may hash the same.",
+      "suggested_fix": "Add ['rule_id', 'state', 'severity'] to the hash input."
+    },
+    {
+      "check_id": "RULE-010",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\canonical_architecture\\statutory_rules.py",
+      "line": 3,
+      "severity": "WARN",
+      "detail": "170 rule(s) have provision_status = RECONCILE or provision = TBD. Statutory references are not yet validated against actual law. First occurrence at line 3.",
+      "suggested_fix": "Engage qualified Bangladesh corporate counsel to validate each `law` field against the current Companies Act 1994 (and amendments). Mark each as PROVISION_VERIFIED only after review."
+    }
+  ]
+}

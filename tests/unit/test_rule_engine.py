@@ -66,7 +66,7 @@ class TestBaseline:
     def test_score_hash_present(self, rule_engine, compliant_profile):
         """Score hash must be present for AI Constitution Article 4 compliance."""
         output = rule_engine.evaluate(compliant_profile)
-        assert hasattr(output.score_breakdown, "score_hash") or True  # hash in persistence layer
+        assert hasattr(output.score_breakdown, "score_hash")
 
 
 # =============================================================================
@@ -467,8 +467,12 @@ class TestTransferRules:
         assert_flag_triggered(output, "TR-002")
 
     def test_TR005_triggers_void_transfer_no_approval(self, rule_engine, build_profile, make_share_transfer):
-        """Transfer without board approval → TR-003."""
-        transfer = make_share_transfer(board_approval=False, board_approval_obtained=False)
+        """Transfer without board approval under an applicable AoA restriction → TR-005."""
+        transfer = make_share_transfer(
+            aoa_restriction_apply=True,
+            board_approval=False,
+            board_approval_obtained=False,
+        )
         profile = build_profile(share_transfers=[transfer])
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "TR-005")

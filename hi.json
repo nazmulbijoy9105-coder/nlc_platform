@@ -1,0 +1,126 @@
+{
+  "generated_at": "2026-10-25T22:24:07.776311Z",
+  "repo": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean",
+  "findings": [
+    {
+      "check_id": "HIST-LBR-001",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\canonical_architecture\\legal_reconciliation.py",
+      "line": 394,
+      "severity": "WARN",
+      "detail": "LBR-001 fires without visible labour-law applicability gate. Companies without employees shouldn't trigger LBR rules.",
+      "suggested_fix": "Add an applicability predicate: only fire LBR-* when company has 7+ employees (Labour Act 2006 threshold)."
+    },
+    {
+      "check_id": "HIST-LBR-001",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\canonical_architecture\\legal_reconciliation.py",
+      "line": 395,
+      "severity": "WARN",
+      "detail": "LBR-001 fires without visible labour-law applicability gate. Companies without employees shouldn't trigger LBR rules.",
+      "suggested_fix": "Add an applicability predicate: only fire LBR-* when company has 7+ employees (Labour Act 2006 threshold)."
+    },
+    {
+      "check_id": "HIST-LBR-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\canonical_architecture\\legal_reconciliation.py",
+      "line": 402,
+      "severity": "WARN",
+      "detail": "LBR-002 fires without visible labour-law applicability gate. Companies without employees shouldn't trigger LBR rules.",
+      "suggested_fix": "Add an applicability predicate: only fire LBR-* when company has 7+ employees (Labour Act 2006 threshold)."
+    },
+    {
+      "check_id": "HIST-LBR-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\canonical_architecture\\legal_reconciliation.py",
+      "line": 403,
+      "severity": "WARN",
+      "detail": "LBR-002 fires without visible labour-law applicability gate. Companies without employees shouldn't trigger LBR rules.",
+      "suggested_fix": "Add an applicability predicate: only fire LBR-* when company has 7+ employees (Labour Act 2006 threshold)."
+    },
+    {
+      "check_id": "HIST-LBR-003",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\canonical_architecture\\legal_reconciliation.py",
+      "line": 410,
+      "severity": "WARN",
+      "detail": "LBR-003 fires without visible labour-law applicability gate. Companies without employees shouldn't trigger LBR rules.",
+      "suggested_fix": "Add an applicability predicate: only fire LBR-* when company has 7+ employees (Labour Act 2006 threshold)."
+    },
+    {
+      "check_id": "HIST-LBR-003",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\canonical_architecture\\legal_reconciliation.py",
+      "line": 411,
+      "severity": "WARN",
+      "detail": "LBR-003 fires without visible labour-law applicability gate. Companies without employees shouldn't trigger LBR rules.",
+      "suggested_fix": "Add an applicability predicate: only fire LBR-* when company has 7+ employees (Labour Act 2006 threshold)."
+    },
+    {
+      "check_id": "HIST-LBR-003",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\canonical_architecture\\statutory_rescue.py",
+      "line": 1297,
+      "severity": "WARN",
+      "detail": "LBR-003 fires without visible labour-law applicability gate. Companies without employees shouldn't trigger LBR rules.",
+      "suggested_fix": "Add an applicability predicate: only fire LBR-* when company has 7+ employees (Labour Act 2006 threshold)."
+    },
+    {
+      "check_id": "HIST-LBR-001",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\test_canonical_integrity.py",
+      "line": 75,
+      "severity": "WARN",
+      "detail": "LBR-001 fires without visible labour-law applicability gate. Companies without employees shouldn't trigger LBR rules.",
+      "suggested_fix": "Add an applicability predicate: only fire LBR-* when company has 7+ employees (Labour Act 2006 threshold)."
+    },
+    {
+      "check_id": "HIST-LBR-001",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\test_canonical_integrity.py",
+      "line": 83,
+      "severity": "WARN",
+      "detail": "LBR-001 fires without visible labour-law applicability gate. Companies without employees shouldn't trigger LBR rules.",
+      "suggested_fix": "Add an applicability predicate: only fire LBR-* when company has 7+ employees (Labour Act 2006 threshold)."
+    },
+    {
+      "check_id": "HIST-LBR-001",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\test_canonical_integrity.py",
+      "line": 114,
+      "severity": "WARN",
+      "detail": "LBR-001 fires without visible labour-law applicability gate. Companies without employees shouldn't trigger LBR rules.",
+      "suggested_fix": "Add an applicability predicate: only fire LBR-* when company has 7+ employees (Labour Act 2006 threshold)."
+    },
+    {
+      "check_id": "HIST-LBR-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\test_rule_engine.py",
+      "line": 878,
+      "severity": "WARN",
+      "detail": "LBR-002 fires without visible labour-law applicability gate. Companies without employees shouldn't trigger LBR rules.",
+      "suggested_fix": "Add an applicability predicate: only fire LBR-* when company has 7+ employees (Labour Act 2006 threshold)."
+    },
+    {
+      "check_id": "HIST-LBR-003",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\test_rule_engine.py",
+      "line": 879,
+      "severity": "WARN",
+      "detail": "LBR-003 fires without visible labour-law applicability gate. Companies without employees shouldn't trigger LBR rules.",
+      "suggested_fix": "Add an applicability predicate: only fire LBR-* when company has 7+ employees (Labour Act 2006 threshold)."
+    },
+    {
+      "check_id": "HIST-OR-TRUE",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\test_rule_engine.py",
+      "line": 69,
+      "severity": "WARN",
+      "detail": "`or True` makes the assertion always pass: assert hasattr(output.score_breakdown, \"score_hash\") or True  # hash in persistence layer",
+      "suggested_fix": "Remove the `or True`. If genuinely intended for skip-on-error, use pytest.skip() instead."
+    },
+    {
+      "check_id": "HIST-MIG-DRIFT",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\alembic\\versions\\0001_initial_schema.py",
+      "line": 0,
+      "severity": "INFO",
+      "detail": "3 migration(s) contain RLS statements. VERIFY these were actually applied on the deployed DB (run verify_rls.py).",
+      "suggested_fix": ""
+    },
+    {
+      "check_id": "HIST-RESCUE-CONTRACT",
+      "file": "(tests)",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "No rescue engagement contract test found.",
+      "suggested_fix": "Add tests/unit/test_rescue_engagement_contract.py with explicit contract assertions: caller args, return shape, DB side-effects, audit row."
+    }
+  ]
+}

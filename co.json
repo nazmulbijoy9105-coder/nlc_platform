@@ -1,0 +1,86 @@
+{
+  "generated_at": "2026-10-25T22:26:27.476362Z",
+  "repo": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean",
+  "findings": [
+    {
+      "check_id": "COM-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\services\\commercial_service.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Approve/reject endpoint in commercial_service.py does not appear to record approved_by/actor field. Attribution missing.",
+      "suggested_fix": "Set `document.approved_by = current_user.id` and write an activity_log entry: `Approved document X by user Y at timestamp`."
+    },
+    {
+      "check_id": "COM-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\test_auth_revocation_coverage.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Approve/reject endpoint in test_auth_revocation_coverage.py does not appear to record approved_by/actor field. Attribution missing.",
+      "suggested_fix": "Set `document.approved_by = current_user.id` and write an activity_log entry: `Approved document X by user Y at timestamp`."
+    },
+    {
+      "check_id": "COM-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\test_document_integrity.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Approve/reject endpoint in test_document_integrity.py does not appear to record approved_by/actor field. Attribution missing.",
+      "suggested_fix": "Set `document.approved_by = current_user.id` and write an activity_log entry: `Approved document X by user Y at timestamp`."
+    },
+    {
+      "check_id": "COM-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\test_pdf_report_service.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Approve/reject endpoint in test_pdf_report_service.py does not appear to record approved_by/actor field. Attribution missing.",
+      "suggested_fix": "Set `document.approved_by = current_user.id` and write an activity_log entry: `Approved document X by user Y at timestamp`."
+    },
+    {
+      "check_id": "COM-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\test_security_enterprise.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Approve/reject endpoint in test_security_enterprise.py does not appear to record approved_by/actor field. Attribution missing.",
+      "suggested_fix": "Set `document.approved_by = current_user.id` and write an activity_log entry: `Approved document X by user Y at timestamp`."
+    },
+    {
+      "check_id": "COM-004",
+      "file": "(engagement)",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "No engagement lifecycle state machine detected. Invalid transitions (e.g. CLOSED -> ASSIGNED) may succeed.",
+      "suggested_fix": "Add a `VALID_ENGAGEMENT_TRANSITIONS` dict and validate every PATCH /engagement against it."
+    },
+    {
+      "check_id": "COM-005",
+      "file": "(commercial)",
+      "line": 0,
+      "severity": "FAIL",
+      "detail": "No server-side entitlement check detected. Frontend-only gating is bypassable.",
+      "suggested_fix": "Add `Depends(require_entitlement('feature_name'))` to every route that produces premium content / actions."
+    },
+    {
+      "check_id": "COM-006",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\documents.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Notification code lacks visible idempotency key. Worker restart may re-send duplicate deadline alerts.",
+      "suggested_fix": "Add a `notification_id` (uuid) per logical notification; check exists before insert."
+    },
+    {
+      "check_id": "COM-007",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\companies.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Report service does not appear to bind to an evidence snapshot_id. Report content may be inconsistent with the snapshot displayed to the client.",
+      "suggested_fix": "Persist evidence snapshot at evaluation time; reference snapshot_id in the report."
+    },
+    {
+      "check_id": "COM-007",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\companies.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Report service does not appear to record rule_engine_version. Same report URL may render different content over time as rule definitions change.",
+      "suggested_fix": "Stamp every report with engine_version + registry_hash; render the report against the rule definitions in force at evaluation time."
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "generated_at": "2026-10-25T22:20:12.689001Z",
+  "repo": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean",
+  "route_count": 1,
+  "findings": [
+    {
+      "check_id": "RJSC-002",
+      "file": "(repo)",
+      "line": 0,
+      "severity": "INFO",
+      "detail": "Frontend or API directory not found at expected location; cannot check naming parity.",
+      "suggested_fix": ""
+    },
+    {
+      "check_id": "RJSC-005",
+      "file": "(filings)",
+      "line": 0,
+      "severity": "FAIL",
+      "detail": "No visible filing-state transition validation. Invalid transitions (e.g. FILED -> PENDING) may silently succeed.",
+      "suggested_fix": "Add a `VALID_TRANSITIONS` dict mapping current_status -> set of allowed next statuses; every PATCH handler must validate against this map."
+    },
+    {
+      "check_id": "API-001",
+      "file": "(tests)",
+      "line": 0,
+      "severity": "FAIL",
+      "detail": "No parity test found at all. Cannot verify whether the API serves the same rule corpus as the engine seed.",
+      "suggested_fix": "Add tests/integration/test_api_rule_parity.py: authenticate properly (use a fixture token), GET /api/v1/rules, then compare returned rule IDs to STATUTORY_RULE_REGISTRY."
+    },
+    {
+      "check_id": "API-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\auth.py",
+      "line": 0,
+      "severity": "FAIL",
+      "detail": "1/1 routes in F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\auth.py lack any auth/authz dependency.",
+      "suggested_fix": "Add `current_user=Depends(get_current_user)` to every route that should be authenticated. Add a role guard for state-changing operations."
+    }
+  ]
+}

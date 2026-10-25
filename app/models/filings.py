@@ -213,3 +213,31 @@ class AnnualReturn(FullMixin, Base):
             f"<AnnualReturn company={self.company_id} "
             f"FY={self.financial_year} default={self.is_default}>"
         )
+
+# RJSC-005: Filing lifecycle state transition validation.
+# Every PATCH handler must validate `next_status` against this map.
+VALID_TRANSITIONS: dict[str, set[str]] = {
+    "PENDING":       {"FILED", "CANCELLED"},
+    "FILED":         {"REJECTED", "SUPERSEDED"},
+    "REJECTED":      {"PENDING"},
+    "SUPERSEDED":    set(),
+    "CANCELLED":     set(),
+    "OVERDUE":       {"FILED", "CANCELLED"},
+    "HELD":          {"MINUTES_FILED", "CANCELLED"},
+    "MINUTES_FILED": set(),
+    "COMPLETED":     set(),
+    "IN_PROGRESS":   {"COMPLETED", "CANCELLED"},
+}
+
+def validate_filing_transition(current_status: str, next_status: str) -> bool:
+    """Return True if the transition is allowed, False otherwise."""
+    return next_status in VALID_TRANSITIONS.get(current_status, set())
+
+
+class InvalidFilingTransitionError(ValueError):
+    """Raised when a filing lifecycle transition is not allowed."""
+    def __init__(self, current: str, next_: str):
+        super().__init__(
+            f"Invalid filing transition: {current} -> {next_}. "
+            f"Allowed from {current}: {VALID_TRANSITIONS.get(current, set())}"
+        )
