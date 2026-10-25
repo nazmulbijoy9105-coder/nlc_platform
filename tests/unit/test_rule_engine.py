@@ -24,7 +24,14 @@ from datetime import date, timedelta
 
 import pytest
 
-from app.rule_engine.engine import ChargeEvent
+from app.rule_engine.engine import (
+    ChargeEvent,
+    ComplianceFlag,
+    ExposureBand,
+    RevenueTier,
+    RuleState,
+    Severity,
+)
 from tests.conftest import (
     assert_flag_not_triggered,
     assert_flag_triggered,
@@ -768,6 +775,28 @@ class TestEscalationRules:
 class TestScoreBanding:
     """Verify score → band mapping is correct and non-overlapping."""
 
+    def test_unknown_finding_does_not_reduce_agm_module_score(
+        self, rule_engine, compliant_profile
+    ):
+        """UNKNOWN evidence must not deduct points from a module score."""
+        flag = ComplianceFlag(
+            rule_id="AGM-TEST",
+            flag_code="AGM-TEST",
+            severity=Severity.YELLOW,
+            score_impact=5,
+            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+            description="Regression test finding",
+            statutory_basis="Test only",
+            state=RuleState.UNKNOWN,
+        )
+
+        result = rule_engine._calculate_score([flag], compliant_profile)
+
+        assert result.agm_score == 20
+        assert result.raw_total == 100
+
+    """Verify score → band mapping is correct and non-overlapping."""
+
     @pytest.mark.parametrize("score,expected_band", [
         (100, "GREEN"),
         (85,  "GREEN"),
@@ -995,7 +1024,7 @@ class TestUntestedRules:
         assert_flag_triggered(rule_engine.evaluate(profile), "INC-001")
 
     def test_INC003_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(current_director_count=0)), "INC-003")
+        assert_flag_triggered(rule_engine.evaluate(build_profile(current_director_count=0, directors_verified=True)), "INC-003")
 
     def test_INC004_triggers(self, rule_engine, build_profile):
         assert_flag_triggered(rule_engine.evaluate(build_profile(paid_up_capital_bdt=200000, authorized_capital_bdt=100000)), "INC-004")

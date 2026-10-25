@@ -71,7 +71,6 @@ class RuleState(str, Enum):
     COMPLIANT = "COMPLIANT"
     NON_COMPLIANT = "NON_COMPLIANT"
     VERIFIED_ABSENT = "VERIFIED_ABSENT"  # confirmed absence via verified external source
-    VERIFIED_ABSENT = "VERIFIED_ABSENT"  # confirmed absence via verified external source
     UNKNOWN = "UNKNOWN"
     NOT_APPLICABLE = "NOT_APPLICABLE"
     CONDITIONAL = "CONDITIONAL"
@@ -1791,21 +1790,22 @@ class NLCRuleEngine:
 
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
         active = [f for f in flags if not f.resolved and f.conditional_applies]
+        violations = [f for f in active if f.state == RuleState.NON_COMPLIANT]
 
-        tax_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("TAX-", "VAT-")))
-        agm_ded = sum(f.score_impact for f in active if f.rule_id.startswith("AGM-"))
-        aud_ded = sum(f.score_impact for f in active if f.rule_id.startswith("AUD-"))
-        ret_ded = sum(f.score_impact for f in active if f.rule_id.startswith("AR-"))
-        dir_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("DIR-", "INC-", "DEF-", "TL-", "BOD-", "MEM-")))
-        shr_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("SH-", "TR-")))
-        cap_ded = sum(f.score_impact for f in active if f.rule_id.startswith(("CAP-", "STR-", "CHG-", "ACC-")))
-        off_ded = sum(f.score_impact for f in active if f.rule_id.startswith("OFF-"))
-        reg_ded = sum(f.score_impact for f in active if f.rule_id.startswith("REG-"))
-        bnk_ded = sum(f.score_impact for f in active if f.rule_id.startswith("BNK-"))
-        lbr_ded = sum(f.score_impact for f in active if f.rule_id.startswith("LBR-"))
-        bsec_ded = sum(f.score_impact for f in active if f.rule_id.startswith("BSEC-"))
-        fx_ded = sum(f.score_impact for f in active if f.rule_id.startswith("FX-"))
-        esc_ded = sum(f.score_impact for f in active if f.rule_id.startswith("ESC-"))
+        tax_ded = sum(f.score_impact for f in violations if f.rule_id.startswith(("TAX-", "VAT-")))
+        agm_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("AGM-"))
+        aud_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("AUD-"))
+        ret_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("AR-"))
+        dir_ded = sum(f.score_impact for f in violations if f.rule_id.startswith(("DIR-", "INC-", "DEF-", "TL-", "BOD-", "MEM-")))
+        shr_ded = sum(f.score_impact for f in violations if f.rule_id.startswith(("SH-", "TR-")))
+        cap_ded = sum(f.score_impact for f in violations if f.rule_id.startswith(("CAP-", "STR-", "CHG-", "ACC-")))
+        off_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("OFF-"))
+        reg_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("REG-"))
+        bnk_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("BNK-"))
+        lbr_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("LBR-"))
+        bsec_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("BSEC-"))
+        fx_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("FX-"))
+        esc_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("ESC-"))
 
         raw = self._calculate_raw_score(flags)
         raw = max(0, min(100, raw))

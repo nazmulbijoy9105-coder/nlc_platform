@@ -15,7 +15,6 @@ class RuleState(str, Enum):
     COMPLIANT = "COMPLIANT"
     NON_COMPLIANT = "NON_COMPLIANT"
     VERIFIED_ABSENT = "VERIFIED_ABSENT"  # confirmed absence via verified external source
-    VERIFIED_ABSENT = "VERIFIED_ABSENT"  # confirmed absence via verified external source
     UNKNOWN = "UNKNOWN"
     NOT_APPLICABLE = "NOT_APPLICABLE"
     CONDITIONAL = "CONDITIONAL"      # defined; no evaluator emits it yet

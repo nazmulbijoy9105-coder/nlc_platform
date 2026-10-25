@@ -179,6 +179,11 @@ class ComplianceScoreHistory(UUIDPrimaryKeyMixin, Base):
     engine_version: Mapped[str] = mapped_column(String(20), nullable=False)
 
     # ── Trigger ───────────────────────────────────────────────────
+    evaluation_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="COMPLETED",
+        comment="PENDING | IN_PROGRESS | COMPLETED | FAILED (OPS-004)"
+    )
+
     trigger_source: Mapped[str] = mapped_column(
         String(100), default="CRON",
         comment="CRON | API_REQUEST | RESCUE_STEP_COMPLETE | MANUAL"

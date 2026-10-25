@@ -265,6 +265,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 score_hash=score_hash,
                 engine_version=settings.rule_engine_version,
                 trigger_source=trigger_source,
+                evaluation_status="COMPLETED",  # OPS-004
             )
             self.db.add(snapshot)
 

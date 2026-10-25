@@ -4,7 +4,7 @@ from app.services.company_service import CompanyService
 from app.rule_engine.engine import NLCRuleEngine, Severity, RuleState
 
 @pytest.mark.asyncio
-async def test_zero_directors_triggers_inc003_and_agm_unknown(db):
+async def test_unverified_zero_director_records_do_not_trigger_inc003_and_agm_unknown(db):
     company = await CompanyService(db).create_company(
         registration_number="TEST-NO-AGM-01",
         company_name="No AGM Co",
@@ -24,8 +24,12 @@ async def test_zero_directors_triggers_inc003_and_agm_unknown(db):
     
     flag_ids = [f.rule_id for f in output.flags]
     
-    assert "INC-003" in flag_ids, "INC-003 should fire for 0 directors (Section 90(2))"
-    assert "ESC-003" in flag_ids, "ESC-003 should fire (INC-003 has is_black_override=True)"
+    # An empty NLC director-record collection is not RJSC-verified evidence
+    # that the company legally has zero directors.
+    assert profile.current_director_count == 0
+    assert profile.directors_verified is False
+    assert "INC-003" not in flag_ids
+    assert "ESC-003" not in flag_ids
     
     # AGM-001 should fire, but as UNKNOWN (0 points), not as a hard violation
     agm_flags = [f for f in output.flags if f.rule_id == "AGM-001"]
@@ -33,7 +37,6 @@ async def test_zero_directors_triggers_inc003_and_agm_unknown(db):
     assert agm_flags[0].state == RuleState.UNKNOWN
     assert agm_flags[0].score_impact == 0
     
-    # NOTE: Risk band may be RED due to other DB defaults (moa_aoa_filed=False),
-    # INC-003 correctly fires BLACK for 0 directors (structural deficiency).
-    # AGM-001 correctly fires as UNKNOWN (data missing, per R-008).
-    # ESC-003 fires because INC-003 has is_black_override=True.
+    # Other findings may still affect the risk band.
+    # Missing AGM evidence remains UNKNOWN and has zero score impact.
+    # INC-003 and ESC-003 require a verified director-count deficiency.
