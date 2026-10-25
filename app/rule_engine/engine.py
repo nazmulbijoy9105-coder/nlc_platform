@@ -469,7 +469,7 @@ class NLCRuleEngine:
                 severity=Severity.RED,
                 score_impact=15,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="Memorandum and Articles of Association not filed with RJSC.",
+                description="Memorandum and Articles of Association not found in NLC records - verify with RJSC registry.",
                 statutory_basis="Section 23, Companies Act 1994 (Bangladesh)",
             ))
 
@@ -482,7 +482,7 @@ class NLCRuleEngine:
                     severity=Severity.YELLOW if delay < 90 else Severity.RED,
                     score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Memorandum and Articles of Association not filed with RJSC. Section 11: constitutional documents required.",
+                    description="Memorandum and Articles of Association not found in NLC records - verify with RJSC registry. Section 11: constitutional documents required.",
                     statutory_basis="Section 23, Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay}
                 ))
@@ -490,7 +490,7 @@ class NLCRuleEngine:
         if c.company_type == "PRIVATE_LIMITED" and c.current_director_count is not None and (c.current_director_count or 0) < 2:  # type: ignore
             inc003_impact = 15
             inc003_desc = (
-                "Private company has NO directors. Section 90(2) requires minimum 2. Company cannot legally act."
+                "Private company has NO directors. Section 90(2) requires minimum 2. Director records require verification - absence in NLC database does not confirm actual absence."
                 if c.current_director_count == 0
                 else "Private company has only 1 director. Section 90(2) requires minimum 2."
             )
@@ -611,7 +611,7 @@ class NLCRuleEngine:
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="First auditor status unknown (data missing).",
-                statutory_basis="Section 210(1), Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 210(2A), Companies Act 1994 (Bangladesh)",
                 state=RuleState.UNKNOWN
             ))
         elif c.first_auditor_appointed is False:
@@ -624,8 +624,8 @@ class NLCRuleEngine:
                     severity=Severity.YELLOW,
                     score_impact=10,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE if delay <= 365 else RevenueTier.STRUCTURED_REGULARIZATION,
-                    description="First auditor not appointed within 30 days. Section 210(1): overdue by " + str(delay) + " days.",
-                    statutory_basis="Section 210(1), Companies Act 1994 (Bangladesh)",
+                    description="First auditor not appointed within 120 days of incorporation. Section 210(2A): overdue by " + str(delay) + " days.",
+                    statutory_basis="Section 210(2A), Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay}
                 ))
 
@@ -1707,7 +1707,7 @@ class NLCRuleEngine:
                 severity=Severity.BLACK,
                 score_impact=25,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description=f"3+ year default or on strike-off list. Section 304: strike-off imminent. Corporate Rescue mandatory.",
+                description=f"3+ year default or on strike-off list. Section 304: strike-off imminent. NLC risk policy: rescue workflow recommended.",
                 statutory_basis="Section 304, Companies Act 1994 (Bangladesh)",
                 detail={"agm_years": agm_years, "ar_years": ar_years, "on_list": c.on_rjsc_strike_off_list},
                 is_black_override=True,
@@ -1729,7 +1729,7 @@ class NLCRuleEngine:
                 severity=Severity.BLACK,
                 score_impact=esc003_impact,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Corporate Rescue mandatory. Systemic failure detected.",
+                description="NLC risk policy: rescue workflow recommended. Systemic failure detected.",
                 statutory_basis="Sections 81, 115, 36, 346 (aggregate), Companies Act 1994 (Bangladesh)",
                 detail={"black_count": black_count, "pre_score": pre_score},
                 is_black_override=True,

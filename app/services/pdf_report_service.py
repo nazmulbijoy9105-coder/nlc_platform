@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from fastapi import Response
+from fastapi import Response, HTTPException
 
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
@@ -113,9 +113,10 @@ def build_compliance_report_html(
     <p><strong>Registration Number:</strong> {esc(company.registration_number)}<br>
        <strong>Date of Report:</strong> {esc(generated_at.strftime('%d %B %Y'))}</p>
 
-    <div class="score-box">
+        <div class="score-box">
         <div class="score-number {_score_class(score)}">{esc(score)} / 100</div>
         <div class="band">Risk Band: {esc(band)}</div>
+        {('<div style="font-size:11px;color:#B91C1C;margin-top:8px;"><strong>Score Override:</strong> A BLACK-severity rule has been triggered. The compliance score is set to 0 regardless of accumulated deductions, as the company has a critical legal deficiency requiring immediate remediation.</div>') if band == 'BLACK' else ''}
     </div>
 
     <h3>Active Compliance Flags</h3>
