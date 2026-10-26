@@ -100,12 +100,26 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
 
     monkeypatch.setattr(report_module, "render_html_to_pdf_async", fake_render)
 
-    response = asyncio.run(PDFReportService(db=None).generate_company_compliance_pdf("any-id"))
+    # Mock the COM-007 snapshot lookup: this test does not need a real database.
+    snapshot = SimpleNamespace(
+        score_hash="test-snapshot-hash",
+        engine_version="test-engine-v1",
+    )
+
+    class FakeDB:
+        async def execute(self, statement):
+            return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
+
+    response = asyncio.run(
+        PDFReportService(db=FakeDB()).generate_company_compliance_pdf("any-id")
+    )
 
     assert isinstance(response, Response)
     assert response.status_code == 200
     assert response.media_type == "application/pdf"
     assert response.body == b"%PDF-1.7 stub"
+    assert response.headers["x-snapshot-hash"] == "test-snapshot-hash"
+    assert response.headers["x-engine-version"] == "test-engine-v1"
     assert (
         response.headers["content-disposition"]
         == 'attachment; filename="compliance_report_C-1_X-Evil_1_2020.pdf"'
