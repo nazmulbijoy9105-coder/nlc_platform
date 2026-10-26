@@ -223,12 +223,13 @@ class QuotationService(BaseService[Quotation]):
         self,
         quotation_id: uuid.UUID,
         reason: str,
+        rejected_by: uuid.UUID | None = None,  # COM-002
     ) -> Quotation | None:
         """Mark quotation as rejected."""
         q = await self.get_by_id(quotation_id)
         if not q:
             return None
-        return await self.update_instance(q, status="REJECTED", rejection_reason=reason)
+        return await self.update_instance(q, status="REJECTED", rejection_reason=reason, rejected_by=rejected_by)  # COM-002
 
 
 # ═══════════════════════════════════════════════════════════════════════
