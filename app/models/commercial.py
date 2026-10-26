@@ -280,3 +280,29 @@ class InvalidEngagementTransitionError(ValueError):
             f"Invalid engagement transition: {current} -> {next_}. "
             f"Allowed from {current}: {VALID_ENGAGEMENT_TRANSITIONS.get(current, set())}"
         )
+
+# COM-004: Engagement lifecycle state transition validation.
+# Every PATCH /engagement handler must validate `next_status` against this map.
+VALID_ENGAGEMENT_TRANSITIONS: dict[str, set[str]] = {
+    "IDENTIFIED":  {"QUOTED", "CANCELLED"},
+    "QUOTED":      {"CONFIRMED", "CANCELLED"},
+    "CONFIRMED":   {"IN_PROGRESS", "CANCELLED"},
+    "IN_PROGRESS": {"COMPLETED", "CANCELLED"},
+    "COMPLETED":   set(),  # terminal
+    "CANCELLED":   set(),  # terminal
+}
+
+
+def validate_engagement_transition(current_status: str, next_status: str) -> bool:
+    """Return True if the transition is allowed, False otherwise."""
+    allowed = VALID_ENGAGEMENT_TRANSITIONS.get(current_status, set())
+    return next_status in allowed
+
+
+class InvalidEngagementTransitionError(ValueError):
+    """Raised when an engagement lifecycle transition is not allowed."""
+    def __init__(self, current: str, next_: str):
+        super().__init__(
+            f"Invalid engagement transition: {current} -> {next_}. "
+            f"Allowed from {current}: {VALID_ENGAGEMENT_TRANSITIONS.get(current, set())}"
+        )
