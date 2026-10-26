@@ -85,6 +85,7 @@ class RescueService(BaseService[RescuePlan]):
             completion_percentage=0,
             assigned_staff_id=assigned_staff_id,
             created_by=created_by,
+            engagement_id=engagement_id,
             quoted_fee_bdt=estimated_fee_bdt,
             target_completion_date=target_completion_date,
         )

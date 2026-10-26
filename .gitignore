@@ -83,3 +83,4 @@ test_v2_*.py
 test_e2e_*.py
 test_fix_*.py
 diag_*.py
+*.bak_*

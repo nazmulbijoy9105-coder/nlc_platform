@@ -1889,36 +1889,95 @@ class NLCRuleEngine:
     # RESCUE & LIFECYCLE SEQUENCING
     # ───────────────────────────────────────────────────────────────────
     def _generate_rescue_sequence(self, c: CompanyProfile, flags: List[ComplianceFlag], score: ScoreBreakdown) -> List[Dict[str, Any]]:
-        """R-014: Rescue derives strictly from active, verified findings."""
-        active = [f for f in flags if not f.resolved and f.conditional_applies]
+        """R-014: Generate rescue steps only from active, verified findings.
+
+        TAX-004 is aggregated into one step because its missed-quarter details
+        describe one remediation item. Missing quarter evidence does not itself
+        establish a missed payment.
+        """
+        active = [
+            f for f in flags
+            if not f.resolved and f.conditional_applies
+        ]
         if score.risk_band not in (Severity.RED, Severity.BLACK):
             return []
-        steps = []
+
+        actionable = [
+            f for f in active
+            if f.state == RuleState.NON_COMPLIANT
+            and f.severity in (Severity.RED, Severity.BLACK)
+        ]
+        if not actionable:
+            return []
+
         try:
-            from canonical_architecture.statutory_rescue import STATUTORY_RESCUE_REGISTRY
-            for flag in active:
-                # FIX: Only generate rescue for verified NON_COMPLIANT findings
-                if flag.state != RuleState.NON_COMPLIANT or flag.severity not in (Severity.RED, Severity.BLACK):
+            from canonical_architecture.statutory_rescue import (
+                STATUTORY_RESCUE_REGISTRY,
+            )
+        except ImportError as e:
+            import logging
+            logging.getLogger(__name__).error(
+                f"Failed to import STATUTORY_RESCUE_REGISTRY: {e}"
+            )
+            return []
+
+        steps = []
+        tax004_processed = False
+
+        for flag in actionable:
+            if flag.rule_id == "TAX-004":
+                if tax004_processed:
                     continue
-                rescue = STATUTORY_RESCUE_REGISTRY.get(flag.rule_id)
+                tax004_processed = True
+
+                tax_flags = [
+                    f for f in actionable if f.rule_id == "TAX-004"
+                ]
+                missed_quarters = []
+                seen_quarters = set()
+
+                for tax_flag in tax_flags:
+                    detail = tax_flag.detail or {}
+                    quarters = detail.get("quarters", [])
+                    if not isinstance(quarters, (list, tuple, set)):
+                        continue
+                    for quarter in quarters:
+                        if quarter is None:
+                            continue
+                        quarter_label = str(quarter).strip()
+                        if quarter_label and quarter_label not in seen_quarters:
+                            seen_quarters.add(quarter_label)
+                            missed_quarters.append(quarter_label)
+
+                # No documented missed quarter means no TAX-004 rescue step.
+                if not missed_quarters:
+                    continue
+
+                rescue = STATUTORY_RESCUE_REGISTRY.get("TAX-004")
                 if not rescue:
-                    raise ValueError(f"Missing statutory rescue mapping for actionable finding: {flag.rule_id}")
-                
-                priority = "CRITICAL" if flag.severity == Severity.BLACK else "HIGH"
+                    raise ValueError(
+                        "Missing statutory rescue mapping for actionable "
+                        "finding: TAX-004"
+                    )
+
+                priority = (
+                    "CRITICAL"
+                    if any(f.severity == Severity.BLACK for f in tax_flags)
+                    else "HIGH"
+                )
                 actions = rescue.get("statutory_actions", [])
-                desc = "; ".join(actions) if actions else rescue.get("objective", f"Remediate {flag.rule_id}")
-                if flag.rule_id == "TAX-004":
-                    all_missed = []
-                    for f in active:
-                        if f.rule_id == "TAX-004":
-                            all_missed.extend(f.detail.get("quarters", []))
-                    if all_missed:
-                        desc = f"Missed quarters: {', '.join(all_missed)}. {desc}"
-                
+                desc = "; ".join(actions) if actions else rescue.get(
+                    "objective", "Remediate TAX-004"
+                )
+                desc = f"Missed quarters: {', '.join(missed_quarters)}. {desc}"
+
                 steps.append({
-                    "title": rescue.get("objective", f"Remediate: {flag.rule_id}"),
-                    "description": desc, "related_rules": [flag.rule_id],
-                    "priority": priority, "min_days": 7, "max_days": 30,
+                    "title": rescue.get("objective", "Remediate TAX-004"),
+                    "description": desc,
+                    "related_rules": ["TAX-004"],
+                    "priority": priority,
+                    "min_days": 7,
+                    "max_days": 30,
                     "rescue_id": rescue.get("rescue_id", ""),
                     "authority": rescue.get("authority", ""),
                     "closure_condition": rescue.get("closure_condition", ""),
@@ -1927,14 +1986,45 @@ class NLCRuleEngine:
                     "estimated_days_min": rescue.get("estimated_days_min"),
                     "estimated_days_max": rescue.get("estimated_days_max"),
                 })
-        except ImportError as e:
-            import logging
-            logging.getLogger(__name__).error(f"Failed to import STATUTORY_RESCUE_REGISTRY: {e}")
-            return []
-        priority_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
-        steps.sort(key=lambda s: (priority_order.get(s["priority"], 9), s["min_days"]))
-        return steps
+                continue
 
+            rescue = STATUTORY_RESCUE_REGISTRY.get(flag.rule_id)
+            if not rescue:
+                raise ValueError(
+                    "Missing statutory rescue mapping for actionable finding: "
+                    f"{flag.rule_id}"
+                )
+
+            priority = (
+                "CRITICAL" if flag.severity == Severity.BLACK else "HIGH"
+            )
+            actions = rescue.get("statutory_actions", [])
+            desc = "; ".join(actions) if actions else rescue.get(
+                "objective", f"Remediate {flag.rule_id}"
+            )
+
+            steps.append({
+                "title": rescue.get("objective", f"Remediate: {flag.rule_id}"),
+                "description": desc,
+                "related_rules": [flag.rule_id],
+                "priority": priority,
+                "min_days": 7,
+                "max_days": 30,
+                "rescue_id": rescue.get("rescue_id", ""),
+                "authority": rescue.get("authority", ""),
+                "closure_condition": rescue.get("closure_condition", ""),
+                "statutory_basis": rescue.get("statutory_basis"),
+                "complexity": rescue.get("complexity"),
+                "estimated_days_min": rescue.get("estimated_days_min"),
+                "estimated_days_max": rescue.get("estimated_days_max"),
+            })
+
+        priority_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+        steps.sort(key=lambda step: (
+            priority_order.get(step["priority"], 9),
+            step["min_days"],
+        ))
+        return steps
 
     def _determine_lifecycle_stage(self, c: CompanyProfile) -> LifecycleStage:
         if c.on_rjsc_strike_off_list or c.is_dormant:
