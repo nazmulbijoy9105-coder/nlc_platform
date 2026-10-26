@@ -240,6 +240,7 @@ class Quotation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     accepted_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    rejected_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, comment="FK to users.id (COM-002)")
 
     # ── Line Items ────────────────────────────────────────────────
     line_items: Mapped[list | None] = mapped_column(JSONB, nullable=True)
