@@ -251,14 +251,14 @@ async def refresh_token(body: RefreshRequest, db=Depends(get_db)):
 
 
 @router.post("/logout")
-def logout(token: str = Depends(oauth2_scheme)):
+async def logout(current_user: dict = Depends(get_current_user), token: str = Depends(oauth2_scheme)):
     """Logout: revokes this access token (by jti) until its own expiry."""
     from app.core.token_blacklist import revoke
 
     payload = decode_token(token)
     jti = payload.get("jti") if payload else None
     revoked = bool(jti) and revoke(jti, payload.get("exp"))
-    return {"status": "logged_out", "revoked": revoked}
+    return {"status": "logged_out", "revoked": revoked, "user_id": current_user.get("sub")}  # SEC-004
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
