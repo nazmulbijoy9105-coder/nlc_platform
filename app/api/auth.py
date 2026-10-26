@@ -246,8 +246,17 @@ async def refresh_token(body: RefreshRequest, db=Depends(get_db)):
     user = result.scalar_one_or_none()
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or deactivated")
+    # SEC-006: revoke the old refresh token (rotation — prevents replay)
+    from app.core.token_blacklist import revoke
+    old_jti = payload.get("jti")
+    old_exp = payload.get("exp")
+    if old_jti and old_exp:
+        revoke(old_jti, old_exp)
+
     new_access = create_access_token({"sub": str(user.id), "user_id": str(user.id), "email": user.email, "role": str(user.role), "type": "access"})
-    return RefreshResponse(access_token=new_access, token_type="bearer")
+    # SEC-006: issue new refresh token (rotation)
+    new_refresh = create_refresh_token({"sub": str(user.id), "user_id": str(user.id), "email": user.email, "role": str(user.role), "type": "refresh"})
+    return RefreshResponse(access_token=new_access, refresh_token=new_refresh, token_type="bearer")
 
 
 @router.post("/logout")
