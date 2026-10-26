@@ -64,6 +64,7 @@ class Notification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         String(100), nullable=False,
         comment="AGM_DEADLINE | RETURN_DEADLINE | SCORE_DEGRADED | RESCUE_REQUIRED | etc."
     )
+    deduplication_key: Mapped[str | None] = mapped_column(String(200), nullable=True, comment="Idempotency key (COM-006)")
     channel: Mapped[NotificationChannel] = mapped_column(
         Enum(NotificationChannel, name="notification_channel"), nullable=False
     )
