@@ -45,6 +45,12 @@ class RescuePlan(FullMixin, Base):
     """
     __tablename__ = "rescue_plans"
 
+    # RES-010: link rescue plan to commercial engagement
+    engagement_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="SET NULL"), nullable=True,
+        comment="FK to engagements.id (RES-010)"
+    )
+
     company_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("companies.id", ondelete="CASCADE"),

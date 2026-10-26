@@ -209,6 +209,7 @@ async def create_rescue_plan(
         assigned_staff_id=body.assigned_staff_id,
         estimated_fee_bdt=body.estimated_fee_bdt,
         target_completion_date=date.fromisoformat(body.target_completion_date) if body.target_completion_date else None,
+        engagement_id=None,  # RES-010: explicit linkage, populated by service
     )
 
     await activity.log(

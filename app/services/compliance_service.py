@@ -299,7 +299,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     await rescue_svc.generate_rescue_plan(
                         company_id=company_id,
                         engine_output=output,
-                        created_by=getattr(self, '_current_user_id', None)
+                        created_by=getattr(self, '_current_user_id', None),
+                        engagement_id=None,  # RES-010: explicit linkage, populated by service
                     )
                 except Exception as e:
                     logger.error(f"Failed to auto-create rescue plan for company {company_id}: {e}", exc_info=True)
