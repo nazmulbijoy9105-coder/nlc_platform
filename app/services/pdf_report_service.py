@@ -15,6 +15,8 @@ from fastapi import Response, HTTPException
 
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
+from app.models.compliance import ComplianceScoreHistory
+from sqlalchemy import select
 from app.services.pdf_render import (
     asset_uri,
     esc,
@@ -141,6 +143,17 @@ class PDFReportService:
         company = await CompanyService(self.db).get_by_id_or_404(company_id)
         flags = await ComplianceService(self.db).get_active_flags(company_id)
 
+        # COM-007: bind report to evidence snapshot + engine version
+        score_snapshot = await self.db.execute(
+            select(ComplianceScoreHistory)
+            .where(ComplianceScoreHistory.company_id == company.id)
+            .order_by(ComplianceScoreHistory.calculated_at.desc())
+            .limit(1)
+        )
+        snapshot = score_snapshot.scalar_one_or_none()
+        snapshot_hash = snapshot.score_hash if snapshot else "unknown"
+        engine_version = snapshot.engine_version if snapshot else "unknown"
+
         html_content = build_compliance_report_html(
             company,
             flags,
@@ -153,5 +166,9 @@ class PDFReportService:
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "X-Snapshot-Hash": snapshot_hash,  # COM-007
+                "X-Engine-Version": engine_version,  # COM-007
+            },
         )
