@@ -109,6 +109,7 @@ class Company(FullMixin, Base):
         Boolean, default=False, index=True
     )
     rescue_triggered_at: Mapped[datetime | None] = mapped_column(
+    rescue_generation_error: Mapped[str | None] = mapped_column(Text, nullable=True)
         DateTime(timezone=True), nullable=True
     )
 
