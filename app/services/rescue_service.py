@@ -11,7 +11,12 @@ and persisted here. Step completion triggers compliance re-evaluation.
 """
 from __future__ import annotations
 
+import logging
 import uuid
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.commercial import Engagement
 from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import select, update
@@ -26,6 +31,8 @@ from app.models.enums import (
 )
 from app.models.rescue import RescuePlan, RescueStep
 from app.services.base import BaseService
+
+logger = logging.getLogger("nlc.rescue")
 
 
 class RescueService(BaseService[RescuePlan]):
@@ -92,8 +99,12 @@ class RescueService(BaseService[RescuePlan]):
 
         # Create step records
         steps = []
+        total_step_count = len(rescue_data) if isinstance(rescue_data, list) else 0
         for i, step_data in enumerate(rescue_data):
-            step = await self._create_step(plan.id, company_id, step_data, i)
+            step = await self._create_step(
+                plan.id, company_id, step_data, i,
+                total_steps=total_step_count,
+            )
             steps.append(step)
 
         # Create tasks from steps
@@ -101,6 +112,23 @@ class RescueService(BaseService[RescuePlan]):
 
         # Reload with steps
         await self.db.refresh(plan)
+
+        # Auto-create commercial engagement if one wasn't passed in.
+        # Engagement failure must NOT fail the rescue plan save — the plan
+        # exists; ops can create the engagement manually if needed.
+        if engagement_id is None:
+            try:
+                await self.create_engagement_from_rescue(
+                    company_id=company_id,
+                    rescue_plan=plan,
+                    created_by=created_by,
+                )
+            except Exception as e:
+                logger.error(
+                    "engagement_creation_failed plan_id=%s company_id=%s error=%s",
+                    plan.id, company_id, e, exc_info=True,
+                )
+
         return plan
 
     async def _create_step(
@@ -109,6 +137,8 @@ class RescueService(BaseService[RescuePlan]):
         company_id: uuid.UUID,
         step_data,
         step_index: int = 0,
+        *,
+        total_steps: int = 0,
     ) -> RescueStep:
         """Create a single rescue step record."""
         complexity_map = {
@@ -119,6 +149,17 @@ class RescueService(BaseService[RescuePlan]):
         }
         days_min = step_data.get("estimated_days_min") or step_data.get("min_days") or 7
         days_max = step_data.get("estimated_days_max") or step_data.get("max_days") or 21
+
+        # Re-evaluation fires when ANY holds:
+        #   - engine explicitly annotated triggers_reevaluation on the step
+        #   - this is the final step in the plan (terminal completion)
+        #   - step is CRITICAL priority (typically BLACK-override remediation)
+        triggers_reevaluation = bool(
+            step_data.get("triggers_reevaluation")
+            or (step_index + 1) == total_steps
+            or step_data.get("priority") == "CRITICAL"
+        )
+
         step = RescueStep(
             id=uuid.uuid4(),
             rescue_plan_id=plan_id,
@@ -135,7 +176,7 @@ class RescueService(BaseService[RescuePlan]):
             estimated_days_max=days_max,
             target_completion_date=date.today() + timedelta(days=days_max),
             step_status=RescueStepStatus.PENDING,
-            triggers_reevaluation=step_data.get("step_number", 0) == 8,
+            triggers_reevaluation=triggers_reevaluation,
         )
         self.db.add(step)
         await self.db.flush()
@@ -266,16 +307,17 @@ class RescueService(BaseService[RescuePlan]):
         company_id: uuid.UUID,
         rescue_plan: RescuePlan,
         created_by: uuid.UUID | None = None,
-    ) -> None:
+    ) -> "Engagement":
         """
         Create a revenue engagement when a rescue plan is generated.
         _create_engagement_from_rescue stub implementation.
         AI Constitution Article 2.2: Revenue data visible to admin only.
+        Returns the created Engagement and links it back to the rescue plan.
         """
         from app.services.commercial_service import EngagementService
 
         eng_svc = EngagementService(self.db)
-        await eng_svc.create(
+        engagement = await eng_svc.create(
             company_id=company_id,
             engagement_title=rescue_plan.plan_name,
             engagement_type="CORPORATE_RESCUE",
@@ -287,3 +329,8 @@ class RescueService(BaseService[RescuePlan]):
             identified_date=date.today(),
             assigned_staff_id=rescue_plan.assigned_staff_id,
         )
+        # Link engagement back to the rescue plan
+        rescue_plan.engagement_id = engagement.id
+        self.db.add(rescue_plan)
+        await self.db.flush()
+        return engagement
