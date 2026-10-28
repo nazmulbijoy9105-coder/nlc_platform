@@ -43,8 +43,17 @@ class BaseService(Generic[ModelT]):
     """
     model: type[ModelT]
 
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(
+        self,
+        db: AsyncSession,
+        *,
+        actor_id: uuid.UUID | None = None,
+    ) -> None:
         self.db = db
+        # Actor performing the operation — used for audit trails (created_by,
+        # updated_by). None means system/cron. Set at construction by API layer:
+        # MyService(db, actor_id=current_user.id)
+        self._current_user_id = actor_id
 
     # ── CREATE ────────────────────────────────────────────────────
 
