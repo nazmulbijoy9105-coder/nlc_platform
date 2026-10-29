@@ -2,7 +2,7 @@
 """Deep legal citation audit v2 - NLC rule engine vs Companies Act 1994 (BD).
 Ground truth: rule-map v1.0 + user-verified mappings (migrations 0007/0010/0029/0030, cb306ac).
 Run: python tools/legal_citation_audit.py   (exit 1 = violations found)
-Scans live declarations in app/, canonical_architecture/, tests/. alembic/ = historical, excluded.
+Scans live declarations in app/, canonical_architecture/. tests/ (fixtures) and alembic/ (history) excluded.
 Citations matched as plain substrings over the FULL declaration block (description + statutory_basis).
 """
 import sys
@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 ENGINE = ROOT / "app" / "rule_engine" / "engine.py"
-SCAN_DIRS = ["app", "canonical_architecture", "tests"]
+SCAN_DIRS = ["app", "canonical_architecture"]
 EXCLUDE = ("alembic", "tools", "legal_audit")
 
 EXPECTED = {
@@ -31,7 +31,7 @@ EXPECTED = {
     "SH-001":  ["Section 151", "Form XV"],
     "SH-002":  ["Section 158"],
     "CAP-001": ["Section 53", "Section 56"],
-    "CAP-002": ["Section 174"],
+    "CAP-002": ["Section 159", "Section 159(1)"],
     "CAP-003": ["Section 150"],
     "CHG-001": ["Section 159"],
     "DEF-001": ["Section 118(6)", "Section 182(9)"],

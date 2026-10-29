@@ -351,8 +351,8 @@ LEGAL_RECONCILIATION: Dict[str, Dict[str, Any]] = {
         "source": None,
         "notes": "Awaiting legal source reconciliation."
     },
-    "INC-002": {
-        "rule_id": "INC-002",
+    "OFF-001": {
+        "rule_id": "OFF-001",
         "verified": False,
         "verified_by": None,
         "verified_at": None,

@@ -191,9 +191,9 @@ STATUTORY_RESCUE_REGISTRY: Dict[str, Dict[str, Any]] = {
         "estimated_days_min": 7,
         "estimated_days_max": 21
     },
-    "INC-002": {
+    "OFF-001": {
         "rescue_id": "INC-RESCUE-002",
-        "triggered_by": "INC-002",
+        "triggered_by": "OFF-001",
         "objective": "Remediate: Memorandum and Articles Not Filed",
         "prerequisites": [],
         "statutory_actions": [
