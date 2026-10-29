@@ -111,6 +111,7 @@ class Company(FullMixin, Base):
     rescue_triggered_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    rescue_generation_error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # ── AGM State ─────────────────────────────────────────────────
     first_agm_held: Mapped[bool] = mapped_column(Boolean, default=False)

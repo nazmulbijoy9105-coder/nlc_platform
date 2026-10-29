@@ -384,14 +384,27 @@ BIDA_ADVANTAGE_THRESHOLD_USD = 100000
 _VAT_TURNOVER_THRESHOLD_BDT = 3000000
 
 
-_COVERAGE_FIELDS = (
-    "last_agm_date", "last_audit_signed_date", "last_return_filed_year",
-)
+_COVERAGE_FIELDS: dict[str, float] = {
+    "last_agm_date":            2.0,
+    "last_audit_signed_date":   2.0,
+    "last_return_filed_year":   2.0,
+    "first_auditor_appointed":  1.0,
+    "tin_obtained":             1.0,
+    "current_director_count":   0.5,
+    "member_count":             0.5,
+}
 
 
 def _input_coverage(company) -> float:
-    known = sum(1 for n in _COVERAGE_FIELDS if getattr(company, n, None) not in (None, ""))
-    return known / len(_COVERAGE_FIELDS)
+    """Weighted fraction of high-signal profile fields with data.
+    Tri-state booleans (None=unknown, True/False=known) count as known when
+    False — a real negative answer is not missing data."""
+    total_weight = sum(_COVERAGE_FIELDS.values())
+    known_weight = 0.0
+    for field_name, weight in _COVERAGE_FIELDS.items():
+        if getattr(company, field_name, None) is not None:
+            known_weight += weight
+    return min(1.0, known_weight / total_weight)
 
 
 class NLCRuleEngine:
@@ -1744,11 +1757,14 @@ class NLCRuleEngine:
     def _score_to_band(self, raw: int, *, force_black: bool = False, coverage: float = 1.0) -> str:
         """Map a raw score to a risk band string.
         coverage = fraction of rules that had data to evaluate (0.0 to 1.0).
-        Below 0.5 → NOT_EVALUATED regardless of score."""
-        if coverage < 0.5:
-            return "NOT_EVALUATED"
+        Below 0.5 → NOT_EVALUATED — UNLESS force_black is set, in which case
+        we have confirmed BLACK findings and the company is definitively in
+        trouble, not 'unknown'. Prevents the rescue_sequence generator from
+        skipping BLACK-override companies with sparse profile data."""
         if force_black:
             return "BLACK"
+        if coverage < 0.5:
+            return "NOT_EVALUATED"
         if raw <= 29:
             return "BLACK"
         if raw <= 49:
@@ -1845,9 +1861,14 @@ class NLCRuleEngine:
         else:
             band = score_band
 
-        if band in (Severity.GREEN, Severity.YELLOW, Severity.NOT_EVALUATED): exposure = ExposureBand.LOW
-        elif band == Severity.RED: exposure = ExposureBand.HIGH
-        else: exposure = ExposureBand.SEVERE
+        if band == Severity.NOT_EVALUATED:
+            exposure = ExposureBand.LOW
+        elif band in (Severity.GREEN, Severity.YELLOW):
+            exposure = ExposureBand.LOW
+        elif band == Severity.RED:
+            exposure = ExposureBand.HIGH
+        else:
+            exposure = ExposureBand.SEVERE
 
         active_rules = {f.rule_id for f in active}
         flag_signatures = sorted(f"{f.rule_id}:{str(f.state)}:{str(f.severity)}:{f.score_impact}" for f in active)  # RULE-009: include state/severity/score_impact

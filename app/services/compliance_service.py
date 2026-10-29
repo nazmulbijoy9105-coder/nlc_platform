@@ -62,9 +62,23 @@ def _company_profile_kwargs(profile_data: dict, profile_cls) -> dict:
 
 
 def _has_rescue_output(output) -> bool:
+    """Whether the engine produced rescue steps (informational only).
+    Do NOT use this to decide whether a company needs rescue — use
+    _is_rescue_required instead."""
     rescue_plan = getattr(output, "rescue_plan", None)
     rescue_sequence = getattr(output, "rescue_sequence", None)
     return bool(rescue_plan or rescue_sequence)
+
+
+def _is_rescue_required(output) -> bool:
+    """Whether the company NEEDS a rescue plan — based on flag presence,
+    not on whether the engine happened to produce a sequence."""
+    sb = output.score_breakdown
+    return (
+        sb.black_flag_count > 0
+        or sb.red_flag_count > 0
+        or sb.override_applied
+    )
 
 
 class ComplianceService(BaseService[ComplianceFlag]):
@@ -173,7 +187,15 @@ class ComplianceService(BaseService[ComplianceFlag]):
             risk_band = RiskBand(
                 "BLACK" if score <= 29 else "RED" if score <= 49 else "YELLOW" if score <= 69 else "GREEN"
             )
-        rescue_required = _has_rescue_output(output)
+        rescue_required = _is_rescue_required(output)
+        if rescue_required and not _has_rescue_output(output):
+            logger.warning(
+                "rescue_required_but_no_sequence company=%s black=%s red=%s override=%s",
+                company_id,
+                output.score_breakdown.black_flag_count,
+                output.score_breakdown.red_flag_count,
+                output.score_breakdown.override_applied,
+            )
 
         # ── Resolve previously active flags not in current output ──
         current_rule_ids = {f.rule_id for f in output.flags}
@@ -302,8 +324,26 @@ class ComplianceService(BaseService[ComplianceFlag]):
                         created_by=getattr(self, '_current_user_id', None),
                         engagement_id=None,  # RES-010: explicit linkage, populated by service
                     )
+                except ValueError as e:
+                    # Engine produced actionable RED/BLACK flags but no rescue
+                    # sequence — data-integrity issue, not transient. Persist
+                    # the failure so ops/dashboard can see it.
+                    actionable = [
+                        (f.rule_id, str(f.severity))
+                        for f in output.flags
+                        if not f.resolved and str(f.severity) in ('BLACK', 'RED')
+                    ]
+                    logger.error(
+                        "rescue_plan_value_error company=%s reason=%s actionable_flags=%s",
+                        company_id, e, actionable,
+                    )
+                    company_svc_update['rescue_generation_error'] = str(e)[:500]
                 except Exception as e:
-                    logger.error(f"Failed to auto-create rescue plan for company {company_id}: {e}", exc_info=True)
+                    logger.error(
+                        "rescue_plan_unexpected_error company=%s error=%s",
+                        company_id, e, exc_info=True,
+                    )
+                    company_svc_update['rescue_generation_error'] = f'unexpected: {e}'[:500]
 
         await self.db.execute(
             update(Company)
