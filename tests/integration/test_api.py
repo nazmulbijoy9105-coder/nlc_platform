@@ -711,20 +711,20 @@ class TestCommercial:
 class TestRules:
 
     @pytest.mark.asyncio
-    async def test_list_rules_authenticated(self, api_client, admin_token):
-        resp = await api_client.get("/api/v1/rules", headers=_auth(admin_token))
+    async def test_list_rules_authenticated(self, api_client, super_admin_token):
+        resp = await api_client.get("/api/v1/rules", headers=_auth(super_admin_token))
         assert resp.status_code == 200
         rules = resp.json()
         assert isinstance(rules, list)
 
     @pytest.mark.asyncio
-    async def test_get_rule_not_found(self, api_client, admin_token):
-        resp = await api_client.get("/api/v1/rules/FAKE-999", headers=_auth(admin_token))
+    async def test_get_rule_not_found(self, api_client, super_admin_token):
+        resp = await api_client.get("/api/v1/rules/FAKE-999", headers=_auth(super_admin_token))
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_get_black_overrides(self, api_client, admin_token):
-        resp = await api_client.get("/api/v1/rules/black-overrides", headers=_auth(admin_token))
+    async def test_get_black_overrides(self, api_client, super_admin_token):
+        resp = await api_client.get("/api/v1/rules/black-overrides", headers=_auth(super_admin_token))
         assert resp.status_code == 200
         rules = resp.json()
         assert isinstance(rules, list)
@@ -735,8 +735,8 @@ class TestRules:
             assert {"AUD-003", "TR-005", "ESC-002", "ESC-003"}.issubset(black_ids)
 
     @pytest.mark.asyncio
-    async def test_get_rule_summary(self, api_client, admin_token):
-        resp = await api_client.get("/api/v1/rules/summary", headers=_auth(admin_token))
+    async def test_get_rule_summary(self, api_client, super_admin_token):
+        resp = await api_client.get("/api/v1/rules/summary", headers=_auth(super_admin_token))
         assert resp.status_code == 200
         data = resp.json()
         assert "total_rules" in data

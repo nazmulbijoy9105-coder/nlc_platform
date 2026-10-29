@@ -156,7 +156,7 @@ ILRMF_RULES: List[Dict[str, Any]] = [
 
 ]
 
-EXPECTED_RULE_COUNT = 75
+EXPECTED_RULE_COUNT = 85
 
 
 def get_database_url() -> str:
@@ -235,7 +235,7 @@ async def seed_rules(dry_run: bool = False, verbose: bool = False) -> int:
             if existing:
                 await conn.execute(sa.text("""
                     UPDATE legal_rules SET
-                    rule_name=:rn, rule_type=CAST(:rt AS rule_type),
+                    rule_name=:rn, rule_type=:rt,
                     statutory_basis=:sb, description=:desc,
                     rule_condition=CAST(:rc AS jsonb),
                     default_severity=CAST(:ds AS severity_level),
@@ -259,7 +259,7 @@ async def seed_rules(dry_run: bool = False, verbose: bool = False) -> int:
                         revenue_tier, is_black_override, rule_version, is_active,
                         created_at, updated_at
                     ) VALUES (
-                        uuid_generate_v4(), :rid, :rn, CAST(:rt AS rule_type), :sb,
+                        uuid_generate_v4(), :rid, :rn, :rt, :sb,
                         :desc, CAST(:rc AS jsonb), CAST(:ds AS severity_level), :si,
                         CAST(:rev AS revenue_tier), :ibo, '2.0', TRUE, :now, :now
                     )

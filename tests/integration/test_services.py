@@ -201,6 +201,8 @@ class TestComplianceService:
         mock_output.score_breakdown.final_score = 90
         mock_output.score_breakdown.risk_band = "GREEN"
         mock_output.score_breakdown.override_applied = False
+        mock_output.score_breakdown.black_flag_count = 0
+        mock_output.score_breakdown.red_flag_count = 0
         mock_output.score_breakdown.score_hash = "abc123"
         mock_output.score_breakdown.raw_total = 90
         mock_output.score_breakdown.agm_score = 25
