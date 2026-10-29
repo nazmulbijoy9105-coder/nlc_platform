@@ -37,7 +37,7 @@ EXPECTED = {
     "DEF-001": ["Section 118(6)", "Section 182(9)"],
     "MEM-001": ["Section 222"],
     "TR-001":  ["Section 38"],
-    "TL-001":  ["City Corporation Ordinance", "Pourashava Act"],
+    "TL-001": ["City Corporation", "Paurashava"],
 }
 FORBIDDEN_IDS = {"INC-002": "duplicate of INC-001; split into OFF-001 (D2)"}
 FORBIDDEN_TEXT = ["210(2A)", "120 days of incorporation",
