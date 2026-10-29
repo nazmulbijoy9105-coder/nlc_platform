@@ -91,22 +91,47 @@ async def _check_redis() -> ComponentHealth:
 
 
 def _check_celery_workers() -> ComponentHealth:
-    """Check Celery broker reachability without blocking."""
+    """Report actual worker discovery, not just Redis reachability."""
     start = time.perf_counter()
+
     try:
-        import redis
+        from app.worker.celery_app import check_worker_health
 
-        from app.core.config import get_settings
-        s = get_settings()
-        r = redis.from_url(s.redis_url, socket_connect_timeout=2, socket_timeout=2)
-        r.ping()
-        r.close()
-        ms = round((time.perf_counter() - start) * 1000, 2)
-        return ComponentHealth(status="degraded", response_ms=ms, detail="Broker reachable; worker count unknown")
-    except Exception as e:
-        ms = round((time.perf_counter() - start) * 1000, 2)
-        return ComponentHealth(status="degraded", response_ms=ms, detail=f"Celery broker unreachable: {str(e)[:80]}")
+        result = check_worker_health()
+        elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
+        worker_status = result.get("status")
 
+        if worker_status == "healthy":
+            return ComponentHealth(
+                status="ok",
+                response_ms=elapsed_ms,
+                detail=(
+                    f"Responding workers: {result.get('active_workers')}; "
+                    f"active tasks: {result.get('active_tasks')}"
+                ),
+            )
+
+        if worker_status == "no_workers":
+            detail = "No responding Celery workers"
+        else:
+            detail = result.get(
+                "detail", "Worker availability could not be confirmed"
+            )
+
+        return ComponentHealth(
+            status="degraded",
+            response_ms=elapsed_ms,
+            detail=detail,
+        )
+
+    except Exception:
+        logger.exception("celery_health_check_failed")
+        elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
+        return ComponentHealth(
+            status="degraded",
+            response_ms=elapsed_ms,
+            detail="Worker availability could not be confirmed",
+        )
 
 async def _check_s3() -> ComponentHealth:
     """Verify S3 bucket is accessible (head_bucket). Only runs if AWS is configured."""
