@@ -16,6 +16,7 @@ from fastapi import Response, HTTPException
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
 from app.models.compliance import ComplianceScoreHistory
+from app.services.rescue_service import RescueService
 from sqlalchemy import select
 from app.services.pdf_render import (
     asset_uri,
@@ -58,6 +59,27 @@ h2 { color: __NAVY__; }
 .flags-table th, .flags-table td { border: 1px solid #dee2e6; padding: 8px; text-align: left; font-size: 12px; }
 .flags-table th { background-color: __NAVY__; color: white; }
 .footer { margin-top: 40px; font-size: 10px; color: #6c757d; text-align: center; border-top: 1px solid #dee2e6; padding-top: 10px; }
+
+/* ── Rescue Plan section ────────────────────────────────────── */
+.rescue-section { margin-top: 28px; page-break-inside: avoid; }
+.rescue-section h3 { color: __NAVY__; border-bottom: 2px solid __GOLD__; padding-bottom: 6px; margin-bottom: 12px; }
+.rescue-meta { font-size: 11px; color: #495057; margin-bottom: 12px; line-height: 1.5; }
+.rescue-meta strong { color: __NAVY__; }
+.progress-wrap { background: #e9ecef; border-radius: 4px; height: 18px; margin: 8px 0 14px; overflow: hidden; }
+.progress-bar { background: __GOLD__; height: 100%; }
+.progress-label { font-size: 11px; color: #495057; margin-bottom: 10px; }
+.steps-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.steps-table th, .steps-table td { border: 1px solid #dee2e6; padding: 7px 8px; text-align: left; font-size: 11px; vertical-align: top; }
+.steps-table th { background-color: __NAVY__; color: white; }
+.steps-table td.step-num { text-align: center; font-weight: bold; color: __NAVY__; width: 32px; }
+.status-badge { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+.status-PENDING     { background: #e2e8f0; color: #475569; }
+.status-IN_PROGRESS { background: #fef3c7; color: #92400e; }
+.status-COMPLETE    { background: #dcfce7; color: #166534; }
+.status-BLOCKED     { background: #fee2e2; color: #991b1b; }
+.step-notes { color: #6b7280; font-style: italic; margin-top: 4px; }
+.step-blocked { color: #991b1b; font-style: italic; margin-top: 4px; }
+.no-rescue { font-size: 11px; color: #6c757d; font-style: italic; margin-top: 8px; }
 """.replace("__NAVY__", NAVY).replace("__GOLD__", GOLD)
 
 
@@ -69,15 +91,126 @@ def _score_class(score: Any) -> str:
     return "score-warn"
 
 
+def _render_rescue_section(rescue_plan: Any) -> str:
+    """
+    Render the Corporate Rescue Plan block.
+
+    Returns an empty string when no active plan exists (GREEN/YELLOW companies
+    never have one, and RED/BLACK companies may not yet have triggered rescue
+    generation).
+    """
+    if rescue_plan is None:
+        # Only emit a notice when the company is RED/BLACK — for those bands
+        # a missing rescue plan is itself actionable information. For GREEN/
+        # YELLOW we omit the section entirely so the report stays clean.
+        return ""
+
+    plan = rescue_plan
+    steps = getattr(plan, "steps", None) or []
+
+    started_at = getattr(plan, "started_at", None)
+    started_str = started_at.strftime("%d %b %Y") if started_at else "—"
+    target_str = getattr(plan, "target_completion_date", None) or "—"
+    if target_str != "—" and hasattr(target_str, "strftime"):
+        target_str = target_str.strftime("%d %b %Y")
+
+    completed = int(getattr(plan, "completed_steps", 0) or 0)
+    total = int(getattr(plan, "total_steps", 0) or 0)
+    blocked = int(getattr(plan, "blocked_steps", 0) or 0)
+    pct = int(getattr(plan, "completion_percentage", 0) or 0)
+    if total == 0 and steps:
+        total = len(steps)
+    pct = min(max(pct, 0), 100)
+
+    # Step rows
+    if steps:
+        rows_html = []
+        for s in steps:
+            status_val = getattr(s, "step_status", None)
+            status_str = str(getattr(status_val, "value", status_val) or "PENDING")
+            target_step_date = getattr(s, "target_completion_date", None)
+            target_step_str = (
+                target_step_date.strftime("%d %b %Y")
+                if hasattr(target_step_date, "strftime")
+                else (target_step_date or "—")
+            )
+            statutory = getattr(s, "statutory_basis", None) or ""
+            complexity_val = getattr(s, "complexity", None)
+            complexity_str = str(getattr(complexity_val, "value", complexity_val) or "")
+            notes = getattr(s, "completion_notes", None) or ""
+            blocked_reason = getattr(s, "blocked_reason", None) or ""
+
+            notes_html = (
+                f'<div class="step-notes">{esc(notes)}</div>'
+                if notes
+                else ""
+            )
+            blocked_html = (
+                f'<div class="step-blocked">Blocked: {esc(blocked_reason)}</div>'
+                if blocked_reason
+                else ""
+            )
+
+            rows_html.append(
+                f"<tr>"
+                f'<td class="step-num">{esc(getattr(s, "step_number", ""))}</td>'
+                f"<td><strong>{esc(getattr(s, 'step_title', ''))}</strong>"
+                f"<div style=\"font-size:10px;color:#6b7280;margin-top:2px;\">{esc(getattr(s, 'step_description', ''))[:240]}</div>"
+                f"{blocked_html}{notes_html}</td>"
+                f"<td>{esc(statutory)}</td>"
+                f"<td>{esc(complexity_str)}</td>"
+                f'<td><span class="status-badge status-{esc(status_str)}">{esc(status_str.replace("_", " "))}</span></td>'
+                f"<td>{esc(target_step_str)}</td>"
+                f"</tr>"
+            )
+        rows = "".join(rows_html)
+    else:
+        rows = '<tr><td colspan="6">No rescue steps recorded.</td></tr>'
+
+    return f"""
+    <div class="rescue-section">
+        <h3>Corporate Rescue Plan</h3>
+        <div class="rescue-meta">
+            <strong>Plan:</strong> {esc(getattr(plan, "plan_name", ""))}<br>
+            <strong>Triggered by risk band:</strong> {esc(getattr(plan, "initial_risk_band", ""))}
+            &nbsp;|&nbsp; <strong>Initial score:</strong> {esc(getattr(plan, "initial_score", ""))}/100<br>
+            <strong>Started:</strong> {esc(started_str)}
+            &nbsp;|&nbsp; <strong>Target completion:</strong> {esc(target_str)}
+            &nbsp;|&nbsp; <strong>Steps:</strong> {esc(completed)}/{esc(total)} completed
+            {"&nbsp;|&nbsp; <strong>Blocked:</strong> " + esc(str(blocked)) if blocked else ""}
+        </div>
+        <div class="progress-label">Progress: {esc(pct)}%</div>
+        <div class="progress-wrap">
+            <div class="progress-bar" style="width:{esc(pct)}%;"></div>
+        </div>
+        <table class="steps-table">
+            <tr>
+                <th>#</th>
+                <th>Step</th>
+                <th>Statutory Basis</th>
+                <th>Complexity</th>
+                <th>Status</th>
+                <th>Target Date</th>
+            </tr>
+            {rows}
+        </table>
+    </div>
+    """
+
+
 def build_compliance_report_html(
     company: Any,
     flags: Any,
     generated_at: datetime,
     logo_uri: str | None = None,
+    rescue_plan: Any = None,
 ) -> str:
-    """Pure function: company + flags -> report HTML. All dynamic values escaped.
+    """Pure function: company + flags + rescue_plan -> report HTML. All dynamic values escaped.
 
     logo_uri must come from pdf_render.asset_uri(), never from user input.
+    rescue_plan may be None (GREEN/YELLOW company, or RED/BLACK company that
+    hasn't triggered rescue generation yet); in that case the rescue section
+    is omitted entirely.
     """
     score = company.current_compliance_score or 0
     band = company.current_risk_band or "NOT_EVALUATED"
@@ -96,6 +229,8 @@ def build_compliance_report_html(
         if logo_uri
         else ""
     )
+
+    rescue_html = _render_rescue_section(rescue_plan)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -127,6 +262,8 @@ def build_compliance_report_html(
         {rows}
     </table>
 
+    {rescue_html}
+
     <div class="footer">
         <p>This compliance intelligence output is subject to professional review under the Companies Act 1994 (Bangladesh).</p>
         <p>Automated compliance screening. Not legal advice. Consult your legal counsel.</p>
@@ -142,6 +279,17 @@ class PDFReportService:
     async def generate_company_compliance_pdf(self, company_id: str) -> Response:
         company = await CompanyService(self.db).get_by_id_or_404(company_id)
         flags = await ComplianceService(self.db).get_active_flags(company_id)
+
+        # Fetch the active rescue plan (if any) so the PDF includes the
+        # 8-step recovery roadmap. GREEN/YELLOW companies have no plan;
+        # RED/BLACK companies may not have triggered rescue generation yet.
+        # Failure to load the plan must NOT break PDF generation — we degrade
+        # gracefully to a flags-only report.
+        rescue_plan = None
+        try:
+            rescue_plan = await RescueService(self.db).get_active_plan(company.id)
+        except Exception:
+            rescue_plan = None
 
         # COM-007: bind report to evidence snapshot + engine version
         score_snapshot = await self.db.execute(
@@ -159,6 +307,7 @@ class PDFReportService:
             flags,
             datetime.now(REPORT_TZ),
             logo_uri=asset_uri(LOGO_FILE),
+            rescue_plan=rescue_plan,
         )
         pdf_bytes = await render_html_to_pdf_async(html_content)
 
