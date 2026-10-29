@@ -1,0 +1,252 @@
+==============================================================================
+ DEEP LEGAL CITATION AUDIT - NLC RULE ENGINE
+ Statute: Companies Act 1994 (Bangladesh) - rule-map ground truth v1.0
+ Generated: 2026-10-30T01:17:18  |  Repo: F:\NLC_RECOVERY_CLONES\nlc_platform_clean
+==============================================================================
+
+[A] REPO STATE
+    branch:         main
+    last 3 commits: 366044f Fix 11 citation mismatches (increased search window to 800 chars) | 7a56ab8 Fix 11 citation mismatches per auditor rule-map v1.0 | 8326226 Fix AUD-001 comment: 210(2A) -> 210(6), 120d -> 30d
+    working tree:   2 dirty file(s)
+      ?? legal_audit/legal_audit_20261030_010940.txt
+      ?? legal_audit/legal_audit_20261030_011214.txt
+
+[B] SCAN SUMMARY
+    files scanned: 246 (py: 233, json: 13)
+    rule declarations found: 118 (distinct rule_ids: 87)
+
+[C] CITATION AUDIT PER RULE
+    WARN  ACC-001   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1657
+    PASS  ACC-002   1 decl(s), citation OK  [app\rule_engine\engine.py:1671]
+    WARN  ACC-003   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1684
+    PASS  AGM-001   3 decl(s), citation OK  [app\rule_engine\engine.py:718]
+    FAIL  AGM-002   1 decl(s) at app\rule_engine\engine.py:756
+        expected any of: Section 85 / Section 89 / s.85 / s.89
+    WARN  AGM-003   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:770
+    WARN  AGM-004   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:785
+    WARN  AGM-005   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:797
+    WARN  AGM-006   unmapped rule (2 decl) - extend EXPECTED table
+        at alembic\versions\0010_fix_rule_identities.py:54; app\rule_engine\engine.py:809
+    WARN  AGM-007   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1491
+    PASS  AR-001    3 decl(s), citation OK  [alembic\versions\0010_fix_rule_identities.py:134]
+    WARN  AR-002    unmapped rule (2 decl) - extend EXPECTED table
+        at alembic\versions\0010_fix_rule_identities.py:135; app\rule_engine\engine.py:840
+    WARN  AR-003    unmapped rule (2 decl) - extend EXPECTED table
+        at alembic\versions\0010_fix_rule_identities.py:136; app\rule_engine\engine.py:852
+    WARN  AR-004    unmapped rule (2 decl) - extend EXPECTED table
+        at alembic\versions\0010_fix_rule_identities.py:137; app\rule_engine\engine.py:870
+    PASS  AUD-001   3 decl(s), citation OK  [alembic\versions\0010_fix_rule_identities.py:63]
+    PASS  AUD-002   2 decl(s), citation OK  [alembic\versions\0010_fix_rule_identities.py:72]
+    WARN  AUD-003   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:690
+    WARN  AUD-004   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:703
+    PASS  AUD-005   1 decl(s), citation OK  [app\rule_engine\engine.py:663]
+    WARN  BNK-001   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1412
+    WARN  BNK-002   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1425
+    WARN  BNK-003   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1438
+    WARN  BOD-001   unmapped rule (2 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1603; app\rule_engine\engine.py:1616
+    WARN  BOD-002   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1629
+    WARN  BOD-003   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1641
+    WARN  BSEC-001  unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1551
+    WARN  BSEC-002  unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1558
+    WARN  BSEC-003  unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1565
+    WARN  BSEC-004  unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1572
+    PASS  CAP-001   1 decl(s), citation OK  [app\rule_engine\engine.py:1171]
+    PASS  CAP-002   1 decl(s), citation OK  [app\rule_engine\engine.py:1185]
+    PASS  CAP-003   1 decl(s), citation OK  [app\rule_engine\engine.py:1209]
+    WARN  CAP-004   unmapped rule (2 decl) - extend EXPECTED table
+        at alembic\versions\0031_add_board_accounts_rules.py:46; app\rule_engine\engine.py:1223
+    PASS  CHG-001   1 decl(s), citation OK  [app\rule_engine\engine.py:1197]
+    PASS  DEF-001   1 decl(s), citation OK  [app\rule_engine\engine.py:1706]
+    WARN  DEF-002   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1352
+    PASS  DIR-001   2 decl(s), citation OK  [app\rule_engine\engine.py:888]
+    PASS  DIR-002   1 decl(s), citation OK  [app\rule_engine\engine.py:915]
+    PASS  DIR-003   1 decl(s), citation OK  [app\rule_engine\engine.py:937]
+    PASS  DIR-004   1 decl(s), citation OK  [app\rule_engine\engine.py:925]
+    WARN  DIR-005   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1498
+    WARN  DIR-006   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1505
+    WARN  DIR-007   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:949
+    WARN  DIR-008   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1529
+    WARN  DIR-010   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1539
+    PASS  ESC-001   exempt (internal/non-CA basis), 1 decl
+    WARN  ESC-002   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1733
+    WARN  ESC-003   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1755
+    WARN  ESC-004   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1512
+    WARN  ESC-005   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1520
+    WARN  FX-001    unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1582
+    PASS  INC-001   3 decl(s), citation OK  [alembic\versions\0029_fix_inc001_inc002_identities.py:31]
+    FAIL  INC-002   forbidden rule id still present (2 decl) - D2 fix: INC-002 duplicated INC-001; it was split into OFF-001 (s.77(2) registered-office notice, 28 days, Form VI).
+        at alembic\versions\0029_fix_inc001_inc002_identities.py:44; app\rule_engine\engine.py:507
+    PASS  INC-003   3 decl(s), citation OK  [alembic\versions\0007_fix_tl_inc003_rules.py:69]
+    WARN  INC-004   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:538
+    WARN  INC-005   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:552
+    WARN  INC-006   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:564
+    WARN  INC-007   unmapped rule (5 decl) - extend EXPECTED table
+        at alembic\versions\0007_fix_tl_inc003_rules.py:28; alembic\versions\0007_fix_tl_inc003_rules.py:78; alembic\versions\0007_fix_tl_inc003_rules.py:86
+    WARN  LBR-001   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1455
+    WARN  LBR-002   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1467
+    WARN  LBR-003   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1478
+    PASS  MEM-001   1 decl(s), citation OK  [app\rule_engine\engine.py:581]
+    PASS  OFF-001   3 decl(s), citation OK  [alembic\versions\0010_fix_rule_identities.py:146]
+    PASS  REG-001   1 decl(s), citation OK  [app\rule_engine\engine.py:1112]
+    FAIL  REG-002   forbidden citation(s) found
+        alembic\versions\0010_fix_rule_identities.py:123  forbidden 'sec 87'  ...(Sec 34), Directors (Sec 90), Charges (Sec 87), or AGM Minutes (Sec 83).' WHERE rule_id = '...
+        alembic\versions\0010_fix_rule_identities.py:123  forbidden 'sec 90)'  ...s missing: Members (Sec 34), Directors (Sec 90), Charges (Sec 87), or AGM Minutes (Sec 83).'...
+        alembic\versions\0010_fix_rule_identities.py:123  forbidden 'sec 83)'  ...90), Charges (Sec 87), or AGM Minutes (Sec 83).' WHERE rule_id = 'REG-002'; """) #...
+        app\rule_engine\engine.py:1125  forbidden 'sec 87'  ...(Sec 34), Directors (Sec 90), Charges (Sec 87), AGM Minutes (Sec 89).", statutory_b...
+        app\rule_engine\engine.py:1125  forbidden 'sec 90)'  ...missing)}. Members (Sec 34), Directors (Sec 90), Charges (Sec 87), AGM Minutes (Sec 89).",...
+    WARN  REG-003   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1137
+    WARN  REG-004   unmapped rule (1 decl) - extend EXPECTED table
+        at alembic\versions\0003_add_reg_004_rule.py:41
+    PASS  SH-001    1 decl(s), citation OK  [app\rule_engine\engine.py:967]
+    WARN  SH-002    unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:981
+    WARN  SH-003    unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:995
+    WARN  STR-001   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1371
+    WARN  STR-002   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1384
+    WARN  STR-003   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1397
+    WARN  TAX-001   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1239
+    WARN  TAX-002   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1250
+    WARN  TAX-003   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1280
+    WARN  TAX-004   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1312
+    FAIL  TL-001    2 decl(s) at alembic\versions\0007_fix_tl_inc003_rules.py:77; app\rule_engine\engine.py:605
+        expected any of: Income Tax / VAT / NBR / Tax Ordinance / VAT Act
+    WARN  TL-002    unmapped rule (2 decl) - extend EXPECTED table
+        at alembic\versions\0007_fix_tl_inc003_rules.py:85; app\rule_engine\engine.py:619
+    PASS  TR-001    2 decl(s), citation OK  [alembic\versions\0010_fix_rule_identities.py:149]
+    WARN  TR-002    unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1029
+    WARN  TR-003    unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1041
+    WARN  TR-004    unmapped rule (2 decl) - extend EXPECTED table
+        at alembic\versions\0010_fix_rule_identities.py:150; app\rule_engine\engine.py:1053
+    WARN  TR-005    unmapped rule (2 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1065; tests\unit\test_transfer_scenarios.py:12
+    WARN  TR-006    unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1085
+    WARN  VAT-002   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1328
+    WARN  VAT-003   unmapped rule (1 decl) - extend EXPECTED table
+        at app\rule_engine\engine.py:1339
+
+[D] FORBIDDEN RULE IDS (must be removed / renamed)
+    FAIL  INC-002 - D2 fix: INC-002 duplicated INC-001; it was split into OFF-001 (s.77(2) registered-office notice, 28 days, Form VI).
+
+[E] GLOBAL FORBIDDEN CITATIONS (wrong-statute strings)
+    PASS  none found
+
+[F] ENGINE PATCH STATE
+    WARN  C1 alembic\env.py: CATEGORY_CAPS not found
+    WARN  C2 alembic\env.py: 'eval_state' not found - F3 UNKNOWN policy not applied (run tools/apply_legal_fixes.py)
+    WARN  C5 alembic\env.py: is_black_override not defined
+    INFO  C4 alembic\env.py: UNKNOWN_COVERAGE_CAP not found (optional coverage penalty not applied)
+    WARN  C1 app\models\__init__.py: CATEGORY_CAPS not found
+    WARN  C2 app\models\__init__.py: 'eval_state' not found - F3 UNKNOWN policy not applied (run tools/apply_legal_fixes.py)
+    WARN  C5 app\models\__init__.py: is_black_override not defined
+    INFO  C4 app\models\__init__.py: UNKNOWN_COVERAGE_CAP not found (optional coverage penalty not applied)
+    WARN  C1 app\models\company.py: CATEGORY_CAPS not found
+    WARN  C2 app\models\company.py: 'eval_state' not found - F3 UNKNOWN policy not applied (run tools/apply_legal_fixes.py)
+    WARN  C5 app\models\company.py: is_black_override not defined
+    INFO  C4 app\models\company.py: UNKNOWN_COVERAGE_CAP not found (optional coverage penalty not applied)
+    WARN  C1 app\models\compliance.py: CATEGORY_CAPS not found
+    WARN  C2 app\models\compliance.py: 'eval_state' not found - F3 UNKNOWN policy not applied (run tools/apply_legal_fixes.py)
+    WARN  C5 app\models\compliance.py: is_black_override not defined
+    INFO  C4 app\models\compliance.py: UNKNOWN_COVERAGE_CAP not found (optional coverage penalty not applied)
+    WARN  C1 app\rule_engine\__init__.py: CATEGORY_CAPS not found
+    WARN  C2 app\rule_engine\__init__.py: 'eval_state' not found - F3 UNKNOWN policy not applied (run tools/apply_legal_fixes.py)
+    WARN  C5 app\rule_engine\__init__.py: is_black_override not defined
+    INFO  C4 app\rule_engine\__init__.py: UNKNOWN_COVERAGE_CAP not found (optional coverage penalty not applied)
+    WARN  C1 app\rule_engine\engine.py: CATEGORY_CAPS not found
+    PASS  C2 app\rule_engine\engine.py: eval_state field present (F3 UNKNOWN policy)
+    WARN  C5 app\rule_engine\engine.py: is_black_override not defined
+    PASS  C4 app\rule_engine\engine.py: UNKNOWN_COVERAGE_CAP present (coverage penalty)
+    WARN  C1 app\services\compliance_service.py: CATEGORY_CAPS not found
+    WARN  C2 app\services\compliance_service.py: 'eval_state' not found - F3 UNKNOWN policy not applied (run tools/apply_legal_fixes.py)
+    WARN  C5 app\services\compliance_service.py: is_black_override not defined
+    INFO  C4 app\services\compliance_service.py: UNKNOWN_COVERAGE_CAP not found (optional coverage penalty not applied)
+    WARN  C1 app\services\notification_service.py: CATEGORY_CAPS not found
+    WARN  C2 app\services\notification_service.py: 'eval_state' not found - F3 UNKNOWN policy not applied (run tools/apply_legal_fixes.py)
+    WARN  C5 app\services\notification_service.py: is_black_override not defined
+    INFO  C4 app\services\notification_service.py: UNKNOWN_COVERAGE_CAP not found (optional coverage penalty not applied)
+    WARN  C1 tests\unit\test_audit_trail_enterprise.py: CATEGORY_CAPS not found
+    WARN  C2 tests\unit\test_audit_trail_enterprise.py: 'eval_state' not found - F3 UNKNOWN policy not applied (run tools/apply_legal_fixes.py)
+    WARN  C5 tests\unit\test_audit_trail_enterprise.py: is_black_override not defined
+    INFO  C4 tests\unit\test_audit_trail_enterprise.py: UNKNOWN_COVERAGE_CAP not found (optional coverage penalty not applied)
+    WARN  C1 tests\unit\test_data_model.py: CATEGORY_CAPS not found
+    WARN  C2 tests\unit\test_data_model.py: 'eval_state' not found - F3 UNKNOWN policy not applied (run tools/apply_legal_fixes.py)
+    WARN  C5 tests\unit\test_data_model.py: is_black_override not defined
+    INFO  C4 tests\unit\test_data_model.py: UNKNOWN_COVERAGE_CAP not found (optional coverage penalty not applied)
+    WARN  C1 tests\unit\test_rescue_planner_parity.py: CATEGORY_CAPS not found
+    WARN  C2 tests\unit\test_rescue_planner_parity.py: 'eval_state' not found - F3 UNKNOWN policy not applied (run tools/apply_legal_fixes.py)
+    WARN  C5 tests\unit\test_rescue_planner_parity.py: is_black_override not defined
+    INFO  C4 tests\unit\test_rescue_planner_parity.py: UNKNOWN_COVERAGE_CAP not found (optional coverage penalty not applied)
+    WARN  C1 tests\unit\test_rescue_sequence_parity.py: CATEGORY_CAPS not found
+    WARN  C2 tests\unit\test_rescue_sequence_parity.py: 'eval_state' not found - F3 UNKNOWN policy not applied (run tools/apply_legal_fixes.py)
+    WARN  C5 tests\unit\test_rescue_sequence_parity.py: is_black_override not defined
+    INFO  C4 tests\unit\test_rescue_sequence_parity.py: UNKNOWN_COVERAGE_CAP not found (optional coverage penalty not applied)
+    WARN  C1 tests\unit\test_rule_engine.py: CATEGORY_CAPS not found
+    WARN  C2 tests\unit\test_rule_engine.py: 'eval_state' not found - F3 UNKNOWN policy not applied (run tools/apply_legal_fixes.py)
+    WARN  C5 tests\unit\test_rule_engine.py: is_black_override not defined
+    INFO  C4 tests\unit\test_rule_engine.py: UNKNOWN_COVERAGE_CAP not found (optional coverage penalty not applied)
+    WARN  C1 tests\unit\test_transfer_scenarios.py: CATEGORY_CAPS not found
+    WARN  C2 tests\unit\test_transfer_scenarios.py: 'eval_state' not found - F3 UNKNOWN policy not applied (run tools/apply_legal_fixes.py)
+    WARN  C5 tests\unit\test_transfer_scenarios.py: is_black_override not defined
+    INFO  C4 tests\unit\test_transfer_scenarios.py: UNKNOWN_COVERAGE_CAP not found (optional coverage penalty not applied)
+    WARN  C1 tools\wiring_audit.py: CATEGORY_CAPS not found
+    WARN  C2 tools\wiring_audit.py: 'eval_state' not found - F3 UNKNOWN policy not applied (run tools/apply_legal_fixes.py)
+    WARN  C5 tools\wiring_audit.py: is_black_override not defined
+    INFO  C4 tools\wiring_audit.py: UNKNOWN_COVERAGE_CAP not found (optional coverage penalty not applied)
+    WARN  C1 verify_rule_integrity.py: CATEGORY_CAPS not found
+    WARN  C2 verify_rule_integrity.py: 'eval_state' not found - F3 UNKNOWN policy not applied (run tools/apply_legal_fixes.py)
+    WARN  C5 verify_rule_integrity.py: is_black_override not defined
+    INFO  C4 verify_rule_integrity.py: UNKNOWN_COVERAGE_CAP not found (optional coverage penalty not applied)
+
+[G] VERDICT: 5 FAIL / 107 WARN / 25 PASS
+    REMEDIATION:
+      1. python tools/apply_legal_fixes.py        (auto-applies F1/F2/F3)
+      2. update stale test expectations manually  (see README section 5)
+      3. re-run: python tools/legal_citation_audit.py   until exit 0
+==============================================================================
