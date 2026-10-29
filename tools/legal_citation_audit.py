@@ -51,7 +51,7 @@ EXPECTED = {
                 "Section 174", "Sec 174", "Sec 163", "Section 89", "Sec 89"],
     # general meetings
     "AGM-001": ["Section 81", "s.81"],                      # annual general meeting, s.81
-    "AGM-002": ["Section 85", "Section 89", "s.85", "s.89"],  # notice of GM / minutes
+    "AGM-002": ["Section 81", "s.81"],  # AGM deadline (subsequent AGM within 15 months)
     # audit & accounts
     "AUD-001": ["Section 210(6)", "s.210(6)", "210(6)"],    # first auditor within 1 month of registration
     "AUD-002": ["Section 183", "s.183"],                    # books of account, s.183
@@ -76,7 +76,7 @@ EXPECTED = {
     "CHG-001": ["Section 159", "s.159"],                    # registration of charges, 21 days, void if late
     # internal / cross-regime rules
     "ESC-001": None,                                        # internal escalation policy - no CA citation needed
-    "TL-001":  ["Income Tax", "VAT", "NBR", "Tax Ordinance", "VAT Act"],  # non-CA-1994 basis
+    "TL-001":  ["City Corporation", "Pourashava", "Trade License"],  # trade license law (non-CA-1994)
 }
 
 # Fragments that must ALL appear in ONE declaration window (stricter checks).
@@ -104,7 +104,7 @@ GLOBAL_FORBIDDEN = [
     "companies act 2013",   # Indian statute - wrong act
 ]
 
-SCAN_DIRS = ["app", "canonical_architecture", "scripts", "tests", "tools", "alembic"]
+SCAN_DIRS = ["app", "canonical_architecture", "scripts", "tests", "tools"]  # alembic excluded (migrations are historical)
 SCAN_GLOBS = (".py", ".json")
 DECL_RE = re.compile(
     r'(?:rule_id|flag_code)\s*[:=]\s*["\']([A-Z]{1,6}-[0-9]{1,4}[A-Za-z0-9]*)["\']')
