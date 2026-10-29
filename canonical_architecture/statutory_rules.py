@@ -130,21 +130,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "score_impact": 15,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
-    "OFF-001": {
-        "rule_id": "OFF-001",
-        "legal_domain": "Corporate",
-        "law": "Section 23, Companies Act 1994 (Bangladesh)",
-        "requirement": "Memorandum and Articles Not Filed - MoA and AoA not filed with RJSC. Section 23: constitutional documents required. Without filing, company has no valid constitution.",
-        "provision": "TBD",
-        "provision_status": ProvisionStatus.RECONCILE,
-        "applicability": "ALL_ACTIVE_COMPANIES",
-        "exceptions": [],
-        "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "BLACK",
-        "score_impact": 25,
-        "invariants": ["R-007", "R-008", "R-014", "R-019"]
-    },
+    
     "INC-003": {
         "rule_id": "INC-003",
         "legal_domain": "Corporate",
