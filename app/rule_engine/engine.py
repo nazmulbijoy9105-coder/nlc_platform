@@ -366,7 +366,7 @@ DIRECTOR_FILING_DEADLINE_DAYS = 14
 SHARE_CERTIFICATE_DEADLINE_DAYS = 90
 REGISTERED_OFFICE_DEADLINE_DAYS = 28
 FIRST_AUDITOR_DEADLINE_DAYS = 30  # Section 210(6): first auditor within 1 month (30 days) of registration
-CHARGE_REGISTRATION_DEADLINE_DAYS = 30  # verify: s.174 window (RJSC practice 21 days)
+CHARGE_REGISTRATION_DEADLINE_DAYS = 21  # Section 159(1): charge registration within 21 days of creation
 ALLOTMENT_FILING_DEADLINE_DAYS = 60
 SPECIAL_RESOLUTION_DEADLINE_DAYS = 15  # Companies Act 1994, Section 88 (15 days)
 
@@ -595,7 +595,7 @@ class NLCRuleEngine:
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="Trade License not obtained from City Corporation/Municipality.",
-                statutory_basis="City Corporation Ordinance 1983 / Pourashava Act 2009",
+                statutory_basis="Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
                 detail={"trade_license": False},
             ))
         elif c.trade_license_expiry and c.trade_license_expiry < self.today:
@@ -609,7 +609,7 @@ class NLCRuleEngine:
                 score_impact=imp,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description=f"Trade License expired {days_expired} days ago. Must renew by 31 March annually.",
-                statutory_basis="City Corporation Ordinance 1983 / Pourashava Act 2009",
+                statutory_basis="Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
                 detail={"expired_days": days_expired},
             ))
 
@@ -1174,8 +1174,8 @@ class NLCRuleEngine:
                         severity=Severity.YELLOW if delay < 90 else Severity.RED,
                         score_impact=5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"{charge.charge_type} charge (Tk {charge.amount_bdt:,.2f}) not registered. Section 174: registration deadline. Unregistered charge void against creditors and liquidator.",
-                        statutory_basis="Section 174, Companies Act 1994 (Bangladesh)",
+                        description=f"{charge.charge_type} charge (Tk {charge.amount_bdt:,.2f}) not registered within 21 days of creation. Section 159(1): unregistered charge void against creditors and liquidator.",
+                        statutory_basis="Section 159(1), Companies Act 1994 (Bangladesh)",
                         detail={"charge_id": charge.charge_id, "delay": delay, "amount": charge.amount_bdt}
                     ))
 
