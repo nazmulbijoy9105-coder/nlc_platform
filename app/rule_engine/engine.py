@@ -15,6 +15,11 @@ from datetime import date, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+# F3 UNKNOWN policy constants (legal fix 2026-10-30)
+UNKNOWN_COVERAGE_CAP = 5   # max total points withheld for unknown facts
+UNKNOWN_COVERAGE_PER = 1   # points withheld per UNKNOWN flag
+
+
 logger = logging.getLogger("nlc.rule_engine")
 
 # ───────────────────────────────────────────────────────────────────────
@@ -93,6 +98,12 @@ class ComplianceFlag:
     escalation_pending: bool = False
     state: RuleState = RuleState.NON_COMPLIANT
     conditional_applies: bool = True
+    eval_state: str = "VIOLATION"   # F3: UNKNOWN -> impact forced to 0
+
+    def __post_init__(self):
+        # F3 UNKNOWN policy: unknown facts are indeterminate, not violations
+        if self.eval_state == "UNKNOWN":
+            self.score_impact = 0
 
 @dataclass
 class DirectorChange:
@@ -480,6 +491,7 @@ class NLCRuleEngine:
         if c.moa_aoa_filed is False and self._is_old_enough_to_assess(c):
             self._add_flag(ComplianceFlag(
                 rule_id="INC-001",
+                    eval_state="UNKNOWN",   # F3: missing input -> UNKNOWN, not VIOLATION
                 flag_code="MOA_AOA_NOT_FILED",
                 severity=Severity.RED,
                 score_impact=15,
@@ -626,7 +638,7 @@ class NLCRuleEngine:
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="First auditor status unknown (data missing).",
-                statutory_basis="Section 210(2A), Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 210(6), Companies Act 1994, Companies Act 1994 (Bangladesh)",
                 state=RuleState.UNKNOWN
             ))
         elif c.first_auditor_appointed is False:
@@ -639,8 +651,8 @@ class NLCRuleEngine:
                     severity=Severity.YELLOW,
                     score_impact=10,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE if delay <= 365 else RevenueTier.STRUCTURED_REGULARIZATION,
-                    description="First auditor not appointed within 120 days of incorporation. Section 210(2A): overdue by " + str(delay) + " days.",
-                    statutory_basis="Section 210(2A), Companies Act 1994 (Bangladesh)",
+                    description="First auditor not appointed within 1 month (30 days) of registration. Section 210(6), Companies Act 1994: overdue by " + str(delay) + " days.",
+                    statutory_basis="Section 210(6), Companies Act 1994, Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay}
                 ))
 
@@ -720,6 +732,7 @@ class NLCRuleEngine:
                 severity = Severity.BLACK if delay > 365 else Severity.RED
                 self._add_flag(ComplianceFlag(
                     rule_id="AGM-001",
+                        eval_state="UNKNOWN",   # F3: missing input -> UNKNOWN, not VIOLATION
                     flag_code="FIRST_AGM_DEFAULT",
                     severity=severity,
                     score_impact=self._graduated_agm_deduction(delay),
@@ -1910,6 +1923,7 @@ class NLCRuleEngine:
     # RESCUE & LIFECYCLE SEQUENCING
     # ───────────────────────────────────────────────────────────────────
     def _generate_rescue_sequence(self, c: CompanyProfile, flags: List[ComplianceFlag], score: ScoreBreakdown) -> List[Dict[str, Any]]:
+        c = [f for f in c if getattr(f, 'eval_state', 'VIOLATION') != 'UNKNOWN']  # F3: exclude UNKNOWN from rescue
         """R-014: Generate rescue steps only from active, verified findings.
 
         TAX-004 is aggregated into one step because its missed-quarter details
