@@ -68,7 +68,7 @@ class StatutoryRule:
 _RULES = (
     StatutoryRule(
         "INC-001", "Corporate", "Companies Act 1994",
-        "File Memorandum and Articles of Association", "Section 11",
+        "File Memorandum and Articles of Association", "Section 23",
         ProvisionStatus.RECONCILE, "RJSC", ("MOA_FILED", "AOA_FILED"),
         Severity.RED, 15),
     StatutoryRule(
@@ -97,12 +97,12 @@ _RULES = (
     StatutoryRule(
         "DIR-005", "Corporate", "Companies Act 1994",
         "Maintain statutory register mapped to DIR-005 (mapping under review)",
-        "Section 97", ProvisionStatus.RECONCILE, "INTERNAL",
+        "Section 130", ProvisionStatus.RECONCILE, "INTERNAL",
         ("REGISTER_DIR_005",), Severity.YELLOW, 5),
     StatutoryRule(
         "DIR-006", "Corporate", "Companies Act 1994",
         "Maintain statutory register mapped to DIR-006 (mapping under review)",
-        "Section 98", ProvisionStatus.RECONCILE, "INTERNAL",
+        "Section 130", ProvisionStatus.RECONCILE, "INTERNAL",
         ("REGISTER_DIR_006",), Severity.YELLOW, 5),
 )
 
@@ -133,8 +133,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "INC-002": {
         "rule_id": "INC-002",
         "legal_domain": "Corporate",
-        "law": "Section 11, Companies Act 1994 (Bangladesh)",
-        "requirement": "Memorandum and Articles Not Filed - MoA and AoA not filed with RJSC. Section 11: constitutional documents required. Without filing, company has no valid constitution.",
+        "law": "Section 23, Companies Act 1994 (Bangladesh)",
+        "requirement": "Memorandum and Articles Not Filed - MoA and AoA not filed with RJSC. Section 23: constitutional documents required. Without filing, company has no valid constitution.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -343,8 +343,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AGM-006": {
         "rule_id": "AGM-006",
         "legal_domain": "Corporate",
-        "law": "Section 83, Companies Act 1994 (Bangladesh)",
-        "requirement": "AGM Minutes Not Prepared - AGM held but minutes not prepared or signed by chairman. Section 83: minutes are prima facie evidence of proceedings. Without minutes, AGM validity can be challenged.",
+        "law": "Section 89, Companies Act 1994 (Bangladesh)",
+        "requirement": "AGM Minutes Not Prepared - AGM held but minutes not prepared or signed by chairman. Section 89: minutes are prima facie evidence of proceedings. Without minutes, AGM validity can be challenged.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",

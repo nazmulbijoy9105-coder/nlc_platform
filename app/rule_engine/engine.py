@@ -497,7 +497,7 @@ class NLCRuleEngine:
                     severity=Severity.YELLOW if delay < 90 else Severity.RED,
                     score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Memorandum and Articles of Association not found in NLC records - verify with RJSC registry. Section 11: constitutional documents required.",
+                    description="Memorandum and Articles of Association not found in NLC records - verify with RJSC registry. Section 23: constitutional documents required.",
                     statutory_basis="Section 23, Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay}
                 ))
@@ -829,7 +829,7 @@ class NLCRuleEngine:
                 severity=Severity.RED,
                 score_impact=20,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=f"{c.unfiled_returns_count} Annual Returns unfiled. Section 304: strike-off risk elevated.",
+                description=f"{c.unfiled_returns_count} Annual Returns unfiled. Section 346: strike-off risk elevated.",
                 statutory_basis="Sections 36 and 304, Companies Act 1994 (Bangladesh)",
                 detail={"unfiled_count": c.unfiled_returns_count}
             ))
@@ -841,7 +841,7 @@ class NLCRuleEngine:
                 severity=Severity.BLACK,
                 score_impact=20,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description=f"{c.unfiled_returns_count} Annual Returns unfiled. Section 304: severe default, director liability.",
+                description=f"{c.unfiled_returns_count} Annual Returns unfiled. Section 346: severe default, director liability.",
                 statutory_basis="Sections 36 and 304, Companies Act 1994 (Bangladesh)",
                 detail={"unfiled_count": c.unfiled_returns_count}
             ))
@@ -892,7 +892,7 @@ class NLCRuleEngine:
                         severity=severity,
                         score_impact=10 if delay > 90 else 5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"Director appointment not filed via Form XII. Section 92: 14-day deadline. Overdue by {delay} days.",
+                        description=f"Director appointment not filed via Form XII. Section 115: 14-day deadline. Overdue by {delay} days.",
                         statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "delay": delay}
                     ))
@@ -904,7 +904,7 @@ class NLCRuleEngine:
                         severity=severity,
                         score_impact=10 if delay > 90 else 5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"Director {change.event_type} not filed via Form XII. Section 92: 14-day deadline. Overdue by {delay} days.",
+                        description=f"Director {change.event_type} not filed via Form XII. Section 115: 14-day deadline. Overdue by {delay} days.",
                         statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "delay": delay, "type": change.event_type}
                     ))
@@ -914,7 +914,7 @@ class NLCRuleEngine:
                         severity=Severity.RED,
                         score_impact=10,
                         revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                        description="Departed director still liable until Form XII filed. Section 92: filing required to release liability.",
+                        description="Departed director still liable until Form XII filed. Section 115: filing required to release liability.",
                         statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id}
                     ))
@@ -956,7 +956,7 @@ class NLCRuleEngine:
                     severity=Severity.YELLOW if delay < 90 else Severity.RED,
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Share allotment not filed via Form XV. Section 50: 30-day deadline. Overdue by {delay} days.",
+                    description=f"Share allotment not filed via Form XV. Section 151: 60-day deadline. Overdue by {delay} days.",
                     statutory_basis="Section 151, Companies Act 1994 (Bangladesh)",
                     detail={"delay": delay}
                 ))
@@ -970,7 +970,7 @@ class NLCRuleEngine:
                     severity=Severity.YELLOW if delay < 90 else Severity.RED,
                     score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Share certificates not issued within 60 days. Section 46: overdue by {delay - SHARE_CERTIFICATE_DEADLINE_DAYS} days.",
+                    description=f"Share certificates not issued within 60 days. Section 158: overdue by {delay - SHARE_CERTIFICATE_DEADLINE_DAYS} days.",
                     statutory_basis="Section 158, Companies Act 1994 (Bangladesh)",
                     detail={"delay": delay}
                 ))
@@ -1006,7 +1006,7 @@ class NLCRuleEngine:
                     severity=Severity.YELLOW,
                     score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Share transfer without Form 117 instrument. Section 108: proper instrument required.",
+                    description="Share transfer without Form 117 instrument. Section 38: proper instrument required.",
                     statutory_basis="Section 38, Companies Act 1994 (Bangladesh)",
                     detail={"transfer_id": transfer.transfer_id}
                 ))
@@ -1030,7 +1030,7 @@ class NLCRuleEngine:
                     severity=Severity.YELLOW,
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Share transfer without board approval. Section 47 + AoA: approval required where restricted.",
+                    description="Share transfer without board approval. Section 38 + AoA: approval required where restricted.",
                     statutory_basis="Section 38; AoA, Companies Act 1994 (Bangladesh)",
                     detail={"transfer_id": transfer.transfer_id}
                 ))
@@ -1054,7 +1054,7 @@ class NLCRuleEngine:
                     severity=Severity.BLACK,
                     score_impact=15,
                     revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                    description="Transfer violated AoA restriction. Section 47: such transfer is void. BLACK override.",
+                    description="Transfer violated AoA restriction. Section 38: such transfer is void. BLACK override.",
                     statutory_basis="Section 38; AoA, Companies Act 1994 (Bangladesh)",
                     detail={"transfer_id": transfer.transfer_id, "override": True},
                     is_black_override=True,
@@ -1485,21 +1485,21 @@ class NLCRuleEngine:
                 rule_id="DIR-005", flag_code="REGISTER_OF_DIRECTORS_INTERESTS_MISSING",
                 severity=Severity.YELLOW, score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="Register of directors interests not maintained. Section 97.",
+                description="Register of directors interests not maintained. Section 130.",
                 statutory_basis="Section 130, Companies Act 1994 (Bangladesh)"))
         if c.register_of_contracts is False:
             self._add_flag(ComplianceFlag(
                 rule_id="DIR-006", flag_code="REGISTER_OF_CONTRACTS_MISSING",
                 severity=Severity.YELLOW, score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="Register of contracts not maintained. Section 98.",
+                description="Register of contracts not maintained. Section 130.",
                 statutory_basis="Section 130, Companies Act 1994 (Bangladesh)"))
         if c.voluntary_winding_up:
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-004", flag_code="VOLUNTARY_WINDING_UP",
                 severity=Severity.BLACK, score_impact=30,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Voluntary winding up. Section 196.",
+                description="Voluntary winding up. Section 286.",
                 statutory_basis="Section 286, Companies Act 1994 (Bangladesh)",
                 is_black_override=True))
         if c.investigation_order:
@@ -1507,7 +1507,7 @@ class NLCRuleEngine:
                 rule_id="ESC-005", flag_code="INVESTIGATION_ORDER_PENDING",
                 severity=Severity.RED, score_impact=20,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="Investigation order pending. Section 199.",
+                description="Investigation order pending. Section 195.",
                 statutory_basis="Section 195, Companies Act 1994 (Bangladesh)"))
 
         # DIR-008: Director holding office of profit (Section 104)
@@ -1708,8 +1708,8 @@ class NLCRuleEngine:
                 severity=Severity.RED,
                 score_impact=15,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=f"2+ year AGM and Return defaults. Section 304: RJSC strike-off risk elevated.",
-                statutory_basis="Section 304, Companies Act 1994 (Bangladesh)",
+                description=f"2+ year AGM and Return defaults. Section 346: RJSC strike-off risk elevated.",
+                statutory_basis="Section 346, Companies Act 1994 (Bangladesh)",
                 detail={"agm_years": agm_years, "ar_years": ar_years}
             ))
 
@@ -1722,8 +1722,8 @@ class NLCRuleEngine:
                 severity=Severity.BLACK,
                 score_impact=25,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description=f"3+ year default or on strike-off list. Section 304: strike-off imminent. NLC risk policy: rescue workflow recommended.",
-                statutory_basis="Section 304, Companies Act 1994 (Bangladesh)",
+                description=f"3+ year default or on strike-off list. Section 346: strike-off imminent. NLC risk policy: rescue workflow recommended.",
+                statutory_basis="Section 346, Companies Act 1994 (Bangladesh)",
                 detail={"agm_years": agm_years, "ar_years": ar_years, "on_list": c.on_rjsc_strike_off_list},
                 is_black_override=True,
                 escalation_pending=True,
