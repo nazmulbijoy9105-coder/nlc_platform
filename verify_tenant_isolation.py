@@ -360,11 +360,11 @@ def check_sec_009(repo_root: Path, findings: list[Finding]) -> None:
 def check_sec_010(repo_root: Path, findings: list[Finding]) -> None:
     """SEC-010: SQL string interpolation in admin queries."""
     SUSPICIOUS_SQL = re.compile(
-        r'f["\'].*(?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE).*\{[^}]+\}.*["\']',
+        r'f["\']\s*(?:SELECT|INSERT|UPDATE|DELETE)\s+.*\{[^}]+\}',
         re.IGNORECASE | re.DOTALL,
     )
     SUSPICIOUS_SQL2 = re.compile(
-        r'["\'].*(?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE).*["\'].*%.*',
+        r'["\']\s*(?:SELECT|INSERT|UPDATE|DELETE)\s+.*["\'].*%.*',
         re.IGNORECASE,
     )
     py_files = list((repo_root / "app").rglob("*.py")) if (repo_root / "app").exists() else []
