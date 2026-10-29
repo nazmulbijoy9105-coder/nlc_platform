@@ -1,0 +1,95 @@
+{
+  "generated_at": "2026-10-29T16:35:25.904662Z",
+  "repo": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean",
+  "route_count": 105,
+  "findings": [
+    {
+      "check_id": "RJSC-001",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\filings.py",
+      "line": 378,
+      "severity": "FAIL",
+      "detail": "Filing operation PATCH /agm/{agm_id}/filed (mark_agm_filed) lacks require_company_access dependency. Any authenticated user can mark a foreign company's filing as filed.",
+      "suggested_fix": "Add `current_company=Depends(require_company_access)` to the decorator chain."
+    },
+    {
+      "check_id": "RJSC-001",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\filings.py",
+      "line": 527,
+      "severity": "FAIL",
+      "detail": "Filing operation PATCH /annual-return/{return_id}/filed (mark_return_filed) lacks require_company_access dependency. Any authenticated user can mark a foreign company's filing as filed.",
+      "suggested_fix": "Add `current_company=Depends(require_company_access)` to the decorator chain."
+    },
+    {
+      "check_id": "RJSC-001",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\rjsc_forms.py",
+      "line": 150,
+      "severity": "FAIL",
+      "detail": "Filing operation PATCH /{form_id}/filed (mark_form_filed) lacks require_company_access dependency. Any authenticated user can mark a foreign company's filing as filed.",
+      "suggested_fix": "Add `current_company=Depends(require_company_access)` to the decorator chain."
+    },
+    {
+      "check_id": "RJSC-002",
+      "file": "(repo)",
+      "line": 0,
+      "severity": "INFO",
+      "detail": "Frontend or API directory not found at expected location; cannot check naming parity.",
+      "suggested_fix": ""
+    },
+    {
+      "check_id": "RJSC-004",
+      "file": "(tests)",
+      "line": 0,
+      "severity": "FAIL",
+      "detail": "Found 6 RJSC routes but only 4 cross-tenant test file(s). Most routes have NO cross-tenant coverage.",
+      "suggested_fix": "Add a cross-tenant test per RJSC route: authenticate as user A, call route with company_id of company B, assert 403/404."
+    },
+    {
+      "check_id": "API-001",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\test_rescue_planner_parity.py",
+      "line": 0,
+      "severity": "FAIL",
+      "detail": "Parity test in test_rescue_planner_parity.py contains 401/skip/xfail markers -- likely the test is failing or being skipped due to auth. Live parity NOT actually verified.",
+      "suggested_fix": "Fix the test fixtures so the parity check returns 200 with the full rule corpus. Do NOT skip -- this is a critical correctness check."
+    },
+    {
+      "check_id": "API-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\admin.py",
+      "line": 0,
+      "severity": "FAIL",
+      "detail": "16/16 routes in F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\admin.py lack any auth/authz dependency.",
+      "suggested_fix": "Add `current_user=Depends(get_current_user)` to every route that should be authenticated. Add a role guard for state-changing operations."
+    },
+    {
+      "check_id": "API-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\auth.py",
+      "line": 0,
+      "severity": "FAIL",
+      "detail": "5/8 routes in F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\auth.py lack any auth/authz dependency.",
+      "suggested_fix": "Add `current_user=Depends(get_current_user)` to every route that should be authenticated. Add a role guard for state-changing operations."
+    },
+    {
+      "check_id": "API-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\health.py",
+      "line": 0,
+      "severity": "FAIL",
+      "detail": "3/3 routes in F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\health.py lack any auth/authz dependency.",
+      "suggested_fix": "Add `current_user=Depends(get_current_user)` to every route that should be authenticated. Add a role guard for state-changing operations."
+    },
+    {
+      "check_id": "API-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\notifications.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "1/3 routes in F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\notifications.py lack any auth/authz dependency.",
+      "suggested_fix": "Add `current_user=Depends(get_current_user)` to every route that should be authenticated. Add a role guard for state-changing operations."
+    },
+    {
+      "check_id": "API-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\webhooks.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "1/7 routes in F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\webhooks.py lack any auth/authz dependency.",
+      "suggested_fix": "Add `current_user=Depends(get_current_user)` to every route that should be authenticated. Add a role guard for state-changing operations."
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "generated_at": "2026-10-29T16:35:29.714141Z",
+  "repo": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean",
+  "findings": [
+    {
+      "check_id": "COM-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\integration\\test_cross_tenant_access.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Approve/reject endpoint in test_cross_tenant_access.py does not appear to record approved_by/actor field. Attribution missing.",
+      "suggested_fix": "Set `document.approved_by = current_user.id` and write an activity_log entry: `Approved document X by user Y at timestamp`."
+    },
+    {
+      "check_id": "COM-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\test_auth_revocation_coverage.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Approve/reject endpoint in test_auth_revocation_coverage.py does not appear to record approved_by/actor field. Attribution missing.",
+      "suggested_fix": "Set `document.approved_by = current_user.id` and write an activity_log entry: `Approved document X by user Y at timestamp`."
+    },
+    {
+      "check_id": "COM-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\test_document_integrity.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Approve/reject endpoint in test_document_integrity.py does not appear to record approved_by/actor field. Attribution missing.",
+      "suggested_fix": "Set `document.approved_by = current_user.id` and write an activity_log entry: `Approved document X by user Y at timestamp`."
+    },
+    {
+      "check_id": "COM-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\test_pdf_report_service.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Approve/reject endpoint in test_pdf_report_service.py does not appear to record approved_by/actor field. Attribution missing.",
+      "suggested_fix": "Set `document.approved_by = current_user.id` and write an activity_log entry: `Approved document X by user Y at timestamp`."
+    },
+    {
+      "check_id": "COM-002",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\tests\\unit\\test_security_enterprise.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Approve/reject endpoint in test_security_enterprise.py does not appear to record approved_by/actor field. Attribution missing.",
+      "suggested_fix": "Set `document.approved_by = current_user.id` and write an activity_log entry: `Approved document X by user Y at timestamp`."
+    },
+    {
+      "check_id": "COM-004",
+      "file": "(engagement)",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "No engagement lifecycle state machine detected. Invalid transitions (e.g. CLOSED -> ASSIGNED) may succeed.",
+      "suggested_fix": "Add a `VALID_ENGAGEMENT_TRANSITIONS` dict and validate every PATCH /engagement against it."
+    },
+    {
+      "check_id": "COM-006",
+      "file": "F:\\NLC_RECOVERY_CLONES\\nlc_platform_clean\\app\\api\\documents.py",
+      "line": 0,
+      "severity": "WARN",
+      "detail": "Notification code lacks visible idempotency key. Worker restart may re-send duplicate deadline alerts.",
+      "suggested_fix": "Add a `notification_id` (uuid) per logical notification; check exists before insert."
+    }
+  ]
+}
