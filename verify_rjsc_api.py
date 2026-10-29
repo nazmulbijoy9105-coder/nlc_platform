@@ -69,7 +69,7 @@ def collect_route_signatures(repo_root: Path) -> list[dict]:
             continue
         lines = text.splitlines()
         for node in ast.walk(tree):
-            if not isinstance(node, ast.FunctionDef):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue
             for dec in node.decorator_list:
                 if not isinstance(dec, ast.Call) or not isinstance(dec.func, ast.Attribute):
@@ -134,7 +134,7 @@ def check_rjsc_002(repo_root: Path, findings: list[Finding]) -> None:
         except SyntaxError:
             continue
         for node in ast.walk(tree):
-            if not isinstance(node, ast.FunctionDef):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue
             for dec in node.decorator_list:
                 if not isinstance(dec, ast.Call) or not isinstance(dec.func, ast.Attribute):

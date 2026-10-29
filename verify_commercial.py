@@ -123,7 +123,7 @@ def check_com_003(repo_root: Path, findings: list[Finding]) -> None:
         except (SyntaxError, OSError):
             continue
         for node in ast.walk(tree):
-            if not isinstance(node, ast.FunctionDef):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue
             for dec in node.decorator_list:
                 if not isinstance(dec, ast.Call) or not isinstance(dec.func, ast.Attribute):

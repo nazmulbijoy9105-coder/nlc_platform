@@ -129,6 +129,7 @@ class RouterVisitor(ast.NodeVisitor):
             })
 
         self.generic_visit(node)
+    visit_AsyncFunctionDef = visit_FunctionDef  # Phase 6a: catch async def routes
 
 
 # ---------------------------------------------------------------------------
