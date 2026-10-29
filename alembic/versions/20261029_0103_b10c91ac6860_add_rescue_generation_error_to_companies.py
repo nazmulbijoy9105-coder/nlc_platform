@@ -19,24 +19,24 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-import sqlalchemy as sa
 
 
 # ── Revision identifiers ──────────────────────────────────────────────
 revision: str = 'b10c91ac6860'
-down_revision: Union[str, None] = '0042_dedup_key'
+down_revision: Union[str, None] = '0043_reconcile_notification_dedup_key'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
     """Apply this migration."""
-    pass
+    op.add_column('companies', sa.Column('rescue_generation_error', sa.Text(), nullable=True))
 
 
 def downgrade() -> None:
     """
     Roll back this migration.
-    Document what data may be lost on downgrade.
+    Drops the rescue_generation_error column. Data in this column is
+    transient error text; no business data is lost.
     """
-    pass
+    op.drop_column('companies', 'rescue_generation_error')
