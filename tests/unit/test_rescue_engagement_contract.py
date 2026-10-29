@@ -73,6 +73,14 @@ async def test_generate_rescue_plan_passes_engagement_id_to_create():
     svc._create_step = AsyncMock(return_value=MagicMock())
     svc._create_tasks_from_steps = AsyncMock()
 
+    # generate_rescue_plan refetches the plan with selectinload() at the end
+    # (to avoid MissingGreenlet on lazy-loaded plan.steps / plan.company in
+    # the response serializer). Mock db.execute to return created_plan from
+    # scalar_one() so the test still validates the create-contract.
+    db.execute = AsyncMock(
+        return_value=MagicMock(scalar_one=Mock(return_value=created_plan))
+    )
+
     engine_output = MagicMock()
     engine_output.rescue_sequence = [{"title": "Test rescue step"}]
     engine_output.score_breakdown = MagicMock(
