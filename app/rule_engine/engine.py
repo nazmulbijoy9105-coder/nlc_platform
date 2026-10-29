@@ -666,7 +666,7 @@ class NLCRuleEngine:
                     score_impact=10,
                     revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                     description="No auditor appointed for current FY. Section 210(2): mandatory at every AGM.",
-                    statutory_basis="Section 210(2), Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 210(3), Companies Act 1994 (Bangladesh)",
                 ))
 
         if c.agm_scheduled_date and c.audit_complete is False:
@@ -681,7 +681,7 @@ class NLCRuleEngine:
                     score_impact=12,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Audit not complete. AGM in {days_to} days. Section 151 requires audited accounts at AGM.",
-                    statutory_basis="Section 151, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
                     detail={"days_to_agm": days_to}
                 ))
 
@@ -891,7 +891,7 @@ class NLCRuleEngine:
                     score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Director filing status unknown for {change.director_id}.",
-                    statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 90, Companies Act 1994 (Bangladesh)",
                     detail={"director_id": change.director_id},
                     state=RuleState.UNKNOWN
                 ))
@@ -906,7 +906,7 @@ class NLCRuleEngine:
                         score_impact=10 if delay > 90 else 5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=f"Director appointment not filed via Form XII. Section 115: 14-day deadline. Overdue by {delay} days.",
-                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
+                        statutory_basis="Section 90, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "delay": delay}
                     ))
                 elif change.event_type in ("resignation", "removal", "death"):
@@ -918,7 +918,7 @@ class NLCRuleEngine:
                         score_impact=10 if delay > 90 else 5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=f"Director {change.event_type} not filed via Form XII. Section 115: 14-day deadline. Overdue by {delay} days.",
-                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
+                        statutory_basis="Section 93, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "delay": delay, "type": change.event_type}
                     ))
                     self._add_flag(ComplianceFlag(
@@ -928,7 +928,7 @@ class NLCRuleEngine:
                         score_impact=10,
                         revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                         description="Departed director still liable until Form XII filed. Section 115: filing required to release liability.",
-                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
+                        statutory_basis="Section 109, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id}
                     ))
 
@@ -970,7 +970,7 @@ class NLCRuleEngine:
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Share allotment not filed via Form XV. Section 151: 60-day deadline. Overdue by {delay} days.",
-                    statutory_basis="Section 151, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 158, Companies Act 1994 (Bangladesh)",
                     detail={"delay": delay}
                 ))
 
@@ -1115,7 +1115,7 @@ class NLCRuleEngine:
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description=f"{len(non_core_missing)} non-core register(s) missing: {', '.join(non_core_missing)}.",
-                statutory_basis="Sections 34, 90, 87, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 34, Companies Act 1994 (Bangladesh)",
                 detail={"missing": non_core_missing}
             ))
 
@@ -1188,7 +1188,7 @@ class NLCRuleEngine:
                         score_impact=5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=f"{charge.charge_type} charge (Tk {charge.amount_bdt:,.2f}) not registered. Section 87: 30-day deadline. Unregistered charge void against liquidator.",
-                        statutory_basis="Section 88, Companies Act 1994 (Bangladesh)",
+                        statutory_basis="Section 151, Companies Act 1994 (Bangladesh)",
                         detail={"charge_id": charge.charge_id, "delay": delay, "amount": charge.amount_bdt}
                     ))
 
@@ -1200,7 +1200,7 @@ class NLCRuleEngine:
                     score_impact=3,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description="Charge satisfaction not filed via Form XIX. Sec 87.",
-                    statutory_basis="Section 88, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 159, Companies Act 1994 (Bangladesh)",
                     detail={"charge_id": charge.charge_id, "charge_type": charge.charge_type}
                 ))
 
@@ -1212,7 +1212,7 @@ class NLCRuleEngine:
                 score_impact=15,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description="Capital reduction without court order. Sec 100.",
-                statutory_basis="Section 59, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 150, Companies Act 1994 (Bangladesh)",
                 is_black_override=True,
             ))
 
@@ -1709,7 +1709,7 @@ class NLCRuleEngine:
                 score_impact=impact,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description=f"{disq_count} director(s) disqualified under Sec 94. Cannot act as director for 5 years.",
-                statutory_basis="Section 94, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 118(6), Companies Act 1994 (Bangladesh)",
                 detail={"disqualifications": c.disqualification_details, "count": disq_count},
                 is_black_override=is_override,
             ))
