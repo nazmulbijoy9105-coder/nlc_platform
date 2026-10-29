@@ -129,7 +129,20 @@ class RescueService(BaseService[RescuePlan]):
                     plan.id, company_id, e, exc_info=True,
                 )
 
-        return plan
+        # Eager-load all relationships the response serializer will access.
+        # Without this, accessing plan.steps / plan.company in _plan_to_response
+        # triggers lazy-load IO outside an async greenlet context -> MissingGreenlet.
+        from sqlalchemy.orm import selectinload
+        stmt = (
+            select(RescuePlan)
+            .options(
+                selectinload(RescuePlan.steps),
+                selectinload(RescuePlan.company),
+            )
+            .where(RescuePlan.id == plan.id)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one()
 
     async def _create_step(
         self,

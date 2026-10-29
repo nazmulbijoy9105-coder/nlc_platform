@@ -391,37 +391,60 @@ def on_task_retry(
 # ═══════════════════════════════════════════════════════════════════════
 
 def check_worker_health() -> dict[str, Any]:
-    """
-    Check Celery worker health.
-    Returns dict with: active_workers, active_tasks, queued_tasks.
-    Used by FastAPI health check endpoint.
-    """
+    """Report observed Celery worker status without guessing on timeouts."""
     try:
-        inspect = celery_app.control.inspect(timeout=2.0)
+        inspector = celery_app.control.inspect(timeout=2.0)
+        active = inspector.active()
 
-        active   = inspect.active()   or {}
-        reserved = inspect.reserved() or {}
+        # None means no conclusive response; do not call it "no workers".
+        if active is None:
+            return {
+                "status": "unknown",
+                "detail": "Worker inspection timed out or returned no response",
+                "active_workers": None,
+                "active_tasks": None,
+                "queued_tasks": None,
+                "worker_names": [],
+            }
 
-        active_workers = list(active.keys())
-        active_count   = sum(len(v) for v in active.values())
-        queued_count   = sum(len(v) for v in reserved.values())
+        worker_names = list(active.keys())
+        active_count = sum(len(tasks or []) for tasks in active.values())
+
+        reserved = inspector.reserved()
+        queued_count = (
+            sum(len(tasks or []) for tasks in reserved.values())
+            if reserved is not None
+            else None
+        )
+
+        if not worker_names:
+            status = "no_workers"
+            detail = "No responding Celery workers"
+        else:
+            status = "healthy"
+            detail = None
 
         return {
-            "status":         "healthy" if active_workers else "no_workers",
-            "active_workers": len(active_workers),
-            "active_tasks":   active_count,
-            "queued_tasks":   queued_count,
-            "worker_names":   active_workers[:5],  # First 5 worker names
+            "status": status,
+            "detail": detail,
+            "active_workers": len(worker_names),
+            "active_tasks": active_count,
+            "queued_tasks": queued_count,
+            "worker_names": worker_names[:5],
         }
-    except Exception as e:
+
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "celery_worker_health_inspection_failed"
+        )
         return {
-            "status":         "unhealthy",
-            "error":          str(e),
-            "active_workers": 0,
-            "active_tasks":   0,
-            "queued_tasks":   0,
+            "status": "unknown",
+            "detail": "Worker inspection failed; availability is unconfirmed",
+            "active_workers": None,
+            "active_tasks": None,
+            "queued_tasks": None,
+            "worker_names": [],
         }
 
-
-# ── Module-level alias for direct import convenience ─────────────────
+# Module-level alias for direct import convenience.
 app = celery_app

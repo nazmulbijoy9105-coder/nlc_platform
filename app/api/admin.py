@@ -419,6 +419,26 @@ async def get_company_logs(company_id: str, limit: int = 50, admin=Depends(requi
 
 @router.get("/maintenance/worker-health")
 async def worker_health(admin=Depends(require_admin)):
+    """Return observed Celery worker status to an authorized administrator."""
+    from app.worker.celery_app import check_worker_health
+
+    result = check_worker_health()
+    observed = result.get("status", "unknown")
+
+    if observed == "healthy":
+        public_status = "healthy"
+    elif observed == "no_workers":
+        public_status = "degraded"
+    else:
+        public_status = "unknown"
+
+    return {
+        **result,
+        "status": public_status,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+async def worker_health(admin=Depends(require_admin)):
     """Return worker health status."""
     return {
         "status": "healthy",
