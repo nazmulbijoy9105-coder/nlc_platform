@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from fastapi import Depends, HTTPException, status
 
+from app.core.dependencies import get_current_user
+
 
 async def _check_subscription_active(company_id, feature_name: str) -> bool:
     """Check if the company has an active subscription with the feature.
@@ -39,8 +41,6 @@ def require_entitlement(feature_name: str):
         @router.post("/premium", dependencies=[Depends(require_entitlement("premium_feature"))])
     """
     async def _check(current_user=Depends(get_current_user)) -> bool:
-        # get_current_user is imported lazily to avoid circular imports
-        from app.core.dependencies import get_current_user
         company_id = getattr(current_user, "company_id", None)
         if company_id is None:
             # Staff/admin users may not have a company_id — allow for now
