@@ -158,6 +158,13 @@ async def mark_form_filed(
     filing_check = await svc.get_by_id(form_id)
     if not filing_check:
         raise HTTPException(status_code=404, detail="Form filing not found")
+    # RJSC-001: verify user has access to this company's filing
+    if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):
+        from sqlalchemy import select as _sel
+        from app.models.company import CompanyUserAccess as _CMA
+        _access = await db.execute(_sel(_CMA).where(_CMA.user_id == current_user.id, _CMA.company_id == filing_check.company_id))
+        if not _access.scalar_one_or_none():
+            raise HTTPException(status_code=403, detail="Access denied — filing belongs to another company")
     filing = await svc.mark_filed(
         form_id=form_id,
         filed_date=body.filed_date,
