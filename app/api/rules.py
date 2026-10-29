@@ -211,7 +211,7 @@ async def get_rule_summary(
     "/black-overrides",
     response_model=list[RuleResponse],
     summary="List all BLACK override rules",
-    description="Returns rules where is_black_override=True (INC-003, AUD-003, TR-005, ESC-002, ESC-003, DEF-001, CAP-003, INC-002, INC-004).",
+    description="Returns rules where is_black_override=True (INC-003, AUD-003, TR-005, ESC-002, ESC-003, DEF-001, CAP-003, INC-004).",
     dependencies=[Depends(require_roles("SUPER_ADMIN"))],
 )
 async def get_black_overrides(
