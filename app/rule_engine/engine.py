@@ -638,7 +638,7 @@ class NLCRuleEngine:
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="First auditor status unknown (data missing).",
-                statutory_basis="Section 210(6), Companies Act 1994, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
                 state=RuleState.UNKNOWN
             ))
         elif c.first_auditor_appointed is False:
@@ -652,7 +652,7 @@ class NLCRuleEngine:
                     score_impact=10,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE if delay <= 365 else RevenueTier.STRUCTURED_REGULARIZATION,
                     description="First auditor not appointed within 1 month (30 days) of registration. Section 210(6), Companies Act 1994: overdue by " + str(delay) + " days.",
-                    statutory_basis="Section 210(6), Companies Act 1994, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay}
                 ))
 
