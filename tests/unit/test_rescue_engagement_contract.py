@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import inspect
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
