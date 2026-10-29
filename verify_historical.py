@@ -64,6 +64,9 @@ def check_lbr_rules(repo_root: Path, findings: list[Finding]) -> None:
         except Exception:
             continue
         if re.search(r'\bLBR-001\b|\bLBR-002\b|\bLBR-003\b', text):
+            # Phase 6c: skip test/reconciliation files — they reference rule IDs without firing
+            if any(x in str(p).lower() for x in ("test", "reconciliation", "statutory_rules", "statutory_rescue")):
+                continue
             lbr_files.append(p)
     if not lbr_files:
         findings.append(Finding(
