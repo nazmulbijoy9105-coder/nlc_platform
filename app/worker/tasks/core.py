@@ -38,6 +38,13 @@ AI Constitution compliance is enforced per task:
 from __future__ import annotations
 
 import asyncio
+
+# SEC-009: fail closed if required secrets are missing (worker context only)
+import os as _os
+if _os.environ.get("CELERY_BROKER_URL") or _os.environ.get("CELERY_BROKER"):
+    from app.core.config import settings as _settings
+    if not _settings.DATABASE_URL:
+        raise RuntimeError("SEC-009: DATABASE_URL not configured — refusing to run worker tasks")
 import logging
 import uuid
 from datetime import UTC, date, datetime, timedelta
