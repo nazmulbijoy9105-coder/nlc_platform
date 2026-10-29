@@ -798,7 +798,7 @@ class NLCRuleEngine:
                 severity=Severity.YELLOW,
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="AGM held but minutes not prepared. Section 83: minutes are prima facie evidence.",
+                description="AGM held but minutes not prepared. Section 89: minutes are prima facie evidence.",
                 statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
             ))
 
@@ -1114,7 +1114,7 @@ class NLCRuleEngine:
                 severity=severity,
                 score_impact=10 if len(core_missing) <= 2 else 20,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION if severity == Severity.RED else RevenueTier.CORPORATE_RESCUE,
-                description=f"Core registers missing: {', '.join(core_missing)}. Members (Sec 34), Directors (Sec 90), Charges (Sec 87), AGM Minutes (Sec 83).",
+                description=f"Core registers missing: {', '.join(core_missing)}. Members (Sec 34), Directors (Sec 90), Charges (Sec 87), AGM Minutes (Sec 89).",
                 statutory_basis="Sections 34, 83, 87, 90, Companies Act 1994 (Bangladesh)",
                 detail={"missing_core": core_missing}
             ))
