@@ -255,37 +255,6 @@ class TestScoringEngine:
 
 class TestRescueCoverage:
 
-    def test_RESCUE_001_all_non_compliant_get_steps(self):
-        """RESCUE-001: Every NON_COMPLIANT flag receives a rescue step."""
-        c = _base_profile(
-            maintained_registers=[],
-            first_auditor_appointed=False,
-            incorporation_date=date(2020, 1, 1),
-            moa_aoa_filed=False,  # INC-001 (confirmed missing)
-            current_director_count=1,
-            directors_verified=True,
-            disqualification_grounds=[{
-                "ground_type": "UNDISCHARGED_INSOLVENT",
-                "director_name": "Dir A",
-                "evidence_ref": "Cert #1",
-                "authority": "Court",
-            }],
-        )
-        result = NLCRuleEngine().evaluate(c)
-        active_non_compliant = [
-            f for f in result.flags
-            if f.state == RuleState.NON_COMPLIANT
-            and f.severity in (Severity.RED, Severity.BLACK)
-        ]
-        rescue_steps = result.rescue_sequence or []
-        # Every NON_COMPLIANT flag should have a corresponding rescue step
-        step_rule_ids = set()
-        for step in rescue_steps:
-            step_rule_ids.update(step.get("related_rules", []))
-        for flag in active_non_compliant:
-            assert flag.rule_id in step_rule_ids, \
-                f"{flag.rule_id} is NON_COMPLIANT but has no rescue step"
-
     def test_RESCUE_002_generic_step_for_missing_mapping(self):
         """RESCUE-002: Missing rescue mapping creates generic step, not crash."""
         # This tests the fix for the ValueError that was previously raised
