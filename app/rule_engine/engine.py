@@ -1769,7 +1769,7 @@ class NLCRuleEngine:
         )
         
         if pre_score <= 29 or has_black_override:
-            black_count = len([f for f in self._flags if f.severity == Severity.BLACK and f.rule_id not in self._ESC_RULE_IDS])
+            black_count = len([f for f in self._flags if f.severity == Severity.BLACK and f.state == RuleState.NON_COMPLIANT and f.eval_state != "UNKNOWN" and not f.resolved and f.conditional_applies and f.rule_id not in self._ESC_RULE_IDS])
             esc003_impact = 10 if black_count <= 2 else (25 if black_count == 3 else 35)
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-003",
