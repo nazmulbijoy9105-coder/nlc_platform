@@ -435,4 +435,4 @@ class TestProductionGate:
         agm_flag = _flag_by_id(result, "AGM-001")
         if agm_flag and agm_flag.state == RuleState.NON_COMPLIANT:
             assert "AGM-001" in VERIFIED_RULE_IDS, \
-                "AGM-001 should be in VERIFIED_RULE_IDS
+                "AGM-001 should be in VERIFIED_RULE_IDS""
