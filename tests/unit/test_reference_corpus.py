@@ -61,6 +61,8 @@ def _base_profile(**overrides) -> CompanyProfile:
         directors_verified=True,
         current_director_count=3,
         disqualification_details=[],
+        share_transfers=[],
+        director_changes=[],
         moa_aoa_filed=True,
         tin_obtained=True,
         vat_registered=True,
@@ -351,6 +353,8 @@ class TestDEF001Variations:
         """No disqualifications → no DEF-001 flag."""
         c = _base_profile(
             disqualification_details=[],
+        share_transfers=[],
+        director_changes=[],
         )
         result = _engine().evaluate(c)
         flag = _flag_by_id(result, "DEF-001")
@@ -360,6 +364,8 @@ class TestDEF001Variations:
         """disqualification_details is empty but directors_verified=False."""
         c = _base_profile(
             disqualification_details=[],
+        share_transfers=[],
+        director_changes=[],
             directors_verified=False,  # not verified — can't confirm clean
         )
         result = _engine().evaluate(c)
@@ -386,6 +392,8 @@ class TestDEF001Variations:
         """No directors → rule not applicable."""
         c = _base_profile(
             disqualification_details=[],
+        share_transfers=[],
+        director_changes=[],
             current_director_count=0,
         )
         result = _engine().evaluate(c)
@@ -395,7 +403,9 @@ class TestDEF001Variations:
     def test_5_exception_changes_result(self):
         """Disqualification appealed and overturned."""
         c = _base_profile(
-            disqualification_details=[],  # cleared after appeal
+            disqualification_details=[],
+        share_transfers=[],
+        director_changes=[],  # cleared after appeal
         )
         result = _engine().evaluate(c)
         flag = _flag_by_id(result, "DEF-001")
