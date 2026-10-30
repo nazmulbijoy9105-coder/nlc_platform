@@ -262,19 +262,12 @@ def require_roles(*allowed_roles: str):
     return _check_role
 
 
-def require_admin() -> TokenData:
-    """Shortcut: SUPER_ADMIN or ADMIN_STAFF only."""
-    return require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF)  # type: ignore
-
-
-def require_super_admin() -> TokenData:
-    """Shortcut: SUPER_ADMIN only. Used for rule changes, user management."""
-    return require_roles(UserRole.SUPER_ADMIN)  # type: ignore
-
-
-def require_staff() -> TokenData:
-    """Shortcut: SUPER_ADMIN, ADMIN_STAFF, or LEGAL_STAFF."""
-    return require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRole.LEGAL_STAFF)  # type: ignore
+# Module-level callables — FastAPI resolves these directly via Depends().
+# DO NOT wrap in a function: that returns the inner _check_role without
+# calling it, silently bypassing authentication on every admin endpoint.
+require_admin = require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF)
+require_super_admin = require_roles(UserRole.SUPER_ADMIN)
+require_staff = require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRole.LEGAL_STAFF)
 
 
 # ═══════════════════════════════════════════════════════════════════════

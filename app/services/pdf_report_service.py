@@ -68,6 +68,7 @@ h2 { color: __NAVY__; }
 .band-YELLOW { background: #fef3c7; color: #92400e; }
 .band-RED    { background: #fee2e2; color: #991b1b; }
 .band-BLACK  { background: #1f2937; color: #f9fafb; }
+.band-NOT_EVALUATED { background: #e5e7eb; color: #6b7280; }
 .band-current { border: 2px solid __GOLD__; }
 
 /* ── Executive summary ─────────────────────────────────── */
@@ -222,6 +223,7 @@ def _render_band_legend(current_band: str) -> str:
         ("YELLOW", "50-69", "Monitor"),
         ("RED", "30-49", "Action Required"),
         ("BLACK", "0-29", "Critical"),
+        ("NOT_EVALUATED", "—", "Insufficient Data"),
     ]
     items = []
     for band_name, score_range, label in bands:
@@ -245,6 +247,8 @@ def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue
         urgency = "<strong>Critical legal deficiency detected.</strong> The company has a BLACK-severity compliance breach requiring immediate remediation. The compliance score has been overridden to 0 pending resolution of the critical flag(s)."
     elif band == "RED":
         urgency = "<strong>Significant compliance gaps detected.</strong> The company requires structured remediation to address active RED-severity findings and restore compliance standing."
+    elif band == "NOT_EVALUATED":
+        urgency = "<strong>Insufficient data for compliance evaluation.</strong> Less than 50% of required compliance data points are available. Please complete the company profile and trigger re-evaluation."
     elif band == "YELLOW":
         urgency = "<strong>Compliance monitoring recommended.</strong> The company has minor deficiencies that should be addressed to maintain good standing."
     else:
