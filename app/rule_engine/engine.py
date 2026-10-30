@@ -1832,13 +1832,13 @@ class NLCRuleEngine:
         esc_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("ESC-"))
 
         module_sum = (
-            max(0, 20 - agm_ded) + max(0, 20 - aud_ded) + max(0, 20 - ret_ded) +
-            max(0, 10 - dir_ded) + max(0, 10 - shr_ded) + max(0, 5 - cap_ded) +
-            max(0, 5 - off_ded) + max(0, 5 - reg_ded) + max(0, 5 - tax_ded) +
-            max(0, 5 - bnk_ded) + max(0, 5 - lbr_ded) + max(0, 5 - bsec_ded) + 
-            max(0, 5 - fx_ded) + max(0, 5 - esc_ded)
+            max(0, CATEGORY_CAPS["AGM"][0] - agm_ded) + max(0, CATEGORY_CAPS["AUD"][0] - aud_ded) + max(0, CATEGORY_CAPS["RET"][0] - ret_ded) +
+            max(0, CATEGORY_CAPS["DIR"][0] - dir_ded) + max(0, CATEGORY_CAPS["SHR"][0] - shr_ded) + max(0, CATEGORY_CAPS["CAP"][0] - cap_ded) +
+            max(0, CATEGORY_CAPS["OFF"][0] - off_ded) + max(0, CATEGORY_CAPS["REG"][0] - reg_ded) + max(0, CATEGORY_CAPS["TAX"][0] - tax_ded) +
+            max(0, CATEGORY_CAPS["BNK"][0] - bnk_ded) + max(0, CATEGORY_CAPS["LBR"][0] - lbr_ded) + max(0, CATEGORY_CAPS["BSEC"][0] - bsec_ded) + 
+            max(0, CATEGORY_CAPS["FX"][0] - fx_ded) + max(0, CATEGORY_CAPS["ESC"][0] - esc_ded)
         )
-        # FIX: Scale 125 max points to 100
+        # FIX: scale sum of CATEGORY_CAPS (240) to 100
         return int((module_sum / 240.0) * 100)
 
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
@@ -1934,15 +1934,15 @@ class NLCRuleEngine:
         score_hash = hashlib.sha256(hash_str.encode()).hexdigest()[:16]
 
         return ScoreBreakdown(
-            agm_score=max(0, 20 - agm_ded),
-            audit_score=max(0, 20 - aud_ded),
-            return_score=max(0, 20 - ret_ded),
-            director_score=max(0, 10 - dir_ded),
-            shareholding_score=max(0, 10 - shr_ded),
-            capital_score=max(0, 5 - cap_ded),
-            office_score=max(0, 5 - off_ded),
-            register_score=max(0, 5 - reg_ded),
-            tax_score=max(0, 5 - tax_ded),
+            agm_score=max(0, CATEGORY_CAPS["AGM"][0] - agm_ded),
+            audit_score=max(0, CATEGORY_CAPS["AUD"][0] - aud_ded),
+            return_score=max(0, CATEGORY_CAPS["RET"][0] - ret_ded),
+            director_score=max(0, CATEGORY_CAPS["DIR"][0] - dir_ded),
+            shareholding_score=max(0, CATEGORY_CAPS["SHR"][0] - shr_ded),
+            capital_score=max(0, CATEGORY_CAPS["CAP"][0] - cap_ded),
+            office_score=max(0, CATEGORY_CAPS["OFF"][0] - off_ded),
+            register_score=max(0, CATEGORY_CAPS["REG"][0] - reg_ded),
+            tax_score=max(0, CATEGORY_CAPS["TAX"][0] - tax_ded),
             raw_total=raw,
             final_score=final,
             override_applied=override,
@@ -1956,11 +1956,11 @@ class NLCRuleEngine:
             red_flag_count=len([f for f in active if f.severity == Severity.RED and f.state == RuleState.NON_COMPLIANT]),
             yellow_flag_count=len([f for f in active if f.severity == Severity.YELLOW and f.state == RuleState.NON_COMPLIANT]),
             green_flag_count=len([f for f in active if f.severity == Severity.GREEN and f.state == RuleState.NON_COMPLIANT]),
-            bankruptcy_score=max(0, 5 - bnk_ded),
-            labour_score=max(0, 5 - lbr_ded),
-            bsec_score=max(0, 5 - bsec_ded),
-            fx_score=max(0, 5 - fx_ded),
-            escalation_score=max(0, 5 - esc_ded),
+            bankruptcy_score=max(0, CATEGORY_CAPS["BNK"][0] - bnk_ded),
+            labour_score=max(0, CATEGORY_CAPS["LBR"][0] - lbr_ded),
+            bsec_score=max(0, CATEGORY_CAPS["BSEC"][0] - bsec_ded),
+            fx_score=max(0, CATEGORY_CAPS["FX"][0] - fx_ded),
+            escalation_score=max(0, CATEGORY_CAPS["ESC"][0] - esc_ded),
             score_hash=score_hash
         )
 

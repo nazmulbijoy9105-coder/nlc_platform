@@ -76,3 +76,4 @@ Sources this round: app.roc.gov.bd FORM IX page (Consent of Director to Act, sec
 ## P5 promotion log
 
 - 2026-10-30 R4-P3: AR-001 (s.36, 21-day annual return; re-verified this round) and SH-002 (s.158, 90-day share certificate; F-13 CLOSED) promoted into VERIFIED_RULE_IDS. Allowlist 41 -> 43.
+- 2026-10-30 R4-P4b (F-27 completion): stale inline caps confirmed at multiple sites with different groupings; grouping-independent per-term rewrite applied everywhere (all sites now read CATEGORY_CAPS). Divisor 240 retained in _calculate_raw_score. Dual score model flagged as F-28; BLACK-override eval_state gap flagged as F-29.
