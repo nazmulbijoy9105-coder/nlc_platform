@@ -91,7 +91,7 @@ def _base_profile(**overrides) -> CompanyProfile:
         shareholder_change_date=None,
         
         
-        maintained_registers=True,
+        maintained_registers=["members", "directors", "charges", "minutes_agm", "minutes_board", "transfers", "debentures"],
         
         register_location="registered_office",
         on_rjsc_strike_off_list=False,
