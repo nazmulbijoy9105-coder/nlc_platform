@@ -525,7 +525,7 @@ class NLCRuleEngine:
         if c.moa_aoa_filed is False and self._is_old_enough_to_assess(c):
             self._add_flag(ComplianceFlag(
                 rule_id="INC-001",
-                    eval_state="UNKNOWN",   # F3: missing input -> UNKNOWN, not VIOLATION
+                eval_state="UNKNOWN",   # F3: missing input -> UNKNOWN, not VIOLATION
                 flag_code="MOA_AOA_NOT_FILED",
                 severity=Severity.RED,
                 score_impact=15,
@@ -753,7 +753,6 @@ class NLCRuleEngine:
                 severity = Severity.BLACK if delay > 365 else Severity.RED
                 self._add_flag(ComplianceFlag(
                     rule_id="AGM-001",
-                        eval_state="UNKNOWN",   # F3: missing input -> UNKNOWN, not VIOLATION
                     flag_code="FIRST_AGM_DEFAULT",
                     severity=severity,
                     score_impact=self._graduated_agm_deduction(delay),
@@ -1840,7 +1839,7 @@ class NLCRuleEngine:
             max(0, 5 - fx_ded) + max(0, 5 - esc_ded)
         )
         # FIX: Scale 125 max points to 100
-        return int((module_sum / 125.0) * 100)
+        return int((module_sum / 240.0) * 100)
 
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
         active = [f for f in flags if not f.resolved and f.conditional_applies]
@@ -1906,12 +1905,12 @@ class NLCRuleEngine:
         score_band = Severity(self._score_to_band(final, force_black=bool(critical), coverage=coverage))
 
         # Band = worst of (score-based band, highest active flag severity)
-        # Prevents false GREEN when a RED-severity rule fires (BLACK handled above)'t override
+        # Prevents false GREEN when a RED-severity rule fires (BLACK handled above).
         if not critical:
             severity_rank = {Severity.GREEN: 0, Severity.YELLOW: 1, Severity.RED: 2, Severity.BLACK: 3}
             max_flag_severity = Severity.GREEN
             for f in active:
-                if f.severity in severity_rank and (f.severity in (Severity.RED, Severity.BLACK)) and f.state == RuleState.NON_COMPLIANT:
+                if f.severity in severity_rank and (f.severity in (Severity.RED, Severity.BLACK)) and f.state == RuleState.NON_COMPLIANT and f.eval_state != "UNKNOWN":
                     if severity_rank[f.severity] > severity_rank.get(max_flag_severity, 0):
                         max_flag_severity = f.severity
             band_rank = severity_rank.get(score_band, 0)
