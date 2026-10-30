@@ -898,7 +898,7 @@ class NLCRuleEngine:
                     score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Director filing status unknown for {change.director_id}.",
-                    statutory_basis="Section 90, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 92, Companies Act 1994 (Bangladesh)",
                     detail={"director_id": change.director_id},
                     state=RuleState.UNKNOWN
                 ))
@@ -913,7 +913,7 @@ class NLCRuleEngine:
                         score_impact=10 if delay > 90 else 5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=f"Director appointment not filed via Form XII. Section 115: 14-day deadline. Overdue by {delay} days.",
-                        statutory_basis="Section 90, Companies Act 1994 (Bangladesh)",
+                        statutory_basis="Section 92, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "delay": delay}
                     ))
                 elif change.event_type in ("resignation", "removal", "death"):
