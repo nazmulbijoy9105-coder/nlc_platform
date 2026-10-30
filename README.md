@@ -1,6 +1,6 @@
 # NEUM LEX COUNSEL — RJSC Compliance Intelligence Platform
 
-**Version 2.1.0** | Engine v2.1 | 75 ILRMF Rules | Bangladesh Companies Act 1994
+**Version 2.2.0** | Engine v2.1 | 85 ILRMF Rules | Bangladesh Companies Act 1994
 
 Proprietary Software — Neum Lex Counsel
 
@@ -9,7 +9,7 @@ Automates RJSC corporate compliance monitoring for Bangladeshi companies under t
 ## What This Is
 
 A full-stack compliance intelligence platform that:
-- Evaluates companies against **75 ILRMF rules** across **17 modules**
+- Evaluates companies against **85 ILRMF rules** across **17 modules**
 - Scores 0-100 with risk bands: GREEN / YELLOW / RED / BLACK / NOT_EVALUATED
 - Flags violations with statutory basis, section reference, and score impact
 - Generates AI-drafted legal documents with mandatory human approval (AI Constitution Article 3)
@@ -38,14 +38,14 @@ A full-stack compliance intelligence platform that:
 | API | FastAPI + Pydantic v2 + uvicorn |
 | Database | PostgreSQL 16 + SQLAlchemy 2.0 async (147 columns on companies table) |
 | Cache/Queue | Redis 7 + Celery 5 + redbeat |
-| Migrations | Alembic (22 migrations, auto-applied on deploy) |
+| Migrations | Alembic (43 migrations, auto-applied on deploy) |
 | Auth | JWT (32+ char secret) + TOTP 2FA (AES-256 encrypted) + bcrypt |
 | Rate Limiting | slowapi (10/min on login) |
 | AI | Anthropic Claude / OpenAI (human approval required) |
 | Storage | AWS S3 |
 | Email | AWS SES |
 | Error Monitoring | Sentry |
-| Tests | pytest + pytest-asyncio (211 tests) |
+| Tests | pytest + pytest-asyncio (288 unit tests + integration tests) |
 | CI/CD | GitHub Actions (compile + test + rule parity audit) |
 | Code Quality | Ruff linter + mypy type checker |
 
@@ -58,11 +58,11 @@ nlc_platform/
 │   ├── models/              # 28 SQLAlchemy ORM tables (147+ columns on companies)
 │   ├── services/            # 12 service files (CompanyService, ComplianceService, etc.)
 │   ├── core/                # config, security, dependencies (RBAC + RLS)
-│   ├── rule_engine/         # Deterministic 75-rule ILRMF engine v2.1
+│   ├── rule_engine/         # Deterministic 85-rule ILRMF engine v2.1
 │   └── worker/              # Celery tasks + beat schedule (7-year retention)
-├── alembic/                 # 22 migrations (0001-0022)
+├── alembic/                 # 43 migrations (0001-0043)
 ├── scripts/                 # Seeders (75 rules + AI templates)
-├── tests/                   # 211 tests (unit + integration)
+├── tests/                   # 288 unit tests + integration tests (unit + integration)
 ├── tools/                   # audit_rule_parity.py (canonical AST-based parity check)
 ├── docs/                    # LEGAL_BASIS_MATRIX.md, LAWYER_LEGAL_REVIEW_PACK.md
 ├── .github/workflows/       # CI: compile + pytest + parity audit
@@ -73,7 +73,7 @@ nlc_platform/
 ├── CHANGELOG.md             # Version history
 └── pytest.ini               # Test configuration
 
-## 75 ILRMF Rules — 17 Modules
+## 85 ILRMF Rules — 17 Modules
 
 | Module | Rules | Statutory Basis |
 |--------|-------|-----------------|
@@ -84,12 +84,12 @@ nlc_platform/
 | BSEC Governance (4) | BSEC-001 to BSEC-004 | BSEC CG Code 2023 |
 | Capital & Charges (5) | CAP-001 to CAP-004, CHG-001 | Sections 54, 87, 100 |
 | Default (2) | DEF-001, DEF-002 | Sections 297, 447 |
-| Directors (6) | DIR-001 to DIR-006 | Sections 92, 97, 98 |
+| Directors (6) | DIR-001 to DIR-008, DIR-010 | Sections 92, 93, 97, 98, 104, 110 |
 | Escalation (5) | ESC-001 to ESC-005 | Sections 196, 199, 304 |
 | Foreign Exchange (1) | FX-001 | FE Regulation Act 1947 |
-| Incorporation (6) | INC-001 to INC-006 | Sections 11, 81, 90(2), 150 |
+| Incorporation (6) | INC-001 to INC-007 | Sections 11, 81, 90(2), 150 |
 | Labour (3) | LBR-001 to LBR-003 | Labour Act 2006 |
-| Office (1) | OFF-001 | Section 81 |
+| Office (1) | OFF-001 | Section 77 (28-day filing) |
 | Registers (3) | REG-001 to REG-003 | Sections 34, 83, 87, 90 |
 | Shareholders (3) | SH-001 to SH-003 | Sections 46, 50, 52 |
 | Structural (3) | STR-001 to STR-003 | Sections 17, 18, 20 |
@@ -130,12 +130,12 @@ curl http://localhost:8000/api/v1/health/ready
 # Development
 uvicorn app.main:app --reload          # Start API server
 alembic upgrade head                   # Run migrations
-python scripts/seed_rules.py           # Seed 75 rules
+python scripts/seed_rules.py           # Seed 85 rules
 celery -A app.worker.celery_app worker -l info  # Start Celery worker
 celery -A app.worker.celery_app beat -l info     # Start beat scheduler
 
 # Testing
-python -m pytest tests/unit -q          # 211 unit tests
+python -m pytest tests/unit -q          # 288 unit tests
 python -m pytest tests/unit -v          # Verbose with test names
 DATABASE_URL=dummy python -m pytest tests/unit -q  # No DB needed
 
@@ -147,7 +147,7 @@ python tools/audit_rule_parity.py --no-db  # Rule parity (AST-based)
 # Deployment (Render.com)
 # Auto-deploys on push to main branch
 # Migrations run automatically on startup
-# Rules auto-seed if count < 75
+# Rules auto-seed if count < 85
 API Endpoints
 Router
 	
@@ -206,9 +206,9 @@ Documentation
 Document
 	
 Purpose
-docs/LEGAL_BASIS_MATRIX.md	Maps all 75 rules to statutory basis (PENDING legal review)
+docs/LEGAL_BASIS_MATRIX.md	Maps all 85 rules to statutory basis (PENDING legal review)
 docs/LAWYER_LEGAL_REVIEW_PACK.md	Materials for Bangladesh lawyer to verify citations
-CHANGELOG.md	Version history (v2.1.0)
+CHANGELOG.md	Version history (v2.2.0)
 .env.example	All configuration variables documented
 /api/v1/docs	OpenAPI Swagger UI (live)
 /api/v1/redoc	ReDoc API documentation (live)
@@ -220,6 +220,6 @@ This platform provides automated compliance screening based on the Bangladesh Co
 
 Companies with insufficient data are shown as NOT_EVALUATED (not compliant). Companies with complete data receive real compliance scores.
 
-Status: LEGAL_BASIS_MATRIX.md is UNVERIFIED. Commercial use requires lawyer verification of all 75 rule citations.
+Status: LEGAL_BASIS_MATRIX.md is UNVERIFIED. Commercial use requires lawyer verification of all 85 rule citations.
 
 All rights reserved — Neum Lex Counsel.

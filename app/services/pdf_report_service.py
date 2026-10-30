@@ -218,10 +218,10 @@ def _render_rescue_section(rescue_plan: Any) -> str:
 def _render_band_legend(current_band: str) -> str:
     """Render the 4-band risk legend with the current band highlighted."""
     bands = [
-        ("GREEN", "80-100", "Compliant"),
-        ("YELLOW", "50-79", "Monitor"),
-        ("RED", "1-49", "Action Required"),
-        ("BLACK", "0", "Critical"),
+        ("GREEN", "70-100", "Compliant"),
+        ("YELLOW", "50-69", "Monitor"),
+        ("RED", "30-49", "Action Required"),
+        ("BLACK", "0-29", "Critical"),
     ]
     items = []
     for band_name, score_range, label in bands:
