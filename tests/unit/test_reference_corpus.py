@@ -42,6 +42,7 @@ def _base_profile(**overrides) -> CompanyProfile:
     """Create a compliant baseline CompanyProfile with sensible defaults."""
     defaults = dict(
         company_id="test-company",
+        company_name="Test Company Ltd.",
         company_type="PRIVATE_LIMITED",
         incorporation_date=date(2024, 1, 1),
         last_agm_date=date(2024, 6, 15),
