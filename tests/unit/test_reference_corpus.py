@@ -50,7 +50,7 @@ def _base_profile(**overrides) -> CompanyProfile:
         last_agm_date=today - timedelta(days=120),
         agm_count=3,
         agm_held_this_cycle=True,
-        agm_notice_days=21,
+        
         agm_minutes_prepared=True,
         members_present_at_agm=5,
         registered_office_address="123 Gulshan, Dhaka",
@@ -65,18 +65,18 @@ def _base_profile(**overrides) -> CompanyProfile:
         tin_obtained=True,
         vat_registered=True,
         trade_license_obtained=True,
-        trade_license_valid=True,
+        
         is_manufacturing=False,
-        factory_license_valid=True,
-        books_of_account_maintained=True,
-        balance_sheet_presented=True,
-        balance_sheet_filed=True,
+        factory_license_obtained=True,
+        books_of_account_kept=True,
+        financial_statements_presented=True,
+        financial_statements_filed=True,
         audit_in_progress=False,
         first_auditor_appointed=True,
         auditor_reappointed_at_agm=True,
-        audit_complete_before_agm=True,
-        special_resolution_filed=True,
-        special_resolution_date=None,
+        audit_complete=True,
+        capital_increase_resolution=True,
+        capital_increase_special_resolution=True,
         object_clause_change_pending=False,
         object_clause_change_date=None,
         name_change_pending=False,
@@ -84,13 +84,13 @@ def _base_profile(**overrides) -> CompanyProfile:
         authorized_capital_bdt=1000000,
         paid_up_capital_bdt=500000,
         share_certificates_issued=True,
-        share_allotment_filed=True,
+        form_xv_filed=True,
         last_allotment_date=None,
         shareholder_change_date=None,
-        charge_registered=True,
-        charge_satisfaction_filed=True,
-        registers_maintained=True,
-        core_registers_complete=True,
+        
+        
+        maintained_registers=True,
+        
         register_location="registered_office",
         on_rjsc_strike_off_list=False,
         winding_up_petition_filed=False,
@@ -98,9 +98,9 @@ def _base_profile(**overrides) -> CompanyProfile:
         voluntary_winding_up=False,
         has_foreign_shareholder=False,
         is_fdi_registered=False,
-        ar_filed_this_year=True,
-        ar_years=0,
-        agm_years=0,
+        annual_return_filed=True,
+        unfiled_returns_count=0,
+        
     )
     defaults.update(overrides)
     return CompanyProfile(**defaults)
