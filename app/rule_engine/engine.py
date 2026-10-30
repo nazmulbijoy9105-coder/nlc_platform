@@ -381,6 +381,20 @@ CORE_REGISTERS = ["members", "directors", "charges", "minutes_agm"]
 # inline is_black_override=True on the flag itself.
 BLACK_OVERRIDE_RULES: set[str] = set()
 
+# P0 PRODUCTION ELIGIBILITY CONTROL
+# Only rules in this set contribute to the AUTHORITATIVE compliance score.
+# Unverified rules still generate flags but their score_impact is zeroed.
+VERIFIED_RULE_IDS: frozenset[str] = frozenset({
+    "AGM-001", "AGM-002", "AGM-003", "AGM-004", "AGM-005", "AGM-006", "AGM-007",
+    "REG-001", "REG-002", "REG-003", "OFF-001",
+    "DIR-001", "DIR-002", "DIR-003", "DIR-004", "DIR-007", "DIR-008", "DIR-010",
+    "CAP-001", "CAP-002", "CAP-003", "CHG-001",
+    "STR-001", "STR-002", "STR-003",
+    "ACC-001", "ACC-002", "ACC-003", "BOD-001", "BOD-002", "BOD-003",
+    "INC-001", "INC-003", "INC-004", "INC-007", "MEM-001", "TR-001",
+    "ESC-001", "ESC-002", "DEF-001", "DEF-002",
+})
+
 # 100-point scoring model v2 - per-category deduction caps.
 # key -> (max_deduction, rule_id_prefixes). UNKNOWN states never reach the
 # deduction phase (violations are NON_COMPLIANT only).
@@ -1095,7 +1109,7 @@ class NLCRuleEngine:
                     score_impact=0,
                     revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                     description=f"Transfer has {len(tr_flags)} deficiencies. Composite irregularity requiring structured remediation.",
-                    statutory_basis="Sections 34, 47, 108, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Sections 34, 38, 39, Companies Act 1994 (Bangladesh)",
                     detail={"transfer_id": transfer.transfer_id, "count": len(tr_flags)}
                 ))
 
@@ -1797,7 +1811,11 @@ class NLCRuleEngine:
     def _calculate_raw_score(self, flags: List[ComplianceFlag]) -> int:
         active = [f for f in flags if not f.resolved and f.conditional_applies]
         # FIX: Only deduct points for NON_COMPLIANT findings
-        violations = [f for f in active if f.state == RuleState.NON_COMPLIANT]
+        violations = [
+            f for f in active
+            if f.state == RuleState.NON_COMPLIANT
+            and f.rule_id in VERIFIED_RULE_IDS
+        ]
         
         tax_ded = sum(f.score_impact for f in violations if f.rule_id.startswith(("TAX-", "VAT-")))
         agm_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("AGM-"))
@@ -1826,7 +1844,11 @@ class NLCRuleEngine:
 
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
         active = [f for f in flags if not f.resolved and f.conditional_applies]
-        violations = [f for f in active if f.state == RuleState.NON_COMPLIANT]
+        violations = [
+            f for f in active
+            if f.state == RuleState.NON_COMPLIANT
+            and f.rule_id in VERIFIED_RULE_IDS
+        ]
 
         tax_ded = sum(f.score_impact for f in violations if f.rule_id.startswith(("TAX-", "VAT-")))
         agm_ded = sum(f.score_impact for f in violations if f.rule_id.startswith("AGM-"))
