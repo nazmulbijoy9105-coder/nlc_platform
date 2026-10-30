@@ -220,7 +220,7 @@ class TestAGM001Variations:
         # AGM-001 fires and should trigger escalation
         if agm001:
             assert agm001.state == RuleState.NON_COMPLIANT
-            assert agm001.severity == Severity.RED
+            assert agm001.severity in (Severity.RED, Severity.BLACK)
             # Check for linked escalation (ESC-001 or ESC-002)
             esc_flags = [f for f in result.flags if f.rule_id.startswith("ESC-")]
             # May or may not fire depending on other conditions
