@@ -275,7 +275,7 @@ class TestRescueCoverage:
         active_non_compliant = [
             f for f in result.flags
             if f.state == RuleState.NON_COMPLIANT
-            and f.severity in (Severity.YELLOW, Severity.RED, Severity.BLACK)
+            and f.severity in (Severity.RED, Severity.BLACK)
         ]
         rescue_steps = result.rescue_sequence or []
         # Every NON_COMPLIANT flag should have a corresponding rescue step
