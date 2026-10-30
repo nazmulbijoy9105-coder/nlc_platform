@@ -39,70 +39,22 @@ def _engine() -> NLCRuleEngine:
 
 
 def _base_profile(**overrides) -> CompanyProfile:
-    """Create a compliant baseline CompanyProfile with ALL fields the engine needs."""
-    today = date.today()
+    """Create a compliant baseline CompanyProfile with sensible defaults."""
     defaults = dict(
         company_id="test-company",
         company_name="Test Company Ltd.",
         company_type="PRIVATE_LIMITED",
-        incorporation_date=today - timedelta(days=365 * 3),
-        financial_year_end=date(today.year - 1, 12, 31),
-        last_agm_date=today - timedelta(days=120),
-        agm_count=3,
+        incorporation_date=date(2024, 1, 1),
+        last_agm_date=date(2024, 6, 15),
+        agm_count=1,
         agm_held_this_cycle=True,
-        
-        agm_minutes_prepared=True,
-        members_present_at_agm=5,
-        registered_office_address="123 Gulshan, Dhaka",
+        registered_office_address="123 Dhaka",
         registered_office_change_date=None,
         form_vi_filed=True,
-        form_vi_filed_date=None,
         is_dormant=False,
         directors_verified=True,
         current_director_count=3,
         disqualification_details=[],
-        share_transfers=[],
-        director_changes=[],
-        moa_aoa_filed=True,
-        tin_obtained=True,
-        vat_registered=True,
-        trade_license_obtained=True,
-        
-        is_manufacturing=False,
-        factory_license_obtained=True,
-        books_of_account_kept=True,
-        financial_statements_presented=True,
-        financial_statements_filed=True,
-        audit_in_progress=False,
-        first_auditor_appointed=True,
-        auditor_reappointed_at_agm=True,
-        audit_complete=True,
-        capital_increase_resolution=True,
-        capital_increase_special_resolution=True,
-        object_clause_change_pending=False,
-        object_clause_change_date=None,
-        name_change_pending=False,
-        name_change_date=None,
-        authorized_capital_bdt=1000000,
-        paid_up_capital_bdt=500000,
-        share_certificates_issued=True,
-        form_xv_filed=True,
-        last_allotment_date=None,
-        shareholder_change_date=None,
-        
-        
-        maintained_registers=["members", "directors", "charges", "minutes_agm", "minutes_board", "transfers", "debentures"],
-        
-        register_location="registered_office",
-        on_rjsc_strike_off_list=False,
-        winding_up_petition_filed=False,
-        court_ordered_winding_up=False,
-        voluntary_winding_up=False,
-        has_foreign_shareholder=False,
-        is_fdi_registered=False,
-        annual_return_filed=True,
-        unfiled_returns_count=0,
-        
     )
     defaults.update(overrides)
     return CompanyProfile(**defaults)
@@ -211,7 +163,7 @@ class TestAGM001Variations:
     def test_7_cross_reference_changes_consequence(self):
         """AGM-001 default triggers S82 penalty + ESC-001 escalation."""
         c = _base_profile(
-            incorporation_date=date(2020, 1, 1),  # 4+ years, way past deadline
+            incorporation_date=date(2025, 1, 1),  # ~22 months old, past 18-month (548d) deadline, delay <365d → RED
             last_agm_date=None,
             agm_count=0,
         )
@@ -220,7 +172,7 @@ class TestAGM001Variations:
         # AGM-001 fires and should trigger escalation
         if agm001:
             assert agm001.state == RuleState.NON_COMPLIANT
-            assert agm001.severity in (Severity.RED, Severity.BLACK)
+            assert agm001.severity == Severity.RED
             # Check for linked escalation (ESC-001 or ESC-002)
             esc_flags = [f for f in result.flags if f.rule_id.startswith("ESC-")]
             # May or may not fire depending on other conditions
@@ -353,8 +305,6 @@ class TestDEF001Variations:
         """No disqualifications → no DEF-001 flag."""
         c = _base_profile(
             disqualification_details=[],
-        share_transfers=[],
-        director_changes=[],
         )
         result = _engine().evaluate(c)
         flag = _flag_by_id(result, "DEF-001")
@@ -364,8 +314,6 @@ class TestDEF001Variations:
         """disqualification_details is empty but directors_verified=False."""
         c = _base_profile(
             disqualification_details=[],
-        share_transfers=[],
-        director_changes=[],
             directors_verified=False,  # not verified — can't confirm clean
         )
         result = _engine().evaluate(c)
@@ -375,9 +323,18 @@ class TestDEF001Variations:
             assert flag.state != RuleState.NON_COMPLIANT or flag.rule_id != "DEF-001"
 
     def test_3_conflicting_evidence_disputed(self):
-        """Disqualification recorded but director still listed as active."""
+        """Disqualification recorded but director still listed as active.
+
+        P0 FIX: DEF-001 now requires verified structured grounds.
+        With verified evidence (insolvency certificate), this fires BLACK.
+        """
         c = _base_profile(
-            disqualification_details=["Dir A: Insolvency 2023"],
+            disqualification_grounds=[{
+                "ground_type": "UNDISCHARGED_INSOLVENT",
+                "director_name": "Dir A",
+                "evidence_ref": "Insolvency Certificate 2023",
+                "authority": "Bankruptcy Court, Dhaka",
+            }],
             current_director_count=3,
             directors_verified=True,
         )
@@ -392,8 +349,6 @@ class TestDEF001Variations:
         """No directors → rule not applicable."""
         c = _base_profile(
             disqualification_details=[],
-        share_transfers=[],
-        director_changes=[],
             current_director_count=0,
         )
         result = _engine().evaluate(c)
@@ -403,9 +358,7 @@ class TestDEF001Variations:
     def test_5_exception_changes_result(self):
         """Disqualification appealed and overturned."""
         c = _base_profile(
-            disqualification_details=[],
-        share_transfers=[],
-        director_changes=[],  # cleared after appeal
+            disqualification_details=[],  # cleared after appeal
         )
         result = _engine().evaluate(c)
         flag = _flag_by_id(result, "DEF-001")
@@ -414,7 +367,12 @@ class TestDEF001Variations:
     def test_6_applicable_amendment(self):
         """Section 94 disqualification grounds — verify against current Act."""
         c = _base_profile(
-            disqualification_details=["Dir B: Unsound mind (court finding)"],
+            disqualification_grounds=[{
+                "ground_type": "UNSOUND_MIND",
+                "director_name": "Dir B",
+                "evidence_ref": "Court Order #456",
+                "authority": "Competent Court",
+            }],
         )
         result = _engine().evaluate(c)
         flag = _flag_by_id(result, "DEF-001")
@@ -426,7 +384,13 @@ class TestDEF001Variations:
     def test_7_cross_reference_changes_consequence(self):
         """DEF-001 (BLACK) triggers corporate rescue mandatory."""
         c = _base_profile(
-            disqualification_details=["Dir C: Undischarged insolvent"],
+            disqualification_grounds=[{
+                "ground_type": "UNDISCHARGED_INSOLVENT",
+                "director_name": "Dir C",
+                "evidence_ref": "Insolvency Certificate #789",
+                "authority": "Bankruptcy Court",
+            }],
+            current_director_count=2,  # 1 disqualified leaves only 1 → below minimum → override
             incorporation_date=date(2020, 1, 1),
             last_agm_date=None,
             agm_count=0,
@@ -439,14 +403,24 @@ class TestDEF001Variations:
             assert result.score_breakdown.risk_band in (Severity.BLACK, Severity.RED)
 
     def test_8_legal_question_requires_judgment(self):
-        """Director with pending insolvency application — is S94(d) met?"""
+        """Director with pending insolvency application — is S94(c) met?
+
+        P0 FIX: Pending insolvency (PENDING_INSOLVENCY ground) with
+        verified court evidence fires BLACK. Without evidence, it's
+        NOT_EVALUATED — a lawyer must verify the pending application.
+        """
         c = _base_profile(
-            disqualification_details=["Dir D: Insolvency application pending (not adjudicated)"],
+            disqualification_grounds=[{
+                "ground_type": "PENDING_INSOLVENCY",
+                "director_name": "Dir D",
+                "evidence_ref": "Court Application Receipt",
+                "authority": "Insolvency Court",
+            }],
         )
         result = _engine().evaluate(c)
         flag = _flag_by_id(result, "DEF-001")
         # S94(1)(c): "applied to be adjudicated as insolvent and application is pending"
-        # This is a legal question — is a pending application sufficient?
+        # With verified evidence, this fires NON_COMPLIANT
         if flag:
             assert flag.state == RuleState.NON_COMPLIANT
             # The engine makes a binary decision, but a lawyer should verify

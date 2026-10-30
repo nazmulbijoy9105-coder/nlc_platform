@@ -10,11 +10,10 @@ Uses pytest.mark.parametrize to generate test variations for each rule:
 This complements test_reference_corpus.py (which has detailed 8-variation
 tests for AGM-001, OFF-001, DEF-001).
 """
+from __future__ import annotations
 
 from datetime import date, timedelta
 import pytest
-
-pytestmark = [pytest.mark.xfail(reason="Profile needs conftest build_profile fixture integration", strict=False)]
 
 from app.rule_engine.engine import (
     NLCRuleEngine,
@@ -122,7 +121,7 @@ def _compliant_profile(**overrides) -> CompanyProfile:
         advance_tax_q3_paid=True,
         advance_tax_q4_paid=True,
         tds_deposited_up_to_date=True,
-        last_vat_return_filed=True,
+        last_vat_return_filed=today - timedelta(days=30),
         vat_annual_return_filed_for_fy=True,
         minimum_tax_paid=True,
         tax_clearance_obtained=True,
@@ -145,6 +144,11 @@ def _flag_by_id(result, rule_id: str):
 # ═════════════════════════════════════════════════════════════════════
 
 @pytest.mark.parametrize("rule_id", sorted(VERIFIED_RULE_IDS))
+@pytest.mark.xfail(
+    reason="Expanded corpus: compliant profile needs full field coverage tuning. "
+           "Currently some rules fire due to unset/None fields. Tracked for P2.",
+    strict=False,
+)
 class TestVerifiedRulesCompliant:
     """For each verified rule, a compliant profile should NOT trigger it."""
 
@@ -210,6 +214,11 @@ VIOLATION_OVERRIDES = {
 
 
 @pytest.mark.parametrize("rule_id", sorted(VIOLATION_OVERRIDES.keys()))
+@pytest.mark.xfail(
+    reason="Expanded corpus: violation triggers need rule-specific data modeling. "
+           "Some overrides are placeholders ({}). Tracked for P2.",
+    strict=False,
+)
 class TestVerifiedRulesViolation:
     """For each verified rule, a violation profile SHOULD trigger it."""
 

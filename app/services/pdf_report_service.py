@@ -18,7 +18,6 @@ from app.services.compliance_service import ComplianceService
 from app.models.compliance import ComplianceScoreHistory
 from app.services.rescue_service import RescueService
 from sqlalchemy import select
-from app.rule_engine.engine import CATEGORY_CAPS
 from app.services.pdf_render import (
     asset_uri,
     esc,
@@ -107,6 +106,67 @@ def _score_class(score: Any) -> str:
     if score < 50:
         return "score-bad"
     return "score-warn"
+
+
+def _render_band_legend(current_band: str) -> str:
+    """Render the 5-band risk legend with the current band highlighted.
+
+    Includes NOT_EVALUATED for companies with insufficient data (coverage < 0.5).
+    """
+    bands = [
+        ("GREEN", "70-100", "Compliant"),
+        ("YELLOW", "50-69", "Monitor"),
+        ("RED", "30-49", "Action Required"),
+        ("BLACK", "0-29", "Critical"),
+        ("NOT_EVALUATED", "—", "Insufficient Data"),
+    ]
+    items = []
+    for band_name, score_range, label in bands:
+        cls = f"band-item band-{band_name}"
+        if band_name == current_band:
+            cls += " band-current"
+        items.append(
+            f'<div class="{cls}">{esc(band_name)}<br><span style="font-weight:normal;text-transform:none;letter-spacing:0;">{esc(score_range)} · {esc(label)}</span></div>'
+        )
+    return f'<div class="band-legend">{"".join(items)}</div>'
+
+
+def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue_plan: Any) -> str:
+    """Generate a brief executive summary paragraph based on the company's status."""
+    flag_count = len(flags) if flags else 0
+    black_count = sum(1 for f in (flags or []) if getattr(f, "severity", "") == "BLACK")
+    red_count = sum(1 for f in (flags or []) if getattr(f, "severity", "") == "RED")
+    yellow_count = sum(1 for f in (flags or []) if getattr(f, "severity", "") == "YELLOW")
+
+    if band == "BLACK":
+        urgency = "<strong>Critical legal deficiency detected.</strong> The company has a BLACK-severity compliance breach requiring immediate remediation. The compliance score has been overridden to 0 pending resolution of the critical flag(s)."
+    elif band == "RED":
+        urgency = "<strong>Significant compliance gaps detected.</strong> The company requires structured remediation to address active RED-severity findings and restore compliance standing."
+    elif band == "YELLOW":
+        urgency = "<strong>Compliance monitoring recommended.</strong> The company has minor deficiencies that should be addressed to maintain good standing."
+    elif band == "NOT_EVALUATED":
+        urgency = "<strong>Insufficient data for compliance evaluation.</strong> Less than 50% of required compliance data points are available. The company's compliance status cannot be determined. Please complete the company profile and trigger re-evaluation."
+    else:
+        urgency = "<strong>Company is in good compliance standing.</strong> No critical issues detected. Continue regular monitoring."
+
+    parts = [urgency]
+    parts.append(
+        f"Active flags: <strong>{flag_count}</strong> "
+        f"({black_count} BLACK, {red_count} RED, {yellow_count} YELLOW). "
+        f"Compliance score: <strong>{score}/100</strong>."
+    )
+
+    if rescue_plan is not None:
+        completed = int(getattr(rescue_plan, "completed_steps", 0) or 0)
+        total = int(getattr(rescue_plan, "total_steps", 0) or 0)
+        parts.append(
+            f"A <strong>Corporate Rescue Plan</strong> has been initiated with "
+            f"{total} remediation step(s), {completed} completed."
+        )
+    elif band in ("RED", "BLACK"):
+        parts.append("No rescue plan has been generated yet. Consider triggering compliance evaluation to generate a remediation roadmap.")
+
+    return f'<div class="exec-summary">{" ".join(parts)}</div>'
 
 
 def _render_rescue_section(rescue_plan: Any) -> str:
@@ -216,64 +276,6 @@ def _render_rescue_section(rescue_plan: Any) -> str:
     """
 
 
-def _render_band_legend(current_band: str) -> str:
-    """Render the 4-band risk legend with the current band highlighted."""
-    bands = [
-        ("GREEN", "70-100", "Compliant"),
-        ("YELLOW", "50-69", "Monitor"),
-        ("RED", "30-49", "Action Required"),
-        ("BLACK", "0-29", "Critical"),
-        ("NOT_EVALUATED", "—", "Insufficient Data"),
-    ]
-    items = []
-    for band_name, score_range, label in bands:
-        cls = f"band-item band-{band_name}"
-        if band_name == current_band:
-            cls += " band-current"
-        items.append(
-            f'<div class="{cls}">{esc(band_name)}<br><span style="font-weight:normal;text-transform:none;letter-spacing:0;">{esc(score_range)} · {esc(label)}</span></div>'
-        )
-    return f'<div class="band-legend">{"".join(items)}</div>'
-
-
-def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue_plan: Any) -> str:
-    """Generate a brief executive summary paragraph based on the company's status."""
-    flag_count = len(flags) if flags else 0
-    black_count = sum(1 for f in (flags or []) if getattr(f, "severity", "") == "BLACK")
-    red_count = sum(1 for f in (flags or []) if getattr(f, "severity", "") == "RED")
-    yellow_count = sum(1 for f in (flags or []) if getattr(f, "severity", "") == "YELLOW")
-
-    if band == "BLACK":
-        urgency = "<strong>Critical legal deficiency detected.</strong> The company has a BLACK-severity compliance breach requiring immediate remediation. The compliance score has been overridden to 0 pending resolution of the critical flag(s)."
-    elif band == "RED":
-        urgency = "<strong>Significant compliance gaps detected.</strong> The company requires structured remediation to address active RED-severity findings and restore compliance standing."
-    elif band == "NOT_EVALUATED":
-        urgency = "<strong>Insufficient data for compliance evaluation.</strong> Less than 50% of required compliance data points are available. Please complete the company profile and trigger re-evaluation."
-    elif band == "YELLOW":
-        urgency = "<strong>Compliance monitoring recommended.</strong> The company has minor deficiencies that should be addressed to maintain good standing."
-    else:
-        urgency = "<strong>Company is in good compliance standing.</strong> No critical issues detected. Continue regular monitoring."
-
-    parts = [urgency]
-    parts.append(
-        f"Active flags: <strong>{flag_count}</strong> "
-        f"({black_count} BLACK, {red_count} RED, {yellow_count} YELLOW). "
-        f"Compliance score: <strong>{score}/100</strong>."
-    )
-
-    if rescue_plan is not None:
-        completed = int(getattr(rescue_plan, "completed_steps", 0) or 0)
-        total = int(getattr(rescue_plan, "total_steps", 0) or 0)
-        parts.append(
-            f"A <strong>Corporate Rescue Plan</strong> has been initiated with "
-            f"{total} remediation step(s), {completed} completed."
-        )
-    elif band in ("RED", "BLACK"):
-        parts.append("No rescue plan has been generated yet. Consider triggering compliance evaluation to generate a remediation roadmap.")
-
-    return f'<div class="exec-summary">{" ".join(parts)}</div>'
-
-
 def build_compliance_report_html(
     company: Any,
     flags: Any,
@@ -289,6 +291,7 @@ def build_compliance_report_html(
     rescue_plan may be None (GREEN/YELLOW company, or RED/BLACK company that
     hasn't triggered rescue generation yet); in that case the rescue section
     is omitted entirely.
+    engine_version and snapshot_hash are included in the footer for audit trail.
     """
     score = company.current_compliance_score or 0
     band = company.current_risk_band or "NOT_EVALUATED"
@@ -301,46 +304,6 @@ def build_compliance_report_html(
         )
     else:
         rows = '<tr><td colspan="4">No active compliance flags.</td></tr>'
-    # F1 reconciliation: per-flag impacts are raw (pre-cap). The engine applies
-    # CATEGORY_CAPS per category inside _calculate_score; surface it so the
-    # printed math reconciles with the score box.
-    band_str = str(getattr(band, "value", band) or "NOT_EVALUATED")
-    recon_html = ""
-    if flags and band_str != "BLACK":
-        cat_raw = {}
-        for fl in flags:
-            rid = str(getattr(fl, "rule_id", "") or "")
-            imp = int(getattr(fl, "score_impact", 0) or 0)
-            cat = "OTHER"
-            for cat_name, (_cap, _prefixes) in CATEGORY_CAPS.items():
-                if any(rid.startswith(p) for p in _prefixes):
-                    cat = cat_name
-                    break
-            cat_raw[cat] = cat_raw.get(cat, 0) + imp
-        total_eff = 0
-        adjusted = []
-        for cat_name in sorted(cat_raw):
-            raw = cat_raw[cat_name]
-            cap = 100 if cat_name == "OTHER" else CATEGORY_CAPS[cat_name][0]
-            eff = min(raw, cap)
-            total_eff += eff
-            if eff < raw:
-                adjusted.append(
-                    f'<div>Category cap applied ({esc(cat_name)}): raw deduction {raw} pts '
-                    f'capped to {eff} pts (cap {cap})</div>'
-                )
-        if total_eff > 0:
-            implied = 100 - total_eff
-            note = "" if implied == int(score) else " (final score clamped/overridden by engine)"
-            cap_html = "".join(adjusted)
-            recon_html = (
-                '<div style="font-size:11px;color:#495057;margin-top:8px;">'
-                f'<strong>Score reconciliation:</strong> raw deductions '
-                f'-{sum(cat_raw.values())} pts; category caps '
-                f'-{sum(cat_raw.values()) - total_eff} pts; effective deductions '
-                f'-{total_eff} pts &rarr; indicated score {implied}/100{note}'
-                f'{cap_html}</div>'
-            )
 
     logo_html = (
         f'<img class="logo" src="{esc(logo_uri)}" alt="Neum Lex Counsel"><br>'
@@ -366,15 +329,28 @@ def build_compliance_report_html(
         <div class="subtitle">Generated by Neum Lex Counsel</div>
     </div>
 
-    <h2>{esc(company.company_name or '[COMPANY NAME NOT ON FILE]')}</h2>
-    <p><strong>Registration Number:</strong> {esc(company.registration_number)}<br>
-       <strong>Date of Report:</strong> {esc(generated_at.strftime('%d %B %Y'))}</p>
+    <h2>{esc(company.company_name)}</h2>
+    <table class="meta-table" style="width:100%;font-size:11px;margin-bottom:12px;">
+        <tr>
+            <td style="width:25%;"><strong>Registration Number:</strong> {esc(company.registration_number)}</td>
+            <td style="width:25%;"><strong>Company Type:</strong> {esc(getattr(company, 'company_type', 'N/A'))}</td>
+            <td style="width:25%;"><strong>Date of Report:</strong> {esc(generated_at.strftime('%d %B %Y'))}</td>
+            <td style="width:25%;"><strong>Assessment ID:</strong> {esc(snapshot_hash[:12] if snapshot_hash and snapshot_hash != 'unknown' else 'N/A')}</td>
+        </tr>
+        <tr>
+            <td><strong>Incorporated:</strong> {esc(getattr(company, 'incorporation_date', 'N/A') or 'N/A')}</td>
+            <td><strong>Financial Year End:</strong> {esc(getattr(company, 'financial_year_end', 'N/A') or 'N/A')}</td>
+            <td><strong>Status:</strong> {esc(getattr(company, 'status', 'N/A'))}</td>
+            <td><strong>Engine Version:</strong> {esc(engine_version)}</td>
+        </tr>
+    </table>
 
         <div class="score-box">
         <div class="score-number {_score_class(score)}">{esc(score)} / 100</div>
         <div class="band">Risk Band: {esc(band)}</div>
         {('<div style="font-size:11px;color:#B91C1C;margin-top:8px;"><strong>Score Override:</strong> A BLACK-severity rule has been triggered. The compliance score is set to 0 regardless of accumulated deductions, as the company has a critical legal deficiency requiring immediate remediation.</div>') if band == 'BLACK' else ''}
     </div>
+    {('<div style="font-size:10px;color:#8B6914;background:#FFF8E1;border:1px solid #FFD54F;padding:6px;margin:8px 0;border-radius:4px;"><strong>TEST ASSESSMENT:</strong> This report was generated for a test company. Do not use for legal or regulatory purposes.</div>') if 'TEST' in (company.registration_number or '').upper() else ''}
     {legend_html}
     {summary_html}
 
@@ -384,13 +360,12 @@ def build_compliance_report_html(
         {rows}
     </table>
 
-    {recon_html}
-
     {rescue_html}
 
     <div class="footer">
         <p>This compliance intelligence output is subject to professional review under the Companies Act 1994 (Bangladesh).</p>
         <p>Automated compliance screening. Not legal advice. Consult your legal counsel.</p>
+        <div class="audit-meta">Engine: {esc(engine_version)} | Snapshot: {esc(snapshot_hash[:16]) if snapshot_hash else 'unknown'} | Generated: {esc(generated_at.isoformat())}</div>
     </div>
 </body>
 </html>"""

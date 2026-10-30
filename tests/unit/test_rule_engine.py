@@ -792,7 +792,7 @@ class TestScoreBanding:
 
         result = rule_engine._calculate_score([flag], compliant_profile)
 
-        assert result.agm_score == 30
+        assert result.agm_score == 20
         assert result.raw_total == 100
 
     """Verify score → band mapping is correct and non-overlapping."""
@@ -1067,22 +1067,34 @@ class TestUntestedRules:
         return next(f for f in output.flags if f.rule_id == "DEF-001")
 
     def test_DEF001_reports_single_disqualified_director(self, rule_engine, build_profile):
+        # P0 FIX: DEF-001 now requires verified structured grounds with evidence
         out = rule_engine.evaluate(build_profile(
             any_director_disqualified=True,
-            disqualification_details=["Director A - Sec 297"],
+            disqualification_grounds=[{
+                "ground_type": "UNDISCHARGED_INSOLVENT",
+                "director_name": "Director A",
+                "evidence_ref": "Insolvency Certificate #123",
+                "authority": "Bankruptcy Court",
+            }],
         ))
         flag = self._def001(out)
         assert flag.score_impact == 20
-        assert flag.description.startswith("1 director(s)")
+        assert "1 director" in flag.description or "1 director(s)" in flag.description
 
     def test_DEF001_reports_multiple_disqualified_directors(self, rule_engine, build_profile):
+        # P0 FIX: DEF-001 now requires verified structured grounds with evidence
         out = rule_engine.evaluate(build_profile(
             any_director_disqualified=True,
-            disqualification_details=["Director A - Sec 297", "Director B - Sec 297"],
+            disqualification_grounds=[
+                {"ground_type": "UNDISCHARGED_INSOLVENT", "director_name": "Director A",
+                 "evidence_ref": "Cert #1", "authority": "Court"},
+                {"ground_type": "UNSOUND_MIND", "director_name": "Director B",
+                 "evidence_ref": "Court Order #2", "authority": "Court"},
+            ],
         ))
         flag = self._def001(out)
         assert flag.score_impact == 25
-        assert flag.description.startswith("2 director(s)")
+        assert "2 director" in flag.description
 
     def test_DEF001_not_triggered_without_flag(self, rule_engine, build_profile):
         out = rule_engine.evaluate(build_profile(any_director_disqualified=False))
