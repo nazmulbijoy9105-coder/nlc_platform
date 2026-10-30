@@ -2040,7 +2040,7 @@ class NLCRuleEngine:
                     "rescue_id": rescue.get("rescue_id", ""),
                     "authority": rescue.get("authority", ""),
                     "closure_condition": rescue.get("closure_condition", ""),
-                    "statutory_basis": rescue.get("statutory_basis") or getattr(tax_flags[0], "statutory_basis", "") if tax_flags else "",
+                    "statutory_basis": rescue.get("statutory_basis") or (getattr(tax_flags[0], "statutory_basis", "") if tax_flags else ""),
                     "complexity": rescue.get("complexity"),
                     "estimated_days_min": rescue.get("estimated_days_min"),
                     "estimated_days_max": rescue.get("estimated_days_max"),
