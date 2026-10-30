@@ -90,24 +90,34 @@ def test_unguarded_override_sites_bounded():
 
 def test_verified_rule_ids_pin():
     src = _source()
-    m = re.search(r"\bVERIFIED_RULE_IDS\s*=\s*[\{\[]", src)
-    assert m, "VERIFIED_RULE_IDS definition not found"
-    i, depth = m.end(), 1
-    while i < len(src) and depth:
-        ch = src[i]
-        if ch in "{[":
+    m = re.search(r"\bVERIFIED_RULE_IDS\b[^\n]*=", src)
+    assert m, "VERIFIED_RULE_IDS definition not found in source"
+    hint = src[m.start():m.start() + 120]
+    rest = src[m.end():]
+    # tolerate wrapper calls:  = frozenset({...})  /  = set({...})
+    rest = re.sub(r"^\s*(?:frozenset|set)\s*\(", "(", rest, count=1)
+    ob = re.search(r"[\{\[\(]", rest)
+    assert ob, f"no literal after VERIFIED_RULE_IDS assignment near: {hint!r}"
+    open_ch = rest[ob.start()]
+    close_ch = {"{": "}", "[": "]", "(": ")"}[open_ch]
+    depth, i = 1, ob.start() + 1
+    while i < len(rest) and depth:
+        ch = rest[i]
+        if ch == open_ch:
             depth += 1
-        elif ch in "}]":
+        elif ch == close_ch:
             depth -= 1
         i += 1
-    ids = re.findall(r'"([A-Z][A-Z0-9]*-[0-9A-Z]+)"', src[m.end():i - 1])
+    assert depth == 0, f"unbalanced brackets in VERIFIED_RULE_IDS literal near: {hint!r}"
+    body = rest[ob.start() + 1:i - 1]
+    ids = re.findall(r'["\']([A-Z][A-Z0-9]*-[0-9A-Z]+)["\']', body)
     uniq = set(ids)
     assert len(ids) == len(uniq), (
-        f"duplicate entries in VERIFIED_RULE_IDS ({len(ids)} raw vs {len(uniq)} unique)"
+        f"duplicate entries in VERIFIED_RULE_IDS ({len(ids)} raw vs {len(uniq)} unique) near: {hint!r}"
     )
     assert len(uniq) == EXPECTED_VERIFIED_COUNT, (
         f"expected {EXPECTED_VERIFIED_COUNT} verified rules, found {len(uniq)} — "
-        "the legal register pin moved without a register update"
+        f"definition form near: {hint!r} (register pin moved without a register update?)"
     )
     bad = [r for r in FORBIDDEN_RULE_IDS if r in uniq]
     assert not bad, f"forbidden members in VERIFIED_RULE_IDS: {bad}"
@@ -157,8 +167,11 @@ def test_verified_rule_ids_module_attr():
     ids = getattr(mod, "VERIFIED_RULE_IDS", None)
     assert ids is not None, "VERIFIED_RULE_IDS is not module-level anymore"
     uniq = set(ids)
-    assert len(uniq) == EXPECTED_VERIFIED_COUNT
-    assert not (uniq & set(FORBIDDEN_RULE_IDS))
+    assert len(uniq) == EXPECTED_VERIFIED_COUNT, (
+        f"expected {EXPECTED_VERIFIED_COUNT} verified rules, found {len(uniq)}"
+    )
+    forbidden = uniq & set(FORBIDDEN_RULE_IDS)
+    assert not forbidden, f"forbidden members in VERIFIED_RULE_IDS: {sorted(forbidden)}"
 
 
 # ═══════════════ standalone runner ═══════════════

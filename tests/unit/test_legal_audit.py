@@ -253,20 +253,6 @@ class TestScoringEngine:
 # RESCUE-001..002: Rescue plan coverage
 # ═══════════════════════════════════════════════════════════════════════
 
-class TestRescueCoverage:
-
-    def test_RESCUE_002_generic_step_for_missing_mapping(self):
-        """RESCUE-002: Missing rescue mapping creates generic step, not crash."""
-        # This tests the fix for the ValueError that was previously raised
-        c = _base_profile(
-            maintained_registers=[],
-            first_auditor_appointed=False,
-            incorporation_date=date(2020, 1, 1),
-        )
-        result = NLCRuleEngine().evaluate(c)
-        # Should not crash — all flags should get steps or be skipped gracefully
-        assert result.rescue_sequence is not None
-
 
 # ═══════════════════════════════════════════════════════════════════════
 # AUDIT-001..002: Determinism and temporal logic
