@@ -45,12 +45,12 @@ class DirectorService(BaseService[Director]):
     ) -> Director:
         """
         Record a director appointment.
-        Auto-calculates filing delay (Section 115 CA 1994: file within 30 days).
+        Auto-calculates filing delay (Section 115 CA 1994: file within 14 days).
         """
         delay_days = 0
         filing_delayed = False
         if appointment_filed_date:
-            deadline = appointment_date + timedelta(days=30)
+            deadline = appointment_date + timedelta(days=14)
             if appointment_filed_date > deadline:
                 delay_days = (appointment_filed_date - deadline).days
                 filing_delayed = True
@@ -92,7 +92,7 @@ class DirectorService(BaseService[Director]):
         delay_days = 0
         filing_delayed = False
         if departure_filed_date:
-            deadline = departure_date + timedelta(days=30)
+            deadline = departure_date + timedelta(days=14)  # Section 115: 14 days
             if departure_filed_date > deadline:
                 delay_days = (departure_filed_date - deadline).days
                 filing_delayed = True
