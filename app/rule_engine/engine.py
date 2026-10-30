@@ -547,7 +547,7 @@ class NLCRuleEngine:
                 severity=Severity.BLACK,
                 score_impact=20,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Paid-up capital exceeds authorized capital. Section 150: all excess allotments void.",
+                description="Paid-up capital exceeds authorized capital. Section 53: all excess allotments void.",
                 statutory_basis="Section 53, Companies Act 1994 (Bangladesh)",
                 is_black_override=True,
                 detail={"paid_up": c.paid_up_capital_bdt, "authorized": c.authorized_capital_bdt}
@@ -604,7 +604,7 @@ class NLCRuleEngine:
                 score_impact=10,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description="Business commenced without Section 150 declaration filed with Registrar.",
-                statutory_basis="Section 150, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 59, Companies Act 1994 (Bangladesh)",
             ))
 
         if c.trade_license_obtained is False:
@@ -806,8 +806,8 @@ class NLCRuleEngine:
                 severity=Severity.RED,
                 score_impact=15,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=f"AGM quorum not met. {c.members_present_at_agm} present, need {PRIVATE_COMPANY_QUORUM}. Section 83.",
-                statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
+                description=f"AGM quorum not met. {c.members_present_at_agm} present, need {PRIVATE_COMPANY_QUORUM}. Section 85.",
+                statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
                 detail={"present": c.members_present_at_agm, "required": PRIVATE_COMPANY_QUORUM}
             ))
 
@@ -935,7 +935,7 @@ class NLCRuleEngine:
                         score_impact=10,
                         revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                         description="Departed director still liable until Form XII filed. Section 115: filing required to release liability.",
-                        statutory_basis="Section 109, Companies Act 1994 (Bangladesh)",
+                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id}
                     ))
 
@@ -1180,7 +1180,7 @@ class NLCRuleEngine:
                 severity=Severity.YELLOW,
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="Capital increase without shareholder resolution. Section 54: Ordinary/Special Resolution required.",
+                description="Capital increase without shareholder resolution. Section 53: Ordinary/Special Resolution required.",
                 statutory_basis="Section 53, Companies Act 1994 (Bangladesh)",
             ))
 
@@ -1218,7 +1218,7 @@ class NLCRuleEngine:
                 severity=Severity.BLACK,
                 score_impact=15,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Capital reduction without court order. Section 150.",
+                description="Capital reduction without court order. Section 59.",
                 statutory_basis="Section 150, Companies Act 1994 (Bangladesh)",
                 is_black_override=True,
             ))
@@ -1378,8 +1378,8 @@ class NLCRuleEngine:
                     rule_id="STR-001", flag_code="NAME_CHANGE_NOT_FILED",
                     severity=sev, score_impact=8 if delay > 90 else 3,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Name change not filed. Sec 20: Special Resolution + RJSC filing. Overdue {delay} days.",
-                    statutory_basis="Section 20, Companies Act 1994 (Bangladesh)",
+                    description=f"Name change not filed. Sec 11: Special Resolution + RJSC filing. Overdue {delay} days.",
+                    statutory_basis="Section 11, Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay}
                 ))
 
@@ -1715,8 +1715,8 @@ class NLCRuleEngine:
                 severity=Severity.BLACK,
                 score_impact=impact,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description=f"{disq_count} director(s) disqualified under Section 118(6). Cannot act as director for 5 years.",
-                statutory_basis="Section 118(6), Companies Act 1994 (Bangladesh)",
+                description=f"{disq_count} director(s) disqualified under Section 94. Cannot act as director for 5 years.",
+                statutory_basis="Section 94, Companies Act 1994 (Bangladesh)",
                 detail={"disqualifications": c.disqualification_details, "count": disq_count},
                 is_black_override=is_override,
             ))
