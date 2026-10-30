@@ -72,3 +72,7 @@ Sources this round: bdlaws.minlaw.gov.bd act-788 TOC (sections 23, 34, 36, 52, 5
 | F-10 STATUS | engine.py main lines 528 and 756 | Sites re-confirmed on main (line drift +14 vs branch). AGM-001 already has a proper upstream UNKNOWN branch (agm_count None or incorporation_date None - severity YELLOW, impact 0, state=RuleState.UNKNOWN, early return), which is the engine's own correct idiom for missing data. The 756 hardcode sits strictly inside the overdue branch where facts are determined | Fix pattern: 756 - delete the eval_state line (violation stands); 528 - replace eval_state hardcode with state=RuleState.UNKNOWN + score_impact 0; plus F-20 floor hardening. CRITICAL |
 
 Sources this round: app.roc.gov.bd FORM IX page (Consent of Director to Act, sec. 92(1)(Ka)); app.roc.gov.bd RJSC Business Process Brief returns-filing tables (Form IX 30d s.92, Form XII 14d s.115, Form IV 15d s.56, Form 23B 30d s.210(2), Form XXVIII 21d, Schedule X 21d s.36); bdlaws act-788 TOC (s.93 = consent of candidate for director).
+
+## P5 promotion log
+
+- 2026-10-30 R4-P3: AR-001 (s.36, 21-day annual return; re-verified this round) and SH-002 (s.158, 90-day share certificate; F-13 CLOSED) promoted into VERIFIED_RULE_IDS. Allowlist 41 -> 43.

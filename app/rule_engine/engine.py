@@ -392,7 +392,7 @@ VERIFIED_RULE_IDS: frozenset[str] = frozenset({
     "STR-001", "STR-002", "STR-003",
     "ACC-001", "ACC-002", "ACC-003", "BOD-001", "BOD-002", "BOD-003",
     "INC-001", "INC-003", "INC-004", "INC-007", "MEM-001", "TR-001",
-    "ESC-001", "ESC-002", "DEF-001", "DEF-002",
+    "ESC-001", "ESC-002", "DEF-001", "DEF-002", "AR-001", "SH-002",
 })
 
 # 100-point scoring model v2 - per-category deduction caps.
