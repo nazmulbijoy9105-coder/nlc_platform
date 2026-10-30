@@ -149,7 +149,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "INC-004": {
         "rule_id": "INC-004",
         "legal_domain": "Corporate",
-        "law": "Section 150, Companies Act 1994 (Bangladesh)",
+        "law": "Section 59, Companies Act 1994 (Bangladesh)",
         "requirement": "Paid-Up Capital Exceeds Authorized Capital - Paid-up capital exceeds authorized capital. Section 150: company cannot issue shares beyond authorized capital. All excess allotments void.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
@@ -314,8 +314,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AGM-005": {
         "rule_id": "AGM-005",
         "legal_domain": "Corporate",
-        "law": "Section 83(12), Companies Act 1994 (Bangladesh)",
-        "requirement": "AGM Quorum Not Met - AGM held but quorum not satisfied. Section 83(12): private companies need minimum 2 members present in person. Resolutions without quorum have no legal effect.",
+        "law": "Section 85, Companies Act 1994 (Bangladesh)",
+        "requirement": "AGM Quorum Not Met - AGM held but quorum not satisfied. Section 85(2)(b): private companies need minimum 2 members present in person. Resolutions without quorum have no legal effect.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -464,7 +464,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "SH-001": {
         "rule_id": "SH-001",
         "legal_domain": "Corporate",
-        "law": "Section 50, Companies Act 1994 (Bangladesh)",
+        "law": "Section 151, Companies Act 1994 (Bangladesh)",
         "requirement": "Share Allotment Not Filed — Form XV - Share allotment not filed via Form XV within 30 days. Section 50 requires return of allotment. Failure means allotment not reflected in RJSC register, creating uncertainty about issued capital.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
@@ -479,7 +479,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "SH-002": {
         "rule_id": "SH-002",
         "legal_domain": "Corporate",
-        "law": "Section 46, Companies Act 1994 (Bangladesh)",
+        "law": "Section 158, Companies Act 1994 (Bangladesh)",
         "requirement": "Share Certificates Not Issued Within 60 Days - Share certificates not issued within 60 days of allotment. Section 46 requires certificates within 2 months. Non-issuance means no documentary evidence of ownership, obstructing transfers and dividends.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
@@ -509,7 +509,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "TR-001": {
         "rule_id": "TR-001",
         "legal_domain": "Corporate",
-        "law": "Section 108, Companies Act 1994 (Bangladesh)",
+        "law": "Section 38, Companies Act 1994 (Bangladesh)",
         "requirement": "No Share Transfer Instrument — Form 117 - Share transfer without Form 117 instrument. Section 108 requires proper instrument of transfer, duly stamped, executed by both parties. Missing instrument renders transfer void and unregistrable.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
@@ -944,8 +944,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "DEF-001": {
         "rule_id": "DEF-001",
         "legal_domain": "Corporate",
-        "law": "Section 297, Companies Act 1994 (Bangladesh)",
-        "requirement": "Director Disqualified - One or more directors disqualified under Section 297. Cannot act as director for 5 years.",
+        "law": "Section 94, Companies Act 1994 (Bangladesh)",
+        "requirement": "Director Disqualified - One or more directors disqualified under Section 94. Cannot act as director for 5 years.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -959,8 +959,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "DEF-002": {
         "rule_id": "DEF-002",
         "legal_domain": "Corporate",
-        "law": "Section 447, Companies Act 1994 (Bangladesh)",
-        "requirement": "Unresolved Penalty Notices - Unresolved penalty notices. Section 447: fine up to Tk 10,000 per offence.",
+        "law": "Section 397, Companies Act 1994 (Bangladesh)",
+        "requirement": "Unresolved Penalty Notices - Unresolved penalty notices. Section 397: fine up to Tk 10,000 per offence.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -1004,7 +1004,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "ESC-004": {
         "rule_id": "ESC-004",
         "legal_domain": "Corporate",
-        "law": "Section 196, Companies Act 1994 (Bangladesh)",
+        "law": "Section 234, Companies Act 1994 (Bangladesh)",
         "requirement": "Voluntary Winding Up - Voluntary winding up initiated. Section 196.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
@@ -1094,7 +1094,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "STR-001": {
         "rule_id": "STR-001",
         "legal_domain": "Corporate",
-        "law": "Section 20, Companies Act 1994 (Bangladesh)",
+        "law": "Section 11, Companies Act 1994 (Bangladesh)",
         "requirement": "Name Change Not Filed - Name change special resolution not filed with RJSC within the statutory period.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
