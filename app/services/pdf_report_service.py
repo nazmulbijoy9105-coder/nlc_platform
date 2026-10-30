@@ -61,6 +61,22 @@ h2 { color: __NAVY__; }
 .flags-table th { background-color: __NAVY__; color: white; }
 .footer { margin-top: 40px; font-size: 10px; color: #6c757d; text-align: center; border-top: 1px solid #dee2e6; padding-top: 10px; }
 
+/* ── Risk band legend ───────────────────────────────────── */
+.band-legend { display: flex; gap: 8px; margin: 12px 0 4px; font-size: 9px; }
+.band-item { flex: 1; padding: 6px 4px; text-align: center; border-radius: 3px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+.band-GREEN  { background: #dcfce7; color: #166534; }
+.band-YELLOW { background: #fef3c7; color: #92400e; }
+.band-RED    { background: #fee2e2; color: #991b1b; }
+.band-BLACK  { background: #1f2937; color: #f9fafb; }
+.band-current { border: 2px solid __GOLD__; }
+
+/* ── Executive summary ─────────────────────────────────── */
+.exec-summary { background: #f8f9fa; border-left: 3px solid __GOLD__; padding: 10px 14px; margin: 16px 0; font-size: 11px; line-height: 1.6; color: #374151; }
+.exec-summary strong { color: __NAVY__; }
+
+/* ── Audit metadata in footer ──────────────────────────── */
+.audit-meta { font-size: 9px; color: #9ca3af; margin-top: 6px; font-family: monospace; }
+
 /* ── Rescue Plan section ────────────────────────────────────── */
 .rescue-section { margin-top: 28px; page-break-inside: avoid; }
 .rescue-section h3 { color: __NAVY__; border-bottom: 2px solid __GOLD__; padding-bottom: 6px; margin-bottom: 12px; }
@@ -199,12 +215,69 @@ def _render_rescue_section(rescue_plan: Any) -> str:
     """
 
 
+def _render_band_legend(current_band: str) -> str:
+    """Render the 4-band risk legend with the current band highlighted."""
+    bands = [
+        ("GREEN", "80-100", "Compliant"),
+        ("YELLOW", "50-79", "Monitor"),
+        ("RED", "1-49", "Action Required"),
+        ("BLACK", "0", "Critical"),
+    ]
+    items = []
+    for band_name, score_range, label in bands:
+        cls = f"band-item band-{band_name}"
+        if band_name == current_band:
+            cls += " band-current"
+        items.append(
+            f'<div class="{cls}">{esc(band_name)}<br><span style="font-weight:normal;text-transform:none;letter-spacing:0;">{esc(score_range)} · {esc(label)}</span></div>'
+        )
+    return f'<div class="band-legend">{"".join(items)}</div>'
+
+
+def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue_plan: Any) -> str:
+    """Generate a brief executive summary paragraph based on the company's status."""
+    flag_count = len(flags) if flags else 0
+    black_count = sum(1 for f in (flags or []) if getattr(f, "severity", "") == "BLACK")
+    red_count = sum(1 for f in (flags or []) if getattr(f, "severity", "") == "RED")
+    yellow_count = sum(1 for f in (flags or []) if getattr(f, "severity", "") == "YELLOW")
+
+    if band == "BLACK":
+        urgency = "<strong>Critical legal deficiency detected.</strong> The company has a BLACK-severity compliance breach requiring immediate remediation. The compliance score has been overridden to 0 pending resolution of the critical flag(s)."
+    elif band == "RED":
+        urgency = "<strong>Significant compliance gaps detected.</strong> The company requires structured remediation to address active RED-severity findings and restore compliance standing."
+    elif band == "YELLOW":
+        urgency = "<strong>Compliance monitoring recommended.</strong> The company has minor deficiencies that should be addressed to maintain good standing."
+    else:
+        urgency = "<strong>Company is in good compliance standing.</strong> No critical issues detected. Continue regular monitoring."
+
+    parts = [urgency]
+    parts.append(
+        f"Active flags: <strong>{flag_count}</strong> "
+        f"({black_count} BLACK, {red_count} RED, {yellow_count} YELLOW). "
+        f"Compliance score: <strong>{score}/100</strong>."
+    )
+
+    if rescue_plan is not None:
+        completed = int(getattr(rescue_plan, "completed_steps", 0) or 0)
+        total = int(getattr(rescue_plan, "total_steps", 0) or 0)
+        parts.append(
+            f"A <strong>Corporate Rescue Plan</strong> has been initiated with "
+            f"{total} remediation step(s), {completed} completed."
+        )
+    elif band in ("RED", "BLACK"):
+        parts.append("No rescue plan has been generated yet. Consider triggering compliance evaluation to generate a remediation roadmap.")
+
+    return f'<div class="exec-summary">{" ".join(parts)}</div>'
+
+
 def build_compliance_report_html(
     company: Any,
     flags: Any,
     generated_at: datetime,
     logo_uri: str | None = None,
     rescue_plan: Any = None,
+    engine_version: str = "unknown",
+    snapshot_hash: str = "unknown",
 ) -> str:
     """Pure function: company + flags + rescue_plan -> report HTML. All dynamic values escaped.
 
@@ -271,6 +344,8 @@ def build_compliance_report_html(
         else ""
     )
 
+    legend_html = _render_band_legend(band)
+    summary_html = _render_exec_summary(company, flags, band, score, rescue_plan)
     rescue_html = _render_rescue_section(rescue_plan)
 
     return f"""<!DOCTYPE html>
@@ -296,6 +371,8 @@ def build_compliance_report_html(
         <div class="band">Risk Band: {esc(band)}</div>
         {('<div style="font-size:11px;color:#B91C1C;margin-top:8px;"><strong>Score Override:</strong> A BLACK-severity rule has been triggered. The compliance score is set to 0 regardless of accumulated deductions, as the company has a critical legal deficiency requiring immediate remediation.</div>') if band == 'BLACK' else ''}
     </div>
+    {legend_html}
+    {summary_html}
 
     <h3>Active Compliance Flags</h3>
     <table class="flags-table">
@@ -351,6 +428,8 @@ class PDFReportService:
             datetime.now(REPORT_TZ),
             logo_uri=asset_uri(LOGO_FILE),
             rescue_plan=rescue_plan,
+            engine_version=engine_version,
+            snapshot_hash=snapshot_hash,
         )
         pdf_bytes = await render_html_to_pdf_async(html_content)
 
