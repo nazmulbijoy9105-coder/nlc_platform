@@ -10,11 +10,12 @@ Uses pytest.mark.parametrize to generate test variations for each rule:
 This complements test_reference_corpus.py (which has detailed 8-variation
 tests for AGM-001, OFF-001, DEF-001).
 """
-pytestmark = [pytest.mark.xfail(reason="Profile needs conftest build_profile fixture integration", strict=False)]
 from __future__ import annotations
 
 from datetime import date, timedelta
 import pytest
+
+pytestmark = [pytest.mark.xfail(reason="Profile needs conftest build_profile fixture integration", strict=False)]
 
 from app.rule_engine.engine import (
     NLCRuleEngine,
