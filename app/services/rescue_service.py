@@ -35,6 +35,15 @@ from app.services.base import BaseService
 logger = logging.getLogger("nlc.rescue")
 
 
+def _derive_plan_target(explicit: date | None, steps: list) -> date | None:
+    """F2a: explicit caller target wins; else the max step target; else None."""
+    if explicit is not None:
+        return explicit
+    targets = [getattr(s, "target_completion_date", None) for s in (steps or [])]
+    targets = [t for t in targets if t is not None]
+    return max(targets) if targets else None
+
+
 class RescueService(BaseService[RescuePlan]):
     model = RescuePlan
 
@@ -106,6 +115,12 @@ class RescueService(BaseService[RescuePlan]):
                 total_steps=total_step_count,
             )
             steps.append(step)
+
+        # F2a: plan-level target - explicit caller value wins; else max
+        # step target, so the PDF never shows an em-dash for Target completion.
+        plan.target_completion_date = _derive_plan_target(target_completion_date, steps)
+        if plan.target_completion_date is not None:
+            await self.db.flush()
 
         # Create tasks from steps
         await self._create_tasks_from_steps(plan.id, company_id, steps, assigned_staff_id)

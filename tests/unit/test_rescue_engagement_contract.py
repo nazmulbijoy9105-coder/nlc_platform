@@ -60,6 +60,7 @@ async def test_generate_rescue_plan_passes_engagement_id_to_create():
     db = MagicMock()
     db.execute = AsyncMock()
     db.refresh = AsyncMock()
+    db.flush = AsyncMock()
 
     svc = RescueService(db=db)
     test_engagement_id = uuid.uuid4()
