@@ -1764,7 +1764,7 @@ class NLCRuleEngine:
 
         pre_score = self._calculate_raw_score(self._flags)
         has_black_override = any(
-            f.is_black_override and f.state == RuleState.NON_COMPLIANT 
+            f.is_black_override and f.state == RuleState.NON_COMPLIANT and f.eval_state != "UNKNOWN"
             for f in self._flags if not f.resolved and f.conditional_applies
         )
         
@@ -1889,12 +1889,12 @@ class NLCRuleEngine:
         final = raw
         critical = [
             f for f in active 
-            if f.is_black_override and f.state == RuleState.NON_COMPLIANT
+            if f.is_black_override and f.state == RuleState.NON_COMPLIANT and f.eval_state != "UNKNOWN"
         ]
         if not critical:
             critical = [
                 f for f in active 
-                if f.severity == Severity.BLACK and f.state == RuleState.NON_COMPLIANT
+                if f.severity == Severity.BLACK and f.state == RuleState.NON_COMPLIANT and f.eval_state != "UNKNOWN"
             ]
         if critical:
             override = True
