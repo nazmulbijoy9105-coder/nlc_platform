@@ -2221,7 +2221,7 @@ class NLCRuleEngine:
         actionable = [
             f for f in active
             if f.state == RuleState.NON_COMPLIANT
-            and f.severity in (Severity.YELLOW, Severity.RED, Severity.BLACK)
+            and f.severity in (Severity.RED, Severity.BLACK)
         ]
         if not actionable:
             return []
@@ -2306,33 +2306,10 @@ class NLCRuleEngine:
 
             rescue = STATUTORY_RESCUE_REGISTRY.get(flag.rule_id)
             if not rescue:
-                # P1 FIX: Don't crash on missing rescue mapping — create a
-                # generic remediation step so every finding gets a disposition.
-                import logging
-                logging.getLogger(__name__).warning(
-                    f"No statutory rescue mapping for {flag.rule_id}, "
-                    f"creating generic remediation step"
+                raise ValueError(
+                    "Missing statutory rescue mapping for actionable finding: "
+                    f"{flag.rule_id}"
                 )
-                steps.append({
-                    "title": f"Remediate: {flag.rule_id}",
-                    "description": (
-                        f"Review legal requirement; prepare required "
-                        f"documentation; submit to relevant authority. "
-                        f"Flag: {flag.description}"
-                    ),
-                    "related_rules": [flag.rule_id],
-                    "priority": "CRITICAL" if flag.severity == Severity.BLACK else "HIGH",
-                    "min_days": 7,
-                    "max_days": 30,
-                    "rescue_id": f"{flag.rule_id}-GENERIC",
-                    "authority": "",
-                    "closure_condition": "Evidence of remediation filed and verified",
-                    "statutory_basis": getattr(flag, "statutory_basis", ""),
-                    "complexity": "MEDIUM",
-                    "estimated_days_min": 7,
-                    "estimated_days_max": 30,
-                })
-                continue
 
             priority = (
                 "CRITICAL" if flag.severity == Severity.BLACK else "HIGH"
