@@ -252,7 +252,7 @@ async def lifespan(app: FastAPI):
         logger.warning("admin_auto_sync_failed", error=str(_e))
 
 
-    # Auto-seed ILRMF rules if table is empty
+    # Reconcile ILRMF rules (idempotent upsert)
     try:
         import json as _json
         from datetime import datetime
