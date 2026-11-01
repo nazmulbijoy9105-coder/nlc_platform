@@ -18,7 +18,6 @@ Rules covered (3 representative):
 
 Total: 24 test cases.
 """
-from __future__ import annotations
 
 from datetime import date, timedelta
 from dataclasses import dataclass, field
