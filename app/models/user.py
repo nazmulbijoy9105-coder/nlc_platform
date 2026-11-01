@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
     from .company import CompanyUserAccess
     from .infrastructure import UserActivityLog
+    from .webhook import WebhookEndpoint
 
 
 class User(FullMixin, Base):

@@ -1,0 +1,94 @@
+canonical_architecture\statutory_rules.py:1283: error: The type "type[StatutoryRule]" is not generic and not indexable  [misc]
+canonical_architecture\statutory_rules.py:1296: error: "type[StatutoryRule]" has no attribute "get"  [attr-defined]
+canonical_architecture\statutory_rules.py:1297: error: Unsupported target for indexed assignment ("type[StatutoryRule]")  [index]
+canonical_architecture\statutory_rescue.py:172: error: Name "STATUTORY_RESCUE_REGISTRY" already defined on line 97  [no-redef]
+canonical_architecture\lifecycle_engine.py:29: error: Name "evidence" is not defined  [name-defined]
+canonical_architecture\lifecycle_engine.py:30: error: Returning Any from function declared to return "RuleState"  [no-any-return]
+canonical_architecture\lifecycle_engine.py:30: error: Name "ComplianceStatus" is not defined  [name-defined]
+canonical_architecture\lifecycle_engine.py:34: error: Name "evidence" is not defined  [name-defined]
+canonical_architecture\lifecycle_engine.py:48: error: Name "finding" is not defined  [name-defined]
+canonical_architecture\lifecycle_engine.py:50: error: Name "finding" is not defined  [name-defined]
+canonical_architecture\lifecycle_engine.py:56: error: Returning Any from function declared to return "RuleState"  [no-any-return]
+canonical_architecture\lifecycle_engine.py:56: error: Name "ComplianceStatus" is not defined  [name-defined]
+canonical_architecture\lifecycle_engine.py:78: error: Value of type "RescueDef" is not indexable  [index]
+canonical_architecture\lifecycle_engine.py:79: error: Value of type "RescueDef" is not indexable  [index]
+canonical_architecture\lifecycle_engine.py:80: error: Value of type "RescueDef" is not indexable  [index]
+canonical_architecture\lifecycle_engine.py:81: error: Value of type "RescueDef" is not indexable  [index]
+app\rule_engine\engine.py:297: error: Name "is_manufacturing" already defined on line 200  [no-redef]
+app\rule_engine\engine.py:298: error: Name "factory_license_obtained" already defined on line 295  [no-redef]
+app\rule_engine\engine.py:563: error: No overload variant of "__sub__" of "date" matches argument type "None"  [operator]
+app\rule_engine\engine.py:563: note: Possible overload variants:
+app\rule_engine\engine.py:563: note:     def __sub__(self, datetime, /) -> Never
+app\rule_engine\engine.py:563: note:     def __sub__(self, date, /) -> timedelta
+app\rule_engine\engine.py:563: note:     def __sub__(self, timedelta, /) -> date
+app\rule_engine\engine.py:563: note: Right operand is of type "date | None"
+app\rule_engine\engine.py:790: error: Unsupported operand types for > ("date" and "timedelta")  [operator]
+app\rule_engine\engine.py:790: note: Right operand is of type "date | timedelta"
+app\rule_engine\engine.py:790: error: Unsupported operand types for + ("None" and "timedelta")  [operator]
+app\rule_engine\engine.py:790: note: Left operand is of type "date | None"
+app\rule_engine\engine.py:1906: error: Incompatible types in assignment (expression has type "list[str]", variable has type "list[dict[Any, Any]]")  [assignment]
+app\services\pdf_render.py:76: error: Returning Any from function declared to return "bytes"  [no-any-return]
+app\core\config.py:69: error: Incompatible types in assignment (expression has type "str | None", variable has type "str")  [assignment]
+app\models\user.py:66: error: Name "WebhookEndpoint" is not defined  [name-defined]
+app\models\commercial.py:286: error: Name "VALID_ENGAGEMENT_TRANSITIONS" already defined on line 259  [no-redef]
+app\models\commercial.py:296: error: Name "validate_engagement_transition" already defined on line 270  [no-redef]
+app\models\commercial.py:302: error: Name "InvalidEngagementTransitionError" already defined on line 276  [no-redef]
+app\services\notification_service.py:346: error: Incompatible return value type (got "Sequence[UserActivityLog]", expected "list[dict[Any, Any]]")  [return-value]
+app\services\company_service.py:354: error: Argument "form_117_filed" to "ShareTransfer" has incompatible type "Any | None"; expected "bool"  [arg-type]
+app\core\dependencies.py:162: error: Argument "user_id" to "TokenData" has incompatible type "Any | None"; expected "str"  [arg-type]
+app\api\auth.py:259: error: Unexpected keyword argument "refresh_token" for "RefreshResponse"  [call-arg]
+app\api\auth.py:269: error: Argument 1 to "revoke" has incompatible type "Any | None"; expected "str"  [arg-type]
+app\api\auth.py:269: error: Item "None" of "dict[Any, Any] | None" has no attribute "get"  [union-attr]
+app\services\rescue_service.py:44: error: Value of type variable "SupportsRichComparisonT" of "max" cannot be "Any | None"  [type-var]
+app\api\rjsc_forms.py:170: error: Argument "form_id" to "mark_filed" of "RJSCFormService" has incompatible type "UUID"; expected "str"  [arg-type]
+app\api\commercial.py:165: error: Argument "status" to "EngagementResponse" has incompatible type "str | None"; expected "str"  [arg-type]
+app\api\commercial.py:197: error: Argument "status" to "TaskResponse" has incompatible type "str | None"; expected "str"  [arg-type]
+app\api\calendar.py:25: error: "ComplianceCalendarService" has no attribute "generate_and_persist"  [attr-defined]
+app\api\calendar.py:40: error: "ComplianceCalendarService" has no attribute "get_upcoming_events"; maybe "get_upcoming"?  [attr-defined]
+app\services\compliance_service.py:77: error: Returning Any from function declared to return "bool"  [no-any-return]
+app\worker\tasks\core.py:423: error: Name "db" is not defined  [name-defined]
+app\services\pdf_report_service.py:214: error: Item "None" of "Any | None" has no attribute "strftime"  [union-attr]
+app\services\pdf_report_service.py:439: error: Argument 1 to "get_by_id_or_404" of "BaseService" has incompatible type "str"; expected "UUID"  [arg-type]
+app\services\pdf_report_service.py:440: error: Argument 1 to "get_active_flags" of "ComplianceService" has incompatible type "str"; expected "UUID"  [arg-type]
+app\api\admin.py:425: error: Name "worker_health" already defined on line 404  [no-redef]
+app\tasks\scheduler.py:22: error: Module "app.worker.tasks" has no attribute "evaluate_all_companies"  [attr-defined]
+app\tasks\scheduler.py:24: error: Unexpected keyword argument "task" for "info" of "Logger"  [call-arg]
+app\tasks\scheduler.py:24: note: "info" defined in "logging"
+app\tasks\scheduler.py:26: error: Unexpected keyword argument "task" for "error" of "Logger"  [call-arg]
+app\tasks\scheduler.py:26: note: "error" defined in "logging"
+app\tasks\scheduler.py:26: error: Unexpected keyword argument "error" for "error" of "Logger"  [call-arg]
+app\tasks\scheduler.py:49: error: Unexpected keyword argument "count" for "info" of "Logger"  [call-arg]
+app\tasks\scheduler.py:49: note: "info" defined in "logging"
+app\tasks\scheduler.py:51: error: Unexpected keyword argument "task" for "error" of "Logger"  [call-arg]
+app\tasks\scheduler.py:51: note: "error" defined in "logging"
+app\tasks\scheduler.py:51: error: Unexpected keyword argument "error" for "error" of "Logger"  [call-arg]
+app\tasks\scheduler.py:56: error: Module "app.services.webhook_service" has no attribute "process_retries"  [attr-defined]
+app\tasks\scheduler.py:59: error: Unexpected keyword argument "count" for "info" of "Logger"  [call-arg]
+app\tasks\scheduler.py:59: note: "info" defined in "logging"
+app\tasks\scheduler.py:61: error: Unexpected keyword argument "task" for "error" of "Logger"  [call-arg]
+app\tasks\scheduler.py:61: note: "error" defined in "logging"
+app\tasks\scheduler.py:61: error: Unexpected keyword argument "error" for "error" of "Logger"  [call-arg]
+app\tasks\scheduler.py:68: error: Unexpected keyword argument "task" for "info" of "Logger"  [call-arg]
+app\tasks\scheduler.py:68: note: "info" defined in "logging"
+app\tasks\scheduler.py:70: error: Unexpected keyword argument "task" for "error" of "Logger"  [call-arg]
+app\tasks\scheduler.py:70: note: "error" defined in "logging"
+app\tasks\scheduler.py:70: error: Unexpected keyword argument "error" for "error" of "Logger"  [call-arg]
+app\tasks\scheduler.py:82: error: Unexpected keyword argument "error" for "error" of "Logger"  [call-arg]
+app\tasks\scheduler.py:82: note: "error" defined in "logging"
+app\tasks\scheduler.py:87: error: Module "app.worker.tasks" has no attribute "cleanup_expired_notifications"  [attr-defined]
+app\tasks\scheduler.py:89: error: Unexpected keyword argument "task" for "info" of "Logger"  [call-arg]
+app\tasks\scheduler.py:89: note: "info" defined in "logging"
+app\tasks\scheduler.py:91: error: Unexpected keyword argument "task" for "error" of "Logger"  [call-arg]
+app\tasks\scheduler.py:91: note: "error" defined in "logging"
+app\tasks\scheduler.py:91: error: Unexpected keyword argument "error" for "error" of "Logger"  [call-arg]
+app\tasks\scheduler.py:96: error: Module "app.worker.tasks" has no attribute "queue_deadline_warning_notifications"  [attr-defined]
+app\tasks\scheduler.py:98: error: Unexpected keyword argument "task" for "info" of "Logger"  [call-arg]
+app\tasks\scheduler.py:98: note: "info" defined in "logging"
+app\tasks\scheduler.py:100: error: Unexpected keyword argument "task" for "error" of "Logger"  [call-arg]
+app\tasks\scheduler.py:100: note: "error" defined in "logging"
+app\tasks\scheduler.py:100: error: Unexpected keyword argument "error" for "error" of "Logger"  [call-arg]
+app\tasks\scheduler.py:126: error: Unexpected keyword argument "jobs" for "info" of "Logger"  [call-arg]
+app\tasks\scheduler.py:126: note: "info" defined in "logging"
+app\api\filings.py:560: error: Argument "rjsc_receipt_number" to "mark_filed" of "AnnualReturnService" has incompatible type "str | None"; expected "str"  [arg-type]
+app\api\documents.py:217: error: Argument "template_name" to "TemplateResponse" has incompatible type "Any | None"; expected "str"  [arg-type]
+pyproject.toml: note: unused section(s): module = ['botocore.*', 'redbeat.*']

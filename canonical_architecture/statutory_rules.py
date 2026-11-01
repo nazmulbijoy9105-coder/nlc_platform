@@ -1270,29 +1270,24 @@ for _k, _d in _LEGACY_RULE_DICTS.items():
     if _k not in STATUTORY_RULE_REGISTRY:   # canonical wins on overlap
         STATUTORY_RULE_REGISTRY[_k] = _legacy_rule(_k, _d)
 
+def as_dict(rule: StatutoryRule) -> dict:
+    """Thin adapter for tests/callers that still expect dict-style access.
+    Never mutates the frozen StatutoryRule.
+    """
+    return {
+        "rule_id": rule.rule_id,
+        "legal_domain": rule.legal_domain,
+        "law": rule.law,
+        "requirement": rule.requirement,
+        "provision": rule.provision,
+        "provision_status": rule.provision_status,
+        "authority": rule.authority,
+        "evidence_required": rule.evidence_required,
+        "severity": rule.severity,
+        "score_impact": rule.score_impact,
+        "applies_if": rule.applies_if,
+        "exceptions": rule.exceptions,
+        "evaluation_states": rule.evaluation_states,
+        "invariants": rule.invariants,
+    }
 
-# --- NLC FIX: hybrid access (attribute + dict subscript) ---
-# Tests use both r.exceptions (attribute) and r["invariants"] (subscript).
-# Add __getitem__ to StatutoryRule to support both access patterns.
-def _statutory_rule_getitem(self, key):
-    """Allow dict-style access: rule['exceptions'] == rule.exceptions."""
-    if hasattr(self, key):
-        return getattr(self, key)
-    raise KeyError(key)
-
-StatutoryRule.__getitem__ = _statutory_rule_getitem
-
-
-def _statutory_rule_get(self, key, default=None):
-    """Allow dict-style .get() access: rule.get('exceptions', [])."""
-    if hasattr(self, key):
-        return getattr(self, key)
-    return default
-
-def _statutory_rule_setitem(self, key, value):
-    """Allow dict-style assignment: rule['provision_status'] = VERIFIED."""
-    setattr(self, key, value)
-
-StatutoryRule.get = _statutory_rule_get
-StatutoryRule.__setitem__ = _statutory_rule_setitem
-# --- END NLC FIX: hybrid access ---

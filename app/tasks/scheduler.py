@@ -53,10 +53,13 @@ async def _check_overdue_filings() -> None:
 
 async def _process_webhook_retries() -> None:
     try:
-        from app.services.webhook_service import process_retries
-        count = await process_retries()
-        if count:
-            logger.info("webhook_retries_processed", count=count)
+        from app.models.database import AsyncSessionLocal
+        from app.services.webhook_service import WebhookService
+        async with AsyncSessionLocal() as db:
+            svc = WebhookService(db)
+            count = await svc.process_retries()
+            if count:
+                logger.info("webhook_retries_processed", count=count)
     except Exception as e:
         logger.error("scheduled_task_failed", task="webhook_retries", error=str(e))
 

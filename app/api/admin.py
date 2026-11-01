@@ -422,14 +422,6 @@ async def worker_health(admin=Depends(require_admin)):
         "timestamp": datetime.now(UTC).isoformat(),
     }
 
-async def worker_health(admin=Depends(require_admin)):
-    """Return worker health status."""
-    return {
-        "status": "healthy",
-        "timestamp": datetime.now(UTC).isoformat(),
-    }
-
-
 @router.post("/maintenance/backup")
 async def trigger_backup(super_admin=Depends(require_super_admin)):
     """Trigger a database backup. Requires SUPER_ADMIN role."""

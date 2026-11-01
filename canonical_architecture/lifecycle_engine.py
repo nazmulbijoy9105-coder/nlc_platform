@@ -4,102 +4,111 @@ Canonical Lifecycle Orchestrator
 Enforces the strict flow: Legal Source -> Rule -> Evaluation -> Rescue -> Action -> Audit
 Governed by Product Invariants R-001...R-020.
 """
-from typing import Any, Dict, List
-from canonical_architecture.product_invariants import Invariant
-from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY, RuleState
+from __future__ import annotations
+
+from typing import Any, Dict, List, Mapping, Sequence, Union
+
+from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY, RuleState, StatutoryRule
 from canonical_architecture.statutory_rescue import STATUTORY_RESCUE_REGISTRY
 from canonical_architecture.legal_reconciliation import LEGAL_RECONCILIATION
 
+EvidenceInput = Union[Mapping[str, Any], Sequence[Any]]
+
+
 class CanonicalLifecycleEngine:
     """Orchestrates the canonical compliance and rescue lifecycle."""
-    
-    def __init__(self):
+
+    def __init__(self) -> None:
         self.rule_registry = STATUTORY_RULE_REGISTRY
         self.rescue_registry = STATUTORY_RESCUE_REGISTRY
         self.reconciliation_registry = LEGAL_RECONCILIATION
-        self.audit_trail: List[Dict[str, Any]] = [] # R-020: Immutable Trace
+        self.audit_trail: List[Dict[str, Any]] = []  # R-020: Immutable Trace
 
     def _audit(self, action: str, details: Dict[str, Any]) -> None:
         """R-020: Record immutable trace of decisions/actions."""
         self.audit_trail.append({"action": action, "details": details})
-        # In production, this writes to an append-only DB table
 
-    def evaluate_finding(self, rule_id: str, evidence_provided: Dict[str, Any]) -> RuleState:
-        """Evaluates whether a finding is remediated by the provided evidence."""
-        if not evidence:
-            return ComplianceStatus.NON_COMPLIANT
-            
-        # Check if any provided evidence is actually valid and matches the finding
-        valid_evidence_found = False
-        for ev in evidence:
-            # Skip if evidence is None or explicitly marked invalid
-            if not ev:
-                continue
-            
-            # If the evidence object has an 'is_valid' flag, enforce it
-            if hasattr(ev, 'is_valid') and not ev.is_valid:
-                continue
-                
-            # If the evidence object has a 'status', ensure it's not rejected
-            if hasattr(ev, 'status') and str(ev.status).upper() in ['REJECTED', 'INVALID']:
-                continue
-                
-            # If the finding specifies required evidence types, check for a match
-            if hasattr(finding, 'required_evidence') and finding.required_evidence:
-                ev_type = getattr(ev, 'evidence_type', None) or getattr(ev, 'type', None)
-                if ev_type and ev_type not in finding.required_evidence:
-                    continue
-            
-            valid_evidence_found = True
-            break
-            
-        return ComplianceStatus.COMPLIANT if valid_evidence_found else ComplianceStatus.NON_COMPLIANT
-
-    def _is_applicable(self, rule_def: Dict[str, Any], evidence: Dict[str, Any]) -> bool:
-        """APPLICABILITY & EXCEPTIONS"""
-        # Check exceptions based on company facts
-        exceptions = rule_def.get("exceptions", [])
-        if "DORMANT_STRIKE_OFF" in exceptions and evidence.get("is_dormant"):
+    def _is_applicable(self, rule: StatutoryRule, evidence: Mapping[str, Any]) -> bool:
+        """Honour applies_if and exceptions (R-004)."""
+        if rule.applies_if and not evidence.get(rule.applies_if):
             return False
+        for exc in rule.exceptions:
+            if evidence.get(exc) or evidence.get(exc.lower()) or (
+                evidence.get("is_dormant") and exc == "DORMANT_STRIKE_OFF"
+            ):
+                return False
         return True
 
+    def _evidence_satisfies(self, rule: StatutoryRule, evidence: EvidenceInput) -> bool:
+        if isinstance(evidence, Mapping):
+            if not evidence:
+                return False
+            for key in rule.evidence_required:
+                short = key.split(":")[-1] if ":" in key else key
+                val = evidence.get(key) or evidence.get(short) or evidence.get(short.lower())
+                if not val:
+                    return False
+            return True
+        if not evidence:
+            return False
+        for ev in evidence:
+            if not ev:
+                continue
+            if hasattr(ev, "is_valid") and not getattr(ev, "is_valid"):
+                continue
+            if hasattr(ev, "status") and str(getattr(ev, "status", "")).upper() in (
+                "REJECTED", "INVALID",
+            ):
+                continue
+            return True
+        return False
+
+    def evaluate_finding(self, rule_id: str, evidence: EvidenceInput) -> RuleState:
+        rule = self.rule_registry.get(rule_id)
+        if rule is None:
+            return RuleState.UNKNOWN
+        evidence_map: Mapping[str, Any] = evidence if isinstance(evidence, Mapping) else {}
+        if not self._is_applicable(rule, evidence_map):
+            return RuleState.NOT_APPLICABLE
+        if not evidence:
+            return RuleState.UNKNOWN
+        verified = self._evidence_satisfies(rule, evidence)
+        return RuleState.COMPLIANT if verified else RuleState.NON_COMPLIANT
+
     def generate_rescue_plan(self, active_findings: List[str]) -> List[Dict[str, Any]]:
-        """
-        FINDING -> STATUTORY RESCUE
-        R-014: Rescue derives strictly from findings.
-        R-015: Dependencies are respected.
-        """
-        steps = []
+        steps: List[Dict[str, Any]] = []
         for rule_id in active_findings:
             rescue_def = self.rescue_registry.get(rule_id)
-            if rescue_def:
-                # In production, check prerequisites (R-015) before adding
+            if rescue_def is None:
+                continue
+            if hasattr(rescue_def, "rescue_id"):
                 steps.append({
-                    "rescue_id": rescue_def["rescue_id"],
-                    "actions": rescue_def["statutory_actions"],
-                    "service": rescue_def["service_workflow"],
-                    "deadline": rescue_def["deadline_basis"]
+                    "rescue_id": rescue_def.rescue_id,
+                    "actions": list(getattr(rescue_def, "statutory_actions", ())),
+                    "service": getattr(rescue_def, "service_workflow", ""),
+                    "deadline": getattr(rescue_def, "deadline_basis", ""),
+                })
+            elif isinstance(rescue_def, dict):
+                steps.append({
+                    "rescue_id": rescue_def.get("rescue_id"),
+                    "actions": rescue_def.get("statutory_actions", []),
+                    "service": rescue_def.get("service_workflow", ""),
+                    "deadline": rescue_def.get("deadline_basis", ""),
                 })
         self._audit("RESCUE_GENERATED", {"steps": len(steps)})
         return steps
 
-    def submit_new_evidence(self, rule_id: str, evidence: Dict[str, Any]) -> RuleState:
-        """
-        NEW EVIDENCE -> RE-EVALUATION -> VERIFIED CURE -> CLOSED
-        R-018: New evidence triggers re-evaluation.
-        R-019: Verified cure closes rescue.
-        """
+    def submit_new_evidence(
+        self,
+        rule_id: str,
+        evidence: EvidenceInput,
+        verification_recorded: bool = False,
+    ) -> RuleState:
         self._audit("EVIDENCE_SUBMITTED", {"rule_id": rule_id})
-        
-        # R-018: Re-evaluate
         new_state = self.evaluate_finding(rule_id, evidence)
-        
-        if new_state == RuleState.COMPLIANT:
-            # R-019: Verified cure closes rescue
+        if new_state is RuleState.COMPLIANT and verification_recorded:
             self._audit("RESCUE_CLOSED", {"rule_id": rule_id, "reason": "Verified compliant"})
-            # Logic to mark rescue case as closed in DB
-            
         return new_state
 
-# Singleton instance for the platform
+
 lifecycle_engine = CanonicalLifecycleEngine()

@@ -446,23 +446,31 @@ async def get_db_for_user(request: Request) -> AsyncSession:  # type: ignore
     """
     Yield a DB session with user RLS context set.
     Extracts user_id from JWT Bearer token in request headers.
+    Raises 401 if the token is missing or invalid.
     Use for: ALL authenticated API routes.
     """
+    from fastapi import HTTPException
     from app.core.security import decode_token
-    
-    user_id = "ANONYMOUS"
+
     auth_header = request.headers.get("authorization", "")
-    if auth_header.startswith("Bearer "):
-        try:
-            payload = decode_token(auth_header[7:])
-            if payload.get("type") == "access":  # type: ignore
-                user_id = payload.get("user_id") or payload.get("sub") or "ANONYMOUS"  # type: ignore
-        except Exception:
-            pass  # Fall back to ANONYMOUS on any decode failure
-    
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+
+    try:
+        payload = decode_token(auth_header[7:])
+        if not payload or payload.get("type") != "access":
+            raise HTTPException(status_code=401, detail="Invalid or expired access token")
+        user_id = payload.get("user_id") or payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Token missing user identity")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired access token")
+
     async with AsyncSessionLocal() as session:
         try:
-            await set_rls_context(session, user_id)
+            await set_rls_context(session, str(user_id))
             yield session
             await session.commit()
         except Exception:
