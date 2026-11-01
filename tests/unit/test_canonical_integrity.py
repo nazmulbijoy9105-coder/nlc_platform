@@ -44,9 +44,14 @@ def test_seed_matches_engine_and_has_no_duplicates():
 
 
 def test_inner_ids_match_keys():
-    bad_rules = [k for k, v in STATUTORY_RULE_REGISTRY.items() if v.get("rule_id") == k]
-    assert len(bad_rules) == len(STATUTORY_RULE_REGISTRY), sorted(
-        set(STATUTORY_RULE_REGISTRY) - set(bad_rules))
-    bad_rescue = [k for k, v in STATUTORY_RESCUE_REGISTRY.items() if v.get("triggered_by") == k]
-    assert len(bad_rescue) == len(STATUTORY_RESCUE_REGISTRY), sorted(
-        set(STATUTORY_RESCUE_REGISTRY) - set(bad_rescue))
+    # StatutoryRule / RescueDef are frozen dataclasses — use attributes, not .get()
+    bad_rules = [
+        k for k, v in STATUTORY_RULE_REGISTRY.items()
+        if getattr(v, "rule_id", None) != k
+    ]
+    assert not bad_rules, sorted(bad_rules)
+    bad_rescue = [
+        k for k, v in STATUTORY_RESCUE_REGISTRY.items()
+        if getattr(v, "triggered_by", None) != k
+    ]
+    assert not bad_rescue, sorted(bad_rescue)
