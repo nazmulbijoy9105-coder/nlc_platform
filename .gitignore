@@ -84,3 +84,6 @@ test_e2e_*.py
 test_fix_*.py
 diag_*.py
 *.bak_*
+redis_check.py
+nlc_openapi*.json
+nlc_blacklist_audit.py
