@@ -1,6 +1,9 @@
 """
 NLC — GATE E2: Tenant & Object Authorization (IDOR) Adversarial Tests
 Proves that User A (Company A) cannot access Company B's resources by manipulating IDs.
+
+NOTE: Prefer api_client_as_user (real RLS) for new tests. The module-scoped
+client fixture below still uses dependency overrides for fast IDOR checks.
 """
 from contextlib import asynccontextmanager
 

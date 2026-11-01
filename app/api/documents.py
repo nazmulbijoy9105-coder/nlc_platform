@@ -358,6 +358,34 @@ async def list_documents(
 
 
 # ---------------------------------------------------------------------------
+
+async def _assert_document_company_access(
+    doc,
+    current_user: User,
+    db: AsyncSession,
+) -> None:
+    """
+    After loading a document by ID, verify the caller may access its company.
+    Staff roles (LEGAL/ADMIN/SUPER) are allowed; clients must have CompanyUserAccess.
+    Prevents IDOR when only document_id is in the path.
+    """
+    from app.models.enums import UserRole
+    role = current_user.role
+    role_val = role.value if hasattr(role, "value") else str(role)
+    if role_val in ("SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF"):
+        return
+    from sqlalchemy import select
+    from app.models.company import CompanyUserAccess
+    result = await db.execute(
+        select(CompanyUserAccess.id).where(
+            CompanyUserAccess.user_id == current_user.id,
+            CompanyUserAccess.company_id == doc.company_id,
+        ).limit(1)
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(status_code=403, detail="Access denied to this document's company.")
+
+
 # GET /documents/detail/{document_id} — Get single document
 # ---------------------------------------------------------------------------
 
@@ -375,6 +403,9 @@ async def get_document(
     svc = DocumentService(db)
 
     doc = await svc.get_by_id_or_404(document_id)
+
+    # Explicit company-access check (IDOR defence — path has no company_id)
+    await _assert_document_company_access(doc, current_user, db)
 
     # Clients may only view released documents
     if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):
@@ -512,6 +543,9 @@ async def get_pdf_url(
     ActivityService(db)
 
     doc = await svc.get_by_id_or_404(document_id)
+
+    # Explicit company-access check (IDOR defence — path has no company_id)
+    await _assert_document_company_access(doc, current_user, db)
 
     # Clients may only download approved, released documents
     if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):

@@ -87,3 +87,16 @@ diag_*.py
 redis_check.py
 nlc_openapi*.json
 nlc_blacklist_audit.py
+
+# Local audit / static-analysis outputs (do not commit)
+bandit_report.json
+mypy_full.txt
+pip_audit_full.txt
+pip_audit_report.json
+requirements_frozen.txt
+requirements_updated.txt
+ruff_full.json
+production_reconciliation.py
+tools/production_reconciliation.py
+_audit_out/
+*.audit.json
