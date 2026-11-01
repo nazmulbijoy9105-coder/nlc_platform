@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db
 from app.models.user import User
-from app.models.commercial import CompanyUserAccess  # adjust import path
+from app.models.company import CompanyUserAccess  # adjust import path
 
 
 async def require_company_access(

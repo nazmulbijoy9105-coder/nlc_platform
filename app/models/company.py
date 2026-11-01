@@ -222,38 +222,18 @@ class Company(FullMixin, Base):
     internal_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # ── BSEC Corporate Governance ──────────────────────────────────────
-    bsec_listed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    bsec_quarterly_report_filed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    cg_certificate_obtained: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    board_independent_director: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    audit_committee_established: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-
-    # ── Labour Compliance ──────────────────────────────────────────────
-    factory_license_obtained: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     is_manufacturing: Mapped[bool | None] = mapped_column(
         Boolean, nullable=True, default=None,
         comment="Tri-state applicability: NULL=unknown, FALSE=not a factory, TRUE=manufacturing (R-003/R-008)",
     )
-    factory_license_expiry: Mapped[date | None] = mapped_column(Date, nullable=True)
-    labour_court_order_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     worker_compensation_filed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     # ── Bankruptcy / Winding Up ────────────────────────────────────────
-    winding_up_petition_filed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     winding_up_petition_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    liquidator_appointed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    court_ordered_winding_up: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    voluntary_winding_up: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-
-    # ── Escalation / Strike-Off ────────────────────────────────────────
     on_rjsc_strike_off_list: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     rjsc_strike_off_notice_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     rjsc_status: Mapped[str | None] = mapped_column(String(100), nullable=True)
     last_rjsc_compliance_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    investigation_order: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-
-    # ── Foreign Exchange / FDI ─────────────────────────────────────────
-    foreign_exchange_violation: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     encashment_certificate_uploaded: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     encashment_certificate_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     bida_registered: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
@@ -279,29 +259,15 @@ class Company(FullMixin, Base):
     profit_loss_attached: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     # ── Capital / Resolutions ──────────────────────────────────────────
-    special_resolution_filed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    special_resolution_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     special_resolution_filed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    capital_reduction_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     capital_reduction_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     capital_reduction_court_order_obtained: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     paid_up_ge_authorized: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     # ── Corporate Structure Changes ────────────────────────────────────
-    name_change_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    name_change_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    name_change_sr_passed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    object_clause_change_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    object_clause_change_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    aoa_alteration_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    aoa_alteration_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-
-    # ── Statutory Registers ────────────────────────────────────────────
     register_of_members_maintained: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     register_of_directors_maintained: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     register_of_charges_maintained: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
-    register_of_contracts: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
-    register_of_directors_interests: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     register_location: Mapped[str] = mapped_column(
         String(500),
         nullable=False,
@@ -311,7 +277,6 @@ class Company(FullMixin, Base):
     minutes_book_board_maintained: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
     # ── AGM Details ────────────────────────────────────────────────────
-    agm_adjourned_without_notice: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     agm_scheduled_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     notice_sent_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     members_present_at_agm: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
@@ -329,7 +294,6 @@ class Company(FullMixin, Base):
     registered_office_change_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # ── Financial ──────────────────────────────────────────────────────
-    annual_turnover_bdt: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
     last_tax_return_filed_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # ── Shareholders ───────────────────────────────────────────────────
