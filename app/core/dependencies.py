@@ -127,9 +127,21 @@ async def get_admin_db() -> AsyncSession:  # type: ignore
 # ═══════════════════════════════════════════════════════════════════════
 
 def _check_token_blacklist(jti: str) -> bool:
-    """Check if token is revoked via Redis blacklist. Returns True if revoked."""
-    from app.core.token_blacklist import is_revoked
-    return is_revoked(jti)
+    """
+    Check if token is revoked via Redis blacklist.
+    Returns True if revoked.
+    Raises HTTP 401 if Redis is unavailable (fail closed — RDS-01).
+    """
+    from fastapi import HTTPException, status
+    from app.core.token_blacklist import BlacklistUnavailable, is_revoked
+    try:
+        return is_revoked(jti, fail_closed=True)
+    except BlacklistUnavailable:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication service temporarily unavailable. Please retry.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 def verify_access_token(

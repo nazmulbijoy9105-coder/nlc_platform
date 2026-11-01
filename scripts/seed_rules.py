@@ -1,3 +1,5 @@
+# SEED-01: This script upserts by rule_id (SELECT then UPDATE/INSERT).
+# It must NEVER seed based on COUNT(*) < N. Count checks are verification only.
 #!/usr/bin/env python3
 """
 NEUM LEX COUNSEL — Legal Rules Seeder v2.0

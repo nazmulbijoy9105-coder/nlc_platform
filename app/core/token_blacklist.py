@@ -13,6 +13,10 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
+class BlacklistUnavailable(Exception):
+    """Raised when Redis cannot be reached for a revocation check."""
+
+
 def _redis_url() -> str:
     return os.environ.get("REDIS_URL") or settings.redis_url or "redis://localhost:6379/0"
 
@@ -38,10 +42,19 @@ def revoke(jti: str, exp: float | None) -> bool:
         return False
 
 
-def is_revoked(jti: str) -> bool:
-    """Fail-open on Redis errors (availability), but log them."""
+def is_revoked(jti: str, *, fail_closed: bool = True) -> bool:
+    """
+    Return True if jti is on the blacklist.
+
+    fail_closed=True (default, auth path):
+        Redis errors raise BlacklistUnavailable — callers must reject the token.
+    fail_closed=False (best-effort / telemetry only):
+        Redis errors return False (treat as not revoked).
+    """
     try:
         return bool(_client().exists(f"blacklist:{jti}"))
     except Exception:
         logger.warning("token_blacklist_check_failed", exc_info=True)
+        if fail_closed:
+            raise BlacklistUnavailable("Token blacklist unavailable") from None
         return False
