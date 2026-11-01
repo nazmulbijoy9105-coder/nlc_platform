@@ -169,7 +169,7 @@ def can_close(rule_state: RuleState, verification_recorded: bool) -> bool:
 from typing import Any, Dict, List
 from canonical_architecture.statutory_rules import RuleState
 
-STATUTORY_RESCUE_REGISTRY: Dict[str, Dict[str, Any]] = {
+_LEGACY_RESCUE_DICTS: Dict[str, Dict[str, Any]] = {
     "INC-001": {
         "rescue_id": "INC-RESCUE-001",
         "triggered_by": "INC-001",
@@ -1465,25 +1465,60 @@ STATUTORY_RESCUE_REGISTRY: Dict[str, Dict[str, Any]] = {
 }
 
 
-# --- NLC FIX: convert dict entries to RescueDef instances ---
-def _nlc_normalize_rescue_registry() -> None:
-    """Convert all dict entries to RescueDef instances."""
+
+# --- NLC: merge legacy dict rescues into the typed registry (no overwrite) ---
+def _merge_legacy_rescues() -> None:
+    """Convert _LEGACY_RESCUE_DICTS entries to RescueDef and merge.
+    Canonical typed entries from _RESCUES always win on key collision.
+    """
     from canonical_architecture.statutory_rules import ProvisionStatus
     import dataclasses as _dc
     if not _dc.is_dataclass(RescueDef):
         return
+    if "_LEGACY_RESCUE_DICTS" not in globals():
+        return
     _valid = {f.name for f in _dc.fields(RescueDef)}
-    for _rid, _entry in list(STATUTORY_RESCUE_REGISTRY.items()):
-        if isinstance(_entry, dict):
-            if "deadline_status" not in _entry:
-                _entry["deadline_status"] = ProvisionStatus.RECONCILE
-            _filtered = {k: v for k, v in _entry.items() if k in _valid}
-            try:
-                STATUTORY_RESCUE_REGISTRY[_rid] = RescueDef(**_filtered)
-            except TypeError:
-                pass
+    for _rid, _entry in list(_LEGACY_RESCUE_DICTS.items()):
+        if _rid in STATUTORY_RESCUE_REGISTRY:
+            continue
+        if not isinstance(_entry, dict):
+            continue
+        entry = dict(_entry)
+        if "deadline_status" not in entry:
+            entry["deadline_status"] = ProvisionStatus.RECONCILE
+        filtered = {k: v for k, v in entry.items() if k in _valid}
+        filtered.setdefault("deadline_status", ProvisionStatus.RECONCILE)
+        filtered.setdefault("prerequisites", ())
+        if "statutory_actions" in filtered and isinstance(filtered["statutory_actions"], list):
+            filtered["statutory_actions"] = tuple(filtered["statutory_actions"])
+        if "prerequisites" in filtered and isinstance(filtered["prerequisites"], list):
+            filtered["prerequisites"] = tuple(filtered["prerequisites"])
+        try:
+            STATUTORY_RESCUE_REGISTRY[_rid] = RescueDef(**filtered)
+        except TypeError:
+            pass
 
-_nlc_normalize_rescue_registry()
-# --- END NLC FIX: convert dict entries to RescueDef ---
+_merge_legacy_rescues()
 
-# --- END NLC FIX: hybrid access for STATUTORY_RESCUE_REGISTRY ---
+
+def rescue_as_dict(rd: "RescueDef") -> dict:
+    """Thin adapter for callers that still expect a dict."""
+    return {
+        "rescue_id": rd.rescue_id,
+        "triggered_by": rd.triggered_by,
+        "objective": rd.objective,
+        "statutory_actions": list(rd.statutory_actions),
+        "authority": rd.authority,
+        "service_workflow": rd.service_workflow,
+        "deadline_basis": rd.deadline_basis,
+        "deadline_status": rd.deadline_status,
+        "notification_required": rd.notification_required,
+        "verification": rd.verification,
+        "prerequisites": list(rd.prerequisites),
+        "complexity": getattr(rd, "complexity", "MEDIUM"),
+        "estimated_days_min": getattr(rd, "estimated_days_min", None),
+        "estimated_days_max": getattr(rd, "estimated_days_max", None),
+        "statutory_basis": getattr(rd, "statutory_basis", ""),
+        "closure_condition": rd.closure_condition,
+    }
+# --- END NLC rescue merge ---

@@ -685,3 +685,82 @@ def pytest_collection_modifyitems(config, items):
         for item in items:
             if "integration" in str(item.fspath):
                 item.add_marker(skip_integration)
+
+
+# ---------------------------------------------------------------------------
+# RLS-aware fixtures (tenant isolation)
+# ---------------------------------------------------------------------------
+
+@pytest_asyncio.fixture
+async def db_for_user(test_engine, request):
+    """
+    DB session with REAL RLS context for a specific user.
+    Does NOT set app.rls_bypass.
+    """
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy import text
+    user_id = getattr(request, "param", None)
+    if user_id is None:
+        user_id = str(_role_user_id("CLIENT_DIRECTOR"))
+
+    async with test_engine.connect() as conn:
+        await conn.begin()
+        session = AsyncSession(bind=conn, expire_on_commit=False)
+        try:
+            from app.core.dependencies import set_rls_context
+            await set_rls_context(session, str(user_id))
+        except Exception:
+            await session.execute(
+                text("SELECT set_config('app.current_user_id', :uid, true)"),
+                {"uid": str(user_id)},
+            )
+        yield session
+        await session.close()
+        await conn.rollback()
+
+
+@pytest_asyncio.fixture
+async def api_client_as_user(db_for_user):
+    """
+    HTTP client whose get_db_for_user uses a real RLS session.
+    Use this for tenant-isolation tests.
+    """
+    from httpx import ASGITransport, AsyncClient
+    from unittest.mock import MagicMock, patch
+    from app.core.dependencies import get_db, get_db_for_user
+    from app.main import create_app
+    from app.models.database import get_db as auth_get_db
+    from app.models.enums import UserRole
+    from app.models.user import User
+
+    for _role in UserRole:
+        _uid = _role_user_id(_role.value)
+        if await db_for_user.get(User, _uid) is None:
+            db_for_user.add(User(
+                id=_uid,
+                email=f"seed_{_role.value.lower()}@nlctest.com",
+                full_name=f"Seed {_role.value}",
+                password_hash="!seeded-no-login",
+                role=_role,
+                is_active=True,
+                totp_enabled=False,
+            ))
+    await db_for_user.flush()
+
+    app = create_app()
+
+    async def _override_user_db():
+        yield db_for_user
+
+    app.dependency_overrides[get_db_for_user] = _override_user_db
+    app.dependency_overrides[get_db] = _override_user_db
+    app.dependency_overrides[auth_get_db] = _override_user_db
+
+    with patch("app.worker.tasks.evaluate_company_compliance.apply_async", return_value=MagicMock(id="test-task")), \
+         patch("app.worker.tasks.generate_ai_document_async.apply_async", return_value=MagicMock(id="test-task")), \
+         patch("app.worker.tasks.render_pdf.apply_async", return_value=MagicMock(id="test-task")):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            yield client
+
+    app.dependency_overrides.clear()
+
