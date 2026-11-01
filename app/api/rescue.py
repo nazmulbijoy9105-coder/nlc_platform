@@ -19,6 +19,7 @@ Business rules:
 
 
 import uuid
+from datetime import date
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status

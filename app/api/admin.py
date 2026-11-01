@@ -33,14 +33,6 @@ async def require_super_admin(current_user=Depends(get_current_user)):
     return current_user
 
 
-async def require_super_admin(current_user=Depends(get_current_user)):
-    """Require SUPER_ADMIN role only — returns 403 for ADMIN_STAFF."""
-    role = current_user.role if hasattr(current_user, "role") else current_user.get("role", "")
-    if str(role) != "SUPER_ADMIN":
-        raise HTTPException(status_code=403, detail="Super admin access required")
-    return current_user
-
-
 
 
 @router.get("/dashboard")
