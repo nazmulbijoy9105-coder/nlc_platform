@@ -99,6 +99,8 @@ def mock_redis_blacklist():
 
 
 
+
+@pytest_asyncio.fixture(scope="session")
 async def test_engine():
     """
     Async engine pointing at nlc_test database.
