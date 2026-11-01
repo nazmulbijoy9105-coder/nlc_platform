@@ -165,7 +165,7 @@ def test_all_invariants_have_rule_text():
 def test_unknown_state_allowed_when_r008_applies():
     for rid, r in STATUTORY_RULE_REGISTRY.items():
         if r.evidence_required:
-            assert RuleState.UNKNOWN in r["evaluation_states"], (
+            assert RuleState.UNKNOWN in r.evaluation_states, (
                 f"{rid} requires evidence but cannot return UNKNOWN (violates R-008)")
 
 def test_every_rule_has_rescue():
