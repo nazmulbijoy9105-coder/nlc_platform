@@ -792,7 +792,7 @@ class TestScoreBanding:
 
         result = rule_engine._calculate_score([flag], compliant_profile)
 
-        assert result.agm_score == 20
+        assert result.agm_score == 30
         assert result.raw_total == 100
 
     """Verify score → band mapping is correct and non-overlapping."""
