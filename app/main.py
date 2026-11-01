@@ -31,7 +31,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.tasks.scheduler import start_scheduler, stop_scheduler
 from app.api import (
     admin,
     auth,
@@ -41,13 +40,14 @@ from app.api import (
     documents,
     filings,
     health,
+    notifications,
     rescue,
     rjsc_forms,
-    rules,    notifications,
+    rules,
     webhooks,
-
 )
 from app.core.config import get_settings
+from app.tasks.scheduler import start_scheduler, stop_scheduler
 
 if TYPE_CHECKING:
     from collections.abc import Callable

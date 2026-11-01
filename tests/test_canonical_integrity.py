@@ -1,10 +1,22 @@
 import dataclasses
 
 from canonical_architecture import (
-    AuditTrail, EvidenceStatus, Finding, Invariant, INVARIANT_RULES,
-    RESERVED_UNDEFINED, RescueMode, RescueState, RuleState,
-    STATUTORY_RESCUE_REGISTRY, STATUTORY_RULE_REGISTRY, can_close,
-    compute_score, evaluate_all, evaluate_rule, get_rescue_plan,
+    INVARIANT_RULES,
+    RESERVED_UNDEFINED,
+    STATUTORY_RESCUE_REGISTRY,
+    STATUTORY_RULE_REGISTRY,
+    AuditTrail,
+    EvidenceStatus,
+    Finding,
+    Invariant,
+    RescueMode,
+    RescueState,
+    RuleState,
+    can_close,
+    compute_score,
+    evaluate_all,
+    evaluate_rule,
+    get_rescue_plan,
 )
 
 INV_IDS = {i.value for i in Invariant}
@@ -13,7 +25,7 @@ ABSENT = EvidenceStatus.VERIFIED_ABSENT
 
 
 def _ev(rule_id, status):
-    return {e: status for e in STATUTORY_RULE_REGISTRY[rule_id].evidence_required}
+    return dict.fromkeys(STATUTORY_RULE_REGISTRY[rule_id].evidence_required, status)
 
 
 # --- structure -------------------------------------------------------------
@@ -136,8 +148,7 @@ def test_audit_chain_detects_tampering():  # R-020
     t._events[1] = dataclasses.replace(t._events[1], detail_json='{"n": 99}')
     assert not t.verify()
 from canonical_architecture import (
-    Invariant, INVARIANT_RULES, STATUTORY_RULE_REGISTRY,
-    STATUTORY_RESCUE_REGISTRY, RuleState,
+    Invariant,
 )
 
 INV_IDS = {i.name.replace("_", "-", 1) for i in Invariant}  # R_006 -> R-006

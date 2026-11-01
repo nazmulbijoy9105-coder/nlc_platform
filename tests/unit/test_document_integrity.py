@@ -2,11 +2,14 @@
 NLC — GATE E5: Document & Evidence Integrity Tests
 Proves that unapproved AI documents cannot be downloaded or released.
 """
-import pytest
 from unittest.mock import AsyncMock, MagicMock
-from app.services.document_service import DocumentService
+
+import pytest
+
 from app.models.documents import Document
 from app.models.enums import DocumentType
+from app.services.document_service import DocumentService
+
 
 @pytest.fixture
 def mock_db():

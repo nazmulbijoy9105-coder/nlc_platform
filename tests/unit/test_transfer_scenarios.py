@@ -4,8 +4,10 @@
 (b) restriction present but complied with → COMPLIANT
 (c) approval evidence missing → UNKNOWN (0 pts)
 """
-import pytest
 from types import SimpleNamespace
+
+import pytest
+
 from app.rule_engine.engine import ComplianceFlag, NLCRuleEngine, RevenueTier, RuleState, Severity
 
 

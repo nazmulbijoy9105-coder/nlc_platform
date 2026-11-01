@@ -2066,7 +2066,7 @@ class NLCRuleEngine:
             max(0, 20 - agm_ded) + max(0, 20 - aud_ded) + max(0, 20 - ret_ded) +
             max(0, 10 - dir_ded) + max(0, 10 - shr_ded) + max(0, 5 - cap_ded) +
             max(0, 5 - off_ded) + max(0, 5 - reg_ded) + max(0, 5 - tax_ded) +
-            max(0, 5 - bnk_ded) + max(0, 5 - lbr_ded) + max(0, 5 - bsec_ded) + 
+            max(0, 5 - bnk_ded) + max(0, 5 - lbr_ded) + max(0, 5 - bsec_ded) +
             max(0, 5 - fx_ded) + max(0, 5 - esc_ded)
         )
         # FIX: Scale 125 max points to 100
@@ -2120,12 +2120,12 @@ class NLCRuleEngine:
         reason = None
         final = raw
         critical = [
-            f for f in active 
+            f for f in active
             if f.is_black_override and f.state == RuleState.NON_COMPLIANT and f.eval_state != "UNKNOWN"
         ]
         if not critical:
             critical = [
-                f for f in active 
+                f for f in active
                 if f.severity == Severity.BLACK and f.state == RuleState.NON_COMPLIANT and f.eval_state != "UNKNOWN"
             ]
         if critical:
@@ -2151,9 +2151,7 @@ class NLCRuleEngine:
         else:
             band = score_band
 
-        if band == Severity.NOT_EVALUATED:
-            exposure = ExposureBand.LOW
-        elif band in (Severity.GREEN, Severity.YELLOW):
+        if band == Severity.NOT_EVALUATED or band in (Severity.GREEN, Severity.YELLOW):
             exposure = ExposureBand.LOW
         elif band == Severity.RED:
             exposure = ExposureBand.HIGH
@@ -2161,7 +2159,7 @@ class NLCRuleEngine:
             exposure = ExposureBand.SEVERE
 
         active_rules = {f.rule_id for f in active}
-        flag_signatures = sorted(f"{f.rule_id}:{str(f.state)}:{str(f.severity)}:{f.score_impact}" for f in active)  # RULE-009: include state/severity/score_impact
+        flag_signatures = sorted(f"{f.rule_id}:{f.state!s}:{f.severity!s}:{f.score_impact}" for f in active)  # RULE-009: include state/severity/score_impact
         hash_str = f"{final}:{','.join(flag_signatures)}:{RULE_ENGINE_VERSION}"
         score_hash = hashlib.sha256(hash_str.encode()).hexdigest()[:16]
 

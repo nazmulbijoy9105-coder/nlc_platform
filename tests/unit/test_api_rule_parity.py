@@ -14,6 +14,7 @@ import inspect
 import re
 
 from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+
 from app.rule_engine.engine import NLCRuleEngine
 
 

@@ -4,6 +4,7 @@ Maps internal compliance rules to official RJSC statutory forms.
 """
 from dataclasses import dataclass
 
+
 @dataclass
 class RJSCForm:
     form_code: str

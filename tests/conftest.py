@@ -25,7 +25,6 @@ Usage:
 """
 
 from __future__ import annotations
-from datetime import date
 
 import asyncio
 import os
@@ -246,9 +245,8 @@ async def api_client(db) -> AsyncGenerator[AsyncClient, None]:
     Celery tasks are mocked to run eagerly (no worker needed).
     """
     from app.core.dependencies import get_db, get_db_for_user
-    from app.models.database import get_db as auth_get_db
     from app.main import create_app
-
+    from app.models.database import get_db as auth_get_db
     from app.models.enums import UserRole
     from app.models.user import User
 

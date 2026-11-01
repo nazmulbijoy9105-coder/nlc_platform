@@ -9,8 +9,8 @@ Endpoints:
   GET    /rjsc-forms/reference              Get all RJSC form types
 """
 from __future__ import annotations
-import uuid
 
+import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -161,6 +161,7 @@ async def mark_form_filed(
     # RJSC-001: verify user has access to this company's filing
     if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):
         from sqlalchemy import select as _sel
+
         from app.models.company import CompanyUserAccess as _CMA
         _access = await db.execute(_sel(_CMA).where(_CMA.user_id == current_user.id, _CMA.company_id == filing_check.company_id))
         if not _access.scalar_one_or_none():

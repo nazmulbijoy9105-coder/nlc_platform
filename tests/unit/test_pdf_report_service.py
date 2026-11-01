@@ -9,8 +9,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import Response
 
-from app.services import pdf_render
-from app.services import pdf_report_service as report_module
+from app.services import pdf_render, pdf_report_service as report_module
 from app.services.pdf_report_service import (
     LOGO_FILE,
     PDFReportService,
@@ -46,7 +45,7 @@ WHEN = datetime(2026, 10, 20, 1, 0)
 
 def _require_weasyprint():
     try:
-        import weasyprint  # noqa: F401
+        import weasyprint
     except Exception as exc:  # OSError when Pango/Cairo are missing
         pytest.skip(f"WeasyPrint not usable here: {exc}")
 

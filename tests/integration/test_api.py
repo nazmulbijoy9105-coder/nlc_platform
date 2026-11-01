@@ -25,8 +25,8 @@ Test conventions:
 
 from __future__ import annotations
 
-from datetime import date
 import uuid
+from datetime import date
 
 import pytest
 

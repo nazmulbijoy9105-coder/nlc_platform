@@ -3,7 +3,9 @@ NLC — GATE E8: Audit / Hash-Chain Verification Tests
 Proves that the compliance score hash is tamper-evident.
 """
 import hashlib
+
 import pytest
+
 
 def generate_hash(company_id: str, score: int, risk_band: str, snapshot_month: str, engine_version: str) -> str:
     """Replicates the hash generation logic from ComplianceService."""

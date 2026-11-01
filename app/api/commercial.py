@@ -24,9 +24,9 @@ Endpoints:
 
 
 import uuid
+from datetime import date
 
 import structlog
-from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,8 +34,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
-    require_roles,
     require_company_access,
+    require_roles,
 )
 from app.models.enums import EngagementStatus, RevenueTier
 from app.models.user import User

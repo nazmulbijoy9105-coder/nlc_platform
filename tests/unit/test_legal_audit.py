@@ -16,14 +16,15 @@ Legal basis: Companies Act 1994 (Bangladesh)
 from __future__ import annotations
 
 from datetime import date, timedelta
+
 import pytest
 
 from app.rule_engine.engine import (
-    NLCRuleEngine,
+    VERIFIED_RULE_IDS,
     CompanyProfile,
+    NLCRuleEngine,
     RuleState,
     Severity,
-    VERIFIED_RULE_IDS,
 )
 
 

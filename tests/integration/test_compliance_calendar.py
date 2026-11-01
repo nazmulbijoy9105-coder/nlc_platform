@@ -4,9 +4,9 @@ from datetime import date, timedelta
 import pytest
 
 from app.models.compliance_calendar import (
-    ComplianceCalendarEvent,
-    CalendarEventType,
     CalendarEventStatus,
+    CalendarEventType,
+    ComplianceCalendarEvent,
 )
 from app.tasks.compliance_tasks import check_overdue_events
 

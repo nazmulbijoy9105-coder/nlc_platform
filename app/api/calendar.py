@@ -1,11 +1,12 @@
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
-    require_company_access,
-    get_db,
     get_current_user,
+    get_db,
+    require_company_access,
 )
 from app.services.compliance_calendar import ComplianceCalendarService
 

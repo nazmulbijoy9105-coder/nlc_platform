@@ -15,15 +15,14 @@ Coverage:
 """
 
 from __future__ import annotations
-from datetime import date
 
 import uuid
-
-from app.models.enums import UserRole
 from datetime import date, timedelta
 from unittest.mock import MagicMock
 
 import pytest
+
+from app.models.enums import UserRole
 
 pytestmark = [pytest.mark.integration]
 

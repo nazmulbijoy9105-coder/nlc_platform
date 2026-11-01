@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import date, UTC
+from datetime import date
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -29,6 +29,7 @@ async def _run_daily_compliance_evaluation() -> None:
 async def _check_overdue_filings() -> None:
     try:
         from sqlalchemy import select
+
         from app.models.database import AsyncSessionLocal
         from app.models.rjsc_forms import RJSCFormFiling
 
@@ -71,8 +72,9 @@ async def _send_pending_notifications() -> None:
 
 async def _database_health_check() -> None:
     try:
-        from app.models.database import AsyncSessionLocal
         from sqlalchemy import text
+
+        from app.models.database import AsyncSessionLocal
         async with AsyncSessionLocal() as db:
             await db.execute(text("SELECT 1"))
         logger.debug("db_health_check_ok")

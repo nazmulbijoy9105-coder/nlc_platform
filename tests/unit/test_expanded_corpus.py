@@ -12,14 +12,15 @@ tests for AGM-001, OFF-001, DEF-001).
 """
 
 from datetime import date, timedelta
+
 import pytest
 
 from app.rule_engine.engine import (
-    NLCRuleEngine,
+    VERIFIED_RULE_IDS,
     CompanyProfile,
+    NLCRuleEngine,
     RuleState,
     Severity,
-    VERIFIED_RULE_IDS,
 )
 
 

@@ -14,19 +14,18 @@ import asyncio
 import hashlib
 import hmac
 import json
-import logging
-from datetime import datetime, timedelta, UTC
-from typing import Any
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import httpx
 import structlog
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.webhook import (
-    WebhookEndpoint, WebhookDelivery,
-    WebhookEvent, DeliveryStatus,
+    DeliveryStatus,
+    WebhookDelivery,
+    WebhookEndpoint,
 )
 
 logger = structlog.get_logger(__name__)

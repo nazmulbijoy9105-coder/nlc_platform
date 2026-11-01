@@ -41,6 +41,7 @@ import asyncio
 
 # SEC-009: fail closed if required secrets are missing (worker context only)
 import os as _os
+
 if _os.environ.get("CELERY_BROKER_URL") or _os.environ.get("CELERY_BROKER"):
     from app.core.config import settings as _settings
     if not _settings.DATABASE_URL:
@@ -416,6 +417,7 @@ def send_pending_notifications(
                 return False
 
             from sqlalchemy import select
+
             from app.models.user import User
 
             result = await db.execute(

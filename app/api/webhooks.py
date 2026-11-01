@@ -17,11 +17,11 @@ from __future__ import annotations
 import uuid
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, HttpUrl
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_db_for_user, get_current_user
+from app.core.dependencies import get_current_user, get_db_for_user
 from app.models.user import User
 from app.models.webhook import WebhookEvent
 from app.services.webhook_service import WebhookService

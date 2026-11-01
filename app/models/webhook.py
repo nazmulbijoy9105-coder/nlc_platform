@@ -7,15 +7,15 @@ compliance event notifications (score changes, new flags, rescue plans).
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, UTC
+from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, Integer, Boolean, Text, ForeignKey, Index
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY, TIMESTAMP
+from sqlalchemy import Boolean, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TIMESTAMP, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .mixins import TimestampMixin, UUIDPrimaryKeyMixin
 from .database import Base
+from .mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
     from .user import User
@@ -71,8 +71,8 @@ class WebhookEndpoint(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     last_response_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Relationships
-    user: Mapped["User"] = relationship("User", back_populates="webhook_endpoints")
-    deliveries: Mapped[list["WebhookDelivery"]] = relationship(
+    user: Mapped[User] = relationship("User", back_populates="webhook_endpoints")
+    deliveries: Mapped[list[WebhookDelivery]] = relationship(
         "WebhookDelivery", back_populates="endpoint", lazy="selectin",
         order_by="WebhookDelivery.created_at.desc()"
     )
@@ -101,7 +101,7 @@ class WebhookDelivery(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     delivered_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     next_retry_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
 
-    endpoint: Mapped["WebhookEndpoint"] = relationship("WebhookEndpoint", back_populates="deliveries")
+    endpoint: Mapped[WebhookEndpoint] = relationship("WebhookEndpoint", back_populates="deliveries")
 
     def __repr__(self) -> str:
         return f"<WebhookDelivery event={self.event_type} status={self.status} attempts={self.attempts}>"

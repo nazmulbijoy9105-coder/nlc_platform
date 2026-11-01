@@ -19,17 +19,18 @@ Rules covered (3 representative):
 Total: 24 test cases.
 """
 
-from datetime import date, timedelta
 from dataclasses import dataclass, field
+from datetime import date, timedelta
 from typing import Any
+
 import pytest
 
 from app.rule_engine.engine import (
-    NLCRuleEngine,
+    VERIFIED_RULE_IDS,
     CompanyProfile,
+    NLCRuleEngine,
     RuleState,
     Severity,
-    VERIFIED_RULE_IDS,
 )
 
 

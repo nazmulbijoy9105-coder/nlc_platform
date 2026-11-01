@@ -44,7 +44,7 @@ def test_seed_matches_engine_and_has_no_duplicates():
 
 
 def test_inner_ids_match_keys():
-    bad_rules = [k for k, v in STATUTORY_RULE_REGISTRY.items() if v.get("rule_id") == k] 
+    bad_rules = [k for k, v in STATUTORY_RULE_REGISTRY.items() if v.get("rule_id") == k]
     assert len(bad_rules) == len(STATUTORY_RULE_REGISTRY), sorted(
         set(STATUTORY_RULE_REGISTRY) - set(bad_rules))
     bad_rescue = [k for k, v in STATUTORY_RESCUE_REGISTRY.items() if v.get("triggered_by") == k]

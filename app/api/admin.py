@@ -1,19 +1,15 @@
 import time
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, EmailStr
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import get_current_user
 from app.core.dependencies import get_db, get_db_for_user
-from datetime import datetime, timezone
-from sqlalchemy import select
-from app.models.user import User
 from app.models.infrastructure import UserActivityLog
-from datetime import datetime, timezone
-from sqlalchemy import select
 from app.models.user import User
-from app.models.infrastructure import UserActivityLog
 
 router = APIRouter()
 
@@ -190,15 +186,13 @@ async def reactivate_user(user_id: str, admin=Depends(require_admin), db: AsyncS
     return {"id": user_id, "is_active": True}
 
 
-from app.services.user_service import UserService
-
 import csv
 import io
 
 from fastapi.responses import StreamingResponse
 
 from app.core.security import hash_password, validate_password_strength
-
+from app.services.user_service import UserService
 
 # ---------------------------------------------------------------------------
 # COMPANY ACCESS MANAGEMENT (SUPER_ADMIN ONLY)
@@ -213,7 +207,6 @@ async def grant_company_access(
 ):
     """Grant a user access to a specific company (Admin only)."""
     import uuid as _uuid
-    from app.services.user_service import UserService
     
     try:
         uid = _uuid.UUID(user_id)
@@ -242,7 +235,6 @@ async def revoke_company_access(
 ):
     """Revoke a user's access to a specific company (Admin only)."""
     import uuid as _uuid
-    from app.services.user_service import UserService
     
     try:
         uid = _uuid.UUID(user_id)
@@ -427,27 +419,27 @@ async def worker_health(admin=Depends(require_admin)):
     return {
         **result,
         "status": public_status,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 async def worker_health(admin=Depends(require_admin)):
     """Return worker health status."""
     return {
         "status": "healthy",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
 @router.post("/maintenance/backup")
 async def trigger_backup(super_admin=Depends(require_super_admin)):
     """Trigger a database backup. Requires SUPER_ADMIN role."""
-    return {"status": "backup_started", "timestamp": datetime.now(timezone.utc).isoformat()}
+    return {"status": "backup_started", "timestamp": datetime.now(UTC).isoformat()}
 
 
 @router.post("/maintenance/evaluate-all")
 async def trigger_evaluate_all(super_admin=Depends(require_super_admin)):
     """Trigger evaluation for all companies. Requires SUPER_ADMIN role."""
-    return {"status": "evaluation_started", "timestamp": datetime.now(timezone.utc).isoformat()}
+    return {"status": "evaluation_started", "timestamp": datetime.now(UTC).isoformat()}
 
 # ───────────────────────────────────────────────────────────────────
 # ADDITIONAL ADMIN ROUTES — user lookup, activity logs, maintenance

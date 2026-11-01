@@ -15,8 +15,6 @@ before Alembic migrations are generated.
 # ── Database infrastructure ─────────────────────────────────────────
 # ── Commercial (Tasks, Engagements, Quotations) ──────────────────────
 from .commercial import Engagement, Quotation, Task
-from .compliance_calendar import ComplianceCalendarEvent
-from .regulatory_rule import RegulatoryRule
 
 # ── Companies ────────────────────────────────────────────────────────
 from .company import Company, CompanyUserAccess
@@ -27,6 +25,7 @@ from .compliance import (
     ComplianceFlag,
     ComplianceScoreHistory,
 )
+from .compliance_calendar import ComplianceCalendarEvent
 from .database import Base, get_db, set_admin_context, set_rls_context
 
 # ── Documents (Documents, Access Log, AI Templates, AI Log) ──────────
@@ -78,6 +77,7 @@ from .infrastructure import (
 
 # ── People (Directors, Shareholders, Transfers) ──────────────────────
 from .people import Director, Shareholder, ShareTransfer
+from .regulatory_rule import RegulatoryRule
 
 # ── Rescue (Plans + Steps) ───────────────────────────────────────────
 from .rescue import RescuePlan, RescueStep
@@ -154,4 +154,4 @@ __all__ = [
     "set_rls_context",
 ]
 
-from .webhook import WebhookEndpoint, WebhookDelivery, WebhookEvent, DeliveryStatus
+from .webhook import DeliveryStatus, WebhookDelivery, WebhookEndpoint, WebhookEvent

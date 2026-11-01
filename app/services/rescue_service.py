@@ -335,7 +335,7 @@ class RescueService(BaseService[RescuePlan]):
         company_id: uuid.UUID,
         rescue_plan: RescuePlan,
         created_by: uuid.UUID | None = None,
-    ) -> "Engagement":
+    ) -> Engagement:
         """
         Create a revenue engagement when a rescue plan is generated.
         _create_engagement_from_rescue stub implementation.

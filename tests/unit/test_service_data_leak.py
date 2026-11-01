@@ -1,7 +1,10 @@
-import pytest
 from datetime import date
+
+import pytest
+
+from app.rule_engine.engine import NLCRuleEngine, RuleState, Severity
 from app.services.company_service import CompanyService
-from app.rule_engine.engine import NLCRuleEngine, Severity, RuleState
+
 
 @pytest.mark.asyncio
 async def test_unverified_zero_director_records_do_not_trigger_inc003_and_agm_unknown(db):

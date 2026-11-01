@@ -6,13 +6,20 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    Boolean, Date, DateTime, Enum, ForeignKey, String, Text, UniqueConstraint,
+    Boolean,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    String,
+    Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
-from .enums import CalendarEventType, CalendarEventStatus
+from .enums import CalendarEventStatus, CalendarEventType
 from .mixins import FullMixin
 
 if TYPE_CHECKING:
@@ -66,4 +73,4 @@ class ComplianceCalendarEvent(FullMixin, Base):
     assigned_to: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     reviewer_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
 
-    company: Mapped["Company"] = relationship("Company")
+    company: Mapped[Company] = relationship("Company")

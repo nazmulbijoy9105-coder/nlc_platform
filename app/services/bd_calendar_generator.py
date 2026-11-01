@@ -2,10 +2,17 @@
 Service to dynamically calculate BD statutory deadlines based on Companies Act 1994 (amended 2008).
 """
 from datetime import date, timedelta
-from dateutil.relativedelta import relativedelta
 from typing import List
+
+from dateutil.relativedelta import relativedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.compliance_calendar import ComplianceCalendarEvent, CalendarEventType, CalendarEventStatus
+
+from app.models.compliance_calendar import (
+    CalendarEventStatus,
+    CalendarEventType,
+    ComplianceCalendarEvent,
+)
+
 
 class BDCalendarGenerator:
     def __init__(self, db: AsyncSession):
@@ -52,7 +59,7 @@ class BDCalendarGenerator:
             ))
 
             # 3. Income Tax Return (NBR) Deadline (Usually Nov 30th for June FYE)
-            tax_due_date = current_fye + relativedelta(months=5) 
+            tax_due_date = current_fye + relativedelta(months=5)
             events.append(ComplianceCalendarEvent(
                 company_id=company_id,
                 event_type=CalendarEventType.TAX_RETURN,

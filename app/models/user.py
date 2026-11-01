@@ -63,7 +63,7 @@ class User(FullMixin, Base):
     )
 
 
-    webhook_endpoints: Mapped[list["WebhookEndpoint"]] = relationship(
+    webhook_endpoints: Mapped[list[WebhookEndpoint]] = relationship(
         "WebhookEndpoint", back_populates="user", lazy="selectin"
     )
     # ── Helpers ───────────────────────────────────────────────────

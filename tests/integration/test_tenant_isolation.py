@@ -2,11 +2,13 @@
 NLC — GATE E2: Tenant & Object Authorization (IDOR) Adversarial Tests
 Proves that User A (Company A) cannot access Company B's resources by manipulating IDs.
 """
+from contextlib import asynccontextmanager
+
 import pytest
 from fastapi.testclient import TestClient
+
+from app.core.dependencies import TokenData, verify_access_token
 from app.main import create_app
-from app.core.dependencies import verify_access_token, TokenData
-from contextlib import asynccontextmanager
 
 # Mock User A (belongs only to Company A)
 MOCK_TOKEN_A = TokenData(sub="11111111-1111-1111-1111-111111111111", role="CLIENT_DIRECTOR", company_ids=["00000000-0000-0000-0000-000000000001"], user_id="11111111-1111-1111-1111-111111111111", email="usera@test.com")

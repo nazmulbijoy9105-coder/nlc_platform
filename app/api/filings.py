@@ -387,6 +387,7 @@ async def mark_agm_filed(
     # RJSC-001: verify user has access to this company's AGM
     if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):
         from sqlalchemy import select as _sel
+
         from app.models.company import CompanyUserAccess as _CMA
         _access = await db.execute(_sel(_CMA).where(_CMA.user_id == current_user.id, _CMA.company_id == _agm.company_id))
         if not _access.scalar_one_or_none():
@@ -547,6 +548,7 @@ async def mark_return_filed(
         raise HTTPException(status_code=404, detail="Annual return record not found.")
     if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):
         from sqlalchemy import select as _sel
+
         from app.models.company import CompanyUserAccess as _CMA
         _access = await db.execute(_sel(_CMA).where(_CMA.user_id == current_user.id, _CMA.company_id == _existing.company_id))
         if not _access.scalar_one_or_none():

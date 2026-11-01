@@ -11,22 +11,22 @@ from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from fastapi import Response, HTTPException
+from fastapi import Response
+from sqlalchemy import select
 
+from app.models.compliance import ComplianceScoreHistory
+
+# Import CATEGORY_CAPS for score reconciliation (cap adjustment display)
+from app.rule_engine.engine import CATEGORY_CAPS
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
-from app.models.compliance import ComplianceScoreHistory
-from app.services.rescue_service import RescueService
-from sqlalchemy import select
 from app.services.pdf_render import (
     asset_uri,
     esc,
     render_html_to_pdf_async,
     safe_filename_part,
 )
-
-# Import CATEGORY_CAPS for score reconciliation (cap adjustment display)
-from app.rule_engine.engine import CATEGORY_CAPS
+from app.services.rescue_service import RescueService
 
 REPORT_TZ = ZoneInfo("Asia/Dhaka")
 LOGO_FILE = "nlc_logo.png"

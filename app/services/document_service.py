@@ -27,10 +27,10 @@ import httpx
 from sqlalchemy import select
 
 from app.core.config import get_settings
+from app.integrations.rjsc_forms_registry import get_form_for_rule
 from app.models.documents import AIOutputLog, AIPromptTemplate, Document, DocumentAccessLog
 from app.models.enums import AiModel, DocumentType
 from app.services.base import BaseService
-from app.integrations.rjsc_forms_registry import get_form_for_rule
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

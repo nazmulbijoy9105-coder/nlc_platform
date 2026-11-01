@@ -2,11 +2,13 @@
 NLC — GATE E3: Super Admin Control Plane Boundary Tests
 Proves that Super Admins cannot alter immutable legal evaluation results directly.
 """
+from contextlib import asynccontextmanager
+
 import pytest
 from fastapi.testclient import TestClient
+
+from app.core.dependencies import TokenData, get_current_user
 from app.main import create_app
-from app.core.dependencies import get_current_user, TokenData
-from contextlib import asynccontextmanager
 
 # Mock Super Admin Token
 MOCK_SUPER_ADMIN = TokenData(sub="admin-uuid", role="SUPER_ADMIN", company_ids=[], user_id="admin-uuid", email="admin@test.com")
