@@ -92,13 +92,9 @@ def event_loop():
 
 @pytest.fixture(autouse=True)
 def mock_redis_blacklist():
-    """Mock Redis token blacklist for all tests — no Redis required locally."""
-    with patch("app.core.token_blacklist.is_revoked", return_value=False),          patch("app.core.token_blacklist._client") as mock_client:
-        mock_client.return_value.exists.return_value = 0
+    """Mock Redis token blacklist — no Redis required locally."""
+    with patch("app.core.token_blacklist.is_revoked", return_value=False):
         yield
-
-
-
 @pytest_asyncio.fixture(scope="session")
 async def test_engine():
     """
