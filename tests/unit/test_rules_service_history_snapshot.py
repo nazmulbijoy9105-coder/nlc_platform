@@ -18,6 +18,9 @@ async def test_rule_version_snapshot_preserves_material_legal_definition_fields(
 
     changed_by = uuid4()
     rule = SimpleNamespace(
+        id=uuid4(),
+        created_at=datetime(2026, 1, 1, 8, 0),
+        updated_at=datetime(2026, 10, 20, 9, 30),
         rule_id="AGM-001",
         rule_type="AGM",
         rule_name="Annual general meeting",
@@ -50,6 +53,9 @@ async def test_rule_version_snapshot_preserves_material_legal_definition_fields(
     )
 
     assert snapshot.previous_definition == {
+        "id": str(rule.id),
+        "created_at": "2026-01-01T08:00:00",
+        "updated_at": "2026-10-20T09:30:00",
         "rule_id": "AGM-001",
         "rule_type": "AGM",
         "rule_name": "Annual general meeting",
