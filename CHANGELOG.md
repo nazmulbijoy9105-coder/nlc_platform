@@ -1,8 +1,22 @@
 # Changelog
 
+## [2.2.0] — 2026-11-02
+### Changed
+- Version strings aligned across README, pyproject.toml, app/core/config.py, OpenAPI (was mixed 1.0.0 / 2.1.0 / 2.2.0)
+- Rule corpus confirmed at 85 ILRMF rules (Engine ↔ Seed parity)
+- CI uses real Redis service container (removed autouse Redis mock)
+
+### Fixed
+- Production gate: version consistency, legal audit summary refresh
+
+### Notes
+- Runtime idempotent schema safety-net in lifespan retained (Alembic remains source of truth; 43 migrations present)
+- Independent Bangladesh company-law lawyer review of full 85-rule corpus still recommended before high-stakes production use
+
+
 ## [Unreleased]
 ### Fixed
-- Rule corpus reconciled to 75 rules across engine, seed, API, and tests
+- Rule corpus reconciled (now 85 rules) across engine, seed, API, and tests
 - NOT_EVALUATED band added to Severity and RiskBand enums
 - 60+ DB columns added for extended rule coverage
 - last_evaluated_at shows real timestamp after evaluation

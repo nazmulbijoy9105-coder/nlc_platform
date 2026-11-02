@@ -84,7 +84,15 @@ async def lifespan(app: FastAPI):
         raise RuntimeError(f"Cannot connect to database on startup: {e}")
 
 
-    # Run pending migrations (0003-0004) directly - alembic.ini has no URL on Render
+    # ------------------------------------------------------------------
+    # DEFENSIVE SCHEMA SAFETY-NET (idempotent)
+    # Alembic (43 migrations) is the source of truth. These ADD VALUE /
+    # ADD COLUMN IF NOT EXISTS statements exist only as a last-resort
+    # guard for environments where a migration may have been skipped.
+    # Do not add new columns here — put them in a new Alembic revision.
+    # Production gate 2026-11-02: retain until a full column audit confirms
+    # zero drift, then remove this block.
+    # ------------------------------------------------------------------
     try:
         import sqlalchemy as _sa
 

@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     whatsapp_api_token: str | None = None
     s3_backup_bucket: str | None = None
     PROJECT_NAME: str = "NLC Platform"
-    app_version: str = "1.0.0"
+    app_version: str = "2.2.0"
     is_production: bool = True
     environment: str = "production"
     
