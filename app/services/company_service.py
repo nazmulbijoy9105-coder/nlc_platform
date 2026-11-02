@@ -440,7 +440,7 @@ class CompanyService(BaseService[Company]):
             "authorized_capital_bdt":       float(company.authorized_capital_bdt) if company.authorized_capital_bdt else 0.0,
             "paid_up_capital_bdt":          float(company.paid_up_capital_bdt) if company.paid_up_capital_bdt else 0.0,
             "capital_increase_date":       getattr(company, "capital_increase_date", None),
-            "capital_increase_resolution": getattr(company, 'capital_increase_resolution', False),
+            "capital_increase_resolution": getattr(company, "capital_increase_resolution", None),
             "charges":                     [],
             # form_viii_filed removed — not a CompanyProfile field
 
@@ -470,6 +470,8 @@ class CompanyService(BaseService[Company]):
             "penalty_notices_received":     company.penalty_notices_received,
             "penalty_notices_resolved":     company.penalty_notices_resolved,
             "current_director_count": len([d for d in company.directors if d.director_status.value == "ACTIVE"]) if company.directors is not None else None,
+            # Local records are not independently verified against RJSC.
+            "directors_verified": False,
 
             # BSEC Corporate Governance
             "bsec_listed":                   getattr(company, "bsec_listed", False),
