@@ -9,7 +9,7 @@ from fastapi import HTTPException
 
 from app.core.dependencies import TokenData, require_roles
 from app.models.webhook import WebhookDelivery, WebhookEndpoint
-from app.services.webhook_service import WebhookService
+from app.services.webhook_service import WebhookService, validate_webhook_url
 
 
 class _Result:
@@ -123,6 +123,31 @@ def test_event_without_tenant_owner_is_not_broadcast():
     count = asyncio.run(WebhookService(db).trigger_event("compliance.evaluated", {}))
     assert count == 0
     assert db.statements == []
+
+
+
+def test_webhook_url_rejects_plain_http():
+    with pytest.raises(ValueError, match="HTTPS"):
+        asyncio.run(validate_webhook_url("http://example.com/hook"))
+
+
+@pytest.mark.parametrize("url", [
+    "https://127.0.0.1/hook",
+    "https://10.0.0.5/hook",
+    "https://localhost/hook",
+])
+def test_webhook_url_rejects_local_destinations(url):
+    with pytest.raises(ValueError):
+        asyncio.run(validate_webhook_url(url))
+
+
+def test_retry_worker_claims_new_and_due_pending_deliveries():
+    db = _DB(_Result([]))
+    count = asyncio.run(WebhookService(db).process_retries())
+    assert count == 0
+    sql = _sql(db.statements[0])
+    assert "next_retry_at IS NULL" in sql
+    assert "FOR UPDATE SKIP LOCKED" in sql
 
 
 def test_privileged_role_is_rechecked_against_database(monkeypatch):
