@@ -18,7 +18,7 @@ import uuid
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db_for_user, require_roles
@@ -37,11 +37,25 @@ class WebhookCreateRequest(BaseModel):
         default=[], description="Event types to subscribe to. Empty = all events."
     )
 
+    @field_validator("url")
+    @classmethod
+    def require_https(cls, value: HttpUrl) -> HttpUrl:
+        if value.scheme != "https":
+            raise ValueError("Webhook URLs must use HTTPS.")
+        return value
+
 
 class WebhookUpdateRequest(BaseModel):
     url: HttpUrl | None = None
     events: List[str] | None = None
     is_active: bool | None = None
+
+    @field_validator("url")
+    @classmethod
+    def require_https(cls, value: HttpUrl | None) -> HttpUrl | None:
+        if value is not None and value.scheme != "https":
+            raise ValueError("Webhook URLs must use HTTPS.")
+        return value
 
 
 class WebhookResponse(BaseModel):
