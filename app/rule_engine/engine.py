@@ -929,7 +929,7 @@ class NLCRuleEngine:
                     detail={"days_to_agm": days_rem}
                 ))
 
-        if c.agm_held_this_cycle and (c.members_present_at_agm or 0) < PRIVATE_COMPANY_QUORUM:  # type: ignore
+        if c.agm_held_this_cycle and c.members_present_at_agm is not None and c.members_present_at_agm < PRIVATE_COMPANY_QUORUM:  # type: ignore
             self._add_flag(ComplianceFlag(
                 rule_id="AGM-005",
                 flag_code="AGM_QUORUM_DEFECTIVE",
