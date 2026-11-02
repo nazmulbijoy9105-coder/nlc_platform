@@ -68,7 +68,7 @@ def test_test_delivery_requires_endpoint_owner():
     db = _DB(_Result(None))
     result = asyncio.run(WebhookService(db).send_test_event(endpoint_id, owner_id))
     assert result == {"error": "Endpoint not found"}
-    assert str(owner_id) in _sql(db.statements[0])
+    assert str(owner_id).replace("-", "") in _sql(db.statements[0])
 
 
 def test_delivery_history_is_scoped_to_endpoint_owner():
