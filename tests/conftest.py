@@ -90,12 +90,6 @@ def event_loop():
 # Database engine (session-scoped — created once)
 # ---------------------------------------------------------------------------
 
-@pytest.fixture(autouse=True)
-def mock_redis_blacklist():
-    """Mock Redis client for all tests without bypassing blacklist logic."""
-    with patch("app.core.token_blacklist._client") as mock_client:
-        mock_client.return_value.exists.return_value = 0
-        yield
 
 
 
