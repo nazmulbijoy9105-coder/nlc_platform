@@ -15,7 +15,7 @@ class TestWebhookTenantBoundaries:
     async def test_test_delivery_requires_endpoint_owner(self):
         """Webhook delivery query must filter by endpoint owner."""
         owner_id = uuid.UUID("b7a30ec0-7fc4-4eac-95c1-07f0cd2c95de")
-        endpoint_id = "f02afa5d-c692-468c-ab33-22e17f057be5"
+        endpoint_id = uuid.UUID("f02afa5d-c692-468c-ab33-22e17f057be5")
 
         from app.models.webhook import WebhookEndpoint, WebhookDelivery
         from sqlalchemy import select
