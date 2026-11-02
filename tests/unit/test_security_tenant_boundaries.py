@@ -166,7 +166,11 @@ def test_retry_worker_claims_new_and_due_pending_deliveries():
     db = _DB(_Result([]))
     count = asyncio.run(WebhookService(db).process_retries())
     assert count == 0
-    sql = _sql(db.statements[0])
+    from sqlalchemy.dialects import postgresql
+    sql = str(db.statements[0].compile(
+        dialect=postgresql.dialect(),
+        compile_kwargs={"literal_binds": True},
+    ))
     assert "next_retry_at IS NULL" in sql
     assert "FOR UPDATE SKIP LOCKED" in sql
 
