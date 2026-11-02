@@ -35,7 +35,13 @@ async def test_rule_version_snapshot_preserves_material_legal_definition_fields(
         is_black_override=True,
         is_active=True,
         rule_version="2.4",
+        created_by=uuid4(),
+        last_modified_by=uuid4(),
+        last_modified_at=__import__("datetime").datetime(2026, 10, 20, 9, 30),
     )
+
+    created_by = rule.created_by
+    last_modified_by = rule.last_modified_by
 
     snapshot = await service._create_version_snapshot(
         rule=rule,
@@ -61,6 +67,9 @@ async def test_rule_version_snapshot_preserves_material_legal_definition_fields(
         "is_black_override": True,
         "is_active": True,
         "rule_version": "2.4",
+        "created_by": str(created_by),
+        "last_modified_by": str(last_modified_by),
+        "last_modified_at": "2026-10-20T09:30:00",
     }
     db.add.assert_called_once_with(snapshot)
     db.flush.assert_awaited_once()
