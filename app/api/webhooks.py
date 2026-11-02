@@ -90,11 +90,14 @@ async def create_webhook(
 ):
     """Register a new webhook URL to receive compliance event notifications."""
     svc = WebhookService(db)
-    endpoint = await svc.register_endpoint(
-        user_id=current_user.id,
-        url=str(body.url),
-        events=body.events,
-    )
+    try:
+        endpoint = await svc.register_endpoint(
+            user_id=current_user.id,
+            url=str(body.url),
+            events=body.events,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     await db.commit()
     return WebhookResponse(
         id=str(endpoint.id),
@@ -140,13 +143,16 @@ async def update_webhook(
 ):
     """Update webhook URL, events, or active status."""
     svc = WebhookService(db)
-    endpoint = await svc.update_endpoint(
-        endpoint_id=endpoint_id,
-        user_id=current_user.id,
-        url=str(body.url) if body.url else None,
-        events=body.events,
-        is_active=body.is_active,
-    )
+    try:
+        endpoint = await svc.update_endpoint(
+            endpoint_id=endpoint_id,
+            user_id=current_user.id,
+            url=str(body.url) if body.url else None,
+            events=body.events,
+            is_active=body.is_active,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     if not endpoint:
         raise HTTPException(status_code=404, detail="Webhook endpoint not found")
     await db.commit()
