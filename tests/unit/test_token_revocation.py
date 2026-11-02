@@ -2,7 +2,7 @@
 import time
 
 import app.core.token_blacklist as tb
-from app.core.security import create_access_token, decode_token
+from app.core.security import create_access_token, create_refresh_token, create_temp_token, decode_token
 
 
 class FakeRedis:
@@ -11,6 +11,12 @@ class FakeRedis:
 
     def setex(self, key, ttl, value):
         self.d[key] = (ttl, value)
+
+    def set(self, key, value, ex=None, nx=False):
+        if nx and key in self.d:
+            return False
+        self.d[key] = (ex, value)
+        return True
 
     def exists(self, key):
         return 1 if key in self.d else 0
@@ -40,3 +46,26 @@ def test_revoke_ttl_follows_token_expiry(monkeypatch):
     tb.revoke("x", time.time() + 120)
     ttl, _ = fake.d["blacklist:x"]
     assert 100 <= ttl <= 120
+
+
+def test_refresh_tokens_have_unique_jti():
+    first = decode_token(create_refresh_token({"sub": "u1"}), expected_type="refresh")
+    second = decode_token(create_refresh_token({"sub": "u1"}), expected_type="refresh")
+    assert first and second
+    assert first["jti"] != second["jti"]
+
+
+def test_temp_token_is_short_lived_and_typed():
+    payload = decode_token(create_temp_token({"sub": "u1"}), expected_type="temp")
+    assert payload
+    assert payload["type"] == "temp"
+    assert payload["jti"]
+
+
+def test_temp_token_consumption_is_single_use(monkeypatch):
+    fake = FakeRedis()
+    monkeypatch.setattr(tb, "_client", lambda: fake)
+    payload = decode_token(create_temp_token({"sub": "u1"}), expected_type="temp")
+    assert payload
+    assert tb.consume_temp_token(payload["jti"], payload["exp"]) is True
+    assert tb.consume_temp_token(payload["jti"], payload["exp"]) is False
