@@ -73,7 +73,8 @@ def render_html_to_pdf(html_content: str) -> bytes:
     """Render an HTML string to PDF bytes. Only app/static/brand files can be loaded."""
     from weasyprint import HTML  # imported lazily: pulls in Pango/Cairo
 
-    return HTML(string=html_content, url_fetcher=make_safe_fetcher()).write_pdf()
+    result = HTML(string=html_content, url_fetcher=make_safe_fetcher()).write_pdf()
+    return bytes(result) if not isinstance(result, bytes) else result
 
 
 async def render_html_to_pdf_async(html_content: str) -> bytes:

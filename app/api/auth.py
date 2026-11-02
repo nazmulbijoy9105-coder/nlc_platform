@@ -49,6 +49,7 @@ class Verify2FARequest(BaseModel):
 
 class RefreshResponse(BaseModel):
     access_token: str
+    refresh_token: str | None = None
     token_type: str = "bearer"
 
 
@@ -264,9 +265,9 @@ async def logout(current_user: dict = Depends(get_current_user), token: str = De
     """Logout: revokes this access token (by jti) until its own expiry."""
     from app.core.token_blacklist import revoke
 
-    payload = decode_token(token)
-    jti = payload.get("jti") if payload else None
-    revoked = bool(jti) and revoke(jti, payload.get("exp"))
+    payload = decode_token(token) or {}
+    jti = payload.get("jti")
+    revoked = bool(jti) and revoke(str(jti), payload.get("exp"))
     return {"status": "logged_out", "revoked": revoked, "user_id": current_user.get("sub")}  # SEC-004
 
 class ChangePasswordRequest(BaseModel):

@@ -90,7 +90,15 @@ def event_loop():
 # Database engine (session-scoped — created once)
 # ---------------------------------------------------------------------------
 
-@pytest_asyncio.fixture(scope="session")
+@pytest.fixture(autouse=True)
+def mock_redis_blacklist():
+    """Mock Redis token blacklist for all tests — no Redis required locally."""
+    with patch("app.core.token_blacklist.is_revoked", return_value=False),          patch("app.core.token_blacklist._client") as mock_client:
+        mock_client.return_value.exists.return_value = 0
+        yield
+
+
+
 async def test_engine():
     """
     Async engine pointing at nlc_test database.

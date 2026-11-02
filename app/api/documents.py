@@ -121,7 +121,7 @@ def _doc_to_response(doc) -> DocumentResponse:
         document_id=str(doc.id),
         company_id=str(doc.company_id),
         document_type=doc.document_type,
-        template_name=getattr(doc, "template_name", None),
+        template_name=str(getattr(doc or ""), "template_name", None),
         title=doc.title,
         human_approved=doc.human_approved,
         in_review_queue=doc.in_review_queue,
@@ -214,7 +214,7 @@ async def list_templates(
 
     return [
         TemplateResponse(
-            template_name=getattr(t, "template_name", None),
+            template_name=str(getattr(t or ""), "template_name", None),
             document_type=t.document_type.value if hasattr(t.document_type, "value") else str(t.document_type),
             description=t.description,
             required_placeholders=t.required_placeholders or [],

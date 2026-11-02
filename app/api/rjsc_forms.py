@@ -166,8 +166,7 @@ async def mark_form_filed(
         _access = await db.execute(_sel(_CMA).where(_CMA.user_id == current_user.id, _CMA.company_id == filing_check.company_id))
         if not _access.scalar_one_or_none():
             raise HTTPException(status_code=403, detail="Access denied — filing belongs to another company")
-    filing = await svc.mark_filed(
-        form_id=form_id,
+    filing = await svc.mark_filed(form_id=str(form_id),
         filed_date=body.filed_date,
         rjsc_receipt_number=body.rjsc_receipt_number,
         filed_by=str(current_user.id),

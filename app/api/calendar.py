@@ -22,7 +22,7 @@ async def generate_calendar(
     current_user=Depends(get_current_user),
 ):
     service = ComplianceCalendarService(db)
-    events = await service.generate_and_persist(company_id, years_ahead=years_ahead)
+    events = await service.get_calendar(company_id, years_ahead=years_ahead)
     return {"message": f"Generated {len(events)} events", "count": len(events)}
 
 
@@ -37,5 +37,5 @@ async def get_calendar(
     current_user=Depends(get_current_user),
 ):
     service = ComplianceCalendarService(db)
-    events = await service.get_upcoming_events(company_id, days_ahead=days_ahead)
+    events = await service.get_upcoming(company_id, days_ahead=days_ahead)
     return {"company_id": str(company_id), "events": events}

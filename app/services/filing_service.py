@@ -363,7 +363,7 @@ class AnnualReturnService(BaseService[AnnualReturn]):
         self,
         return_id: uuid.UUID,
         filed_date: date,
-        rjsc_receipt_number: str,
+        rjsc_receipt_number: str | None = None,
         filing_fee_paid_bdt: float | None = None,
         late_fee_paid_bdt: float | None = None,
         is_complete: bool = True,

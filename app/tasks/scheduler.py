@@ -4,12 +4,13 @@ from __future__ import annotations
 import logging
 import os
 from datetime import date
+from typing import Any, cast
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
-logger = logging.getLogger(__name__)
+logger = cast("Any", logging.getLogger(__name__))
 scheduler: AsyncIOScheduler | None = None
 
 
@@ -19,7 +20,7 @@ def _is_eager() -> bool:
 
 async def _run_daily_compliance_evaluation() -> None:
     try:
-        from app.worker.tasks import evaluate_all_companies
+        from app.worker.tasks.core import evaluate_all_companies
         evaluate_all_companies.delay()
         logger.info("scheduled_task_completed", task="daily_compliance_evaluation")
     except Exception as e:
@@ -87,7 +88,7 @@ async def _database_health_check() -> None:
 
 async def _cleanup_expired_notifications() -> None:
     try:
-        from app.worker.tasks import cleanup_expired_notifications
+        from app.worker.tasks.core import cleanup_expired_notifications
         cleanup_expired_notifications.delay()
         logger.info("scheduled_task_completed", task="cleanup_expired_notifications")
     except Exception as e:
@@ -96,7 +97,7 @@ async def _cleanup_expired_notifications() -> None:
 
 async def _queue_deadline_warnings() -> None:
     try:
-        from app.worker.tasks import queue_deadline_warning_notifications
+        from app.worker.tasks.core import queue_deadline_warning_notifications
         queue_deadline_warning_notifications.delay()
         logger.info("scheduled_task_completed", task="deadline_warnings")
     except Exception as e:

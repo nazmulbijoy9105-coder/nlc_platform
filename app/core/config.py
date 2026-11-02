@@ -67,7 +67,8 @@ class Settings(BaseSettings):
     # FIX 2: Read from 'CELERY_BROKER_URL' to match Render Dashboard
     redis_url: str = (
         os.getenv("CELERY_BROKER_URL")
-        or os.getenv("REDIS_URL", "")
+        or os.getenv("REDIS_URL")
+        or ""
     )
     CELERY_BROKER_URL: str = ""
     CELERY_RESULT_BACKEND: str = ""

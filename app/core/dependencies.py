@@ -172,7 +172,7 @@ def verify_access_token(
 
     try:
         return TokenData(
-            user_id=payload.get("user_id") or payload.get("sub"),
+        user_id=str(payload.get("user_id") or payload.get("sub") or ""),
             email=payload["email"],
             role=payload["role"],
             company_ids=payload.get("company_ids", []),

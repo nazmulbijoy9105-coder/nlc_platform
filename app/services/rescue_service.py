@@ -41,7 +41,7 @@ def _derive_plan_target(explicit: date | None, steps: list) -> date | None:
         return explicit
     targets = [getattr(s, "target_completion_date", None) for s in (steps or [])]
     targets = [t for t in targets if t is not None]
-    return max(targets) if targets else None
+    return max(targets) if targets else None  # type: ignore[type-var]
 
 
 class RescueService(BaseService[RescuePlan]):
