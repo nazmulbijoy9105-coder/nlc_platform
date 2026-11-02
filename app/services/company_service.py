@@ -45,6 +45,7 @@ class CompanyService(BaseService[Company]):
         initial_directors: list[dict] | None = None,
         initial_shareholders: list[dict] | None = None,
         created_by: uuid.UUID | None = None,
+        is_manufacturing: bool | None = None,
     ) -> Company:
         """
         Create a new company with optional initial directors and shareholders.
@@ -69,6 +70,7 @@ class CompanyService(BaseService[Company]):
             authorized_capital_bdt=authorized_capital_bdt,
             paid_up_capital_bdt=paid_up_capital_bdt,
             assigned_staff_id=assigned_staff_id,
+            is_manufacturing=is_manufacturing,
         )
 
         # Create initial directors if provided
@@ -443,6 +445,7 @@ class CompanyService(BaseService[Company]):
             "audit_committee_established":  getattr(company, "audit_committee_established", False),
 
             # Labour Compliance
+            "is_manufacturing":             company.is_manufacturing,
             "factory_license_obtained":     getattr(company, "factory_license_obtained", None),
             "factory_license_expiry":       getattr(company, "factory_license_expiry", None),
             "labour_court_order_pending":   getattr(company, "labour_court_order_pending", False),

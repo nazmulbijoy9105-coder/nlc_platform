@@ -53,6 +53,26 @@ class TestCompanyService:
         assert company.register_location == "registered_office"
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("is_manufacturing", [True, False, None])
+    async def test_manufacturing_applicability_reaches_rule_engine_profile(self, db, is_manufacturing):
+        from app.services.company_service import CompanyService
+
+        svc = CompanyService(db)
+        company = await svc.create_company(
+            company_name="Manufacturing Applicability Test Ltd",
+            registration_number=f"M-{uuid.uuid4().hex[:8].upper()}",
+            incorporation_date=date.today() - timedelta(days=365),
+            registered_address="456 Test Road, Dhaka",
+            company_type="PRIVATE_LIMITED",
+            financial_year_end=date(2025, 12, 31),
+            is_manufacturing=is_manufacturing,
+        )
+
+        profile = await svc.build_company_profile(company.id)
+        assert profile is not None
+        assert profile["is_manufacturing"] is is_manufacturing
+
+    @pytest.mark.asyncio
     async def test_get_by_registration_number(self, db, db_company):
         from app.services.company_service import CompanyService
 

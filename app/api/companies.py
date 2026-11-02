@@ -55,6 +55,8 @@ class CompanyCreateRequest(BaseModel):
     any_director_disqualified: bool = False
     penalty_notices_received: int = 0
     penalty_notices_resolved: int = 0
+    # None means manufacturing applicability has not been established.
+    is_manufacturing: bool | None = None
 
 
 class CompanyUpdateRequest(BaseModel):
@@ -83,6 +85,8 @@ class CompanyUpdateRequest(BaseModel):
     disqualification_details: list[str] | None = None
     penalty_notices_received: int | None = None
     penalty_notices_resolved: int | None = None
+    # Explicit null resets the fact to UNKNOWN.
+    is_manufacturing: bool | None = None
 
 
 class FlagResolveRequest(BaseModel):
@@ -123,6 +127,7 @@ class CompanyResponse(BaseModel):
     any_director_disqualified: bool | None = None
     penalty_notices_received: int | None = None
     penalty_notices_resolved: int | None = None
+    is_manufacturing: bool | None = None
 
 
 class ComplianceSummaryResponse(BaseModel):
@@ -207,6 +212,7 @@ def _company_to_response(company) -> CompanyResponse:
         black_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("BLACK", "Severity.BLACK")]),
         red_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("RED", "Severity.RED")]),
         yellow_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("YELLOW", "Severity.YELLOW")]),
+        is_manufacturing=getattr(company, "is_manufacturing", None),
     )
 
 
@@ -222,6 +228,7 @@ async def create_company(body: CompanyCreateRequest, request: Request, current_u
         incorporation_date=body.incorporation_date, registered_address=body.registered_address,
         company_type=body.company_type, financial_year_end=body.financial_year_end,  # type: ignore
         assigned_staff_id=body.assigned_staff_id,
+        is_manufacturing=body.is_manufacturing,
     )
     _tax_fields = ["trade_license_obtained", "trade_license_expiry", "tax_return_filed_for_current_fy", "advance_tax_q1_paid", "advance_tax_q2_paid", "advance_tax_q3_paid", "advance_tax_q4_paid", "tds_deposited_up_to_date", "last_tds_deposit_date", "last_vat_return_filed", "vat_annual_return_filed_for_fy", "minimum_tax_paid", "tax_clearance_obtained", "tax_return_deadline_extended", "any_director_disqualified", "penalty_notices_received", "penalty_notices_resolved"]
     _tax_update = {k: getattr(body, k) for k in _tax_fields if getattr(body, k, None) is not None}
@@ -259,18 +266,22 @@ async def update_company(company_id: uuid.UUID, body: CompanyUpdateRequest, requ
     svc = CompanyService(db)
     activity = ActivityService(db)
     update_data = body.model_dump(exclude_none=True)
-    if not update_data:
+    has_manufacturing_update = "is_manufacturing" in body.model_fields_set
+    if not update_data and not has_manufacturing_update:
         raise HTTPException(status_code=400, detail="No fields provided for update.")
     _field_map = {"assigned_officer_id": "assigned_staff_id", "notes": "internal_notes"}
     mapped_data = {}
     for k, v in update_data.items():
         mapped_data[_field_map.get(k, k)] = v
+    # Preserve an explicit null: it resets this tri-state fact to UNKNOWN.
+    if has_manufacturing_update:
+        mapped_data["is_manufacturing"] = body.is_manufacturing
     for _non_model in ("is_fdi_registered", "is_dormant"):
         mapped_data.pop(_non_model, None)
     company = await svc.update_by_id(company_id, **mapped_data)
     if not company:
         raise HTTPException(status_code=404, detail="Company not found.")
-    await activity.log(action="COMPANY_UPDATED", resource_type="company", resource_id=str(company_id), description=f"Updated fields: {list(update_data.keys())}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
+    await activity.log(action="COMPANY_UPDATED", resource_type="company", resource_id=str(company_id), description=f"Updated fields: {list(mapped_data.keys())}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     return _company_to_response(company)
 
 

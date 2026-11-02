@@ -25,6 +25,7 @@ from datetime import date, timedelta
 import pytest
 
 from app.rule_engine.engine import (
+    ApplicabilityState,
     ChargeEvent,
     ComplianceFlag,
     ExposureBand,
@@ -874,33 +875,72 @@ class TestInsolvencyRules:
 
 
 class TestLabourRules:
-    """Labour Act 2006 — LBR-001 to LBR-003."""
+    """Labour Act 2006 — factory licensing and court-order applicability."""
 
-    def test_LBR001_triggers_factory_license_missing(self, rule_engine, build_profile):
-        """Factory license not obtained → LBR-001."""
+    def test_manufacturing_applicability_is_explicitly_tristate(self, rule_engine, build_profile):
+        applicable = rule_engine._manufacturing_applicability(
+            build_profile(is_manufacturing=True)
+        )
+        not_applicable = rule_engine._manufacturing_applicability(
+            build_profile(is_manufacturing=False)
+        )
+        unknown = rule_engine._manufacturing_applicability(
+            build_profile(is_manufacturing=None)
+        )
+
+        assert applicable.state is ApplicabilityState.APPLICABLE
+        assert not_applicable.state is ApplicabilityState.NOT_APPLICABLE
+        assert unknown.state is ApplicabilityState.UNKNOWN
+        assert applicable.reason
+        assert not_applicable.reason
+        assert unknown.reason
+
+    def test_LBR001_triggers_only_for_confirmed_manufacturing(self, rule_engine, build_profile):
         profile = build_profile(is_manufacturing=True, factory_license_obtained=False)
-        profile = build_profile(factory_license_obtained=False, is_manufacturing=True)
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "LBR-001")
 
-    def test_LBR002_triggers_factory_license_expired(self, rule_engine, build_profile):
-        """Factory license expired → LBR-002."""
+    @pytest.mark.parametrize("manufacturing_status", [False, None])
+    def test_LBR001_does_not_trigger_when_manufacturing_not_established(
+        self, rule_engine, build_profile, manufacturing_status
+    ):
+        output = rule_engine.evaluate(build_profile(
+            is_manufacturing=manufacturing_status,
+            factory_license_obtained=False,
+        ))
+        assert_flag_not_triggered(output, "LBR-001")
+
+    def test_LBR002_triggers_only_for_confirmed_manufacturing(self, rule_engine, build_profile):
         profile = build_profile(
+            is_manufacturing=True,
             factory_license_obtained=True,
             factory_license_expiry=date.today() - timedelta(days=30),
         )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "LBR-002")
 
-    def test_LBR003_triggers_labour_court_order(self, rule_engine, build_profile):
-        """Labour court order pending → LBR-003."""
-        profile = build_profile(labour_court_order_pending=True)
+    @pytest.mark.parametrize("manufacturing_status", [False, None])
+    def test_LBR002_does_not_trigger_when_manufacturing_not_established(
+        self, rule_engine, build_profile, manufacturing_status
+    ):
+        profile = build_profile(
+            is_manufacturing=manufacturing_status,
+            factory_license_obtained=True,
+            factory_license_expiry=date.today() - timedelta(days=30),
+        )
+        output = rule_engine.evaluate(profile)
+        assert_flag_not_triggered(output, "LBR-002")
+
+    def test_LBR003_court_order_is_not_gated_by_factory_status(self, rule_engine, build_profile):
+        profile = build_profile(
+            is_manufacturing=None,
+            labour_court_order_pending=True,
+        )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "LBR-003")
 
     def test_no_labour_flags_when_compliant(self, rule_engine, build_profile):
-        """No labour flags when compliant."""
-        profile = build_profile()
+        profile = build_profile(is_manufacturing=True)
         output = rule_engine.evaluate(profile)
         flag_ids = [f.rule_id for f in output.flags]
         assert "LBR-001" not in flag_ids

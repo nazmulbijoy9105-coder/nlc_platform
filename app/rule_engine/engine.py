@@ -81,6 +81,17 @@ class RuleState(str, Enum):
     CONDITIONAL = "CONDITIONAL"
     CONTRADICTORY = "CONTRADICTORY"
 
+class ApplicabilityState(str, Enum):
+    APPLICABLE = "APPLICABLE"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+    UNKNOWN = "UNKNOWN"
+
+
+@dataclass(frozen=True)
+class ApplicabilityDecision:
+    state: ApplicabilityState
+    reason: str
+
 @dataclass
 class ComplianceFlag:
     rule_id: str
@@ -1608,32 +1619,56 @@ class NLCRuleEngine:
             ))
 
     # MODULE 13: LABOUR COMPLIANCE (Labour Act 2006)
+    @staticmethod
+    def _manufacturing_applicability(c: CompanyProfile) -> ApplicabilityDecision:
+        """Resolve factory-license applicability without treating missing facts as false."""
+        if c.is_manufacturing is True:
+            return ApplicabilityDecision(
+                ApplicabilityState.APPLICABLE,
+                "Manufacturing activity is affirmatively established.",
+            )
+        if c.is_manufacturing is False:
+            return ApplicabilityDecision(
+                ApplicabilityState.NOT_APPLICABLE,
+                "Company is affirmatively recorded as non-manufacturing.",
+            )
+        return ApplicabilityDecision(
+            ApplicabilityState.UNKNOWN,
+            "Manufacturing status has not been established.",
+        )
+
     def _run_labour_rules(self, c: CompanyProfile) -> None:
-        # R-003/R-008: LBR-001 applies only to entities confirmed as manufacturing.
-        # None (unknown) and False (not a factory) must not raise a flag.
-        if c.is_manufacturing is True and c.factory_license_obtained is False:
-            self._add_flag(ComplianceFlag(
-                rule_id="LBR-001",
-                flag_code="FACTORY_LICENSE_MISSING",
-                severity=Severity.RED,
-                score_impact=10,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="Factory license not obtained. Labour Act 2006: factory license mandatory for manufacturing entities.",
-                statutory_basis="Labour Act 2006 (Bangladesh), Section 35"
-            ))
+        applicability = self._manufacturing_applicability(c)
 
-        if c.factory_license_expiry and self.today > c.factory_license_expiry:
-            delay = (self.today - c.factory_license_expiry).days
-            self._add_flag(ComplianceFlag(
-                rule_id="LBR-002",
-                flag_code="FACTORY_LICENSE_EXPIRED",
-                severity=Severity.YELLOW,
-                score_impact=5,
-                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=f"Factory license expired. Overdue by {delay} days. Labour Act 2006: renewal required.",
-                statutory_basis="Labour Act 2006 (Bangladesh), Section 35"
-            ))
+        # Factory-license obligations are evaluated only for established
+        # manufacturing entities. UNKNOWN and NOT_APPLICABLE never create
+        # a statutory breach or score deduction.
+        if applicability.state is ApplicabilityState.APPLICABLE:
+            if c.factory_license_obtained is False:
+                self._add_flag(ComplianceFlag(
+                    rule_id="LBR-001",
+                    flag_code="FACTORY_LICENSE_MISSING",
+                    severity=Severity.RED,
+                    score_impact=10,
+                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                    description="Factory license not obtained. Labour Act 2006: factory license mandatory for manufacturing entities.",
+                    statutory_basis="Labour Act 2006 (Bangladesh), Section 35"
+                ))
 
+            if c.factory_license_expiry and self.today > c.factory_license_expiry:
+                delay = (self.today - c.factory_license_expiry).days
+                self._add_flag(ComplianceFlag(
+                    rule_id="LBR-002",
+                    flag_code="FACTORY_LICENSE_EXPIRED",
+                    severity=Severity.YELLOW,
+                    score_impact=5,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=f"Factory license expired. Overdue by {delay} days. Labour Act 2006: renewal required.",
+                    statutory_basis="Labour Act 2006 (Bangladesh), Section 35"
+                ))
+
+        # LBR-003 is not gated by manufacturing status: applicability of an
+        # existing labour-court order depends on the order's parties and scope.
         if c.labour_court_order_pending:
             self._add_flag(ComplianceFlag(
                 rule_id="LBR-003",
