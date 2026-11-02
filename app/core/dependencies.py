@@ -356,21 +356,36 @@ def require_company_access(company_id_param: str = "company_id"):
             token: TokenData = Depends(verify_access_token),
         ):
     """
-    def _check_access(
+    async def _check_access(
         company_id: uuid.UUID,
         token: TokenData = Depends(verify_access_token),
+        db: AsyncSession = Depends(get_db),
     ) -> uuid.UUID:
-        # Admin/Staff/Legal: bypass — RLS handles DB-level isolation
-        if token.role in (
-            UserRole.SUPER_ADMIN,
-            UserRole.ADMIN_STAFF,
-            UserRole.LEGAL_STAFF,
-        ):
+        # Re-check active user and current role; do not trust stale company_ids
+        # embedded in a JWT after a membership has been revoked.
+        await set_rls_context(db, token.user_id)
+        from sqlalchemy import select
+        result = await db.execute(
+            select(User).where(User.id == uuid.UUID(token.user_id), User.is_active.is_(True))
+        )
+        user = result.scalar_one_or_none()
+        if user is None:
+            raise HTTPException(status_code=401, detail="User account is inactive or unavailable.")
+        db_role = user.role.value if hasattr(user.role, "value") else str(user.role)
+        if db_role != token.role:
+            raise HTTPException(status_code=401, detail="Account permissions changed. Please sign in again.")
+
+        if db_role in ("SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF"):
             return company_id
 
-        # Client roles: must have this company in their JWT
-        company_str = str(company_id)
-        if company_str not in token.company_ids:
+        from app.models.company import CompanyUserAccess
+        membership = await db.execute(
+            select(CompanyUserAccess.id).where(
+                CompanyUserAccess.user_id == uuid.UUID(token.user_id),
+                CompanyUserAccess.company_id == company_id,
+            ).limit(1)
+        )
+        if membership.scalar_one_or_none() is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You do not have access to this company.",
