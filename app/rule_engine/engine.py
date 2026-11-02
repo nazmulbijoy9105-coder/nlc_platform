@@ -220,7 +220,7 @@ class CompanyProfile:
     minutes_book_board_maintained: bool = False
     register_location: str = "registered_office"
     capital_increase_date: Optional[date] = None
-    capital_increase_resolution: bool = False
+    capital_increase_resolution: bool | None = None
     capital_increase_special_resolution: bool = False
     form_iv_filed: bool | None = None
     form_iv_filed_date: Optional[date] = None
@@ -501,7 +501,12 @@ def _input_coverage(company) -> float:
     total_weight = sum(_COVERAGE_FIELDS.values())
     known_weight = 0.0
     for field_name, weight in _COVERAGE_FIELDS.items():
-        if getattr(company, field_name, None) is not None:
+        value = getattr(company, field_name, None)
+        if field_name == "current_director_count":
+            # NLC's own director rows are not proof of the RJSC-verified count.
+            if getattr(company, "directors_verified", False) is not True:
+                continue
+        if value is not None:
             known_weight += weight
     return min(1.0, known_weight / total_weight)
 
@@ -614,7 +619,9 @@ class NLCRuleEngine:
             ))
 
 
-        if c.company_type == "PRIVATE_LIMITED" and c.current_director_count is not None and (c.current_director_count or 0) < 2 and c.directors_verified:  # RULE-001: only fire when verified against RJSC
+        if (c.company_type == "PRIVATE_LIMITED" and c.directors_verified
+                and c.current_director_count is not None
+                and c.current_director_count < 2):  # RULE-001: only fire when verified against RJSC
             inc003_impact = 15
             inc003_desc = (
                 "Private company has NO directors. Section 90(2) requires minimum 2. Director records require verification - absence in NLC database does not confirm actual absence."
