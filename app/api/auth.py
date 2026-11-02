@@ -1,6 +1,6 @@
 import os
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, EmailStr, Field
 from slowapi import Limiter
@@ -217,6 +217,8 @@ async def setup_2fa(
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=401, detail="User not found or inactive")
+    if user.totp_enabled:
+        raise HTTPException(status_code=409, detail="Two-factor authentication is already enabled")
 
     setup = await UserService(db).setup_totp(user)
     return {
@@ -319,7 +321,10 @@ async def refresh_token(body: RefreshRequest, db=Depends(get_db)):
     old_exp = payload.get("exp")
     if not isinstance(old_jti, str) or not old_jti or not old_exp:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
+    from app.core.token_blacklist import is_revoked
     try:
+        if is_revoked(old_jti, fail_closed=True):
+            raise HTTPException(status_code=401, detail="Refresh token has been revoked")
         consumed = consume_refresh_token(old_jti, old_exp)
     except BlacklistUnavailable:
         raise HTTPException(status_code=503, detail="Authentication service temporarily unavailable")
@@ -333,15 +338,37 @@ async def refresh_token(body: RefreshRequest, db=Depends(get_db)):
     return RefreshResponse(access_token=new_access, refresh_token=new_refresh, token_type="bearer")
 
 
+class LogoutRequest(BaseModel):
+    refresh_token: str | None = None
+
+
 @router.post("/logout")
-async def logout(current_user: dict = Depends(get_current_user), token: str = Depends(oauth2_scheme)):
-    """Logout: revokes this access token (by jti) until its own expiry."""
+async def logout(
+    body: LogoutRequest = Body(default=LogoutRequest()),
+    current_user: dict = Depends(get_current_user),
+    token: str = Depends(oauth2_scheme),
+):
+    """Revoke the current access token and, when supplied, its refresh token."""
     from app.core.token_blacklist import revoke
 
-    payload = decode_token(token) or {}
-    jti = payload.get("jti")
-    revoked = bool(jti) and revoke(str(jti), payload.get("exp"))
-    return {"status": "logged_out", "revoked": revoked, "user_id": current_user.get("sub")}  # SEC-004
+    access_payload = decode_token(token, expected_type="access") or {}
+    access_jti = access_payload.get("jti")
+    access_revoked = bool(access_jti) and revoke(str(access_jti), access_payload.get("exp"))
+
+    refresh_revoked = False
+    if body.refresh_token:
+        refresh_payload = decode_token(body.refresh_token, expected_type="refresh")
+        if refresh_payload and refresh_payload.get("sub") == current_user.get("sub"):
+            refresh_jti = refresh_payload.get("jti")
+            if refresh_jti:
+                refresh_revoked = revoke(str(refresh_jti), refresh_payload.get("exp"))
+
+    return {
+        "status": "logged_out",
+        "access_revoked": access_revoked,
+        "refresh_revoked": refresh_revoked,
+        "user_id": current_user.get("sub"),
+    }
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
