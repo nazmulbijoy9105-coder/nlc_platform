@@ -99,7 +99,7 @@ async def create_webhook(
     return WebhookResponse(
         id=str(endpoint.id),
         url=endpoint.url,
-        secret="***",
+        secret=endpoint.secret,
         events=endpoint.events,
         is_active=endpoint.is_active,
         last_delivery_at=endpoint.last_delivery_at.isoformat() if endpoint.last_delivery_at else None,
@@ -153,7 +153,7 @@ async def update_webhook(
     return WebhookResponse(
         id=str(endpoint.id),
         url=endpoint.url,
-        secret=endpoint.secret,
+        secret="***",
         events=endpoint.events,
         is_active=endpoint.is_active,
         last_delivery_at=endpoint.last_delivery_at.isoformat() if endpoint.last_delivery_at else None,
