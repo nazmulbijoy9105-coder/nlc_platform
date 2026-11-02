@@ -220,9 +220,14 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Role mismatch check removed — token is signed and trusted.
-    # Revocation is handled via Redis blacklist on logout.
-    # The token's role claim is authoritative for RBAC (require_roles checks it).
+    # Authorization is always based on the current database role, never a stale JWT claim.
+    db_role = user.role.value if hasattr(user.role, "value") else str(user.role)
+    if db_role != token.role:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account permissions changed. Please sign in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     return user
 
@@ -262,14 +267,27 @@ def require_roles(*allowed_roles: str):
             _: TokenData = Depends(require_roles("SUPER_ADMIN", "ADMIN_STAFF"))
         ):
     """
-    def _check_role(token: TokenData = Depends(verify_access_token)) -> TokenData:
-        if token.role not in allowed_roles:
+    async def _check_role(
+        token: TokenData = Depends(verify_access_token),
+        db: AsyncSession = Depends(get_db),
+    ) -> TokenData:
+        # Reload role from the database on every privileged request. JWT role
+        # claims can outlive an administrator's role downgrade.
+        await set_rls_context(db, token.user_id)
+        from sqlalchemy import select
+        result = await db.execute(
+            select(User).where(User.id == uuid.UUID(token.user_id), User.is_active.is_(True))
+        )
+        user = result.scalar_one_or_none()
+        if user is None:
+            raise HTTPException(status_code=401, detail="User account is inactive or unavailable.")
+        db_role = user.role.value if hasattr(user.role, "value") else str(user.role)
+        if db_role != token.role:
+            raise HTTPException(status_code=401, detail="Account permissions changed. Please sign in again.")
+        if db_role not in [str(getattr(role, "value", role)) for role in allowed_roles]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=(
-                    f"Access denied. This action requires one of: "
-                    f"{list(allowed_roles)}. Your role: {token.role}"
-                ),
+                detail=f"Access denied. This action requires one of: {list(allowed_roles)}.",
             )
         return token
     return _check_role
