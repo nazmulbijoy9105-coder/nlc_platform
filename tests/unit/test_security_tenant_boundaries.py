@@ -1,5 +1,6 @@
 """Regression tests for webhook tenant boundaries and current-role authorization."""
 import asyncio
+import inspect
 import uuid
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -116,6 +117,15 @@ def test_company_list_filter_uses_live_active_memberships(monkeypatch):
     assert result == [str(allowed_id)]
     membership_sql = _sql(db.statements[1])
     assert "company_user_access.is_active IS true" in membership_sql
+
+
+
+def test_document_workflow_service_contracts_accept_notes_and_worker_parameters():
+    from app.services.document_service import DocumentService
+
+    assert "approval_note" in inspect.signature(DocumentService.approve_document).parameters
+    assert "release_note" in inspect.signature(DocumentService.release_to_client).parameters
+    assert "parameters" in inspect.signature(DocumentService.generate_ai_document).parameters
 
 
 def test_event_without_tenant_owner_is_not_broadcast():
