@@ -1,7 +1,6 @@
 """Regression tests for complete legal-rule version snapshots."""
 
-from datetime import date
-from types import SimpleNamespace
+from datetime import date, datetime
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
@@ -37,7 +36,7 @@ async def test_rule_version_snapshot_preserves_material_legal_definition_fields(
         rule_version="2.4",
         created_by=uuid4(),
         last_modified_by=uuid4(),
-        last_modified_at=__import__("datetime").datetime(2026, 10, 20, 9, 30),
+        last_modified_at=datetime(2026, 10, 20, 9, 30),
     )
 
     created_by = rule.created_by
