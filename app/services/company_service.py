@@ -351,7 +351,7 @@ class CompanyService(BaseService[Company]):
                 board_approval_obtained=t.board_approval_obtained,
                 share_register_updated=t.register_updated,
                 aoa_restriction_apply=t.aoa_restriction_violated,
-                form_117_filed=getattr(t, "form_117_filed", None),  # UNKNOWN until RJSC filings table lookup implemented (TR-007)
+                form_117_filed=bool(getattr(t, "form_117_filed", None)) if t is not None else False,  # UNKNOWN until RJSC filings table lookup implemented (TR-007)
             ))
 
         # ── Statutory Registers ───────────────────────────────────

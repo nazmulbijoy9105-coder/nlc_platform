@@ -197,7 +197,6 @@ class CompanyProfile:
     aoa_transfer_restriction: bool = False
     has_foreign_shareholder: bool = False
     foreign_shareholding_pct: float = 0.0
-    is_manufacturing: bool = False
     is_dormant: bool = False
     is_fdi_registered: bool = False
     fdi_registration_date: Optional[date] = None
@@ -292,7 +291,6 @@ class CompanyProfile:
     liquidator_appointed: bool = False
     court_ordered_winding_up: bool = False
     # ── Labour (Labour Act 2006) ──
-    factory_license_obtained: bool = False
     # Tri-state applicability (R-003/R-008): None = unknown, False = not a factory, True = manufacturing.
     is_manufacturing: bool | None = None
     factory_license_obtained: bool | None = None
@@ -558,7 +556,7 @@ class NLCRuleEngine:
     def _is_old_enough_to_assess(self, c: CompanyProfile) -> bool:
         """Issue 2 fix: returns True if company is >30 days old (enough to assess MoA filing).
         Returns False for fresh companies where False may just mean 'not yet assessed'."""
-        if c.incorporation_date is False:
+        if c.incorporation_date is None:
             return True  # If no incorporation date, allow the rule to fire
         days_old = (self.today - c.incorporation_date).days
         return days_old > 30
