@@ -7,8 +7,7 @@ from canonical_architecture.statutory_rescue import STATUTORY_RESCUE_REGISTRY
 from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
 
 ROOT = Path(__file__).resolve().parents[2]
-EXPECTED = 75
-EXPECTED = 85
+EXPECTED = 85  # ILRMF production corpus (was 75 pre-expansion)
 
 
 def _engine_ids():
@@ -55,3 +54,38 @@ def test_inner_ids_match_keys():
         if getattr(v, "triggered_by", None) != k
     ]
     assert not bad_rescue, sorted(bad_rescue)
+
+
+def _engine_basis_map():
+    """Best-effort: rule_id -> set of statutory_basis strings near ComplianceFlag."""
+    src = (ROOT / "app" / "rule_engine" / "engine.py").read_text(encoding="utf-8")
+    bases = {}
+    for m in re.finditer(r'rule_id\s*=\s*["\']([A-Z0-9-]+)["\']', src):
+        rid = m.group(1)
+        window = src[max(0, m.start() - 150) : min(len(src), m.end() + 700)]
+        found = re.findall(r'statutory_basis\s*=\s*["\']([^"\']+)["\']', window)
+        if found:
+            bases.setdefault(rid, set()).update(found)
+    return bases
+
+
+def test_seed_statutory_basis_matches_engine():
+    """Field-level parity: seed statutory_basis must appear in engine for same rule_id."""
+    from scripts.seed_rules import ILRMF_RULES
+
+    engine_bases = _engine_basis_map()
+    missing_in_engine = []
+    mismatches = []
+    for row in ILRMF_RULES:
+        rid = row["rule_id"]
+        sb = (row.get("statutory_basis") or "").strip()
+        if rid not in engine_bases:
+            missing_in_engine.append(rid)
+            continue
+        ebs = engine_bases[rid]
+        # Accept exact match or mutual containment (wording variants)
+        ok = any(sb == eb or sb in eb or eb in sb for eb in ebs)
+        if not ok:
+            mismatches.append({"rule_id": rid, "seed": sb, "engine": sorted(ebs)})
+    assert not missing_in_engine, missing_in_engine
+    assert not mismatches, mismatches

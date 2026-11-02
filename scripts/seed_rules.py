@@ -2,16 +2,20 @@
 # It must NEVER seed based on COUNT(*) < N. Count checks are verification only.
 #!/usr/bin/env python3
 """
-NEUM LEX COUNSEL — Legal Rules Seeder v2.0
+NEUM LEX COUNSEL — Legal Rules Seeder
 scripts/seed_rules.py
 
-Standalone script to seed all 46 ILRMF v2.0 rules.
+Standalone script to seed all 85 ILRMF rules (engine parity).
 Safe to run multiple times — upserts by rule_id.
 
+Statutory bases must match app/rule_engine/engine.py.
+ID parity is verified by tests; field-level statutory_basis
+parity is enforced in tests/unit/test_canonical_integrity.py.
+
 USAGE:
- python scripts/seed_rules.py
- python scripts/seed_rules.py --dry-run
- python scripts/seed_rules.py --verbose
+  python scripts/seed_rules.py
+  python scripts/seed_rules.py --dry-run
+  python scripts/seed_rules.py --verbose
 """
 from __future__ import annotations
 
@@ -37,9 +41,9 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import create_async_engine
 
 # ═══════════════════════════════════════════════════════════════════════
-# ILRMF v2.0 — 32 Rules
-# ALL SECTION NUMBERS VERIFIED against Companies Act 1994 (Bangladesh)
-# ═══════════════════════════════════════════════════════════════════════
+# ILRMF — 85 Rules (engine ↔ seed ID + statutory_basis parity)
+# Section numbers aligned to app/rule_engine/engine.py (2026-11-02 production gate)
+# Lawyer source verification remains PENDING for RECONCILE provisions
 
 ILRMF_RULES: List[Dict[str, Any]] = [
     # MODULE 0: INCORPORATION — 5 rules (Sec 9, 11, 90, 150)
@@ -175,7 +179,7 @@ def get_database_url() -> str:
 async def seed_rules(dry_run: bool = False, verbose: bool = False) -> int:
     print(f"\n{'='*60}")
     print(f" NEUM LEX COUNSEL — Legal Rules Seeder v2.0")
-    print(f" ILRMF v2.0 — {EXPECTED_RULE_COUNT} rules")
+    print(f" ILRMF — {EXPECTED_RULE_COUNT} rules")
     print(f" Mode: {'DRY RUN' if dry_run else 'LIVE'}")
     print(f"{'='*60}\n")
 
@@ -294,7 +298,7 @@ async def seed_rules(dry_run: bool = False, verbose: bool = False) -> int:
 
 
 def main():
-    p = argparse.ArgumentParser(description="Seed ILRMF v2.0 rules")
+    p = argparse.ArgumentParser(description="Seed ILRMF 85-rule corpus")
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--verbose", "-v", action="store_true")
     args = p.parse_args()
