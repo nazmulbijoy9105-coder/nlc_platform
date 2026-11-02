@@ -1,6 +1,7 @@
 """Regression tests for complete legal-rule version snapshots."""
 
 from datetime import date, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
