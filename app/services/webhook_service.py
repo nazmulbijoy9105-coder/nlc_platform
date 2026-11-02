@@ -105,7 +105,7 @@ class WebhookService:
         )
         self.db.add(endpoint)
         await self.db.flush()
-        logger.info("webhook_registered", endpoint_id=str(endpoint.id), url=url, events=events)
+        logger.info("webhook_registered", endpoint_id=str(endpoint.id), events=events)
         return endpoint
 
     async def list_endpoints(self, user_id: UUID) -> list[WebhookEndpoint]:
@@ -180,8 +180,7 @@ class WebhookService:
         self, event_type: str, payload: dict, user_id: UUID | None = None
     ) -> int:
         """
-        Trigger a webhook event. Finds all matching active endpoints,
-        creates delivery records, and attempts immediate delivery.
+        Trigger a webhook event and enqueue deliveries for the scheduler.
 
         Returns: number of deliveries queued.
         """
@@ -231,17 +230,8 @@ class WebhookService:
     # ── Delivery Engine ─────────────────────────────────────────
 
     async def _deliver_pending(self) -> None:
-        """Find pending deliveries and attempt to deliver them."""
-        result = await self.db.execute(
-            select(WebhookDelivery)
-            .where(WebhookDelivery.status == DeliveryStatus.PENDING)
-            .order_by(WebhookDelivery.created_at)
-            .limit(50)
-        )
-        deliveries = list(result.scalars().all())
-
-        for delivery in deliveries:
-            await self._attempt_delivery(delivery)
+        """Compatibility wrapper using the locked, committed retry-queue path."""
+        await self.process_retries()
 
     async def _attempt_delivery(self, delivery: WebhookDelivery) -> None:
         """Attempt to deliver a single webhook. Retries on failure."""
