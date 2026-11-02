@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from app.services.company_service import _agm_profile_evidence
 from app.services.compliance_service import _applied_score_impacts, _is_rescue_required
-from app.rule_engine.engine import RuleState
+from app.rule_engine.engine import RuleState, _input_coverage
 from app.rule_engine.engine import CompanyProfile, NLCRuleEngine
 
 
@@ -170,3 +170,21 @@ def test_missing_capital_resolution_evidence_does_not_create_violation():
 
     result = NLCRuleEngine().evaluate(profile)
     assert "CAP-001" not in {flag.rule_id for flag in result.flags}
+
+
+def test_unverified_director_rows_do_not_inflate_evidence_coverage():
+    unverified = CompanyProfile(
+        company_id="coverage-unverified",
+        company_name="Coverage Test Ltd",
+        current_director_count=3,
+        directors_verified=False,
+    )
+    verified = CompanyProfile(
+        company_id="coverage-verified",
+        company_name="Coverage Test Ltd",
+        current_director_count=3,
+        directors_verified=True,
+    )
+
+    assert _input_coverage(unverified) == 0.0
+    assert _input_coverage(verified) > 0.0
