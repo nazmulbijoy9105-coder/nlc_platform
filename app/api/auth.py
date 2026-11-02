@@ -230,7 +230,9 @@ class VerifyTOTPSetupRequest(BaseModel):
 
 
 @router.post("/2fa/confirm")
+@_limiter.limit("5/minute")
 async def confirm_2fa_setup(
+    request: Request,
     body: VerifyTOTPSetupRequest,
     current_user: dict = Depends(get_current_user),
     db=Depends(get_db),
@@ -253,7 +255,8 @@ async def confirm_2fa_setup(
 
 
 @router.post("/verify-2fa", response_model=LoginResponse)
-async def verify_2fa(body: Verify2FARequest, db=Depends(get_db)):
+@_limiter.limit("5/minute")
+async def verify_2fa(request: Request, body: Verify2FARequest, db=Depends(get_db)):
     """Verify a single-use 2FA challenge and then issue full tokens."""
     payload = decode_token(body.temp_token, expected_type="temp")
     jti = payload.get("jti") if payload else None
