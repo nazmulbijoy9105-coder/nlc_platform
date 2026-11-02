@@ -166,10 +166,10 @@ class CompanyProfile:
     agm_held_without_audit: bool = False
     agm_scheduled_date: Optional[date] = None
     notice_sent_date: Optional[date] = None
-    members_present_at_agm: int | None = 0
-    auditor_reappointed_at_agm: bool = False
+    members_present_at_agm: int | None = None
+    auditor_reappointed_at_agm: bool | None = None
     accounts_adopted_at_agm: bool = False
-    agm_minutes_prepared: bool = False
+    agm_minutes_prepared: bool | None = None
     first_auditor_appointed: bool | None = None
     first_auditor_appointment_date: Optional[date] = None
     audit_complete: bool = False
