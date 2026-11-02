@@ -859,7 +859,6 @@ class NLCRuleEngine:
                 severity = Severity.BLACK if delay > 365 else Severity.RED
                 self._add_flag(ComplianceFlag(
                     rule_id="AGM-001",
-                        eval_state="UNKNOWN",   # F3: missing input -> UNKNOWN, not VIOLATION
                     flag_code="FIRST_AGM_DEFAULT",
                     severity=severity,
                     score_impact=self._graduated_agm_deduction(delay),
