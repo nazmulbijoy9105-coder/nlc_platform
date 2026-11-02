@@ -383,6 +383,7 @@ def require_company_access(company_id_param: str = "company_id"):
             select(CompanyUserAccess.id).where(
                 CompanyUserAccess.user_id == uuid.UUID(token.user_id),
                 CompanyUserAccess.company_id == company_id,
+                CompanyUserAccess.is_active.is_(True),
             ).limit(1)
         )
         if membership.scalar_one_or_none() is None:
@@ -395,17 +396,40 @@ def require_company_access(company_id_param: str = "company_id"):
     return _check_access
 
 
-def get_client_company_filter(
+async def get_client_company_filter(
     token: TokenData = Depends(verify_access_token),
+    db: AsyncSession = Depends(get_db),
 ) -> list[str] | None:
     """
-    For list endpoints: return the company_ids filter for client roles.
-    Admin/Staff get None (no filter = all companies via RLS).
-    Client roles get their JWT company_ids list as the filter.
+    Return a live company filter from active database memberships.
+    JWT company_ids are informational only and may be stale after revocation.
     """
-    if token.is_admin or token.is_legal_staff:
-        return None  # No filter — RLS handles it
-    return token.company_ids
+    await set_rls_context(db, token.user_id)
+    from sqlalchemy import select
+    user_result = await db.execute(
+        select(User).where(
+            User.id == uuid.UUID(token.user_id),
+            User.is_active.is_(True),
+        )
+    )
+    user = user_result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User account is inactive or unavailable.")
+    db_role = user.role.value if hasattr(user.role, "value") else str(user.role)
+    if db_role != token.role:
+        raise HTTPException(status_code=401, detail="Account permissions changed. Please sign in again.")
+
+    if db_role in ("SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF"):
+        return None
+
+    from app.models.company import CompanyUserAccess
+    membership_result = await db.execute(
+        select(CompanyUserAccess.company_id).where(
+            CompanyUserAccess.user_id == uuid.UUID(token.user_id),
+            CompanyUserAccess.is_active.is_(True),
+        )
+    )
+    return [str(company_id) for company_id in membership_result.scalars().all()]
 
 
 # ═══════════════════════════════════════════════════════════════════════
