@@ -55,6 +55,8 @@ class CompanyCreateRequest(BaseModel):
     any_director_disqualified: bool = False
     penalty_notices_received: int = 0
     penalty_notices_resolved: int = 0
+    # None means manufacturing applicability has not been established.
+    is_manufacturing: bool | None = None
 
 
 class CompanyUpdateRequest(BaseModel):
@@ -83,6 +85,8 @@ class CompanyUpdateRequest(BaseModel):
     disqualification_details: list[str] | None = None
     penalty_notices_received: int | None = None
     penalty_notices_resolved: int | None = None
+    # Explicit null resets the fact to UNKNOWN.
+    is_manufacturing: bool | None = None
 
 
 class FlagResolveRequest(BaseModel):
@@ -222,6 +226,7 @@ async def create_company(body: CompanyCreateRequest, request: Request, current_u
         incorporation_date=body.incorporation_date, registered_address=body.registered_address,
         company_type=body.company_type, financial_year_end=body.financial_year_end,  # type: ignore
         assigned_staff_id=body.assigned_staff_id,
+        is_manufacturing=body.is_manufacturing,
     )
     _tax_fields = ["trade_license_obtained", "trade_license_expiry", "tax_return_filed_for_current_fy", "advance_tax_q1_paid", "advance_tax_q2_paid", "advance_tax_q3_paid", "advance_tax_q4_paid", "tds_deposited_up_to_date", "last_tds_deposit_date", "last_vat_return_filed", "vat_annual_return_filed_for_fy", "minimum_tax_paid", "tax_clearance_obtained", "tax_return_deadline_extended", "any_director_disqualified", "penalty_notices_received", "penalty_notices_resolved"]
     _tax_update = {k: getattr(body, k) for k in _tax_fields if getattr(body, k, None) is not None}
@@ -265,6 +270,9 @@ async def update_company(company_id: uuid.UUID, body: CompanyUpdateRequest, requ
     mapped_data = {}
     for k, v in update_data.items():
         mapped_data[_field_map.get(k, k)] = v
+    # Preserve an explicit null: it resets this tri-state fact to UNKNOWN.
+    if "is_manufacturing" in body.model_fields_set:
+        mapped_data["is_manufacturing"] = body.is_manufacturing
     for _non_model in ("is_fdi_registered", "is_dormant"):
         mapped_data.pop(_non_model, None)
     company = await svc.update_by_id(company_id, **mapped_data)
