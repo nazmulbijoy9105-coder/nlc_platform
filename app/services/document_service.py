@@ -194,6 +194,7 @@ class DocumentService(BaseService[Document]):
         self,
         document_id: uuid.UUID,
         approved_by: uuid.UUID,
+        approval_note: str | None = None,
     ) -> Document | None:
         """
         Human approval of AI-generated document.
@@ -207,18 +208,23 @@ class DocumentService(BaseService[Document]):
             logger.warning(f"approve_document called on non-AI doc {document_id}")
 
         now = datetime.now(UTC)
+        notes = doc.notes or ""
+        if approval_note and approval_note.strip():
+            notes = (notes + "\n" if notes else "") + f"Approval: {approval_note.strip()}"
         return await self.update_instance(
             doc,
             human_approved=True,
             approved_by=approved_by,
             approved_at=now,
             in_review_queue=False,
+            notes=notes or None,
         )
 
     async def release_to_client(
         self,
         document_id: uuid.UUID,
         released_by: uuid.UUID,
+        release_note: str | None = None,
     ) -> Document | None:
         """
         Make a document visible to client users.
@@ -232,10 +238,14 @@ class DocumentService(BaseService[Document]):
                 "AI Constitution violation: Document must be human-approved "
                 "before releasing to client."
             )
+        notes = doc.notes or ""
+        if release_note and release_note.strip():
+            notes = (notes + "\n" if notes else "") + f"Release: {release_note.strip()}"
         return await self.update_instance(
             doc,
             is_client_visible=True,
             client_released_at=datetime.now(UTC),
+            notes=notes or None,
         )
 
     # ── Access & Download ─────────────────────────────────────────

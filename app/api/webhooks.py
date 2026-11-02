@@ -18,15 +18,15 @@ import uuid
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_user, get_db_for_user
+from app.core.dependencies import get_current_user, get_db_for_user, require_roles
 from app.models.user import User
 from app.models.webhook import WebhookEvent
 from app.services.webhook_service import WebhookService
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN"))])
 
 
 # ── Schemas ──────────────────────────────────────────────────────
@@ -37,11 +37,25 @@ class WebhookCreateRequest(BaseModel):
         default=[], description="Event types to subscribe to. Empty = all events."
     )
 
+    @field_validator("url")
+    @classmethod
+    def require_https(cls, value: HttpUrl) -> HttpUrl:
+        if value.scheme != "https":
+            raise ValueError("Webhook URLs must use HTTPS.")
+        return value
+
 
 class WebhookUpdateRequest(BaseModel):
     url: HttpUrl | None = None
     events: List[str] | None = None
     is_active: bool | None = None
+
+    @field_validator("url")
+    @classmethod
+    def require_https(cls, value: HttpUrl | None) -> HttpUrl | None:
+        if value is not None and value.scheme != "https":
+            raise ValueError("Webhook URLs must use HTTPS.")
+        return value
 
 
 class WebhookResponse(BaseModel):
@@ -90,11 +104,14 @@ async def create_webhook(
 ):
     """Register a new webhook URL to receive compliance event notifications."""
     svc = WebhookService(db)
-    endpoint = await svc.register_endpoint(
-        user_id=current_user.id,
-        url=str(body.url),
-        events=body.events,
-    )
+    try:
+        endpoint = await svc.register_endpoint(
+            user_id=current_user.id,
+            url=str(body.url),
+            events=body.events,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     await db.commit()
     return WebhookResponse(
         id=str(endpoint.id),
@@ -140,19 +157,23 @@ async def update_webhook(
 ):
     """Update webhook URL, events, or active status."""
     svc = WebhookService(db)
-    endpoint = await svc.update_endpoint(
-        endpoint_id=endpoint_id,
-        url=str(body.url) if body.url else None,
-        events=body.events,
-        is_active=body.is_active,
-    )
+    try:
+        endpoint = await svc.update_endpoint(
+            endpoint_id=endpoint_id,
+            user_id=current_user.id,
+            url=str(body.url) if body.url else None,
+            events=body.events,
+            is_active=body.is_active,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     if not endpoint:
         raise HTTPException(status_code=404, detail="Webhook endpoint not found")
     await db.commit()
     return WebhookResponse(
         id=str(endpoint.id),
         url=endpoint.url,
-        secret=endpoint.secret,
+        secret="***",
         events=endpoint.events,
         is_active=endpoint.is_active,
         last_delivery_at=endpoint.last_delivery_at.isoformat() if endpoint.last_delivery_at else None,
@@ -169,7 +190,7 @@ async def delete_webhook(
 ):
     """Delete a webhook endpoint."""
     svc = WebhookService(db)
-    deleted = await svc.delete_endpoint(endpoint_id)
+    deleted = await svc.delete_endpoint(endpoint_id, current_user.id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Webhook endpoint not found")
     await db.commit()
@@ -184,7 +205,9 @@ async def test_webhook(
 ):
     """Send a test event to verify the webhook is working."""
     svc = WebhookService(db)
-    result = await svc.send_test_event(endpoint_id)
+    result = await svc.send_test_event(endpoint_id, current_user.id)
+    if result.get("error"):
+        raise HTTPException(status_code=404, detail="Webhook endpoint not found")
     await db.commit()
     return TestResponse(**result)
 
@@ -198,7 +221,7 @@ async def get_deliveries(
 ):
     """Get delivery history for a webhook endpoint."""
     svc = WebhookService(db)
-    deliveries = await svc.get_deliveries(endpoint_id, limit=limit)
+    deliveries = await svc.get_deliveries(endpoint_id, current_user.id, limit=min(max(limit, 1), 100))
     return [
         DeliveryResponse(
             id=str(d.id),
