@@ -65,3 +65,15 @@ def is_revoked(jti: str, *, fail_closed: bool = True) -> bool:
         if fail_closed:
             raise BlacklistUnavailable('Token blacklist unavailable') from None
         return False
+
+
+def consume_refresh_token(jti: str, exp: float | int | None) -> bool:
+    """Atomically consume a refresh-token jti once; fail closed if Redis is unavailable."""
+    if not jti or not exp:
+        return False
+    ttl = max(int(float(exp) - time.time()), 1)
+    try:
+        return bool(_client().set(f"refresh-consumed:{jti}", "consumed", ex=ttl, nx=True))
+    except Exception as exc:
+        logger.warning("refresh_token_consume_failed", exc_info=True)
+        raise BlacklistUnavailable("Refresh-token validation unavailable") from exc
