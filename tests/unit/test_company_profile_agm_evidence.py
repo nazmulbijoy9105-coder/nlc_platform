@@ -152,3 +152,21 @@ def test_rescue_required_is_based_on_findings_not_sequence_generation():
     )
 
     assert _is_rescue_required(output) is True
+
+
+def test_missing_capital_resolution_evidence_does_not_create_violation():
+    today = date.today()
+    profile = CompanyProfile(
+        company_id="capital-evidence-test",
+        company_name="Capital Evidence Test Ltd",
+        incorporation_date=date(today.year - 2, 1, 1),
+        capital_increase_date=date(today.year - 1, 1, 1),
+        capital_increase_resolution=None,
+        agm_count=1,
+        annual_return_filed=True,
+        first_auditor_appointed=True,
+        audit_complete=True,
+    )
+
+    result = NLCRuleEngine().evaluate(profile)
+    assert "CAP-001" not in {flag.rule_id for flag in result.flags}
