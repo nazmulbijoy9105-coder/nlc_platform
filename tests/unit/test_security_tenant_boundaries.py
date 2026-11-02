@@ -51,7 +51,7 @@ def test_update_endpoint_is_scoped_to_owner():
     assert result is None
     sql = _sql(db.statements[0])
     assert "webhook_endpoints.user_id" in sql
-    assert str(owner_id) in sql
+    assert str(owner_id).replace("-", "") in sql
 
 
 def test_delete_endpoint_cannot_delete_another_users_endpoint():
@@ -59,7 +59,7 @@ def test_delete_endpoint_cannot_delete_another_users_endpoint():
     db = _DB(_Result(None))
     deleted = asyncio.run(WebhookService(db).delete_endpoint(endpoint_id, owner_id))
     assert deleted is False
-    assert str(owner_id) in _sql(db.statements[0])
+    assert str(owner_id).replace("-", "") in _sql(db.statements[0])
     db.delete.assert_not_awaited()
 
 
