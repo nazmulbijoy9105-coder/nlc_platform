@@ -159,7 +159,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "shareholding_score":output.score_breakdown.shareholding_score,
                 "override_applied":  output.score_breakdown.override_applied,
             },
-            "rescue_required": _has_rescue_output(output),
+            "rescue_required": _is_rescue_required(output),
+            "rescue_sequence": output.rescue_sequence,
             "engine_version":  output.engine_version,
             "ilrmf_version":   output.ilrmf_version,
         }
