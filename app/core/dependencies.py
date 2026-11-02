@@ -248,6 +248,9 @@ async def get_current_user_with_db(  # type: ignore
         user = result.scalar_one_or_none()
         if not user:
             raise HTTPException(status_code=401, detail="User not found.")
+        db_role = user.role.value if hasattr(user.role, "value") else str(user.role)
+        if db_role != token.role:
+            raise HTTPException(status_code=401, detail="Account permissions changed. Please sign in again.")
         yield user, db
         await db.commit()
 
@@ -307,7 +310,7 @@ require_staff = require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRo
 
 def require_super_admin_ip(
     request: Request,
-    token: TokenData = Depends(verify_access_token),
+    token: TokenData = Depends(require_roles(UserRole.SUPER_ADMIN)),
     settings: Settings = Depends(get_settings),
 ) -> TokenData:
     """
@@ -437,7 +440,7 @@ async def get_client_company_filter(
 # ═══════════════════════════════════════════════════════════════════════
 
 def require_revenue_access(
-    token: TokenData = Depends(verify_access_token),
+    token: TokenData = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF)),
 ) -> TokenData:
     """
     Guard for revenue, engagement, and pipeline endpoints.
