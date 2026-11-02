@@ -152,6 +152,10 @@ __all__ = [
     "get_db",
     "set_admin_context",
     "set_rls_context",
+    "DeliveryStatus",
+    "WebhookDelivery",
+    "WebhookEndpoint",
+    "WebhookEvent",
 ]
 
 from .webhook import DeliveryStatus, WebhookDelivery, WebhookEndpoint, WebhookEvent

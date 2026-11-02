@@ -386,14 +386,14 @@ def send_pending_notifications(
         from app.models.enums import NotificationChannel
 
         if notif.channel == NotificationChannel.EMAIL:
-            return await _send_email(notif)
+            return await _send_email(notif, db)
         elif notif.channel == NotificationChannel.DASHBOARD:
             return True  # Dashboard notifications are already in DB — they're "delivered"
         elif notif.channel == NotificationChannel.WHATSAPP:
             return await _send_whatsapp(notif)
         return False
 
-    async def _send_email(notif) -> bool:
+    async def _send_email(notif, db) -> bool:
         """Send email via AWS SES."""
         try:
             import boto3

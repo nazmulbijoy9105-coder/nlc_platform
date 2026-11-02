@@ -155,7 +155,7 @@ class DocumentService(BaseService[Document]):
         final_content += f"\n\n---\n\n{template.liability_disclaimer}"
 
         # ── Step 6.5: Attach statutory form mapping (if applicable) ─
-        statutory_form = get_form_for_rule(parameters.get("triggered_rule_id", ""))
+        _statutory_form = get_form_for_rule(parameters.get("triggered_rule_id", ""))
         
         # ── Step 7: Store document (AI Constitution Article 3) ─────
         document = await self.create(

@@ -2158,7 +2158,6 @@ class NLCRuleEngine:
         else:
             exposure = ExposureBand.SEVERE
 
-        active_rules = {f.rule_id for f in active}
         flag_signatures = sorted(f"{f.rule_id}:{f.state!s}:{f.severity!s}:{f.score_impact}" for f in active)  # RULE-009: include state/severity/score_impact
         hash_str = f"{final}:{','.join(flag_signatures)}:{RULE_ENGINE_VERSION}"
         score_hash = hashlib.sha256(hash_str.encode()).hexdigest()[:16]

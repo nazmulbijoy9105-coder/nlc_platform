@@ -1,4 +1,4 @@
-"""Proactive Compliance Calendar – persistent statutory deadlines."""
+"""Proactive Compliance Calendar - persistent statutory deadlines."""
 from __future__ import annotations
 
 import uuid

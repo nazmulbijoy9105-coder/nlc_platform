@@ -168,7 +168,7 @@ class WebhookService:
 
         # Attempt immediate delivery (non-blocking)
         if matching:
-            asyncio.create_task(self._deliver_pending())
+            self._delivery_task = asyncio.create_task(self._deliver_pending())
 
         logger.info("webhook_triggered", event_type=event_type, endpoints=count)
         return count
