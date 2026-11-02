@@ -153,8 +153,8 @@ def verify_access_token(
     Checks token blacklist for revoked tokens.
     Raises 401 on invalid/expired/revoked token.
     """
-    payload = decode_token(credentials.credentials)
-    if payload is None:
+    payload = decode_token(credentials.credentials, expected_type="access")
+    if payload is None or not isinstance(payload.get("jti"), str) or not payload.get("jti"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token.",

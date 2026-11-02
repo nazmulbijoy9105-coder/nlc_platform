@@ -1,6 +1,6 @@
 import os
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, EmailStr, Field
 from slowapi import Limiter
@@ -10,6 +10,7 @@ from sqlalchemy import select
 from app.core.security import (
     create_access_token,
     create_refresh_token,
+    create_temp_token,
     decode_token,
     decrypt_totp_secret,
     hash_password,
@@ -32,10 +33,12 @@ class LoginBody(BaseModel):
     password: str = Field(min_length=8)
 
 class LoginResponse(BaseModel):
-    access_token: str
-    refresh_token: str
+    access_token: str | None = None
+    refresh_token: str | None = None
     token_type: str = "bearer"
     user: dict
+    requires_2fa: bool = False
+    temp_token: str | None = None
 
 
 class RefreshRequest(BaseModel):
@@ -64,15 +67,18 @@ class UserResponse(BaseModel):
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
-    payload = decode_token(token)
-    if not payload or payload.get("type") != "access":
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    payload = decode_token(token, expected_type="access")
+    jti = payload.get("jti") if payload else None
+    if not payload or not isinstance(jti, str) or not jti:
+        raise HTTPException(status_code=401, detail="Invalid or expired access token")
     from starlette.concurrency import run_in_threadpool
 
-    from app.core.token_blacklist import is_revoked
-    jti = payload.get("jti")
-    if jti and await run_in_threadpool(is_revoked, jti):
-        raise HTTPException(status_code=401, detail="Token has been revoked")
+    from app.core.token_blacklist import BlacklistUnavailable, is_revoked
+    try:
+        if await run_in_threadpool(is_revoked, jti):
+            raise HTTPException(status_code=401, detail="Token has been revoked")
+    except BlacklistUnavailable:
+        raise HTTPException(status_code=503, detail="Authentication service temporarily unavailable")
     return payload
 
 
@@ -149,19 +155,30 @@ async def login(request: Request,body: LoginBody, db=Depends(get_db)):
         "requires_2fa": getattr(verified_user, "requires_2fa", False),
     }
     
-    # Build JWT payload with company_ids
+    # Users who have completed TOTP enrollment must complete the challenge
+    # before any access or refresh token is issued.
+    if verified_user.totp_enabled:
+        challenge = create_temp_token({"sub": str(verified_user.id)})
+        return {
+            "access_token": None,
+            "refresh_token": None,
+            "token_type": "bearer",
+            "user": user_dict,
+            "requires_2fa": True,
+            "temp_token": challenge,
+        }
+
     jwt_payload = await svc.build_jwt_payload(verified_user)
-    jwt_payload["type"] = "access"
-    
     access_token = create_access_token(jwt_payload)
-    refresh_jwt = {**jwt_payload, "type": "refresh"}
-    refresh_token = create_refresh_token(refresh_jwt)
-    
+    refresh_token = create_refresh_token(jwt_payload)
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
         "user": user_dict,
+        "requires_2fa": False,
+        "temp_token": None,
     }
 
 
@@ -200,6 +217,8 @@ async def setup_2fa(
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=401, detail="User not found or inactive")
+    if user.totp_enabled:
+        raise HTTPException(status_code=409, detail="Two-factor authentication is already enabled")
 
     setup = await UserService(db).setup_totp(user)
     return {
@@ -208,22 +227,67 @@ async def setup_2fa(
     }
 
 
-@router.post("/verify-2fa", response_model=LoginResponse)
-async def verify_2fa(body: Verify2FARequest, db=Depends(get_db)):
-    """Verify TOTP code and issue full tokens."""
-    payload = decode_token(body.temp_token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    result = await db.execute(select(User).where(User.id == payload.get("sub")))
+class VerifyTOTPSetupRequest(BaseModel):
+    totp_code: str = Field(pattern=r"^\d{6}$")
+
+
+@router.post("/2fa/confirm")
+@_limiter.limit("5/minute")
+async def confirm_2fa_setup(
+    request: Request,
+    body: VerifyTOTPSetupRequest,
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    """Enable TOTP only after the authenticated user proves possession."""
+    user_id = current_user.get("sub") or current_user.get("user_id")
+    result = await db.execute(
+        select(User).where(User.id == user_id, User.is_active.is_(True))
+    )
     user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    totp_secret = user.totp_secret_encrypted
-    if not totp_secret:
-        raise HTTPException(status_code=400, detail="2FA not configured for this user")
-    decrypted = decrypt_totp_secret(totp_secret)
-    if not verify_totp_code(decrypted, body.totp_code):
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found or inactive")
+    if not user.totp_secret_encrypted:
+        raise HTTPException(status_code=400, detail="Start 2FA setup before confirming")
+    if user.totp_enabled:
+        raise HTTPException(status_code=409, detail="Two-factor authentication is already enabled")
+    if not await UserService(db).confirm_totp(user, body.totp_code):
         raise HTTPException(status_code=401, detail="Invalid 2FA code")
+    return {"status": "enabled", "requires_2fa": True}
+
+
+@router.post("/verify-2fa", response_model=LoginResponse)
+@_limiter.limit("5/minute")
+async def verify_2fa(request: Request, body: Verify2FARequest, db=Depends(get_db)):
+    """Verify a single-use 2FA challenge and then issue full tokens."""
+    payload = decode_token(body.temp_token, expected_type="temp")
+    jti = payload.get("jti") if payload else None
+    exp = payload.get("exp") if payload else None
+    user_id = payload.get("sub") if payload else None
+    if not payload or not isinstance(jti, str) or not jti or not user_id or not exp:
+        raise HTTPException(status_code=401, detail="Invalid or expired 2FA challenge")
+
+    result = await db.execute(
+        select(User).where(User.id == user_id, User.is_active.is_(True))
+    )
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found or inactive")
+    if not user.totp_enabled or not user.totp_secret_encrypted:
+        raise HTTPException(status_code=403, detail="Two-factor authentication is not enabled")
+
+    if not verify_totp_code(decrypt_totp_secret(user.totp_secret_encrypted), body.totp_code):
+        raise HTTPException(status_code=401, detail="Invalid 2FA code")
+
+    from app.core.token_blacklist import BlacklistUnavailable, consume_temp_token
+    try:
+        if not consume_temp_token(jti, exp):
+            raise HTTPException(status_code=401, detail="2FA challenge has already been used")
+    except BlacklistUnavailable:
+        raise HTTPException(status_code=503, detail="Authentication service temporarily unavailable")
+
+    svc = UserService(db)
+    jwt_payload = await svc.build_jwt_payload(user)
     user_dict = {
         "id": str(user.id),
         "email": user.email,
@@ -232,9 +296,13 @@ async def verify_2fa(body: Verify2FARequest, db=Depends(get_db)):
         "is_active": user.is_active,
         "requires_2fa": True,
     }
-    access_token = create_access_token({"sub": str(user.id), "user_id": str(user.id), "email": user.email, "role": str(user.role), "type": "access"})
-    refresh_token = create_refresh_token({"sub": str(user.id), "user_id": str(user.id), "email": user.email, "role": str(user.role), "type": "refresh"})
-    return LoginResponse(access_token=access_token, refresh_token=refresh_token, token_type="bearer", user=user_dict)
+    return LoginResponse(
+        access_token=create_access_token(jwt_payload),
+        refresh_token=create_refresh_token(jwt_payload),
+        token_type="bearer",
+        user=user_dict,
+        requires_2fa=False,
+    )
 
 
 @router.post("/refresh", response_model=RefreshResponse)
@@ -247,28 +315,60 @@ async def refresh_token(body: RefreshRequest, db=Depends(get_db)):
     user = result.scalar_one_or_none()
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or deactivated")
-    # SEC-006: revoke the old refresh token (rotation — prevents replay)
-    from app.core.token_blacklist import revoke
+    # SEC-006: atomically consume the old refresh token; reject replay.
+    from app.core.token_blacklist import BlacklistUnavailable, consume_refresh_token
     old_jti = payload.get("jti")
     old_exp = payload.get("exp")
-    if old_jti and old_exp:
-        revoke(old_jti, old_exp)
+    if not isinstance(old_jti, str) or not old_jti or not old_exp:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+    from app.core.token_blacklist import is_revoked
+    try:
+        if is_revoked(old_jti, fail_closed=True):
+            raise HTTPException(status_code=401, detail="Refresh token has been revoked")
+        consumed = consume_refresh_token(old_jti, old_exp)
+    except BlacklistUnavailable:
+        raise HTTPException(status_code=503, detail="Authentication service temporarily unavailable")
+    if not consumed:
+        raise HTTPException(status_code=401, detail="Refresh token has already been used")
 
-    new_access = create_access_token({"sub": str(user.id), "user_id": str(user.id), "email": user.email, "role": str(user.role), "type": "access"})
-    # SEC-006: issue new refresh token (rotation)
-    new_refresh = create_refresh_token({"sub": str(user.id), "user_id": str(user.id), "email": user.email, "role": str(user.role), "type": "refresh"})
+    # Rebuild authorization claims from current database memberships.
+    jwt_payload = await UserService(db).build_jwt_payload(user)
+    new_access = create_access_token(jwt_payload)
+    new_refresh = create_refresh_token(jwt_payload)
     return RefreshResponse(access_token=new_access, refresh_token=new_refresh, token_type="bearer")
 
 
+class LogoutRequest(BaseModel):
+    refresh_token: str | None = None
+
+
 @router.post("/logout")
-async def logout(current_user: dict = Depends(get_current_user), token: str = Depends(oauth2_scheme)):
-    """Logout: revokes this access token (by jti) until its own expiry."""
+async def logout(
+    body: LogoutRequest = Body(default=LogoutRequest()),
+    current_user: dict = Depends(get_current_user),
+    token: str = Depends(oauth2_scheme),
+):
+    """Revoke the current access token and, when supplied, its refresh token."""
     from app.core.token_blacklist import revoke
 
-    payload = decode_token(token) or {}
-    jti = payload.get("jti")
-    revoked = bool(jti) and revoke(str(jti), payload.get("exp"))
-    return {"status": "logged_out", "revoked": revoked, "user_id": current_user.get("sub")}  # SEC-004
+    access_payload = decode_token(token, expected_type="access") or {}
+    access_jti = access_payload.get("jti")
+    access_revoked = bool(access_jti) and revoke(str(access_jti), access_payload.get("exp"))
+
+    refresh_revoked = False
+    if body.refresh_token:
+        refresh_payload = decode_token(body.refresh_token, expected_type="refresh")
+        if refresh_payload and refresh_payload.get("sub") == current_user.get("sub"):
+            refresh_jti = refresh_payload.get("jti")
+            if refresh_jti:
+                refresh_revoked = revoke(str(refresh_jti), refresh_payload.get("exp"))
+
+    return {
+        "status": "logged_out",
+        "access_revoked": access_revoked,
+        "refresh_revoked": refresh_revoked,
+        "user_id": current_user.get("sub"),
+    }
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
