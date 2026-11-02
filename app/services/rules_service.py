@@ -162,6 +162,7 @@ class RulesService(BaseService[LegalRule]):
             return value
 
         previous_definition = {
+            "id":                      snapshot_value(rule.id),
             "rule_id":                 rule.rule_id,
             "rule_type":               snapshot_value(rule.rule_type),
             "rule_name":               rule.rule_name,
@@ -182,6 +183,8 @@ class RulesService(BaseService[LegalRule]):
             "created_by":              snapshot_value(rule.created_by),
             "last_modified_by":        snapshot_value(rule.last_modified_by),
             "last_modified_at":        snapshot_value(rule.last_modified_at),
+            "created_at":              snapshot_value(rule.created_at),
+            "updated_at":              snapshot_value(rule.updated_at),
         }
         version = LegalRuleVersion(
             id=uuid.uuid4(),
