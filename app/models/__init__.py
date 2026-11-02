@@ -91,71 +91,68 @@ from .user import User
 
 # ── All models (28 tables) for reference ─────────────────────────────
 __all__ = [
-    "AGM",                      # TABLE: agms
-    "AIOutputLog",              # TABLE: ai_output_log
-    "AIPromptTemplate",         # TABLE: ai_prompt_templates
+    "AGM",
+    "AIOutputLog",
+    "AIPromptTemplate",
     "AiModel",
-    "AnnualReturn",             # TABLE: annual_returns
-    "Audit",                    # TABLE: audits
-    # Database
+    "AnnualReturn",
+    "Audit",
     "Base",
-    "Company",                  # TABLE: companies
-    "ComplianceCalendarEvent",  # TABLE: compliance_calendar_events
+    "Company",
     "CompanyStatus",
     "CompanyType",
-    "CompanyUserAccess",        # TABLE: company_user_access
+    "CompanyUserAccess",
     "ComplexityLevel",
-    "ComplianceEvent",          # TABLE: compliance_events
-    "ComplianceFlag",           # TABLE: compliance_flags
-    "ComplianceScoreHistory",   # TABLE: compliance_score_history
-    "Director",                 # TABLE: directors
+    "ComplianceCalendarEvent",
+    "ComplianceEvent",
+    "ComplianceFlag",
+    "ComplianceScoreHistory",
+    "DeliveryStatus",
+    "Director",
     "DirectorStatus",
-    "Document",                 # TABLE: documents
-    "DocumentAccessLog",        # TABLE: document_access_log
+    "Document",
+    "DocumentAccessLog",
     "DocumentType",
-    "Engagement",               # TABLE: engagements
+    "Engagement",
     "EngagementStatus",
     "EventAction",
     "ExposureBand",
     "FlagStatus",
-    "LegalRule",                # TABLE: legal_rules
-    "LegalRuleVersion",         # TABLE: legal_rule_versions
+    "LegalRule",
+    "LegalRuleVersion",
     "LifecycleStage",
-    "Notification",             # TABLE: notifications
+    "Notification",
     "NotificationChannel",
     "NotificationStatus",
-    "Quotation",                # TABLE: quotations
-    "RegulatoryRule",           # TABLE: regulatory_rules
-    "RJSCFormFiling",            # TABLE: share_transfers
-    "RegisteredOfficeHistory",  # TABLE: registered_office_history
-    "RescuePlan",               # TABLE: rescue_plans
-    "RescueStep",               # TABLE: rescue_steps
+    "Quotation",
+    "RJSCFormFiling",
+    "RegisteredOfficeHistory",
+    "RegulatoryRule",
+    "RescuePlan",
+    "RescueStep",
     "RescueStepStatus",
     "RevenueTier",
-    # Enums
     "RiskBand",
     "RuleType",
-    "SRORegistry",              # TABLE: sro_registry
+    "SRORegistry",
     "SeverityLevel",
     "ShareTransfer",
-    "Shareholder",              # TABLE: shareholders
+    "Shareholder",
     "SroType",
-    "StatutoryRegister",        # TABLE: statutory_registers
-    "Task",                     # TABLE: tasks
+    "StatutoryRegister",
+    "Task",
     "TaskPriority",
     "TaskStatus",
     "TransferStatus",
-    # Models (28 tables)
-    "User",                     # TABLE: users
-    "UserActivityLog",          # TABLE: user_activity_logs
+    "User",
+    "UserActivityLog",
     "UserRole",
-    "get_db",
-    "set_admin_context",
-    "set_rls_context",
-    "DeliveryStatus",
     "WebhookDelivery",
     "WebhookEndpoint",
     "WebhookEvent",
+    "get_db",
+    "set_admin_context",
+    "set_rls_context",
 ]
 
 from .webhook import DeliveryStatus, WebhookDelivery, WebhookEndpoint, WebhookEvent
