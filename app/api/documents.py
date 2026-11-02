@@ -296,7 +296,6 @@ async def generate_document(
                 "template_name": body.template_name,
                 "template_params": body.template_params,
                 "requested_by": str(current_user.id),
-                "notes": body.notes,
             }
         )
         logger.info("document_generation_queued", task_id=task.id, template=body.template_name)
@@ -458,7 +457,7 @@ async def approve_document(
         action="DOCUMENT_APPROVED",
         resource_type="document",
         resource_id=str(document_id),
-        description=f"Document approved by {current_user.full_name}",
+        description=(f"Document approved by {current_user.full_name}" + (f": {body.approval_note.strip()}" if body.approval_note and body.approval_note.strip() else "")),
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
     )
@@ -505,7 +504,6 @@ async def release_document(
     released_doc = await svc.release_to_client(  # type: ignore
         document_id=document_id,
         released_by=current_user.id,
-        notify_client=body.notify_client,
         release_note=body.release_note,
     )
     if not released_doc:
@@ -515,12 +513,12 @@ async def release_document(
         action="DOCUMENT_RELEASED",
         resource_type="document",
         resource_id=str(document_id),
-        description=f"Document released to client by {current_user.full_name}",
+        description=(f"Document released to client by {current_user.full_name}" + (f": {body.release_note.strip()}" if body.release_note and body.release_note.strip() else "")),
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
     )
     return MessageResponse(
-        message="Document released to client successfully.",
+        message=("Document released to client successfully. No separate notification was sent." if body.notify_client else "Document released to client successfully."),
         document_id=str(document_id),
     )
 
