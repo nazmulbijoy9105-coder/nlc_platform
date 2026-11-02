@@ -625,7 +625,7 @@ def generate_ai_document_async(
                 company_id=uuid.UUID(company_id),
                 document_type=document_type,  # type: ignore
                 template_name=template_name,
-                template_params=template_params,
+                parameters=template_params,
                 requested_by=uuid.UUID(requested_by),
             )
             return str(doc.id)  # type: ignore

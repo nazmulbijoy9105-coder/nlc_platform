@@ -220,9 +220,14 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Role mismatch check removed — token is signed and trusted.
-    # Revocation is handled via Redis blacklist on logout.
-    # The token's role claim is authoritative for RBAC (require_roles checks it).
+    # Authorization is always based on the current database role, never a stale JWT claim.
+    db_role = user.role.value if hasattr(user.role, "value") else str(user.role)
+    if db_role != token.role:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account permissions changed. Please sign in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     return user
 
@@ -243,6 +248,9 @@ async def get_current_user_with_db(  # type: ignore
         user = result.scalar_one_or_none()
         if not user:
             raise HTTPException(status_code=401, detail="User not found.")
+        db_role = user.role.value if hasattr(user.role, "value") else str(user.role)
+        if db_role != token.role:
+            raise HTTPException(status_code=401, detail="Account permissions changed. Please sign in again.")
         yield user, db
         await db.commit()
 
@@ -262,14 +270,27 @@ def require_roles(*allowed_roles: str):
             _: TokenData = Depends(require_roles("SUPER_ADMIN", "ADMIN_STAFF"))
         ):
     """
-    def _check_role(token: TokenData = Depends(verify_access_token)) -> TokenData:
-        if token.role not in allowed_roles:
+    async def _check_role(
+        token: TokenData = Depends(verify_access_token),
+        db: AsyncSession = Depends(get_db),
+    ) -> TokenData:
+        # Reload role from the database on every privileged request. JWT role
+        # claims can outlive an administrator's role downgrade.
+        await set_rls_context(db, token.user_id)
+        from sqlalchemy import select
+        result = await db.execute(
+            select(User).where(User.id == uuid.UUID(token.user_id), User.is_active.is_(True))
+        )
+        user = result.scalar_one_or_none()
+        if user is None:
+            raise HTTPException(status_code=401, detail="User account is inactive or unavailable.")
+        db_role = user.role.value if hasattr(user.role, "value") else str(user.role)
+        if db_role != token.role:
+            raise HTTPException(status_code=401, detail="Account permissions changed. Please sign in again.")
+        if db_role not in [str(getattr(role, "value", role)) for role in allowed_roles]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=(
-                    f"Access denied. This action requires one of: "
-                    f"{list(allowed_roles)}. Your role: {token.role}"
-                ),
+                detail=f"Access denied. This action requires one of: {list(allowed_roles)}.",
             )
         return token
     return _check_role
@@ -289,7 +310,7 @@ require_staff = require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRo
 
 def require_super_admin_ip(
     request: Request,
-    token: TokenData = Depends(verify_access_token),
+    token: TokenData = Depends(require_roles(UserRole.SUPER_ADMIN)),
     settings: Settings = Depends(get_settings),
 ) -> TokenData:
     """
@@ -338,21 +359,37 @@ def require_company_access(company_id_param: str = "company_id"):
             token: TokenData = Depends(verify_access_token),
         ):
     """
-    def _check_access(
+    async def _check_access(
         company_id: uuid.UUID,
         token: TokenData = Depends(verify_access_token),
+        db: AsyncSession = Depends(get_db),
     ) -> uuid.UUID:
-        # Admin/Staff/Legal: bypass — RLS handles DB-level isolation
-        if token.role in (
-            UserRole.SUPER_ADMIN,
-            UserRole.ADMIN_STAFF,
-            UserRole.LEGAL_STAFF,
-        ):
+        # Re-check active user and current role; do not trust stale company_ids
+        # embedded in a JWT after a membership has been revoked.
+        await set_rls_context(db, token.user_id)
+        from sqlalchemy import select
+        result = await db.execute(
+            select(User).where(User.id == uuid.UUID(token.user_id), User.is_active.is_(True))
+        )
+        user = result.scalar_one_or_none()
+        if user is None:
+            raise HTTPException(status_code=401, detail="User account is inactive or unavailable.")
+        db_role = user.role.value if hasattr(user.role, "value") else str(user.role)
+        if db_role != token.role:
+            raise HTTPException(status_code=401, detail="Account permissions changed. Please sign in again.")
+
+        if db_role in ("SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF"):
             return company_id
 
-        # Client roles: must have this company in their JWT
-        company_str = str(company_id)
-        if company_str not in token.company_ids:
+        from app.models.company import CompanyUserAccess
+        membership = await db.execute(
+            select(CompanyUserAccess.id).where(
+                CompanyUserAccess.user_id == uuid.UUID(token.user_id),
+                CompanyUserAccess.company_id == company_id,
+                CompanyUserAccess.is_active.is_(True),
+            ).limit(1)
+        )
+        if membership.scalar_one_or_none() is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You do not have access to this company.",
@@ -362,17 +399,40 @@ def require_company_access(company_id_param: str = "company_id"):
     return _check_access
 
 
-def get_client_company_filter(
+async def get_client_company_filter(
     token: TokenData = Depends(verify_access_token),
+    db: AsyncSession = Depends(get_db),
 ) -> list[str] | None:
     """
-    For list endpoints: return the company_ids filter for client roles.
-    Admin/Staff get None (no filter = all companies via RLS).
-    Client roles get their JWT company_ids list as the filter.
+    Return a live company filter from active database memberships.
+    JWT company_ids are informational only and may be stale after revocation.
     """
-    if token.is_admin or token.is_legal_staff:
-        return None  # No filter — RLS handles it
-    return token.company_ids
+    await set_rls_context(db, token.user_id)
+    from sqlalchemy import select
+    user_result = await db.execute(
+        select(User).where(
+            User.id == uuid.UUID(token.user_id),
+            User.is_active.is_(True),
+        )
+    )
+    user = user_result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User account is inactive or unavailable.")
+    db_role = user.role.value if hasattr(user.role, "value") else str(user.role)
+    if db_role != token.role:
+        raise HTTPException(status_code=401, detail="Account permissions changed. Please sign in again.")
+
+    if db_role in ("SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF"):
+        return None
+
+    from app.models.company import CompanyUserAccess
+    membership_result = await db.execute(
+        select(CompanyUserAccess.company_id).where(
+            CompanyUserAccess.user_id == uuid.UUID(token.user_id),
+            CompanyUserAccess.is_active.is_(True),
+        )
+    )
+    return [str(company_id) for company_id in membership_result.scalars().all()]
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -380,7 +440,7 @@ def get_client_company_filter(
 # ═══════════════════════════════════════════════════════════════════════
 
 def require_revenue_access(
-    token: TokenData = Depends(verify_access_token),
+    token: TokenData = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF)),
 ) -> TokenData:
     """
     Guard for revenue, engagement, and pipeline endpoints.

@@ -59,6 +59,7 @@ async def _process_webhook_retries() -> None:
         async with AsyncSessionLocal() as db:
             svc = WebhookService(db)
             count = await svc.process_retries()
+            await db.commit()
             if count:
                 logger.info("webhook_retries_processed", count=count)
     except Exception as e:

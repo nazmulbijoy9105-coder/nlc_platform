@@ -12,10 +12,13 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import ipaddress
 import hmac
 import json
+import socket
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
+from urllib.parse import urlsplit
 
 import httpx
 import structlog
@@ -48,6 +51,37 @@ def verify_signature(payload: dict, secret: str, signature: str) -> bool:
     return hmac.compare_digest(expected, signature)
 
 
+async def validate_webhook_url(url: str) -> None:
+    """Reject non-HTTPS and non-public webhook destinations before any outbound request."""
+    try:
+        parsed = urlsplit(url)
+        host = parsed.hostname
+        port = parsed.port or 443
+    except ValueError as exc:
+        raise ValueError("Invalid webhook URL") from exc
+    if parsed.scheme.lower() != "https" or not host or parsed.username or parsed.password:
+        raise ValueError("Webhook URLs must be HTTPS and must not contain credentials.")
+    if host.lower() in {"localhost", "localhost.localdomain"} or host.endswith(".local"):
+        raise ValueError("Webhook destination must be a public hostname.")
+    try:
+        literal = ipaddress.ip_address(host)
+    except ValueError:
+        literal = None
+    if literal is not None:
+        if not literal.is_global:
+            raise ValueError("Webhook destination must use a public IP address.")
+        return
+    try:
+        records = await asyncio.get_running_loop().getaddrinfo(
+            host, port, type=socket.SOCK_STREAM
+        )
+    except OSError as exc:
+        raise ValueError("Webhook hostname could not be resolved.") from exc
+    addresses = {record[4][0].split("%", 1)[0] for record in records}
+    if not addresses or any(not ipaddress.ip_address(address).is_global for address in addresses):
+        raise ValueError("Webhook hostname resolves to a non-public IP address.")
+
+
 class WebhookService:
     """Manages webhook endpoints, event triggering, and delivery."""
 
@@ -61,6 +95,7 @@ class WebhookService:
     ) -> WebhookEndpoint:
         """Register a new webhook endpoint. Secret is auto-generated."""
         import secrets
+        await validate_webhook_url(url)
         endpoint = WebhookEndpoint(
             user_id=user_id,
             url=url,
@@ -70,7 +105,7 @@ class WebhookService:
         )
         self.db.add(endpoint)
         await self.db.flush()
-        logger.info("webhook_registered", endpoint_id=str(endpoint.id), url=url, events=events)
+        logger.info("webhook_registered", endpoint_id=str(endpoint.id), events=events)
         return endpoint
 
     async def list_endpoints(self, user_id: UUID) -> list[WebhookEndpoint]:
@@ -83,14 +118,21 @@ class WebhookService:
         return list(result.scalars().all())
 
     async def update_endpoint(
-        self, endpoint_id: UUID, url: str | None = None,
+        self, endpoint_id: UUID, user_id: UUID, url: str | None = None,
         events: list[str] | None = None, is_active: bool | None = None
     ) -> WebhookEndpoint | None:
-        """Update a webhook endpoint."""
-        endpoint = await self.db.get(WebhookEndpoint, endpoint_id)
+        """Update only an endpoint owned by the authenticated user."""
+        result = await self.db.execute(
+            select(WebhookEndpoint).where(
+                WebhookEndpoint.id == endpoint_id,
+                WebhookEndpoint.user_id == user_id,
+            )
+        )
+        endpoint = result.scalar_one_or_none()
         if not endpoint:
             return None
         if url is not None:
+            await validate_webhook_url(url)
             endpoint.url = url
         if events is not None:
             endpoint.events = events
@@ -100,19 +142,31 @@ class WebhookService:
         await self.db.flush()
         return endpoint
 
-    async def delete_endpoint(self, endpoint_id: UUID) -> bool:
-        """Delete a webhook endpoint."""
-        endpoint = await self.db.get(WebhookEndpoint, endpoint_id)
+    async def delete_endpoint(self, endpoint_id: UUID, user_id: UUID) -> bool:
+        """Delete only an endpoint owned by the authenticated user."""
+        result = await self.db.execute(
+            select(WebhookEndpoint).where(
+                WebhookEndpoint.id == endpoint_id,
+                WebhookEndpoint.user_id == user_id,
+            )
+        )
+        endpoint = result.scalar_one_or_none()
         if not endpoint:
             return False
         await self.db.delete(endpoint)
         await self.db.flush()
         return True
 
-    async def rotate_secret(self, endpoint_id: UUID) -> str | None:
+    async def rotate_secret(self, endpoint_id: UUID, user_id: UUID) -> str | None:
         """Generate a new signing secret (for security rotation)."""
         import secrets
-        endpoint = await self.db.get(WebhookEndpoint, endpoint_id)
+        result = await self.db.execute(
+            select(WebhookEndpoint).where(
+                WebhookEndpoint.id == endpoint_id,
+                WebhookEndpoint.user_id == user_id,
+            )
+        )
+        endpoint = result.scalar_one_or_none()
         if not endpoint:
             return None
         endpoint.secret = secrets.token_urlsafe(32)
@@ -126,14 +180,19 @@ class WebhookService:
         self, event_type: str, payload: dict, user_id: UUID | None = None
     ) -> int:
         """
-        Trigger a webhook event. Finds all matching active endpoints,
-        creates delivery records, and attempts immediate delivery.
+        Trigger a webhook event and enqueue deliveries for the scheduler.
 
         Returns: number of deliveries queued.
         """
-        # Find matching endpoints
+        # Never fan out globally: events without an explicit tenant owner are dropped.
+        if user_id is None:
+            logger.warning("webhook_event_dropped_without_user", event_type=event_type)
+            return 0
+
+        # Find only this tenant's matching endpoints.
         query = select(WebhookEndpoint).where(
-            WebhookEndpoint.is_active == True,  # noqa: E712
+            WebhookEndpoint.is_active.is_(True),
+            WebhookEndpoint.user_id == user_id,
         )
         result = await self.db.execute(query)
         endpoints = list(result.scalars().all())
@@ -143,10 +202,6 @@ class WebhookService:
             ep for ep in endpoints
             if not ep.events or event_type in ep.events
         ]
-
-        # Also filter by user_id if provided (tenant isolation)
-        if user_id:
-            matching = [ep for ep in matching if ep.user_id == user_id]
 
         count = 0
         for endpoint in matching:
@@ -166,9 +221,8 @@ class WebhookService:
 
         await self.db.flush()
 
-        # Attempt immediate delivery (non-blocking)
-        if matching:
-            self._delivery_task = asyncio.create_task(self._deliver_pending())
+        # Delivery is performed by the worker/scheduler after the caller commits.
+        # Do not spawn a task sharing this request-scoped AsyncSession.
 
         logger.info("webhook_triggered", event_type=event_type, endpoints=count)
         return count
@@ -176,17 +230,8 @@ class WebhookService:
     # ── Delivery Engine ─────────────────────────────────────────
 
     async def _deliver_pending(self) -> None:
-        """Find pending deliveries and attempt to deliver them."""
-        result = await self.db.execute(
-            select(WebhookDelivery)
-            .where(WebhookDelivery.status == DeliveryStatus.PENDING)
-            .order_by(WebhookDelivery.created_at)
-            .limit(50)
-        )
-        deliveries = list(result.scalars().all())
-
-        for delivery in deliveries:
-            await self._attempt_delivery(delivery)
+        """Compatibility wrapper using the locked, committed retry-queue path."""
+        await self.process_retries()
 
     async def _attempt_delivery(self, delivery: WebhookDelivery) -> None:
         """Attempt to deliver a single webhook. Retries on failure."""
@@ -208,7 +253,8 @@ class WebhookService:
         }
 
         try:
-            async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+            await validate_webhook_url(endpoint.url)
+            async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT, follow_redirects=False) as client:
                 resp = await client.post(endpoint.url, json=delivery.payload, headers=headers)
 
             delivery.response_code = resp.status_code
@@ -263,9 +309,11 @@ class WebhookService:
             select(WebhookDelivery)
             .where(
                 WebhookDelivery.status == DeliveryStatus.PENDING,
-                WebhookDelivery.next_retry_at <= now,
+                (WebhookDelivery.next_retry_at.is_(None) | (WebhookDelivery.next_retry_at <= now)),
             )
+            .order_by(WebhookDelivery.created_at)
             .limit(50)
+            .with_for_update(skip_locked=True)
         )
         retries = list(result.scalars().all())
 
@@ -276,14 +324,20 @@ class WebhookService:
             logger.info("webhook_retries_processed", count=len(retries))
         return len(retries)
 
-    async def send_test_event(self, endpoint_id: UUID) -> dict:
+    async def send_test_event(self, endpoint_id: UUID, user_id: UUID) -> dict:
         """Send a test event to verify webhook configuration."""
         test_payload = {
             "event_type": "webhook.test",
             "message": "This is a test webhook from Neum Lex Counsel",
             "timestamp": datetime.now(UTC).isoformat(),
         }
-        endpoint = await self.db.get(WebhookEndpoint, endpoint_id)
+        result = await self.db.execute(
+            select(WebhookEndpoint).where(
+                WebhookEndpoint.id == endpoint_id,
+                WebhookEndpoint.user_id == user_id,
+            )
+        )
+        endpoint = result.scalar_one_or_none()
         if not endpoint:
             return {"error": "Endpoint not found"}
 
@@ -309,12 +363,16 @@ class WebhookService:
     # ── Delivery Log ────────────────────────────────────────────
 
     async def get_deliveries(
-        self, endpoint_id: UUID, limit: int = 50
+        self, endpoint_id: UUID, user_id: UUID, limit: int = 50
     ) -> list[WebhookDelivery]:
         """Get delivery history for an endpoint."""
         result = await self.db.execute(
             select(WebhookDelivery)
-            .where(WebhookDelivery.endpoint_id == endpoint_id)
+            .join(WebhookEndpoint, WebhookEndpoint.id == WebhookDelivery.endpoint_id)
+            .where(
+                WebhookDelivery.endpoint_id == endpoint_id,
+                WebhookEndpoint.user_id == user_id,
+            )
             .order_by(WebhookDelivery.created_at.desc())
             .limit(limit)
         )
