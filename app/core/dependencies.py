@@ -133,6 +133,7 @@ def _check_token_blacklist(jti: str) -> bool:
     Raises HTTP 401 if Redis is unavailable (fail closed — RDS-01).
     """
     from fastapi import HTTPException, status
+
     from app.core.token_blacklist import BlacklistUnavailable, is_revoked
     try:
         return is_revoked(jti, fail_closed=True)
@@ -462,6 +463,7 @@ async def get_db_for_user(request: Request) -> AsyncSession:  # type: ignore
     Use for: ALL authenticated API routes.
     """
     from fastapi import HTTPException
+
     from app.core.security import decode_token
 
     auth_header = request.headers.get("authorization", "")

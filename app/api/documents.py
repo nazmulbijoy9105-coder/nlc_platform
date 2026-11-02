@@ -369,12 +369,12 @@ async def _assert_document_company_access(
     Staff roles (LEGAL/ADMIN/SUPER) are allowed; clients must have CompanyUserAccess.
     Prevents IDOR when only document_id is in the path.
     """
-    from app.models.enums import UserRole
     role = current_user.role
     role_val = role.value if hasattr(role, "value") else str(role)
     if role_val in ("SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF"):
         return
     from sqlalchemy import select
+
     from app.models.company import CompanyUserAccess
     result = await db.execute(
         select(CompanyUserAccess.id).where(
