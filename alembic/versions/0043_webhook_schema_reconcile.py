@@ -49,6 +49,7 @@ def upgrade() -> None:
     ):
         op.execute(statement)
 
+    op.execute("ALTER TABLE webhook_deliveries ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()")
     op.execute("ALTER TABLE webhook_endpoints ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE webhook_deliveries ENABLE ROW LEVEL SECURITY")
     op.execute("DROP POLICY IF EXISTS webhook_endpoints_owner_scope ON webhook_endpoints")
