@@ -70,6 +70,47 @@ def _has_rescue_output(output) -> bool:
     return bool(rescue_plan or rescue_sequence)
 
 
+def _applied_score_impacts(flags) -> list[dict]:
+    """Reconcile nominal flag impacts with the verified-rule gate and caps.
+
+    The returned value is aligned by index with the original flags list so
+    repeated rule IDs cannot overwrite one another.
+    """
+    from app.rule_engine.engine import CATEGORY_CAPS, VERIFIED_RULE_IDS, RuleState
+
+    remaining = {name: cap[0] for name, cap in CATEGORY_CAPS.items()}
+    results = []
+    for flag in flags:
+        state = getattr(flag, "state", None)
+        active = not getattr(flag, "resolved", False) and getattr(flag, "conditional_applies", True)
+        if not active:
+            results.append({"applied": 0, "status": "INACTIVE"})
+            continue
+        if state != RuleState.NON_COMPLIANT or getattr(flag, "eval_state", "VIOLATION") == "UNKNOWN":
+            results.append({"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"})
+            continue
+        if flag.rule_id not in VERIFIED_RULE_IDS:
+            results.append({"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"})
+            continue
+
+        category = next(
+            (name for name, (_, prefixes) in CATEGORY_CAPS.items()
+             if flag.rule_id.startswith(prefixes)),
+            None,
+        )
+        if category is None:
+            results.append({"applied": 0, "status": "NO_SCORING_CATEGORY"})
+            continue
+
+        applied = min(max(0, int(flag.score_impact)), remaining[category])
+        remaining[category] -= applied
+        results.append({
+            "applied": applied,
+            "status": "APPLIED" if applied else "CATEGORY_CAP_REACHED",
+        })
+    return results
+
+
 def _is_rescue_required(output) -> bool:
     """Whether the company NEEDS a rescue plan — based on flag presence,
     not on whether the engine happened to produce a sequence."""
@@ -134,6 +175,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
             f"Flags={len(output.flags)} | Trigger={trigger_source}"
         )
 
+        applied_impacts = _applied_score_impacts(output.flags)
+
         return {
             "company_id":    str(company_id),
             "score":         output.score_breakdown.final_score,
@@ -146,18 +189,37 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "severity":       f.severity,
                     "description":    f.description,
                     "score_impact":   f.score_impact,
+                    "score_impact_applied": applied_impacts[index]["applied"],
+                    "scoring_status": applied_impacts[index]["status"],
                     "revenue_tier":   f.revenue_tier,
                     "statutory_basis": f.statutory_basis,
                 }
-                for f in output.flags
+                for index, f in enumerate(output.flags)
             ],
             "score_breakdown": {
                 "agm_score":         output.score_breakdown.agm_score,
                 "audit_score":       output.score_breakdown.audit_score,
                 "return_score":      output.score_breakdown.return_score,
                 "director_score":    output.score_breakdown.director_score,
-                "shareholding_score":output.score_breakdown.shareholding_score,
-                "override_applied":  output.score_breakdown.override_applied,
+                "shareholding_score": output.score_breakdown.shareholding_score,
+                "capital_score": output.score_breakdown.capital_score,
+                "office_score": output.score_breakdown.office_score,
+                "register_score": output.score_breakdown.register_score,
+                "tax_score": output.score_breakdown.tax_score,
+                "bankruptcy_score": output.score_breakdown.bankruptcy_score,
+                "labour_score": output.score_breakdown.labour_score,
+                "bsec_score": output.score_breakdown.bsec_score,
+                "fx_score": output.score_breakdown.fx_score,
+                "escalation_score": output.score_breakdown.escalation_score,
+                "raw_total": output.score_breakdown.raw_total,
+                "final_score": output.score_breakdown.final_score,
+                "coverage": output.score_breakdown.coverage,
+                "active_flag_count": output.score_breakdown.active_flag_count,
+                "black_flag_count": output.score_breakdown.black_flag_count,
+                "red_flag_count": output.score_breakdown.red_flag_count,
+                "yellow_flag_count": output.score_breakdown.yellow_flag_count,
+                "override_applied": output.score_breakdown.override_applied,
+                "override_reason": output.score_breakdown.override_reason,
             },
             "rescue_required": _is_rescue_required(output),
             "rescue_sequence": output.rescue_sequence,
