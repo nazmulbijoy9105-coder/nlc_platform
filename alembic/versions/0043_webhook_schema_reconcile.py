@@ -1,12 +1,4 @@
-"""Reconcile webhook schema and tenant RLS on existing installations.
-
-Revision ID: 0043_webhook_schema_reconcile
-Revises: 0042_dedup_key
-
-The webhook models and migration 0037 exist in source, but the deployed
-schema inspected for this release is at 0042 and lacks both webhook tables.
-This idempotent reconciliation makes the missing schema explicit.
-"""
+"""Reconcile webhook schema and tenant RLS on existing installations."""
 from alembic import op
 
 revision = "0043_webhook_schema_reconcile"
@@ -47,57 +39,48 @@ def upgrade() -> None:
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
     """)
-    op.execute("CREATE INDEX IF NOT EXISTS idx_webhook_endpoints_user ON webhook_endpoints(user_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_webhook_endpoints_active ON webhook_endpoints(is_active)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_endpoint ON webhook_deliveries(endpoint_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_pending ON webhook_deliveries(status) WHERE status = 'PENDING'")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_retry ON webhook_deliveries(next_retry_at) WHERE status = 'PENDING' AND next_retry_at IS NOT NULL")
+    for statement in (
+        "CREATE INDEX IF NOT EXISTS idx_webhook_endpoints_user ON webhook_endpoints(user_id)",
+        "CREATE INDEX IF NOT EXISTS idx_webhook_endpoints_active ON webhook_endpoints(is_active)",
+        "CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_endpoint ON webhook_deliveries(endpoint_id)",
+        "CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_pending ON webhook_deliveries(status) WHERE status = 'PENDING'",
+        "CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_retry ON webhook_deliveries(next_retry_at) WHERE status = 'PENDING' AND next_retry_at IS NOT NULL",
+    ):
+        op.execute(statement)
 
     op.execute("ALTER TABLE webhook_endpoints ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE webhook_deliveries ENABLE ROW LEVEL SECURITY")
+    op.execute("DROP POLICY IF EXISTS webhook_endpoints_owner_scope ON webhook_endpoints")
     op.execute("""
-        DO $$
-        BEGIN
-            IF NOT EXISTS (
-                SELECT 1 FROM pg_policies
-                WHERE schemaname = 'public' AND tablename = 'webhook_endpoints'
-                  AND policyname = 'webhook_endpoints_owner_scope'
-            ) THEN
-                CREATE POLICY webhook_endpoints_owner_scope ON webhook_endpoints
-                USING (
-                    current_setting('app.current_user_id', true) = 'ADMIN'
-                    OR user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
-                )
-                WITH CHECK (
-                    current_setting('app.current_user_id', true) = 'ADMIN'
-                    OR user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
-                );
-            END IF;
-            IF NOT EXISTS (
-                SELECT 1 FROM pg_policies
-                WHERE schemaname = 'public' AND tablename = 'webhook_deliveries'
-                  AND policyname = 'webhook_deliveries_owner_scope'
-            ) THEN
-                CREATE POLICY webhook_deliveries_owner_scope ON webhook_deliveries
-                USING (
-                    current_setting('app.current_user_id', true) = 'ADMIN'
-                    OR EXISTS (
-                        SELECT 1 FROM webhook_endpoints e
-                        WHERE e.id = webhook_deliveries.endpoint_id
-                          AND e.user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
-                    )
-                )
-                WITH CHECK (
-                    current_setting('app.current_user_id', true) = 'ADMIN'
-                    OR EXISTS (
-                        SELECT 1 FROM webhook_endpoints e
-                        WHERE e.id = webhook_deliveries.endpoint_id
-                          AND e.user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
-                    )
-                );
-            END IF;
-        END
-        $$
+        CREATE POLICY webhook_endpoints_owner_scope ON webhook_endpoints
+        USING (
+            CASE WHEN current_setting('app.current_user_id', true) = 'ADMIN' THEN TRUE
+            ELSE user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid END
+        )
+        WITH CHECK (
+            CASE WHEN current_setting('app.current_user_id', true) = 'ADMIN' THEN TRUE
+            ELSE user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid END
+        )
+    """)
+    op.execute("DROP POLICY IF EXISTS webhook_deliveries_owner_scope ON webhook_deliveries")
+    op.execute("""
+        CREATE POLICY webhook_deliveries_owner_scope ON webhook_deliveries
+        USING (
+            CASE WHEN current_setting('app.current_user_id', true) = 'ADMIN' THEN TRUE
+            ELSE EXISTS (
+                SELECT 1 FROM webhook_endpoints e
+                WHERE e.id = webhook_deliveries.endpoint_id
+                  AND e.user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
+            ) END
+        )
+        WITH CHECK (
+            CASE WHEN current_setting('app.current_user_id', true) = 'ADMIN' THEN TRUE
+            ELSE EXISTS (
+                SELECT 1 FROM webhook_endpoints e
+                WHERE e.id = webhook_deliveries.endpoint_id
+                  AND e.user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
+            ) END
+        )
     """)
     op.execute("""
         DO $$
