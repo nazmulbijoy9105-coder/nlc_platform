@@ -145,16 +145,43 @@ class RulesService(BaseService[LegalRule]):
         This entry is append-only — never modified after creation.
         AI Constitution Article 1: Every change is traceable.
         """
+        # Preserve the complete material legal-rule state before mutation.
+        # JSONB cannot reliably serialize date/datetime/UUID/Enum objects, so
+        # normalize those values into stable JSON-compatible representations.
+        def snapshot_value(value: Any) -> Any:
+            if value is None:
+                return None
+            if hasattr(value, "value"):
+                return value.value
+            if isinstance(value, (datetime,)):
+                return value.isoformat()
+            if isinstance(value, uuid.UUID):
+                return str(value)
+            if hasattr(value, "isoformat"):
+                return value.isoformat()
+            return value
+
         previous_definition = {
-            "rule_name":        rule.rule_name,
-            "statutory_basis":  rule.statutory_basis,
-            "description":      rule.description,
-            "default_severity": rule.default_severity,
-            "score_impact":     rule.score_impact,
-            "revenue_tier":     rule.revenue_tier,
-            "is_active":        rule.is_active,
-            "rule_condition":   rule.rule_condition,
-            "rule_version":     rule.rule_version,
+            "rule_id":                 rule.rule_id,
+            "rule_type":               snapshot_value(rule.rule_type),
+            "rule_name":               rule.rule_name,
+            "statutory_basis":         rule.statutory_basis,
+            "statutory_effective_date": snapshot_value(rule.statutory_effective_date),
+            "description":             rule.description,
+            "verification_status":    rule.verification_status,
+            "verified_by":             rule.verified_by,
+            "verified_at":             snapshot_value(rule.verified_at),
+            "verification_notes":      rule.verification_notes,
+            "rule_condition":          rule.rule_condition,
+            "default_severity":        snapshot_value(rule.default_severity),
+            "score_impact":            rule.score_impact,
+            "revenue_tier":            snapshot_value(rule.revenue_tier),
+            "is_black_override":       rule.is_black_override,
+            "is_active":               rule.is_active,
+            "rule_version":            rule.rule_version,
+            "created_by":              snapshot_value(rule.created_by),
+            "last_modified_by":        snapshot_value(rule.last_modified_by),
+            "last_modified_at":        snapshot_value(rule.last_modified_at),
         }
         version = LegalRuleVersion(
             id=uuid.uuid4(),
