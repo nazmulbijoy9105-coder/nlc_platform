@@ -89,6 +89,12 @@ def _applied_score_impacts(flags) -> list[dict]:
         if state != RuleState.NON_COMPLIANT or getattr(flag, "eval_state", "VIOLATION") == "UNKNOWN":
             results.append({"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"})
             continue
+        severity_value = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
+        if getattr(flag, "is_black_override", False) or severity_value == "BLACK":
+            # The engine applies its separate BLACK risk-policy override path;
+            # this is not an ordinary category deduction.
+            results.append({"applied": 0, "status": "BLACK_OVERRIDE_POLICY"})
+            continue
         if flag.rule_id not in VERIFIED_RULE_IDS:
             results.append({"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"})
             continue
