@@ -10,11 +10,15 @@ rescue_service, and deadline checker tasks.
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
+import ipaddress
 import hmac
 import json
+import socket
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
+from urllib.parse import urlsplit
 
 import httpx
 import structlog
@@ -47,6 +51,37 @@ def verify_signature(payload: dict, secret: str, signature: str) -> bool:
     return hmac.compare_digest(expected, signature)
 
 
+async def validate_webhook_url(url: str) -> None:
+    """Reject non-HTTPS and non-public webhook destinations before any outbound request."""
+    try:
+        parsed = urlsplit(url)
+        host = parsed.hostname
+        port = parsed.port or 443
+    except ValueError as exc:
+        raise ValueError("Invalid webhook URL") from exc
+    if parsed.scheme.lower() != "https" or not host or parsed.username or parsed.password:
+        raise ValueError("Webhook URLs must be HTTPS and must not contain credentials.")
+    if host.lower() in {"localhost", "localhost.localdomain"} or host.endswith(".local"):
+        raise ValueError("Webhook destination must be a public hostname.")
+    try:
+        literal = ipaddress.ip_address(host)
+    except ValueError:
+        literal = None
+    if literal is not None:
+        if not literal.is_global:
+            raise ValueError("Webhook destination must use a public IP address.")
+        return
+    try:
+        records = await asyncio.get_running_loop().getaddrinfo(
+            host, port, type=socket.SOCK_STREAM
+        )
+    except OSError as exc:
+        raise ValueError("Webhook hostname could not be resolved.") from exc
+    addresses = {record[4][0].split("%", 1)[0] for record in records}
+    if not addresses or any(not ipaddress.ip_address(address).is_global for address in addresses):
+        raise ValueError("Webhook hostname resolves to a non-public IP address.")
+
+
 class WebhookService:
     """Manages webhook endpoints, event triggering, and delivery."""
 
@@ -60,6 +95,7 @@ class WebhookService:
     ) -> WebhookEndpoint:
         """Register a new webhook endpoint. Secret is auto-generated."""
         import secrets
+        await validate_webhook_url(url)
         endpoint = WebhookEndpoint(
             user_id=user_id,
             url=url,
@@ -96,6 +132,7 @@ class WebhookService:
         if not endpoint:
             return None
         if url is not None:
+            await validate_webhook_url(url)
             endpoint.url = url
         if events is not None:
             endpoint.events = events
@@ -226,7 +263,8 @@ class WebhookService:
         }
 
         try:
-            async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+            await validate_webhook_url(endpoint.url)
+            async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT, follow_redirects=False) as client:
                 resp = await client.post(endpoint.url, json=delivery.payload, headers=headers)
 
             delivery.response_code = resp.status_code
@@ -281,9 +319,11 @@ class WebhookService:
             select(WebhookDelivery)
             .where(
                 WebhookDelivery.status == DeliveryStatus.PENDING,
-                WebhookDelivery.next_retry_at <= now,
+                (WebhookDelivery.next_retry_at.is_(None) | (WebhookDelivery.next_retry_at <= now)),
             )
+            .order_by(WebhookDelivery.created_at)
             .limit(50)
+            .with_for_update(skip_locked=True)
         )
         retries = list(result.scalars().all())
 
