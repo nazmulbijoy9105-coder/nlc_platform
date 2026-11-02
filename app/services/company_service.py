@@ -23,6 +23,32 @@ from app.models.people import Director, Shareholder
 from app.services.base import BaseService
 
 
+def _agm_profile_evidence(latest_agm) -> dict:
+    """Map AGM evidence from the AGM record without inventing attendance.
+
+    AGM.members_present has a database default of zero. Treat zero as
+    unrecorded attendance rather than proof that no members attended.
+    """
+    if latest_agm is None:
+        return {
+            "members_present_at_agm": None,
+            "auditor_reappointed_at_agm": None,
+            "agm_minutes_prepared": None,
+            "notice_sent_date": None,
+        }
+
+    members_present = getattr(latest_agm, "members_present", None)
+    if members_present == 0:
+        members_present = None
+
+    return {
+        "members_present_at_agm": members_present,
+        "auditor_reappointed_at_agm": getattr(latest_agm, "auditor_reappointed", None),
+        "agm_minutes_prepared": getattr(latest_agm, "minutes_prepared", None),
+        "notice_sent_date": getattr(latest_agm, "notice_sent_date", None),
+    }
+
+
 class CompanyService(BaseService[Company]):
     model = Company
 
@@ -319,6 +345,8 @@ class CompanyService(BaseService[Company]):
         audits_sorted = sorted(company.audits, key=lambda a: a.financial_year, reverse=True)
         latest_audit = audits_sorted[0] if audits_sorted else None
 
+        agm_profile_evidence = _agm_profile_evidence(latest_agm)
+
         # ── Annual Return State ───────────────────────────────────
         returns_sorted = sorted(
             company.annual_returns, key=lambda r: r.financial_year, reverse=True
@@ -375,7 +403,7 @@ class CompanyService(BaseService[Company]):
             "agm_count":                  agm_count,
             "last_agm_date":              company.last_agm_date,
             "agm_held_this_cycle":        latest_agm.agm_held if latest_agm else (company.last_agm_date is not None and (date.today() - company.last_agm_date).days <= 456),
-            "agm_minutes_prepared":       bool(latest_agm.minutes_prepared) if latest_agm else False,
+            "agm_minutes_prepared":       agm_profile_evidence["agm_minutes_prepared"],
 
             # Audit State
             "first_auditor_appointed":    bool(company.first_auditor_appointed) if company.first_auditor_appointed is not None else None,
@@ -523,9 +551,9 @@ class CompanyService(BaseService[Company]):
             # AGM Details
             "agm_adjourned_without_notice":  getattr(company, "agm_adjourned_without_notice", False),
             "agm_scheduled_date":            getattr(company, "agm_scheduled_date", None),
-            "notice_sent_date":              getattr(company, "notice_sent_date", None),
-            "members_present_at_agm":        getattr(company, "members_present_at_agm", 0),
-            "auditor_reappointed_at_agm":    getattr(company, "auditor_reappointed_at_agm", False),
+            "notice_sent_date":              agm_profile_evidence["notice_sent_date"],
+            "members_present_at_agm":        agm_profile_evidence["members_present_at_agm"],
+            "auditor_reappointed_at_agm":    agm_profile_evidence["auditor_reappointed_at_agm"],
             "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", False),
 
             # Audit Details
