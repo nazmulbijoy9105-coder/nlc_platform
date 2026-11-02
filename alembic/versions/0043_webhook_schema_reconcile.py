@@ -56,8 +56,7 @@ def upgrade() -> None:
     op.execute("""
         CREATE POLICY webhook_endpoints_owner_scope ON webhook_endpoints
         USING (
-            CASE WHEN current_setting('app.current_user_id', true) = 'ADMIN' THEN TRUE
-            ELSE user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid END
+            user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
         )
         WITH CHECK (
             CASE WHEN current_setting('app.current_user_id', true) = 'ADMIN' THEN TRUE
@@ -68,12 +67,11 @@ def upgrade() -> None:
     op.execute("""
         CREATE POLICY webhook_deliveries_owner_scope ON webhook_deliveries
         USING (
-            CASE WHEN current_setting('app.current_user_id', true) = 'ADMIN' THEN TRUE
-            ELSE EXISTS (
+            EXISTS (
                 SELECT 1 FROM webhook_endpoints e
                 WHERE e.id = webhook_deliveries.endpoint_id
                   AND e.user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
-            ) END
+            )
         )
         WITH CHECK (
             CASE WHEN current_setting('app.current_user_id', true) = 'ADMIN' THEN TRUE
@@ -88,6 +86,8 @@ def upgrade() -> None:
         DO $$
         BEGIN
             IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
+                REVOKE ALL PRIVILEGES ON webhook_endpoints FROM nlc_app_role;
+                REVOKE ALL PRIVILEGES ON webhook_deliveries FROM nlc_app_role;
                 GRANT SELECT, INSERT, UPDATE, DELETE ON webhook_endpoints TO nlc_app_role;
                 GRANT SELECT, INSERT, UPDATE, DELETE ON webhook_deliveries TO nlc_app_role;
             END IF;
@@ -97,5 +97,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute("DROP TABLE IF EXISTS webhook_deliveries")
-    op.execute("DROP TABLE IF EXISTS webhook_endpoints")
+    # The reconciliation may have adopted tables created by the earlier 0037
+    # migration. Never drop customer webhook data when reverting this revision.
+    op.execute("DROP POLICY IF EXISTS webhook_deliveries_owner_scope ON webhook_deliveries")
+    op.execute("DROP POLICY IF EXISTS webhook_endpoints_owner_scope ON webhook_endpoints")
+    op.execute("ALTER TABLE IF EXISTS webhook_deliveries DISABLE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE IF EXISTS webhook_endpoints DISABLE ROW LEVEL SECURITY")
