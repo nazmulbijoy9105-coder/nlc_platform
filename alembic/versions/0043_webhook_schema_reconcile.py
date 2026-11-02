@@ -59,8 +59,7 @@ def upgrade() -> None:
             user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
         )
         WITH CHECK (
-            CASE WHEN current_setting('app.current_user_id', true) = 'ADMIN' THEN TRUE
-            ELSE user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid END
+            user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
         )
     """)
     op.execute("DROP POLICY IF EXISTS webhook_deliveries_owner_scope ON webhook_deliveries")
@@ -74,12 +73,11 @@ def upgrade() -> None:
             )
         )
         WITH CHECK (
-            CASE WHEN current_setting('app.current_user_id', true) = 'ADMIN' THEN TRUE
-            ELSE EXISTS (
+            EXISTS (
                 SELECT 1 FROM webhook_endpoints e
                 WHERE e.id = webhook_deliveries.endpoint_id
                   AND e.user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
-            ) END
+            )
         )
     """)
     op.execute("""
