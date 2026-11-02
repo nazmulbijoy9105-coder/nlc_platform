@@ -65,3 +65,25 @@ def is_revoked(jti: str, *, fail_closed: bool = True) -> bool:
         if fail_closed:
             raise BlacklistUnavailable('Token blacklist unavailable') from None
         return False
+
+
+def _consume_once(namespace: str, jti: str, exp: float | int | None) -> bool:
+    """Atomically consume a token identifier once; fail closed if Redis is unavailable."""
+    if not jti or not exp:
+        return False
+    ttl = max(int(float(exp) - time.time()), 1)
+    try:
+        return bool(_client().set(f"{namespace}:{jti}", "consumed", ex=ttl, nx=True))
+    except Exception as exc:
+        logger.warning("one_time_token_consume_failed", exc_info=True)
+        raise BlacklistUnavailable("Token validation unavailable") from exc
+
+
+def consume_refresh_token(jti: str, exp: float | int | None) -> bool:
+    """Atomically consume a refresh-token jti once; fail closed if Redis is unavailable."""
+    return _consume_once("refresh-consumed", jti, exp)
+
+
+def consume_temp_token(jti: str, exp: float | int | None) -> bool:
+    """Atomically consume a temporary authentication token once."""
+    return _consume_once("temp-consumed", jti, exp)
