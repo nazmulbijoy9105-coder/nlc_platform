@@ -10,6 +10,7 @@ from sqlalchemy import select
 from app.core.security import (
     create_access_token,
     create_refresh_token,
+    create_temp_token,
     decode_token,
     decrypt_totp_secret,
     hash_password,
@@ -32,10 +33,12 @@ class LoginBody(BaseModel):
     password: str = Field(min_length=8)
 
 class LoginResponse(BaseModel):
-    access_token: str
-    refresh_token: str
+    access_token: str | None = None
+    refresh_token: str | None = None
     token_type: str = "bearer"
     user: dict
+    requires_2fa: bool = False
+    temp_token: str | None = None
 
 
 class RefreshRequest(BaseModel):
@@ -152,19 +155,30 @@ async def login(request: Request,body: LoginBody, db=Depends(get_db)):
         "requires_2fa": getattr(verified_user, "requires_2fa", False),
     }
     
-    # Build JWT payload with company_ids
+    # Users who have completed TOTP enrollment must complete the challenge
+    # before any access or refresh token is issued.
+    if verified_user.totp_enabled:
+        challenge = create_temp_token({"sub": str(verified_user.id)})
+        return {
+            "access_token": None,
+            "refresh_token": None,
+            "token_type": "bearer",
+            "user": user_dict,
+            "requires_2fa": True,
+            "temp_token": challenge,
+        }
+
     jwt_payload = await svc.build_jwt_payload(verified_user)
-    jwt_payload["type"] = "access"
-    
     access_token = create_access_token(jwt_payload)
-    refresh_jwt = {**jwt_payload, "type": "refresh"}
-    refresh_token = create_refresh_token(refresh_jwt)
-    
+    refresh_token = create_refresh_token(jwt_payload)
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
         "user": user_dict,
+        "requires_2fa": False,
+        "temp_token": None,
     }
 
 
@@ -213,20 +227,35 @@ async def setup_2fa(
 
 @router.post("/verify-2fa", response_model=LoginResponse)
 async def verify_2fa(body: Verify2FARequest, db=Depends(get_db)):
-    """Verify TOTP code and issue full tokens."""
-    payload = decode_token(body.temp_token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    result = await db.execute(select(User).where(User.id == payload.get("sub")))
+    """Verify a single-use 2FA challenge and then issue full tokens."""
+    payload = decode_token(body.temp_token, expected_type="temp")
+    jti = payload.get("jti") if payload else None
+    exp = payload.get("exp") if payload else None
+    user_id = payload.get("sub") if payload else None
+    if not payload or not isinstance(jti, str) or not jti or not user_id or not exp:
+        raise HTTPException(status_code=401, detail="Invalid or expired 2FA challenge")
+
+    result = await db.execute(
+        select(User).where(User.id == user_id, User.is_active.is_(True))
+    )
     user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    totp_secret = user.totp_secret_encrypted
-    if not totp_secret:
-        raise HTTPException(status_code=400, detail="2FA not configured for this user")
-    decrypted = decrypt_totp_secret(totp_secret)
-    if not verify_totp_code(decrypted, body.totp_code):
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found or inactive")
+    if not user.totp_enabled or not user.totp_secret_encrypted:
+        raise HTTPException(status_code=403, detail="Two-factor authentication is not enabled")
+
+    from app.core.token_blacklist import BlacklistUnavailable, consume_temp_token
+    try:
+        if not consume_temp_token(jti, exp):
+            raise HTTPException(status_code=401, detail="2FA challenge has already been used")
+    except BlacklistUnavailable:
+        raise HTTPException(status_code=503, detail="Authentication service temporarily unavailable")
+
+    if not verify_totp_code(decrypt_totp_secret(user.totp_secret_encrypted), body.totp_code):
         raise HTTPException(status_code=401, detail="Invalid 2FA code")
+
+    svc = UserService(db)
+    jwt_payload = await svc.build_jwt_payload(user)
     user_dict = {
         "id": str(user.id),
         "email": user.email,
@@ -235,9 +264,13 @@ async def verify_2fa(body: Verify2FARequest, db=Depends(get_db)):
         "is_active": user.is_active,
         "requires_2fa": True,
     }
-    access_token = create_access_token({"sub": str(user.id), "user_id": str(user.id), "email": user.email, "role": str(user.role), "type": "access"})
-    refresh_token = create_refresh_token({"sub": str(user.id), "user_id": str(user.id), "email": user.email, "role": str(user.role), "type": "refresh"})
-    return LoginResponse(access_token=access_token, refresh_token=refresh_token, token_type="bearer", user=user_dict)
+    return LoginResponse(
+        access_token=create_access_token(jwt_payload),
+        refresh_token=create_refresh_token(jwt_payload),
+        token_type="bearer",
+        user=user_dict,
+        requires_2fa=False,
+    )
 
 
 @router.post("/refresh", response_model=RefreshResponse)
