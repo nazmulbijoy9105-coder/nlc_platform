@@ -225,6 +225,33 @@ async def setup_2fa(
     }
 
 
+class VerifyTOTPSetupRequest(BaseModel):
+    totp_code: str = Field(pattern=r"^\d{6}$")
+
+
+@router.post("/2fa/confirm")
+async def confirm_2fa_setup(
+    body: VerifyTOTPSetupRequest,
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    """Enable TOTP only after the authenticated user proves possession."""
+    user_id = current_user.get("sub") or current_user.get("user_id")
+    result = await db.execute(
+        select(User).where(User.id == user_id, User.is_active.is_(True))
+    )
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found or inactive")
+    if not user.totp_secret_encrypted:
+        raise HTTPException(status_code=400, detail="Start 2FA setup before confirming")
+    if user.totp_enabled:
+        raise HTTPException(status_code=409, detail="Two-factor authentication is already enabled")
+    if not await UserService(db).confirm_totp(user, body.totp_code):
+        raise HTTPException(status_code=401, detail="Invalid 2FA code")
+    return {"status": "enabled", "requires_2fa": True}
+
+
 @router.post("/verify-2fa", response_model=LoginResponse)
 async def verify_2fa(body: Verify2FARequest, db=Depends(get_db)):
     """Verify a single-use 2FA challenge and then issue full tokens."""
@@ -244,15 +271,15 @@ async def verify_2fa(body: Verify2FARequest, db=Depends(get_db)):
     if not user.totp_enabled or not user.totp_secret_encrypted:
         raise HTTPException(status_code=403, detail="Two-factor authentication is not enabled")
 
+    if not verify_totp_code(decrypt_totp_secret(user.totp_secret_encrypted), body.totp_code):
+        raise HTTPException(status_code=401, detail="Invalid 2FA code")
+
     from app.core.token_blacklist import BlacklistUnavailable, consume_temp_token
     try:
         if not consume_temp_token(jti, exp):
             raise HTTPException(status_code=401, detail="2FA challenge has already been used")
     except BlacklistUnavailable:
         raise HTTPException(status_code=503, detail="Authentication service temporarily unavailable")
-
-    if not verify_totp_code(decrypt_totp_secret(user.totp_secret_encrypted), body.totp_code):
-        raise HTTPException(status_code=401, detail="Invalid 2FA code")
 
     svc = UserService(db)
     jwt_payload = await svc.build_jwt_payload(user)
