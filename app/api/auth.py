@@ -64,15 +64,18 @@ class UserResponse(BaseModel):
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
-    payload = decode_token(token)
-    if not payload or payload.get("type") != "access":
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    payload = decode_token(token, expected_type="access")
+    jti = payload.get("jti") if payload else None
+    if not payload or not isinstance(jti, str) or not jti:
+        raise HTTPException(status_code=401, detail="Invalid or expired access token")
     from starlette.concurrency import run_in_threadpool
 
-    from app.core.token_blacklist import is_revoked
-    jti = payload.get("jti")
-    if jti and await run_in_threadpool(is_revoked, jti):
-        raise HTTPException(status_code=401, detail="Token has been revoked")
+    from app.core.token_blacklist import BlacklistUnavailable, is_revoked
+    try:
+        if await run_in_threadpool(is_revoked, jti):
+            raise HTTPException(status_code=401, detail="Token has been revoked")
+    except BlacklistUnavailable:
+        raise HTTPException(status_code=503, detail="Authentication service temporarily unavailable")
     return payload
 
 
@@ -247,16 +250,23 @@ async def refresh_token(body: RefreshRequest, db=Depends(get_db)):
     user = result.scalar_one_or_none()
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or deactivated")
-    # SEC-006: revoke the old refresh token (rotation — prevents replay)
-    from app.core.token_blacklist import revoke
+    # SEC-006: atomically consume the old refresh token; reject replay.
+    from app.core.token_blacklist import BlacklistUnavailable, consume_refresh_token
     old_jti = payload.get("jti")
     old_exp = payload.get("exp")
-    if old_jti and old_exp:
-        revoke(old_jti, old_exp)
+    if not isinstance(old_jti, str) or not old_jti or not old_exp:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+    try:
+        consumed = consume_refresh_token(old_jti, old_exp)
+    except BlacklistUnavailable:
+        raise HTTPException(status_code=503, detail="Authentication service temporarily unavailable")
+    if not consumed:
+        raise HTTPException(status_code=401, detail="Refresh token has already been used")
 
-    new_access = create_access_token({"sub": str(user.id), "user_id": str(user.id), "email": user.email, "role": str(user.role), "type": "access"})
-    # SEC-006: issue new refresh token (rotation)
-    new_refresh = create_refresh_token({"sub": str(user.id), "user_id": str(user.id), "email": user.email, "role": str(user.role), "type": "refresh"})
+    # Rebuild authorization claims from current database memberships.
+    jwt_payload = await UserService(db).build_jwt_payload(user)
+    new_access = create_access_token(jwt_payload)
+    new_refresh = create_refresh_token(jwt_payload)
     return RefreshResponse(access_token=new_access, refresh_token=new_refresh, token_type="bearer")
 
 
