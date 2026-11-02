@@ -127,6 +127,7 @@ class CompanyResponse(BaseModel):
     any_director_disqualified: bool | None = None
     penalty_notices_received: int | None = None
     penalty_notices_resolved: int | None = None
+    is_manufacturing: bool | None = None
 
 
 class ComplianceSummaryResponse(BaseModel):
@@ -211,6 +212,7 @@ def _company_to_response(company) -> CompanyResponse:
         black_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("BLACK", "Severity.BLACK")]),
         red_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("RED", "Severity.RED")]),
         yellow_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("YELLOW", "Severity.YELLOW")]),
+        is_manufacturing=getattr(company, "is_manufacturing", None),
     )
 
 
