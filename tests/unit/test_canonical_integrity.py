@@ -1,5 +1,9 @@
-"""E1 gate: engine, canonical registry, rescue registry and DB seed carry identical rule IDs."""
-import re
+"""Structured parity gate for engine, canonical registry, rescue registry and seed corpus.
+
+The engine is parsed as Python syntax. Rule IDs and statutory bases are read
+from the same ComplianceFlag constructor call, not inferred from nearby text.
+"""
+import ast
 from collections import Counter
 from pathlib import Path
 
@@ -7,17 +11,92 @@ from canonical_architecture.statutory_rescue import STATUTORY_RESCUE_REGISTRY
 from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
 
 ROOT = Path(__file__).resolve().parents[2]
-EXPECTED = 85  # ILRMF production corpus (was 75 pre-expansion)
+EXPECTED = 85  # ILRMF production corpus; this gate does not add or remove rules.
+
+
+def _is_rule_id(value: str) -> bool:
+    """Validate the repository's PREFIX-NNN rule ID format without text scraping."""
+    parts = value.split("-")
+    return (
+        len(parts) == 2
+        and bool(parts[0])
+        and parts[0].isalpha()
+        and parts[0].isupper()
+        and len(parts[1]) == 3
+        and parts[1].isdigit()
+    )
+
+
+def _call_name(node):
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    return None
+
+
+def _engine_rule_data():
+    """Return rule_id -> statutory bases from actual ComplianceFlag call nodes."""
+    source = (ROOT / "app" / "rule_engine" / "engine.py").read_text(encoding="utf-8")
+    tree = ast.parse(source, filename="app/rule_engine/engine.py")
+    result = {}
+    errors = []
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or _call_name(node.func) != "ComplianceFlag":
+            continue
+
+        keywords = {kw.arg: kw.value for kw in node.keywords if kw.arg is not None}
+        rule_node = keywords.get("rule_id")
+        basis_node = keywords.get("statutory_basis")
+
+        if not isinstance(rule_node, ast.Constant) or not isinstance(rule_node.value, str):
+            errors.append(f"line {node.lineno}: ComplianceFlag rule_id must be a string literal")
+            continue
+
+        rule_id = rule_node.value
+        if not _is_rule_id(rule_id):
+            errors.append(f"line {node.lineno}: invalid rule_id {rule_id!r}")
+            continue
+
+        if not isinstance(basis_node, ast.Constant) or not isinstance(basis_node.value, str):
+            errors.append(
+                f"line {node.lineno}: {rule_id} statutory_basis must be a string literal"
+            )
+            continue
+
+        basis = basis_node.value.strip()
+        if not basis:
+            errors.append(f"line {node.lineno}: {rule_id} statutory_basis is empty")
+            continue
+
+        result.setdefault(rule_id, set()).add(basis)
+
+    return result, errors
 
 
 def _engine_ids():
-    src = (ROOT / "app" / "rule_engine" / "engine.py").read_text(encoding="utf-8")
-    return set(re.findall(r'rule_id="([A-Z]+-\d{3})"', src))
+    data, errors = _engine_rule_data()
+    assert not errors, errors
+    return set(data)
 
 
 def _seed_rows():
     from scripts.seed_rules import ILRMF_RULES
-    return [r["rule_id"] for r in ILRMF_RULES]
+    return ILRMF_RULES
+
+
+def _normalise_basis(value: str) -> str:
+    """Normalise punctuation and whitespace while preserving all legal tokens."""
+    return " ".join(
+        "".join(ch.casefold() if ch.isalnum() else " " for ch in value).split()
+    )
+
+
+def test_engine_rule_calls_are_structurally_parseable():
+    data, errors = _engine_rule_data()
+    assert not errors, errors
+    assert data, "No ComplianceFlag rule definitions were found"
 
 
 def test_counts():
@@ -27,87 +106,69 @@ def test_counts():
 
 
 def test_engine_registry_rescue_sets_equal():
-    e = _engine_ids()
-    r = set(STATUTORY_RULE_REGISTRY)
-    c = set(STATUTORY_RESCUE_REGISTRY)
-    assert e == r, {"engine_only": sorted(e - r), "registry_only": sorted(r - e)}
-    assert e == c, {"engine_only": sorted(e - c), "rescue_only": sorted(c - e)}
+    engine = _engine_ids()
+    registry = set(STATUTORY_RULE_REGISTRY)
+    rescue = set(STATUTORY_RESCUE_REGISTRY)
+    assert engine == registry, {
+        "engine_only": sorted(engine - registry),
+        "registry_only": sorted(registry - engine),
+    }
+    assert engine == rescue, {
+        "engine_only": sorted(engine - rescue),
+        "rescue_only": sorted(rescue - engine),
+    }
 
 
 def test_seed_matches_engine_and_has_no_duplicates():
     rows = _seed_rows()
-    dupes = [k for k, n in Counter(rows).items() if n > 1]
-    assert not dupes, dupes
-    s, e = set(rows), _engine_ids()
-    assert s == e, {"seed_only": sorted(s - e), "engine_only": sorted(e - s)}
+    seed_ids = [row["rule_id"] for row in rows]
+    duplicates = [rule_id for rule_id, count in Counter(seed_ids).items() if count > 1]
+    assert not duplicates, duplicates
+    seed_set, engine_set = set(seed_ids), _engine_ids()
+    assert seed_set == engine_set, {
+        "seed_only": sorted(seed_set - engine_set),
+        "engine_only": sorted(engine_set - seed_set),
+    }
 
 
-def test_inner_ids_match_keys():
-    # StatutoryRule / RescueDef are frozen dataclasses — use attributes, not .get()
+def test_inner_ids_match_registry_keys():
     bad_rules = [
-        k for k, v in STATUTORY_RULE_REGISTRY.items()
-        if getattr(v, "rule_id", None) != k
+        key for key, value in STATUTORY_RULE_REGISTRY.items()
+        if getattr(value, "rule_id", None) != key
     ]
     assert not bad_rules, sorted(bad_rules)
+
     bad_rescue = [
-        k for k, v in STATUTORY_RESCUE_REGISTRY.items()
-        if getattr(v, "triggered_by", None) != k
+        key for key, value in STATUTORY_RESCUE_REGISTRY.items()
+        if getattr(value, "triggered_by", None) != key
     ]
     assert not bad_rescue, sorted(bad_rescue)
 
 
-def _engine_basis_map():
-    """Best-effort: rule_id -> set of statutory_basis strings near ComplianceFlag."""
-    src = (ROOT / "app" / "rule_engine" / "engine.py").read_text(encoding="utf-8")
-    bases = {}
-    for m in re.finditer(r'rule_id\s*=\s*["\']([A-Z0-9-]+)["\']', src):
-        rid = m.group(1)
-        window = src[max(0, m.start() - 150) : min(len(src), m.end() + 700)]
-        found = re.findall(r'statutory_basis\s*=\s*["\']([^"\']+)["\']', window)
-        if found:
-            bases.setdefault(rid, set()).update(found)
-    return bases
+def test_seed_statutory_basis_matches_engine_call_for_same_rule():
+    engine_data, errors = _engine_rule_data()
+    assert not errors, errors
 
-
-def test_seed_statutory_basis_matches_engine():
-    """Field-level parity: seed statutory_basis must appear in engine for same rule_id.
-
-    If the engine emits a rule_id without a nearby statutory_basis= string literal
-    (e.g. multi-line / shared helper), require the section tokens from the seed
-    basis to appear somewhere in the engine source near that rule_id.
-    """
-    from scripts.seed_rules import ILRMF_RULES
-
-    engine_bases = _engine_basis_map()
-    src = (ROOT / "app" / "rule_engine" / "engine.py").read_text(encoding="utf-8")
-    missing_in_engine = []
     mismatches = []
-    for row in ILRMF_RULES:
-        rid = row["rule_id"]
-        sb = (row.get("statutory_basis") or "").strip()
-        if rid not in engine_bases:
-            # Fallback: section numbers from seed must appear near rule_id in engine
-            positions = [m.start() for m in re.finditer(re.escape(f'rule_id="{rid}"'), src)]
-            positions += [m.start() for m in re.finditer(re.escape(f"rule_id='{rid}'"), src)]
-            if not positions:
-                missing_in_engine.append(rid)
-                continue
-            secs = re.findall(r"\d+", sb)
-            ok_fallback = False
-            for pos in positions:
-                window = src[max(0, pos - 400) : min(len(src), pos + 1200)]
-                if secs and all(s in window for s in secs[:4]):
-                    ok_fallback = True
-                    break
-                if sb and sb[:40] in window:
-                    ok_fallback = True
-                    break
-            if not ok_fallback:
-                mismatches.append({"rule_id": rid, "seed": sb, "engine": ["<no statutory_basis literal>"]})
-            continue
-        ebs = engine_bases[rid]
-        ok = any(sb == eb or sb in eb or eb in sb for eb in ebs)
-        if not ok:
-            mismatches.append({"rule_id": rid, "seed": sb, "engine": sorted(ebs)})
-    assert not missing_in_engine, missing_in_engine
+    for row in _seed_rows():
+        rule_id = row["rule_id"]
+        seed_basis = _normalise_basis((row.get("statutory_basis") or "").strip())
+        engine_bases = {
+            _normalise_basis(value) for value in engine_data.get(rule_id, set())
+        }
+
+        # Keep the existing compatibility rule (exact or contained basis), but
+        # compare values attached to the same AST call rather than nearby text.
+        if not seed_basis or not any(
+            seed_basis == engine_basis
+            or seed_basis in engine_basis
+            or engine_basis in seed_basis
+            for engine_basis in engine_bases
+        ):
+            mismatches.append({
+                "rule_id": rule_id,
+                "seed": row.get("statutory_basis"),
+                "engine": sorted(engine_data.get(rule_id, set())),
+            })
+
     assert not mismatches, mismatches
