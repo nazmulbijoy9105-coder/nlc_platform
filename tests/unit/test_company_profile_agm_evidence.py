@@ -2,6 +2,8 @@ from datetime import date
 from types import SimpleNamespace
 
 from app.services.company_service import _agm_profile_evidence
+from app.services.compliance_service import _applied_score_impacts, _is_rescue_required
+from app.rule_engine.engine import RuleState
 from app.rule_engine.engine import CompanyProfile, NLCRuleEngine
 
 
@@ -107,3 +109,46 @@ def test_verified_zero_directors_triggers_minimum_director_rule():
 
     result = NLCRuleEngine().evaluate(profile)
     assert "INC-003" in {flag.rule_id for flag in result.flags}
+
+
+def test_score_impact_reporting_respects_verified_rule_gate_and_category_caps():
+    flags = [
+        SimpleNamespace(
+            rule_id="AGM-001", score_impact=20, state=RuleState.NON_COMPLIANT,
+            eval_state="VIOLATION", resolved=False, conditional_applies=True,
+        ),
+        SimpleNamespace(
+            rule_id="AGM-001", score_impact=20, state=RuleState.NON_COMPLIANT,
+            eval_state="VIOLATION", resolved=False, conditional_applies=True,
+        ),
+        SimpleNamespace(
+            rule_id="TAX-001", score_impact=10, state=RuleState.NON_COMPLIANT,
+            eval_state="VIOLATION", resolved=False, conditional_applies=True,
+        ),
+    ]
+
+    applied = _applied_score_impacts(flags)
+
+    assert applied[0] == {"applied": 20, "status": "APPLIED"}
+    assert applied[1] == {"applied": 10, "status": "APPLIED"}
+    assert applied[2] == {"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"}
+
+
+def test_unknown_flags_are_not_reported_as_applied_deductions():
+    flag = SimpleNamespace(
+        rule_id="AGM-001", score_impact=15, state=RuleState.UNKNOWN,
+        eval_state="UNKNOWN", resolved=False, conditional_applies=True,
+    )
+
+    assert _applied_score_impacts([flag])[0]["applied"] == 0
+
+
+def test_rescue_required_is_based_on_findings_not_sequence_generation():
+    output = SimpleNamespace(
+        score_breakdown=SimpleNamespace(
+            black_flag_count=0, red_flag_count=1, override_applied=False,
+        ),
+        rescue_sequence=[],
+    )
+
+    assert _is_rescue_required(output) is True
