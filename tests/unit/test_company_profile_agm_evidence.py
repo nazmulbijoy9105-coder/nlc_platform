@@ -71,3 +71,39 @@ def test_missing_agm_evidence_does_not_create_quorum_or_reappointment_flags():
     assert "AGM-005" not in fired_rule_ids
     assert "AGM-006" not in fired_rule_ids
     assert "AUD-004" not in fired_rule_ids
+
+
+def test_director_count_from_local_records_is_not_rjsc_verified():
+    today = date.today()
+    profile = CompanyProfile(
+        company_id="director-verification-test",
+        company_name="Director Verification Test Ltd",
+        incorporation_date=date(today.year - 2, 1, 1),
+        current_director_count=0,
+        directors_verified=False,
+        agm_count=1,
+        annual_return_filed=True,
+        first_auditor_appointed=True,
+        audit_complete=True,
+    )
+
+    result = NLCRuleEngine().evaluate(profile)
+    assert "INC-003" not in {flag.rule_id for flag in result.flags}
+
+
+def test_verified_zero_directors_triggers_minimum_director_rule():
+    today = date.today()
+    profile = CompanyProfile(
+        company_id="verified-director-test",
+        company_name="Verified Director Test Ltd",
+        incorporation_date=date(today.year - 2, 1, 1),
+        current_director_count=0,
+        directors_verified=True,
+        agm_count=1,
+        annual_return_filed=True,
+        first_auditor_appointed=True,
+        audit_complete=True,
+    )
+
+    result = NLCRuleEngine().evaluate(profile)
+    assert "INC-003" in {flag.rule_id for flag in result.flags}
