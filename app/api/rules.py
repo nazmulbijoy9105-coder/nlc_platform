@@ -342,18 +342,45 @@ async def get_rule_history(
         raise HTTPException(status_code=404, detail=f"Rule '{rule_id}' not found.")
 
     versions = await svc.get_version_history(rule_id)
-    return [
-        RuleVersionResponse(
-            version_id=str(v.id),
-            rule_id=v.rule_id,
-            version=v.version,
-            previous_severity=v.previous_severity,  # type: ignore[attr-defined]
-            new_severity=v.new_severity,  # type: ignore[attr-defined]
-            previous_score_impact=v.previous_score_impact,  # type: ignore[attr-defined]
-            new_score_impact=v.new_score_impact,  # type: ignore[attr-defined]
-            change_reason=v.change_reason,
-            changed_by_id=str(v.changed_by_id),  # type: ignore[attr-defined]
-            changed_at=v.changed_at.isoformat(),
+    responses: list[RuleVersionResponse] = []
+
+    # History is returned newest first. Each snapshot stores the state BEFORE
+    # its change; the next newer snapshot (or the current rule) supplies the
+    # state AFTER that change.
+    for index, version_record in enumerate(versions):
+        previous = version_record.previous_definition or {}
+        if index == 0:
+            newer = {
+                "default_severity": existing.default_severity,
+                "score_impact": existing.score_impact,
+            }
+        else:
+            newer = versions[index - 1].previous_definition or {}
+
+        previous_severity = previous.get("default_severity")
+        new_severity = newer.get("default_severity")
+        previous_score_impact = previous.get("score_impact")
+        new_score_impact = newer.get("score_impact")
+
+        responses.append(
+            RuleVersionResponse(
+                version_id=str(version_record.id),
+                rule_id=version_record.rule_id,
+                version=version_record.version,
+                previous_severity=(
+                    str(getattr(previous_severity, "value", previous_severity))
+                    if previous_severity is not None else None
+                ),
+                new_severity=(
+                    str(getattr(new_severity, "value", new_severity))
+                    if new_severity is not None else None
+                ),
+                previous_score_impact=previous_score_impact,
+                new_score_impact=new_score_impact,
+                change_reason=version_record.change_reason,
+                changed_by_id=str(version_record.changed_by),
+                changed_at=version_record.changed_at.isoformat(),
+            )
         )
-        for v in versions
-    ]
+
+    return responses
