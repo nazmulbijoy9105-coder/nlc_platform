@@ -21,12 +21,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, HttpUrl
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_user, get_db_for_user
+from app.core.dependencies import get_current_user, get_db_for_user, require_roles
 from app.models.user import User
 from app.models.webhook import WebhookEvent
 from app.services.webhook_service import WebhookService
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN"))])
 
 
 # ── Schemas ──────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ async def create_webhook(
     return WebhookResponse(
         id=str(endpoint.id),
         url=endpoint.url,
-        secret=endpoint.secret,
+        secret="***",
         events=endpoint.events,
         is_active=endpoint.is_active,
         last_delivery_at=endpoint.last_delivery_at.isoformat() if endpoint.last_delivery_at else None,
@@ -142,6 +142,7 @@ async def update_webhook(
     svc = WebhookService(db)
     endpoint = await svc.update_endpoint(
         endpoint_id=endpoint_id,
+        user_id=current_user.id,
         url=str(body.url) if body.url else None,
         events=body.events,
         is_active=body.is_active,
@@ -169,7 +170,7 @@ async def delete_webhook(
 ):
     """Delete a webhook endpoint."""
     svc = WebhookService(db)
-    deleted = await svc.delete_endpoint(endpoint_id)
+    deleted = await svc.delete_endpoint(endpoint_id, current_user.id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Webhook endpoint not found")
     await db.commit()
@@ -184,7 +185,9 @@ async def test_webhook(
 ):
     """Send a test event to verify the webhook is working."""
     svc = WebhookService(db)
-    result = await svc.send_test_event(endpoint_id)
+    result = await svc.send_test_event(endpoint_id, current_user.id)
+    if result.get("error"):
+        raise HTTPException(status_code=404, detail="Webhook endpoint not found")
     await db.commit()
     return TestResponse(**result)
 
@@ -198,7 +201,7 @@ async def get_deliveries(
 ):
     """Get delivery history for a webhook endpoint."""
     svc = WebhookService(db)
-    deliveries = await svc.get_deliveries(endpoint_id, limit=limit)
+    deliveries = await svc.get_deliveries(endpoint_id, current_user.id, limit=min(max(limit, 1), 100))
     return [
         DeliveryResponse(
             id=str(d.id),
