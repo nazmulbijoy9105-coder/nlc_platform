@@ -78,7 +78,7 @@ def test_delivery_history_is_scoped_to_endpoint_owner():
     assert rows == []
     sql = _sql(db.statements[0])
     assert "JOIN webhook_endpoints" in sql
-    assert str(owner_id) in sql
+    assert str(owner_id).replace("-", "") in sql
 
 
 def test_event_without_tenant_owner_is_not_broadcast():
