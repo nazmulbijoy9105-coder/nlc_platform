@@ -264,21 +264,22 @@ async def update_company(company_id: uuid.UUID, body: CompanyUpdateRequest, requ
     svc = CompanyService(db)
     activity = ActivityService(db)
     update_data = body.model_dump(exclude_none=True)
-    if not update_data:
+    has_manufacturing_update = "is_manufacturing" in body.model_fields_set
+    if not update_data and not has_manufacturing_update:
         raise HTTPException(status_code=400, detail="No fields provided for update.")
     _field_map = {"assigned_officer_id": "assigned_staff_id", "notes": "internal_notes"}
     mapped_data = {}
     for k, v in update_data.items():
         mapped_data[_field_map.get(k, k)] = v
     # Preserve an explicit null: it resets this tri-state fact to UNKNOWN.
-    if "is_manufacturing" in body.model_fields_set:
+    if has_manufacturing_update:
         mapped_data["is_manufacturing"] = body.is_manufacturing
     for _non_model in ("is_fdi_registered", "is_dormant"):
         mapped_data.pop(_non_model, None)
     company = await svc.update_by_id(company_id, **mapped_data)
     if not company:
         raise HTTPException(status_code=404, detail="Company not found.")
-    await activity.log(action="COMPANY_UPDATED", resource_type="company", resource_id=str(company_id), description=f"Updated fields: {list(update_data.keys())}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
+    await activity.log(action="COMPANY_UPDATED", resource_type="company", resource_id=str(company_id), description=f"Updated fields: {list(mapped_data.keys())}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     return _company_to_response(company)
 
 
