@@ -2,6 +2,7 @@ from datetime import date
 from types import SimpleNamespace
 
 from app.services.company_service import _agm_profile_evidence
+from app.rule_engine.engine import CompanyProfile, NLCRuleEngine
 
 
 def test_missing_agm_record_keeps_attendance_and_auditor_status_unknown():
@@ -44,3 +45,29 @@ def test_default_zero_attendance_is_not_treated_as_verified_quorum_breach():
     assert evidence["members_present_at_agm"] is None
     assert evidence["auditor_reappointed_at_agm"] is True
     assert evidence["agm_minutes_prepared"] is False
+
+
+
+def test_missing_agm_evidence_does_not_create_quorum_or_reappointment_flags():
+    today = date.today()
+    profile = CompanyProfile(
+        company_id="agm-evidence-test",
+        company_name="AGM Evidence Test Ltd",
+        incorporation_date=date(today.year - 3, 1, 1),
+        agm_count=1,
+        last_agm_date=today.replace(day=1),
+        agm_held_this_cycle=True,
+        members_present_at_agm=None,
+        auditor_reappointed_at_agm=None,
+        agm_minutes_prepared=None,
+        first_auditor_appointed=True,
+        audit_complete=True,
+        annual_return_filed=True,
+    )
+
+    result = NLCRuleEngine().evaluate(profile)
+    fired_rule_ids = {flag.rule_id for flag in result.flags}
+
+    assert "AGM-005" not in fired_rule_ids
+    assert "AGM-006" not in fired_rule_ids
+    assert "AUD-004" not in fired_rule_ids
