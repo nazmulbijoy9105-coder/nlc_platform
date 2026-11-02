@@ -81,6 +81,43 @@ def test_delivery_history_is_scoped_to_endpoint_owner():
     assert str(owner_id).replace("-", "") in sql
 
 
+
+def test_company_access_query_requires_active_membership():
+    company_id, user_id = uuid.uuid4(), uuid.uuid4()
+    db = _DB(_Result(SimpleNamespace(role="CLIENT_DIRECTOR")), _Result(None))
+    token = TokenData(user_id=str(user_id), email="client@example.test", role="CLIENT_DIRECTOR")
+    checker = __import__("app.core.dependencies", fromlist=["require_company_access"]).require_company_access()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr("app.core.dependencies.set_rls_context", AsyncMock())
+    try:
+        with pytest.raises(HTTPException) as exc:
+            asyncio.run(checker(company_id, token, db))
+        assert exc.value.status_code == 403
+        membership_sql = _sql(db.statements[1])
+        assert "company_user_access.is_active IS true" in membership_sql
+    finally:
+        monkeypatch.undo()
+
+
+def test_company_list_filter_uses_live_active_memberships(monkeypatch):
+    from app.core.dependencies import get_client_company_filter
+
+    user_id, allowed_id, stale_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    user = SimpleNamespace(role="CLIENT_DIRECTOR", is_active=True)
+    db = _DB(_Result(user), _Result([allowed_id]))
+    monkeypatch.setattr("app.core.dependencies.set_rls_context", AsyncMock())
+    token = TokenData(
+        user_id=str(user_id),
+        email="client@example.test",
+        role="CLIENT_DIRECTOR",
+        company_ids=[str(allowed_id), str(stale_id)],
+    )
+    result = asyncio.run(get_client_company_filter(token, db))
+    assert result == [str(allowed_id)]
+    membership_sql = _sql(db.statements[1])
+    assert "company_user_access.is_active IS true" in membership_sql
+
+
 def test_event_without_tenant_owner_is_not_broadcast():
     db = _DB()
     count = asyncio.run(WebhookService(db).trigger_event("compliance.evaluated", {}))
