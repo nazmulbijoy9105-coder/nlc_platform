@@ -36,7 +36,8 @@ def upgrade() -> None:
             error_message TEXT NULL,
             delivered_at TIMESTAMPTZ NULL,
             next_retry_at TIMESTAMPTZ NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
     """)
     for statement in (
