@@ -41,10 +41,16 @@ def _agm_profile_evidence(latest_agm) -> dict:
     if members_present == 0:
         members_present = None
 
+    minutes_prepared = getattr(latest_agm, "minutes_prepared", None)
+    # The ORM column defaults to False, so False alone cannot establish that
+    # minutes were never prepared; retain UNKNOWN until explicit evidence exists.
+    if minutes_prepared is False:
+        minutes_prepared = None
+
     return {
         "members_present_at_agm": members_present,
         "auditor_reappointed_at_agm": getattr(latest_agm, "auditor_reappointed", None),
-        "agm_minutes_prepared": getattr(latest_agm, "minutes_prepared", None),
+        "agm_minutes_prepared": minutes_prepared,
         "notice_sent_date": getattr(latest_agm, "notice_sent_date", None),
     }
 
