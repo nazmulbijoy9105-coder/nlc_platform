@@ -188,3 +188,16 @@ def test_unverified_director_rows_do_not_inflate_evidence_coverage():
 
     assert _input_coverage(unverified) == 0.0
     assert _input_coverage(verified) > 0.0
+
+
+def test_black_override_is_reported_separately_from_category_deduction():
+    flag = SimpleNamespace(
+        rule_id="ESC-003", score_impact=10, state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION", resolved=False, conditional_applies=True,
+        is_black_override=True, severity="BLACK",
+    )
+
+    assert _applied_score_impacts([flag])[0] == {
+        "applied": 0,
+        "status": "BLACK_OVERRIDE_POLICY",
+    }
