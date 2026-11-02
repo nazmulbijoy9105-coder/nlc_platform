@@ -44,7 +44,7 @@ def test_default_zero_attendance_is_not_treated_as_verified_quorum_breach():
 
     assert evidence["members_present_at_agm"] is None
     assert evidence["auditor_reappointed_at_agm"] is True
-    assert evidence["agm_minutes_prepared"] is False
+    assert evidence["agm_minutes_prepared"] is None
 
 
 
