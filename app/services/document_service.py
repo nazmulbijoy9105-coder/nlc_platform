@@ -210,7 +210,7 @@ class DocumentService(BaseService[Document]):
         now = datetime.now(UTC)
         notes = doc.notes or ""
         if approval_note and approval_note.strip():
-            notes = (notes + "\\n" if notes else "") + f"Approval: {approval_note.strip()}"
+            notes = (notes + "\n" if notes else "") + f"Approval: {approval_note.strip()}"
         return await self.update_instance(
             doc,
             human_approved=True,
@@ -240,7 +240,7 @@ class DocumentService(BaseService[Document]):
             )
         notes = doc.notes or ""
         if release_note and release_note.strip():
-            notes = (notes + "\\n" if notes else "") + f"Release: {release_note.strip()}"
+            notes = (notes + "\n" if notes else "") + f"Release: {release_note.strip()}"
         return await self.update_instance(
             doc,
             is_client_visible=True,
