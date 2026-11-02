@@ -9,6 +9,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.core.dependencies import TokenData, require_roles
+from app.api.webhooks import WebhookCreateRequest, WebhookUpdateRequest
 from app.models.webhook import WebhookDelivery, WebhookEndpoint
 from app.services.webhook_service import WebhookService, validate_webhook_url
 
@@ -134,6 +135,16 @@ def test_event_without_tenant_owner_is_not_broadcast():
     assert count == 0
     assert db.statements == []
 
+
+
+
+def test_webhook_request_schemas_require_https():
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        WebhookCreateRequest(url="http://example.com/hook")
+    with pytest.raises(ValidationError):
+        WebhookUpdateRequest(url="http://example.com/hook")
 
 
 def test_webhook_url_rejects_plain_http():
