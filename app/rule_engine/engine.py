@@ -165,6 +165,11 @@ class CompanyProfile:
     financial_year_end: Optional[date] = field(default=None)
     agm_count: int | None = None
     last_agm_date: Optional[date] = None
+    agm_extension_granted_until: date | None = None
+    agm_extension_verified: bool = False
+    agm_extension_evidence_ref: str | None = None
+    agm_extension_verified_at: date | None = None
+    agm_extension_verified_by: str | None = None
     agm_held_this_cycle: bool = False
     agm_held_without_audit: bool = False
     agm_scheduled_date: Optional[date] = None
@@ -963,6 +968,32 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     # MODULE 2: AGM
     # ───────────────────────────────────────────────────────────────────
+    def _subsequent_agm_deadline(self, c: CompanyProfile) -> date | None:
+        if c.last_agm_date is None:
+            return None
+        fifteen_month_deadline = self._add_months(c.last_agm_date, 15)
+        calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
+        base_deadline = min(fifteen_month_deadline, calendar_year_deadline)
+        if c.agm_extension_granted_until is None:
+            return base_deadline
+        extension_verified = (
+            c.agm_extension_verified is True
+            and bool(c.agm_extension_evidence_ref)
+            and c.agm_extension_verified_at is not None
+            and bool(c.agm_extension_verified_by)
+        )
+        if not extension_verified:
+            return None
+        statutory_limit = min(
+            base_deadline + timedelta(days=90),
+            calendar_year_deadline,
+        )
+        if c.agm_extension_granted_until < base_deadline:
+            return base_deadline
+        if c.agm_extension_granted_until > statutory_limit:
+            return None
+        return c.agm_extension_granted_until
+
     def _run_agm_rules(self, c: CompanyProfile) -> None:
         if c.agm_count is None or c.incorporation_date is None:
             self._add_flag(ComplianceFlag(
@@ -994,12 +1025,22 @@ class NLCRuleEngine:
             return
 
         if c.last_agm_date and c.agm_held_this_cycle is False:
-            # Section 81(1): at least one AGM in each calendar year and
-            # no more than 15 months between successive AGMs.
-            fifteen_month_deadline = self._add_months(c.last_agm_date, 15)
-            calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
-            agm_deadline = min(fifteen_month_deadline, calendar_year_deadline)
-            basis = "15_MONTH" if fifteen_month_deadline <= calendar_year_deadline else "CALENDAR_YEAR"
+            agm_deadline = self._subsequent_agm_deadline(c)
+            if agm_deadline is None:
+                self._add_flag(ComplianceFlag(
+                    rule_id="AGM-002",
+                    flag_code="AGM_EXTENSION_REQUIRES_REVIEW",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="An AGM extension is recorded but its statutory validity or evidence provenance is not verified. No automatic default determination is made.",
+                    statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                    detail={"extension_until": str(c.agm_extension_granted_until)},
+                ))
+                return
+            basis = "VALIDATED_EXTENSION" if c.agm_extension_granted_until else "SECTION_81(1)"
 
             if self.today > agm_deadline:
                 delay = (self.today - agm_deadline).days
@@ -2618,9 +2659,9 @@ class NLCRuleEngine:
             
         # Match Section 81(1): no more than 15 months between AGMs and
         # an AGM in each Gregorian calendar year. Do not use an assumed FY+6m rule.
-        fifteen_month_deadline = self._add_months(c.last_agm_date, 15)
-        calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
-        deadline = min(fifteen_month_deadline, calendar_year_deadline)
+        deadline = self._subsequent_agm_deadline(c)
+        if deadline is None:
+            return 0
         if self.today > deadline:
             return (self.today - deadline).days // 365
         return 0
