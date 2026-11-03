@@ -167,6 +167,7 @@ class CompanyProfile:
     agm_held_without_audit: bool = False
     agm_scheduled_date: Optional[date] = None
     notice_sent_date: Optional[date] = None
+    agm_notice_verified_absent: bool | None = None
     members_present_at_agm: int | None = None
     auditor_reappointed_at_agm: bool | None = None
     accounts_adopted_at_agm: bool = False
@@ -948,16 +949,40 @@ class NLCRuleEngine:
             warn = c.agm_scheduled_date - timedelta(days=AGM_NOTICE_MINIMUM_DAYS)
             if self.today >= warn:
                 days_rem = (c.agm_scheduled_date - self.today).days
-                self._add_flag(ComplianceFlag(
-                    rule_id="AGM-004",
-                    flag_code="AGM_NOTICE_NOT_ISSUED",
-                    severity=Severity.RED,
-                    score_impact=15,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"AGM notice not issued. {days_rem} days to AGM. Section 85 requires 21 clear days notice.",
-                    statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
-                    detail={"days_to_agm": days_rem}
-                ))
+                if c.agm_notice_verified_absent is True:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-004",
+                        flag_code="AGM_NOTICE_VERIFIED_ABSENT",
+                        severity=Severity.RED,
+                        score_impact=15,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=f"AGM notice verified as not served. Section 85 requires written notice; check the statutory accidental-omission/non-receipt exception before determining the validity of proceedings.",
+                        statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
+                        detail={"days_to_agm": days_rem, "notice_absence_verified": True}
+                    ))
+                else:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-004",
+                        flag_code="AGM_NOTICE_STATUS_UNKNOWN",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="No notice date is recorded in NLC. This is an evidence gap, not proof that notice was not served.",
+                        statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
+                        detail={"days_to_agm": days_rem, "notice_absence_verified": False},
+                        state=RuleState.UNKNOWN,
+                    ))
+        elif c.agm_held_this_cycle and c.agm_notice_verified_absent is True:
+            self._add_flag(ComplianceFlag(
+                rule_id="AGM-004",
+                flag_code="AGM_NOTICE_VERIFIED_ABSENT",
+                severity=Severity.RED,
+                score_impact=15,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="AGM record confirms notice was not served. Section 85 applies, subject to statutory exceptions for accidental omission or non-receipt; legal effect requires review.",
+                statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
+                detail={"notice_absence_verified": True}
+            ))
 
         # Section 85(2)(b) is a default rule only where the Articles do not provide otherwise.
         # The statutory default differs by company/member count (private: 2 if <=6 members,
