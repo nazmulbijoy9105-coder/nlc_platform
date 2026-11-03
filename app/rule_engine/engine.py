@@ -2361,7 +2361,9 @@ class NLCRuleEngine:
         final = raw
         critical = [
             f for f in active
-            if f.is_black_override and f.state == RuleState.NON_COMPLIANT and f.eval_state != "UNKNOWN"
+            if f.is_black_override
+            and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+            and f.eval_state == "VIOLATION"
         ]
         if not critical:
             critical = [
