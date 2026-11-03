@@ -97,7 +97,7 @@ nlc_platform/
 | Trade License (2) | TL-001, TL-002 | City Corp Ordinance 1983 |
 | Transfers (6) | TR-001 to TR-006 | Sections 34, 47, 108 |
 
-**BLACK Override Rules:** INC-003, INC-004, AUD-003, TR-005, ESC-002, ESC-003, ESC-004, BNK-001, BNK-002, BNK-003, CAP-003, DEF-001
+**BLACK Override Rules:** INC-003, INC-004, TR-005, ESC-002, ESC-003, ESC-004, BNK-001, BNK-002, BNK-003, CAP-003, DEF-001
 
 ## Quick Start
 
