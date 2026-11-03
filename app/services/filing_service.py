@@ -150,19 +150,12 @@ class AGMService(BaseService[AGM]):
         members_total_evidence_ref: str | None = None,
         members_present_evidence_ref: str | None = None,
     ) -> AGM | None:
-        """Record an AGM and assess quorum only after current Articles are verified.
+        """Record an AGM using server-derived quorum and verified evidence.
 
-        Section 85(2)(b) supplies the private-company default only where the
-        current Articles have been checked and no alternative quorum applies.
-    ) -> AGM | None:
-        """
-        Record an AGM using server-derived quorum, not a client-supplied boolean.
-
-        Section 85(2)(b) private-company default:
-        2 members where total membership is not more than 6; 3 where it is
-        more than 6. Articles-specific overrides are not yet modelled, so this
-        is a statutory-default assessment and must not be presented as a
-        final Articles-compliant legal determination.
+        Section 85(2)(b) provides statutory default quorum numbers, but the
+        company's current Articles may prescribe a different quorum. Do not
+        treat the statutory default as a final Articles-compliant conclusion
+        unless the Articles have been checked and evidence provenance recorded.
         """
         agm = await self.get_by_id(agm_id)
         if not agm:
