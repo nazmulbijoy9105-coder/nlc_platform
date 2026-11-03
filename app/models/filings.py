@@ -62,6 +62,11 @@ class AGM(FullMixin, Base):
         comment="Calculated: incorporation+548d (first) or FY end+182d (subsequent)"
     )
     notice_sent_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    short_notice_consent_obtained: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    short_notice_consent_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    short_notice_consent_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    short_notice_consent_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    short_notice_consent_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     notice_days_before: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # AGM-003: notice defective (< 21 days)
     notice_defective: Mapped[bool] = mapped_column(Boolean, default=False)
