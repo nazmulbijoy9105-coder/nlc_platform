@@ -415,6 +415,7 @@ class CompanyService(BaseService[Company]):
 
             # Audit State
             "first_auditor_appointed":    bool(company.first_auditor_appointed) if company.first_auditor_appointed is not None else None,
+            "first_auditor_appointment_date": company.first_auditor_appointment_date,
             "audit_complete":             latest_audit.audit_complete if latest_audit else None,
             "last_audit_signed_date":     company.last_audit_signed_date,
 
