@@ -155,7 +155,8 @@ class AGMService(BaseService[AGM]):
     async def mark_held(
         self,
         agm_id: uuid.UUID,
-        held_date: date,
+        held_date: date | None = None,
+        agm_date: date | None = None,
         members_present: int | None = None,
         quorum_met: bool | None = None,
         auditor_reappointed: bool | None = None,
@@ -173,6 +174,9 @@ class AGMService(BaseService[AGM]):
         agm = await self.get_by_id(agm_id)
         if not agm:
             return None
+        meeting_date = held_date or agm_date
+        if meeting_date is None:
+            raise ValueError("held_date is required to mark an AGM as held")
 
         # Only calculate quorum when the applicable threshold has been reviewed.
         if quorum_met is None and members_present is not None and quorum_required is not None:
@@ -180,14 +184,14 @@ class AGMService(BaseService[AGM]):
 
         is_default = False
         delay_days = 0
-        if agm.agm_deadline and held_date > agm.agm_deadline:
+        if agm.agm_deadline and meeting_date > agm.agm_deadline:
             is_default = True
-            delay_days = (held_date - agm.agm_deadline).days
+            delay_days = (meeting_date - agm.agm_deadline).days
 
         return await self.update_instance(
             agm,
             agm_held=True,
-            agm_date=held_date,
+            agm_date=meeting_date,
             venue=venue,
             members_present=members_present,
             quorum_required=quorum_required,
