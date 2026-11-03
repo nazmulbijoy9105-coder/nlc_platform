@@ -972,6 +972,18 @@ class NLCRuleEngine:
                         detail={"days_to_agm": days_rem, "notice_absence_verified": False},
                         state=RuleState.UNKNOWN,
                     ))
+        elif c.agm_held_this_cycle and c.notice_sent_date is None and c.agm_notice_verified_absent is not True:
+            self._add_flag(ComplianceFlag(
+                rule_id="AGM-004",
+                flag_code="AGM_NOTICE_STATUS_UNKNOWN",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="No notice date is recorded in NLC for the held AGM. This is an evidence gap, not proof that notice was not served.",
+                statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
+                detail={"notice_absence_verified": False},
+                state=RuleState.UNKNOWN,
+            ))
         elif c.agm_held_this_cycle and c.agm_notice_verified_absent is True:
             self._add_flag(ComplianceFlag(
                 rule_id="AGM-004",
