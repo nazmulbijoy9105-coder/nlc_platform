@@ -653,7 +653,7 @@ class NLCRuleEngine:
                 severity=Severity.BLACK,
                 score_impact=20,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Paid-up capital exceeds authorized capital. Section 150: all excess allotments void.",
+                description="Paid-up capital exceeds the recorded authorised capital. Verify the Section 53 increase process and registered capital records; NLC escalates this as a BLACK capital-control risk, while the legal effect of any excess allotment requires case-specific review.",
                 statutory_basis="Section 53, Companies Act 1994 (Bangladesh)",
                 is_black_override=True,
                 detail={"paid_up": c.paid_up_capital_bdt, "authorized": c.authorized_capital_bdt}
@@ -810,18 +810,20 @@ class NLCRuleEngine:
                     }
                 ))
 
-        if c.first_auditor_appointed and c.agm_count is not None and c.agm_count > 0 and c.auditor_reappointed_at_agm is False and c.audit_in_progress is False and c.last_agm_date is not None:  # type: ignore
-            fy_end = c.financial_year_end
-            if self.today > fy_end + timedelta(days=120):
-                 self._add_flag(ComplianceFlag(
-                    rule_id="AUD-005",
-                    flag_code="SUBSEQUENT_AUDITOR_NOT_APPOINTED",
-                    severity=Severity.RED,
-                    score_impact=10,
-                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description="No auditor appointed for current FY. Section 210(3): mandatory at every AGM.",
-                    statutory_basis="Section 210(3), Companies Act 1994 (Bangladesh)",
-                ))
+        # AUD-005 is an evidence-status rule, not a separate 120-day statutory
+        # deadline. Section 210(3) reappointment is assessed at the AGM by AUD-004.
+        # If the held AGM's auditor decision is absent, keep the result UNKNOWN.
+        if c.agm_held_this_cycle and c.auditor_reappointed_at_agm is None:
+            self._add_flag(ComplianceFlag(
+                rule_id="AUD-005",
+                flag_code="SUBSEQUENT_AUDITOR_STATUS_UNKNOWN",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Auditor reappointment decision is not recorded for the held AGM. Section 210(3) applies; obtain the AGM resolution and check statutory exceptions.",
+                statutory_basis="Section 210(3), Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+            ))
 
         if c.agm_scheduled_date and c.audit_complete is False:
             warning = c.agm_scheduled_date - timedelta(days=AGM_NOTICE_MINIMUM_DAYS)
@@ -1109,7 +1111,7 @@ class NLCRuleEngine:
                     score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Director filing status unknown for {change.director_id}.",
-                    statutory_basis="Section 90, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                     detail={"director_id": change.director_id},
                     state=RuleState.UNKNOWN
                 ))
