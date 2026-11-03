@@ -213,6 +213,43 @@ def test_public_company_requires_three_verified_directors():
     assert flag.state == RuleState.NON_COMPLIANT
     assert flag.detail["required"] == 3
 
+
+def test_pre_score_and_authoritative_raw_score_use_identical_category_caps():
+    profile = _profile()
+    flags = [
+        ComplianceFlag(
+            rule_id="AGM-001",
+            flag_code="AGM-001-A",
+            severity=Severity.RED,
+            score_impact=20,
+            revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+            description="Verified AGM default.",
+            statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
+        ),
+        ComplianceFlag(
+            rule_id="AGM-002",
+            flag_code="AGM-002-B",
+            severity=Severity.RED,
+            score_impact=20,
+            revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+            description="Second verified AGM default.",
+            statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
+        ),
+        ComplianceFlag(
+            rule_id="INC-003",
+            flag_code="INC-003-C",
+            severity=Severity.RED,
+            score_impact=15,
+            revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+            description="Verified director count finding.",
+            statutory_basis="Section 90, Companies Act 1994 (Bangladesh)",
+        ),
+    ]
+    engine = NLCRuleEngine()
+    breakdown = engine._calculate_score(flags, profile)
+    assert engine._calculate_raw_score(flags) == breakdown.raw_total
+    assert breakdown.raw_total == 55
+
 def test_score_hash_changes_when_evidence_inputs_change():
     engine = NLCRuleEngine()
     first = engine.evaluate(_profile(member_count=2), today=date(2026, 11, 3))
