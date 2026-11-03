@@ -40,21 +40,38 @@ def test_agm_profile_evidence_comes_from_the_latest_agm_record():
     assert evidence["notice_sent_date"] == date(2026, 1, 1)
 
 
-def test_default_zero_attendance_is_not_treated_as_verified_quorum_breach():
+def test_legacy_null_attendance_keeps_quorum_unknown():
     meeting = SimpleNamespace(
-        members_present=0,
-        auditor_reappointed=True,
+        members_present=None,
+        auditor_reappointed=None,
         minutes_prepared=False,
-        quorum_met=True,
+        quorum_met=None,
         notice_sent_date=None,
     )
 
     evidence = _agm_profile_evidence(meeting)
 
     assert evidence["members_present_at_agm"] is None
-    assert evidence["auditor_reappointed_at_agm"] is True
+    assert evidence["auditor_reappointed_at_agm"] is None
     assert evidence["agm_minutes_prepared"] is None
     assert evidence["agm_quorum_met"] is None
+
+
+def test_explicit_zero_attendance_and_failed_quorum_are_preserved():
+    meeting = SimpleNamespace(
+        members_present=0,
+        auditor_reappointed=False,
+        minutes_prepared=False,
+        quorum_met=False,
+        notice_sent_date=None,
+        notice_missing=False,
+    )
+
+    evidence = _agm_profile_evidence(meeting)
+
+    assert evidence["members_present_at_agm"] == 0
+    assert evidence["auditor_reappointed_at_agm"] is False
+    assert evidence["agm_quorum_met"] is False
 
 
 
