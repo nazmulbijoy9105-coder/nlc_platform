@@ -85,6 +85,7 @@ class AGMResponse(BaseModel):
     company_id: str
     financial_year: int
     agm_due_date: str | None
+    scheduled_date: str | None = None
     held_date: str | None
     filed_date: str | None
     quorum_met: bool | None
@@ -300,6 +301,7 @@ async def create_agm(
         company_id=body.company_id,
         financial_year=body.financial_year,
         agm_deadline=body.agm_due_date,
+        scheduled_date=body.scheduled_date,
         notice_sent_date=body.notice_sent_date,
     )
 
@@ -679,7 +681,8 @@ def _agm_to_response(agm) -> AGMResponse:
         agm_id=str(agm.id),
         company_id=str(agm.company_id),
         financial_year=agm.financial_year,
-        agm_due_date=agm.agm_deadline.isoformat() if agm.agm_deadline else '2099-12-31',
+        agm_due_date=agm.agm_deadline.isoformat() if agm.agm_deadline else None,
+        scheduled_date=agm.scheduled_date.isoformat() if agm.scheduled_date else None,
         held_date=agm.agm_date.isoformat() if agm.agm_date else None,
         filed_date=agm.rjsc_filing_date.isoformat() if agm.rjsc_filing_date else None,
         quorum_met=agm.quorum_met,
