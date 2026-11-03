@@ -173,6 +173,7 @@ class CompanyProfile:
     # Section 85(2)(b) is only the default where the Articles do not provide otherwise.
     agm_quorum_required: int | None = None
     agm_quorum_basis_verified: bool = False
+    agm_attendance_verified: bool = False
     auditor_reappointed_at_agm: bool | None = None
     accounts_adopted_at_agm: bool = False
     agm_minutes_prepared: bool | None = None
@@ -947,7 +948,9 @@ class NLCRuleEngine:
                 ))
 
         if c.agm_held_this_cycle and c.members_present_at_agm is not None:
-            if c.agm_quorum_basis_verified is not True or c.agm_quorum_required is None:
+            if (c.agm_attendance_verified is not True
+                    or c.agm_quorum_basis_verified is not True
+                    or c.agm_quorum_required is None):
                 self._add_flag(ComplianceFlag(
                     rule_id="AGM-005",
                     flag_code="AGM_QUORUM_BASIS_NOT_VERIFIED",
