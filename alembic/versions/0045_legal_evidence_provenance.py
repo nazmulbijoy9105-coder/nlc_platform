@@ -69,12 +69,90 @@ def upgrade() -> None:
     op.execute("""
         ALTER TABLE agms
         ADD CONSTRAINT ck_agms_quorum_required_positive
-        CHECK (quorum_required IS NULL OR quorum_required > 0)
+        CHECK (quorum_required IS NULL OR quorum_required > 0),
+        ADD CONSTRAINT ck_agms_attendance_verification_provenance
+        CHECK (NOT members_present_verified OR (
+            members_present_evidence_ref IS NOT NULL
+            AND members_present_verified_at IS NOT NULL
+            AND members_present_verified_by IS NOT NULL
+        )),
+        ADD CONSTRAINT ck_agms_quorum_verification_provenance
+        CHECK (NOT quorum_required_verified OR (
+            quorum_evidence_ref IS NOT NULL
+            AND quorum_verified_at IS NOT NULL
+            AND quorum_verified_by IS NOT NULL
+        )),
+        ADD CONSTRAINT ck_agms_auditor_reappointment_provenance
+        CHECK (NOT auditor_reappointment_verified OR (
+            auditor_reappointment_evidence_ref IS NOT NULL
+            AND auditor_reappointment_verified_at IS NOT NULL
+            AND auditor_reappointment_verified_by IS NOT NULL
+        ))
+    """)
+    op.execute("""
+        ALTER TABLE audits
+        ADD CONSTRAINT ck_audits_completion_verification_provenance
+        CHECK (NOT audit_completion_verified OR (
+            audit_completion_evidence_ref IS NOT NULL
+            AND audit_completion_verified_at IS NOT NULL
+            AND audit_completion_verified_by IS NOT NULL
+        ))
+    """)
+    op.execute("""
+        ALTER TABLE companies
+        ADD CONSTRAINT ck_companies_directors_verification_provenance
+        CHECK (NOT directors_verified OR (
+            directors_verification_evidence_ref IS NOT NULL
+            AND directors_verified_at IS NOT NULL
+            AND directors_verified_by IS NOT NULL
+        )),
+        ADD CONSTRAINT ck_companies_subsidiary_verification_provenance
+        CHECK (NOT subsidiary_status_verified OR (
+            is_private_subsidiary_of_public_company IS NOT NULL
+            AND subsidiary_status_evidence_ref IS NOT NULL
+            AND subsidiary_status_verified_at IS NOT NULL
+            AND subsidiary_status_verified_by IS NOT NULL
+        )),
+        ADD CONSTRAINT ck_companies_moa_aoa_verification_provenance
+        CHECK (NOT moa_aoa_verified OR (
+            moa_aoa_evidence_ref IS NOT NULL
+            AND moa_aoa_verified_at IS NOT NULL
+            AND moa_aoa_verified_by IS NOT NULL
+        )),
+        ADD CONSTRAINT ck_companies_first_auditor_verification_provenance
+        CHECK (NOT first_auditor_appointment_verified OR (
+            first_auditor_appointment_evidence_ref IS NOT NULL
+            AND first_auditor_appointment_verified_at IS NOT NULL
+            AND first_auditor_appointment_verified_by IS NOT NULL
+        )),
+        ADD CONSTRAINT ck_companies_agm_extension_verification_provenance
+        CHECK (NOT agm_extension_verified OR (
+            agm_extension_granted_until IS NOT NULL
+            AND agm_extension_application_date IS NOT NULL
+            AND agm_extension_evidence_ref IS NOT NULL
+            AND agm_extension_verified_at IS NOT NULL
+            AND agm_extension_verified_by IS NOT NULL
+        ))
     """)
 
 
 def downgrade() -> None:
-    op.execute("ALTER TABLE agms DROP CONSTRAINT IF EXISTS ck_agms_quorum_required_positive")
+    op.execute("""
+        ALTER TABLE agms
+        DROP CONSTRAINT IF EXISTS ck_agms_auditor_reappointment_provenance,
+        DROP CONSTRAINT IF EXISTS ck_agms_quorum_verification_provenance,
+        DROP CONSTRAINT IF EXISTS ck_agms_attendance_verification_provenance,
+        DROP CONSTRAINT IF EXISTS ck_agms_quorum_required_positive
+    """)
+    op.execute("ALTER TABLE audits DROP CONSTRAINT IF EXISTS ck_audits_completion_verification_provenance")
+    op.execute("""
+        ALTER TABLE companies
+        DROP CONSTRAINT IF EXISTS ck_companies_agm_extension_verification_provenance,
+        DROP CONSTRAINT IF EXISTS ck_companies_first_auditor_verification_provenance,
+        DROP CONSTRAINT IF EXISTS ck_companies_moa_aoa_verification_provenance,
+        DROP CONSTRAINT IF EXISTS ck_companies_subsidiary_verification_provenance,
+        DROP CONSTRAINT IF EXISTS ck_companies_directors_verification_provenance
+    """)
     op.execute("""
         ALTER TABLE agms
         DROP COLUMN IF EXISTS auditor_reappointment_verified_by,
