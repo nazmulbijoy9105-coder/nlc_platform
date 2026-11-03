@@ -227,13 +227,9 @@ class TestCompanies:
         assert "password" not in data
 
     @pytest.mark.asyncio
-    async def test_create_company_requires_admin_role(self, api_client, legal_token, db_user):
-        """LEGAL_STAFF cannot create companies."""
-        from app.core.security import create_access_token
-        token = create_access_token({
-            "sub": str(db_user.id), "user_id": str(db_user.id), "type": "access",
-            "role": "LEGAL_STAFF", "email": db_user.email, "company_ids": [],
-        })
+    async def test_create_company_requires_admin_role(self, api_client, legal_token):
+        """A persisted LEGAL_STAFF identity cannot create companies."""
+        token = legal_token
         resp = await api_client.post(
             "/api/v1/companies",
             headers=_auth(token),
@@ -268,12 +264,8 @@ class TestCompanies:
 
     @pytest.mark.asyncio
     async def test_get_compliance_returns_summary(self, api_client, admin_token, db_company):
-        from app.core.security import create_access_token
-        token = create_access_token({
-            "sub": str(uuid.uuid4()), "type": "access",
-            "role": "ADMIN_STAFF", "email": "a@t.com",
-            "company_ids": [str(db_company.id)],
-        })
+        # api_client seeds the persisted ADMIN_STAFF identity used by admin_token.
+        token = admin_token
         resp = await api_client.get(
             f"/api/v1/companies/{db_company.id}/compliance",
             headers=_auth(token),
@@ -285,13 +277,9 @@ class TestCompanies:
         assert "risk_band" in data
 
     @pytest.mark.asyncio
-    async def test_get_score_history(self, api_client, db_company):
-        from app.core.security import create_access_token
-        token = create_access_token({
-            "sub": str(uuid.uuid4()), "type": "access",
-            "role": "ADMIN_STAFF", "email": "a@t.com",
-            "company_ids": [str(db_company.id)],
-        })
+    async def test_get_score_history(self, api_client, admin_token, db_company):
+        # api_client seeds the persisted ADMIN_STAFF identity used by admin_token.
+        token = admin_token
         resp = await api_client.get(
             f"/api/v1/companies/{db_company.id}/score-history?months=6",
             headers=_auth(token),
@@ -499,12 +487,9 @@ class TestRescue:
 class TestDocuments:
 
     @pytest.fixture
-    def legal_tok(self, db_user):
-        from app.core.security import create_access_token
-        return create_access_token({
-            "sub": str(db_user.id), "user_id": str(db_user.id), "type": "access",
-            "role": "LEGAL_STAFF", "email": db_user.email, "company_ids": [],
-        })
+    def legal_tok(self, legal_token):
+        # Use the persisted LEGAL_STAFF identity seeded by api_client.
+        return legal_token
 
     @pytest.mark.asyncio
     async def test_list_templates(self, api_client, legal_tok):
@@ -632,13 +617,9 @@ class TestCommercial:
         assert resp.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_get_pipeline_forbidden_for_client(self, api_client, db_company):
-        from app.core.security import create_access_token
-        client_tok = create_access_token({
-            "sub": str(uuid.uuid4()), "type": "access",
-            "role": "CLIENT_DIRECTOR", "email": "client@test.com",
-            "company_ids": [str(db_company.id)],
-        })
+    async def test_get_pipeline_forbidden_for_client(self, api_client, client_token):
+        # The fixture seeds a persisted CLIENT_DIRECTOR identity before issuing this token.
+        client_tok = client_token
         resp = await api_client.get(
             "/api/v1/commercial/pipeline",
             headers=_auth(client_tok),
@@ -756,11 +737,11 @@ class TestRules:
         assert resp.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_update_rule_requires_change_reason(self, api_client, db_user):
+    async def test_update_rule_requires_change_reason(self, api_client, db_super_admin):
         from app.core.security import create_access_token
         sa_token = create_access_token({
-            "sub": str(db_user.id), "user_id": str(db_user.id), "type": "access",
-            "role": "SUPER_ADMIN", "email": db_user.email, "company_ids": [],
+            "sub": str(db_super_admin.id), "user_id": str(db_super_admin.id), "type": "access",
+            "role": "SUPER_ADMIN", "email": db_super_admin.email, "company_ids": [],
         })
         resp = await api_client.patch(
             "/api/v1/rules/AGM-001",
@@ -770,12 +751,12 @@ class TestRules:
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_black_override_rule_cannot_change_severity(self, api_client, db_user):
+    async def test_black_override_rule_cannot_change_severity(self, api_client, db_super_admin):
         """AUD-003 is a BLACK override — severity cannot be changed to non-BLACK."""
         from app.core.security import create_access_token
         sa_token = create_access_token({
-            "sub": str(db_user.id), "user_id": str(db_user.id), "type": "access",
-            "role": "SUPER_ADMIN", "email": db_user.email, "company_ids": [],
+            "sub": str(db_super_admin.id), "user_id": str(db_super_admin.id), "type": "access",
+            "role": "SUPER_ADMIN", "email": db_super_admin.email, "company_ids": [],
         })
         resp = await api_client.patch(
             "/api/v1/rules/AUD-003",
@@ -798,11 +779,11 @@ class TestRules:
 class TestAdmin:
 
     @pytest.fixture
-    def super_admin_tok(self, db_user):
+    def super_admin_tok(self, db_super_admin):
         from app.core.security import create_access_token
         return create_access_token({
-            "sub": str(db_user.id), "user_id": str(db_user.id), "type": "access",
-            "role": "SUPER_ADMIN", "email": db_user.email, "company_ids": [],
+            "sub": str(db_super_admin.id), "user_id": str(db_super_admin.id), "type": "access",
+            "role": "SUPER_ADMIN", "email": db_super_admin.email, "company_ids": [],
         })
 
     @pytest.fixture
@@ -989,16 +970,13 @@ class TestRBAC:
         assert resp.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_wrong_role_returns_403_not_404(self, api_client, db_user):
+    async def test_wrong_role_returns_403_not_404(self, api_client, client_token):
         """
         RBAC failures must return 403 Forbidden, not 404 Not Found.
         Returning 404 would hide the existence of the endpoint.
         """
-        from app.core.security import create_access_token
-        client_tok = create_access_token({
-            "sub": str(uuid.uuid4()), "type": "access",
-            "role": "CLIENT_DIRECTOR", "email": "client@test.com", "company_ids": [],
-        })
+        # Use the persisted CLIENT_DIRECTOR identity seeded by api_client.
+        client_tok = client_token
         resp = await api_client.get(
             "/api/v1/admin/users",
             headers=_auth(client_tok),
