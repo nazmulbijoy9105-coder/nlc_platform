@@ -40,6 +40,32 @@ def upgrade() -> None:
         $$;
     """)
 
+    # Login needs one narrowly-scoped lookup before a user ID is available
+    # for the normal transaction-local RLS context. It is callable only by the
+    # backend application role and returns one matching account row.
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_auth_user_by_email(p_email text)
+        RETURNS SETOF public.users
+        LANGUAGE sql
+        STABLE
+        SECURITY DEFINER
+        SET search_path = pg_catalog, public
+        AS $
+            SELECT u.*
+            FROM public.users u
+            WHERE lower(u.email) = lower(btrim(p_email))
+            LIMIT 1
+        $;
+        REVOKE ALL ON FUNCTION public.nlc_auth_user_by_email(text) FROM PUBLIC;
+        DO $auth_grant$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
+                GRANT EXECUTE ON FUNCTION public.nlc_auth_user_by_email(text) TO nlc_app_role;
+            END IF;
+        END
+        $auth_grant$;
+    """)
+
     op.execute("""
         CREATE OR REPLACE FUNCTION public.nlc_current_user_is_staff()
         RETURNS boolean
