@@ -28,10 +28,10 @@ BCIC vs Registrar of Joint Stock Companies (High Court Division).
 ## Confirmed defects
 | ID | Rule | Defect | Correction |
 | --- | --- | --- | --- |
-| F-2 | AGM-001/AGM-002 + helper | 548/456 fixed days encode calendar 18/15 months (drift both directions) | calendar-month arithmetic (relativedelta), 6 sites: lines 359, 360, 736, 754, 2138, 2144 |
+| F-2 | AGM-001/AGM-002 + filing helpers | 548/456 fixed days encoded calendar 18/15 months (drift both directions) | Implemented in draft branch using shared calendar-month arithmetic; unit/CI verification pending |
 | F-10 | AGM-001 line 742 | eval_state="UNKNOWN" hardcoded on violation branch (probable, probe pending) | must be VIOLATION state on overdue determination |
 | F-4 | REG-004 seed | cites s.26 for registers | s.26 = copies of MoA/AoA to members; register of members = s.34 et seq. |
-| F-5 | AUD-002/AUD-003 | cite s.151 for accounts at AGM | s.151 = Return of Allotment (Form XV, 60 days); cite s.183 accounts chapter |
+| F-5 | AUD-002/AUD-003 | cite s.151 for accounts at AGM | Corrected to s.183 in engine, seed and canonical registry; independent reviewer approval pending |
 | F-6 | CHG-001 | Form XIX + s.159 for satisfaction | satisfaction = Form XXVIII, 21 days (Form XIX = modification, s.167(3)) |
 | F-7 | DEF-002 | s.447 "penalty notices, Tk 10,000" | s.447 = punishment for fraud; not applicable as cited |
 | F-11 | DIR-007 | cites s.93(2) for consent | s.92 (Form IX, 30 days) |
@@ -40,7 +40,7 @@ BCIC vs Registrar of Joint Stock Companies (High Court Division).
 ## Probable / to pin
 | ID | Location | Issue |
 | --- | --- | --- |
-| F-12 | CAP capital increase (engine ~999-1007) | cites s.52, 30 days; official Form IV = s.56, 15 days |
+| F-12 | SH-003 capital increase (engine) | stale s.52 / 30-day reference | Corrected to Form IV, s.56, 15 days in engine and seed; CI pending |
 | F-13 | share certificates (engine ~985-993) | cites s.158, 90 days; s.158 borders charges chapter - pin exact section |
 | F-2b | FY_END_AGM_DEADLINE_DAYS=182 | no Companies Act 1994 anchor (BSEC listed-company practice); scope per company type |
 | - | AGM notice 21 clear days (engine ~774-799) | cites s.85 - pin exact section |
