@@ -292,6 +292,18 @@ def test_pre_score_and_authoritative_raw_score_use_identical_category_caps():
     assert breakdown.raw_total == 55
 
 
+
+def test_section_81_first_agm_within_18_months_defers_next_agm_to_second_following_year():
+    profile = _profile(
+        incorporation_date=date(2025, 1, 1),
+        last_agm_date=date(2025, 12, 15),
+        agm_count=1,
+        agm_held_this_cycle=False,
+    )
+    result = NLCRuleEngine().evaluate(profile, today=date(2026, 11, 3))
+    assert "AGM-002" not in {flag.rule_id for flag in result.flags}
+
+
 def test_verified_registrar_agm_extension_is_applied_within_section_81_limit():
     profile = _profile(
         agm_count=1,
