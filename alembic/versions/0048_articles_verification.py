@@ -57,8 +57,12 @@ def upgrade():
     op.create_index("ix_articles_verifications_document_id", "articles_verifications", ["document_id"])
     op.create_index("ix_articles_verifications_status", "articles_verifications", ["status"])
     op.create_index(
-        "uq_articles_verifications_active", "articles_verifications", ["company_id"],
-        unique=True, postgresql_where=sa.text("status IN ('PENDING', 'VERIFIED')"),
+        "uq_articles_verifications_pending", "articles_verifications", ["company_id"],
+        unique=True, postgresql_where=sa.text("status = 'PENDING'"),
+    )
+    op.create_index(
+        "uq_articles_verifications_verified", "articles_verifications", ["company_id"],
+        unique=True, postgresql_where=sa.text("status = 'VERIFIED'"),
     )
 
     op.create_table(
