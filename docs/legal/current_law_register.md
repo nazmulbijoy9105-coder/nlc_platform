@@ -224,7 +224,20 @@ Legacy database values are deliberately not backfilled as verified. Defaults are
 - Section 81 first/subsequent AGM timing, Companies Act 1994 text: https://www.icnl.org/research/library/bangladesh_comp/
 - ICAB Corporate Laws Manual: https://www.icab.org.bd/icabadmin/uploads/ckeditor/6665Corporate%20Laws%20Manual%20Final%202021.pdf
 
-Source review status: source text checked for this targeted round; full amendment-by-amendment legal review and independent sign-off remain OPEN.
+Source review status: official BDLaws text checked for this targeted round. Section 94 unpaid-call threshold remains disputed across Bengali/English materials; full amendment-by-amendment legal review and independent sign-off remain OPEN.
+
+### Official source links for this review round
+
+- Companies Act 1994, current consolidated text: https://bdlaws.minlaw.gov.bd/act-print-788.html
+- Section 81 AGM timing and extension: https://bdlaws.minlaw.gov.bd/act-print-788/section-print-32905.html
+- Section 85 meeting notice and quorum: https://bdlaws.minlaw.gov.bd/act-print-788/section-print-32909.html
+- Section 90 minimum directors: https://bdlaws.minlaw.gov.bd/act-788/section-32914.html
+- Section 115 director particulars: https://bdlaws.minlaw.gov.bd/act-788/act-part-print-355.html
+- Section 210 auditor appointment: https://bdlaws.minlaw.gov.bd/act-788/section-33854.html
+- RJSC/eBRS Form XII and Form 23B filing FAQ: https://ebrs.roc.gov.bd/public/faqs
+- Bangladesh Supreme Court Company Matter judgment: https://www.supremecourt.gov.bd/resources/documents/1548640_CompanyMatter90of2017.pdf
+
+The consolidated BDLaws text includes the Companies (Amendment) Act 2020 and Companies (Second Amendment) Act 2020. This does not replace a complete gazette/amendment-history review through the assessment date.
 
 
 ### Follow-up hardening in this branch
