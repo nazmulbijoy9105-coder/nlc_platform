@@ -398,7 +398,6 @@ REGISTERED_OFFICE_DEADLINE_DAYS = 28
 # from Jan 31 = Feb 28/29 (last day of month). Using 30 days would be
 # legally incorrect for months with 28/29/31 days. We now compute the
 # deadline by adding one calendar month to the incorporation date.
-FIRST_AUDITOR_DEADLINE_DAYS = 30  # DEPRECATED: kept for backward compat, use _add_one_month()
 CHARGE_REGISTRATION_DEADLINE_DAYS = 21  # Section 159(1): charge registration within 21 days of creation
 ALLOTMENT_FILING_DEADLINE_DAYS = 60
 SPECIAL_RESOLUTION_DEADLINE_DAYS = 15  # Companies Act 1994, Section 88 (15 days)
