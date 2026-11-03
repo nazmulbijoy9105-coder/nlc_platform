@@ -14,11 +14,11 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, date, datetime
 
-from sqlalchemy import func, select, text, update
+from sqlalchemy import and_, func, or_, select, text, update
 from sqlalchemy.orm import selectinload
 
 from app.models.company import Company, CompanyUserAccess
-from app.models.documents import ArticlesVerification
+from app.models.documents import ArticlesVerification, Document
 from app.models.enums import CompanyStatus, CompanyType, LifecycleStage, RevenueTier, RiskBand
 from app.models.people import Director, Shareholder
 from app.services.base import BaseService
@@ -473,10 +473,27 @@ class CompanyService(BaseService[Company]):
         ) or date.today()
         verified_articles = await self.db.scalar(
             select(ArticlesVerification)
+            .join(
+                Document,
+                and_(
+                    Document.id == ArticlesVerification.document_id,
+                    Document.company_id == ArticlesVerification.company_id,
+                ),
+            )
             .where(
                 ArticlesVerification.company_id == company_id,
-                ArticlesVerification.status == "VERIFIED",
+                ArticlesVerification.status.in_(("VERIFIED", "SUPERSEDED", "REVOKED")),
                 ArticlesVerification.effective_from <= articles_as_of,
+                Document.is_active.is_(True),
+                Document.document_type == "ARTICLES_OF_ASSOCIATION",
+                Document.version == ArticlesVerification.source_document_version,
+                Document.checksum_sha256 == ArticlesVerification.source_checksum_sha256,
+                or_(
+                    ArticlesVerification.revoked_at.is_(None),
+                    ArticlesVerification.revoked_at > datetime.combine(
+                        articles_as_of, datetime.min.time(), tzinfo=UTC
+                    ),
+                ),
             )
             .order_by(
                 ArticlesVerification.effective_from.desc(),
