@@ -1275,9 +1275,12 @@ def _legacy_rule(key: str, d: Dict[str, Any]) -> StatutoryRule:
         raise RuntimeError(f"{key}: evidence_required must contain non-empty keys")
     auth = _LEGACY_AUTHORITY_OVERRIDE.get(key) or _LEGACY_AUTHORITY[d["legal_domain"]]
     allowed_states = tuple(d.get("evaluation_states", _BASE_STATES))
-    # R-008: every evidence-dependent rule must be able to remain UNKNOWN.
-    if d["evidence_required"] and RuleState.UNKNOWN not in allowed_states:
-        allowed_states += (RuleState.UNKNOWN,)
+    # R-008/R-009: evidence-dependent rules must preserve UNKNOWN and
+    # contradictory evidence rather than forcing a binary legal conclusion.
+    if d["evidence_required"]:
+        for required_state in (RuleState.UNKNOWN, RuleState.CONTRADICTORY):
+            if required_state not in allowed_states:
+                allowed_states += (required_state,)
     exceptions = tuple(d["exceptions"])
     if exceptions and RuleState.NOT_APPLICABLE not in allowed_states:
         allowed_states += (RuleState.NOT_APPLICABLE,)
