@@ -79,11 +79,16 @@ class AGM(FullMixin, Base):
     quorum_met: Mapped[bool] = mapped_column(Boolean, default=True)
     members_present: Mapped[int] = mapped_column(Integer, default=0)
     members_present_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    members_present_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    members_present_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    members_present_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     quorum_required: Mapped[int] = mapped_column(
         Integer, default=2, comment="Section 85(2)(b) CA 1994 — subject to Articles and member count"
     )
     quorum_required_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     quorum_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    quorum_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    quorum_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     # ── Auditor ───────────────────────────────────────────────────
     # AGM-006: auditor not reappointed at AGM
