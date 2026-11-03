@@ -33,6 +33,8 @@ def _agm_profile_evidence(latest_agm) -> dict:
         return {
             "members_present_at_agm": None,
             "auditor_reappointed_at_agm": None,
+            "auditor_reappointment_verified": False,
+            "auditor_reappointment_evidence_ref": None,
             "agm_minutes_prepared": None,
             "notice_sent_date": None,
         }
@@ -53,6 +55,12 @@ def _agm_profile_evidence(latest_agm) -> dict:
     if minutes_prepared is False:
         minutes_prepared = None
 
+    auditor_reappointment_verified = (
+        getattr(latest_agm, "auditor_reappointment_verified", False) is True
+        and bool(getattr(latest_agm, "auditor_reappointment_evidence_ref", None))
+        and getattr(latest_agm, "auditor_reappointment_verified_at", None) is not None
+        and getattr(latest_agm, "auditor_reappointment_verified_by", None) is not None
+    )
     return {
         "members_present_at_agm": members_present,
         "agm_attendance_verified": attendance_verified,
@@ -73,7 +81,12 @@ def _agm_profile_evidence(latest_agm) -> dict:
             and getattr(latest_agm, "quorum_verified_by", None) is not None
         ),
         "agm_quorum_evidence_ref": getattr(latest_agm, "quorum_evidence_ref", None),
-        "auditor_reappointed_at_agm": getattr(latest_agm, "auditor_reappointed", None),
+        "auditor_reappointed_at_agm": (
+            getattr(latest_agm, "auditor_reappointed", None)
+            if auditor_reappointment_verified else None
+        ),
+        "auditor_reappointment_verified": auditor_reappointment_verified,
+        "auditor_reappointment_evidence_ref": getattr(latest_agm, "auditor_reappointment_evidence_ref", None),
         "agm_minutes_prepared": minutes_prepared,
         "notice_sent_date": getattr(latest_agm, "notice_sent_date", None),
     }
@@ -436,8 +449,45 @@ class CompanyService(BaseService[Company]):
             "agm_minutes_prepared":       agm_profile_evidence["agm_minutes_prepared"],
 
             # Audit State
-            "first_auditor_appointed":    bool(company.first_auditor_appointed) if company.first_auditor_appointed is not None else None,
-            "audit_complete":             latest_audit.audit_complete if latest_audit else None,
+            "first_auditor_appointed": (
+                bool(company.first_auditor_appointed)
+                if (
+                    company.first_auditor_appointment_verified is True
+                    and bool(company.first_auditor_appointment_evidence_ref)
+                    and company.first_auditor_appointment_verified_at is not None
+                    and company.first_auditor_appointment_verified_by is not None
+                    and company.first_auditor_appointed is not None
+                ) else None
+            ),
+            "first_auditor_appointment_verified": (
+                company.first_auditor_appointment_verified is True
+                and bool(company.first_auditor_appointment_evidence_ref)
+                and company.first_auditor_appointment_verified_at is not None
+                and company.first_auditor_appointment_verified_by is not None
+            ),
+            "first_auditor_appointment_evidence_ref": company.first_auditor_appointment_evidence_ref,
+            "first_auditor_appointment_verified_at": company.first_auditor_appointment_verified_at.date() if company.first_auditor_appointment_verified_at else None,
+            "first_auditor_appointment_verified_by": str(company.first_auditor_appointment_verified_by) if company.first_auditor_appointment_verified_by else None,
+            "audit_complete": (
+                latest_audit.audit_complete
+                if (
+                    latest_audit
+                    and latest_audit.audit_completion_verified is True
+                    and bool(latest_audit.audit_completion_evidence_ref)
+                    and latest_audit.audit_completion_verified_at is not None
+                    and latest_audit.audit_completion_verified_by is not None
+                ) else None
+            ),
+            "audit_completion_verified": bool(
+                latest_audit
+                and latest_audit.audit_completion_verified is True
+                and latest_audit.audit_completion_evidence_ref
+                and latest_audit.audit_completion_verified_at is not None
+                and latest_audit.audit_completion_verified_by is not None
+            ),
+            "audit_completion_evidence_ref": latest_audit.audit_completion_evidence_ref if latest_audit else None,
+            "audit_completion_verified_at": latest_audit.audit_completion_verified_at.date() if latest_audit and latest_audit.audit_completion_verified_at else None,
+            "audit_completion_verified_by": str(latest_audit.audit_completion_verified_by) if latest_audit and latest_audit.audit_completion_verified_by else None,
             "last_audit_signed_date":     company.last_audit_signed_date,
 
             # Annual Return State
@@ -626,6 +676,8 @@ class CompanyService(BaseService[Company]):
             "agm_quorum_basis_verified":     agm_profile_evidence.get("agm_quorum_basis_verified", False),
             "agm_quorum_evidence_ref":       agm_profile_evidence.get("agm_quorum_evidence_ref"),
             "auditor_reappointed_at_agm":    agm_profile_evidence["auditor_reappointed_at_agm"],
+            "auditor_reappointment_verified": agm_profile_evidence.get("auditor_reappointment_verified", False),
+            "auditor_reappointment_evidence_ref": agm_profile_evidence.get("auditor_reappointment_evidence_ref"),
             "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", False),
 
             # Audit Details
