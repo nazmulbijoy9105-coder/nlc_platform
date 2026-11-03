@@ -105,17 +105,15 @@ it should be added and the canonical updated from S46 → S158.
 
 ## Additional Items for Legal Review
 
-### 4. AUD-002: Audit Not Completed Before AGM — Section 183 vs Section 151
+### 4. AUD-002: Audit Not Completed Before AGM — Section 183
 
-**Current engine citation:** Section 183
-**Engine description text:** "Section 151: AGM procedurally defective"
+**Current engine citation and description:** Section 183, Companies Act 1994 (Bangladesh).
 
-**Issue:** The statutory_basis says Section 183 (Annual balance sheet)
-but the description text says "Section 151". S151 = Return as to
-allotment (wrong concept). The description text should say "Section 183".
+**Current implementation:** A pre-AGM warning is raised when the scheduled AGM is within the statutory notice window and verified audit-completion evidence is absent. The evaluator does not presume that AGM resolutions are automatically invalid.
 
-**Status:** Description text mismatch — basis is likely correct.
-**Fix needed:** Update description text from "Section 151" to "Section 183".
+**Counsel verification required:** Confirm the applicable Section 183 duties, required accounts and evidence, and the proper interaction with the AGM timetable.
+
+**Status:** Engine, seed and canonical citation/trigger are aligned on the review branch. Independent counsel verification remains pending.
 
 ### 5. AUD-003: AGM Held Without Completed Audit — Case-Specific Legal Review
 
