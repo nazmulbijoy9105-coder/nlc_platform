@@ -33,6 +33,7 @@ def upgrade():
         sa.Column("quorum_variation_exists", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("quorum_required", sa.Integer(), nullable=True),
         sa.Column("clause_reference", sa.String(255), nullable=True),
+        sa.Column("quorum_clause_text", sa.Text(), nullable=True),
         sa.Column("reviewer_note", sa.Text(), nullable=True),
         sa.Column("revoked_by", UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=True),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
@@ -43,6 +44,7 @@ def upgrade():
         sa.CheckConstraint("source_checksum_sha256 ~ '^[0-9a-f]{64}
         sa.CheckConstraint("quorum_required IS NULL OR quorum_required BETWEEN 1 AND 100", name="ck_articles_verifications_quorum"),
         sa.CheckConstraint("status <> 'VERIFIED' OR (effective_from IS NOT NULL AND clause_reference IS NOT NULL)", name="ck_articles_verifications_verified_fields"),
+        sa.CheckConstraint("status <> 'VERIFIED' OR quorum_variation_exists = FALSE OR quorum_clause_text IS NOT NULL", name="ck_articles_verifications_quorum_text"),
         sa.CheckConstraint("quorum_variation_exists = FALSE OR quorum_required IS NOT NULL", name="ck_articles_verifications_variation_quorum"),
         sa.CheckConstraint(
             "(status = 'PENDING' AND reviewed_by IS NULL AND reviewed_at IS NULL) OR "
@@ -148,6 +150,7 @@ def upgrade():
                 OR NEW.quorum_variation_exists IS DISTINCT FROM OLD.quorum_variation_exists
                 OR NEW.quorum_required IS DISTINCT FROM OLD.quorum_required
                 OR NEW.clause_reference IS DISTINCT FROM OLD.clause_reference
+                OR NEW.quorum_clause_text IS DISTINCT FROM OLD.quorum_clause_text
                 OR NEW.reviewer_note IS DISTINCT FROM OLD.reviewer_note
             ) THEN
                 RAISE EXCEPTION 'Articles reviewer decision is immutable after review';
