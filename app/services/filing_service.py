@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 
+from app.models.company import Company
 from app.models.filings import AGM, AnnualReturn, Audit
 from app.rule_engine.engine import NLCRuleEngine
 from app.models.infrastructure import StatutoryRegister
@@ -58,6 +59,24 @@ class AGMService(BaseService[AGM]):
         Create an AGM record. Calculates is_default and delay_days automatically
         if agm_deadline is provided.
         """
+        # Populate a statutory deadline when callers do not supply one.
+        # First AGM: incorporation + 18 calendar months.
+        # Subsequent AGM: preceding AGM + 15 calendar months.
+        if agm_deadline is None:
+            company_result = await self.db.execute(
+                select(Company).where(Company.id == company_id)
+            )
+            company = company_result.scalar_one_or_none()
+            if company is not None:
+                if company.last_agm_date is not None:
+                    agm_deadline = self.calculate_subsequent_agm_deadline(
+                        company.last_agm_date, company.financial_year_end
+                    )
+                elif company.incorporation_date is not None:
+                    agm_deadline = self.calculate_first_agm_deadline(
+                        company.incorporation_date
+                    )
+
         # Auto-calculate default status
         if agm_held and agm_date and agm_deadline:
             if agm_date > agm_deadline:
