@@ -128,6 +128,58 @@ def test_missing_agm_notice_record_is_not_treated_as_proven_legal_omission():
     assert notice.score_impact == 0
 
 
+def test_held_agm_without_notice_or_scheduled_date_is_not_evaluated():
+    today = date(2026, 11, 3)
+    profile = CompanyProfile(
+        company_id="agm-held-no-notice-test",
+        company_name="AGM Held No Notice Test Ltd",
+        incorporation_date=date(2020, 1, 1),
+        agm_count=1,
+        last_agm_date=today,
+        agm_held_this_cycle=True,
+        agm_scheduled_date=None,
+        notice_sent_date=None,
+        annual_return_filed=True,
+        first_auditor_appointed=True,
+        first_auditor_appointment_date=date(2020, 1, 15),
+        audit_complete=True,
+    )
+
+    result = NLCRuleEngine().evaluate(profile, today=today)
+    notice = next(flag for flag in result.flags if flag.rule_id == "AGM-004")
+    assert notice.flag_code == "AGM_HELD_NOTICE_EVIDENCE_MISSING"
+    assert notice.state == RuleState.UNKNOWN
+    assert notice.eval_state == "UNKNOWN"
+    assert notice.severity.value == "NOT_EVALUATED"
+    assert notice.score_impact == 0
+
+
+def test_held_agm_with_notice_but_missing_meeting_date_is_not_evaluated():
+    today = date(2026, 11, 3)
+    profile = CompanyProfile(
+        company_id="agm-held-no-date-test",
+        company_name="AGM Held No Date Test Ltd",
+        incorporation_date=date(2020, 1, 1),
+        agm_count=1,
+        last_agm_date=today,
+        agm_held_this_cycle=True,
+        agm_scheduled_date=None,
+        notice_sent_date=date(2026, 10, 1),
+        annual_return_filed=True,
+        first_auditor_appointed=True,
+        first_auditor_appointment_date=date(2020, 1, 15),
+        audit_complete=True,
+    )
+
+    result = NLCRuleEngine().evaluate(profile, today=today)
+    notice = next(flag for flag in result.flags if flag.rule_id == "AGM-003")
+    assert notice.flag_code == "AGM_MEETING_DATE_MISSING_FOR_NOTICE_ASSESSMENT"
+    assert notice.state == RuleState.UNKNOWN
+    assert notice.eval_state == "UNKNOWN"
+    assert notice.severity.value == "NOT_EVALUATED"
+    assert notice.score_impact == 0
+
+
 def test_first_auditor_appointed_late_is_not_marked_compliant():
     registration = date(2026, 1, 31)
     profile = CompanyProfile(
