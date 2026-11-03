@@ -154,9 +154,17 @@ class TestAGMRules:
         assert_flag_triggered(output, "AGM-003")
 
     def test_AGM003_no_trigger_with_proper_notice(self, rule_engine, build_profile):
+        """AGM-003 should not fire as violation when notice is proper."""
+        profile = build_profile(
+            agm_held_this_cycle=True,
+            agm_scheduled_date=date.today() + timedelta(days=30),
+            notice_sent_date=date.today(),
+        )
         output = rule_engine.evaluate(profile)
+        # AGM-003 may fire as NOT_EVALUATED (data gap) — only fail if NON_COMPLIANT
         _agm003 = [f for f in output.flags if f.rule_id == "AGM-003" and f.state != RuleState.UNKNOWN]
         assert not _agm003, f"AGM-003 should not fire as violation, got: {_agm003}"
+
     def test_AGM004_triggers_when_no_notice_sent(self, rule_engine, build_profile):
         """AGM scheduled but no notice sent → AGM-004."""
         profile = build_profile(
