@@ -136,7 +136,7 @@ class Audit(FullMixin, Base):
         String(100), nullable=True,
         comment="ICAB registration number of audit firm"
     )
-    # AUD-002: first auditor not appointed within 30 days
+    # AUD-001: first auditor appointment date; Section 210(6) calendar month
     first_auditor_appointed: Mapped[bool] = mapped_column(Boolean, default=False)
     first_auditor_appointment_date: Mapped[date | None] = mapped_column(
         Date, nullable=True
