@@ -413,6 +413,9 @@ def build_profile():
             "member_count": 5,
             "articles_quorum_verified": True,
             "articles_quorum_required": None,
+            "articles_quorum_verified_by": "test-counsel",
+            "articles_quorum_verified_at": today,
+            "articles_quorum_evidence_ref": "test-evidence://current-articles",
             "business_commencement_declaration_filed": True,
         }
         defaults.update(overrides)
