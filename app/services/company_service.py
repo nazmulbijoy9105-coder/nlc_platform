@@ -14,7 +14,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, date, datetime
 
-from sqlalchemy import and_, func, or_, select, text, update
+from sqlalchemy import func, select, text, update
 from sqlalchemy.orm import selectinload
 
 from app.models.company import Company, CompanyUserAccess
