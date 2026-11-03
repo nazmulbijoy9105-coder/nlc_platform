@@ -82,6 +82,12 @@ async def test_articles_verification_submit_review_revoke_and_event_history(
     assert reviewed.json()["status"] == "VERIFIED"
     assert reviewed.json()["reviewed_by"] != verification["submitted_by"]
 
+    from app.services.company_service import CompanyService
+    verified_profile = await CompanyService(db).build_company_profile(db_company.id)
+    assert verified_profile["articles_quorum_verified"] is True
+    assert verified_profile["articles_quorum_required"] is None
+    assert verified_profile["articles_quorum_verified_by"] == reviewed.json()["reviewed_by"]
+
     events = await api_client.get(
         f"/api/v1/companies/{db_company.id}/articles-verification/{verification['id']}/events",
         headers=admin_headers,
@@ -97,6 +103,10 @@ async def test_articles_verification_submit_review_revoke_and_event_history(
     assert revoked.status_code == 200, revoked.text
     assert revoked.json()["status"] == "REVOKED"
     assert revoked.json()["revocation_reason"]
+
+    revoked_profile = await CompanyService(db).build_company_profile(db_company.id)
+    assert revoked_profile["articles_quorum_verified"] is False
+    assert revoked_profile["articles_quorum_required"] is None
 
     final_events = await api_client.get(
         f"/api/v1/companies/{db_company.id}/articles-verification/{verification['id']}/events",
