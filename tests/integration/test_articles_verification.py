@@ -202,3 +202,51 @@ async def test_articles_submission_can_be_rejected_without_verified_only_fields(
     assert rejected.json()["status"] == "REJECTED"
     assert rejected.json()["effective_from"] is None
     assert rejected.json()["clause_reference"] is None
+
+
+@pytest.mark.asyncio
+async def test_articles_pdf_upload_computes_checksum_and_stores_private_source(
+    api_client, db, db_company, admin_headers, monkeypatch
+):
+    await _grant_staff_memberships(db, db_company.id)
+    calls = {}
+
+    class FakeS3:
+        def put_object(self, **kwargs):
+            calls.update(kwargs)
+
+    import boto3
+    monkeypatch.setattr(boto3, "client", lambda *args, **kwargs: FakeS3())
+
+    payload = b"%PDF-1.7\\nNLC Articles source\\n%%EOF"
+    response = await api_client.post(
+        f"/api/v1/companies/{db_company.id}/articles-document",
+        headers=admin_headers,
+        files={"file": ("articles.pdf", payload, "application/pdf")},
+    )
+    assert response.status_code == 201, response.text
+    result = response.json()
+
+    import hashlib
+    from app.models.documents import Document
+
+    document = await db.get(Document, uuid.UUID(result["document_id"]))
+    assert document is not None
+    assert document.checksum_sha256 == hashlib.sha256(payload).hexdigest()
+    assert document.document_type == DocumentType.ARTICLES_OF_ASSOCIATION
+    assert document.ai_generated is False
+    assert document.human_approved is False
+    assert document.is_client_visible is False
+    assert calls["ServerSideEncryption"] == "AES256"
+    assert calls["Metadata"]["sha256"] == document.checksum_sha256
+
+
+@pytest.mark.asyncio
+async def test_articles_upload_rejects_non_pdf_payload(api_client, db, db_company, admin_headers):
+    await _grant_staff_memberships(db, db_company.id)
+    response = await api_client.post(
+        f"/api/v1/companies/{db_company.id}/articles-document",
+        headers=admin_headers,
+        files={"file": ("articles.pdf", b"not a pdf", "application/pdf")},
+    )
+    assert response.status_code == 422
