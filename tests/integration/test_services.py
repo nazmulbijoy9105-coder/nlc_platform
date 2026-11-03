@@ -520,14 +520,17 @@ class TestFilingService:
         assert updated is not None
         assert updated.agm_date == date(2022, 5, 15)
         assert updated.auditor_reappointed is True
-        assert updated.quorum_required == 2
-        assert updated.quorum_met is True
+        assert updated.quorum_required is None
+        assert updated.quorum_met is None
+        assert updated.quorum_basis == "ARTICLES_NOT_VERIFIED_OR_QUORUM_INPUTS_UNKNOWN"
 
     @pytest.mark.asyncio
     async def test_mark_agm_held_large_private_company_requires_three_members(self, db, db_company):
         from app.services.filing_service import AGMService
 
         db_company.member_count = 7
+        db_company.articles_quorum_verified = True
+        db_company.articles_quorum_required = None
         await db.flush()
         svc = AGMService(db)
         agm = await svc.create_agm(company_id=db_company.id, financial_year=2022)
@@ -563,7 +566,7 @@ class TestFilingService:
         assert updated is not None
         assert updated.quorum_required is None
         assert updated.quorum_met is None
-        assert updated.quorum_basis == "NOT_EVALUATED"
+        assert updated.quorum_basis == "ARTICLES_NOT_VERIFIED_OR_QUORUM_INPUTS_UNKNOWN"
 
     @pytest.mark.asyncio
     async def test_create_audit(self, db, db_company):
