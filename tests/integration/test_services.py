@@ -531,6 +531,9 @@ class TestFilingService:
         db_company.member_count = 7
         db_company.articles_quorum_verified = True
         db_company.articles_quorum_required = None
+        db_company.articles_quorum_verified_by = "test-counsel"
+        db_company.articles_quorum_verified_at = date(2023, 4, 1)
+        db_company.articles_quorum_evidence_ref = "test-evidence://current-articles"
         await db.flush()
         svc = AGMService(db)
         agm = await svc.create_agm(company_id=db_company.id, financial_year=2022)
