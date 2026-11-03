@@ -221,6 +221,35 @@ class TestCompanyService:
 
 
     @pytest.mark.asyncio
+    async def test_first_auditor_appointment_date_from_audit_record_reaches_evaluator(self, db, db_company):
+        from app.rule_engine.engine import CompanyProfile, NLCRuleEngine
+        from app.services.company_service import CompanyService
+        from app.services.filing_service import AuditService
+
+        appointment_date = db_company.incorporation_date + timedelta(days=35)
+        await AuditService(db).create_audit(
+            company_id=db_company.id,
+            financial_year=2025,
+            first_auditor_appointed=True,
+            first_auditor_appointment_date=appointment_date,
+        )
+
+        profile_data = await CompanyService(db).build_company_profile(db_company.id)
+        assert profile_data is not None
+        assert profile_data["first_auditor_appointed"] is True
+        assert profile_data["first_auditor_appointment_date"] == appointment_date
+
+        profile = CompanyProfile(**profile_data)
+        result = NLCRuleEngine().evaluate(
+            profile,
+            today=db_company.incorporation_date + timedelta(days=60),
+        )
+        auditor_flag = next(flag for flag in result.flags if flag.rule_id == "AUD-001")
+        assert auditor_flag.flag_code == "FIRST_AUDITOR_APPOINTED_LATE"
+        assert auditor_flag.detail["appointment_date"] == appointment_date.isoformat()
+
+
+    @pytest.mark.asyncio
     async def test_portfolio_stats_returns_dict(self, db):
         from app.services.company_service import CompanyService
 
