@@ -127,6 +127,45 @@ def test_missing_agm_notice_record_is_not_treated_as_proven_legal_omission():
     assert notice.score_impact == 0
 
 
+def test_first_auditor_appointed_late_is_not_marked_compliant():
+    registration = date(2026, 1, 31)
+    profile = CompanyProfile(
+        company_id="auditor-late-test",
+        company_name="Auditor Late Test Ltd",
+        incorporation_date=registration,
+        first_auditor_appointed=True,
+        first_auditor_appointment_date=date(2026, 3, 2),
+        audit_complete=True,
+        annual_return_filed=True,
+    )
+
+    result = NLCRuleEngine().evaluate(profile, today=date(2026, 3, 10))
+    flag = next(flag for flag in result.flags if flag.rule_id == "AUD-001")
+    assert flag.flag_code == "FIRST_AUDITOR_APPOINTED_LATE"
+    assert flag.detail["deadline"] == "2026-02-28"
+    assert flag.detail["appointment_date"] == "2026-03-02"
+    assert flag.detail["calculation_method"] == "calendar_month"
+
+
+def test_first_auditor_boolean_without_appointment_date_is_not_evaluated():
+    profile = CompanyProfile(
+        company_id="auditor-date-unknown-test",
+        company_name="Auditor Date Unknown Ltd",
+        incorporation_date=date(2026, 1, 31),
+        first_auditor_appointed=True,
+        first_auditor_appointment_date=None,
+        audit_complete=True,
+        annual_return_filed=True,
+    )
+
+    result = NLCRuleEngine().evaluate(profile, today=date(2026, 3, 10))
+    flag = next(flag for flag in result.flags if flag.rule_id == "AUD-001")
+    assert flag.flag_code == "FIRST_AUDITOR_APPOINTMENT_DATE_UNVERIFIED"
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.severity.value == "NOT_EVALUATED"
+    assert flag.score_impact == 0
+
+
 def test_director_count_from_local_records_is_not_rjsc_verified():
     today = date.today()
     profile = CompanyProfile(
