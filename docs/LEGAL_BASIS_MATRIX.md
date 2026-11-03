@@ -27,7 +27,7 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | AGM-002 | Subsequent AGM Default | Section 81, Companies Act 1994 (Bangladesh) | RED | 20 | no | Engine-aligned 2026-11-02 |
 | AGM-003 | AGM Notice Defective — Insufficient Days | Section 85, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | AGM-004 | AGM Notice Missing | Section 85, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
-| AGM-005 | AGM Quorum Not Met | Section 89, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
+| AGM-005 | AGM Quorum Not Met | Section 85(2)(b), Companies Act 1994 (Bangladesh) | RED | 15 | no | Source cross-check; independent legal review pending |
 | AGM-006 | AGM Minutes Not Prepared | Section 89, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | AGM-007 | AGM Adjourned Without Proper Notice | Section 130, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | AR-001 | Annual Return Default — Single Year | Section 36 (Schedule X), Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
@@ -152,3 +152,12 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 2. Canonical architecture `RECONCILE` / `PENDING` statuses are unchanged by this matrix.
 3. Deadline day-counts and practice notes still need lawyer confirmation where historically disputed.
 
+
+
+## Primary-source cross-checks (not legal sign-off)
+
+- **AGM quorum (AGM-005):** Bangladesh Laws, Companies Act 1994, Section 85(2)(b): [official text](https://bdlaws.minlaw.gov.bd/act-788/section-32913.html). The statutory default is two members for a private company with no more than six members, three where it has more than six, and five for other companies, subject to the company's Articles. Section 89 concerns minutes, not quorum.
+- **First auditor (AUD-001):** Bangladesh Laws, Companies Act 1994, Section 210(6): [official Act text](https://bdlaws.minlaw.gov.bd/act-print-788.html). The Board appoints the first auditor within one month of registration. NLC uses calendar-month date arithmetic; counsel must confirm the precise deadline computation and any applicable interpretation.
+- **MoA/AoA filing (INC-001):** Bangladesh Laws, Companies Act 1994, Section 23: [official Act text](https://bdlaws.minlaw.gov.bd/act-print-788.html). The MoA and, where applicable, AoA are to be delivered to the Registrar for registration.
+
+These source links are primary-source references for traceability only. They do not change any rule's verification state. Independent lawyer review, including amendments and applicability to the relevant company type, remains required before legal release.
