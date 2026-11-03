@@ -298,7 +298,17 @@ async def test_dashboard_deadlines_filter_by_active_user_membership():
         def mappings(self):
             return _Mappings()
 
-    db = _DB(_DeadlineResult())
+    class _DeadlineDB:
+        def __init__(self):
+            self.statements = []
+            self.parameters = None
+
+        async def execute(self, statement, parameters=None):
+            self.statements.append(statement)
+            self.parameters = parameters
+            return _DeadlineResult()
+
+    db = _DeadlineDB()
     assert await CompanyService(db).get_upcoming_deadlines(30, user_id) == []
 
     statement = db.statements[0]
@@ -308,4 +318,4 @@ async def test_dashboard_deadlines_filter_by_active_user_membership():
     assert "user_id = :user_id" in sql
     assert "is_active IS TRUE" in sql
     assert "days_remaining <= :days" in sql
-    assert statement.compile().params == {"days": 30, "user_id": user_id}
+    assert db.parameters == {"days": 30, "user_id": user_id}
