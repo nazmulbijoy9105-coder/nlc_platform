@@ -189,6 +189,27 @@ class TestCalendarMonthDeadlines:
         assert _flag_by_id(on_deadline, "AGM-001") is None
         assert _flag_by_id(after_deadline, "AGM-001") is not None
 
+    def test_DATE_006_subsequent_agm_must_also_occur_in_each_calendar_year(self):
+        """Section 81 requires both a calendar-year AGM and a max 15-month interval."""
+        profile = _base_profile(
+            incorporation_date=date(2020, 1, 1),
+            agm_count=1,
+            last_agm_date=date(2024, 12, 31),
+            agm_held_this_cycle=False,
+        )
+        on_calendar_year_deadline = NLCRuleEngine().evaluate(
+            profile, today=date(2025, 12, 31)
+        )
+        after_calendar_year_deadline = NLCRuleEngine().evaluate(
+            profile, today=date(2026, 1, 1)
+        )
+        assert _flag_by_id(on_calendar_year_deadline, "AGM-002") is None
+        flag = _flag_by_id(after_calendar_year_deadline, "AGM-002")
+        assert flag is not None
+        assert flag.detail["calendar_year_deadline"] == "2025-12-31"
+        assert flag.detail["interval_deadline"] == "2026-03-31"
+        assert flag.detail["basis"] == "CALENDAR_YEAR"
+
     def test_DATE_005_filing_service_uses_same_calendar_month_rules(self):
         """Filing service and scoring engine must share identical Section 81 dates."""
         from app.services.filing_service import AGMService
