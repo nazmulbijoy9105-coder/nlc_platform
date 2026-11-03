@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import select
 
 from app.models.filings import AGM, AnnualReturn, Audit
+from app.rule_engine.engine import NLCRuleEngine
 from app.models.infrastructure import StatutoryRegister
 from app.services.base import BaseService
 
@@ -167,23 +168,21 @@ class AGMService(BaseService[AGM]):
 
     @staticmethod
     def calculate_first_agm_deadline(incorporation_date: date) -> date:
-        """
-        Section 81 CA 1994: First AGM within 18 months (548 days) of incorporation.
-        """
-        return incorporation_date + timedelta(days=548)
+        """Section 81: first AGM deadline is 18 calendar months after incorporation."""
+        return NLCRuleEngine._add_months(incorporation_date, 18)
 
     @staticmethod
     def calculate_subsequent_agm_deadline(
         last_agm_date: date,
-        financial_year_end: date,
+        financial_year_end: date | None = None,
     ) -> date:
+        """Section 81: maximum 15 calendar months between subsequent AGMs.
+
+        financial_year_end is retained for backward-compatible callers only.
+        A generic six-month-after-FY-end deadline is not imposed on ordinary
+        private companies by the Companies Act rule.
         """
-        Section 81: Subsequent AGM within 15 months of previous (456 days)
-        OR within 6 months (182 days) of FY end — whichever is earlier.
-        """
-        by_last_agm = last_agm_date + timedelta(days=456)
-        by_fy_end = financial_year_end + timedelta(days=182)
-        return min(by_last_agm, by_fy_end)
+        return NLCRuleEngine._add_months(last_agm_date, 15)
 
 
 # ═══════════════════════════════════════════════════════════════════════
