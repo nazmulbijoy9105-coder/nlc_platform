@@ -642,7 +642,6 @@ class CompanyService(BaseService[Company]):
 
             # Audit Details
             "audit_in_progress":             getattr(company, "audit_in_progress", False),
-            "first_auditor_appointment_date": getattr(company, "first_auditor_appointment_date", None),
             "auditor_name":                  getattr(company, "auditor_name", None),
             "auditor_firm_reg_no":           getattr(company, "auditor_firm_reg_no", None),
 
