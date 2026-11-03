@@ -198,7 +198,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "AUD-001",
         "legal_domain": "Corporate",
         "law": "Section 210(6), Companies Act 1994 (Bangladesh)",
-        "requirement": "The Board must appoint the first auditor within one calendar month of registration under Section 210(6). Evaluate timeliness using the actual appointment resolution/effective date and calendar-month arithmetic, not a fixed 30-day interval. Counsel confirmation of the authoritative source and interpretation remains pending.",
+        "requirement": "First auditor not appointed by the Board within one month of registration. The engine calculates the one-month period using calendar-month semantics, not a fixed 30-day interval.",
         "provision": "Section 210(6)",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
