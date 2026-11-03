@@ -2556,10 +2556,11 @@ class NLCRuleEngine:
                     return (self.today - deadline).days // 365  # type: ignore
             return 0
             
-        deadline = min(
-            c.last_agm_date + timedelta(days=SUBSEQUENT_AGM_DEADLINE_DAYS),
-            self._get_fy_end_deadline(c)
-        )
+        # Match Section 81(1): no more than 15 months between AGMs and
+        # an AGM in each Gregorian calendar year. Do not use an assumed FY+6m rule.
+        fifteen_month_deadline = self._add_months(c.last_agm_date, 15)
+        calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
+        deadline = min(fifteen_month_deadline, calendar_year_deadline)
         if self.today > deadline:
             return (self.today - deadline).days // 365
         return 0
