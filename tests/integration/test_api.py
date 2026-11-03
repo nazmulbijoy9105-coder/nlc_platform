@@ -342,17 +342,12 @@ class TestFilings:
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_mark_agm_held_persists_fields_and_derives_quorum(self, api_client, staff_token, db_company, db):
+    async def test_mark_agm_held_without_verified_articles_leaves_quorum_unknown(
+        self, api_client, staff_token, db_company, db
+    ):
         from app.services.filing_service import AGMService
 
         agm = await AGMService(db).create_agm(company_id=db_company.id, financial_year=2021)
-    async def test_mark_agm_held_contract(self, api_client, staff_token, db_company, db):
-        from app.services.filing_service import AGMService
-
-        agm = await AGMService(db).create_agm(
-            company_id=db_company.id,
-            financial_year=2021,
-        )
         response = await api_client.patch(
             f"/api/v1/filings/agm/{agm.id}/held",
             headers=_auth(staff_token),
@@ -363,7 +358,6 @@ class TestFilings:
                 "members_total_at_agm": 5,
                 "members_total_evidence_ref": "test-evidence://members-register-at-agm",
                 "members_present_evidence_ref": "test-evidence://agm-attendance-register",
-                "quorum_met": False,
                 "auditor_reappointed": True,
                 "accounts_adopted": True,
                 "agm_held_without_audit": False,
@@ -374,14 +368,14 @@ class TestFilings:
         assert result["quorum_met"] is None
         assert result["quorum_required"] is None
         assert result["quorum_basis"] == "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
-        assert result["quorum_met"] is True
-        assert result["quorum_required"] == 2
         assert result["venue"] == "Registered Office"
         assert result["accounts_adopted"] is True
         assert result["agm_held_without_audit"] is False
 
     @pytest.mark.asyncio
-    async def test_mark_agm_held_uses_verified_articles_quorum(self, api_client, staff_token, db_company, db):
+    async def test_mark_agm_held_uses_verified_articles_statutory_default(
+        self, api_client, staff_token, db_company, db
+    ):
         from app.services.filing_service import AGMService
 
         db_company.member_count = 7
@@ -414,6 +408,41 @@ class TestFilings:
         assert result["quorum_required"] == 3
         assert result["quorum_basis"] == "SECTION_85_2_B_DEFAULT_ARTICLES_VERIFIED_NO_VARIATION"
 
+    @pytest.mark.asyncio
+    async def test_mark_agm_held_uses_verified_articles_specific_quorum(
+        self, api_client, staff_token, db_company, db
+    ):
+        from app.services.filing_service import AGMService
+
+        db_company.member_count = 7
+        db_company.articles_quorum_verified = True
+        db_company.articles_quorum_required = 4
+        db_company.articles_quorum_verified_by = "test-counsel"
+        db_company.articles_quorum_verified_at = date(2023, 4, 1)
+        db_company.articles_quorum_evidence_ref = "test-evidence://current-articles"
+        await db.flush()
+
+        agm = await AGMService(db).create_agm(company_id=db_company.id, financial_year=2022)
+        response = await api_client.patch(
+            f"/api/v1/filings/agm/{agm.id}/held",
+            headers=_auth(staff_token),
+            json={
+                "held_date": "2023-05-15",
+                "venue": "Registered Office",
+                "members_present": 3,
+                "members_total_at_agm": 7,
+                "members_total_evidence_ref": "test-evidence://members-register-at-agm",
+                "members_present_evidence_ref": "test-evidence://agm-attendance-register",
+                "auditor_reappointed": True,
+                "accounts_adopted": True,
+                "agm_held_without_audit": False,
+            },
+        )
+        assert response.status_code == 200, response.text
+        result = response.json()
+        assert result["quorum_met"] is False
+        assert result["quorum_required"] == 4
+        assert result["quorum_basis"] == "ARTICLES_VERIFIED"
 
     @pytest.mark.asyncio
     async def test_list_agms_for_company(self, api_client, staff_token, db_company):
