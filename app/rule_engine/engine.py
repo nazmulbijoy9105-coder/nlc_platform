@@ -2299,7 +2299,7 @@ class NLCRuleEngine:
             "ilrmf_version": ILRMF_VERSION,
             "profile": asdict(company),
             "final_score": final,
-            "risk_band": band.value,
+            "risk_band": str(band),
             "flags": flag_signatures,
         }
         hash_str = json.dumps(hash_payload, sort_keys=True, separators=(",", ":"), default=str)
