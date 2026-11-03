@@ -277,9 +277,10 @@ class TestAuditRules:
     """Tests for AUD-001, AUD-002, AUD-003 (BLACK override)."""
 
     def test_AUD001_triggers_when_first_auditor_not_appointed(self, rule_engine, build_profile):
-        """First auditor not appointed within 30 days of incorporation → AUD-001."""
+        """First auditor not appointed within one calendar month of registration → AUD-001."""
         profile = build_profile(
             first_auditor_appointed=False,
+            first_auditor_appointment_date=None,
         )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "AUD-001")
@@ -288,10 +289,49 @@ class TestAuditRules:
     def test_AUD001_no_trigger_when_audit_complete(self, rule_engine, build_profile):
         profile = build_profile(
             audit_complete=True,
+            first_auditor_appointed=True,
+            first_auditor_appointment_date=(
+                date.today() - timedelta(days=365 * 3) + timedelta(days=15)
+            ),
             last_audit_signed_date=date.today() - timedelta(days=90),
         )
         output = rule_engine.evaluate(profile)
         assert_flag_not_triggered(output, "AUD-001")
+
+    def test_AUD001_late_appointment_is_detected_even_when_appointed(self, rule_engine, build_profile):
+        registration_date = date(2025, 1, 31)
+        deadline = date(2025, 2, 28)
+        profile = build_profile(
+            incorporation_date=registration_date,
+            first_auditor_appointed=True,
+            first_auditor_appointment_date=date(2025, 3, 5),
+        )
+        output = rule_engine.evaluate(profile)
+        assert_flag_triggered(output, "AUD-001")
+        flag = next(f for f in output.flags if f.rule_id == "AUD-001")
+        assert flag.flag_code == "FIRST_AUDITOR_APPOINTED_LATE"
+        assert flag.detail["deadline"] == deadline.isoformat()
+        assert flag.detail["calculation_method"] == "calendar_month"
+
+    def test_AUD001_appointed_without_date_is_not_evaluated(self, rule_engine, build_profile):
+        profile = build_profile(
+            first_auditor_appointed=True,
+            first_auditor_appointment_date=None,
+        )
+        output = rule_engine.evaluate(profile)
+        flag = next(f for f in output.flags if f.rule_id == "AUD-001")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.score_impact == 0
+
+    def test_AUD001_appointment_status_and_date_conflict_is_not_evaluated(self, rule_engine, build_profile):
+        profile = build_profile(
+            first_auditor_appointed=False,
+            first_auditor_appointment_date=date.today() - timedelta(days=100),
+        )
+        output = rule_engine.evaluate(profile)
+        flag = next(f for f in output.flags if f.rule_id == "AUD-001")
+        assert flag.state == RuleState.CONTRADICTORY
+        assert flag.score_impact == 0
 
     def test_AUD002_triggers_when_audit_not_complete_before_agm(self, rule_engine, build_profile):
         """Audit not complete before scheduled AGM → AUD-002."""
