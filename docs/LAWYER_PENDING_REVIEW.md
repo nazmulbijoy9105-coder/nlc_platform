@@ -2,10 +2,7 @@
 
 ## Purpose
 
-This document lists the 3 remaining statutory citation questions that
-require verification by a Bangladesh-qualified corporate lawyer. All
-other 82 rules have been verified against the Companies Act 1994
-(Bangladesh) PDF (402 sections, 90 pages, 2008 text).
+This is an open legal-review register, not a certification that the remaining rules are legally correct. The previous claim that 82 rules were verified is withdrawn: technical citation synchronization and the internal VERIFIED_RULE_IDS allowlist do not equal independent lawyer approval. A Bangladesh-qualified corporate lawyer must review every active rule, amendments, exceptions and effective dates before commercial legal sign-off.
 
 ## Questions for Lawyer Review
 
@@ -109,27 +106,21 @@ it should be added and the canonical updated from S46 → S158.
 
 ## Additional Items for Legal Review
 
-### 4. AUD-002: Audit Not Completed Before AGM — Section 183 vs Section 151
+### 4. AUD-002: Audit Not Completed Before AGM — Section 183
 
-**Current engine citation:** Section 183
-**Engine description text:** "Section 151: AGM procedurally defective"
+**Current engine citation:** Section 183.
 
-**Issue:** The statutory_basis says Section 183 (Annual balance sheet)
-but the description text says "Section 151". S151 = Return as to
-allotment (wrong concept). The description text should say "Section 183".
+**Implementation status:** The description and basis were aligned to Section 183 in branch `fix/legal-validation-agm-quorum-scoring`. Categorical claims that every AGM resolution is void were removed.
 
-**Status:** Description text mismatch — basis is likely correct.
-**Fix needed:** Update description text from "Section 151" to "Section 183".
+**Legal review still required:** Confirm the precise statutory duty, the interaction with auditor appointment under Section 210, and the legal consequence of unaudited accounts in the particular circumstances.
 
-### 5. AUD-003: AGM Held Without Completed Audit — Sections 151, 210
+### 5. AUD-003: AGM Held Without Completed Audit — Section 183
 
-**Current engine citation:** Sections 151, 210
+**Current engine citation:** Section 183.
 
-**Issue:** S151 = Return as to allotment (wrong concept for audit at AGM).
-The correct sections are likely S183 (Annual balance sheet) and S210
-(Appointment and remuneration of auditors).
+**Implementation status:** Corrected in branch `fix/legal-validation-agm-quorum-scoring`. The BLACK escalation is explicitly identified as NLC internal risk policy, not a statutory declaration that the AGM or every resolution is void.
 
-**Status:** Needs verification — S151 may be incorrect.
+**Legal review still required:** Approve the underlying trigger, statutory consequences and internal BLACK policy separately.
 
 ### 6. Deadline Constants
 
@@ -138,8 +129,9 @@ the current gazetted Act text:
 
 | Constant | Engine value | Act PDF section | Status |
 |---|---|---|---|
-| `FIRST_AGM_DEADLINE_DAYS` | 548 (18 months) | S81 | ✅ Verified |
-| `SUBSEQUENT_AGM_DEADLINE_DAYS` | 456 (15 months) | S81 | ✅ Verified |
+| First AGM deadline | 18 calendar months | S81 | Reviewer approval pending |
+| Subsequent AGM interval | 15 calendar months | S81 | Reviewer approval pending |
+| Date arithmetic | Calendar-month addition with month-end clamping | S81 | Implemented in draft branch; regression tests pending CI |
 | `REGISTERED_OFFICE_DEADLINE_DAYS` | 28 | S77(2) | ✅ Verified |
 | `CHARGE_REGISTRATION_DEADLINE_DAYS` | 21 | S159(1) | ⚠️ Needs verification |
 | `SHARE_CERTIFICATE_DEADLINE_DAYS` | 90 | S158 | ⚠️ Needs verification |
