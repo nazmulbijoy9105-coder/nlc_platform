@@ -3,7 +3,7 @@
 class TestRJSCForms:
     def test_form_reference_has_all_forms(self):
         from app.models.rjsc_forms import RJSC_FORMS_REFERENCE
-        assert len(RJSC_FORMS_REFERENCE) == 13
+        assert len(RJSC_FORMS_REFERENCE) == 14
 
     def test_form_reference_includes_key_forms(self):
         from app.models.rjsc_forms import RJSC_FORMS_REFERENCE
@@ -20,6 +20,7 @@ class TestRJSCForms:
             "FORM_IV": ("Section 56", 15),
             "FORM_VIII": ("Section 88(1)", 15),
             "FORM_IX": ("Section 92", 30),
+            "FORM_X": ("Section 92", 0),
             "FORM_XII": ("Section 115", 14),
             "FORM_XV": ("Section 151", 60),
             "FORM_XVIII": ("Section 159(1)", 21),
@@ -34,7 +35,7 @@ class TestRJSCForms:
     def test_each_form_has_rule_mapping(self):
         from app.models.rjsc_forms import RJSC_FORMS_REFERENCE
         for form in RJSC_FORMS_REFERENCE:
-            if form["form_code"] == "FORM_XIX":
+            if form["form_code"] in {"FORM_X", "FORM_XIX"}:
                 assert form.get("rule_id") is None  # reference-only until CHG-002 is implemented
             else:
                 assert form.get("rule_id"), f"Form {form['form_code']} missing rule_id"
