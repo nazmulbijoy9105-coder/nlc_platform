@@ -151,6 +151,10 @@ class ArticlesVerification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             name="ck_articles_verifications_verified_fields",
         ),
         CheckConstraint(
+            "status <> 'VERIFIED' OR quorum_variation_exists = FALSE OR quorum_clause_text IS NOT NULL",
+            name="ck_articles_verifications_quorum_text",
+        ),
+        CheckConstraint(
             "quorum_variation_exists = FALSE OR quorum_required IS NOT NULL",
             name="ck_articles_verifications_variation_quorum",
         ),
@@ -201,6 +205,7 @@ class ArticlesVerification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     quorum_variation_exists: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
     quorum_required: Mapped[int | None] = mapped_column(Integer, nullable=True)
     clause_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    quorum_clause_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     reviewer_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     revoked_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True,
