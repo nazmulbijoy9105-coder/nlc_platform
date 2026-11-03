@@ -90,6 +90,32 @@ jobs:
       - name: Compile check
         run: python -m compileall app/
 
+      - name: Verify integration database and Redis
+        run: |
+          python - <<'PY'
+          import asyncio
+          import os
+          from sqlalchemy.ext.asyncio import create_async_engine
+          import redis
+
+          async def main():
+              engine = create_async_engine(os.environ["DATABASE_URL_TEST"])
+              try:
+                  async with engine.connect() as connection:
+                      result = await connection.exec_driver_sql("SELECT 1")
+                      assert result.scalar_one() == 1
+              finally:
+                  await engine.dispose()
+
+              client = redis.Redis.from_url(os.environ["REDIS_URL"])
+              try:
+                  assert await client.ping()
+              finally:
+                  await client.aclose()
+
+          asyncio.run(main())
+          PY
+
       - name: Validate Alembic upgrade from empty PostgreSQL
         env:
           DATABASE_URL: postgresql+asyncpg://nlc_test:nlc_test@localhost:5432/nlc_migration_test
