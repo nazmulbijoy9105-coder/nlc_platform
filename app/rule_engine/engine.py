@@ -1334,9 +1334,9 @@ class NLCRuleEngine:
                 severity=Severity.YELLOW,
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=f"{len(non_core_missing)} non-core register(s) missing: {', '.join(non_core_missing)}.",
-                statutory_basis="Section 34, Companies Act 1994 (Bangladesh)",
-                detail={"missing": non_core_missing}
+                description=f"{len(non_core_missing)} non-core statutory record(s) missing: {', '.join(non_core_missing)}. Each record must be checked against its own governing provision.",
+                statutory_basis="Register-specific provisions under the Companies Act 1994 (Bangladesh); see detail",
+                detail={"missing": non_core_missing, "legal_status": "REGISTER_SPECIFIC_BASIS_REQUIRED"}
             ))
 
         if core_missing:
