@@ -413,6 +413,11 @@ def upgrade() -> None:
         DO $privileges$
         BEGIN
             IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
+                REVOKE CREATE ON SCHEMA public FROM nlc_app_role;
+                GRANT USAGE ON SCHEMA public TO nlc_app_role;
+                EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM nlc_app_role';
+                EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM nlc_app_role';
+
                 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
                     public.agms,
                     public.annual_returns,
