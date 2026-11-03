@@ -70,6 +70,9 @@ class AGM(FullMixin, Base):
     # ── Held ──────────────────────────────────────────────────────
     agm_held: Mapped[bool] = mapped_column(Boolean, default=False)
     agm_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    venue: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    accounts_adopted: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
+    agm_held_without_audit: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     # AGM-001 / AGM-002: default flags
     is_default: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     delay_days: Mapped[int] = mapped_column(Integer, default=0)
