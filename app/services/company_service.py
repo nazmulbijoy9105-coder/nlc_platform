@@ -267,18 +267,73 @@ class CompanyService(BaseService[Company]):
         return dict(row)
 
     async def get_risk_distribution(self, user_id: uuid.UUID | None = None) -> list[dict]:
-        """Risk band distribution from vw_risk_distribution view."""
-        result = await self.db.execute(text("SELECT * FROM vw_risk_distribution"))
+        """Return risk distribution limited to companies the caller may access.
+
+        A NULL user_id is reserved for trusted system/admin-context callers
+        (e.g. background jobs). Interactive API callers must pass their ID.
+        """
+        result = await self.db.execute(
+            text(
+                """
+                SELECT
+                    c.current_risk_band AS risk_band,
+                    COUNT(*) AS company_count,
+                    ROUND(
+                        COUNT(*) * 100.0 / NULLIF(SUM(COUNT(*)) OVER (), 0),
+                        1
+                    ) AS percentage
+                FROM companies c
+                WHERE c.is_active = TRUE
+                  AND (
+                    :user_id IS NULL
+                    OR EXISTS (
+                        SELECT 1
+                        FROM company_user_access cua
+                        WHERE cua.company_id = c.id
+                          AND cua.user_id = :user_id
+                          AND cua.is_active = TRUE
+                    )
+                  )
+                GROUP BY c.current_risk_band
+                ORDER BY CASE c.current_risk_band
+                    WHEN 'BLACK' THEN 1
+                    WHEN 'RED' THEN 2
+                    WHEN 'YELLOW' THEN 3
+                    WHEN 'GREEN' THEN 4
+                    ELSE 5
+                END
+                """
+            ),
+            {"user_id": user_id},
+        )
         return [dict(row) for row in result.mappings().all()]
 
     async def get_upcoming_deadlines(self, days_ahead: int = 30, user_id: uuid.UUID | None = None) -> list[dict]:
-        """Fetch upcoming AGM and return deadlines within N days."""
+        """Fetch upcoming deadlines only for companies the caller may access.
+
+        A NULL user_id is reserved for trusted system/admin-context callers
+        (e.g. background jobs). Interactive API callers must pass their ID.
+        """
         result = await self.db.execute(
             text(
-                "SELECT * FROM vw_upcoming_deadlines "
-                "WHERE days_remaining <= :days ORDER BY days_remaining"
+                """
+                SELECT d.*
+                FROM vw_upcoming_deadlines d
+                WHERE d.days_remaining <= :days
+                  AND (
+                    :user_id IS NULL
+                    OR EXISTS (
+                        SELECT 1
+                        FROM company_user_access cua
+                        WHERE cua.company_id = d.company_id
+                          AND cua.user_id = :user_id
+                          AND cua.is_active = TRUE
+                    )
+                  )
+                ORDER BY d.days_remaining
+                """
             ),
-            {"days": days_ahead},
+            {"days": days_ahead, "user_id": user_id},
         )
         return [dict(row) for row in result.mappings().all()]
 
