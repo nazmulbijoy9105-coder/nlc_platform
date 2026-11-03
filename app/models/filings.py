@@ -136,8 +136,10 @@ class Audit(FullMixin, Base):
         String(100), nullable=True,
         comment="ICAB registration number of audit firm"
     )
-    # AUD-001: first auditor appointment date; Section 210(6) calendar month
-    first_auditor_appointed: Mapped[bool] = mapped_column(Boolean, default=False)
+    # AUD-001: tri-state appointment evidence; Section 210(6) calendar month
+    first_auditor_appointed: Mapped[bool | None] = mapped_column(
+        Boolean, nullable=True, default=None
+    )
     first_auditor_appointment_date: Mapped[date | None] = mapped_column(
         Date, nullable=True
     )
