@@ -49,7 +49,11 @@ def upgrade() -> None:
         ADD COLUMN IF NOT EXISTS auditor_reappointment_verified BOOLEAN NOT NULL DEFAULT FALSE,
         ADD COLUMN IF NOT EXISTS auditor_reappointment_evidence_ref TEXT NULL,
         ADD COLUMN IF NOT EXISTS auditor_reappointment_verified_at TIMESTAMPTZ NULL,
-        ADD COLUMN IF NOT EXISTS auditor_reappointment_verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+        ADD COLUMN IF NOT EXISTS auditor_reappointment_verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL
+    """)
+
+    op.execute("""
+        ALTER TABLE audits
         ADD COLUMN IF NOT EXISTS audit_completion_verified BOOLEAN NOT NULL DEFAULT FALSE,
         ADD COLUMN IF NOT EXISTS audit_completion_evidence_ref TEXT NULL,
         ADD COLUMN IF NOT EXISTS audit_completion_verified_at TIMESTAMPTZ NULL,
@@ -57,7 +61,7 @@ def upgrade() -> None:
     """)
 
     op.execute("""
-        DO $$
+        DO $
         BEGIN
             IF NOT EXISTS (
                 SELECT 1 FROM pg_constraint
@@ -76,10 +80,6 @@ def downgrade() -> None:
     op.execute("ALTER TABLE agms DROP CONSTRAINT IF EXISTS ck_agms_quorum_required_positive")
     op.execute("""
         ALTER TABLE agms
-        DROP COLUMN IF EXISTS audit_completion_verified_by,
-        DROP COLUMN IF EXISTS audit_completion_verified_at,
-        DROP COLUMN IF EXISTS audit_completion_evidence_ref,
-        DROP COLUMN IF EXISTS audit_completion_verified,
         DROP COLUMN IF EXISTS auditor_reappointment_verified_by,
         DROP COLUMN IF EXISTS auditor_reappointment_verified_at,
         DROP COLUMN IF EXISTS auditor_reappointment_evidence_ref,
@@ -94,6 +94,13 @@ def downgrade() -> None:
         DROP COLUMN IF EXISTS members_present_verified
     """)
     op.execute("""
+        ALTER TABLE audits
+        DROP COLUMN IF EXISTS audit_completion_verified_by,
+        DROP COLUMN IF EXISTS audit_completion_verified_at,
+        DROP COLUMN IF EXISTS audit_completion_evidence_ref,
+        DROP COLUMN IF EXISTS audit_completion_verified
+    """)
+    op.execute("""
         ALTER TABLE companies
         DROP COLUMN IF EXISTS first_auditor_appointment_evidence_ref,
         DROP COLUMN IF EXISTS first_auditor_appointment_verified_by,
@@ -105,7 +112,6 @@ def downgrade() -> None:
         DROP COLUMN IF EXISTS moa_aoa_verified,
         DROP COLUMN IF EXISTS subsidiary_status_evidence_ref,
         DROP COLUMN IF EXISTS subsidiary_status_verified_by,
-        DROP COLUMN IF EXISTS subsidiary_status_verified_at,
         DROP COLUMN IF EXISTS subsidiary_status_verified_at,
         DROP COLUMN IF EXISTS subsidiary_status_verified,
         DROP COLUMN IF EXISTS is_private_subsidiary_of_public_company,
