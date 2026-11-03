@@ -97,3 +97,82 @@ async def test_client_membership_revocation_denies_company_access(
         headers=_auth(token),
     )
     assert documents_response.status_code == 403, documents_response.text
+
+
+@pytest.mark.asyncio
+async def test_dashboard_risk_and_deadlines_are_scoped_and_revoke_immediately(
+    api_client, db, db_user, db_company, db_other_company
+):
+    from datetime import date, timedelta
+    from sqlalchemy import update
+    from app.models.company import CompanyUserAccess
+    from app.services.filing_service import AGMService
+
+    # This staff user is intentionally assigned to only one of two companies.
+    db.add(CompanyUserAccess(
+        company_id=db_company.id,
+        user_id=db_user.id,
+        is_active=True,
+    ))
+    deadline = date.today() + timedelta(days=10)
+    filing_service = AGMService(db)
+    await filing_service.create_agm(
+        company_id=db_company.id,
+        financial_year=2025,
+        agm_deadline=deadline,
+    )
+    await filing_service.create_agm(
+        company_id=db_other_company.id,
+        financial_year=2025,
+        agm_deadline=deadline,
+    )
+    await db.flush()
+
+    token = create_access_token({
+        "sub": str(db_user.id),
+        "user_id": str(db_user.id),
+        "type": "access",
+        "role": "ADMIN_STAFF",
+        "email": db_user.email,
+        # A stale/overbroad token claim must not reveal the foreign company.
+        "company_ids": [str(db_company.id), str(db_other_company.id)],
+    })
+    headers = _auth(token)
+
+    risk = await api_client.get("/api/v1/companies/dashboard/risk", headers=headers)
+    assert risk.status_code == 200, risk.text
+    assert sum(item["company_count"] for item in risk.json()) == 1
+
+    deadlines = await api_client.get(
+        "/api/v1/companies/dashboard/deadlines?days_ahead=30",
+        headers=headers,
+    )
+    assert deadlines.status_code == 200, deadlines.text
+    visible_ids = {str(item["company_id"]) for item in deadlines.json()}
+    assert str(db_company.id) in visible_ids
+    assert str(db_other_company.id) not in visible_ids
+
+    await db.execute(
+        update(CompanyUserAccess)
+        .where(
+            CompanyUserAccess.user_id == db_user.id,
+            CompanyUserAccess.company_id == db_company.id,
+        )
+        .values(is_active=False)
+    )
+    await db.flush()
+
+    risk_after_revoke = await api_client.get(
+        "/api/v1/companies/dashboard/risk", headers=headers
+    )
+    assert risk_after_revoke.status_code == 200, risk_after_revoke.text
+    assert risk_after_revoke.json() == []
+
+    deadlines_after_revoke = await api_client.get(
+        "/api/v1/companies/dashboard/deadlines?days_ahead=30",
+        headers=headers,
+    )
+    assert deadlines_after_revoke.status_code == 200, deadlines_after_revoke.text
+    assert str(db_company.id) not in {
+        str(item["company_id"]) for item in deadlines_after_revoke.json()
+    }
