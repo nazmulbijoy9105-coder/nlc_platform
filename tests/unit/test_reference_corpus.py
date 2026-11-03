@@ -387,7 +387,7 @@ class TestDEF001Variations:
                 f"Expected Section 94, got {flag.statutory_basis}"
 
     def test_7_cross_reference_changes_consequence(self):
-        """DEF-001 (BLACK) triggers corporate rescue mandatory."""
+        """DEF-001 is a legal finding, not an automatic BLACK override."""
         c = _base_profile(
             disqualification_grounds=[{
                 "ground_type": "UNDISCHARGED_INSOLVENT",
@@ -411,12 +411,7 @@ class TestDEF001Variations:
             assert "DEF-001" not in VERIFIED_RULE_IDS
 
     def test_8_legal_question_requires_judgment(self):
-        """Director with pending insolvency application — is S94(c) met?
-
-        P0 FIX: Pending insolvency (PENDING_INSOLVENCY ground) with
-        verified court evidence fires BLACK. Without evidence, it's
-        NOT_EVALUATED — a lawyer must verify the pending application.
-        """
+        """Pending insolvency application requires authoritative status evidence."""
         c = _base_profile(
             disqualification_grounds=[{
                 "ground_type": "PENDING_INSOLVENCY",
@@ -446,9 +441,10 @@ class TestDEF001Variations:
 class TestProductionGate:
 
     def test_verified_rules_in_set(self):
-        """Verify the 35 verified rules are in VERIFIED_RULE_IDS."""
+        """Verify the internally checked scoring allowlist and pending legal approvals."""
         assert "AGM-001" in VERIFIED_RULE_IDS
         assert "OFF-001" in VERIFIED_RULE_IDS
+        assert "DEF-001" not in VERIFIED_RULE_IDS
         assert "DEF-001" not in VERIFIED_RULE_IDS
         assert len(VERIFIED_RULE_IDS) >= 35
 
