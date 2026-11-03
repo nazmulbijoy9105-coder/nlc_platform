@@ -223,7 +223,13 @@ def upgrade():
             verification_status = 'PENDING',
             verified_by = NULL,
             verified_at = NULL,
-            verification_notes = 'Citation corrected; counsel validation and current Articles evidence review remain pending.'
+            verification_notes = 'Citation corrected; counsel validation and current Articles evidence review remain pending.',
+            rule_condition = jsonb_set(
+                COALESCE(rule_condition, '{}'::jsonb),
+                '{trigger}',
+                to_jsonb('agm_held_this_cycle == True AND current_articles_verified == True AND articles_quorum_verified_by IS NOT NULL AND articles_quorum_verified_at IS NOT NULL AND articles_quorum_evidence_ref IS NOT NULL AND members_total_at_agm > 0 AND members_total_evidence_ref IS NOT NULL AND members_present_evidence_ref IS NOT NULL AND members_present_at_agm <= members_total_at_agm AND members_present_at_agm < (articles_quorum_required IF SET ELSE (2 IF members_total_at_agm <= 6 ELSE 3))'::text),
+                true
+            )
         WHERE rule_id = 'AGM-005'
     """)
 
@@ -237,7 +243,13 @@ def upgrade():
             verification_status = 'PENDING',
             verified_by = NULL,
             verified_at = NULL,
-            verification_notes = 'Wording and evaluator aligned; counsel verification of statutory source and interpretation remains pending.'
+            verification_notes = 'Wording and evaluator aligned; counsel verification of statutory source and interpretation remains pending.',
+            rule_condition = jsonb_set(
+                COALESCE(rule_condition, '{}'::jsonb),
+                '{trigger}',
+                to_jsonb('appointment_date IS NOT NULL AND appointment_date > add_calendar_month(registration_date)'::text),
+                true
+            )
         WHERE rule_id = 'AUD-001'
     """)
     op.execute(
