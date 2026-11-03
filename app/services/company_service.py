@@ -286,12 +286,12 @@ class CompanyService(BaseService[Company]):
                 FROM companies c
                 WHERE c.is_active = TRUE
                   AND (
-                    :user_id IS NULL
+                    CAST(:user_id AS UUID) IS NULL
                     OR EXISTS (
                         SELECT 1
                         FROM company_user_access cua
                         WHERE cua.company_id = c.id
-                          AND cua.user_id = :user_id
+                          AND cua.user_id = CAST(:user_id AS UUID)
                           AND cua.is_active = TRUE
                     )
                   )
@@ -322,12 +322,12 @@ class CompanyService(BaseService[Company]):
                 FROM vw_upcoming_deadlines d
                 WHERE d.days_remaining <= :days
                   AND (
-                    :user_id IS NULL
+                    CAST(:user_id AS UUID) IS NULL
                     OR EXISTS (
                         SELECT 1
                         FROM company_user_access cua
                         WHERE cua.company_id = d.company_id
-                          AND cua.user_id = :user_id
+                          AND cua.user_id = CAST(:user_id AS UUID)
                           AND cua.is_active = TRUE
                     )
                   )
