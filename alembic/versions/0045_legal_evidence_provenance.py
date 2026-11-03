@@ -32,7 +32,12 @@ def upgrade() -> None:
         ADD COLUMN IF NOT EXISTS first_auditor_appointment_verified BOOLEAN NOT NULL DEFAULT FALSE,
         ADD COLUMN IF NOT EXISTS first_auditor_appointment_verified_at TIMESTAMPTZ NULL,
         ADD COLUMN IF NOT EXISTS first_auditor_appointment_verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
-        ADD COLUMN IF NOT EXISTS first_auditor_appointment_evidence_ref TEXT NULL
+        ADD COLUMN IF NOT EXISTS first_auditor_appointment_evidence_ref TEXT NULL,
+        ADD COLUMN IF NOT EXISTS agm_extension_granted_until DATE NULL,
+        ADD COLUMN IF NOT EXISTS agm_extension_verified BOOLEAN NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS agm_extension_evidence_ref TEXT NULL,
+        ADD COLUMN IF NOT EXISTS agm_extension_verified_at TIMESTAMPTZ NULL,
+        ADD COLUMN IF NOT EXISTS agm_extension_verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL
     """)
 
     # AGM evidence is verified separately from its legacy database defaults.
@@ -102,6 +107,11 @@ def downgrade() -> None:
     """)
     op.execute("""
         ALTER TABLE companies
+        DROP COLUMN IF EXISTS agm_extension_verified_by,
+        DROP COLUMN IF EXISTS agm_extension_verified_at,
+        DROP COLUMN IF EXISTS agm_extension_evidence_ref,
+        DROP COLUMN IF EXISTS agm_extension_verified,
+        DROP COLUMN IF EXISTS agm_extension_granted_until,
         DROP COLUMN IF EXISTS first_auditor_appointment_evidence_ref,
         DROP COLUMN IF EXISTS first_auditor_appointment_verified_by,
         DROP COLUMN IF EXISTS first_auditor_appointment_verified_at,
