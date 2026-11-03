@@ -175,6 +175,9 @@ class CompanyProfile:
     agm_held_without_audit: bool = False
     agm_scheduled_date: Optional[date] = None
     notice_sent_date: Optional[date] = None
+    short_notice_consent_obtained: bool | None = None
+    short_notice_consent_verified: bool = False
+    short_notice_consent_evidence_ref: str | None = None
     members_present_at_agm: int | None = None
     # Section 85(2)(b) is only the default where the Articles do not provide otherwise.
     agm_quorum_required: int | None = None
@@ -1076,34 +1079,66 @@ class NLCRuleEngine:
                         detail={"delay_days": delay, "basis": basis}
                     ))
 
+        consent_verified = (
+            c.short_notice_consent_verified is True
+            and bool(c.short_notice_consent_evidence_ref)
+        )
         if c.agm_scheduled_date and c.notice_sent_date:
             clear_days = (c.agm_scheduled_date - c.notice_sent_date).days - 1
             if clear_days < AGM_NOTICE_MINIMUM_DAYS:
-                self._add_flag(ComplianceFlag(
-                    rule_id="AGM-003",
-                    flag_code="AGM_NOTICE_DEFECTIVE",
-                    severity=Severity.YELLOW,
-                    score_impact=5,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"AGM notice issued with {clear_days} clear days. Section 85 requires 21 clear days.",
-                    statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
-                    detail={"clear_days": clear_days}
-                ))
+                if not consent_verified:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-003",
+                        flag_code="AGM_SHORT_NOTICE_CONSENT_UNVERIFIED",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="AGM notice was shorter than 21 clear days, but written consent from all members entitled to attend and vote has not been verified.",
+                        statutory_basis="Section 85(1)(a), Companies Act 1994 (Bangladesh)",
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                        detail={"clear_days": clear_days},
+                    ))
+                elif c.short_notice_consent_obtained is False:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-003",
+                        flag_code="AGM_NOTICE_DEFECTIVE",
+                        severity=Severity.YELLOW,
+                        score_impact=5,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=f"AGM notice issued with {clear_days} clear days and verified absence of written short-notice consent.",
+                        statutory_basis="Section 85(1)(a), Companies Act 1994 (Bangladesh)",
+                        detail={"clear_days": clear_days, "short_notice_consent": False},
+                    ))
 
         if c.agm_scheduled_date and c.notice_sent_date is None:
             warn = c.agm_scheduled_date - timedelta(days=AGM_NOTICE_MINIMUM_DAYS)
             if self.today >= warn:
                 days_rem = (c.agm_scheduled_date - self.today).days
-                self._add_flag(ComplianceFlag(
-                    rule_id="AGM-004",
-                    flag_code="AGM_NOTICE_NOT_ISSUED",
-                    severity=Severity.RED,
-                    score_impact=15,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"AGM notice not issued. {days_rem} days to AGM. Section 85 requires 21 clear days notice.",
-                    statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
-                    detail={"days_to_agm": days_rem}
-                ))
+                if not consent_verified:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-004",
+                        flag_code="AGM_NOTICE_OR_CONSENT_UNVERIFIED",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="No notice date is recorded and any written short-notice consent has not been verified.",
+                        statutory_basis="Section 85(1)(a), Companies Act 1994 (Bangladesh)",
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                        detail={"days_to_agm": days_rem},
+                    ))
+                elif c.short_notice_consent_obtained is False:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-004",
+                        flag_code="AGM_NOTICE_NOT_ISSUED",
+                        severity=Severity.RED,
+                        score_impact=15,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=f"AGM notice not issued and written short-notice consent is verified absent. {days_rem} days to AGM.",
+                        statutory_basis="Section 85(1)(a), Companies Act 1994 (Bangladesh)",
+                        detail={"days_to_agm": days_rem, "short_notice_consent": False},
+                    ))
 
         if (
             c.agm_held_this_cycle
