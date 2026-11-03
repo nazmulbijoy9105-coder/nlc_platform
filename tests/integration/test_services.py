@@ -478,6 +478,11 @@ class TestFilingService:
         await db.flush()
         svc = AGMService(db)
         agm = await svc.create_agm(company_id=db_company.id, financial_year=2024)
+        # Simulate a legacy/default quorum conclusion that must be cleared
+        # when the underlying membership evidence is unknown.
+        agm.quorum_required = 2
+        agm.quorum_met = True
+        await db.flush()
         updated = await svc.mark_held(
             agm_id=agm.id,
             agm_date=date(2024, 5, 15),
@@ -487,6 +492,7 @@ class TestFilingService:
         assert updated is not None
         assert updated.quorum_required is None
         assert updated.quorum_met is None
+        assert updated.quorum_basis == "NOT_EVALUATED"
 
     @pytest.mark.asyncio
     async def test_create_audit(self, db, db_company):
