@@ -446,6 +446,7 @@ class CompanyService(BaseService[Company]):
             "agm_count":                  agm_count,
             "last_agm_date":              company.last_agm_date,
             "agm_extension_granted_until": company.agm_extension_granted_until,
+            "agm_extension_application_date": company.agm_extension_application_date,
             "agm_extension_verified": (
                 company.agm_extension_verified is True
                 and bool(company.agm_extension_evidence_ref)
