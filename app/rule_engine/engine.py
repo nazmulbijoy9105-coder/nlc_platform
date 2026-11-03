@@ -763,6 +763,13 @@ class NLCRuleEngine:
         """Section 210(6): add one calendar month, not 30 days."""
         return NLCRuleEngine._add_months(d, 1)
 
+    @staticmethod
+    def _subsequent_agm_deadline(last_agm_date: date) -> date:
+        """Section 81: hold an AGM in each calendar year and no more than 15 months apart."""
+        interval_deadline = NLCRuleEngine._add_months(last_agm_date, 15)
+        calendar_year_deadline = date(last_agm_date.year + 1, 12, 31)
+        return min(interval_deadline, calendar_year_deadline)
+
     def _run_auditor_rules(self, c: CompanyProfile) -> None:
         # P0 LEGAL FIX: Section 210(6) requires first auditor appointment
         # "within one month" of registration. "One month" = CALENDAR MONTH,
@@ -904,11 +911,17 @@ class NLCRuleEngine:
             return
 
         if c.last_agm_date and c.agm_held_this_cycle is False:
-            # Section 81 sets a maximum 15-calendar-month interval.
-            # The former six-month-after-FY-end rule has no Companies Act anchor
-            # for ordinary private companies and is not applied to this rule.
-            agm_deadline = self._add_months(
+            # Section 81 requires an AGM in each Gregorian calendar year and
+            # no more than 15 calendar months between successive AGMs.
+            interval_deadline = self._add_months(
                 c.last_agm_date, SUBSEQUENT_AGM_DEADLINE_MONTHS
+            )
+            calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
+            agm_deadline = min(interval_deadline, calendar_year_deadline)
+            deadline_basis = (
+                "15_MONTH_INTERVAL"
+                if interval_deadline <= calendar_year_deadline
+                else "CALENDAR_YEAR"
             )
 
             if self.today > agm_deadline:
@@ -921,15 +934,19 @@ class NLCRuleEngine:
                     score_impact=self._graduated_agm_deduction(delay),
                     revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                     description=(
-                        f"Subsequent AGM not held within 15 calendar months of "
-                        f"the preceding AGM. Section 81. Deadline: {agm_deadline.isoformat()}; "
-                        f"overdue by {delay} days."
+                        "Subsequent AGM not held in the next calendar year or "
+                        "within 15 calendar months of the preceding AGM, whichever "
+                        "deadline occurs first. Section 81. "
+                        f"Deadline: {agm_deadline.isoformat()}; overdue by {delay} days."
                     ),
                     statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
                     detail={
                         "delay_days": delay,
                         "deadline": str(agm_deadline),
-                        "calculation_method": "calendar_months",
+                        "interval_deadline": str(interval_deadline),
+                        "calendar_year_deadline": str(calendar_year_deadline),
+                        "basis": deadline_basis,
+                        "calculation_method": "calendar_months_and_calendar_year",
                     }
                 ))
 
@@ -2536,9 +2553,7 @@ class NLCRuleEngine:
                     return (self.today - deadline).days // 365
             return 0
 
-        deadline = self._add_months(
-            c.last_agm_date, SUBSEQUENT_AGM_DEADLINE_MONTHS
-        )
+        deadline = self._subsequent_agm_deadline(c.last_agm_date)
         if self.today > deadline:
             return (self.today - deadline).days // 365
         return 0
