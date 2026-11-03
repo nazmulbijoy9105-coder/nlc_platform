@@ -842,14 +842,19 @@ class NLCRuleEngine:
         if c.agm_held_this_cycle and c.audit_complete is False:
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-003",
-                flag_code="AGM_HELD_WITHOUT_VALID_AUDIT",
-                severity=Severity.BLACK,
-                score_impact=25,
-                revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="AGM held without completed audit. Section 151: AGM procedurally defective, potentially void.",
-                statutory_basis="Sections 151, 210, Companies Act 1994 (Bangladesh)",
-                detail={"override_to_black": True},
-                is_black_override=True,
+                flag_code="AGM_HELD_WITHOUT_COMPLETED_AUDIT",
+                severity=Severity.RED,
+                score_impact=12,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                description=(
+                    "AGM recorded without completed audit. Section 183 governs accounts "
+                    "laid before the AGM; assess the actual accounts, auditor appointment "
+                    "and any applicable exception before determining legal consequences."
+                ),
+                statutory_basis="Sections 183 and 210, Companies Act 1994 (Bangladesh)",
+                detail={"legal_review_required": True, "override_to_black": False},
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
             ))
 
         if c.agm_held_this_cycle and c.auditor_reappointed_at_agm is False:
@@ -2203,7 +2208,10 @@ class NLCRuleEngine:
         if not critical:
             critical = [
                 f for f in active
-                if f.severity == Severity.BLACK and f.state == RuleState.NON_COMPLIANT and f.eval_state != "UNKNOWN"
+                if f.rule_id in VERIFIED_RULE_IDS
+                and f.severity == Severity.BLACK
+                and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+                and f.eval_state == "VIOLATION"
             ]
         if critical:
             override = True
@@ -2219,7 +2227,11 @@ class NLCRuleEngine:
             severity_rank = {Severity.GREEN: 0, Severity.YELLOW: 1, Severity.RED: 2, Severity.BLACK: 3}
             max_flag_severity = Severity.GREEN
             for f in active:
-                if f.severity in severity_rank and (f.severity in (Severity.RED, Severity.BLACK)) and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION":
+                if (f.rule_id in VERIFIED_RULE_IDS
+                        and f.severity in severity_rank
+                        and f.severity in (Severity.RED, Severity.BLACK)
+                        and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+                        and f.eval_state == "VIOLATION"):
                     if severity_rank[f.severity] > severity_rank.get(max_flag_severity, 0):
                         max_flag_severity = f.severity
             band_rank = severity_rank.get(score_band, 0)
