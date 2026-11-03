@@ -29,6 +29,9 @@ def test_agm_profile_evidence_comes_from_the_latest_agm_record():
         minutes_prepared=True,
         quorum_met=False,
         notice_sent_date=date(2026, 1, 1),
+        notice_missing=False,
+        agm_held_without_audit=True,
+        accounts_adopted=True,
     )
 
     evidence = _agm_profile_evidence(meeting)
@@ -38,6 +41,8 @@ def test_agm_profile_evidence_comes_from_the_latest_agm_record():
     assert evidence["agm_minutes_prepared"] is True
     assert evidence["agm_quorum_met"] is False
     assert evidence["notice_sent_date"] == date(2026, 1, 1)
+    assert evidence["agm_held_without_audit"] is True
+    assert evidence["accounts_adopted_at_agm"] is True
 
 
 def test_legacy_null_attendance_keeps_quorum_unknown():
