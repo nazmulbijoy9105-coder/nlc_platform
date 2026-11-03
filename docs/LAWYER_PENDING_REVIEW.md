@@ -1,13 +1,29 @@
-# NLC Legal Review — Pending Citation Questions
+# NLC Legal Review — Pending Citation and Applicability Questions
 
 ## Purpose
 
-This document lists the 3 remaining statutory citation questions that
-require verification by a Bangladesh-qualified corporate lawyer. All
-other 82 rules have been verified against the Companies Act 1994
-(Bangladesh) PDF (402 sections, 90 pages, 2008 text).
+This document records specific statutory citation, interpretation and
+applicability questions for review by a Bangladesh-qualified corporate
+lawyer. It is not a blanket certification that every other active rule is
+legally verified. The canonical registry's RECONCILE/PENDING status remains
+authoritative; no rule may enter VERIFIED_RULE_IDS without documented
+independent counsel approval.
 
 ## Questions for Lawyer Review
+
+### 0. AGM-005: AGM Quorum — Section 85(2)(b) and current Articles
+
+**Current engine citation:** Section 85(2)(b), Companies Act 1994 (Bangladesh)
+
+**Current implementation:** The evaluator requires verified current-Articles provenance, member-register evidence and attendance evidence. For a private company with no Articles variation, the statutory default is two members where total membership is up to six and three where it exceeds six. A verified Articles-specific quorum takes precedence. Missing or incomplete provenance produces UNKNOWN / NOT_EVALUATED with zero score impact.
+
+**Counsel verification required:**
+- Confirm the current official text and application of Section 85(2)(b), including the company-category and membership thresholds.
+- Confirm the interaction between the statutory default and the company's current registered Articles, including amendments and any relevant meeting-specific provisions.
+- Confirm the evidence needed to establish the total membership, members personally present, and the operative Articles.
+- Confirm whether any additional statutory or Articles-based exception affects the calculation.
+
+**Status:** PENDING. AGM-005 has been removed from VERIFIED_RULE_IDS; it may generate an informational finding only and must not affect the authoritative score until counsel approval.
 
 ### 1. AUD-001: First Auditor Appointment — Section 210(6)
 
@@ -140,8 +156,7 @@ the current gazetted Act text:
 | 5 | AUD-003 | S151 included — correct for audit? | May need section update |
 | 6 | Deadlines | 4 constants need verification | Score accuracy affected |
 
-All 5 items above are currently excluded from the authoritative compliance
-score via the `VERIFIED_RULE_IDS` production gate. They generate flags but
+The listed rules remain outside the authoritative score unless and until their individual verification status and allowlist membership are approved. AGM-005 is explicitly excluded pending counsel review. They generate flags but
 do not lower the score. Once a lawyer verifies the correct citations,
 the rules can be added to `VERIFIED_RULE_IDS` and begin contributing to
 the authoritative compliance score.
