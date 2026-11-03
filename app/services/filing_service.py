@@ -186,7 +186,6 @@ class AGMService(BaseService[AGM]):
             accounts_adopted=accounts_adopted,
             agm_held_without_audit=agm_held_without_audit,
             minutes_document_id=minutes_document_id,
-            minutes_prepared=minutes_document_id is not None,
             is_default=is_default,
             delay_days=delay_days,
         )
