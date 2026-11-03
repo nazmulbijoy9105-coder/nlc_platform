@@ -421,7 +421,9 @@ FIRST_AGM_DEADLINE_DAYS = 548
 SUBSEQUENT_AGM_DEADLINE_DAYS = 456
 FY_END_AGM_DEADLINE_DAYS = 182
 AGM_NOTICE_MINIMUM_DAYS = 21
-PRIVATE_COMPANY_QUORUM = 2
+PRIVATE_COMPANY_QUORUM_SMALL = 2   # Section 85(2)(b): private company with ≤6 members
+PRIVATE_COMPANY_QUORUM_LARGE = 3   # Section 85(2)(b): private company with >6 members
+PRIVATE_COMPANY_QUORUM = PRIVATE_COMPANY_QUORUM_SMALL  # backward compat alias
 ANNUAL_RETURN_DEADLINE_DAYS = 21   # Companies Act 1994, Section 36 (Schedule X)
 DIRECTOR_FILING_DEADLINE_DAYS = 14
 SHARE_CERTIFICATE_DEADLINE_DAYS = 90
@@ -1134,6 +1136,18 @@ class NLCRuleEngine:
                         statutory_basis="Section 85(1)(a), Companies Act 1994 (Bangladesh)",
                         detail={"notice_days": notice_days, "short_notice_consent": False},
                     ))
+            clear_days = (c.agm_scheduled_date - c.notice_sent_date).days - 1
+            if clear_days < AGM_NOTICE_MINIMUM_DAYS:
+                self._add_flag(ComplianceFlag(
+                    rule_id="AGM-003",
+                    flag_code="AGM_NOTICE_DEFECTIVE",
+                    severity=Severity.YELLOW,
+                    score_impact=5,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=f"AGM notice issued with {clear_days} clear days. Section 85 requires 21 clear days. NOTE: Section 85 permits shorter notice with member consent, and accidental omission/non-receipt does not invalidate proceedings.",
+                    statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
+                    detail={"clear_days": clear_days}
+                ))
 
         if c.agm_scheduled_date and c.notice_sent_date is None:
             warn = c.agm_scheduled_date - timedelta(days=AGM_NOTICE_MINIMUM_DAYS)
@@ -1163,6 +1177,16 @@ class NLCRuleEngine:
                         statutory_basis="Section 85(1)(a), Companies Act 1994 (Bangladesh)",
                         detail={"days_to_agm": days_rem, "short_notice_consent": False},
                     ))
+                self._add_flag(ComplianceFlag(
+                    rule_id="AGM-004",
+                    flag_code="AGM_NOTICE_NOT_ISSUED",
+                    severity=Severity.RED,
+                    score_impact=15,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=f"AGM notice not issued. {days_rem} days to AGM. Section 85 requires 21 clear days notice. NOTE: Section 85 provides exceptions for accidental omission and permits shorter notice with consent.",
+                    statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
+                    detail={"days_to_agm": days_rem}
+                ))
 
         if (
             c.agm_held_this_cycle
@@ -1183,6 +1207,9 @@ class NLCRuleEngine:
                 description=f"Recorded attendance ({c.members_present_at_agm}) is below verified quorum ({c.agm_quorum_required}).",
                 statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh), read with the Articles",
                 detail={"present": c.members_present_at_agm, "required": c.agm_quorum_required},
+                description=f"AGM quorum not met. {c.members_present_at_agm} present, need {PRIVATE_COMPANY_QUORUM}. Section 85(2)(b).",
+                statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
+                detail={"present": c.members_present_at_agm, "required": PRIVATE_COMPANY_QUORUM}
             ))
 
         if c.agm_held_this_cycle and c.agm_minutes_prepared is False:

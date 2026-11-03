@@ -29,7 +29,8 @@ class ProvisionStatus(str, Enum):
 
 
 class Severity(str, Enum):
-    BLACK = "BLACK"   # legacy override band; override scoring NOT implemented here
+    BLACK = "BLACK"
+    NOT_EVALUATED = "NOT_EVALUATED"   # legacy override band; override scoring NOT implemented here
     RED = "RED"
     YELLOW = "YELLOW"
 
