@@ -26,8 +26,8 @@ logger = logging.getLogger("nlc.rule_engine")
 # ───────────────────────────────────────────────────────────────────────
 # RULE ENGINE VERSION — Immutable in production
 # ───────────────────────────────────────────────────────────────────────
-RULE_ENGINE_VERSION = "2.1"
-ILRMF_VERSION = "2.1"
+RULE_ENGINE_VERSION = "2.2"
+ILRMF_VERSION = "2.2"
 
 # ═══════════════════════════════════════════════════════════════════════
 # ENUMERATIONS
