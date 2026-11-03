@@ -16,13 +16,15 @@ class TestRJSCForms:
         from app.models.rjsc_forms import RJSC_FORMS_REFERENCE
         forms = {item["form_code"]: item for item in RJSC_FORMS_REFERENCE}
         expected = {
+            "FORM_I": ("Section 25", 0),
             "FORM_IV": ("Section 56", 15),
             "FORM_VIII": ("Section 88(1)", 15),
             "FORM_IX": ("Section 92", 30),
             "FORM_XII": ("Section 115", 14),
             "FORM_XV": ("Section 151", 60),
-            "FORM_XVIII": ("Section 159(1)", 21),
-            "FORM_XXVIII": ("Section 172", 21),
+            "FORM_XVIII": ("Sections 159(1), 391", 21),
+            "FORM_XIX": ("Sections 167(3), 319", 21),
+            "FORM_XXVIII": ("Sections 172, 391", 21),
             "SCHEDULE_X": ("Section 36", 21),
         }
         for code, (section, days) in expected.items():
@@ -32,7 +34,10 @@ class TestRJSCForms:
     def test_each_form_has_rule_mapping(self):
         from app.models.rjsc_forms import RJSC_FORMS_REFERENCE
         for form in RJSC_FORMS_REFERENCE:
-            assert form.get("rule_id"), f"Form {form['form_code']} missing rule_id"
+            if form["form_code"] == "FORM_XIX":
+                assert form.get("rule_id") is None  # reference-only until CHG-002 is implemented
+            else:
+                assert form.get("rule_id"), f"Form {form['form_code']} missing rule_id"
 
     def test_each_form_has_section_reference(self):
         from app.models.rjsc_forms import RJSC_FORMS_REFERENCE
