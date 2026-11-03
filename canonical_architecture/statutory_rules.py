@@ -814,7 +814,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
-        "exceptions": ["Section 210(3) statutory reappointment exceptions"],
+        "exceptions": [],
         "evidence_required": ["AGM_RESOLUTION"],
         "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
         "severity": "NOT_EVALUATED",
