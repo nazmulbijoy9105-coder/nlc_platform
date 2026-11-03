@@ -18,6 +18,7 @@ from sqlalchemy import func, select, text, update
 from sqlalchemy.orm import selectinload
 
 from app.models.company import Company, CompanyUserAccess
+from app.models.documents import ArticlesVerification
 from app.models.enums import CompanyStatus, CompanyType, LifecycleStage, RevenueTier, RiskBand
 from app.models.people import Director, Shareholder
 from app.services.base import BaseService
@@ -462,6 +463,47 @@ class CompanyService(BaseService[Company]):
         )
 
         agm_profile_evidence = _agm_profile_evidence(latest_agm)
+        # Quorum verification must come from a version-pinned, independently
+        # reviewed Articles record. Never trust editable AGM form booleans as
+        # proof that the Articles were authenticated.
+        articles_as_of = (
+            latest_agm.agm_date or latest_agm.scheduled_date
+            if latest_agm is not None
+            else date.today()
+        ) or date.today()
+        verified_articles = await self.db.scalar(
+            select(ArticlesVerification)
+            .where(
+                ArticlesVerification.company_id == company_id,
+                ArticlesVerification.status == "VERIFIED",
+                ArticlesVerification.effective_from <= articles_as_of,
+            )
+            .order_by(
+                ArticlesVerification.effective_from.desc(),
+                ArticlesVerification.reviewed_at.desc(),
+            )
+            .limit(1)
+        )
+        agm_profile_evidence.update({
+            "articles_quorum_verified": verified_articles is not None,
+            "articles_quorum_required": (
+                verified_articles.quorum_required
+                if verified_articles is not None and verified_articles.quorum_variation_exists
+                else None
+            ),
+            "articles_quorum_verified_by": (
+                str(verified_articles.reviewed_by) if verified_articles is not None else None
+            ),
+            "articles_quorum_verified_at": (
+                verified_articles.reviewed_at.date()
+                if verified_articles is not None and verified_articles.reviewed_at
+                else None
+            ),
+            "articles_quorum_evidence_ref": (
+                f"document:{verified_articles.document_id}:sha256:{verified_articles.source_checksum_sha256}"
+                if verified_articles is not None else None
+            ),
+        })
 
         # ── Annual Return State ───────────────────────────────────
         returns_sorted = sorted(
