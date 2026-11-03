@@ -1084,8 +1084,8 @@ class NLCRuleEngine:
             and bool(c.short_notice_consent_evidence_ref)
         )
         if c.agm_scheduled_date and c.notice_sent_date:
-            clear_days = (c.agm_scheduled_date - c.notice_sent_date).days - 1
-            if clear_days < AGM_NOTICE_MINIMUM_DAYS:
+            notice_days = (c.agm_scheduled_date - c.notice_sent_date).days
+            if notice_days < AGM_NOTICE_MINIMUM_DAYS:
                 if not consent_verified:
                     self._add_flag(ComplianceFlag(
                         rule_id="AGM-003",
@@ -1093,11 +1093,11 @@ class NLCRuleEngine:
                         severity=Severity.NOT_EVALUATED,
                         score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description="AGM notice was shorter than 21 clear days, but written consent from all members entitled to attend and vote has not been verified.",
+                        description="AGM notice was shorter than 21 days, but written consent from all members entitled to attend and vote has not been verified.",
                         statutory_basis="Section 85(1)(a), Companies Act 1994 (Bangladesh)",
                         state=RuleState.UNKNOWN,
                         eval_state="UNKNOWN",
-                        detail={"clear_days": clear_days},
+                        detail={"notice_days": notice_days},
                     ))
                 elif c.short_notice_consent_obtained is False:
                     self._add_flag(ComplianceFlag(
@@ -1106,9 +1106,9 @@ class NLCRuleEngine:
                         severity=Severity.YELLOW,
                         score_impact=5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"AGM notice issued with {clear_days} clear days and verified absence of written short-notice consent.",
+                        description=f"AGM notice issued with {notice_days} days and verified absence of written short-notice consent.",
                         statutory_basis="Section 85(1)(a), Companies Act 1994 (Bangladesh)",
-                        detail={"clear_days": clear_days, "short_notice_consent": False},
+                        detail={"notice_days": notice_days, "short_notice_consent": False},
                     ))
 
         if c.agm_scheduled_date and c.notice_sent_date is None:
