@@ -91,7 +91,7 @@ class LegalRule(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     is_black_override: Mapped[bool] = mapped_column(
         Boolean, default=False,
-        comment="TRUE for AUD-003, TR-005, ESC-002, ESC-003"
+        comment="TRUE for TR-005, ESC-002, ESC-003; AUD-003 is not a BLACK override"
     )
 
     # ── Version Control ───────────────────────────────────────────
