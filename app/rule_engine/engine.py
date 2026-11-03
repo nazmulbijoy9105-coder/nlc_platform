@@ -177,11 +177,21 @@ class CompanyProfile:
     agm_attendance_evidence_ref: str | None = None
     agm_quorum_evidence_ref: str | None = None
     auditor_reappointed_at_agm: bool | None = None
+    auditor_reappointment_verified: bool = False
+    auditor_reappointment_evidence_ref: str | None = None
     accounts_adopted_at_agm: bool = False
     agm_minutes_prepared: bool | None = None
     first_auditor_appointed: bool | None = None
     first_auditor_appointment_date: Optional[date] = None
-    audit_complete: bool = False
+    first_auditor_appointment_verified: bool = False
+    first_auditor_appointment_evidence_ref: str | None = None
+    first_auditor_appointment_verified_at: date | None = None
+    first_auditor_appointment_verified_by: str | None = None
+    audit_complete: bool | None = None
+    audit_completion_verified: bool = False
+    audit_completion_evidence_ref: str | None = None
+    audit_completion_verified_at: date | None = None
+    audit_completion_verified_by: str | None = None
     last_audit_signed_date: Optional[date] = None
     audit_in_progress: bool = False
     auditor_name: Optional[str] = None
@@ -805,7 +815,12 @@ class NLCRuleEngine:
         # "within one month" of registration. "One month" = CALENDAR MONTH,
         # not 30 days. Using 30 days is legally incorrect for months with
         # 28/29/31 days.
-        if c.first_auditor_appointed is None:
+        if not (
+            c.first_auditor_appointment_verified is True
+            and bool(c.first_auditor_appointment_evidence_ref)
+            and c.first_auditor_appointment_verified_at is not None
+            and bool(c.first_auditor_appointment_verified_by)
+        ) or c.first_auditor_appointed is None:
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-001",
                 flag_code="FIRST_AUDITOR_STATUS_UNKNOWN",
