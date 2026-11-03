@@ -172,15 +172,12 @@ class AGMService(BaseService[AGM]):
         is_default = bool(agm.agm_deadline and agm_date > agm.agm_deadline)
         delay_days = (agm_date - agm.agm_deadline).days if is_default and agm.agm_deadline else 0
 
-        return await self.update_instance(
+        updated = await self.update_instance(
             agm,
             agm_held=True,
             agm_date=agm_date,
             venue=venue,
             members_present=members_present,
-            quorum_required=quorum_required,
-            quorum_met=quorum_met,
-            quorum_basis=quorum_basis,
             auditor_reappointed=auditor_reappointed,
             accounts_adopted=accounts_adopted,
             agm_held_without_audit=agm_held_without_audit,
@@ -188,6 +185,17 @@ class AGMService(BaseService[AGM]):
             is_default=is_default,
             delay_days=delay_days,
         )
+
+        # BaseService.update_instance intentionally ignores None values.
+        # Here None is meaningful: unknown membership must clear any prior
+        # quorum conclusion rather than leave a stale "met" result in place.
+        updated.quorum_required = quorum_required
+        updated.quorum_met = quorum_met
+        updated.quorum_basis = quorum_basis
+        self.db.add(updated)
+        await self.db.flush()
+        await self.db.refresh(updated)
+        return updated
 
     @staticmethod
     def calculate_first_agm_deadline(incorporation_date: date) -> date:
