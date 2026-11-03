@@ -116,6 +116,11 @@ class Company(FullMixin, Base):
     # ── AGM State ─────────────────────────────────────────────────
     first_agm_held: Mapped[bool] = mapped_column(Boolean, default=False)
     last_agm_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    agm_extension_granted_until: Mapped[date | None] = mapped_column(Date, nullable=True)
+    agm_extension_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    agm_extension_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    agm_extension_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    agm_extension_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     agm_default_count: Mapped[int] = mapped_column(Integer, default=0)
 
     # ── Audit State ───────────────────────────────────────────────
