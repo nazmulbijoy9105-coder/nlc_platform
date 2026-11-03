@@ -166,6 +166,7 @@ class CompanyProfile:
     agm_count: int | None = None
     last_agm_date: Optional[date] = None
     agm_extension_granted_until: date | None = None
+    agm_extension_application_date: date | None = None
     agm_extension_verified: bool = False
     agm_extension_evidence_ref: str | None = None
     agm_extension_verified_at: date | None = None
@@ -982,7 +983,10 @@ class NLCRuleEngine:
             and c.agm_extension_verified_at is not None
             and bool(c.agm_extension_verified_by)
         )
-        if not extension_verified:
+        if not extension_verified or c.agm_extension_application_date is None:
+            return None
+        application_days_after_deadline = (c.agm_extension_application_date - base_deadline).days
+        if application_days_after_deadline < 0 or application_days_after_deadline > 30:
             return None
         statutory_limit = min(
             base_deadline + timedelta(days=90),
