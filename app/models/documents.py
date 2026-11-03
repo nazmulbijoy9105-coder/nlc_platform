@@ -154,6 +154,11 @@ class ArticlesVerification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "OR (status IN ('VERIFIED', 'REJECTED', 'REVOKED') AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)",
             name="ck_articles_verifications_review_metadata",
         ),
+        CheckConstraint(
+            "(status = 'REVOKED' AND revoked_by IS NOT NULL AND revoked_at IS NOT NULL AND revocation_reason IS NOT NULL) OR "
+            "(status <> 'REVOKED' AND revoked_by IS NULL AND revoked_at IS NULL AND revocation_reason IS NULL)",
+            name="ck_articles_verifications_revocation_metadata",
+        ),
         Index(
             "uq_articles_verifications_active",
             "company_id",
@@ -172,7 +177,7 @@ class ArticlesVerification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     source_checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     source_document_version: Mapped[int] = mapped_column(Integer, nullable=False)
-    status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING")
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING", index=True)
     submitted_by: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False,
     )
