@@ -982,7 +982,8 @@ class NLCRuleEngine:
         if c.agm_count == 1 and c.incorporation_date is not None:
             first_agm_deadline = self._add_months(c.incorporation_date, 18)
             if c.last_agm_date <= first_agm_deadline:
-                base_deadline = date(c.incorporation_date.year + 2, 12, 31)
+                calendar_year_deadline = date(c.incorporation_date.year + 2, 12, 31)
+                base_deadline = calendar_year_deadline
             else:
                 fifteen_month_deadline = self._add_months(c.last_agm_date, 15)
                 calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
