@@ -128,21 +128,22 @@ class TestAGM001Variations:
         if flag:
             assert flag.rule_id == "AGM-001"
 
-    def test_5_exception_changes_result(self):
-        """Registrar extension granted → should not trigger."""
+    def test_5_verified_registrar_extension_changes_subsequent_agm_deadline(self):
+        """A timely, evidenced Section 81 extension is honoured for a subsequent AGM."""
         c = _base_profile(
-            incorporation_date=date(2024, 1, 1),
-            last_agm_date=None,
-            agm_count=0,
+            incorporation_date=date(2020, 1, 1),
+            last_agm_date=date(2024, 1, 1),
+            agm_count=1,
+            agm_held_this_cycle=False,
+            agm_extension_granted_until=date(2025, 6, 30),
+            agm_extension_application_date=date(2025, 4, 15),
+            agm_extension_verified=True,
+            agm_extension_evidence_ref="RJSC-EXTENSION-TEST",
+            agm_extension_verified_at=date(2025, 4, 16),
+            agm_extension_verified_by="reviewer-001",
         )
-        # Note: The engine doesn't yet model Registrar extensions
-        # This test documents the gap — when extension modeling is added,
-        # this should assert no AGM-001 flag
-        result = _engine().evaluate(c)
-        flag = _flag_by_id(result, "AGM-001")
-        # Currently fires because no extension field exists
-        if flag:
-            assert flag.state == RuleState.NON_COMPLIANT
+        result = NLCRuleEngine(today=date(2025, 6, 15)).evaluate(c)
+        assert "AGM-002" not in {flag.rule_id for flag in result.flags}
 
     def test_6_applicable_amendment(self):
         """Pre-2020 vs post-2020 — One Person Company amendment."""
