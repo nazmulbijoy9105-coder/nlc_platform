@@ -61,6 +61,7 @@ def test_first_auditor_canonical_rule_matches_calendar_month_evaluator():
     assert "30 days" not in rule.requirement.lower()
     # Correct wording is not proof of lawyer verification.
     assert rule.provision_status.value == "RECONCILE"
+    assert RuleState.CONTRADICTORY in rule.evaluation_states
 
 def test_agm_notice_rules_do_not_assert_automatic_nullity():
     defective = STATUTORY_RULE_REGISTRY["AGM-003"].requirement.lower()
