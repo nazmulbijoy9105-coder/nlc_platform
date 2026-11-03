@@ -142,7 +142,17 @@ class ArticlesVerification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             name="ck_articles_verifications_status",
         ),
         CheckConstraint(
-            "source_checksum_sha256 ~ '^[0-9a-f]{64}
+            "source_checksum_sha256 ~ '^[0-9a-f]{64}$'",
+            name="ck_articles_verifications_checksum",
+        ),
+        CheckConstraint(
+            "source_document_version >= 1",
+            name="ck_articles_verifications_document_version",
+        ),
+        CheckConstraint(
+            "quorum_required IS NULL OR quorum_required BETWEEN 1 AND 100",
+            name="ck_articles_verifications_quorum",
+        ),
         CheckConstraint(
             "status <> 'VERIFIED' OR (effective_from IS NOT NULL AND clause_reference IS NOT NULL)",
             name="ck_articles_verifications_verified_fields",
