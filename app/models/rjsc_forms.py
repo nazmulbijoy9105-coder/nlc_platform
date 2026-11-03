@@ -6,6 +6,7 @@ Maps RJSC forms and statutory filing references used by NLC:
   Form VI    → Change of registered office (Section 77, 28 days)
   Form VIII  → Copy of special resolution (Section 88(1), 15 days)
   Form IX    → Consent of director to act (Section 92, 30 days)
+  Form X     → List of persons consenting to be directors (Section 92; incorporation reference)
   Form XII   → Director particulars (Section 115, 14 days)
   Form XV    → Return of allotment (Section 151, 60 days)
   Form XVIII → Particulars of mortgage/charge (Section 159(1), 21 days; s.391 is foreign-company scope)
@@ -75,6 +76,7 @@ RJSC_FORMS_REFERENCE = [
     {"form_code": "FORM_VI", "form_number": "VI", "form_name": "Notice of Change of Registered Office", "section": "Section 77", "rule_id": "OFF-001", "deadline_days": 28},
     {"form_code": "FORM_VIII", "form_number": "VIII", "form_name": "Copy of Special Resolution", "section": "Section 88(1)", "rule_id": "CAP-004", "deadline_days": 15},
     {"form_code": "FORM_IX", "form_number": "IX", "form_name": "Consent of Director to Act", "section": "Section 92", "rule_id": "DIR-007", "deadline_days": 30},
+    {"form_code": "FORM_X", "form_number": "X", "form_name": "List of Persons Consenting to be Directors", "section": "Section 92", "rule_id": None, "deadline_days": 0},
     {"form_code": "FORM_XII", "form_number": "XII", "form_name": "Particulars of Directors, Manager and Managing Agent", "section": "Section 115", "rule_id": "DIR-001", "deadline_days": 14},
     {"form_code": "FORM_XV", "form_number": "XV", "form_name": "Return of Allotment", "section": "Section 151", "rule_id": "SH-001", "deadline_days": 60},
     {"form_code": "FORM_XVIII", "form_number": "XVIII", "form_name": "Particulars of Mortgages or Charges", "section": "Section 159(1)", "rule_id": "CAP-002", "deadline_days": 21},
