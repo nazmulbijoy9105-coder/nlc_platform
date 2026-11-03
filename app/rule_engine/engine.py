@@ -115,7 +115,7 @@ class ComplianceFlag:
     def __post_init__(self):
         # The typed state is authoritative. UNKNOWN must never be serialized
         # as VIOLATION merely because the legacy string field has that default.
-        if self.state == RuleState.UNKNOWN:
+        if self.state in {RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT}:
             self.eval_state = "UNKNOWN"
             self.score_impact = 0
         elif self.eval_state == "UNKNOWN":
