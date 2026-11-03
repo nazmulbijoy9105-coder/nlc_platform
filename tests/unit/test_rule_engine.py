@@ -218,6 +218,8 @@ class TestAGMRules:
         profile = build_profile(
             agm_held_this_cycle=True,
             auditor_reappointed_at_agm=False,
+            auditor_reappointment_verified=True,
+            auditor_reappointment_evidence_ref="AGM-MINUTES-TEST",
         )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "AUD-004")
@@ -283,17 +285,18 @@ class TestAuditRules:
         assert_flag_triggered(output, "AUD-003")
 
     @pytest.mark.black
-    def test_AUD003_forces_black_band(self, rule_engine, build_profile):
-        """AUD-003 is a BLACK override — band must be BLACK regardless of other scores."""
+    def test_AUD003_requires_lawyer_review_and_never_forces_black(self, rule_engine, build_profile):
+        """Unverified audit status is not a confirmed breach or BLACK override."""
         profile = build_profile(
             agm_held_this_cycle=True,
             audit_complete=False,
             agm_held_without_audit=True,
         )
         output = rule_engine.evaluate(profile)
-        # Score may be high but band must be forced BLACK
-        assert output.score_breakdown.override_applied is True
-        assert output.score_breakdown.final_score <= 29
+        flag = next(f for f in output.flags if f.rule_id == "AUD-003")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.is_black_override is False
+        assert output.score_breakdown.override_applied is False
 
     @pytest.mark.black
     def test_AUD003_no_trigger_when_audit_done_before_agm(self, rule_engine, build_profile):
@@ -761,8 +764,15 @@ class TestEscalationRules:
         # Create 2 genuine BLACK override conditions
         profile = build_profile(
             agm_held_this_cycle=True,
-            audit_complete=False,       # AUD-003: BLACK override
-            current_director_count=0,   # INC-003: BLACK override
+            audit_complete=False,
+            incorporation_date=date.today() - timedelta(days=1200),
+            agm_count=0,
+            last_agm_date=None,
+            current_director_count=0,
+            directors_verified=True,
+            directors_verification_evidence_ref="RJSC-DIRECTORS-ESC003",
+            directors_verified_at=date.today(),
+            directors_verified_by="reviewer-001",
         )
         output = rule_engine.evaluate(profile)
 
@@ -1008,9 +1018,11 @@ class TestEngineIntegrity:
     def test_rescue_plan_generated_for_black_company(self, rule_engine, build_profile):
         """BLACK band company is correctly identified with score <= 29."""
         profile = build_profile(
-            agm_held_this_cycle=True,
-            audit_complete=False,
             current_director_count=0,
+            directors_verified=True,
+            directors_verification_evidence_ref="RJSC-DIRECTORS-RESCUE",
+            directors_verified_at=date.today(),
+            directors_verified_by="reviewer-001",
         )
         output = rule_engine.evaluate(profile)
         assert output.score_breakdown.risk_band == "BLACK"
@@ -1064,7 +1076,14 @@ class TestUntestedRules:
         assert_flag_triggered(rule_engine.evaluate(profile), "INC-001")
 
     def test_INC003_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(current_director_count=0, directors_verified=True)), "INC-003")
+        profile = build_profile(
+            current_director_count=0,
+            directors_verified=True,
+            directors_verification_evidence_ref="RJSC-DIRECTORS-INC003",
+            directors_verified_at=date.today(),
+            directors_verified_by="reviewer-001",
+        )
+        assert_flag_triggered(rule_engine.evaluate(profile), "INC-003")
 
     def test_INC004_triggers(self, rule_engine, build_profile):
         assert_flag_triggered(rule_engine.evaluate(build_profile(paid_up_capital_bdt=200000, authorized_capital_bdt=100000)), "INC-004")
@@ -1115,10 +1134,14 @@ class TestUntestedRules:
                 "director_name": "Director A",
                 "evidence_ref": "Insolvency Certificate #123",
                 "authority": "Bankruptcy Court",
+                "effective_date": "2025-01-01",
+                "continuing_status": True,
             }],
         ))
         flag = self._def001(out)
-        assert flag.score_impact == 20
+        assert flag.score_impact == 10
+        assert flag.severity == Severity.RED
+        assert flag.is_black_override is False
         assert "1 director" in flag.description or "1 director(s)" in flag.description
 
     def test_DEF001_reports_multiple_disqualified_directors(self, rule_engine, build_profile):
@@ -1127,13 +1150,17 @@ class TestUntestedRules:
             any_director_disqualified=True,
             disqualification_grounds=[
                 {"ground_type": "UNDISCHARGED_INSOLVENT", "director_name": "Director A",
-                 "evidence_ref": "Cert #1", "authority": "Court"},
+                 "evidence_ref": "Cert #1", "authority": "Court",
+                 "effective_date": "2025-01-01", "continuing_status": True},
                 {"ground_type": "UNSOUND_MIND", "director_name": "Director B",
-                 "evidence_ref": "Court Order #2", "authority": "Court"},
+                 "evidence_ref": "Court Order #2", "authority": "Court",
+                 "effective_date": "2025-01-01", "continuing_status": True},
             ],
         ))
         flag = self._def001(out)
-        assert flag.score_impact == 25
+        assert flag.score_impact == 10
+        assert flag.severity == Severity.RED
+        assert flag.is_black_override is False
         assert "2 director" in flag.description
 
     def test_DEF001_not_triggered_without_flag(self, rule_engine, build_profile):
@@ -1207,14 +1234,14 @@ class TestVerdictRegression:
         output = rule_engine.evaluate(profile, today=date(2026, 10, 1))
         assert_flag_triggered(output, "TAX-003")
 
-    def test_routine_red_flag_does_not_escalate_band(self, rule_engine, build_profile):
+    def test_unverified_red_flag_does_not_escalate_band(self, rule_engine, build_profile):
         profile = build_profile(trade_license_expiry=date.today() - timedelta(days=100))
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "TL-002")
-        assert output.score_breakdown.risk_band.value == "RED"  # Fix: RED flags now escalate band (prevents false GREEN)
+        assert output.score_breakdown.risk_band.value != "RED"
 
     def test_strike_off_risk_flag_escalates_band(self, rule_engine, build_profile):
         profile = build_profile(unfiled_returns_count=2)
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "AR-002")
-        assert output.score_breakdown.risk_band.value in ("RED", "BLACK")
+        assert output.score_breakdown.risk_band.value not in ("RED", "BLACK")
