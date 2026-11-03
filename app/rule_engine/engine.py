@@ -9,8 +9,9 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import date, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -80,6 +81,8 @@ class RuleState(str, Enum):
     NOT_APPLICABLE = "NOT_APPLICABLE"
     CONDITIONAL = "CONDITIONAL"
     CONTRADICTORY = "CONTRADICTORY"
+    DISPUTED = "DISPUTED"
+    REQUIRES_LAWYER_JUDGMENT = "REQUIRES_LAWYER_JUDGMENT"
 
 class ApplicabilityState(str, Enum):
     APPLICABLE = "APPLICABLE"
@@ -113,7 +116,7 @@ class ComplianceFlag:
 
     def __post_init__(self):
         # F3 UNKNOWN policy: unknown facts are indeterminate, not violations
-        if self.eval_state == "UNKNOWN":
+        if self.state not in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) or self.eval_state != "VIOLATION":
             self.score_impact = 0
 
 @dataclass
@@ -167,6 +170,9 @@ class CompanyProfile:
     agm_scheduled_date: Optional[date] = None
     notice_sent_date: Optional[date] = None
     members_present_at_agm: int | None = None
+    # Section 85(2)(b) is only the default where the Articles do not provide otherwise.
+    agm_quorum_required: int | None = None
+    agm_quorum_basis_verified: bool = False
     auditor_reappointed_at_agm: bool | None = None
     accounts_adopted_at_agm: bool = False
     agm_minutes_prepared: bool | None = None
@@ -189,7 +195,8 @@ class CompanyProfile:
     shareholders_list_attached: bool = False
     director_changes: List[DirectorChange] = field(default_factory=list)
     current_director_count: int | None = None
-    directors_verified: bool = False  # RULE-001: True only when director count verified against RJSC registry
+    directors_verified: bool = False  # True only when director count verified against RJSC registry
+    is_private_subsidiary_of_public_company: bool | None = None
     minimum_directors_met: bool | None = None
     shareholder_change_date: Optional[date] = None
     form_xv_filed: bool = False
@@ -285,6 +292,8 @@ class CompanyProfile:
     penalty_notices_received: int | None = 0
     penalty_notices_resolved: int | None = 0
     moa_aoa_filed: bool | None = None
+    # Stored legacy booleans are not proof of registry verification.
+    moa_aoa_verified: bool = False
     annual_turnover_bdt: float = 0.0
     name_change_pending: bool = False
     name_change_date: Optional[date] = None
@@ -439,7 +448,8 @@ CATEGORY_CAPS: dict[str, tuple[int, tuple[str, ...]]] = {
 VERIFIED_RULE_IDS: frozenset[str] = frozenset({
     # AGM module (7 rules)
     "AGM-001", "AGM-002", "AGM-003", "AGM-004",
-    "AGM-005", "AGM-006", "AGM-007",
+    # AGM-005 remains excluded until the AOA-specific quorum basis is verified.
+    "AGM-006", "AGM-007",
     # Registers module (3 rules)
     "REG-001", "REG-002", "REG-003",
     # Registered Office (1 rule)
@@ -2034,12 +2044,12 @@ class NLCRuleEngine:
 
         pre_score = self._calculate_raw_score(self._flags)
         has_black_override = any(
-            f.is_black_override and f.state == RuleState.NON_COMPLIANT and f.eval_state != "UNKNOWN"
+            f.is_black_override and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"
             for f in self._flags if not f.resolved and f.conditional_applies
         )
         
         if pre_score <= 29 or has_black_override:
-            black_count = len([f for f in self._flags if f.severity == Severity.BLACK and f.state == RuleState.NON_COMPLIANT and f.eval_state != "UNKNOWN" and not f.resolved and f.conditional_applies and f.rule_id not in self._ESC_RULE_IDS])
+            black_count = len([f for f in self._flags if f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION" and not f.resolved and f.conditional_applies and f.rule_id not in self._ESC_RULE_IDS])
             esc003_impact = 10 if black_count <= 2 else (25 if black_count == 3 else 35)
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-003",
@@ -2080,7 +2090,7 @@ class NLCRuleEngine:
     def _calculate_raw_score(self, flags: List[ComplianceFlag]) -> int:
         active = [f for f in flags if not f.resolved and f.conditional_applies]
         # FIX: Only deduct points for NON_COMPLIANT findings
-        violations = [f for f in active if f.state == RuleState.NON_COMPLIANT]
+        violations = [f for f in active if f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]
 
         # P0 GATE: Only verified rules contribute to the authoritative score.
         # Unverified rules still generate flags for visibility but do not
@@ -2183,7 +2193,7 @@ class NLCRuleEngine:
             severity_rank = {Severity.GREEN: 0, Severity.YELLOW: 1, Severity.RED: 2, Severity.BLACK: 3}
             max_flag_severity = Severity.GREEN
             for f in active:
-                if f.severity in severity_rank and (f.severity in (Severity.RED, Severity.BLACK)) and f.state == RuleState.NON_COMPLIANT and f.eval_state != "UNKNOWN":
+                if f.severity in severity_rank and (f.severity in (Severity.RED, Severity.BLACK)) and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION":
                     if severity_rank[f.severity] > severity_rank.get(max_flag_severity, 0):
                         max_flag_severity = f.severity
             band_rank = severity_rank.get(score_band, 0)
@@ -2222,10 +2232,10 @@ class NLCRuleEngine:
             revenue_tier=REVENUE_TIER_MAP[band],
             active_flag_count=len(active),
             coverage=coverage,
-            black_flag_count=len([f for f in active if f.severity == Severity.BLACK and f.state == RuleState.NON_COMPLIANT]),
-            red_flag_count=len([f for f in active if f.severity == Severity.RED and f.state == RuleState.NON_COMPLIANT]),
-            yellow_flag_count=len([f for f in active if f.severity == Severity.YELLOW and f.state == RuleState.NON_COMPLIANT]),
-            green_flag_count=len([f for f in active if f.severity == Severity.GREEN and f.state == RuleState.NON_COMPLIANT]),
+            black_flag_count=len([f for f in active if f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            red_flag_count=len([f for f in active if f.severity == Severity.RED and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            yellow_flag_count=len([f for f in active if f.severity == Severity.YELLOW and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            green_flag_count=len([f for f in active if f.severity == Severity.GREEN and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             bankruptcy_score=max(0, 5 - bnk_ded),
             labour_score=max(0, 5 - lbr_ded),
             bsec_score=max(0, 5 - bsec_ded),
