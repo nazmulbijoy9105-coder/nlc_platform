@@ -82,6 +82,7 @@ def downgrade() -> None:
         DROP COLUMN IF EXISTS subsidiary_status_evidence_ref,
         DROP COLUMN IF EXISTS subsidiary_status_verified_by,
         DROP COLUMN IF EXISTS subsidiary_status_verified_at,
+        DROP COLUMN IF EXISTS subsidiary_status_verified_at,
         DROP COLUMN IF EXISTS subsidiary_status_verified,
         DROP COLUMN IF EXISTS is_private_subsidiary_of_public_company,
         DROP COLUMN IF EXISTS directors_verification_evidence_ref,
