@@ -165,6 +165,9 @@ class CompanyProfile:
     member_count: int | None = None
     articles_quorum_verified: bool | None = None
     articles_quorum_required: int | None = None
+    articles_quorum_verified_by: str | None = None
+    articles_quorum_verified_at: date | None = None
+    articles_quorum_evidence_ref: str | None = None
     incorporation_date: date | None = None
     financial_year_end: Optional[date] = field(default=None)
     agm_count: int | None = None
@@ -1026,6 +1029,9 @@ class NLCRuleEngine:
                 and c.member_count > 0
                 and c.members_present_at_agm is not None
                 and c.articles_quorum_verified is True
+                and bool(c.articles_quorum_verified_by and c.articles_quorum_verified_by.strip())
+                and c.articles_quorum_verified_at is not None
+                and bool(c.articles_quorum_evidence_ref and c.articles_quorum_evidence_ref.strip())
                 and (
                     c.articles_quorum_required is None
                     or c.articles_quorum_required >= 1
@@ -1072,7 +1078,12 @@ class NLCRuleEngine:
                     "company_type_not_supported"
                     if company_type != "PRIVATE_LIMITED"
                     else "articles_quorum_not_verified"
-                    if c.articles_quorum_verified is not True
+                    if (
+                        c.articles_quorum_verified is not True
+                        or not c.articles_quorum_verified_by
+                        or not c.articles_quorum_verified_at
+                        or not c.articles_quorum_evidence_ref
+                    )
                     else "invalid_articles_quorum_required"
                     if c.articles_quorum_required is not None and c.articles_quorum_required < 1
                     else "member_count_or_attendance_unknown"
@@ -1095,6 +1106,12 @@ class NLCRuleEngine:
                         "member_count": c.member_count,
                         "articles_quorum_verified": c.articles_quorum_verified,
                         "articles_quorum_required": c.articles_quorum_required,
+                        "articles_quorum_verified_by": c.articles_quorum_verified_by,
+                        "articles_quorum_verified_at": (
+                            c.articles_quorum_verified_at.isoformat()
+                            if c.articles_quorum_verified_at else None
+                        ),
+                        "articles_quorum_evidence_ref": c.articles_quorum_evidence_ref,
                         "reason": reason,
                     },
                     state=RuleState.UNKNOWN,
