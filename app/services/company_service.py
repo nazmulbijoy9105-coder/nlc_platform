@@ -38,6 +38,8 @@ def _agm_profile_evidence(latest_agm) -> dict:
             "agm_quorum_met": None,
             "notice_sent_date": None,
             "agm_notice_verified_absent": None,
+            "agm_held_without_audit": None,
+            "accounts_adopted_at_agm": None,
         }
 
     members_present = getattr(latest_agm, "members_present", None)
@@ -67,6 +69,8 @@ def _agm_profile_evidence(latest_agm) -> dict:
         "agm_notice_verified_absent": (
             True if getattr(latest_agm, "notice_missing", None) is True else None
         ),
+        "agm_held_without_audit": getattr(latest_agm, "agm_held_without_audit", None),
+        "accounts_adopted_at_agm": getattr(latest_agm, "accounts_adopted", None),
     }
 
 
@@ -428,6 +432,8 @@ class CompanyService(BaseService[Company]):
             "agm_quorum_met":              agm_profile_evidence["agm_quorum_met"],
             "notice_sent_date":             agm_profile_evidence["notice_sent_date"],
             "agm_notice_verified_absent":   agm_profile_evidence["agm_notice_verified_absent"],
+            "agm_held_without_audit":       agm_profile_evidence["agm_held_without_audit"],
+            "accounts_adopted_at_agm":      agm_profile_evidence["accounts_adopted_at_agm"],
 
             # Audit State
             "first_auditor_appointed":    bool(company.first_auditor_appointed) if company.first_auditor_appointed is not None else None,
