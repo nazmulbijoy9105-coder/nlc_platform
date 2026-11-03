@@ -17,6 +17,8 @@ def test_missing_agm_record_keeps_attendance_and_auditor_status_unknown():
         "agm_quorum_met": None,
         "notice_sent_date": None,
         "agm_notice_verified_absent": None,
+        "agm_held_without_audit": None,
+        "accounts_adopted_at_agm": None,
     }
 
 
@@ -54,6 +56,16 @@ def test_default_zero_attendance_is_not_treated_as_verified_quorum_breach():
     assert evidence["agm_minutes_prepared"] is None
     assert evidence["agm_quorum_met"] is None
 
+
+
+def test_agm_evidence_columns_are_nullable_where_legacy_defaults_were_ambiguous():
+    from app.models.filings import AGM
+    assert AGM.__table__.c.members_present.nullable is True
+    assert AGM.__table__.c.quorum_required.nullable is True
+    assert AGM.__table__.c.quorum_met.nullable is True
+    assert AGM.__table__.c.auditor_reappointed.nullable is True
+    assert AGM.__table__.c.accounts_adopted.nullable is True
+    assert AGM.__table__.c.agm_held_without_audit.nullable is True
 
 
 def test_notice_missing_orm_default_is_not_verified_absence():
