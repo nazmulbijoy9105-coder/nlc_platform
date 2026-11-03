@@ -443,7 +443,7 @@ CATEGORY_CAPS: dict[str, tuple[int, tuple[str, ...]]] = {
 # Unverified rules still generate flags (for visibility) but their
 # score_impact is excluded from _calculate_score() and _calculate_raw_score().
 #
-# Rationale: statutory citations for these 41 rules have been audited
+# Rationale: statutory citations for these 40 rules have been audited
 # against the Companies Act 1994 (Bangladesh) PDF. Rules not yet verified
 # (AUD-*, SH-*, TR-002~006, ESC-003~005, TAX-*, LBR-*, BNK-*, FX-*,
 # BSEC-*) require lawyer review before they can influence the score.
@@ -451,9 +451,9 @@ CATEGORY_CAPS: dict[str, tuple[int, tuple[str, ...]]] = {
 # BLACK-severity rules (DEF-001) are ALWAYS enforced regardless of
 # verification status — critical safety overrides cannot be gated.
 VERIFIED_RULE_IDS: frozenset[str] = frozenset({
-    # AGM module (7 rules)
+    # AGM module (6 rules; AGM-005 excluded pending independent counsel approval)
     "AGM-001", "AGM-002", "AGM-003", "AGM-004",
-    "AGM-005", "AGM-006", "AGM-007",
+    "AGM-006", "AGM-007",
     # Registers module (3 rules)
     "REG-001", "REG-002", "REG-003",
     # Registered Office (1 rule)
