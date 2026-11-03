@@ -251,8 +251,8 @@ def test_section_94_verified_disqualification_is_not_automatic_black():
         today=date(2026, 11, 3),
     )
     flag = _flag(result, "DEF-001")
-    assert flag.state == RuleState.NON_COMPLIANT
-    assert flag.severity == Severity.RED
+    assert flag.state == RuleState.DISPUTED
+    assert flag.severity == Severity.NOT_EVALUATED
     assert flag.is_black_override is False
     assert "DEF-001" not in VERIFIED_RULE_IDS
 
