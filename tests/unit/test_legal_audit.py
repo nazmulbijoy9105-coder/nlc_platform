@@ -189,6 +189,14 @@ class TestCalendarMonthDeadlines:
         assert _flag_by_id(on_deadline, "AGM-001") is None
         assert _flag_by_id(after_deadline, "AGM-001") is not None
 
+    def test_DATE_005_filing_service_uses_same_calendar_month_rules(self):
+        """Filing service and scoring engine must share identical Section 81 dates."""
+        from app.services.filing_service import AGMService
+        assert AGMService.calculate_first_agm_deadline(date(2024, 1, 31)) == date(2025, 7, 31)
+        assert AGMService.calculate_subsequent_agm_deadline(
+            date(2024, 1, 31), date(2024, 12, 31)
+        ) == date(2025, 4, 30)
+
     def test_DATE_004_subsequent_agm_uses_15_calendar_months(self):
         """Section 81: 15 calendar months, including month-end clamping."""
         profile = _base_profile(
