@@ -184,7 +184,7 @@ class ArticlesVerification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     source_checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     source_document_version: Mapped[int] = mapped_column(Integer, nullable=False)
-    status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING", index=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING", server_default="PENDING", index=True)
     submitted_by: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False,
     )
@@ -194,7 +194,7 @@ class ArticlesVerification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     effective_from: Mapped[date] = mapped_column(Date, nullable=False)
-    quorum_variation_exists: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    quorum_variation_exists: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
     quorum_required: Mapped[int | None] = mapped_column(Integer, nullable=True)
     clause_reference: Mapped[str] = mapped_column(String(255), nullable=False)
     reviewer_note: Mapped[str | None] = mapped_column(Text, nullable=True)
