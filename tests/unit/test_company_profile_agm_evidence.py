@@ -244,7 +244,9 @@ def test_first_auditor_false_status_conflicting_with_appointment_date_is_not_eva
     result = NLCRuleEngine().evaluate(profile, today=date(2026, 3, 10))
     flag = next(flag for flag in result.flags if flag.rule_id == "AUD-001")
     assert flag.flag_code == "FIRST_AUDITOR_EVIDENCE_CONTRADICTORY"
-    assert flag.state == RuleState.UNKNOWN
+    # Conflicting appointment status/date is explicitly contradictory,
+    # and remains non-scoring until a reviewer resolves the evidence.
+    assert flag.state == RuleState.CONTRADICTORY
     assert flag.eval_state == "UNKNOWN"
     assert flag.score_impact == 0
 
