@@ -49,8 +49,10 @@ APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {
         ("PRIVATE_LIMITED",),
         (
             "agm_held",
-            "member_count",
+            "members_total_at_agm",
+            "members_total_evidence_ref",
             "members_present_at_agm",
+            "members_present_evidence_ref",
             "articles_quorum_verified",
             "articles_quorum_verified_by",
             "articles_quorum_verified_at",
