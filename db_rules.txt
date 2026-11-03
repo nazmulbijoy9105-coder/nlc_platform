@@ -10,7 +10,7 @@ AR-002|Annual Return 2-Year Backlog|Companies Act 1994, Sections 119, 304|RED|20
 AR-003|Annual Return 3-Year Backlog — BLACK ESCALATION|Companies Act 1994, Sections 119, 304|BLACK|20|f|t
 AR-004|Annual Return Filed But Incomplete|Companies Act 1994, Section 119|YELLOW|10|f|t
 AUD-001|First Auditor Not Appointed Within One Calendar Month|Companies Act 1994, Section 210(6)|YELLOW|10|f|t
-AUD-002|Audit Not Completed Before AGM|Companies Act 1994, Section 183|RED|12|f|t
+AUD-002|Audit Not Completed Before AGM|Companies Act 1994, Section 183|YELLOW|0|f|t
 AUD-003|AGM Held Without Completed Audit — Legal Review Required|Sections 183 and 210, Companies Act 1994 (Bangladesh)|NOT_EVALUATED|0|f|t
 AUD-004|Auditor Not Reappointed at AGM|Companies Act 1994, Section 210(2)|YELLOW|5|f|t
 AUD-005|No Auditor Appointed for Current FY|Companies Act 1994, Section 210(2)|YELLOW|10|f|t
