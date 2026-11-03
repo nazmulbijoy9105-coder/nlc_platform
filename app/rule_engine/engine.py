@@ -876,40 +876,80 @@ class NLCRuleEngine:
                 ))
 
         if c.agm_scheduled_date and c.audit_complete is False:
+            audit_status_verified = (
+                c.audit_completion_verified is True
+                and bool(c.audit_completion_evidence_ref)
+                and c.audit_completion_verified_at is not None
+                and bool(c.audit_completion_verified_by)
+            )
             warning = c.agm_scheduled_date - timedelta(days=AGM_NOTICE_MINIMUM_DAYS)
             if self.today >= warning:
                 days_to = (c.agm_scheduled_date - self.today).days
-                severity = Severity.RED if days_to < 14 else Severity.YELLOW
-                self._add_flag(ComplianceFlag(
-                    rule_id="AUD-002",
-                    flag_code="AUDIT_MISSING_PRE_AGM",
-                    severity=severity,
-                    score_impact=12,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Audit not complete. AGM in {days_to} days. Section 183 requires audited accounts to be laid before the AGM.",
-                    statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
-                    detail={"days_to_agm": days_to}
-                ))
+                if not audit_status_verified:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AUD-002",
+                        flag_code="AUDIT_COMPLETION_STATUS_UNVERIFIED",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="Audit completion is recorded as false but lacks reviewer, timestamp and evidence provenance.",
+                        statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                    ))
+                else:
+                    severity = Severity.RED if days_to < 14 else Severity.YELLOW
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AUD-002",
+                        flag_code="AUDIT_MISSING_PRE_AGM",
+                        severity=severity,
+                        score_impact=12,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=f"Verified audit completion is absent. AGM in {days_to} days. Section 183 requires accounts to be laid before the AGM.",
+                        statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
+                        detail={"days_to_agm": days_to}
+                    ))
 
         if c.agm_held_this_cycle and c.audit_complete is False:
-            self._add_flag(ComplianceFlag(
-                rule_id="AUD-003",
-                flag_code="AGM_HELD_WITHOUT_COMPLETED_AUDIT",
-                severity=Severity.RED,
-                score_impact=12,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=(
-                    "AGM recorded without completed audit. Section 183 governs accounts "
-                    "laid before the AGM; assess the actual accounts, auditor appointment "
-                    "and any applicable exception before determining legal consequences."
-                ),
-                statutory_basis="Sections 183 and 210, Companies Act 1994 (Bangladesh)",
-                detail={"legal_review_required": True, "override_to_black": False},
-                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
-                eval_state="UNKNOWN",
-            ))
+            audit_status_verified = (
+                c.audit_completion_verified is True
+                and bool(c.audit_completion_evidence_ref)
+                and c.audit_completion_verified_at is not None
+                and bool(c.audit_completion_verified_by)
+            )
+            if not audit_status_verified:
+                self._add_flag(ComplianceFlag(
+                    rule_id="AUD-003",
+                    flag_code="AUDIT_COMPLETION_STATUS_UNVERIFIED",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="AGM record indicates an incomplete audit, but the audit status lacks reviewer, timestamp and evidence provenance.",
+                    statutory_basis="Sections 183 and 210, Companies Act 1994 (Bangladesh)",
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                ))
+            else:
+                self._add_flag(ComplianceFlag(
+                    rule_id="AUD-003",
+                    flag_code="AGM_HELD_WITHOUT_COMPLETED_AUDIT",
+                    severity=Severity.RED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                    description=(
+                        "Verified audit completion is absent for an AGM. Section 183 governs "
+                        "accounts laid before the AGM; a lawyer must assess the actual accounts, "
+                        "auditor appointment and applicable exceptions before determining consequences."
+                    ),
+                    statutory_basis="Sections 183 and 210, Companies Act 1994 (Bangladesh)",
+                    detail={"legal_review_required": True, "override_to_black": False},
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                ))
 
-        if c.agm_held_this_cycle and c.auditor_reappointed_at_agm is False:
+        if (c.agm_held_this_cycle and c.auditor_reappointed_at_agm is False
+                and c.auditor_reappointment_verified is True
+                and bool(c.auditor_reappointment_evidence_ref)):
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-004",
                 flag_code="AUDITOR_NOT_REAPPOINTED",
