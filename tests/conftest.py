@@ -333,6 +333,10 @@ def build_profile():
             "financial_year_end": date(today.year - 1, 12, 31),
             # AGM — fully compliant
             "agm_count": 3,
+            "agm_history_verified": True,
+            "agm_history_evidence_ref": "AGM-HISTORY-TEST",
+            "agm_history_verified_at": today,
+            "agm_history_verified_by": "reviewer-001",
             "last_agm_date": today - timedelta(days=60),
             "agm_held_this_cycle": True,
             "agm_scheduled_date": None,
