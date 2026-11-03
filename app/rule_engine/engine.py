@@ -1019,6 +1019,7 @@ class NLCRuleEngine:
                 detail={
                     "present": c.members_present_at_agm,
                     "member_count": c.member_count,
+                    "quorum_required_recorded": c.agm_quorum_required,
                     "quorum_met_recorded": False,
                     "quorum_basis": "company Articles; statutory default under Section 85(2)(b) where applicable",
                 },
