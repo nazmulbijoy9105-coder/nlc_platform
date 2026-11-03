@@ -48,11 +48,9 @@ def _agm_profile_evidence(latest_agm) -> dict:
     if members_present is None:
         quorum_met = None
 
+    # Migration 0045 converted legacy default-False values to NULL. A new False
+    # value is now an explicit reviewed absence, while NULL remains UNKNOWN.
     minutes_prepared = getattr(latest_agm, "minutes_prepared", None)
-    # The ORM column defaults to False, so False alone cannot establish that
-    # minutes were never prepared; retain UNKNOWN until explicit evidence exists.
-    if minutes_prepared is False:
-        minutes_prepared = None
 
     return {
         "members_present_at_agm": members_present,
