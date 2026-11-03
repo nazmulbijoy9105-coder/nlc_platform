@@ -2213,40 +2213,42 @@ class NLCRuleEngine:
 
 
     def _calculate_raw_score(self, flags: List[ComplianceFlag]) -> int:
-        active = [f for f in flags if not f.resolved and f.conditional_applies]
-        # FIX: Only deduct points for NON_COMPLIANT findings
-        violations = [f for f in active if f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]
+        """Return the same capped 100-point raw score used by _calculate_score.
 
-        # P0 GATE: Only verified rules contribute to the authoritative score.
-        # Unverified rules still generate flags for visibility but do not
-        # reduce the score. BLACK overrides are handled separately in
-        # _calculate_score() and are always enforced.
+        Escalation rules call this before generating ESC flags, so it must use
+        the exact same verified-rule gate, category buckets and caps as the
+        authoritative scorer. A separate 125-point scaling formula caused
+        different pre-score and final-score results for identical findings.
+        """
+        active = [f for f in flags if not f.resolved and f.conditional_applies]
+        violations = [
+            f for f in active
+            if f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+            and f.eval_state == "VIOLATION"
+        ]
         scored = [f for f in violations if f.rule_id in VERIFIED_RULE_IDS]
 
-        tax_ded = sum(f.score_impact for f in scored if f.rule_id.startswith(("TAX-", "VAT-")))
-        agm_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("AGM-"))
-        aud_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("AUD-"))
-        ret_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("AR-"))
-        dir_ded = sum(f.score_impact for f in scored if f.rule_id.startswith(("DIR-", "INC-", "DEF-", "TL-", "BOD-", "MEM-")))
-        shr_ded = sum(f.score_impact for f in scored if f.rule_id.startswith(("SH-", "TR-")))
-        cap_ded = sum(f.score_impact for f in scored if f.rule_id.startswith(("CAP-", "STR-", "CHG-", "ACC-")))
-        off_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("OFF-"))
-        reg_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("REG-"))
-        bnk_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("BNK-"))
-        lbr_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("LBR-"))
-        bsec_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("BSEC-"))
-        fx_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("FX-"))
-        esc_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("ESC-"))
-
-        module_sum = (
-            max(0, 20 - agm_ded) + max(0, 20 - aud_ded) + max(0, 20 - ret_ded) +
-            max(0, 10 - dir_ded) + max(0, 10 - shr_ded) + max(0, 5 - cap_ded) +
-            max(0, 5 - off_ded) + max(0, 5 - reg_ded) + max(0, 5 - tax_ded) +
-            max(0, 5 - bnk_ded) + max(0, 5 - lbr_ded) + max(0, 5 - bsec_ded) +
-            max(0, 5 - fx_ded) + max(0, 5 - esc_ded)
-        )
-        # FIX: Scale 125 max points to 100
-        return int((module_sum / 125.0) * 100)
+        deductions = {
+            "TAX": sum(f.score_impact for f in scored if f.rule_id.startswith(("TAX-", "VAT-"))),
+            "AGM": sum(f.score_impact for f in scored if f.rule_id.startswith("AGM-")),
+            "AUD": sum(f.score_impact for f in scored if f.rule_id.startswith("AUD-")),
+            "RET": sum(f.score_impact for f in scored if f.rule_id.startswith("AR-")),
+            "DIR": sum(f.score_impact for f in scored if f.rule_id.startswith(("DIR-", "INC-", "DEF-", "TL-", "BOD-", "MEM-"))),
+            "SHR": sum(f.score_impact for f in scored if f.rule_id.startswith(("SH-", "TR-"))),
+            "CAP": sum(f.score_impact for f in scored if f.rule_id.startswith(("CAP-", "STR-", "CHG-", "ACC-"))),
+            "OFF": sum(f.score_impact for f in scored if f.rule_id.startswith("OFF-")),
+            "REG": sum(f.score_impact for f in scored if f.rule_id.startswith("REG-")),
+            "BNK": sum(f.score_impact for f in scored if f.rule_id.startswith("BNK-")),
+            "LBR": sum(f.score_impact for f in scored if f.rule_id.startswith("LBR-")),
+            "BSEC": sum(f.score_impact for f in scored if f.rule_id.startswith("BSEC-")),
+            "FX": sum(f.score_impact for f in scored if f.rule_id.startswith("FX-")),
+            "ESC": sum(f.score_impact for f in scored if f.rule_id.startswith("ESC-")),
+        }
+        capped = {
+            key: min(value, CATEGORY_CAPS[key][0])
+            for key, value in deductions.items()
+        }
+        return max(0, min(100, 100 - sum(capped.values())))
 
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
         active = [f for f in flags if not f.resolved and f.conditional_applies]
