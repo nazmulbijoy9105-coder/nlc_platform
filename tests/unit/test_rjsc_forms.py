@@ -22,9 +22,9 @@ class TestRJSCForms:
             "FORM_IX": ("Section 92", 30),
             "FORM_XII": ("Section 115", 14),
             "FORM_XV": ("Section 151", 60),
-            "FORM_XVIII": ("Sections 159(1), 391", 21),
-            "FORM_XIX": ("Sections 167(3), 319", 21),
-            "FORM_XXVIII": ("Sections 172, 391", 21),
+            "FORM_XVIII": ("Section 159(1)", 21),
+            "FORM_XIX": ("Section 167(3)", 21),
+            "FORM_XXVIII": ("Section 172", 21),
             "SCHEDULE_X": ("Section 36", 21),
         }
         for code, (section, days) in expected.items():
