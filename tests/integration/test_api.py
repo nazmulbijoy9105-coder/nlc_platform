@@ -361,12 +361,41 @@ class TestFilings:
         )
         assert response.status_code == 200, response.text
         result = response.json()
-        assert result["quorum_met"] is True
-        assert result["quorum_required"] == 2
-        assert result["quorum_basis"] == "SECTION_85_2_B_DEFAULT_ARTICLES_NOT_REVIEWED"
+        assert result["quorum_met"] is None
+        assert result["quorum_required"] is None
+        assert result["quorum_basis"] == "ARTICLES_NOT_VERIFIED_OR_QUORUM_INPUTS_UNKNOWN"
         assert result["venue"] == "Registered Office"
         assert result["accounts_adopted"] is True
         assert result["agm_held_without_audit"] is False
+
+    @pytest.mark.asyncio
+    async def test_mark_agm_held_uses_verified_articles_quorum(self, api_client, staff_token, db_company, db):
+        from app.services.filing_service import AGMService
+
+        db_company.member_count = 7
+        db_company.articles_quorum_verified = True
+        db_company.articles_quorum_required = None
+        await db.flush()
+
+        agm = await AGMService(db).create_agm(company_id=db_company.id, financial_year=2022)
+        response = await api_client.patch(
+            f"/api/v1/filings/agm/{agm.id}/held",
+            headers=_auth(staff_token),
+            json={
+                "held_date": "2023-05-15",
+                "venue": "Registered Office",
+                "members_present": 2,
+                "auditor_reappointed": True,
+                "accounts_adopted": True,
+                "agm_held_without_audit": False,
+            },
+        )
+        assert response.status_code == 200, response.text
+        result = response.json()
+        assert result["quorum_met"] is False
+        assert result["quorum_required"] == 3
+        assert result["quorum_basis"] == "SECTION_85_2_B_DEFAULT_ARTICLES_VERIFIED_NO_VARIATION"
+
 
     @pytest.mark.asyncio
     async def test_list_agms_for_company(self, api_client, staff_token, db_company):
