@@ -264,19 +264,63 @@ class CompanyService(BaseService[Company]):
             }
         return dict(row)
 
-    async def get_risk_distribution(self, user_id: uuid.UUID | None = None) -> list[dict]:
-        """Risk band distribution from vw_risk_distribution view."""
-        result = await self.db.execute(text("SELECT * FROM vw_risk_distribution"))
-        return [dict(row) for row in result.mappings().all()]
+    async def get_risk_distribution(self, user_id: uuid.UUID) -> list[dict]:
+        """Return risk distribution for active companies accessible to user.
 
-    async def get_upcoming_deadlines(self, days_ahead: int = 30, user_id: uuid.UUID | None = None) -> list[dict]:
-        """Fetch upcoming AGM and return deadlines within N days."""
+        Scope the company rows before aggregation: global aggregates disclose
+        other tenants through both counts and percentages.
+        """
+        accessible_company_ids = (
+            select(CompanyUserAccess.company_id)
+            .where(
+                CompanyUserAccess.user_id == user_id,
+                CompanyUserAccess.is_active.is_(True),
+            )
+        )
+        result = await self.db.execute(
+            select(
+                Company.current_risk_band.label("risk_band"),
+                func.count(Company.id).label("company_count"),
+            )
+            .where(
+                Company.is_active.is_(True),
+                Company.id.in_(accessible_company_ids),
+            )
+            .group_by(Company.current_risk_band)
+        )
+        rows = result.all()
+        total = sum(int(row.company_count) for row in rows)
+        if total == 0:
+            return []
+
+        order = {"BLACK": 0, "RED": 1, "YELLOW": 2, "GREEN": 3}
+        distribution = []
+        for row in rows:
+            band = row.risk_band.value if hasattr(row.risk_band, "value") else row.risk_band
+            distribution.append({
+                "risk_band": band,
+                "company_count": int(row.company_count),
+                "percentage": round(int(row.company_count) * 100.0 / total, 1),
+            })
+        return sorted(distribution, key=lambda item: order.get(str(item["risk_band"]), 4))
+
+    async def get_upcoming_deadlines(
+        self,
+        days_ahead: int,
+        user_id: uuid.UUID,
+    ) -> list[dict]:
+        """Return upcoming deadlines only for the user's active memberships."""
         result = await self.db.execute(
             text(
                 "SELECT * FROM vw_upcoming_deadlines "
-                "WHERE days_remaining <= :days ORDER BY days_remaining"
+                "WHERE days_remaining <= :days "
+                "AND company_id IN ("
+                "  SELECT company_id FROM company_user_access "
+                "  WHERE user_id = :user_id AND is_active IS TRUE"
+                ") "
+                "ORDER BY days_remaining"
             ),
-            {"days": days_ahead},
+            {"days": days_ahead, "user_id": user_id},
         )
         return [dict(row) for row in result.mappings().all()]
 
