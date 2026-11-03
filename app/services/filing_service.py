@@ -41,9 +41,9 @@ class AGMService(BaseService[AGM]):
         agm_held: bool = False,
         agm_date: date | None = None,
         notice_sent_date: date | None = None,
-        members_present: int = 0,
-        quorum_required: int = 2,
-        auditor_reappointed: bool = True,
+        members_present: int | None = None,
+        quorum_required: int | None = None,
+        auditor_reappointed: bool | None = None,
         minutes_prepared: bool = False,
         minutes_filed_rjsc: bool = False,
         rjsc_filing_date: date | None = None,
@@ -51,7 +51,7 @@ class AGMService(BaseService[AGM]):
         delay_days: int = 0,
         notice_defective: bool = False,
         notice_missing: bool = False,
-        quorum_met: bool = True,
+        quorum_met: bool | None = None,
         created_by: uuid.UUID | None = None,
         agm_due_date=None
     ) -> AGM:
@@ -94,9 +94,10 @@ class AGMService(BaseService[AGM]):
             if days_notice < 0:
                 notice_missing = True
 
-        # Quorum check
-        if agm_held and members_present < quorum_required:
-            quorum_met = False
+        # Quorum can only be calculated when the applicable threshold has been
+        # verified from the Articles or the Section 85(2)(b) statutory default.
+        if agm_held and members_present is not None and quorum_required is not None:
+            quorum_met = members_present >= quorum_required
 
         return await self.create(
             company_id=company_id,
@@ -155,9 +156,10 @@ class AGMService(BaseService[AGM]):
         self,
         agm_id: uuid.UUID,
         agm_date: date,
-        members_present: int,
-        auditor_reappointed: bool,
-        quorum_required: int = 2,
+        members_present: int | None,
+        auditor_reappointed: bool | None,
+        quorum_required: int | None = None,
+        quorum_met: bool | None = None,
     ) -> AGM | None:
         """
         Record that an AGM was held on a given date.
@@ -167,7 +169,8 @@ class AGMService(BaseService[AGM]):
         if not agm:
             return None
 
-        quorum_met = members_present >= quorum_required
+        if quorum_met is None and members_present is not None and quorum_required is not None:
+            quorum_met = members_present >= quorum_required
         is_default = False
         delay_days = 0
         if agm.agm_deadline and agm_date > agm.agm_deadline:
@@ -179,6 +182,7 @@ class AGMService(BaseService[AGM]):
             agm_held=True,
             agm_date=agm_date,
             members_present=members_present,
+            quorum_required=quorum_required,
             quorum_met=quorum_met,
             auditor_reappointed=auditor_reappointed,
             is_default=is_default,
