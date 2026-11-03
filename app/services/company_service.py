@@ -36,6 +36,7 @@ def _agm_profile_evidence(latest_agm) -> dict:
             "auditor_reappointed_at_agm": None,
             "agm_minutes_prepared": None,
             "agm_quorum_met": None,
+            "agm_quorum_required": None,
             "notice_sent_date": None,
             "agm_notice_verified_absent": None,
             "agm_held_without_audit": None,
@@ -57,6 +58,7 @@ def _agm_profile_evidence(latest_agm) -> dict:
         "auditor_reappointed_at_agm": getattr(latest_agm, "auditor_reappointed", None),
         "agm_minutes_prepared": minutes_prepared,
         "agm_quorum_met": quorum_met,
+        "agm_quorum_required": getattr(latest_agm, "quorum_required", None),
         "notice_sent_date": getattr(latest_agm, "notice_sent_date", None),
         # False is the ORM default, not proof of service; only explicit True
         # confirms that notice was verified as not served.
@@ -424,6 +426,7 @@ class CompanyService(BaseService[Company]):
             "agm_held_this_cycle":        latest_agm.agm_held if latest_agm else (company.last_agm_date is not None and date.today() <= NLCRuleEngine._add_months(company.last_agm_date, 15)),
             "agm_minutes_prepared":       agm_profile_evidence["agm_minutes_prepared"],
             "agm_quorum_met":              agm_profile_evidence["agm_quorum_met"],
+            "agm_quorum_required":         agm_profile_evidence["agm_quorum_required"],
             "notice_sent_date":             agm_profile_evidence["notice_sent_date"],
             "agm_notice_verified_absent":   agm_profile_evidence["agm_notice_verified_absent"],
             "agm_held_without_audit":       agm_profile_evidence["agm_held_without_audit"],
