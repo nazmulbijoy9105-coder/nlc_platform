@@ -2083,7 +2083,10 @@ class NLCRuleEngine:
                     and continuing is True
                     and (
                         ground_type != "UNPAID_CALL"
-                        or int(g.get("days_since_payment_due", 0)) >= 180
+                        or (
+                            isinstance(g.get("days_since_payment_due"), int)
+                            and g["days_since_payment_due"] >= 180
+                        )
                     )
                     and (
                         ground_type != "AOA_PRESCRIBED"
