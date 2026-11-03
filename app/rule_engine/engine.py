@@ -498,8 +498,8 @@ VERIFIED_RULE_IDS: frozenset[str] = frozenset({
     "TR-001",
     # Escalation (2 rules)
     "ESC-001", "ESC-002",
-    # Director disqualification (2 rules — BLACK override always enforced)
-    "DEF-001", "DEF-002",
+    # Director disqualification rules remain outside scoring pending independent legal review.
+    "DEF-002",
 })
 
 REVENUE_TIER_MAP = {
@@ -2071,7 +2071,21 @@ class NLCRuleEngine:
                 ground_type = g.get("ground_type", "")
                 evidence_ref = g.get("evidence_ref")
                 authority = g.get("authority")
-                if ground_type in VALID_GROUNDS and evidence_ref and authority:
+                director_name = g.get("director_name")
+                effective_date = g.get("effective_date")
+                continuing = g.get("continuing_status")
+                if (
+                    ground_type in VALID_GROUNDS
+                    and isinstance(director_name, str) and director_name.strip()
+                    and isinstance(evidence_ref, str) and evidence_ref.strip()
+                    and isinstance(authority, str) and authority.strip()
+                    and effective_date
+                    and continuing is True
+                    and (
+                        ground_type != "AOA_PRESCRIBED"
+                        or bool(g.get("aoa_provision_ref"))
+                    )
+                ):
                     verified_grounds.append(g)
                 else:
                     unverified_allegations.append(g)
@@ -2083,12 +2097,10 @@ class NLCRuleEngine:
 
         if verified_grounds:
             disq_count = len(verified_grounds)
-            impact = 20 if disq_count == 1 else 25
-            is_override = (
-                c.current_director_count is not None
-                and c.current_director_count > 0
-                and disq_count >= (c.current_director_count - 1)
-            )
+            # Disqualification is a statutory finding; automatic BLACK is an
+            # NLC risk-policy choice, not a consequence prescribed by Section 94.
+            impact = 10
+            is_override = False
             ground_summary = "; ".join(
                 f"{g.get('director_name', 'Director')}: {g.get('ground_type', 'unknown')}"
                 for g in verified_grounds
@@ -2096,9 +2108,9 @@ class NLCRuleEngine:
             self._add_flag(ComplianceFlag(
                 rule_id="DEF-001",
                 flag_code="DIRECTOR_DISQUALIFIED",
-                severity=Severity.BLACK,
+                severity=Severity.RED,
                 score_impact=impact,
-                revenue_tier=RevenueTier.CORPORATE_RESCUE,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=(
                     f"{disq_count} director(s) disqualified under Section 94 "
                     f"({ground_summary}). Verified evidence on file. "
@@ -2110,7 +2122,7 @@ class NLCRuleEngine:
                     "count": disq_count,
                     "evidence_verified": True,
                 },
-                is_black_override=is_override,
+                is_black_override=False,
             ))
         elif unverified_allegations:
             # P0 EVIDENCE SEMANTICS: Unverified disqualification allegations
