@@ -101,7 +101,7 @@ jobs:
           alembic current
 
       - name: Run integration tests
-        run: python -m pytest tests/integration -q --tb=short
+        run: python -m pytest tests/integration -q -rs --tb=short
 
       - name: Run canonical integrity tests
         run: python -m pytest tests/test_canonical_integrity.py -q --tb=short
