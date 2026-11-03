@@ -334,6 +334,8 @@ class TestDEF001Variations:
                 "director_name": "Dir A",
                 "evidence_ref": "Insolvency Certificate 2023",
                 "authority": "Bankruptcy Court, Dhaka",
+                "effective_date": "2023-01-01",
+                "continuing_status": True,
             }],
             current_director_count=3,
             directors_verified=True,
@@ -343,7 +345,8 @@ class TestDEF001Variations:
         # Should fire — disqualified director is still on board
         if flag:
             assert flag.state == RuleState.NON_COMPLIANT
-            assert flag.severity == Severity.BLACK
+            assert flag.severity == Severity.RED
+            assert flag.is_black_override is False
 
     def test_4_company_outside_scope_not_applicable(self):
         """No directors → rule not applicable."""
@@ -372,6 +375,8 @@ class TestDEF001Variations:
                 "director_name": "Dir B",
                 "evidence_ref": "Court Order #456",
                 "authority": "Competent Court",
+                "effective_date": "2024-01-01",
+                "continuing_status": True,
             }],
         )
         result = _engine().evaluate(c)
@@ -389,6 +394,8 @@ class TestDEF001Variations:
                 "director_name": "Dir C",
                 "evidence_ref": "Insolvency Certificate #789",
                 "authority": "Bankruptcy Court",
+                "effective_date": "2025-01-01",
+                "continuing_status": True,
             }],
             current_director_count=2,  # 1 disqualified leaves only 1 → below minimum → override
             incorporation_date=date(2020, 1, 1),
@@ -398,9 +405,10 @@ class TestDEF001Variations:
         result = _engine().evaluate(c)
         flag = _flag_by_id(result, "DEF-001")
         if flag:
-            assert flag.is_black_override == True, "DEF-001 must be BLACK override"
-            # BLACK override forces score to 0 and triggers rescue
-            assert result.score_breakdown.risk_band in (Severity.BLACK, Severity.RED)
+            assert flag.is_black_override is False
+            assert flag.severity == Severity.RED
+            # DEF-001 is visible but excluded from scoring pending independent legal approval.
+            assert "DEF-001" not in VERIFIED_RULE_IDS
 
     def test_8_legal_question_requires_judgment(self):
         """Director with pending insolvency application — is S94(c) met?
@@ -415,6 +423,8 @@ class TestDEF001Variations:
                 "director_name": "Dir D",
                 "evidence_ref": "Court Application Receipt",
                 "authority": "Insolvency Court",
+                "effective_date": "2026-01-01",
+                "continuing_status": True,
             }],
         )
         result = _engine().evaluate(c)
@@ -423,7 +433,9 @@ class TestDEF001Variations:
         # With verified evidence, this fires NON_COMPLIANT
         if flag:
             assert flag.state == RuleState.NON_COMPLIANT
-            # The engine makes a binary decision, but a lawyer should verify
+            assert flag.severity == Severity.RED
+            assert flag.is_black_override is False
+            # The engine makes a finding only from structured evidence.
             # whether "pending application" meets the S94(1)(c) threshold
 
 
@@ -437,7 +449,7 @@ class TestProductionGate:
         """Verify the 35 verified rules are in VERIFIED_RULE_IDS."""
         assert "AGM-001" in VERIFIED_RULE_IDS
         assert "OFF-001" in VERIFIED_RULE_IDS
-        assert "DEF-001" in VERIFIED_RULE_IDS
+        assert "DEF-001" not in VERIFIED_RULE_IDS
         assert len(VERIFIED_RULE_IDS) >= 35
 
     def test_unverified_rules_excluded_from_score(self):
