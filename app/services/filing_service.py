@@ -160,7 +160,12 @@ class AGMService(BaseService[AGM]):
         company_type = getattr(company, "company_type", None) if company else None
         company_type = getattr(company_type, "value", company_type)
 
-        articles_verified = getattr(company, "articles_quorum_verified", None) is True
+        articles_verified = (
+            getattr(company, "articles_quorum_verified", None) is True
+            and bool(getattr(company, "articles_quorum_verified_by", None))
+            and getattr(company, "articles_quorum_verified_at", None) is not None
+            and bool(getattr(company, "articles_quorum_evidence_ref", None))
+        )
         articles_quorum_required = getattr(company, "articles_quorum_required", None)
         if (
             company_type == "PRIVATE_LIMITED"
