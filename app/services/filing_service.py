@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 
+from app.models.company import Company
 from app.models.filings import AGM, AnnualReturn, Audit
 from app.models.infrastructure import StatutoryRegister
 from app.services.base import BaseService
@@ -137,30 +138,55 @@ class AGMService(BaseService[AGM]):
         agm_date: date,
         members_present: int,
         auditor_reappointed: bool,
-        quorum_required: int = 2,
+        *,
+        venue: str | None = None,
+        accounts_adopted: bool | None = None,
+        agm_held_without_audit: bool | None = None,
+        minutes_document_id: uuid.UUID | None = None,
     ) -> AGM | None:
         """
-        Record that an AGM was held on a given date.
-        Auto-calculates quorum, notice, and default status.
+        Record an AGM using server-derived quorum, not a client-supplied boolean.
+
+        Section 85(2)(b) private-company default:
+        2 members where total membership is not more than 6; 3 where it is
+        more than 6. Articles-specific overrides are not yet modelled, so this
+        is a statutory-default assessment and must not be presented as a
+        final Articles-compliant legal determination.
         """
         agm = await self.get_by_id(agm_id)
         if not agm:
             return None
 
-        quorum_met = members_present >= quorum_required
-        is_default = False
-        delay_days = 0
-        if agm.agm_deadline and agm_date > agm.agm_deadline:
-            is_default = True
-            delay_days = (agm_date - agm.agm_deadline).days
+        company = await self.db.get(Company, agm.company_id)
+        member_count = getattr(company, "member_count", None) if company else None
+        company_type = getattr(company, "company_type", None) if company else None
+        company_type = getattr(company_type, "value", company_type)
+
+        if company_type == "PRIVATE_LIMITED" and member_count is not None and member_count > 0:
+            quorum_required = 2 if member_count <= 6 else 3
+            quorum_met: bool | None = members_present >= quorum_required
+        else:
+            # Do not invent a quorum where company type or verified membership
+            # is unavailable, or where a different company category applies.
+            quorum_required = None
+            quorum_met = None
+
+        is_default = bool(agm.agm_deadline and agm_date > agm.agm_deadline)
+        delay_days = (agm_date - agm.agm_deadline).days if is_default and agm.agm_deadline else 0
 
         return await self.update_instance(
             agm,
             agm_held=True,
             agm_date=agm_date,
+            venue=venue,
             members_present=members_present,
+            quorum_required=quorum_required,
             quorum_met=quorum_met,
             auditor_reappointed=auditor_reappointed,
+            accounts_adopted=accounts_adopted,
+            agm_held_without_audit=agm_held_without_audit,
+            minutes_document_id=minutes_document_id,
+            minutes_prepared=minutes_document_id is not None,
             is_default=is_default,
             delay_days=delay_days,
         )
