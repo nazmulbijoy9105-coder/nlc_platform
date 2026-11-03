@@ -630,7 +630,7 @@ class NLCRuleEngine:
             and bool(c.moa_aoa_evidence_ref)
             and c.moa_aoa_verified_at is not None
             and bool(c.moa_aoa_verified_by)
-        ):
+        ) and c.moa_aoa_filed is not True:
             self._add_flag(ComplianceFlag(
                 rule_id="INC-001",
                 flag_code="MOA_AOA_NOT_VERIFIED",
@@ -823,12 +823,14 @@ class NLCRuleEngine:
         # "within one month" of registration. "One month" = CALENDAR MONTH,
         # not 30 days. Using 30 days is legally incorrect for months with
         # 28/29/31 days.
-        if not (
-            c.first_auditor_appointment_verified is True
-            and bool(c.first_auditor_appointment_evidence_ref)
-            and c.first_auditor_appointment_verified_at is not None
-            and bool(c.first_auditor_appointment_verified_by)
-        ) or c.first_auditor_appointed is None:
+        if c.first_auditor_appointed is not True and (
+            not (
+                c.first_auditor_appointment_verified is True
+                and bool(c.first_auditor_appointment_evidence_ref)
+                and c.first_auditor_appointment_verified_at is not None
+                and bool(c.first_auditor_appointment_verified_by)
+            ) or c.first_auditor_appointed is None
+        ):
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-001",
                 flag_code="FIRST_AUDITOR_STATUS_UNKNOWN",
@@ -1090,45 +1092,25 @@ class NLCRuleEngine:
                     detail={"days_to_agm": days_rem}
                 ))
 
-        if c.agm_held_this_cycle and c.members_present_at_agm is not None:
-            if (c.agm_attendance_verified is not True
-                    or not c.agm_attendance_evidence_ref
-                    or c.agm_quorum_basis_verified is not True
-                    or not c.agm_quorum_evidence_ref
-                    or c.agm_quorum_required is None):
-                self._add_flag(ComplianceFlag(
-                    rule_id="AGM-005",
-                    flag_code="AGM_QUORUM_BASIS_NOT_VERIFIED",
-                    severity=Severity.NOT_EVALUATED,
-                    score_impact=0,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Attendance is recorded, but the applicable quorum has not been verified from the Articles and Section 85(2)(b).",
-                    statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
-                    state=RuleState.UNKNOWN,
-                    eval_state="UNKNOWN",
-                    detail={"present": c.members_present_at_agm, "quorum_required": None},
-                ))
-            elif c.members_present_at_agm < c.agm_quorum_required:
-                self._add_flag(ComplianceFlag(
-                    rule_id="AGM-005",
-                    flag_code="AGM_QUORUM_DEFECTIVE",
-                    severity=Severity.RED,
-                    score_impact=15,
-                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description=f"Recorded attendance ({c.members_present_at_agm}) is below verified quorum ({c.agm_quorum_required}).",
-                    statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh), read with the Articles",
-                    detail={"present": c.members_present_at_agm, "required": c.agm_quorum_required},
-                ))
-        if c.agm_held_this_cycle and c.members_present_at_agm is not None and c.members_present_at_agm < PRIVATE_COMPANY_QUORUM:
+        if (
+            c.agm_held_this_cycle
+            and c.members_present_at_agm is not None
+            and c.agm_attendance_verified is True
+            and bool(c.agm_attendance_evidence_ref)
+            and c.agm_quorum_basis_verified is True
+            and bool(c.agm_quorum_evidence_ref)
+            and c.agm_quorum_required is not None
+            and c.members_present_at_agm < c.agm_quorum_required
+        ):
             self._add_flag(ComplianceFlag(
                 rule_id="AGM-005",
                 flag_code="AGM_QUORUM_DEFECTIVE",
                 severity=Severity.RED,
                 score_impact=15,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=f"AGM quorum not met. {c.members_present_at_agm} present, need {PRIVATE_COMPANY_QUORUM}. Section 83.",
-                statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
-                detail={"present": c.members_present_at_agm, "required": PRIVATE_COMPANY_QUORUM}
+                description=f"Recorded attendance ({c.members_present_at_agm}) is below verified quorum ({c.agm_quorum_required}).",
+                statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh), read with the Articles",
+                detail={"present": c.members_present_at_agm, "required": c.agm_quorum_required},
             ))
 
         if c.agm_held_this_cycle and c.agm_minutes_prepared is False:
@@ -2318,7 +2300,11 @@ class NLCRuleEngine:
 
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
         active = [f for f in flags if not f.resolved and f.conditional_applies]
-        violations = [f for f in active if f.state == RuleState.NON_COMPLIANT]
+        violations = [
+            f for f in active
+            if f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+            and f.eval_state == "VIOLATION"
+        ]
 
         # P0 GATE: Only verified rules contribute to the authoritative score.
         # Unverified rules still generate flags for visibility but their
@@ -2661,9 +2647,10 @@ class NLCRuleEngine:
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:
         if c.last_agm_date is None:
             if c.agm_count == 0:
-                deadline = self._add_months(c.incorporation_date, 18)
-                if self.today > deadline:  # type: ignore
-                    return (self.today - deadline).days // 365  # type: ignore
+                if c.incorporation_date is not None:
+                    deadline = self._add_months(c.incorporation_date, 18)
+                    if self.today > deadline:
+                        return (self.today - deadline).days // 365
             return 0
             
         # Match Section 81(1): no more than 15 months between AGMs and
