@@ -778,7 +778,12 @@ class NLCRuleEngine:
         appointment_date = c.first_auditor_appointment_date
         deadline = self._add_one_month(reg_date) if reg_date else None
 
-        def _auditor_unknown(code: str, message: str, detail: dict | None = None) -> None:
+        def _auditor_unknown(
+            code: str,
+            message: str,
+            detail: dict | None = None,
+            state: RuleState = RuleState.UNKNOWN,
+        ) -> None:
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-001",
                 flag_code=code,
@@ -788,7 +793,8 @@ class NLCRuleEngine:
                 description=message,
                 statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
                 detail=detail or {},
-                state=RuleState.UNKNOWN,
+                state=state,
+                eval_state="UNKNOWN",
             ))
 
         if reg_date is None or deadline is None:
@@ -798,7 +804,7 @@ class NLCRuleEngine:
             )
         elif appointment_date is None:
             _auditor_unknown(
-                "FIRST_AUDITOR_APPOINTMENT_DATE_UNKNOWN",
+                "FIRST_AUDITOR_APPOINTMENT_DATE_UNVERIFIED",
                 "A Boolean appointment status without the appointment resolution date is insufficient to determine compliance with Section 210(6).",
                 {"registration_date": reg_date.isoformat(), "deadline": deadline.isoformat(),
                  "appointment_status": c.first_auditor_appointed},
@@ -810,6 +816,7 @@ class NLCRuleEngine:
                 {"registration_date": reg_date.isoformat(),
                  "appointment_date": appointment_date.isoformat(),
                  "appointment_status": c.first_auditor_appointed},
+                state=RuleState.CONTRADICTORY,
             )
         elif appointment_date > deadline:
             delay = (appointment_date - deadline).days
