@@ -66,11 +66,11 @@ class AGMCreateRequest(BaseModel):
 class AGMMarkHeldRequest(BaseModel):
     held_date: date
     venue: str | None = None
-    members_present: int = Field(ge=0)
-    quorum_met: bool
-    auditor_reappointed: bool
-    accounts_adopted: bool
-    agm_held_without_audit: bool = False
+    members_present: int | None = Field(default=None, ge=0)
+    quorum_met: bool | None = None
+    auditor_reappointed: bool | None = None
+    accounts_adopted: bool | None = None
+    agm_held_without_audit: bool | None = None
     minutes_document_id: uuid.UUID | None = None
 
 
@@ -89,7 +89,7 @@ class AGMResponse(BaseModel):
     quorum_met: bool | None
     auditor_reappointed: bool | None
     accounts_adopted: bool | None
-    agm_held_without_audit: bool
+    agm_held_without_audit: bool | None
     is_default: bool
     created_at: str
 
