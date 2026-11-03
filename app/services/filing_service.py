@@ -195,7 +195,7 @@ class AGMService(BaseService[AGM]):
             auditor_reappointed=auditor_reappointed,
             accounts_adopted=accounts_adopted,
             agm_held_without_audit=agm_held_without_audit,
-            minutes_prepared=True if minutes_document_id else None,
+            minutes_prepared=True if minutes_document_id else False,
             minutes_document_id=minutes_document_id,
             is_default=is_default,
             delay_days=delay_days,
