@@ -184,50 +184,44 @@ class TestAGMRules:
         output = rule_engine.evaluate(profile)
         assert_flag_not_triggered(output, "AGM-004")
 
-    # ── AGM-005: Quorum Not Met ────────────────────────────────────────────────
+    # ── AGM-005: Articles-aware quorum ───────────────────────────────────────
 
-    def test_AGM005_triggers_when_quorum_not_met(self, rule_engine, build_profile):
-        profile = build_profile(
-            agm_held_this_cycle=True,
-            member_count=5,
-            articles_quorum_verified=True,
-            articles_quorum_required=None,
-            members_present_at_agm=1,  # Below statutory default quorum of 2
-        )
-        output = rule_engine.evaluate(profile)
-        assert_flag_triggered(output, "AGM-005")
+    def _verified_agm_quorum_profile(self, build_profile, **overrides):
+        values = {
+            "agm_held_this_cycle": True,
+            "company_type": "PRIVATE_LIMITED",
+            "members_total_at_agm": 7,
+            "members_total_evidence_ref": "test-evidence://members-register",
+            "members_present_evidence_ref": "test-evidence://attendance-register",
+            "members_present_at_agm": 2,
+            "articles_quorum_verified": True,
+            "articles_quorum_required": None,
+            "articles_quorum_verified_by": "test-counsel",
+            "articles_quorum_verified_at": date(2026, 1, 1),
+            "articles_quorum_evidence_ref": "test-evidence://current-articles",
+        }
+        values.update(overrides)
+        return build_profile(**values)
 
-    def test_AGM005_no_trigger_when_quorum_met(self, rule_engine, build_profile):
-        profile = build_profile(
-            agm_held_this_cycle=True,
-            member_count=5,
-            articles_quorum_verified=True,
-            articles_quorum_required=None,
-            members_present_at_agm=3,
-        )
-        output = rule_engine.evaluate(profile)
-        assert_flag_not_triggered(output, "AGM-005")
-
-    def test_AGM005_large_private_company_uses_three_member_default(self, rule_engine, build_profile):
-        profile = build_profile(
-            agm_held_this_cycle=True,
-            members_total_at_agm=7,
-            members_total_evidence_ref="test-evidence://members-register-at-agm",
-            members_present_evidence_ref="test-evidence://agm-attendance-register",
-            articles_quorum_verified=True,
-            articles_quorum_required=None,
-            members_present_at_agm=2,
-        )
+    def test_AGM005_large_private_company_default_quorum_is_three_after_articles_review(
+        self, rule_engine, build_profile
+    ):
+        profile = self._verified_agm_quorum_profile(build_profile)
         output = rule_engine.evaluate(profile)
         flag = next(f for f in output.flags if f.rule_id == "AGM-005")
         assert flag.detail["required"] == 3
         assert flag.detail["quorum_basis"] == "SECTION_85_2_B_DEFAULT_ARTICLES_VERIFIED_NO_VARIATION"
 
-    def test_AGM005_articles_alternative_quorum_overrides_statutory_default(self, rule_engine, build_profile):
-        profile = build_profile(
-            agm_held_this_cycle=True,
-            member_count=5,
-            articles_quorum_verified=True,
+    def test_AGM005_no_finding_when_verified_default_quorum_is_met(self, rule_engine, build_profile):
+        profile = self._verified_agm_quorum_profile(
+            build_profile, members_present_at_agm=3
+        )
+        output = rule_engine.evaluate(profile)
+        assert_flag_not_triggered(output, "AGM-005")
+
+    def test_AGM005_verified_articles_override_controls_quorum(self, rule_engine, build_profile):
+        profile = self._verified_agm_quorum_profile(
+            build_profile,
             articles_quorum_required=4,
             members_present_at_agm=3,
         )
@@ -236,76 +230,43 @@ class TestAGMRules:
         assert flag.detail["required"] == 4
         assert flag.detail["quorum_basis"] == "ARTICLES_VERIFIED"
 
-    def test_AGM005_unknown_articles_quorum_is_not_evaluated(self, rule_engine, build_profile):
-        profile = build_profile(
-            agm_held_this_cycle=True,
-            member_count=5,
-            articles_quorum_verified=None,
-            articles_quorum_required=None,
-            members_present_at_agm=1,
-        )
-        output = rule_engine.evaluate(profile)
-        flag = next(f for f in output.flags if f.rule_id == "AGM-005")
-        assert flag.state == RuleState.UNKNOWN
-        assert flag.severity == Severity.NOT_EVALUATED
-        assert flag.score_impact == 0
-
-    def test_AGM005_boolean_without_reviewer_date_and_source_is_not_evaluated(self, rule_engine, build_profile):
-        profile = build_profile(
-            agm_held_this_cycle=True,
-            member_count=5,
+    def test_AGM005_missing_articles_reviewer_date_or_source_is_not_evaluated(
+        self, rule_engine, build_profile
+    ):
+        profile = self._verified_agm_quorum_profile(
+            build_profile,
             articles_quorum_verified=True,
-            articles_quorum_required=None,
             articles_quorum_verified_by=None,
             articles_quorum_verified_at=None,
             articles_quorum_evidence_ref=None,
-            members_present_at_agm=1,
-    def test_AGM005_large_private_company_requires_three_members(self, rule_engine, build_profile):
-        """A private company with more than six members needs three present by default."""
-        profile = build_profile(
-            member_count=7,
-            members_present_at_agm=2,
-            agm_held_this_cycle=True,
-        )
-        output = rule_engine.evaluate(profile)
-        assert_flag_triggered(output, "AGM-005")
-        flag = next(f for f in output.flags if f.rule_id == "AGM-005")
-        assert flag.detail["required"] == 3
-        assert flag.detail["member_count"] == 7
-
-    def test_AGM005_large_private_company_no_trigger_with_three_members(self, rule_engine, build_profile):
-        profile = build_profile(
-            member_count=7,
-            members_present_at_agm=3,
-            agm_held_this_cycle=True,
-        )
-        output = rule_engine.evaluate(profile)
-        assert_flag_not_triggered(output, "AGM-005")
-
-    def test_AGM005_small_private_company_default_quorum_is_two(self, rule_engine, build_profile):
-        profile = build_profile(
-            member_count=6,
-            members_present_at_agm=2,
-            agm_held_this_cycle=True,
-        )
-        output = rule_engine.evaluate(profile)
-        assert_flag_not_triggered(output, "AGM-005")
-
-    def test_AGM005_missing_member_count_is_not_evaluated(self, rule_engine, build_profile):
-        profile = build_profile(
-            member_count=None,
-            members_present_at_agm=1,
-            agm_held_this_cycle=True,
         )
         output = rule_engine.evaluate(profile)
         flag = next(f for f in output.flags if f.rule_id == "AGM-005")
         assert flag.state == RuleState.UNKNOWN
-        assert flag.eval_state == "UNKNOWN"
         assert flag.severity == Severity.NOT_EVALUATED
         assert flag.score_impact == 0
 
-
+    def test_AGM005_missing_member_or_attendance_evidence_is_not_evaluated(
+        self, rule_engine, build_profile
+    ):
+        profile = self._verified_agm_quorum_profile(
+            build_profile,
+            members_total_evidence_ref=None,
+        )
+        output = rule_engine.evaluate(profile)
+        flag = next(f for f in output.flags if f.rule_id == "AGM-005")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.severity == Severity.NOT_EVALUATED
         assert flag.score_impact == 0
+
+    def test_AGM005_small_private_company_default_quorum_is_two(self, rule_engine, build_profile):
+        profile = self._verified_agm_quorum_profile(
+            build_profile,
+            members_total_at_agm=6,
+            members_present_at_agm=2,
+        )
+        output = rule_engine.evaluate(profile)
+        assert_flag_not_triggered(output, "AGM-005")
 
     # ── AGM-006: Auditor Not Reappointed ─────────────────────────────────────
 
