@@ -161,7 +161,6 @@ class TestAGMRules:
             notice_sent_date=date.today(),
         )
         output = rule_engine.evaluate(profile)
-        # AGM-003 may fire as NOT_EVALUATED (data gap) — only fail if NON_COMPLIANT
         _agm003 = [f for f in output.flags if f.rule_id == "AGM-003" and f.state != RuleState.UNKNOWN]
         assert not _agm003, f"AGM-003 should not fire as violation, got: {_agm003}"
 
