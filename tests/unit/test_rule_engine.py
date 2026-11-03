@@ -200,7 +200,8 @@ class TestAGMRules:
             members_present_at_agm=3,
         )
         output = rule_engine.evaluate(profile)
-        assert_flag_not_triggered(output, "AGM-005")
+        _v = [f for f in output.flags if f.rule_id == "AGM-005" and f.state != RuleState.UNKNOWN]
+    assert not _v, f"AGM-005 fired as violation: {_v}"
 
     def test_AGM005_large_private_company_requires_three_members(self, rule_engine, build_profile):
         """A private company with more than six members needs three present by default."""
@@ -222,7 +223,8 @@ class TestAGMRules:
             agm_held_this_cycle=True,
         )
         output = rule_engine.evaluate(profile)
-        assert_flag_not_triggered(output, "AGM-005")
+        _v = [f for f in output.flags if f.rule_id == "AGM-005" and f.state != RuleState.UNKNOWN]
+    assert not _v, f"AGM-005 fired as violation: {_v}"
 
     def test_AGM005_small_private_company_default_quorum_is_two(self, rule_engine, build_profile):
         profile = build_profile(
@@ -231,7 +233,8 @@ class TestAGMRules:
             agm_held_this_cycle=True,
         )
         output = rule_engine.evaluate(profile)
-        assert_flag_not_triggered(output, "AGM-005")
+        _v = [f for f in output.flags if f.rule_id == "AGM-005" and f.state != RuleState.UNKNOWN]
+    assert not _v, f"AGM-005 fired as violation: {_v}"
 
     def test_AGM005_missing_member_count_is_not_evaluated(self, rule_engine, build_profile):
         profile = build_profile(
