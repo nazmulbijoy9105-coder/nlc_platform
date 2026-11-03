@@ -1086,7 +1086,7 @@ class NLCRuleEngine:
                         score_impact=10 if delay > 90 else 5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=f"Director appointment not filed via Form XII. Section 115: 14-day deadline. Overdue by {delay} days.",
-                        statutory_basis="Section 90, Companies Act 1994 (Bangladesh)",
+                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "delay": delay}
                     ))
                 elif change.event_type in ("resignation", "removal", "death"):
@@ -1098,7 +1098,7 @@ class NLCRuleEngine:
                         score_impact=10 if delay > 90 else 5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=f"Director {change.event_type} not filed via Form XII. Section 115: 14-day deadline. Overdue by {delay} days.",
-                        statutory_basis="Section 93, Companies Act 1994 (Bangladesh)",
+                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "delay": delay, "type": change.event_type}
                     ))
                     self._add_flag(ComplianceFlag(
@@ -1123,7 +1123,7 @@ class NLCRuleEngine:
                         statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "delay": delay}
                     ))
-                # DIR-007: Director consent not filed within 30 days (Section 93)
+                # DIR-007: Director consent to act (Form IX) is a separate Section 92 obligation.
                 if change.event_type == "appointment" and delay > 30:
                     self._add_flag(ComplianceFlag(
                         rule_id="DIR-007",
@@ -1131,8 +1131,8 @@ class NLCRuleEngine:
                         severity=Severity.YELLOW,
                         score_impact=5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"Director consent not filed within 30 days. Section 93(2): overdue by {delay} days.",
-                        statutory_basis="Section 93, Companies Act 1994 (Bangladesh)",
+                        description=f"Director consent to act (Form IX) not filed within 30 days under Section 92. Overdue by {delay} days.",
+                        statutory_basis="Section 92, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "delay": delay}
                     ))
 
@@ -1577,12 +1577,11 @@ class NLCRuleEngine:
 
         unresolved = (c.penalty_notices_received or 0) - (c.penalty_notices_resolved or 0)  # type: ignore
         if unresolved > 0:
-            sev = Severity.RED if unresolved >= 3 else Severity.YELLOW
             self._add_flag(ComplianceFlag(
                 rule_id="DEF-002",
                 flag_code="PENALTY_PROSECUTION_RISK",
-                severity=sev,
-                score_impact=8 if unresolved >= 3 else 5,
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=(
                     f"{unresolved} penalty notice(s) are recorded as unresolved. "
