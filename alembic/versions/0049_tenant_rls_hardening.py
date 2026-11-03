@@ -428,6 +428,7 @@ def upgrade() -> None:
                     public.compliance_score_history,
                     public.directors,
                     public.documents,
+                    public.engagements,
                     public.notifications,
                     public.registered_office_history,
                     public.rescue_plans,
