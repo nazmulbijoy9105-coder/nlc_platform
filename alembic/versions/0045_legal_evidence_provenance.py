@@ -141,6 +141,12 @@ def upgrade() -> None:
             AND first_auditor_appointment_verified_at IS NOT NULL
             AND first_auditor_appointment_verified_by IS NOT NULL
         )),
+        ADD CONSTRAINT ck_companies_agm_history_verification_provenance
+        CHECK (NOT agm_history_verified OR (
+            agm_history_evidence_ref IS NOT NULL
+            AND agm_history_verified_at IS NOT NULL
+            AND agm_history_verified_by IS NOT NULL
+        )),
         ADD CONSTRAINT ck_companies_agm_extension_verification_provenance
         CHECK (NOT agm_extension_verified OR (
             agm_extension_granted_until IS NOT NULL
