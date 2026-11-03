@@ -971,6 +971,17 @@ class NLCRuleEngine:
                     statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh), read with the Articles",
                     detail={"present": c.members_present_at_agm, "required": c.agm_quorum_required},
                 ))
+        if c.agm_held_this_cycle and c.members_present_at_agm is not None and c.members_present_at_agm < PRIVATE_COMPANY_QUORUM:
+            self._add_flag(ComplianceFlag(
+                rule_id="AGM-005",
+                flag_code="AGM_QUORUM_DEFECTIVE",
+                severity=Severity.RED,
+                score_impact=15,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                description=f"AGM quorum not met. {c.members_present_at_agm} present, need {PRIVATE_COMPANY_QUORUM}. Section 83.",
+                statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
+                detail={"present": c.members_present_at_agm, "required": PRIVATE_COMPANY_QUORUM}
+            ))
 
         if c.agm_held_this_cycle and c.agm_minutes_prepared is False:
             self._add_flag(ComplianceFlag(
