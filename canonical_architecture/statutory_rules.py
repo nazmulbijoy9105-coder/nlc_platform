@@ -325,7 +325,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "PRIVATE_COMPANIES_ONLY",
         "exceptions": ["Articles may provide otherwise; inspect the current articles"],
         "evidence_required": ["CURRENT_REGISTER_OF_MEMBERS", "AGM_ATTENDANCE_RECORD", "CURRENT_ARTICLES", "DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
+        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
         "severity": "RED",
         "score_impact": 15,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
