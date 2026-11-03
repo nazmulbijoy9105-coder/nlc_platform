@@ -120,6 +120,10 @@ class Company(FullMixin, Base):
 
     # ── Audit State ───────────────────────────────────────────────
     first_auditor_appointed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    first_auditor_appointment_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    first_auditor_appointment_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    first_auditor_appointment_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    first_auditor_appointment_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     last_audit_signed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # ── Returns State ─────────────────────────────────────────────
