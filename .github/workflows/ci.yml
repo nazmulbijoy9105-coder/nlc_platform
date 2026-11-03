@@ -96,7 +96,7 @@ jobs:
           import asyncio
           import os
           from sqlalchemy.ext.asyncio import create_async_engine
-          import redis
+          from redis.asyncio import Redis
 
           async def main():
               engine = create_async_engine(os.environ["DATABASE_URL_TEST"])
@@ -107,7 +107,7 @@ jobs:
               finally:
                   await engine.dispose()
 
-              client = redis.Redis.from_url(os.environ["REDIS_URL"])
+              client = Redis.from_url(os.environ["REDIS_URL"])
               try:
                   assert await client.ping()
               finally:
