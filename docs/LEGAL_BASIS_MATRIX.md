@@ -36,7 +36,7 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | AR-004 | Annual Return Filed But Incomplete | Section 36, Schedule X, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
 | AUD-001 | First Auditor Not Appointed Within One Calendar Month | Section 210(6), Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Calendar-month evaluator and appointment-date evidence patched; counsel verification pending |
 | AUD-002 | Audit Not Completed Before AGM | Section 183, Companies Act 1994 (Bangladesh) | RED | 12 | no | Engine-aligned 2026-11-02 |
-| AUD-003 | AGM Held Without Completed Audit — BLACK OVERRIDE | Sections 151, 210, Companies Act 1994 (Bangladesh) | BLACK | 10 | YES | Engine-aligned 2026-11-02 |
+| AUD-003 | AGM Held Without Completed Audit — Legal Review Required | Sections 183 and 210 (candidate basis; counsel confirmation pending) | NOT_EVALUATED | 0 | no | Case-specific lawyer judgment; excluded from automatic BLACK escalation and authoritative scoring |
 | AUD-004 | Auditor Not Reappointed at AGM | Section 210(2), Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | AUD-005 | Subsequent Auditor Not Appointed | Section 210(3), Companies Act 1994 (Bangladesh) | RED | 10 | no | Engine-aligned 2026-11-02 |
 | BNK-001 | Winding Up Petition Filed | Bankruptcy Act 1997 (Bangladesh), Section 12 | BLACK | 10 | YES | Engine-aligned 2026-11-02 |
