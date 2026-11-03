@@ -9,8 +9,9 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import date, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -1407,16 +1408,31 @@ class NLCRuleEngine:
                     ))
 
             if charge.satisfied and not charge.satisfaction_filed:
-                self._add_flag(ComplianceFlag(
-                    rule_id="CHG-001",
-                    flag_code="CHARGE_SATISFACTION_NOT_FILED",
-                    severity=Severity.YELLOW,
-                    score_impact=3,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Charge satisfaction not filed via Form XIX. Section 159.",
-                    statutory_basis="Section 159, Companies Act 1994 (Bangladesh)",
-                    detail={"charge_id": charge.charge_id, "charge_type": charge.charge_type}
-                ))
+                if charge.satisfaction_date is None:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="CHG-001",
+                        flag_code="CHARGE_SATISFACTION_DATE_UNKNOWN",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="Charge satisfaction is recorded, but its effective date is missing. Verify the satisfaction date and RJSC Form XXVIII filing before determining a deadline breach.",
+                        statutory_basis="Section 172, Companies Act 1994 (Bangladesh)",
+                        detail={"charge_id": charge.charge_id, "legal_status": "DATE_EVIDENCE_UNKNOWN"},
+                        state=RuleState.UNKNOWN,
+                    ))
+                else:
+                    satisfaction_delay = (self.today - charge.satisfaction_date).days
+                    if satisfaction_delay > 21:
+                        self._add_flag(ComplianceFlag(
+                            rule_id="CHG-001",
+                            flag_code="CHARGE_SATISFACTION_NOT_FILED",
+                            severity=Severity.YELLOW,
+                            score_impact=3,
+                            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                            description=f"Charge satisfaction not filed via Form XXVIII within 21 days. Section 172. Overdue by {satisfaction_delay} days.",
+                            statutory_basis="Section 172, Companies Act 1994 (Bangladesh)",
+                            detail={"charge_id": charge.charge_id, "charge_type": charge.charge_type, "delay_days": satisfaction_delay, "form": "Form XXVIII"},
+                        ))
 
         if c.capital_reduction_pending and c.capital_reduction_court_order_obtained is False:
             self._add_flag(ComplianceFlag(
@@ -1425,8 +1441,8 @@ class NLCRuleEngine:
                 severity=Severity.BLACK,
                 score_impact=15,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Capital reduction without court order. Section 150.",
-                statutory_basis="Section 150, Companies Act 1994 (Bangladesh)",
+                description="Share capital reduction without the court approval required by Section 59.",
+                statutory_basis="Section 59, Companies Act 1994 (Bangladesh)",
                 is_black_override=True,
             ))
 
@@ -1439,8 +1455,8 @@ class NLCRuleEngine:
                     severity=Severity.YELLOW if delay < 90 else Severity.RED,
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Special resolution not filed. Section 87: 30-day deadline. Unfiled resolution not binding.",
-                    statutory_basis="Section 88, Companies Act 1994 (Bangladesh)",
+                    description=f"Special resolution not filed with the Registrar within 15 days under Section 88(1). Overdue by {delay} days.",
+                    statutory_basis="Section 88(1), Companies Act 1994 (Bangladesh)",
                     detail={"delay": delay}
                 ))
 
@@ -1568,9 +1584,16 @@ class NLCRuleEngine:
                 severity=sev,
                 score_impact=8 if unresolved >= 3 else 5,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=f"{unresolved} unresolved penalties. Sec 447: fine up to Tk 10,000.",
-                statutory_basis="Section 397, Companies Act 1994 (Bangladesh)",
-                detail={"unresolved": unresolved}
+                description=(
+                    f"{unresolved} penalty notice(s) are recorded as unresolved. "
+                    "The notice documents, issuing authority and notice-specific enabling "
+                    "provision must be reviewed before any statutory breach or penalty is determined."
+                ),
+                statutory_basis="Notice-specific legal basis not verified",
+                detail={"unresolved": unresolved, "legal_status": "NOTICE_REVIEW_REQUIRED"},
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                state=RuleState.UNKNOWN
             ))
 
     # ───────────────────────────────────────────────────────────────────
@@ -2232,8 +2255,19 @@ class NLCRuleEngine:
         else:
             exposure = ExposureBand.SEVERE
 
-        flag_signatures = sorted(f"{f.rule_id}:{f.state!s}:{f.severity!s}:{f.score_impact}" for f in active)  # RULE-009: include state/severity/score_impact
-        hash_str = f"{final}:{','.join(flag_signatures)}:{RULE_ENGINE_VERSION}"
+        flag_signatures = sorted(f"{f.rule_id}:{f.state!s}:{f.severity!s}:{f.score_impact}:{f.eval_state}" for f in active)
+        # Hash the evaluated input snapshot as well as outputs and both version identifiers.
+        hash_payload = {
+            "company_id": company.company_id,
+            "evaluation_date": self.today.isoformat(),
+            "engine_version": RULE_ENGINE_VERSION,
+            "ilrmf_version": ILRMF_VERSION,
+            "profile": asdict(company),
+            "final_score": final,
+            "risk_band": band.value,
+            "flags": flag_signatures,
+        }
+        hash_str = json.dumps(hash_payload, sort_keys=True, separators=(",", ":"), default=str)
         score_hash = hashlib.sha256(hash_str.encode()).hexdigest()[:16]
 
         return ScoreBreakdown(
