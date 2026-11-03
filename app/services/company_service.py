@@ -27,8 +27,8 @@ from app.rule_engine.engine import NLCRuleEngine
 def _agm_profile_evidence(latest_agm) -> dict:
     """Map AGM evidence from the AGM record without inventing attendance.
 
-    AGM.members_present has a database default of zero. Treat zero as
-    unrecorded attendance rather than proof that no members attended.
+    Legacy zero/default values are converted to NULL by migration 0045.
+    A zero written after that migration is an explicit recorded attendance count.
     """
     if latest_agm is None:
         return {
@@ -43,12 +43,8 @@ def _agm_profile_evidence(latest_agm) -> dict:
         }
 
     members_present = getattr(latest_agm, "members_present", None)
-    if members_present == 0:
-        members_present = None
-
     quorum_met = getattr(latest_agm, "quorum_met", None)
-    # Zero attendance is the ORM default/unrecorded sentinel in legacy rows; do not
-    # treat the model's default quorum_met=True as a verified determination.
+    # If the attendance count is unknown, a quorum result cannot be verified either.
     if members_present is None:
         quorum_met = None
 
