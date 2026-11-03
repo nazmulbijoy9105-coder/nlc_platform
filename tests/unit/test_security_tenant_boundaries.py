@@ -322,3 +322,24 @@ def test_not_evaluated_severity_is_a_persistable_database_enum_value():
     from app.models.enums import SeverityLevel
 
     assert SeverityLevel("NOT_EVALUATED") is SeverityLevel.NOT_EVALUATED
+
+
+def test_compliance_flag_model_and_api_preserve_evaluation_state():
+    from app.models.compliance import ComplianceFlag
+    from app.api.companies import FlagResponse
+
+    assert "evaluation_state" in ComplianceFlag.__table__.columns
+    response = FlagResponse(
+        flag_id="flag-1",
+        rule_id="AUD-003",
+        rule_name="Legal review required",
+        severity="NOT_EVALUATED",
+        score_impact=0,
+        evaluation_state="REQUIRES_LAWYER_JUDGMENT",
+        status="ACTIVE",
+        is_black_override=False,
+        triggered_at="2026-11-04",
+        resolved_at=None,
+        resolution_note=None,
+    )
+    assert response.evaluation_state == "REQUIRES_LAWYER_JUDGMENT"
