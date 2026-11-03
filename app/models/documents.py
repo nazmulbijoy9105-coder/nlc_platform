@@ -160,12 +160,17 @@ class ArticlesVerification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             name="ck_articles_verifications_revocation_metadata",
         ),
         Index(
-            "uq_articles_verifications_active",
+            "uq_articles_verifications_pending",
             "company_id",
             unique=True,
-            postgresql_where=text("status IN ('PENDING', 'VERIFIED')"),
+            postgresql_where=text("status = 'PENDING'"),
         ),
-    )
+        Index(
+            "uq_articles_verifications_verified",
+            "company_id",
+            unique=True,
+            postgresql_where=text("status = 'VERIFIED'"),
+        ),    )
 
     company_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"),
@@ -202,6 +207,13 @@ class ArticlesVerificationEvent(UUIDPrimaryKeyMixin, Base):
     """Append-only event trail for Articles verification lifecycle."""
 
     __tablename__ = "articles_verification_events"
+    __table_args__ = (
+        CheckConstraint(
+            "action IN ('SUBMITTED', 'VERIFIED', 'REJECTED', 'REVOKED')",
+            name="ck_articles_verification_events_action",
+        ),
+    )
+
 
     company_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"),
