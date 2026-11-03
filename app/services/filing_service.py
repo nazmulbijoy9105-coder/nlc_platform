@@ -42,7 +42,7 @@ class AGMService(BaseService[AGM]):
         agm_date: date | None = None,
         notice_sent_date: date | None = None,
         members_present: int = 0,
-        quorum_required: int = 2,
+        quorum_required: int | None = None,
         auditor_reappointed: bool = True,
         minutes_prepared: bool = False,
         minutes_filed_rjsc: bool = False,
@@ -51,7 +51,7 @@ class AGMService(BaseService[AGM]):
         delay_days: int = 0,
         notice_defective: bool = False,
         notice_missing: bool = False,
-        quorum_met: bool = True,
+        quorum_met: bool | None = None,
         created_by: uuid.UUID | None = None,
         agm_due_date=None
     ) -> AGM:
@@ -77,8 +77,8 @@ class AGMService(BaseService[AGM]):
                 notice_missing = True
 
         # Quorum check
-        if agm_held and members_present < quorum_required:
-            quorum_met = False
+        if agm_held and quorum_required is not None:
+            quorum_met = members_present >= quorum_required
 
         return await self.create(
             company_id=company_id,
@@ -146,12 +146,10 @@ class AGMService(BaseService[AGM]):
         agm_held_without_audit: bool | None = None,
         minutes_document_id: uuid.UUID | None = None,
     ) -> AGM | None:
-        """Record an AGM; derive the statutory-default quorum server-side.
+        """Record an AGM and assess quorum only after current Articles are verified.
 
-        Section 85(2)(b): private-company default is two members for companies
-        with up to six members, and three where membership exceeds six.
-        Articles-specific alternatives are not represented here; the result
-        therefore remains explicitly provisional pending Articles review.
+        Section 85(2)(b) supplies the private-company default only where the
+        current Articles have been checked and no alternative quorum applies.
         """
         agm = await self.get_by_id(agm_id)
         if not agm:
@@ -162,14 +160,27 @@ class AGMService(BaseService[AGM]):
         company_type = getattr(company, "company_type", None) if company else None
         company_type = getattr(company_type, "value", company_type)
 
-        if company_type == "PRIVATE_LIMITED" and member_count is not None and member_count > 0:
-            quorum_required = 2 if member_count <= 6 else 3
+        articles_verified = getattr(company, "articles_quorum_verified", None) is True
+        articles_quorum_required = getattr(company, "articles_quorum_required", None)
+        if (
+            company_type == "PRIVATE_LIMITED"
+            and member_count is not None
+            and member_count > 0
+            and articles_verified
+            and (articles_quorum_required is None or articles_quorum_required >= 1)
+        ):
+            statutory_default = 2 if member_count <= 6 else 3
+            quorum_required = articles_quorum_required or statutory_default
             quorum_met: bool | None = members_present >= quorum_required
-            quorum_basis = "SECTION_85_2_B_DEFAULT_ARTICLES_NOT_REVIEWED"
+            quorum_basis = (
+                "ARTICLES_VERIFIED"
+                if articles_quorum_required is not None
+                else "SECTION_85_2_B_DEFAULT_ARTICLES_VERIFIED_NO_VARIATION"
+            )
         else:
             quorum_required = None
             quorum_met = None
-            quorum_basis = "NOT_EVALUATED"
+            quorum_basis = "ARTICLES_NOT_VERIFIED_OR_QUORUM_INPUTS_UNKNOWN"
 
         is_default = bool(agm.agm_deadline and agm_date > agm.agm_deadline)
         delay_days = (agm_date - agm.agm_deadline).days if is_default and agm.agm_deadline else 0
