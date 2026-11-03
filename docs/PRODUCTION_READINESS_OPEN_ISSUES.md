@@ -1,0 +1,33 @@
+# NLC Production-Readiness Open-Issues Register
+
+Last reviewed: 2026-11-03
+Repository: `nazmulbijoy9105-coder/nlc_platform`
+Baseline: `main` at `7b20dabfd780050e29b5a4c57b620bc806c41a99`
+Change set: PR #103 — legal AGM / first-auditor corrections
+
+This is the single consolidated register. "Not yet evidenced" is not a finding that a control is absent; it means the current audit has not established that it passes.
+
+| ID | Priority | Area | Finding / requirement | Current evidence | Status / closure test |
+|---|---|---|---|---|---|
+| LEG-001 | P0 | AGM quorum | Section 85(2)(b) default varies by private-company member count; Articles may override. | Engine previously used a fixed quorum of 2. PR #103 changes default to 2 for <=6 private-company members and 3 for >6; missing member count becomes UNKNOWN. | PARTIALLY ADDRESSED. CI pending. Capture and validate any Articles-specific override before final legal closure. |
+| LEG-002 | P0 | AGM notice | Do not treat every defective/missing notice as automatically voiding every resolution; account for shorter-notice consent and accidental omission/non-receipt under Section 85. | PR #103 corrects seed descriptions and existing evaluator descriptions. | OPEN. Add structured, evidence-backed capture and evaluation of unanimous shorter-notice consent and accidental omission/non-receipt. Test both exceptions and ordinary defects. |
+| LEG-003 | P0 | First auditor | Section 210(6): appointment within one month; descriptions and evaluator must agree, and actual appointment date must be checked. | Seed already uses one calendar month. PR #103 corrects legacy canonical description and evaluates appointment date, including late appointments and missing/contradictory data. | PARTIALLY ADDRESSED. CI pending. Verify date arithmetic, all seed/canonical/API/report descriptions, and legal source. |
+| LEG-004 | P0 | Legal governance | A coded rule is not lawyer-validated law. | Canonical rules retain RECONCILE / pending legal approval. | OPEN. Keep status unverified until a named legal reviewer approves source, wording, applicability, effective date and evidence requirements. |
+| API-001 | P0 | AGM workflow | `mark_agm_held` route passes keyword arguments that do not match `AGMService.mark_held` signature (including `held_date`, `venue`, `quorum_met`, `accounts_adopted`, `agm_held_without_audit`, `minutes_document_id`). | Direct comparison of `app/api/filings.py` and `app/services/filing_service.py`. | OPEN. Reconcile API/service/model contract; persist all accepted fields or remove unsupported inputs explicitly; add endpoint integration test. |
+| DB-001 | P0 | Schema/deployment | Neon production branch reports Alembic `0042_dedup_key`; `vercel-dev` reports `0044_webhook_schema_reconcile`. Production schema inspection did not show `companies.member_count` or several Section 89/95/96/150/181/183/190 columns expected from migration 0031, despite production's 0042 version marker. | Read-only inspection of production and vercel-dev branches. Migration 0031 adds `member_count`; production schema does not show it. | OPEN / INVESTIGATE. Reconcile actual schema, revision history, migration graph and deployed application before any migration. Do not assume the Alembic version marker proves schema integrity. |
+| DEP-001 | P0 | Render deployment | Need verify service, deployed commit, health, environment configuration and DB target. | Render workspace discovered; workspace not yet selected by user. | BLOCKED. User confirmation required to inspect "My Workspace". |
+| SEC-001 | P0 | Tenant isolation | No current-turn evidence that cross-company reads/writes are blocked across every endpoint and background task. | Existing tenant-boundary tests are present in repository; no current full test result. | NOT YET VERIFIED. Run PostgreSQL-backed cross-tenant negative tests and inspect RLS, service filters and worker context. |
+| AUD-001 | P1 | Audit history | Verify append-only/tamper-evident history, actor identity, source references, event ordering and reconstruction. | Existing audit/hash-chain tests exist; no current result reviewed. | NOT YET VERIFIED. Run tests and reconcile production rows and database constraints. |
+| RPT-001 | P1 | Reports | Verify every report field derives from the same evaluation snapshot and evidence version. | Report reconciliation tests exist; no current result reviewed. | NOT YET VERIFIED. Run reconciliation tests and compare generated reports with stored evaluation traces. |
+| WF-001 | P1 | Major workflows | Verify company onboarding, AGM, audit, returns, evidence, rescue, approvals and filing workflows end-to-end. | AGM endpoint contract mismatch identified. Other workflows not yet audited in this pass. | OPEN. Add/run end-to-end tests per workflow; no module is accepted on route existence alone. |
+| OPS-001 | P1 | Recovery | Verify backup freshness, restore procedure, point-in-time recovery and recovery evidence. | No current recovery drill evidence reviewed. | NOT YET VERIFIED. Perform a non-production restore drill and retain timestamped evidence. |
+| COM-001 | P1 | Commercial/legal | Verify engagement terms, privacy notices, data-processing terms, liability boundaries, professional review and service obligations. | No current contract pack reviewed in this pass. | NOT YET VERIFIED. Legal review and documented sign-off required. |
+| CI-001 | P0 | Change verification | PR #103 CI must pass before merge. | GitHub Actions CI run 995 was in progress at last check. | PENDING. Recheck unit, integration, canonical integrity and rule-verification-status jobs. |
+
+## Change-control rules
+
+- Do not merge PR #103 until CI is green and the code review is complete.
+- Do not mark any statutory rule VERIFIED without independent lawyer approval.
+- Do not run production migrations or change Render environment variables without explicit approval.
+- Preserve the existing implementation; fix only demonstrated defects.
+- Every closure must link a code change or test, exact commit, test result and supporting legal/operational evidence.
