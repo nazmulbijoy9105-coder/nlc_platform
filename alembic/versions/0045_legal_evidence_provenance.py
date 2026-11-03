@@ -21,6 +21,10 @@ def upgrade() -> None:
         ADD COLUMN IF NOT EXISTS directors_verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
         ADD COLUMN IF NOT EXISTS directors_verification_evidence_ref TEXT NULL,
         ADD COLUMN IF NOT EXISTS is_private_subsidiary_of_public_company BOOLEAN NULL,
+        ADD COLUMN IF NOT EXISTS subsidiary_status_verified BOOLEAN NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS subsidiary_status_verified_at TIMESTAMPTZ NULL,
+        ADD COLUMN IF NOT EXISTS subsidiary_status_verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+        ADD COLUMN IF NOT EXISTS subsidiary_status_evidence_ref TEXT NULL,
         ADD COLUMN IF NOT EXISTS moa_aoa_verified BOOLEAN NOT NULL DEFAULT FALSE,
         ADD COLUMN IF NOT EXISTS moa_aoa_verified_at TIMESTAMPTZ NULL,
         ADD COLUMN IF NOT EXISTS moa_aoa_verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
@@ -31,8 +35,13 @@ def upgrade() -> None:
     op.execute("""
         ALTER TABLE agms
         ADD COLUMN IF NOT EXISTS members_present_verified BOOLEAN NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS members_present_evidence_ref TEXT NULL,
+        ADD COLUMN IF NOT EXISTS members_present_verified_at TIMESTAMPTZ NULL,
+        ADD COLUMN IF NOT EXISTS members_present_verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
         ADD COLUMN IF NOT EXISTS quorum_required_verified BOOLEAN NOT NULL DEFAULT FALSE,
-        ADD COLUMN IF NOT EXISTS quorum_evidence_ref TEXT NULL
+        ADD COLUMN IF NOT EXISTS quorum_evidence_ref TEXT NULL,
+        ADD COLUMN IF NOT EXISTS quorum_verified_at TIMESTAMPTZ NULL,
+        ADD COLUMN IF NOT EXISTS quorum_verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL
     """)
 
     op.execute("""
@@ -55,8 +64,13 @@ def downgrade() -> None:
     op.execute("ALTER TABLE agms DROP CONSTRAINT IF EXISTS ck_agms_quorum_required_positive")
     op.execute("""
         ALTER TABLE agms
+        DROP COLUMN IF EXISTS quorum_verified_by,
+        DROP COLUMN IF EXISTS quorum_verified_at,
         DROP COLUMN IF EXISTS quorum_evidence_ref,
         DROP COLUMN IF EXISTS quorum_required_verified,
+        DROP COLUMN IF EXISTS members_present_verified_by,
+        DROP COLUMN IF EXISTS members_present_verified_at,
+        DROP COLUMN IF EXISTS members_present_evidence_ref,
         DROP COLUMN IF EXISTS members_present_verified
     """)
     op.execute("""
@@ -65,6 +79,10 @@ def downgrade() -> None:
         DROP COLUMN IF EXISTS moa_aoa_verified_by,
         DROP COLUMN IF EXISTS moa_aoa_verified_at,
         DROP COLUMN IF EXISTS moa_aoa_verified,
+        DROP COLUMN IF EXISTS subsidiary_status_evidence_ref,
+        DROP COLUMN IF EXISTS subsidiary_status_verified_by,
+        DROP COLUMN IF EXISTS subsidiary_status_verified_at,
+        DROP COLUMN IF EXISTS subsidiary_status_verified,
         DROP COLUMN IF EXISTS is_private_subsidiary_of_public_company,
         DROP COLUMN IF EXISTS directors_verification_evidence_ref,
         DROP COLUMN IF EXISTS directors_verified_by,
