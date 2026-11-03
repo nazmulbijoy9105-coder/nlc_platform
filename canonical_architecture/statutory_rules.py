@@ -17,6 +17,8 @@ class RuleState(str, Enum):
     VERIFIED_ABSENT = "VERIFIED_ABSENT"  # confirmed absence via verified external source
     UNKNOWN = "UNKNOWN"
     NOT_APPLICABLE = "NOT_APPLICABLE"
+    DISPUTED = "DISPUTED"
+    REQUIRES_LAWYER_JUDGMENT = "REQUIRES_LAWYER_JUDGMENT"
     CONDITIONAL = "CONDITIONAL"      # defined; no evaluator emits it yet
     CONTRADICTORY = "CONTRADICTORY"
 
