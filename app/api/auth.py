@@ -459,9 +459,10 @@ async def signup(body: SignupRequest, db=Depends(get_db)):
     if os.environ.get("ALLOW_PUBLIC_SIGNUP", "true").lower() != "true":
         raise HTTPException(status_code=403, detail="Signup is disabled")
 
-    # Check if email exists
-    existing = await db.execute(select(User).where(User.email == body.email.lower().strip()))
-    if existing.scalar_one_or_none():
+    # Check email through the restricted pre-authentication lookup; ordinary
+    # users-table SELECT is intentionally RLS-scoped to an authenticated ID.
+    existing = await UserService(db).get_by_email(body.email.lower().strip())
+    if existing is not None:
         raise HTTPException(status_code=409, detail="Email already registered")
     
     # Validate password strength
