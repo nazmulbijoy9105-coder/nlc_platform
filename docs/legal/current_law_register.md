@@ -179,7 +179,7 @@ F-series queue (F-22..F-33) unchanged by this section; EA rows add cross-cutting
 
 The earlier F-5/F-24 entries above are historical findings, not the current implementation contract.
 
-- **AUD-002:** engine, seed and canonical rule now use Section 183 and a pre-AGM warning condition based on the scheduled AGM date, audit-completion evidence and the configured statutory notice window. The description no longer claims automatic invalidity. Counsel verification remains PENDING.
+- **AUD-002:** engine, seed and canonical rule now use Section 183 and a pre-AGM warning condition based on the scheduled AGM date, audit-completion evidence and the configured statutory notice window. It is UNKNOWN with zero score impact until the meeting is held; the description no longer claims automatic invalidity. Counsel verification remains PENDING.
 - **AUD-003:** engine and canonical rule now treat a recorded AGM without completed audit as REQUIRES_LAWYER_JUDGMENT / NOT_EVALUATED, with zero score impact and no BLACK override. The candidate Sections 183 and 210 basis remains subject to case-specific counsel verification.
 - Forward migration 0047_aud003_review_state reclassifies active historical AUD-003 findings and invalidates cached company scores/risk bands for affected companies so they must be reevaluated.
 
