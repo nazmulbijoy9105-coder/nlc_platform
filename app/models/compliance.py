@@ -93,6 +93,11 @@ class ComplianceFlag(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     # ── Status ────────────────────────────────────────────────────
+    # Preserve the legal evaluation state separately from operational
+    # ACTIVE/RESOLVED status and severity.
+    evaluation_state: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="LEGACY_UNCLASSIFIED",
+    )
     flag_status: Mapped[FlagStatus] = mapped_column(
         Enum(FlagStatus, name="flag_status"),
         default=FlagStatus.ACTIVE,
