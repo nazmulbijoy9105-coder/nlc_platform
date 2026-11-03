@@ -2229,7 +2229,7 @@ class NLCRuleEngine:
                 score_impact=esc003_impact,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description="NLC risk policy: rescue workflow recommended. Systemic failure detected.",
-                statutory_basis="Sections 81, 115, 36, 346 (aggregate), Companies Act 1994 (Bangladesh)",
+                statutory_basis="NLC internal risk policy; not a statutory risk band under the Companies Act 1994.",
                 detail={"black_count": black_count, "pre_score": pre_score},
                 is_black_override=True,
                 state=RuleState.NON_COMPLIANT
