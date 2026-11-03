@@ -153,8 +153,8 @@ the current gazetted Act text:
 | 1 | AUD-001 | Confirm the authoritative text and application of Section 210(6): Board appointment within one calendar month of registration, calculated by calendar month. | Evaluator now requires appointment-date evidence; counsel approval remains pending |
 | 2 | SH-001 | S151 vs S50 for allotment returns? | Allotment check disabled |
 | 3 | SH-002 | S158 vs S46 for certificate issuance? | Certificate check disabled |
-| 4 | AUD-002 | Description says S151, should be S183? | Description text mismatch |
-| 5 | AUD-003 | S151 included — correct for audit? | May need section update |
+| 4 | AUD-002 | Confirm Section 183 duties and pre-AGM evidence/window | Counsel verification pending |
+| 5 | AUD-003 | Confirm case-specific consequences under Sections 183 and 210; no automatic invalidity | Lawyer judgment; excluded from scoring and BLACK override |
 | 6 | Deadlines | 4 constants need verification | Score accuracy affected |
 
 The listed rules remain outside the authoritative score unless and until their individual verification status and allowlist membership are approved. AGM-005 is explicitly excluded pending counsel review. They generate flags but
