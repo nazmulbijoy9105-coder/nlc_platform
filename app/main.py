@@ -33,6 +33,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api import (
     admin,
+    articles,
     auth,
     calendar,
     commercial,
@@ -586,6 +587,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router, prefix=f"{API_PREFIX}/auth", tags=["Authentication"])
 
     # Protected routes — all require valid JWT
+    app.include_router(articles.router, prefix=f"{API_PREFIX}", tags=["Articles Verification"])
     app.include_router(companies.router,  prefix=f"{API_PREFIX}/companies",  tags=["Companies"])
     app.include_router(filings.router,    prefix=f"{API_PREFIX}/filings",    tags=["Filings"])
     app.include_router(rescue.router,     prefix=f"{API_PREFIX}/rescue",     tags=["Corporate Rescue"])
