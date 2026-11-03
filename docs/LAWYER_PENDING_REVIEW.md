@@ -9,39 +9,19 @@ other 82 rules have been verified against the Companies Act 1994
 
 ## Questions for Lawyer Review
 
-### 1. AUD-001: First Auditor Appointment — Section 210(6) vs 210(1)
+### 1. AUD-001: First Auditor Appointment — Section 210(6)
 
-**Current engine citation:** Section 210(6), Companies Act 1994
-**Canonical citation:** Section 210(1), Companies Act 1994
+**Current engine and canonical citation:** Section 210(6), Companies Act 1994 (Bangladesh)
 
-**Question:** Which subsection of Section 210 governs the first auditor
-appointment deadline (30 days from incorporation)?
+**Current implementation:** The Board's first-auditor appointment date is compared with one calendar month from registration. This is calendar-month arithmetic, not a fixed 30-day interval. A Boolean appointment status without the effective appointment date is NOT_EVALUATED. Appointment-date evidence stored on Audit records is passed into the deterministic evaluator.
 
-**Context from Act PDF:**
-- S210 = "Appointment and remuneration of auditors"
-- S210(1): "Every company shall, at each annual general meeting, appoint
-  an auditor or auditors to hold office from the conclusion of that
-  meeting until the conclusion of the next annual general meeting..."
-- The PDF text for S210 is truncated — subsections beyond (1) are not
-  visible in the machine-extracted text
+**Counsel verification required:**
+- Confirm the authoritative text of Section 210(6), its effective version and that it imposes the first-auditor appointment duty on the Board.
+- Confirm the statutory starting date is the date of registration and the correct calendar-month computation.
+- Distinguish the Board's first-appointment duty under Section 210(6) from the auditor's separate Registrar-filing duty under Section 210(2).
+- Confirm the evidence needed to establish the appointment resolution and its effective date.
 
-**What the engine checks:** First auditor not appointed within 30 days
-(1 month) of incorporation. The engine uses `Section 210(6)` as the
-statutory basis, implying a subsection (6) exists about first auditor
-appointment by the Board within 30 days.
-
-**What needs verification:**
-- Does Section 210(6) exist in the Companies Act 1994?
-- If so, does it specify a 30-day deadline for first auditor appointment?
-- If not, which subsection governs this deadline?
-- Is the 30-day (1 month) deadline correct?
-
-**Impact:** AUD-001 is currently NOT in `VERIFIED_RULE_IDS` — it generates
-flags but does not affect the compliance score. Once verified, it should
-be added to the verified set.
-
----
-
+**Status:** Implementation patched; statutory provenance remains RECONCILE and AUD-001 remains outside VERIFIED_RULE_IDS until counsel approval.
 ### 2. SH-001: Share Allotment Return — Section 151 vs Section 50
 
 **Current engine citation:** Section 151, Companies Act 1994
@@ -144,7 +124,7 @@ the current gazetted Act text:
 | `CHARGE_REGISTRATION_DEADLINE_DAYS` | 21 | S159(1) | ⚠️ Needs verification |
 | `SHARE_CERTIFICATE_DEADLINE_DAYS` | 90 | S158 | ⚠️ Needs verification |
 | `SPECIAL_RESOLUTION_DEADLINE_DAYS` | 15 | S88 | ⚠️ Needs verification |
-| `FIRST_AUDITOR_DEADLINE_DAYS` | 30 | S210(6)? | ⚠️ Needs verification |
+| AUD-001 deadline | One calendar month | S210(6) | ⚠️ Counsel source verification pending |
 | `ANNUAL_RETURN_DEADLINE_DAYS` | 21 | S36 | ✅ Verified |
 
 ---
@@ -153,7 +133,7 @@ the current gazetted Act text:
 
 | # | Rule | Question | Impact if wrong |
 |---|---|---|---|
-| 1 | AUD-001 | Does S210(6) exist? 30-day deadline? | First auditor check disabled |
+| 1 | AUD-001 | Confirm the authoritative text and application of Section 210(6): Board appointment within one calendar month of registration, calculated by calendar month. | Evaluator now requires appointment-date evidence; counsel approval remains pending |
 | 2 | SH-001 | S151 vs S50 for allotment returns? | Allotment check disabled |
 | 3 | SH-002 | S158 vs S46 for certificate issuance? | Certificate check disabled |
 | 4 | AUD-002 | Description says S151, should be S183? | Description text mismatch |

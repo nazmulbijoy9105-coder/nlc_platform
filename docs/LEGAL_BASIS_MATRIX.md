@@ -27,14 +27,14 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | AGM-002 | Subsequent AGM Default | Section 81, Companies Act 1994 (Bangladesh) | RED | 20 | no | Engine-aligned 2026-11-02 |
 | AGM-003 | AGM Notice Defective — Insufficient Days | Section 85, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | AGM-004 | AGM Notice Missing | Section 85, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
-| AGM-005 | AGM Quorum Not Met | Section 89, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
+| AGM-005 | AGM Quorum Not Met | Section 85(2)(b), Companies Act 1994 (Bangladesh), subject to current Articles | RED | 15 | no | Counsel verification pending; membership and Articles evidence required |
 | AGM-006 | AGM Minutes Not Prepared | Section 89, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | AGM-007 | AGM Adjourned Without Proper Notice | Section 130, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | AR-001 | Annual Return Default — Single Year | Section 36 (Schedule X), Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
 | AR-002 | Annual Return 2-Year Backlog | Sections 36 and 304, Companies Act 1994 (Bangladesh) | RED | 20 | no | Engine-aligned 2026-11-02 |
 | AR-003 | Annual Return 3-Year Backlog — Strike-Off Risk | Sections 36 and 304, Companies Act 1994 (Bangladesh) | BLACK | 20 | no | Engine-aligned 2026-11-02 |
 | AR-004 | Annual Return Filed But Incomplete | Section 36, Schedule X, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
-| AUD-001 | First Auditor Not Appointed Within One Calendar Month | Section 210(6), Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
+| AUD-001 | First Auditor Not Appointed Within One Calendar Month | Section 210(6), Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Calendar-month evaluator and appointment-date evidence patched; counsel verification pending |
 | AUD-002 | Audit Not Completed Before AGM | Section 183, Companies Act 1994 (Bangladesh) | RED | 12 | no | Engine-aligned 2026-11-02 |
 | AUD-003 | AGM Held Without Completed Audit — BLACK OVERRIDE | Sections 151, 210, Companies Act 1994 (Bangladesh) | BLACK | 10 | YES | Engine-aligned 2026-11-02 |
 | AUD-004 | Auditor Not Reappointed at AGM | Section 210(2), Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
@@ -144,7 +144,7 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | 2026-11-02 | AUD-001: Section 210(6), one calendar month (was 210(1) / 30 days) |
 | 2026-11-02 | DEF-001: Section 94 evidence-required (was Section 297) |
 | 2026-11-02 | REG-002: Sec 34/89/174 internal vs Sec 115 RJSC filing |
-| 2026-11-02 | AGM-005/006: Section 89; CHG-001: Section 159; TR-*: Section 38; etc. |
+| 2026-11-02 | AGM-005: Section 85(2)(b), subject to current Articles; AGM-006: Section 89; CHG-001: Section 159; TR-*: Section 38; etc. |
 
 ## Explicit non-claims
 

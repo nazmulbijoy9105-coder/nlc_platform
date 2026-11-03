@@ -279,7 +279,7 @@ _LEGACY_RESCUE_DICTS: Dict[str, Dict[str, Any]] = {
     "AUD-001": {
         "rescue_id": "AUD-RESCUE-001",
         "triggered_by": "AUD-001",
-        "objective": "Remediate: First Auditor Not Appointed Within 30 Days",
+        "objective": "Remediate: First Auditor Not Appointed Within One Calendar Month",
         "prerequisites": [],
         "statutory_actions": [
             "review legal requirement",

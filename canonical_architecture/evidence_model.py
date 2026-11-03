@@ -67,7 +67,7 @@ EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
         ("NO_NOTICE_SENT",),
         "documentary", "S85"),
     "AGM-005": EvidenceMapping("AGM-005",
-        (AGM_MINUTES, "ATTENDANCE_REGISTER"),
+        ("CURRENT_ARTICLES", "CURRENT_REGISTER_OF_MEMBERS", AGM_MINUTES, "ATTENDANCE_REGISTER"),
         ("INSUFFICIENT_QUORUM",),
         "documentary", "S85(2)(b)"),
     "AGM-006": EvidenceMapping("AGM-006",

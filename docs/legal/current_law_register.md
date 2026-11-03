@@ -56,7 +56,7 @@ BCIC vs Registrar of Joint Stock Companies (High Court Division).
 | F-21 | engine.py 1884 and 1950 | Corrupted merge-artifact comments: "(BLACK handled above)'t override" and duplicated rescue comment text | Clean text during the F-10/F-20 fix commit; no behavior change. LOW |
 | F-22 | engine.py 373-377 | CORE_REGISTERS lacks statutory pins. Official TOC pins: members = s.34 (Register of members), directors = s.115 (Register of directors, managers and managing agents), charges = s.174 company register (RJSC filing s.159 Form XVIII), minutes_agm = s.89 (minutes of general and Board meetings) | Add pin comments and unify registry citations. MEDIUM |
 | F-23 | statutory_rules.py REG-001/REG-002 | Registry bundle "Sections 34, 83, 87, 90" legally wrong: s.83 = statutory meeting and statutory report; s.87 = extraordinary and special resolutions; s.90 = minimum number of directors; register of directors = s.115 | Re-anchor registry to s.34, s.115, s.174, s.89 aligned with engine. HIGH |
-| F-24 | statutory_rules.py AUD-003 | Bundle "Sections 151, 210" wrong: s.151 = Return as to allotment (Form XV), unrelated to auditors. s.210 full text pinned from bdlaws section-33854: 210(1) appoint at each AGM plus 7-day notice to auditor; 210(2) auditor informs Registrar within 30 days (duty-holder is the auditor, not the company); 210(3) retiring-auditor re-appointment with NO 120-day rule; 210(6) first auditors by Board within 1 month of incorporation | Engine and registry cite "Section 210" only; FIRST_AUDITOR_DEADLINE_DAYS=30 comment VERIFIED; AUD-005 anchor stays open under F-15. MEDIUM |
+| F-24 | statutory_rules.py AUD-003 | Bundle "Sections 151, 210" wrong: s.151 = Return as to allotment (Form XV), unrelated to auditors. s.210 full text pinned from bdlaws section-33854: 210(1) appoint at each AGM plus 7-day notice to auditor; 210(2) auditor informs Registrar within 30 days (duty-holder is the auditor, not the company); 210(3) retiring-auditor re-appointment with NO 120-day rule; 210(6) first auditors by Board within 1 month of registration | Engine uses month-end-aware _add_one_month() and actual appointment-date evidence; fixed-day constant removed. Counsel verification remains open; AUD-005 anchor stays open under F-15. MEDIUM |
 | F-13 CLOSED | engine.py SH-002 and constants | s.158 verified: official TOC title "Time limit for issuing certificate"; published legal commentary quotes 90 days from allotment or registration of transfer | SHARE_CERTIFICATE_DEADLINE_DAYS=90 and the s.158 citation are CORRECT; SH-002 severity dead branch stays open under its round-2 row |
 
 Sources this round: bdlaws.minlaw.gov.bd act-788 TOC (sections 23, 34, 36, 52, 56, 77, 81-89, 90-93, 115, 151, 158-175, 181-190, 210); bdlaws act-788/section-33854 (s.210 full text); roc.gov.bd Form XXVIII page (s.172, from round 2).
@@ -102,10 +102,12 @@ F-series queue (F-22..F-33) unchanged by this section; EA rows add cross-cutting
   its text is rebuilt. Note: the only "5 years" concept nearby is s.110 (managing-director tenure
   limit), unrelated to disqualification; the 5-year post-conviction bar is a foreign-law pattern.
 
-### EA-02 - AUD-001 calendar month vs 30 days (audit s.4D) - OPEN, P0
-- VERDICT: audit CORRECT. Flag text "1 month (30 days)" conflates calendar month with 30 days;
-  s.210(6) says one month (calendar). Distinguish s.210(6) Board appointment from the auditor's
-  own filing duty under s.210(2).
+### EA-02 - AUD-001 calendar month vs 30 days - IMPLEMENTATION PATCHED, COUNSEL REVIEW OPEN, P0
+- Section 210(6) is implemented as one calendar month from registration, not a fixed 30-day interval.
+- The evaluator compares the actual appointment date; a Boolean without date evidence is NOT_EVALUATED.
+- Appointment-date evidence stored on Audit records is passed into the deterministic CompanyProfile.
+- Counsel must still verify the authoritative statutory text, effective date and interpretation.
+- Keep distinct the Board's first-appointment duty under s.210(6) and the auditor's separate filing duty under s.210(2).
 - Arithmetic (computed): overdue 1813 days => deadline = 2021-11-12 exactly. With incorporation
   2021-10-12, +1 calendar month reproduces 1813 while +30 days gives 1814; with incorporation
   2021-10-13, +30 days gives 1813. PDF shows no incorporation date => not independently

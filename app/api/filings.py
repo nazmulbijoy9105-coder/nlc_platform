@@ -67,6 +67,11 @@ class AGMMarkHeldRequest(BaseModel):
     held_date: date
     venue: str | None = None
     members_present: int = Field(ge=0)
+    # Deprecated compatibility input; quorum is derived server-side.
+    quorum_met: bool | None = None
+    members_total_at_agm: int | None = Field(default=None, ge=1)
+    members_total_evidence_ref: str | None = None
+    members_present_evidence_ref: str | None = None
     # Deprecated compatibility input. The server derives quorum from company
     # membership and does not trust a client-provided compliance conclusion.
     quorum_met: bool | None = None
@@ -86,11 +91,15 @@ class AGMResponse(BaseModel):
     company_id: str
     financial_year: int
     agm_due_date: str | None
+    scheduled_date: str | None = None
     held_date: str | None
     filed_date: str | None
     quorum_met: bool | None
     quorum_required: int | None = None
     quorum_basis: str | None = None
+    members_total_at_agm: int | None = None
+    members_total_evidence_ref: str | None = None
+    members_present_evidence_ref: str | None = None
     venue: str | None = None
     auditor_reappointed: bool | None
     accounts_adopted: bool | None
@@ -108,6 +117,8 @@ class AuditCreateRequest(BaseModel):
     financial_year: int = Field(ge=2000, le=2100)
     auditor_firm: str | None = None
     auditor_icab_number: str | None = None
+    first_auditor_appointed: bool | None = None
+    first_auditor_appointment_date: date | None = None
 
 
 class AuditMarkCompleteRequest(BaseModel):
@@ -125,6 +136,8 @@ class AuditResponse(BaseModel):
     is_complete: bool
     signed_date: str | None
     auditor_firm: str | None
+    first_auditor_appointed: bool | None = None
+    first_auditor_appointment_date: str | None = None
     audit_opinion: str | None
     created_at: str
 
@@ -231,7 +244,8 @@ async def list_all_filings(
     # Role-based company filter
     if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):
         accessible = select(CompanyUserAccess.company_id).where(
-            CompanyUserAccess.user_id == current_user.id
+            CompanyUserAccess.user_id == current_user.id,
+            CompanyUserAccess.is_active.is_(True),
         )
         company_filter = Company.id.in_(accessible)
     else:
@@ -301,6 +315,7 @@ async def create_agm(
         company_id=body.company_id,
         financial_year=body.financial_year,
         agm_deadline=body.agm_due_date,
+        scheduled_date=body.scheduled_date,
         notice_sent_date=body.notice_sent_date,
     )
 
@@ -357,6 +372,9 @@ async def mark_agm_held(
         accounts_adopted=body.accounts_adopted,
         agm_held_without_audit=body.agm_held_without_audit,
         minutes_document_id=body.minutes_document_id,
+        members_total_at_agm=body.members_total_at_agm,
+        members_total_evidence_ref=body.members_total_evidence_ref,
+        members_present_evidence_ref=body.members_present_evidence_ref,
     )
     if not agm:
         raise HTTPException(status_code=404, detail="AGM record not found.")
@@ -430,6 +448,8 @@ async def create_audit(
         financial_year=body.financial_year,
         auditor_firm=body.auditor_firm,
         icab_number=body.auditor_icab_number,
+        first_auditor_appointed=body.first_auditor_appointed,
+        first_auditor_appointment_date=body.first_auditor_appointment_date,
     )
     return _audit_to_response(audit)
 
@@ -680,16 +700,20 @@ def _agm_to_response(agm) -> AGMResponse:
         agm_id=str(agm.id),
         company_id=str(agm.company_id),
         financial_year=agm.financial_year,
-        agm_due_date=agm.agm_deadline.isoformat() if agm.agm_deadline else '2099-12-31',
+        agm_due_date=agm.agm_deadline.isoformat() if agm.agm_deadline else None,
+        scheduled_date=agm.scheduled_date.isoformat() if agm.scheduled_date else None,
         held_date=agm.agm_date.isoformat() if agm.agm_date else None,
         filed_date=agm.rjsc_filing_date.isoformat() if agm.rjsc_filing_date else None,
         quorum_met=agm.quorum_met,
         quorum_required=agm.quorum_required,
         quorum_basis=agm.quorum_basis,
-        venue=getattr(agm, "venue", None),
+        members_total_at_agm=agm.members_total_at_agm,
+        members_total_evidence_ref=agm.members_total_evidence_ref,
+        members_present_evidence_ref=agm.members_present_evidence_ref,
+        venue=agm.venue,
         auditor_reappointed=agm.auditor_reappointed,
-        accounts_adopted=getattr(agm, "accounts_adopted", None),
-        agm_held_without_audit=getattr(agm, "agm_held_without_audit", None),
+        accounts_adopted=agm.accounts_adopted,
+        agm_held_without_audit=agm.agm_held_without_audit,
         is_default=agm.is_default,
         created_at=agm.created_at.isoformat() if hasattr(agm, 'created_at') and agm.created_at else '',
     )
@@ -703,6 +727,11 @@ def _audit_to_response(audit) -> AuditResponse:
         is_complete=audit.audit_complete,
         signed_date=audit.audit_signed_date.isoformat() if audit.audit_signed_date else None,
         auditor_firm=audit.auditor_firm,
+        first_auditor_appointed=audit.first_auditor_appointed,
+        first_auditor_appointment_date=(
+            audit.first_auditor_appointment_date.isoformat()
+            if audit.first_auditor_appointment_date else None
+        ),
         audit_opinion=(
             ("QUALIFIED" if audit.report_qualified else "UNQUALIFIED")
             if audit.audit_complete else None

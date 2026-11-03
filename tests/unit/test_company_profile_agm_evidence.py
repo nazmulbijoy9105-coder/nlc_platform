@@ -15,6 +15,15 @@ def test_missing_agm_record_keeps_attendance_and_auditor_status_unknown():
         "auditor_reappointed_at_agm": None,
         "agm_minutes_prepared": None,
         "notice_sent_date": None,
+        "agm_scheduled_date": None,
+        "members_present_evidence_ref": None,
+        "members_total_at_agm": None,
+        "members_total_evidence_ref": None,
+        "articles_quorum_verified": None,
+        "articles_quorum_required": None,
+        "articles_quorum_verified_by": None,
+        "articles_quorum_verified_at": None,
+        "articles_quorum_evidence_ref": None,
     }
 
 
@@ -70,9 +79,173 @@ def test_missing_agm_evidence_does_not_create_quorum_or_reappointment_flags():
     result = NLCRuleEngine().evaluate(profile)
     fired_rule_ids = {flag.rule_id for flag in result.flags}
 
-    assert "AGM-005" not in fired_rule_ids
+    # Unknown membership/attendance is represented as NOT_EVALUATED,
+    # never as a quorum violation or score deduction.
+    quorum = [flag for flag in result.flags if flag.rule_id == "AGM-005"]
+    assert len(quorum) == 1
+    assert quorum[0].state == RuleState.UNKNOWN
+    assert quorum[0].severity.value == "NOT_EVALUATED"
+    assert quorum[0].score_impact == 0
     assert "AGM-006" not in fired_rule_ids
     assert "AUD-004" not in fired_rule_ids
+
+
+def test_short_agm_notice_is_not_scored_without_consent_exception_evidence():
+    today = date(2026, 11, 3)
+    profile = CompanyProfile(
+        company_id="agm-short-notice-test",
+        company_name="AGM Short Notice Test Ltd",
+        incorporation_date=date(2020, 1, 1),
+        agm_count=1,
+        last_agm_date=today,
+        agm_held_this_cycle=False,
+        agm_scheduled_date=date(2026, 12, 1),
+        notice_sent_date=date(2026, 11, 20),
+        annual_return_filed=True,
+        first_auditor_appointed=True,
+        audit_complete=True,
+    )
+
+    result = NLCRuleEngine().evaluate(profile, today=today)
+    notice = next(flag for flag in result.flags if flag.rule_id == "AGM-003")
+    assert notice.state == RuleState.UNKNOWN
+    assert notice.severity.value == "NOT_EVALUATED"
+    assert notice.score_impact == 0
+    assert notice.detail["reason"] == "short_notice_consent_and_exception_evidence_missing"
+
+
+def test_missing_agm_notice_record_is_not_treated_as_proven_legal_omission():
+    today = date(2026, 11, 3)
+    profile = CompanyProfile(
+        company_id="agm-missing-notice-test",
+        company_name="AGM Missing Notice Test Ltd",
+        incorporation_date=date(2020, 1, 1),
+        agm_count=1,
+        last_agm_date=today,
+        agm_scheduled_date=date(2026, 11, 15),
+        notice_sent_date=None,
+        annual_return_filed=True,
+        first_auditor_appointed=True,
+        audit_complete=True,
+    )
+
+    result = NLCRuleEngine().evaluate(profile, today=today)
+    notice = next(flag for flag in result.flags if flag.rule_id == "AGM-004")
+    assert notice.state == RuleState.UNKNOWN
+    assert notice.severity.value == "NOT_EVALUATED"
+    assert notice.score_impact == 0
+
+
+def test_held_agm_without_notice_or_scheduled_date_is_not_evaluated():
+    today = date(2026, 11, 3)
+    profile = CompanyProfile(
+        company_id="agm-held-no-notice-test",
+        company_name="AGM Held No Notice Test Ltd",
+        incorporation_date=date(2020, 1, 1),
+        agm_count=1,
+        last_agm_date=today,
+        agm_held_this_cycle=True,
+        agm_scheduled_date=None,
+        notice_sent_date=None,
+        annual_return_filed=True,
+        first_auditor_appointed=True,
+        first_auditor_appointment_date=date(2020, 1, 15),
+        audit_complete=True,
+    )
+
+    result = NLCRuleEngine().evaluate(profile, today=today)
+    notice = next(flag for flag in result.flags if flag.rule_id == "AGM-004")
+    assert notice.flag_code == "AGM_HELD_NOTICE_EVIDENCE_MISSING"
+    assert notice.state == RuleState.UNKNOWN
+    assert notice.eval_state == "UNKNOWN"
+    assert notice.severity.value == "NOT_EVALUATED"
+    assert notice.score_impact == 0
+
+
+def test_held_agm_with_notice_but_missing_meeting_date_is_not_evaluated():
+    today = date(2026, 11, 3)
+    profile = CompanyProfile(
+        company_id="agm-held-no-date-test",
+        company_name="AGM Held No Date Test Ltd",
+        incorporation_date=date(2020, 1, 1),
+        agm_count=1,
+        last_agm_date=today,
+        agm_held_this_cycle=True,
+        agm_scheduled_date=None,
+        notice_sent_date=date(2026, 10, 1),
+        annual_return_filed=True,
+        first_auditor_appointed=True,
+        first_auditor_appointment_date=date(2020, 1, 15),
+        audit_complete=True,
+    )
+
+    result = NLCRuleEngine().evaluate(profile, today=today)
+    notice = next(flag for flag in result.flags if flag.rule_id == "AGM-003")
+    assert notice.flag_code == "AGM_MEETING_DATE_MISSING_FOR_NOTICE_ASSESSMENT"
+    assert notice.state == RuleState.UNKNOWN
+    assert notice.eval_state == "UNKNOWN"
+    assert notice.severity.value == "NOT_EVALUATED"
+    assert notice.score_impact == 0
+
+
+def test_first_auditor_appointed_late_is_not_marked_compliant():
+    registration = date(2026, 1, 31)
+    profile = CompanyProfile(
+        company_id="auditor-late-test",
+        company_name="Auditor Late Test Ltd",
+        incorporation_date=registration,
+        first_auditor_appointed=True,
+        first_auditor_appointment_date=date(2026, 3, 2),
+        audit_complete=True,
+        annual_return_filed=True,
+    )
+
+    result = NLCRuleEngine().evaluate(profile, today=date(2026, 3, 10))
+    flag = next(flag for flag in result.flags if flag.rule_id == "AUD-001")
+    assert flag.flag_code == "FIRST_AUDITOR_APPOINTED_LATE"
+    assert flag.detail["deadline"] == "2026-02-28"
+    assert flag.detail["appointment_date"] == "2026-03-02"
+    assert flag.detail["calculation_method"] == "calendar_month"
+
+
+def test_first_auditor_boolean_without_appointment_date_is_not_evaluated():
+    profile = CompanyProfile(
+        company_id="auditor-date-unknown-test",
+        company_name="Auditor Date Unknown Ltd",
+        incorporation_date=date(2026, 1, 31),
+        first_auditor_appointed=True,
+        first_auditor_appointment_date=None,
+        audit_complete=True,
+        annual_return_filed=True,
+    )
+
+    result = NLCRuleEngine().evaluate(profile, today=date(2026, 3, 10))
+    flag = next(flag for flag in result.flags if flag.rule_id == "AUD-001")
+    assert flag.flag_code == "FIRST_AUDITOR_APPOINTMENT_DATE_UNVERIFIED"
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.severity.value == "NOT_EVALUATED"
+    assert flag.score_impact == 0
+
+
+def test_first_auditor_false_status_conflicting_with_appointment_date_is_not_evaluated():
+    registration = date(2026, 1, 1)
+    profile = CompanyProfile(
+        company_id="auditor-contradictory-test",
+        company_name="Auditor Contradictory Test Ltd",
+        incorporation_date=registration,
+        first_auditor_appointed=False,
+        first_auditor_appointment_date=date(2026, 1, 10),
+        audit_complete=True,
+        annual_return_filed=True,
+    )
+
+    result = NLCRuleEngine().evaluate(profile, today=date(2026, 3, 10))
+    flag = next(flag for flag in result.flags if flag.rule_id == "AUD-001")
+    assert flag.flag_code == "FIRST_AUDITOR_EVIDENCE_CONTRADICTORY"
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.score_impact == 0
 
 
 def test_director_count_from_local_records_is_not_rjsc_verified():

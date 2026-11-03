@@ -320,12 +320,16 @@ class TestFilings:
                 "company_id": str(db_company.id),
                 "financial_year": 2020,
                 "agm_due_date": "2021-06-30",
+                "scheduled_date": "2021-05-20",
             }
         )
         assert resp.status_code == 201
         data = resp.json()
         assert data["financial_year"] == 2020
         assert data["company_id"] == str(db_company.id)
+        assert data["agm_due_date"] == "2021-06-30"
+        assert data["scheduled_date"] == "2021-05-20"
+        assert data["agm_due_date"] != "2099-12-31"
         assert "agm_id" in data
 
     @pytest.mark.asyncio
@@ -338,6 +342,10 @@ class TestFilings:
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
+    async def test_mark_agm_held_persists_fields_and_derives_quorum(self, api_client, staff_token, db_company, db):
+        from app.services.filing_service import AGMService
+
+        agm = await AGMService(db).create_agm(company_id=db_company.id, financial_year=2021)
     async def test_mark_agm_held_contract(self, api_client, staff_token, db_company, db):
         from app.services.filing_service import AGMService
 
@@ -352,6 +360,9 @@ class TestFilings:
                 "held_date": "2022-05-15",
                 "venue": "Registered Office",
                 "members_present": 2,
+                "members_total_at_agm": 5,
+                "members_total_evidence_ref": "test-evidence://members-register-at-agm",
+                "members_present_evidence_ref": "test-evidence://agm-attendance-register",
                 "quorum_met": False,
                 "auditor_reappointed": True,
                 "accounts_adopted": True,
@@ -360,11 +371,49 @@ class TestFilings:
         )
         assert response.status_code == 200, response.text
         result = response.json()
+        assert result["quorum_met"] is None
+        assert result["quorum_required"] is None
+        assert result["quorum_basis"] == "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
         assert result["quorum_met"] is True
         assert result["quorum_required"] == 2
         assert result["venue"] == "Registered Office"
         assert result["accounts_adopted"] is True
         assert result["agm_held_without_audit"] is False
+
+    @pytest.mark.asyncio
+    async def test_mark_agm_held_uses_verified_articles_quorum(self, api_client, staff_token, db_company, db):
+        from app.services.filing_service import AGMService
+
+        db_company.member_count = 7
+        db_company.articles_quorum_verified = True
+        db_company.articles_quorum_required = None
+        db_company.articles_quorum_verified_by = "test-counsel"
+        db_company.articles_quorum_verified_at = date(2023, 4, 1)
+        db_company.articles_quorum_evidence_ref = "test-evidence://current-articles"
+        await db.flush()
+
+        agm = await AGMService(db).create_agm(company_id=db_company.id, financial_year=2022)
+        response = await api_client.patch(
+            f"/api/v1/filings/agm/{agm.id}/held",
+            headers=_auth(staff_token),
+            json={
+                "held_date": "2023-05-15",
+                "venue": "Registered Office",
+                "members_present": 2,
+                "members_total_at_agm": 7,
+                "members_total_evidence_ref": "test-evidence://members-register-at-agm",
+                "members_present_evidence_ref": "test-evidence://agm-attendance-register",
+                "auditor_reappointed": True,
+                "accounts_adopted": True,
+                "agm_held_without_audit": False,
+            },
+        )
+        assert response.status_code == 200, response.text
+        result = response.json()
+        assert result["quorum_met"] is False
+        assert result["quorum_required"] == 3
+        assert result["quorum_basis"] == "SECTION_85_2_B_DEFAULT_ARTICLES_VERIFIED_NO_VARIATION"
+
 
     @pytest.mark.asyncio
     async def test_list_agms_for_company(self, api_client, staff_token, db_company):
@@ -385,12 +434,16 @@ class TestFilings:
                 "financial_year": 2023,
                 "auditor_firm": "Test Audit LLP",
                 "auditor_icab_number": "ICAB-99999",
+                "first_auditor_appointed": True,
+                "first_auditor_appointment_date": "2024-02-15",
             }
         )
         assert resp.status_code == 201
         data = resp.json()
         assert data["is_complete"] is False
         assert data["financial_year"] == 2023
+        assert data["first_auditor_appointed"] is True
+        assert data["first_auditor_appointment_date"] == "2024-02-15"
 
     @pytest.mark.asyncio
     async def test_create_annual_return(self, api_client, staff_token, db_company):

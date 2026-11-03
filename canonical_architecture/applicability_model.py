@@ -45,9 +45,23 @@ APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {
         "S85: Written notice with date/time/place/business required."
     ),
     "AGM-005": ApplicabilityRule(
-        "AGM-005", ("ALL",), ("agm_held",), (),
-        "S85(2)(b): Private company needs 2 members present (if <=7 total); "
-        "3 if >7. Public company needs 5."
+        "AGM-005",
+        ("PRIVATE_LIMITED",),
+        (
+            "agm_held",
+            "members_total_at_agm",
+            "members_total_evidence_ref",
+            "members_present_at_agm",
+            "members_present_evidence_ref",
+            "articles_quorum_verified",
+            "articles_quorum_verified_by",
+            "articles_quorum_verified_at",
+            "articles_quorum_evidence_ref",
+        ),
+        ("articles_quorum_required",),
+        "S85(2)(b): private-company default is 2 members where total membership "
+        "is <=6 and 3 where total membership is >6, unless the current Articles "
+        "provide otherwise. Verify the Articles and record reviewer, date and evidence."
     ),
     "AGM-006": ApplicabilityRule(
         "AGM-006", ("ALL",), ("agm_held",), (),

@@ -382,6 +382,7 @@ def build_profile():
             "capital_increase_date": None,
             "capital_increase_resolution": True,
             "first_auditor_appointed": True,
+            "first_auditor_appointment_date": today - timedelta(days=365 * 3) + timedelta(days=20),
             "first_auditor_appointment_date": today - timedelta(days=365 * 3) + timedelta(days=15),
             "tin_obtained": True,
             "vat_registered": True,
@@ -411,6 +412,14 @@ def build_profile():
             "director_consent_filed": True,
             "director_office_of_profit": False,
             "member_count": 5,
+            "members_total_at_agm": 5,
+            "members_total_evidence_ref": "test-evidence://members-register-at-agm",
+            "members_present_evidence_ref": "test-evidence://agm-attendance-register",
+            "articles_quorum_verified": True,
+            "articles_quorum_required": None,
+            "articles_quorum_verified_by": "test-counsel",
+            "articles_quorum_verified_at": today,
+            "articles_quorum_evidence_ref": "test-evidence://current-articles",
             "business_commencement_declaration_filed": True,
         }
         defaults.update(overrides)

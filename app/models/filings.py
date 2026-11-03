@@ -60,6 +60,7 @@ class AGM(FullMixin, Base):
         Date, nullable=True, index=True,
         comment="Calculated: incorporation+548d (first) or FY end+182d (subsequent)"
     )
+    scheduled_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     notice_sent_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     notice_days_before: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # AGM-003: notice defective (< 21 days)
@@ -79,6 +80,21 @@ class AGM(FullMixin, Base):
 
     # ── Quorum ────────────────────────────────────────────────────
     # AGM-005: quorum not met
+    quorum_met: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
+    members_present: Mapped[int] = mapped_column(Integer, default=0)
+    members_present_evidence_ref: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    members_total_at_agm: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    members_total_evidence_ref: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    quorum_required: Mapped[int | None] = mapped_column(
+        Integer, nullable=True, default=None,
+        comment="Section 85(2)(b) statutory default; Articles may provide otherwise"
+    )
+    quorum_basis: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    articles_quorum_verified: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    articles_quorum_required: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    articles_quorum_verified_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    articles_quorum_verified_at: Mapped[date | None] = mapped_column(Date, nullable=True)
+    articles_quorum_evidence_ref: Mapped[str | None] = mapped_column(String(500), nullable=True)
     quorum_met: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=True)
     members_present: Mapped[int] = mapped_column(Integer, default=0)
     quorum_required: Mapped[int | None] = mapped_column(
@@ -135,8 +151,10 @@ class Audit(FullMixin, Base):
         String(100), nullable=True,
         comment="ICAB registration number of audit firm"
     )
-    # AUD-002: first auditor not appointed within 30 days
-    first_auditor_appointed: Mapped[bool] = mapped_column(Boolean, default=False)
+    # AUD-001: tri-state appointment evidence; Section 210(6) calendar month
+    first_auditor_appointed: Mapped[bool | None] = mapped_column(
+        Boolean, nullable=True, default=None
+    )
     first_auditor_appointment_date: Mapped[date | None] = mapped_column(
         Date, nullable=True
     )

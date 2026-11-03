@@ -120,7 +120,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "INC-001",
         "legal_domain": "Corporate",
         "law": "Section 23, Companies Act 1994 (Bangladesh)",
-        "requirement": "Memorandum and Articles of Association not filed with RJSC. Section 23: constitutional documents must be filed.",
+        "requirement": "The memorandum and, where the company has articles, the articles must be delivered to the Registrar for registration under Section 23. Absence from NLC records is not proof of non-filing; verify the registered documents with RJSC before recording a breach.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -196,12 +196,13 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "AUD-001",
         "legal_domain": "Corporate",
         "law": "Section 210(6), Companies Act 1994 (Bangladesh)",
+        "requirement": "First auditor not appointed by the Board within one calendar month of registration. Section 210(6) requires appointment within one month; calculate by calendar month, not a fixed 30-day period. The statutory provision remains subject to legal-source verification.",
         "requirement": "First auditor not appointed by the Board within one month of registration. The engine calculates the one-month period using calendar-month semantics, not a fixed 30-day interval.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
-        "evidence_required": ["DOCUMENTARY_EVIDENCE"],
+        "evidence_required": ["FIRST_AUDITOR_APPOINTMENT_RESOLUTION", "APPOINTMENT_EFFECTIVE_DATE", "REGISTRATION_DATE"],
         "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
         "severity": "YELLOW",
         "score_impact": 10,
@@ -286,7 +287,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "AGM-003",
         "legal_domain": "Corporate",
         "law": "Section 85, Companies Act 1994 (Bangladesh)",
-        "requirement": "AGM Notice Defective — Insufficient Days - AGM notice sent with fewer than 21 clear days before meeting. Section 85 requires 21 clear days. 'Clear days' excludes day of service and day of meeting. Resolutions at improperly noticed AGM may be void.",
+        "requirement": "AGM notice sent with fewer than 21 clear days. Section 85 generally requires 21 clear days, but shorter notice may be valid with the required member consent; accidental omission or non-receipt may also fall within the statutory exception. A notice defect alone must not be treated as automatically invalidating every resolution. Record consent and exception evidence; legal provision remains subject to counsel verification.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -301,7 +302,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "AGM-004",
         "legal_domain": "Corporate",
         "law": "Section 85, Companies Act 1994 (Bangladesh)",
-        "requirement": "AGM Notice Missing - No written AGM notice sent to members. Section 85 requires notice specifying date, time, place, and business. AGM without proper notice is a nullity — all resolutions void.",
+        "requirement": "No written AGM notice is recorded as sent to members. Section 85 requires notice specifying the meeting particulars and business. Accidental omission or non-receipt may fall within the statutory exception, and shorter notice may be valid with the required consent. Missing notice evidence does not by itself establish that every resolution is void; assess the facts, consent and statutory exception before drawing a validity conclusion.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -315,13 +316,13 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AGM-005": {
         "rule_id": "AGM-005",
         "legal_domain": "Corporate",
-        "law": "Section 85, Companies Act 1994 (Bangladesh)",
-        "requirement": "AGM Quorum Not Met - AGM held but quorum not satisfied. Section 85(2)(b): private companies need minimum 2 members present in person. Resolutions without quorum have no legal effect.",
+        "law": "Section 85(2)(b), Companies Act 1994 (Bangladesh)",
+        "requirement": "AGM quorum assessment for a private company: the statutory default is two members where the company has up to six members and three members where it has more than six, unless the articles provide otherwise. This is a provisional default only until the current articles and membership evidence are reviewed.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
-        "applicability": "ALL_ACTIVE_COMPANIES",
-        "exceptions": [],
-        "evidence_required": ["DOCUMENTARY_EVIDENCE"],
+        "applicability": "PRIVATE_COMPANIES_ONLY",
+        "exceptions": ["Articles may provide otherwise; inspect the current articles"],
+        "evidence_required": ["CURRENT_REGISTER_OF_MEMBERS", "AGM_ATTENDANCE_RECORD", "CURRENT_ARTICLES", "DOCUMENTARY_EVIDENCE"],
         "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
         "severity": "RED",
         "score_impact": 15,
@@ -1255,16 +1256,26 @@ def _legacy_rule(key: str, d: Dict[str, Any]) -> StatutoryRule:
         raise RuntimeError(f"{key}: unknown legacy keys {sorted(extra)}")
     if d["rule_id"] != key:
         raise RuntimeError(f"{key}: rule_id mismatch {d['rule_id']}")
-    if d["applicability"] != "ALL_ACTIVE_COMPANIES" or d["exceptions"]:
-        raise RuntimeError(f"{key}: narrowed applicability not representable")
-    if list(d["evidence_required"]) != ["DOCUMENTARY_EVIDENCE"]:
-        raise RuntimeError(f"{key}: unexpected legacy evidence keys")
+    applicability = d["applicability"]
+    if applicability == "ALL_ACTIVE_COMPANIES":
+        applies_if = None
+    elif applicability == "PRIVATE_COMPANIES_ONLY":
+        # Keep the statutory scope explicit in the canonical representation.
+        applies_if = "company_type == PRIVATE_LIMITED"
+    else:
+        raise RuntimeError(f"{key}: unsupported legacy applicability {applicability!r}")
+    if not isinstance(d["exceptions"], (list, tuple)):
+        raise RuntimeError(f"{key}: exceptions must be a list or tuple")
+    if not d["evidence_required"] or not all(
+        isinstance(item, str) and item for item in d["evidence_required"]
+    ):
+        raise RuntimeError(f"{key}: evidence_required must contain non-empty keys")
     auth = _LEGACY_AUTHORITY_OVERRIDE.get(key) or _LEGACY_AUTHORITY[d["legal_domain"]]
     return StatutoryRule(
         key, d["legal_domain"], d["law"], d["requirement"], d["provision"],
         d["provision_status"], auth,
-        (key + ":DOCUMENTARY_EVIDENCE",),   # per-rule key: shared key would couple all rules
-        Severity(d["severity"]), d["score_impact"])
+        tuple(d["evidence_required"]),
+        Severity(d["severity"]), d["score_impact"], applies_if=applies_if)
 
 
 for _k, _d in _LEGACY_RULE_DICTS.items():

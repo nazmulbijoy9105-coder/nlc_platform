@@ -74,3 +74,26 @@ async def test_client_membership_revocation_denies_company_access(
         headers=_auth(token),
     )
     assert response.status_code == 403, response.text
+
+    # Revoked membership must also disappear from collection and filing
+    # queries; stale CompanyUserAccess rows are not current authorization.
+    companies_response = await api_client.get(
+        "/api/v1/companies",
+        headers=_auth(token),
+    )
+    assert companies_response.status_code == 200, companies_response.text
+    assert str(db_company.id) not in str(companies_response.json())
+
+    filings_response = await api_client.get(
+        f"/api/v1/filings?company_id={db_company.id}",
+        headers=_auth(token),
+    )
+    assert filings_response.status_code == 200, filings_response.text
+    filings = filings_response.json()
+    assert filings == {"agms": [], "audits": [], "annual_returns": []}
+
+    documents_response = await api_client.get(
+        f"/api/v1/documents/{db_company.id}",
+        headers=_auth(token),
+    )
+    assert documents_response.status_code == 403, documents_response.text

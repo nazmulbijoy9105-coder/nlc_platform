@@ -112,8 +112,12 @@ class ComplianceFlag:
     eval_state: str = "VIOLATION"   # F3: UNKNOWN -> impact forced to 0
 
     def __post_init__(self):
-        # F3 UNKNOWN policy: unknown facts are indeterminate, not violations
-        if self.eval_state == "UNKNOWN":
+        # The typed state is authoritative. UNKNOWN must never be serialized
+        # as VIOLATION merely because the legacy string field has that default.
+        if self.state == RuleState.UNKNOWN:
+            self.eval_state = "UNKNOWN"
+            self.score_impact = 0
+        elif self.eval_state == "UNKNOWN":
             self.score_impact = 0
 
 @dataclass
@@ -158,6 +162,15 @@ class CompanyProfile:
     company_id: str
     company_name: str
     company_type: str = "PRIVATE_LIMITED"
+    member_count: int | None = None
+    members_total_at_agm: int | None = None
+    members_total_evidence_ref: str | None = None
+    members_present_evidence_ref: str | None = None
+    articles_quorum_verified: bool | None = None
+    articles_quorum_required: int | None = None
+    articles_quorum_verified_by: str | None = None
+    articles_quorum_verified_at: date | None = None
+    articles_quorum_evidence_ref: str | None = None
     incorporation_date: date | None = None
     financial_year_end: Optional[date] = field(default=None)
     agm_count: int | None = None
@@ -388,7 +401,6 @@ REGISTERED_OFFICE_DEADLINE_DAYS = 28
 # from Jan 31 = Feb 28/29 (last day of month). Using 30 days would be
 # legally incorrect for months with 28/29/31 days. We now compute the
 # deadline by adding one calendar month to the incorporation date.
-FIRST_AUDITOR_DEADLINE_DAYS = 30  # DEPRECATED: kept for backward compat, use _add_one_month()
 CHARGE_REGISTRATION_DEADLINE_DAYS = 21  # Section 159(1): charge registration within 21 days of creation
 ALLOTMENT_FILING_DEADLINE_DAYS = 60
 SPECIAL_RESOLUTION_DEADLINE_DAYS = 15  # Companies Act 1994, Section 88 (15 days)
@@ -761,93 +773,67 @@ class NLCRuleEngine:
         # "within one month" of registration. "One month" = CALENDAR MONTH,
         # not 30 days. Using 30 days is legally incorrect for months with
         # 28/29/31 days.
-        reg_date = c.incorporation_date or self.today
-        deadline = self._add_one_month(reg_date)
+        reg_date = c.incorporation_date
+        appointment_date = c.first_auditor_appointment_date
+        deadline = self._add_one_month(reg_date) if reg_date else None
 
-        def add_aud001_flag(flag_code: str, delay: int, appointment_date: date | None = None) -> None:
+        def _auditor_unknown(code: str, message: str, detail: dict | None = None) -> None:
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-001",
-                flag_code=flag_code,
+                flag_code=code,
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=message,
+                statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
+                detail=detail or {},
+                state=RuleState.UNKNOWN,
+            ))
+
+        if reg_date is None or deadline is None:
+            _auditor_unknown(
+                "FIRST_AUDITOR_REGISTRATION_DATE_UNKNOWN",
+                "Registration date is unavailable; the Section 210(6) calendar-month deadline cannot be calculated.",
+            )
+        elif appointment_date is None:
+            _auditor_unknown(
+                "FIRST_AUDITOR_APPOINTMENT_DATE_UNKNOWN",
+                "A Boolean appointment status without the appointment resolution date is insufficient to determine compliance with Section 210(6).",
+                {"registration_date": reg_date.isoformat(), "deadline": deadline.isoformat(),
+                 "appointment_status": c.first_auditor_appointed},
+            )
+        elif c.first_auditor_appointed is not True or appointment_date < reg_date:
+            _auditor_unknown(
+                "FIRST_AUDITOR_EVIDENCE_CONTRADICTORY",
+                "The appointment date conflicts with the recorded appointment status or predates registration. Reconcile the appointment resolution and company record.",
+                {"registration_date": reg_date.isoformat(),
+                 "appointment_date": appointment_date.isoformat(),
+                 "appointment_status": c.first_auditor_appointed},
+            )
+        elif appointment_date > deadline:
+            delay = (appointment_date - deadline).days
+            self._add_flag(ComplianceFlag(
+                rule_id="AUD-001",
+                flag_code="FIRST_AUDITOR_APPOINTED_LATE",
                 severity=Severity.YELLOW,
                 score_impact=10,
                 revenue_tier=(
                     RevenueTier.COMPLIANCE_PACKAGE
-                    if delay <= 365
-                    else RevenueTier.STRUCTURED_REGULARIZATION
+                    if delay <= 365 else RevenueTier.STRUCTURED_REGULARIZATION
                 ),
                 description=(
-                    f"First auditor was not appointed within one calendar month "
-                    f"of registration (Section 210(6)). Deadline: {deadline.isoformat()}. "
-                    f"Overdue by {delay} days."
+                    f"First auditor appointment date {appointment_date.isoformat()} "
+                    f"falls after the Section 210(6) deadline {deadline.isoformat()}."
                 ),
                 statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
-                detail={
-                    "delay_days": delay,
-                    "registration_date": str(reg_date),
-                    "deadline": str(deadline),
-                    "appointment_date": str(appointment_date) if appointment_date else None,
-                    "calculation_method": "calendar_month",
-                },
+                detail={"registration_date": reg_date.isoformat(),
+                        "deadline": deadline.isoformat(),
+                        "appointment_date": appointment_date.isoformat(),
+                        "delay_days": delay,
+                        "calculation_method": "calendar_month"},
             ))
-
-        if c.first_auditor_appointed is None:
-            self._add_flag(ComplianceFlag(
-                rule_id="AUD-001",
-                flag_code="FIRST_AUDITOR_STATUS_UNKNOWN",
-                severity=Severity.NOT_EVALUATED,
-                score_impact=0,
-                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=(
-                    "First auditor appointment status unknown (data missing). "
-                    "Section 210(6) requires appointment within one month of registration."
-                ),
-                statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
-                state=RuleState.UNKNOWN,
-            ))
-        elif c.first_auditor_appointment_date is not None:
-            if c.first_auditor_appointed is False:
-                self._add_flag(ComplianceFlag(
-                    rule_id="AUD-001",
-                    flag_code="FIRST_AUDITOR_EVIDENCE_CONTRADICTORY",
-                    severity=Severity.NOT_EVALUATED,
-                    score_impact=0,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=(
-                        "First auditor status is contradictory: an appointment date is recorded "
-                        "but the appointment status is marked false. Verify source evidence."
-                    ),
-                    statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
-                    state=RuleState.CONTRADICTORY,
-                    detail={
-                        "appointment_date": str(c.first_auditor_appointment_date),
-                        "registration_date": str(reg_date),
-                    },
-                ))
-            elif c.first_auditor_appointment_date > deadline:
-                delay = (c.first_auditor_appointment_date - deadline).days
-                add_aud001_flag(
-                    "FIRST_AUDITOR_APPOINTED_LATE",
-                    delay,
-                    c.first_auditor_appointment_date,
-                )
-        elif c.first_auditor_appointed is False and self.today > deadline:
-            delay = (self.today - deadline).days
-            add_aud001_flag("FIRST_AUDITOR_NOT_APPOINTED", delay)
-        elif c.first_auditor_appointed is True:
-            self._add_flag(ComplianceFlag(
-                rule_id="AUD-001",
-                flag_code="FIRST_AUDITOR_APPOINTMENT_DATE_UNKNOWN",
-                severity=Severity.NOT_EVALUATED,
-                score_impact=0,
-                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=(
-                    "First auditor is recorded as appointed, but the appointment date is missing; "
-                    "timeliness under Section 210(6) cannot be verified."
-                ),
-                statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
-                state=RuleState.UNKNOWN,
-            ))
-
+        # An appointment made on or before the deadline is compliant.
+        
         if c.first_auditor_appointed and c.agm_count is not None and c.agm_count > 0 and c.auditor_reappointed_at_agm is False and c.audit_in_progress is False and c.last_agm_date is not None:  # type: ignore
             fy_end = c.financial_year_end
             if self.today > fy_end + timedelta(days=120):
@@ -957,32 +943,92 @@ class NLCRuleEngine:
         if c.agm_scheduled_date and c.notice_sent_date:
             clear_days = (c.agm_scheduled_date - c.notice_sent_date).days - 1
             if clear_days < AGM_NOTICE_MINIMUM_DAYS:
+                # Consent and the accidental-omission/non-receipt exception are
+                # not yet represented as verified, member-level evidence in
+                # CompanyProfile. Do not convert a short-notice fact into a
+                # legal violation until those exceptions can be assessed.
                 self._add_flag(ComplianceFlag(
                     rule_id="AGM-003",
-                    flag_code="AGM_NOTICE_DEFECTIVE",
-                    severity=Severity.YELLOW,
-                    score_impact=5,
+                    flag_code="AGM_NOTICE_SHORT_PERIOD_NOT_EVALUATED",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"AGM notice issued with {clear_days} clear days. Section 85 requires 21 clear days. NOTE: Section 85 permits shorter notice with member consent, and accidental omission/non-receipt does not invalidate proceedings.",
+                    description=(
+                        f"AGM notice has {clear_days} clear days. Section 85 generally "
+                        "requires 21 clear days, but required consent and statutory "
+                        "exception evidence are not captured. Legal effect is NOT_EVALUATED."
+                    ),
                     statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
-                    detail={"clear_days": clear_days}
+                    detail={
+                        "clear_days": clear_days,
+                        "required_clear_days": AGM_NOTICE_MINIMUM_DAYS,
+                        "reason": "short_notice_consent_and_exception_evidence_missing",
+                    },
+                    state=RuleState.UNKNOWN,
                 ))
 
-        if c.agm_scheduled_date and c.notice_sent_date is None:
+        if c.agm_scheduled_date and c.notice_sent_date is None and not c.agm_held_this_cycle:
             warn = c.agm_scheduled_date - timedelta(days=AGM_NOTICE_MINIMUM_DAYS)
             if self.today >= warn:
                 days_rem = (c.agm_scheduled_date - self.today).days
+                # A missing notice record does not establish that notice was
+                # legally omitted, nor whether accidental omission/non-receipt
+                # exception applies. Preserve this as an evidence gap.
                 self._add_flag(ComplianceFlag(
                     rule_id="AGM-004",
-                    flag_code="AGM_NOTICE_NOT_ISSUED",
-                    severity=Severity.RED,
-                    score_impact=15,
+                    flag_code="AGM_NOTICE_STATUS_NOT_EVALUATED",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"AGM notice not issued. {days_rem} days to AGM. Section 85 requires 21 clear days notice. NOTE: Section 85 provides exceptions for accidental omission and permits shorter notice with consent.",
+                    description=(
+                        f"No AGM notice dispatch date is recorded ({days_rem} days "
+                        "to the scheduled meeting). Section 85 exceptions and "
+                        "member-level notice evidence have not been assessed."
+                    ),
                     statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
-                    detail={"days_to_agm": days_rem}
+                    detail={
+                        "days_to_agm": days_rem,
+                        "reason": "notice_dispatch_and_statutory_exception_evidence_missing",
+                    },
+                    state=RuleState.UNKNOWN,
                 ))
 
+        if c.agm_held_this_cycle and c.notice_sent_date is None:
+            # The meeting is recorded as held, but no notice dispatch evidence
+            # exists. Section 85's accidental omission/non-receipt exception
+            # prevents a categorical legal conclusion from this fact alone.
+            self._add_flag(ComplianceFlag(
+                rule_id="AGM-004",
+                flag_code="AGM_HELD_NOTICE_EVIDENCE_MISSING",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "AGM is recorded as held but no notice dispatch date is "
+                    "recorded. Verify member-level service, accidental omission "
+                    "and non-receipt evidence before determining legal effect."
+                ),
+                statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
+                detail={"reason": "held_meeting_notice_evidence_missing"},
+                state=RuleState.UNKNOWN,
+            ))
+
+        if c.agm_held_this_cycle and c.agm_scheduled_date is None and c.notice_sent_date is not None:
+            self._add_flag(ComplianceFlag(
+                rule_id="AGM-003",
+                flag_code="AGM_MEETING_DATE_MISSING_FOR_NOTICE_ASSESSMENT",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "AGM is recorded as held and a notice dispatch date exists, "
+                    "but the meeting date is missing. The 21-clear-day requirement "
+                    "cannot be calculated."
+                ),
+                statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
+                detail={"reason": "meeting_date_missing_for_clear_day_calculation"},
+                state=RuleState.UNKNOWN,
+            ))
         if c.agm_held_this_cycle and c.members_present_at_agm is not None:
             # Section 85(2)(b): the default private-company quorum depends on
             # total membership. The Articles may override this statutory default;
@@ -1026,6 +1072,109 @@ class NLCRuleEngine:
                             "basis": "section_85_2_b_default",
                         }
                     ))
+
+        if c.agm_held_this_cycle:
+            company_type = getattr(c.company_type, "value", c.company_type)
+            quorum_inputs_verified = (
+                company_type == "PRIVATE_LIMITED"
+                and c.members_total_at_agm is not None
+                and c.members_total_at_agm > 0
+                and c.members_present_at_agm is not None
+                and bool(c.members_total_evidence_ref and c.members_total_evidence_ref.strip())
+                and bool(c.members_present_evidence_ref and c.members_present_evidence_ref.strip())
+                and c.members_present_at_agm <= c.members_total_at_agm
+                and c.articles_quorum_verified is True
+                and bool(c.articles_quorum_verified_by and c.articles_quorum_verified_by.strip())
+                and c.articles_quorum_verified_at is not None
+                and bool(c.articles_quorum_evidence_ref and c.articles_quorum_evidence_ref.strip())
+                and (
+                    c.articles_quorum_required is None
+                    or c.articles_quorum_required >= 1
+                )
+            )
+            if quorum_inputs_verified:
+                # Section 85(2)(b) default applies only after current Articles
+                # have been checked and no alternative quorum is recorded.
+                statutory_default = (
+                    PRIVATE_COMPANY_QUORUM_SMALL
+                    if c.members_total_at_agm <= 6
+                    else PRIVATE_COMPANY_QUORUM_LARGE
+                )
+                quorum_required = c.articles_quorum_required or statutory_default
+                quorum_basis = (
+                    "ARTICLES_VERIFIED"
+                    if c.articles_quorum_required is not None
+                    else "SECTION_85_2_B_DEFAULT_ARTICLES_VERIFIED_NO_VARIATION"
+                )
+                if c.members_present_at_agm < quorum_required:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-005",
+                        flag_code="AGM_QUORUM_DEFECTIVE",
+                        severity=Severity.RED,
+                        score_impact=15,
+                        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                        description=(
+                            f"AGM attendance {c.members_present_at_agm} is below the "
+                            f"verified quorum requirement of {quorum_required}. "
+                            "The requirement is based on the current Articles or, "
+                            "where no variation is recorded, Section 85(2)(b)."
+                        ),
+                        statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh), subject to current Articles",
+                        detail={
+                            "present": c.members_present_at_agm,
+                            "members_total_at_agm": c.members_total_at_agm,
+                            "members_total_evidence_ref": c.members_total_evidence_ref,
+                            "members_present_evidence_ref": c.members_present_evidence_ref,
+                            "required": quorum_required,
+                            "articles_quorum_verified": True,
+                            "quorum_basis": quorum_basis,
+                        },
+                    ))
+            else:
+                reason = (
+                    "company_type_not_supported"
+                    if company_type != "PRIVATE_LIMITED"
+                    else "articles_quorum_not_verified"
+                    if (
+                        c.articles_quorum_verified is not True
+                        or not c.articles_quorum_verified_by
+                        or not c.articles_quorum_verified_at
+                        or not c.articles_quorum_evidence_ref
+                    )
+                    else "invalid_articles_quorum_required"
+                    if c.articles_quorum_required is not None and c.articles_quorum_required < 1
+                    else "meeting_membership_or_attendance_evidence_missing"
+                )
+                self._add_flag(ComplianceFlag(
+                    rule_id="AGM-005",
+                    flag_code="AGM_QUORUM_NOT_EVALUATED",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=(
+                        "AGM quorum cannot be determined until the current Articles, "
+                        "member register and attendance record are verified. "
+                        "The statutory default must not be applied without checking "
+                        "whether the Articles provide otherwise."
+                    ),
+                    statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh), subject to current Articles",
+                    detail={
+                        "present": c.members_present_at_agm,
+                        "members_total_at_agm": c.members_total_at_agm,
+                        "members_total_evidence_ref": c.members_total_evidence_ref,
+                        "members_present_evidence_ref": c.members_present_evidence_ref,
+                        "articles_quorum_verified": c.articles_quorum_verified,
+                        "articles_quorum_required": c.articles_quorum_required,
+                        "articles_quorum_verified_by": c.articles_quorum_verified_by,
+                        "articles_quorum_verified_at": (
+                            c.articles_quorum_verified_at.isoformat()
+                            if c.articles_quorum_verified_at else None
+                        ),
+                        "articles_quorum_evidence_ref": c.articles_quorum_evidence_ref,
+                        "reason": reason,
+                    },
+                    state=RuleState.UNKNOWN,
+                ))
 
         if c.agm_held_this_cycle and c.agm_minutes_prepared is False:
             self._add_flag(ComplianceFlag(

@@ -192,6 +192,11 @@ class Company(FullMixin, Base):
     director_office_of_profit: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
     managing_director_appointment_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     member_count: Mapped[int | None] = mapped_column(Integer, server_default="0", nullable=True)
+    articles_quorum_verified: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    articles_quorum_required: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    articles_quorum_verified_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    articles_quorum_verified_at: Mapped[date | None] = mapped_column(Date, nullable=True)
+    articles_quorum_evidence_ref: Mapped[str | None] = mapped_column(String(500), nullable=True)
     business_commencement_declaration_filed: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
     tax_return_deadline_extended: Mapped[bool] = mapped_column(Boolean, default=False)
 

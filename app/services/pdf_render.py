@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import html
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -71,6 +72,13 @@ def make_safe_fetcher():
 
 def render_html_to_pdf(html_content: str) -> bytes:
     """Render an HTML string to PDF bytes. Only app/static/brand files can be loaded."""
+    # Render containers may have a read-only or absent home directory. Give
+    # Fontconfig a known writable ephemeral cache before importing Pango.
+    cache_root = Path("/tmp/nlc-fontconfig-cache")
+    cache_root.mkdir(parents=True, exist_ok=True)
+    os.environ["XDG_CACHE_HOME"] = str(cache_root)
+    os.environ.setdefault("HOME", "/tmp")
+
     from weasyprint import HTML  # imported lazily: pulls in Pango/Cairo
 
     result = HTML(string=html_content, url_fetcher=make_safe_fetcher()).write_pdf()

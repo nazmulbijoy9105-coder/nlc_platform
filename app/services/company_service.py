@@ -32,13 +32,23 @@ def _agm_profile_evidence(latest_agm) -> dict:
     if latest_agm is None:
         return {
             "members_present_at_agm": None,
+            "members_present_evidence_ref": None,
+            "members_total_at_agm": None,
+            "members_total_evidence_ref": None,
+            "articles_quorum_verified": None,
+            "articles_quorum_required": None,
+            "articles_quorum_verified_by": None,
+            "articles_quorum_verified_at": None,
+            "articles_quorum_evidence_ref": None,
             "auditor_reappointed_at_agm": None,
             "agm_minutes_prepared": None,
             "notice_sent_date": None,
+            "agm_scheduled_date": None,
         }
 
     members_present = getattr(latest_agm, "members_present", None)
-    if members_present == 0:
+    members_present_evidence_ref = getattr(latest_agm, "members_present_evidence_ref", None)
+    if members_present == 0 and not members_present_evidence_ref:
         members_present = None
 
     minutes_prepared = getattr(latest_agm, "minutes_prepared", None)
@@ -49,9 +59,18 @@ def _agm_profile_evidence(latest_agm) -> dict:
 
     return {
         "members_present_at_agm": members_present,
+        "members_present_evidence_ref": members_present_evidence_ref,
+        "members_total_at_agm": getattr(latest_agm, "members_total_at_agm", None),
+        "members_total_evidence_ref": getattr(latest_agm, "members_total_evidence_ref", None),
+        "articles_quorum_verified": getattr(latest_agm, "articles_quorum_verified", None),
+        "articles_quorum_required": getattr(latest_agm, "articles_quorum_required", None),
+        "articles_quorum_verified_by": getattr(latest_agm, "articles_quorum_verified_by", None),
+        "articles_quorum_verified_at": getattr(latest_agm, "articles_quorum_verified_at", None),
+        "articles_quorum_evidence_ref": getattr(latest_agm, "articles_quorum_evidence_ref", None),
         "auditor_reappointed_at_agm": getattr(latest_agm, "auditor_reappointed", None),
         "agm_minutes_prepared": minutes_prepared,
         "notice_sent_date": getattr(latest_agm, "notice_sent_date", None),
+        "agm_scheduled_date": getattr(latest_agm, "scheduled_date", None),
     }
 
 
@@ -204,7 +223,8 @@ class CompanyService(BaseService[Company]):
             filters.append(Company.id.in_(uuids))  # type: ignore
         if user_id is not None:
             accessible_company_ids = select(CompanyUserAccess.company_id).where(
-                CompanyUserAccess.user_id == user_id
+                CompanyUserAccess.user_id == user_id,
+                CompanyUserAccess.is_active.is_(True),
             )
             filters.append(Company.id.in_(accessible_company_ids))  # type: ignore
         if search and search.strip():
@@ -264,13 +284,73 @@ class CompanyService(BaseService[Company]):
             }
         return dict(row)
 
-    async def get_risk_distribution(self, user_id: uuid.UUID | None = None) -> list[dict]:
-        """Risk band distribution from vw_risk_distribution view."""
-        result = await self.db.execute(text("SELECT * FROM vw_risk_distribution"))
+    async def get_risk_distribution(self, user_id: uuid.UUID) -> list[dict]:
+        """Return risk distribution for active companies in the user's memberships.
+
+        Filter source companies before aggregation so global counts or
+        percentages cannot disclose another tenant's portfolio.
+        """
+        accessible_company_ids = (
+            select(CompanyUserAccess.company_id)
+            .where(
+                CompanyUserAccess.user_id == user_id,
+                CompanyUserAccess.is_active.is_(True),
+            )
+        )
+        result = await self.db.execute(
+            select(
+                Company.current_risk_band.label("risk_band"),
+                func.count(Company.id).label("company_count"),
+            )
+            .where(
+                Company.is_active.is_(True),
+                Company.id.in_(accessible_company_ids),
+            )
+            .group_by(Company.current_risk_band)
+        )
+        rows = result.all()
+        total = sum(int(row.company_count) for row in rows)
+        if total == 0:
+            return []
+
+        order = {"BLACK": 0, "RED": 1, "YELLOW": 2, "GREEN": 3}
+        distribution = []
+        for row in rows:
+            band = row.risk_band.value if hasattr(row.risk_band, "value") else row.risk_band
+            distribution.append({
+                "risk_band": band,
+                "company_count": int(row.company_count),
+                "percentage": round(int(row.company_count) * 100.0 / total, 1),
+            })
+        return sorted(distribution, key=lambda item: order.get(str(item["risk_band"]), 4))
+
+    async def get_upcoming_deadlines(
+        self,
+        days_ahead: int,
+        user_id: uuid.UUID,
+    ) -> list[dict]:
+        """Return upcoming deadlines only for the user's active memberships."""
+        result = await self.db.execute(
+            text(
+                "SELECT * FROM vw_upcoming_deadlines "
+                "WHERE days_remaining <= :days "
+                "AND company_id IN ("
+                "  SELECT company_id FROM company_user_access "
+                "  WHERE user_id = :user_id AND is_active IS TRUE"
+                ") "
+                "ORDER BY days_remaining"
+            ),
+            {"days": days_ahead, "user_id": user_id},
+        )
         return [dict(row) for row in result.mappings().all()]
 
-    async def get_upcoming_deadlines(self, days_ahead: int = 30, user_id: uuid.UUID | None = None) -> list[dict]:
-        """Fetch upcoming AGM and return deadlines within N days."""
+    async def get_upcoming_deadlines_for_system(self, days_ahead: int = 30) -> list[dict]:
+        """Portfolio-wide deadline scan for the privileged background worker.
+
+        The caller must establish the database admin context before invoking
+        this method. User-facing API routes must use get_upcoming_deadlines()
+        with the authenticated user's ID.
+        """
         result = await self.db.execute(
             text(
                 "SELECT * FROM vw_upcoming_deadlines "
@@ -350,6 +430,34 @@ class CompanyService(BaseService[Company]):
         # ── Audit State ───────────────────────────────────────────
         audits_sorted = sorted(company.audits, key=lambda a: a.financial_year, reverse=True)
         latest_audit = audits_sorted[0] if audits_sorted else None
+        # First-auditor appointment facts may be recorded on an Audit row.
+        # Prefer an evidenced appointment date over a stale company-level
+        # boolean; a boolean alone is not enough to verify timeliness.
+        first_auditor_record = next(
+            (a for a in reversed(audits_sorted) if a.first_auditor_appointment_date),
+            None,
+        )
+        first_auditor_appointment_date = (
+            company.first_auditor_appointment_date
+            or (first_auditor_record.first_auditor_appointment_date if first_auditor_record else None)
+        )
+        first_auditor_statuses = {
+            status
+            for status in (
+                [company.first_auditor_appointed]
+                + [a.first_auditor_appointed for a in audits_sorted]
+            )
+            if status is not None
+        }
+        first_auditor_appointed = (
+            False
+            if first_auditor_appointment_date is not None and False in first_auditor_statuses
+            else True
+            if first_auditor_appointment_date is not None
+            else next(iter(first_auditor_statuses))
+            if len(first_auditor_statuses) == 1
+            else None
+        )
 
         agm_profile_evidence = _agm_profile_evidence(latest_agm)
 
@@ -412,7 +520,8 @@ class CompanyService(BaseService[Company]):
             "agm_minutes_prepared":       agm_profile_evidence["agm_minutes_prepared"],
 
             # Audit State
-            "first_auditor_appointed":    bool(company.first_auditor_appointed) if company.first_auditor_appointed is not None else None,
+            "first_auditor_appointed":    first_auditor_appointed,
+            "first_auditor_appointment_date": first_auditor_appointment_date,
             "audit_complete":             latest_audit.audit_complete if latest_audit else None,
             "last_audit_signed_date":     company.last_audit_signed_date,
 
@@ -558,15 +667,17 @@ class CompanyService(BaseService[Company]):
 
             # AGM Details
             "agm_adjourned_without_notice":  getattr(company, "agm_adjourned_without_notice", False),
-            "agm_scheduled_date":            getattr(company, "agm_scheduled_date", None),
+            "agm_scheduled_date":            agm_profile_evidence["agm_scheduled_date"] or getattr(company, "agm_scheduled_date", None),
             "notice_sent_date":              agm_profile_evidence["notice_sent_date"],
             "members_present_at_agm":        agm_profile_evidence["members_present_at_agm"],
+            "members_present_evidence_ref":  agm_profile_evidence["members_present_evidence_ref"],
+            "members_total_at_agm":          agm_profile_evidence["members_total_at_agm"],
+            "members_total_evidence_ref":    agm_profile_evidence["members_total_evidence_ref"],
             "auditor_reappointed_at_agm":    agm_profile_evidence["auditor_reappointed_at_agm"],
             "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", False),
 
             # Audit Details
             "audit_in_progress":             getattr(company, "audit_in_progress", False),
-            "first_auditor_appointment_date": getattr(company, "first_auditor_appointment_date", None),
             "auditor_name":                  getattr(company, "auditor_name", None),
             "auditor_firm_reg_no":           getattr(company, "auditor_firm_reg_no", None),
 
@@ -680,7 +791,12 @@ class CompanyService(BaseService[Company]):
             "director_consent_filed": company.director_consent_filed,
             "director_office_of_profit": company.director_office_of_profit,
             "managing_director_appointment_date": company.managing_director_appointment_date,
-            "member_count": company.member_count or 0,
+            "member_count": company.member_count,
+            "articles_quorum_verified": agm_profile_evidence["articles_quorum_verified"],
+            "articles_quorum_required": agm_profile_evidence["articles_quorum_required"],
+            "articles_quorum_verified_by": agm_profile_evidence["articles_quorum_verified_by"],
+            "articles_quorum_verified_at": agm_profile_evidence["articles_quorum_verified_at"],
+            "articles_quorum_evidence_ref": agm_profile_evidence["articles_quorum_evidence_ref"],
             "business_commencement_declaration_filed": company.business_commencement_declaration_filed,
         })
 
