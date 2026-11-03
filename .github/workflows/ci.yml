@@ -90,6 +90,14 @@ jobs:
       - name: Compile check
         run: python -m compileall app/
 
+      - name: Validate Alembic upgrade from empty PostgreSQL
+        env:
+          DATABASE_URL: postgresql+asyncpg://nlc_test:nlc_test@localhost:5432/nlc_migration_test
+        run: |
+          PGPASSWORD=nlc_test psql -h localhost -U nlc_test -d postgres -c "CREATE DATABASE nlc_migration_test"
+          alembic upgrade head
+          alembic current
+
       - name: Run integration tests
         run: python -m pytest tests/integration -q --tb=short
 
