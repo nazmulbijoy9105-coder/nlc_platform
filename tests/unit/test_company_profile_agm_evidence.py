@@ -163,6 +163,7 @@ def test_first_auditor_boolean_without_appointment_date_is_not_evaluated():
     flag = next(flag for flag in result.flags if flag.rule_id == "AUD-001")
     assert flag.flag_code == "FIRST_AUDITOR_APPOINTMENT_DATE_UNVERIFIED"
     assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
     assert flag.severity.value == "NOT_EVALUATED"
     assert flag.score_impact == 0
 
