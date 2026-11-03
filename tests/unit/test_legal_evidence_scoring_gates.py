@@ -342,6 +342,19 @@ def test_short_agm_notice_with_verified_absence_of_consent_is_defective():
     assert flag.state == RuleState.NON_COMPLIANT
 
 
+
+def test_unverified_agm_history_does_not_create_deadline_violation():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            incorporation_date=date(2020, 1, 1),
+            agm_count=0,
+            agm_history_verified=False,
+            agm_history_evidence_ref=None,
+        ),
+        today=date(2026, 11, 3),
+    )
+    assert not {"AGM-001", "AGM-002"} & {flag.rule_id for flag in result.flags}
+
 def test_section_81_first_agm_within_18_months_defers_next_agm_to_second_following_year():
     profile = _profile(
         incorporation_date=date(2025, 1, 1),
