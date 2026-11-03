@@ -761,6 +761,35 @@ class NLCRuleEngine:
         # "within one month" of registration. "One month" = CALENDAR MONTH,
         # not 30 days. Using 30 days is legally incorrect for months with
         # 28/29/31 days.
+        reg_date = c.incorporation_date or self.today
+        deadline = self._add_one_month(reg_date)
+
+        def add_aud001_flag(flag_code: str, delay: int, appointment_date: date | None = None) -> None:
+            self._add_flag(ComplianceFlag(
+                rule_id="AUD-001",
+                flag_code=flag_code,
+                severity=Severity.YELLOW,
+                score_impact=10,
+                revenue_tier=(
+                    RevenueTier.COMPLIANCE_PACKAGE
+                    if delay <= 365
+                    else RevenueTier.STRUCTURED_REGULARIZATION
+                ),
+                description=(
+                    f"First auditor was not appointed within one calendar month "
+                    f"of registration (Section 210(6)). Deadline: {deadline.isoformat()}. "
+                    f"Overdue by {delay} days."
+                ),
+                statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
+                detail={
+                    "delay_days": delay,
+                    "registration_date": str(reg_date),
+                    "deadline": str(deadline),
+                    "appointment_date": str(appointment_date) if appointment_date else None,
+                    "calculation_method": "calendar_month",
+                },
+            ))
+
         if c.first_auditor_appointed is None:
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-001",
@@ -770,38 +799,54 @@ class NLCRuleEngine:
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description=(
                     "First auditor appointment status unknown (data missing). "
-                    "Section 210(6) requires Board to appoint first auditor "
-                    "within one calendar month of registration. Cannot "
-                    "determine compliance until status is verified."
+                    "Section 210(6) requires appointment within one month of registration."
                 ),
                 statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
-                state=RuleState.UNKNOWN
+                state=RuleState.UNKNOWN,
             ))
-        elif c.first_auditor_appointed is False:
-            # Compute calendar-month deadline (NOT 30 days)
-            reg_date = c.incorporation_date or self.today
-            deadline = self._add_one_month(reg_date)  # type: ignore
-            if self.today > deadline:  # type: ignore
-                delay = (self.today - deadline).days  # type: ignore
+        elif c.first_auditor_appointment_date is not None:
+            if c.first_auditor_appointed is False:
                 self._add_flag(ComplianceFlag(
                     rule_id="AUD-001",
-                    flag_code="FIRST_AUDITOR_NOT_APPOINTED",
-                    severity=Severity.YELLOW,
-                    score_impact=10,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE if delay <= 365 else RevenueTier.STRUCTURED_REGULARIZATION,
+                    flag_code="FIRST_AUDITOR_EVIDENCE_CONTRADICTORY",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=(
-                        f"First auditor not appointed within one calendar month "
-                        f"of registration (Section 210(6)). Deadline: "
-                        f"{deadline.isoformat()}. Overdue by {delay} days."
+                        "First auditor status is contradictory: an appointment date is recorded "
+                        "but the appointment status is marked false. Verify source evidence."
                     ),
                     statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
+                    state=RuleState.CONTRADICTORY,
                     detail={
-                        "delay_days": delay,
+                        "appointment_date": str(c.first_auditor_appointment_date),
                         "registration_date": str(reg_date),
-                        "deadline": str(deadline),
-                        "calculation_method": "calendar_month",
-                    }
+                    },
                 ))
+            elif c.first_auditor_appointment_date > deadline:
+                delay = (c.first_auditor_appointment_date - deadline).days
+                add_aud001_flag(
+                    "FIRST_AUDITOR_APPOINTED_LATE",
+                    delay,
+                    c.first_auditor_appointment_date,
+                )
+        elif c.first_auditor_appointed is False and self.today > deadline:
+            delay = (self.today - deadline).days
+            add_aud001_flag("FIRST_AUDITOR_NOT_APPOINTED", delay)
+        elif c.first_auditor_appointed is True:
+            self._add_flag(ComplianceFlag(
+                rule_id="AUD-001",
+                flag_code="FIRST_AUDITOR_APPOINTMENT_DATE_UNKNOWN",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "First auditor is recorded as appointed, but the appointment date is missing; "
+                    "timeliness under Section 210(6) cannot be verified."
+                ),
+                statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+            ))
 
         if c.first_auditor_appointed and c.agm_count is not None and c.agm_count > 0 and c.auditor_reappointed_at_agm is False and c.audit_in_progress is False and c.last_agm_date is not None:  # type: ignore
             fy_end = c.financial_year_end
