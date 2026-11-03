@@ -71,6 +71,8 @@ class AGMMarkHeldRequest(BaseModel):
     auditor_reappointed: bool | None = None
     accounts_adopted: bool | None = None
     agm_held_without_audit: bool | None = None
+    minutes_prepared: bool | None = None
+    notice_missing: bool | None = None
     minutes_document_id: uuid.UUID | None = None
 
 
@@ -90,6 +92,10 @@ class AGMResponse(BaseModel):
     auditor_reappointed: bool | None
     accounts_adopted: bool | None
     agm_held_without_audit: bool | None
+    minutes_prepared: bool | None
+    notice_missing: bool
+    venue: str | None
+    members_present: int | None
     is_default: bool
     created_at: str
 
@@ -352,6 +358,8 @@ async def mark_agm_held(
         auditor_reappointed=body.auditor_reappointed,
         accounts_adopted=body.accounts_adopted,
         agm_held_without_audit=body.agm_held_without_audit,
+        minutes_prepared=body.minutes_prepared,
+        notice_missing=body.notice_missing,
         minutes_document_id=body.minutes_document_id,
     )
     if not agm:
@@ -683,6 +691,10 @@ def _agm_to_response(agm) -> AGMResponse:
         auditor_reappointed=agm.auditor_reappointed,
         accounts_adopted=agm.accounts_adopted,
         agm_held_without_audit=agm.agm_held_without_audit,
+        minutes_prepared=agm.minutes_prepared,
+        notice_missing=agm.notice_missing,
+        venue=agm.venue,
+        members_present=agm.members_present,
         is_default=agm.is_default,
         created_at=agm.created_at.isoformat() if hasattr(agm, 'created_at') and agm.created_at else '',
     )
