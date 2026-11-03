@@ -781,8 +781,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "ESC-003": {
         "rule_id": "ESC-003",
         "legal_domain": "Corporate",
-        "law": "Section 304, Companies Act 1994 (Bangladesh)",
-        "requirement": "Corporate Rescue Mandatory — Systemic Failure - Score below BLACK threshold (<=29) due to systemic multi-module failures: BLACK overrides from AUD-003, TR-005, ESC-002, or RED/YELLOW across 4+ modules. Legal status, contractual capacity, and director exposure all critical. 10-step Corporate Rescue mandatory within 30 days. BLACK OVERRIDE: maintains BLACK until rescue verified.",
+        "law": "NLC internal risk policy (not a statutory Companies Act classification)",
+        "requirement": "Internal BLACK escalation and rescue workflow. A BLACK classification, score threshold and rescue deadline are NLC policy decisions, not statutory consequences. Policy-owner approval is required.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
