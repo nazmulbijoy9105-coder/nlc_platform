@@ -239,7 +239,13 @@ class TestCompanyService:
         assert profile_data["first_auditor_appointed"] is True
         assert profile_data["first_auditor_appointment_date"] == appointment_date
 
-        profile = CompanyProfile(**profile_data)
+        profile = CompanyProfile(
+            company_id=str(db_company.id),
+            company_name=db_company.company_name,
+            incorporation_date=db_company.incorporation_date,
+            first_auditor_appointed=profile_data["first_auditor_appointed"],
+            first_auditor_appointment_date=profile_data["first_auditor_appointment_date"],
+        )
         result = NLCRuleEngine().evaluate(
             profile,
             today=db_company.incorporation_date + timedelta(days=60),
