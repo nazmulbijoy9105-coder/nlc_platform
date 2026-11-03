@@ -958,7 +958,7 @@ class NLCRuleEngine:
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="AGM held but minutes not prepared. Section 89: minutes are prima facie evidence.",
-                statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
             ))
 
     # ───────────────────────────────────────────────────────────────────
