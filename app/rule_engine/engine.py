@@ -176,7 +176,7 @@ class CompanyProfile:
     agm_count: int | None = None
     last_agm_date: Optional[date] = None
     agm_held_this_cycle: bool = False
-    agm_held_without_audit: bool = False
+    agm_held_without_audit: bool | None = None
     agm_scheduled_date: Optional[date] = None
     notice_sent_date: Optional[date] = None
     members_present_at_agm: int | None = None
@@ -863,17 +863,39 @@ class NLCRuleEngine:
                     detail={"days_to_agm": days_to}
                 ))
 
-        if c.agm_held_this_cycle and c.audit_complete is False:
+        if c.agm_held_this_cycle and c.agm_held_without_audit is True:
+            # Whether an AGM held without completed audit invalidates any
+            # resolution or creates a particular statutory consequence depends
+            # on the documents and facts. It is a lawyer-judgment issue, not an
+            # automatic BLACK override or score deduction.
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-003",
-                flag_code="AGM_HELD_WITHOUT_VALID_AUDIT",
-                severity=Severity.BLACK,
-                score_impact=25,
-                revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="AGM held without completed audit. Section 151: AGM procedurally defective, potentially void.",
-                statutory_basis="Sections 151, 210, Companies Act 1994 (Bangladesh)",
-                detail={"override_to_black": True},
-                is_black_override=True,
+                flag_code="AGM_HELD_WITHOUT_AUDIT_REQUIRES_LEGAL_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The AGM record states that the meeting was held without a completed audit. "
+                    "A lawyer must review the accounts, auditor appointment, meeting record and "
+                    "applicable statutory provisions before determining legal consequences."
+                ),
+                statutory_basis="Sections 183 and 210, Companies Act 1994 (Bangladesh); legal review required",
+                detail={"legal_review_required": True, "override_to_black": False},
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+            ))
+        elif c.agm_held_this_cycle and c.agm_held_without_audit is None:
+            self._add_flag(ComplianceFlag(
+                rule_id="AUD-003",
+                flag_code="AGM_AUDIT_STATUS_UNKNOWN",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Whether the AGM was held without completed audit is not established by verified evidence.",
+                statutory_basis="Sections 183 and 210, Companies Act 1994 (Bangladesh)",
+                detail={"legal_review_required": True},
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
             ))
 
         if c.agm_held_this_cycle and c.auditor_reappointed_at_agm is False:
