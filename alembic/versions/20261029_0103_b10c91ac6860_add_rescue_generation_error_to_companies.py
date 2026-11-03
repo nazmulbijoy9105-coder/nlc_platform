@@ -30,7 +30,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Apply this migration."""
-    op.add_column('companies', sa.Column('rescue_generation_error', sa.Text(), nullable=True))
+    # Some existing Neon branches contain this column while their Alembic
+    # marker still points to 0042. Reconcile without failing or overwriting data.
+    op.execute(
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS rescue_generation_error TEXT"
+    )
 
 
 def downgrade() -> None:
