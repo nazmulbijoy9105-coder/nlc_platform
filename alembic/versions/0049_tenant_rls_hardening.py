@@ -153,7 +153,7 @@ def upgrade() -> None:
         "compliance_events",
         "quotations",
         "articles_verifications",
-        "rescue_audit_log",
+        "articles_verification_events",
     )
     for table in tenant_tables:
         op.execute(sa.text(f"""
@@ -184,10 +184,34 @@ def upgrade() -> None:
             WITH CHECK (public.nlc_current_user_is_staff());
     """)
 
-    # User records: self access is required for authenticated profile reads;
-    # staff access supports administration. Login/registration must use the
-    # separately configured auth connection or privileged auth function.
+    # User records: self access is required for authentication/profile
+    # workflows. A trigger prevents self-service role or activation changes;
+    # only current staff may change those authorization-critical attributes.
     op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_protect_user_security_fields()
+        RETURNS trigger
+        LANGUAGE plpgsql
+        SECURITY DEFINER
+        SET search_path = pg_catalog, public
+        AS $
+        BEGIN
+            IF NOT public.nlc_current_user_is_staff()
+               AND (
+                   NEW.role IS DISTINCT FROM OLD.role
+                   OR NEW.is_active IS DISTINCT FROM OLD.is_active
+               ) THEN
+                RAISE EXCEPTION 'Only authorized staff may change user role or activation state'
+                    USING ERRCODE = '42501';
+            END IF;
+            RETURN NEW;
+        END;
+        $;
+        DROP TRIGGER IF EXISTS users_protect_security_fields ON public.users;
+        CREATE TRIGGER users_protect_security_fields
+            BEFORE UPDATE ON public.users
+            FOR EACH ROW
+            EXECUTE FUNCTION public.nlc_protect_user_security_fields();
+
         ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
         DROP POLICY IF EXISTS users_self_or_staff ON public.users;
         CREATE POLICY users_self_or_staff ON public.users
@@ -199,6 +223,32 @@ def upgrade() -> None:
             WITH CHECK (
                 id = public.nlc_current_user_id()
                 OR public.nlc_current_user_is_staff()
+            );
+    """)
+
+    # Rescue audit rows inherit tenant scope through their rescue plan.
+    op.execute("""
+        ALTER TABLE public.rescue_audit_log ENABLE ROW LEVEL SECURITY;
+        DROP POLICY IF EXISTS rescue_audit_log_tenant_access ON public.rescue_audit_log;
+        CREATE POLICY rescue_audit_log_tenant_access ON public.rescue_audit_log
+            FOR ALL
+            USING (
+                public.nlc_current_user_is_staff()
+                OR EXISTS (
+                    SELECT 1
+                    FROM public.rescue_plans rp
+                    WHERE rp.id = rescue_audit_log.rescue_plan_id
+                      AND public.nlc_can_access_company(rp.company_id)
+                )
+            )
+            WITH CHECK (
+                public.nlc_current_user_is_staff()
+                OR EXISTS (
+                    SELECT 1
+                    FROM public.rescue_plans rp
+                    WHERE rp.id = rescue_audit_log.rescue_plan_id
+                      AND public.nlc_can_access_company(rp.company_id)
+                )
             );
     """)
 
@@ -257,8 +307,13 @@ def upgrade() -> None:
             CREATE POLICY {table}_authenticated_read ON public.{table}
                 FOR SELECT
                 USING (
-                    public.nlc_current_user_id() IS NOT NULL
-                    OR public.nlc_current_user_is_staff()
+                    public.nlc_current_user_is_staff()
+                    OR EXISTS (
+                        SELECT 1
+                        FROM public.users u
+                        WHERE u.id = public.nlc_current_user_id()
+                          AND u.is_active IS TRUE
+                    )
                 );
             CREATE POLICY {table}_staff_write ON public.{table}
                 FOR ALL
@@ -273,6 +328,8 @@ def upgrade() -> None:
         BEGIN
             IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
                 REVOKE TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA public FROM nlc_app_role;
+                REVOKE UPDATE, DELETE, TRUNCATE ON TABLE public.user_activity_logs FROM nlc_app_role;
+                REVOKE UPDATE, DELETE, TRUNCATE ON TABLE public.document_access_log FROM nlc_app_role;
                 REVOKE ALL ON TABLE public.alembic_version FROM nlc_app_role;
             END IF;
         END
