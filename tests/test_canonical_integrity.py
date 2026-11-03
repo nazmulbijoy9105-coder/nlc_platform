@@ -54,6 +54,14 @@ def test_every_rule_has_rescue_and_back_reference():  # R-012
 def test_no_provision_silently_verified():
     assert all(r.provision_status.value == "RECONCILE" for r in STATUTORY_RULE_REGISTRY.values())
 
+def test_first_auditor_canonical_rule_matches_calendar_month_evaluator():
+    rule = STATUTORY_RULE_REGISTRY["AUD-001"]
+    assert rule.law == "Section 210(6), Companies Act 1994 (Bangladesh)"
+    assert "one calendar month" in rule.requirement.lower()
+    assert "30 days" not in rule.requirement.lower()
+    # Correct wording is not proof of lawyer verification.
+    assert rule.provision_status.value == "RECONCILE"
+
 
 # --- evaluation ------------------------------------------------------------
 def test_missing_evidence_is_unknown_not_noncompliant():  # R-008
