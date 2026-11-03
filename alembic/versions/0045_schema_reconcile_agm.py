@@ -28,6 +28,8 @@ COMPANY_COLUMNS = [
     ("director_office_of_profit", sa.Boolean()),
     ("managing_director_appointment_date", sa.Date()),
     ("member_count", sa.Integer()),
+    ("articles_quorum_verified", sa.Boolean()),
+    ("articles_quorum_required", sa.Integer()),
     ("business_commencement_declaration_filed", sa.Boolean()),
     # 0032
     ("on_rjsc_strike_off_list", sa.Boolean()),
