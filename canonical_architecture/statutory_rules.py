@@ -689,8 +689,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "CAP-003": {
         "rule_id": "CAP-003",
         "legal_domain": "Corporate",
-        "law": "Section 87(2), Companies Act 1994 (Bangladesh)",
-        "requirement": "Charge Satisfaction Not Filed - Charge paid off but Form XXVIII (Satisfaction) not filed. Section 87(2): file within 30 days of payoff. Until filed, charge remains on register, obstructing future borrowing and creating false security interests.",
+        "law": "Section 59, Companies Act 1994 (Bangladesh)",
+        "requirement": "Capital reduction without the court approval required by Section 59. This is the capital-reduction rule; charge satisfaction is separately represented by CHG-001 under Section 172.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -704,8 +704,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "CAP-004": {
         "rule_id": "CAP-004",
         "legal_domain": "Corporate",
-        "law": "Section 87, Companies Act 1994 (Bangladesh)",
-        "requirement": "Special Resolution Not Filed With RJSC - Special resolution passed but not filed within 30 days. Section 87: every special resolution must be filed. Unfiled resolution not binding on company or enforceable against third parties. Includes capital increase, MoA/AoA alteration, voluntary winding up.",
+        "law": "Section 88(1), Companies Act 1994 (Bangladesh)",
+        "requirement": "Special resolution not filed with the Registrar within 15 days under Section 88(1).",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
