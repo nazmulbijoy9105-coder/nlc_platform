@@ -1591,8 +1591,6 @@ class NLCRuleEngine:
                 ),
                 statutory_basis="Notice-specific legal basis not verified",
                 detail={"unresolved": unresolved, "legal_status": "NOTICE_REVIEW_REQUIRED"},
-                severity=Severity.NOT_EVALUATED,
-                score_impact=0,
                 state=RuleState.UNKNOWN
             ))
 
