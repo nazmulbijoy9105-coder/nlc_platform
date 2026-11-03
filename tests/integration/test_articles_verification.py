@@ -174,3 +174,30 @@ async def test_articles_submitter_cannot_self_review(api_client, db, db_company,
         },
     )
     assert reviewed.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_articles_submission_can_be_rejected_without_verified_only_fields(
+    api_client, db, db_company, admin_headers, legal_headers
+):
+    await _grant_staff_memberships(db, db_company.id)
+    document = await _articles_document(db, db_company.id)
+    submitted = await api_client.post(
+        f"/api/v1/companies/{db_company.id}/articles-verification",
+        headers=admin_headers,
+        json={"document_id": str(document.id)},
+    )
+    assert submitted.status_code == 201, submitted.text
+
+    rejected = await api_client.post(
+        f"/api/v1/companies/{db_company.id}/articles-verification/{submitted.json()['id']}/review",
+        headers=legal_headers,
+        json={
+            "decision": "REJECTED",
+            "reviewer_note": "The submitted copy is not sufficiently authenticated.",
+        },
+    )
+    assert rejected.status_code == 200, rejected.text
+    assert rejected.json()["status"] == "REJECTED"
+    assert rejected.json()["effective_from"] is None
+    assert rejected.json()["clause_reference"] is None
