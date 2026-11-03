@@ -294,10 +294,26 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 )
             )
             existing_flag = existing.scalar_one_or_none()
+            evaluation_state = getattr(
+                getattr(flag, "state", None),
+                "value",
+                getattr(flag, "state", "LEGACY_UNCLASSIFIED"),
+            )
+            severity_value = getattr(flag.severity, "value", flag.severity)
+            revenue_tier_value = getattr(
+                flag.revenue_tier, "value", flag.revenue_tier
+            )
             if existing_flag:
-                # Update score impact and description in case rule changed
+                # Refresh the complete legal assessment, including UNKNOWN and
+                # lawyer-judgment states; do not leave a stale RED/BLACK finding.
+                existing_flag.flag_code = flag.flag_code
+                existing_flag.statutory_basis = flag.statutory_basis
+                existing_flag.severity = SeverityLevel(severity_value)
                 existing_flag.score_impact = flag.score_impact
+                existing_flag.revenue_tier = RevenueTier(revenue_tier_value)
+                existing_flag.evaluation_state = evaluation_state
                 existing_flag.description = flag.description
+                existing_flag.detail = getattr(flag, "detail", None)
                 self.db.add(existing_flag)
             else:
                 # New flag
@@ -306,12 +322,13 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     company_id=company_id,
                     rule_id=flag.rule_id,
                     rule_version=settings.rule_engine_version,
-                    flag_code=flag.rule_id,
+                    flag_code=flag.flag_code,
                     statutory_basis=flag.statutory_basis,
-                    severity=SeverityLevel(flag.severity),
+                    severity=SeverityLevel(severity_value),
                     score_impact=flag.score_impact,
                     exposure_band=ExposureBand(getattr(getattr(flag, "exposure_band", None) or output.score_breakdown.exposure_band, "value", getattr(flag, "exposure_band", None) or output.score_breakdown.exposure_band)),
-                    revenue_tier=RevenueTier(flag.revenue_tier.value if hasattr(flag.revenue_tier, 'value') else flag.revenue_tier),
+                    revenue_tier=RevenueTier(revenue_tier_value),
+                    evaluation_state=evaluation_state,
                     flag_status=FlagStatus.ACTIVE,
                     triggered_date=today,
                     description=flag.description,
