@@ -823,13 +823,11 @@ class NLCRuleEngine:
         # "within one month" of registration. "One month" = CALENDAR MONTH,
         # not 30 days. Using 30 days is legally incorrect for months with
         # 28/29/31 days.
-        if c.first_auditor_appointed is not True and (
-            not (
-                c.first_auditor_appointment_verified is True
-                and bool(c.first_auditor_appointment_evidence_ref)
-                and c.first_auditor_appointment_verified_at is not None
-                and bool(c.first_auditor_appointment_verified_by)
-            ) or c.first_auditor_appointed is None
+        if c.first_auditor_appointed is False and not (
+            c.first_auditor_appointment_verified is True
+            and bool(c.first_auditor_appointment_evidence_ref)
+            and c.first_auditor_appointment_verified_at is not None
+            and bool(c.first_auditor_appointment_verified_by)
         ):
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-001",
@@ -2222,7 +2220,7 @@ class NLCRuleEngine:
         )
         
         if pre_score <= 29 or has_black_override:
-            black_count = len([f for f in self._flags if (f.rule_id in VERIFIED_RULE_IDS or f.is_black_override) and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION" and not f.resolved and f.conditional_applies and f.rule_id not in self._ESC_RULE_IDS])
+            black_count = len([f for f in self._flags if f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION" and not f.resolved and f.conditional_applies and f.rule_id not in self._ESC_RULE_IDS])
             esc003_impact = 10 if black_count <= 2 else (25 if black_count == 3 else 35)
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-003",
