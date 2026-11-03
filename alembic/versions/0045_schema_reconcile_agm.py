@@ -81,6 +81,14 @@ AGM_COLUMNS = [
     ("accounts_adopted", sa.Boolean()),
     ("agm_held_without_audit", sa.Boolean()),
     ("quorum_basis", sa.String(length=64)),
+    ("members_present_evidence_ref", sa.String(length=500)),
+    ("members_total_at_agm", sa.Integer()),
+    ("members_total_evidence_ref", sa.String(length=500)),
+    ("articles_quorum_verified", sa.Boolean()),
+    ("articles_quorum_required", sa.Integer()),
+    ("articles_quorum_verified_by", sa.String(length=100)),
+    ("articles_quorum_verified_at", sa.Date()),
+    ("articles_quorum_evidence_ref", sa.String(length=500)),
 ]
 
 LEGAL_RULE_COLUMNS = [
