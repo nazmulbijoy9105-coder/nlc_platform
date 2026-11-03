@@ -913,30 +913,54 @@ class NLCRuleEngine:
         if c.agm_scheduled_date and c.notice_sent_date:
             clear_days = (c.agm_scheduled_date - c.notice_sent_date).days - 1
             if clear_days < AGM_NOTICE_MINIMUM_DAYS:
+                # Consent and the accidental-omission/non-receipt exception are
+                # not yet represented as verified, member-level evidence in
+                # CompanyProfile. Do not convert a short-notice fact into a
+                # legal violation until those exceptions can be assessed.
                 self._add_flag(ComplianceFlag(
                     rule_id="AGM-003",
-                    flag_code="AGM_NOTICE_DEFECTIVE",
-                    severity=Severity.YELLOW,
-                    score_impact=5,
+                    flag_code="AGM_NOTICE_SHORT_PERIOD_NOT_EVALUATED",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"AGM notice issued with {clear_days} clear days. Section 85 requires 21 clear days. NOTE: Section 85 permits shorter notice with member consent, and accidental omission/non-receipt does not invalidate proceedings.",
+                    description=(
+                        f"AGM notice has {clear_days} clear days. Section 85 generally "
+                        "requires 21 clear days, but required consent and statutory "
+                        "exception evidence are not captured. Legal effect is NOT_EVALUATED."
+                    ),
                     statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
-                    detail={"clear_days": clear_days}
+                    detail={
+                        "clear_days": clear_days,
+                        "required_clear_days": AGM_NOTICE_MINIMUM_DAYS,
+                        "reason": "short_notice_consent_and_exception_evidence_missing",
+                    },
+                    state=RuleState.UNKNOWN,
                 ))
 
         if c.agm_scheduled_date and c.notice_sent_date is None:
             warn = c.agm_scheduled_date - timedelta(days=AGM_NOTICE_MINIMUM_DAYS)
             if self.today >= warn:
                 days_rem = (c.agm_scheduled_date - self.today).days
+                # A missing notice record does not establish that notice was
+                # legally omitted, nor whether accidental omission/non-receipt
+                # exception applies. Preserve this as an evidence gap.
                 self._add_flag(ComplianceFlag(
                     rule_id="AGM-004",
-                    flag_code="AGM_NOTICE_NOT_ISSUED",
-                    severity=Severity.RED,
-                    score_impact=15,
+                    flag_code="AGM_NOTICE_STATUS_NOT_EVALUATED",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"AGM notice not issued. {days_rem} days to AGM. Section 85 requires 21 clear days notice. NOTE: Section 85 provides exceptions for accidental omission and permits shorter notice with consent.",
+                    description=(
+                        f"No AGM notice dispatch date is recorded ({days_rem} days "
+                        "to the scheduled meeting). Section 85 exceptions and "
+                        "member-level notice evidence have not been assessed."
+                    ),
                     statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
-                    detail={"days_to_agm": days_rem}
+                    detail={
+                        "days_to_agm": days_rem,
+                        "reason": "notice_dispatch_and_statutory_exception_evidence_missing",
+                    },
+                    state=RuleState.UNKNOWN,
                 ))
 
         if c.agm_held_this_cycle:
