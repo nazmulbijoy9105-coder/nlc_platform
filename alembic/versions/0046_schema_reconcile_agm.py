@@ -10,6 +10,7 @@ held-record contract. It is additive and preserves unknown evidence as NULL.
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
+from sqlalchemy.dialects.postgresql import UUID
 
 revision = "0046_schema_reconcile_agm"
 down_revision = "0045_agm_held_fields"
@@ -98,7 +99,7 @@ LEGAL_RULE_COLUMNS = [
 ]
 
 QUOTATION_COLUMNS = [
-    ("rejected_by", sa.dialects.postgresql.UUID(as_uuid=True)),
+    ("rejected_by", UUID(as_uuid=True)),
 ]
 
 # Historical 0036 semantics: NULL means unknown; False means confirmed absent.
