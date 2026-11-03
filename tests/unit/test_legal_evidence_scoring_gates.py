@@ -250,6 +250,38 @@ def test_pre_score_and_authoritative_raw_score_use_identical_category_caps():
     assert engine._calculate_raw_score(flags) == breakdown.raw_total
     assert breakdown.raw_total == 55
 
+
+def test_verified_registrar_agm_extension_is_applied_within_section_81_limit():
+    profile = _profile(
+        agm_count=1,
+        last_agm_date=date(2024, 1, 1),
+        agm_held_this_cycle=False,
+        agm_extension_granted_until=date(2025, 6, 30),
+        agm_extension_application_date=date(2025, 4, 15),
+        agm_extension_verified=True,
+        agm_extension_evidence_ref="RJSC-EXTENSION-001",
+        agm_extension_verified_at=date(2025, 4, 16),
+        agm_extension_verified_by="reviewer-001",
+    )
+    result = NLCRuleEngine().evaluate(profile, today=date(2025, 6, 15))
+    assert "AGM-002" not in {flag.rule_id for flag in result.flags}
+
+
+def test_unverified_or_late_agm_extension_never_suppresses_into_false_default():
+    profile = _profile(
+        agm_count=1,
+        last_agm_date=date(2024, 1, 1),
+        agm_held_this_cycle=False,
+        agm_extension_granted_until=date(2025, 6, 30),
+        agm_extension_application_date=date(2025, 6, 1),
+        agm_extension_verified=False,
+        agm_extension_evidence_ref=None,
+    )
+    result = NLCRuleEngine().evaluate(profile, today=date(2026, 11, 3))
+    flag = _flag(result, "AGM-002")
+    assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+    assert flag.score_impact == 0
+
 def test_score_hash_changes_when_evidence_inputs_change():
     engine = NLCRuleEngine()
     first = engine.evaluate(_profile(member_count=2), today=date(2026, 11, 3))
