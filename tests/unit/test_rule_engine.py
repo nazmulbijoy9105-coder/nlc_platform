@@ -154,8 +154,17 @@ class TestAGMRules:
         assert_flag_triggered(output, "AGM-003")
 
     def test_AGM003_no_trigger_with_proper_notice(self, rule_engine, build_profile):
+        """A valid 21-clear-day notice must not produce a notice-defect finding."""
+        today = date.today()
+        profile = build_profile(
+            agm_scheduled_date=today + timedelta(days=25),
+            notice_sent_date=today - timedelta(days=5),
+        )
         output = rule_engine.evaluate(profile)
-        _agm003 = [f for f in output.flags if f.rule_id == "AGM-003" and f.state != RuleState.UNKNOWN]
+        _agm003 = [
+            f for f in output.flags
+            if f.rule_id == "AGM-003" and f.state != RuleState.UNKNOWN
+        ]
         assert not _agm003, f"AGM-003 should not fire as violation, got: {_agm003}"
     def test_AGM004_triggers_when_no_notice_sent(self, rule_engine, build_profile):
         """AGM scheduled but no notice sent → AGM-004."""
