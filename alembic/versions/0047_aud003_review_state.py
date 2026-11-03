@@ -27,9 +27,9 @@ def upgrade():
     op.execute("""
         UPDATE legal_rules
         SET statutory_basis = 'Section 183, Companies Act 1994 (Bangladesh)',
-            description = 'Audit is not complete as the scheduled AGM approaches. Section 183 requires the relevant audited accounts to be laid before the AGM. The evaluator raises a pre-AGM warning from the statutory notice window; it does not presume that resolutions are automatically invalid.',
-            default_severity = 'RED',
-            score_impact = 12,
+            description = 'Audit completion is not yet evidenced as the scheduled AGM approaches. Section 183 requires the relevant accounts to be presented at the AGM. This is a pre-AGM reminder only, has zero score impact, and does not presume that a statutory deadline has already been breached or that resolutions are automatically invalid.',
+            default_severity = 'YELLOW',
+            score_impact = 0,
             verification_status = 'PENDING',
             verified_by = NULL,
             verified_at = NULL,
@@ -37,7 +37,7 @@ def upgrade():
             rule_condition = jsonb_set(
                 COALESCE(rule_condition, '{}'::jsonb),
                 '{trigger}',
-                to_jsonb('agm_scheduled_date IS NOT NULL AND audit_complete == False AND today >= agm_scheduled_date - AGM_NOTICE_MINIMUM_DAYS'::text),
+                to_jsonb('agm_scheduled_date IS NOT NULL AND audit_complete == False AND agm_held_this_cycle == False AND 0 <= days_between(today, agm_scheduled_date) <= AGM_NOTICE_MINIMUM_DAYS'::text),
                 true
             )
         WHERE rule_id = 'AUD-002'
