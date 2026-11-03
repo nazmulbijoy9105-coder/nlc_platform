@@ -464,6 +464,15 @@ class CompanyService(BaseService[Company]):
             # AGM State
             "agm_count":                  agm_count,
             "last_agm_date":              company.last_agm_date,
+            "agm_history_verified": (
+                company.agm_history_verified is True
+                and bool(company.agm_history_evidence_ref)
+                and company.agm_history_verified_at is not None
+                and company.agm_history_verified_by is not None
+            ),
+            "agm_history_evidence_ref": company.agm_history_evidence_ref,
+            "agm_history_verified_at": company.agm_history_verified_at.date() if company.agm_history_verified_at else None,
+            "agm_history_verified_by": str(company.agm_history_verified_by) if company.agm_history_verified_by else None,
             "agm_extension_granted_until": company.agm_extension_granted_until,
             "agm_extension_application_date": company.agm_extension_application_date,
             "agm_extension_verified": (
