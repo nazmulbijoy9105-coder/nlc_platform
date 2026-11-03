@@ -599,8 +599,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "REG-001": {
         "rule_id": "REG-001",
         "legal_domain": "Corporate",
-        "law": "Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh)",
-        "requirement": "Core statutory records include the register of members (Section 34), meeting minutes (Section 89), company register of charges (Section 174), and register/particulars of directors (Section 115). Other registers must be mapped to their own verified provisions; do not attribute directors, charges or minutes to Sections 90, 87 or 83.",
+        "law": "Register-specific provisions under the Companies Act 1994 (Bangladesh); see detail",
+        "requirement": "One or more non-core statutory records are missing. Each record must be checked against its own governing provision; do not apply a blanket Section 34 citation to heterogeneous registers.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
