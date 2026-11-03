@@ -17,6 +17,9 @@ def test_missing_agm_record_keeps_attendance_and_auditor_status_unknown():
         "auditor_reappointment_evidence_ref": None,
         "agm_minutes_prepared": None,
         "notice_sent_date": None,
+        "short_notice_consent_obtained": None,
+        "short_notice_consent_verified": False,
+        "short_notice_consent_evidence_ref": None,
     }
 
 
