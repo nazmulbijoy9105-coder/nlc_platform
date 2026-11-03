@@ -18,11 +18,11 @@ from sqlalchemy import (
     DateTime,
     Enum,
     Index,
+    text,
     ForeignKey,
     Integer,
     String,
     Text,
-    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -145,11 +145,20 @@ class ArticlesVerification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "quorum_required IS NULL OR quorum_required BETWEEN 1 AND 100",
             name="ck_articles_verifications_quorum",
         ),
+        CheckConstraint(
+            "quorum_variation_exists = FALSE OR quorum_required IS NOT NULL",
+            name="ck_articles_verifications_variation_quorum",
+        ),
+        CheckConstraint(
+            "(status = 'PENDING' AND reviewed_by IS NULL AND reviewed_at IS NULL) "
+            "OR (status IN ('VERIFIED', 'REJECTED', 'REVOKED') AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)",
+            name="ck_articles_verifications_review_metadata",
+        ),
         Index(
-            "uq_articles_verifications_active_verified",
+            "uq_articles_verifications_active",
             "company_id",
             unique=True,
-            postgresql_where=(__import__("sqlalchemy").text("status = 'VERIFIED'")),
+            postgresql_where=text("status IN ('PENDING', 'VERIFIED')"),
         ),
     )
 
@@ -172,9 +181,10 @@ class ArticlesVerification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True,
     )
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    effective_from: Mapped[date | None] = mapped_column(Date, nullable=True)
+    effective_from: Mapped[date] = mapped_column(Date, nullable=False)
+    quorum_variation_exists: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     quorum_required: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    clause_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    clause_reference: Mapped[str] = mapped_column(String(255), nullable=False)
     reviewer_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     revoked_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True,
