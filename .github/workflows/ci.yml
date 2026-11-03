@@ -94,7 +94,9 @@ jobs:
         env:
           DATABASE_URL: postgresql+asyncpg://nlc_test:nlc_test@localhost:5432/nlc_migration_test
         run: |
-          PGPASSWORD=nlc_test psql -h localhost -U nlc_test -d postgres -c "CREATE DATABASE nlc_migration_test"
+          ADMIN_DATABASE_URL="${DATABASE_URL/postgresql+asyncpg:/postgresql:}"
+          ADMIN_DATABASE_URL="${ADMIN_DATABASE_URL%/nlc_migration_test}/postgres"
+          psql "$ADMIN_DATABASE_URL" -c "CREATE DATABASE nlc_migration_test"
           alembic upgrade head
           alembic current
 
