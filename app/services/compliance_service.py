@@ -580,32 +580,40 @@ class ComplianceService(BaseService[ComplianceFlag]):
             include_future_days=days_ahead,
         )
 
-    async def get_dashboard_kpis(self, user_id=None) -> dict:
-        """Aggregate KPIs for admin dashboard."""
-        # If user_id is provided, filter by it; otherwise return global stats
-        if user_id:
-            query = text("""
-                SELECT
-                    COUNT(*) as total_companies,
-                    COUNT(*) FILTER (WHERE current_risk_band = 'GREEN') as green_count,
-                    COUNT(*) FILTER (WHERE current_risk_band = 'YELLOW') as yellow_count,
-                    COUNT(*) FILTER (WHERE current_risk_band IN ('RED', 'BLACK')) as red_black_count,
-                    0 as upcoming_deadlines
-                FROM companies
-                WHERE assigned_staff_id = :uid AND is_active = true
-            """)
-            result = await self.db.execute(query, {"uid": str(user_id)})
-        else:
-            query = text("""
-                SELECT
-                    COUNT(*) as total_companies,
-                    COUNT(*) FILTER (WHERE current_risk_band = 'GREEN') as green_count,
-                    COUNT(*) FILTER (WHERE current_risk_band = 'YELLOW') as yellow_count,
-                    COUNT(*) FILTER (WHERE current_risk_band IN ('RED', 'BLACK')) as red_black_count,
-                    0 as upcoming_deadlines
-                FROM companies
-                WHERE is_active = true
-            """)
-            result = await self.db.execute(query)
+    async def get_dashboard_kpis(self, user_id: uuid.UUID) -> dict:
+        """Aggregate dashboard KPIs only across the user's active memberships.
+
+        User-facing dashboard calls must never fall back to global portfolio
+        statistics. A global report requires a separate privileged operation.
+        """
+        query = text("""
+            SELECT
+                COUNT(*) AS total_companies,
+                COUNT(*) FILTER (WHERE c.current_risk_band = 'GREEN') AS green_count,
+                COUNT(*) FILTER (WHERE c.current_risk_band = 'YELLOW') AS yellow_count,
+                COUNT(*) FILTER (WHERE c.current_risk_band IN ('RED', 'BLACK')) AS red_black_count,
+                (
+                    SELECT COUNT(*)
+                    FROM vw_upcoming_deadlines d
+                    WHERE d.days_remaining BETWEEN 0 AND 30
+                      AND EXISTS (
+                          SELECT 1
+                          FROM company_user_access cua_deadline
+                          WHERE cua_deadline.company_id = d.company_id
+                            AND cua_deadline.user_id = :uid
+                            AND cua_deadline.is_active IS TRUE
+                      )
+                ) AS upcoming_deadlines
+            FROM companies c
+            WHERE c.is_active IS TRUE
+              AND EXISTS (
+                  SELECT 1
+                  FROM company_user_access cua
+                  WHERE cua.company_id = c.id
+                    AND cua.user_id = :uid
+                    AND cua.is_active IS TRUE
+              )
+        """)
+        result = await self.db.execute(query, {"uid": user_id})
         row = result.mappings().one_or_none()
         return dict(row) if row else {}
