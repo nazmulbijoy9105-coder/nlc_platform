@@ -58,7 +58,7 @@ class AGM(FullMixin, Base):
     # ── Scheduling ────────────────────────────────────────────────
     agm_deadline: Mapped[date | None] = mapped_column(
         Date, nullable=True, index=True,
-        comment="Calculated: incorporation+548d (first) or FY end+182d (subsequent)"
+        comment="Calculated under Companies Act Section 81: incorporation + 18 calendar months (first) or preceding AGM + 15 calendar months (subsequent)"
     )
     notice_sent_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     notice_days_before: Mapped[int | None] = mapped_column(Integer, nullable=True)
