@@ -212,7 +212,9 @@ class TestAGMRules:
     def test_AGM005_large_private_company_uses_three_member_default(self, rule_engine, build_profile):
         profile = build_profile(
             agm_held_this_cycle=True,
-            member_count=7,
+            members_total_at_agm=7,
+            members_total_evidence_ref="test-evidence://members-register-at-agm",
+            members_present_evidence_ref="test-evidence://agm-attendance-register",
             articles_quorum_verified=True,
             articles_quorum_required=None,
             members_present_at_agm=2,
