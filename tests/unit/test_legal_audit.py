@@ -362,6 +362,26 @@ class TestChargeSatisfactionEvidence:
         assert _flag_by_id(result, "CHG-001") is None
 
 
+class TestAuditorReappointmentEvidence:
+    def test_AUD_005_missing_reappointment_decision_is_unknown_not_120_day_breach(self):
+        today = date(2026, 11, 3)
+        profile = _base_profile(
+            agm_count=1,
+            last_agm_date=date(2026, 1, 1),
+            agm_held_this_cycle=True,
+            first_auditor_appointed=True,
+            auditor_reappointed_at_agm=None,
+            audit_in_progress=False,
+            financial_year_end=date(2025, 12, 31),
+        )
+        result = NLCRuleEngine().evaluate(profile, today=today)
+        flag = _flag_by_id(result, "AUD-005")
+        assert flag is not None
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
+
+
 class TestPenaltyNoticeEvidence:
     def test_DEF_002_notice_count_alone_is_not_a_confirmed_statutory_breach(self):
         profile = _base_profile(
