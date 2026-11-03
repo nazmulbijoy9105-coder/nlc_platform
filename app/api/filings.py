@@ -58,7 +58,7 @@ router = APIRouter()
 class AGMCreateRequest(BaseModel):
     company_id: uuid.UUID
     financial_year: int = Field(ge=2000, le=2100)
-    agm_due_date: date
+    agm_due_date: date | None = None
     scheduled_date: date | None = None
     notice_sent_date: date | None = None
 
