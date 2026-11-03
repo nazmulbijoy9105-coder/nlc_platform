@@ -149,6 +149,22 @@ def _add_missing_columns(table_name, definitions):
 def upgrade():
     _add_missing_columns("companies", COMPANY_COLUMNS)
     _add_missing_columns("agms", AGM_COLUMNS)
+
+    # NULL means quorum not established; historical defaults of TRUE/2 would
+    # fabricate a legal conclusion before Articles and membership are checked.
+    op.alter_column(
+        "agms", "quorum_met",
+        existing_type=sa.Boolean(),
+        nullable=True,
+        server_default=None,
+    )
+    op.alter_column(
+        "agms", "quorum_required",
+        existing_type=sa.Integer(),
+        nullable=True,
+        server_default=None,
+    )
+
     _add_missing_columns("legal_rules", LEGAL_RULE_COLUMNS)
     _add_missing_columns("quotations", QUOTATION_COLUMNS)
 
