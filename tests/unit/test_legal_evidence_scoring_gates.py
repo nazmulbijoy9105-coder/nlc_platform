@@ -214,6 +214,49 @@ def test_public_company_requires_three_verified_directors():
     assert flag.detail["required"] == 3
 
 
+
+def test_section_94_unverified_disqualification_allegation_is_unknown():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            disqualification_grounds=[{
+                "ground_type": "UNPAID_CALL",
+                "director_name": "Director A",
+                "evidence_ref": "NOTICE-001",
+                "authority": "RJSC",
+                "effective_date": "2026-01-01",
+                "continuing_status": True,
+                "days_since_payment_due": 120,
+            }]
+        ),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "DEF-001")
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.score_impact == 0
+    assert flag.is_black_override is False
+
+
+def test_section_94_verified_disqualification_is_not_automatic_black():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            disqualification_grounds=[{
+                "ground_type": "UNPAID_CALL",
+                "director_name": "Director A",
+                "evidence_ref": "NOTICE-002",
+                "authority": "RJSC",
+                "effective_date": "2026-01-01",
+                "continuing_status": True,
+                "days_since_payment_due": 180,
+            }]
+        ),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "DEF-001")
+    assert flag.state == RuleState.NON_COMPLIANT
+    assert flag.severity == Severity.RED
+    assert flag.is_black_override is False
+    assert "DEF-001" not in VERIFIED_RULE_IDS
+
 def test_pre_score_and_authoritative_raw_score_use_identical_category_caps():
     profile = _profile()
     flags = [
