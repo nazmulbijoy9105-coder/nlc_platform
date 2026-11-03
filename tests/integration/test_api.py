@@ -320,12 +320,16 @@ class TestFilings:
                 "company_id": str(db_company.id),
                 "financial_year": 2020,
                 "agm_due_date": "2021-06-30",
+                "scheduled_date": "2021-05-20",
             }
         )
         assert resp.status_code == 201
         data = resp.json()
         assert data["financial_year"] == 2020
         assert data["company_id"] == str(db_company.id)
+        assert data["agm_due_date"] == "2021-06-30"
+        assert data["scheduled_date"] == "2021-05-20"
+        assert data["agm_due_date"] != "2099-12-31"
         assert "agm_id" in data
 
     @pytest.mark.asyncio
