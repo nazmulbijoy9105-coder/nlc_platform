@@ -419,12 +419,16 @@ class TestFilings:
                 "financial_year": 2023,
                 "auditor_firm": "Test Audit LLP",
                 "auditor_icab_number": "ICAB-99999",
+                "first_auditor_appointed": True,
+                "first_auditor_appointment_date": "2024-02-15",
             }
         )
         assert resp.status_code == 201
         data = resp.json()
         assert data["is_complete"] is False
         assert data["financial_year"] == 2023
+        assert data["first_auditor_appointed"] is True
+        assert data["first_auditor_appointment_date"] == "2024-02-15"
 
     @pytest.mark.asyncio
     async def test_create_annual_return(self, api_client, staff_token, db_company):
