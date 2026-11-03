@@ -557,7 +557,7 @@ class TestFilingService:
         assert updated.auditor_reappointed is True
         assert updated.quorum_required is None
         assert updated.quorum_met is None
-        assert updated.quorum_basis == "ARTICLES_NOT_VERIFIED_OR_QUORUM_INPUTS_UNKNOWN"
+        assert updated.quorum_basis == "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
 
     @pytest.mark.asyncio
     async def test_mark_agm_held_large_private_company_requires_three_members(self, db, db_company):
