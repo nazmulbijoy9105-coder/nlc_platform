@@ -89,6 +89,8 @@ class AGMResponse(BaseModel):
     held_date: str | None
     filed_date: str | None
     quorum_met: bool | None
+    quorum_required: int | None = None
+    venue: str | None = None
     auditor_reappointed: bool | None
     accounts_adopted: bool | None
     agm_held_without_audit: bool
@@ -681,6 +683,8 @@ def _agm_to_response(agm) -> AGMResponse:
         held_date=agm.agm_date.isoformat() if agm.agm_date else None,
         filed_date=agm.rjsc_filing_date.isoformat() if agm.rjsc_filing_date else None,
         quorum_met=agm.quorum_met,
+        quorum_required=agm.quorum_required,
+        venue=getattr(agm, "venue", None),
         auditor_reappointed=agm.auditor_reappointed,
         accounts_adopted=getattr(agm, "accounts_adopted", None),
         agm_held_without_audit=bool(getattr(agm, "agm_held_without_audit", False)),
