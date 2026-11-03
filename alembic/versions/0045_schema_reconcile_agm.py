@@ -71,6 +71,7 @@ COMPANY_COLUMNS = [
 ]
 
 AGM_COLUMNS = [
+    ("scheduled_date", sa.Date()),
     ("venue", sa.String(length=255)),
     ("accounts_adopted", sa.Boolean()),
     ("agm_held_without_audit", sa.Boolean()),
