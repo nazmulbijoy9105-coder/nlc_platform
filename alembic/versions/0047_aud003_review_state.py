@@ -3,7 +3,7 @@
 Revision ID: 0047_aud003_review_state
 Revises: 0046_schema_reconcile_agm
 
-This runs after 0046 commits the NOT_EVALUATED severity enum value.
+This migration adds the NOT_EVALUATED severity enum value in an autocommit block before persisting lawyer-review findings.
 Active historical AUD-003 findings are reclassified as lawyer-review-only.
 Companies with an affected cached score are marked NOT_EVALUATED so the
 next controlled evaluation must recompute the authoritative score.
