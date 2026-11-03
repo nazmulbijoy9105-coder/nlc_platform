@@ -171,3 +171,46 @@ F-series queue (F-22..F-33) unchanged by this section; EA rows add cross-cutting
   ESC-003 escalation threshold <=29 mirrors the BLACK band; NOT_EVALUATED band exists for
   insufficient data. Failure-safe direction (missing data != proven breach) matches the
   eval_state UNKNOWN design already in the engine.
+
+
+---
+
+## Implementation delta — 2026-11-03 (branch: `fix/legal-validation-agm-quorum-scoring`)
+
+The following confirmed implementation defects have been corrected in this branch. These are code corrections, not independent legal sign-off.
+
+| Area | Implementation correction | Regression coverage |
+|---|---|---|
+| AGM-001 / AGM-002 | First AGM uses 18 calendar months; subsequent AGMs use 15 calendar months. Removed fixed 548/456-day approximations and generic FY-end + 6-month trigger for ordinary private companies. | Month-end, leap-year and boundary-date tests |
+| AGM scheduling | Filing service and company-profile fallback now use the same calendar-month calculation; new AGM records calculate the statutory deadline when one is not supplied. | Shared service deadline test |
+| AGM-005 | Quorum breach requires a recorded failed quorum determination; Section 85(2)(b) default is Articles-dependent and is no longer represented as a universal fixed two-member threshold. | Explicit failed quorum and UNKNOWN tests |
+| AGM-004 | Missing notice date is an evidence gap. A scored breach requires explicit verified notice absence; ORM default `False` is not treated as proof that notice was served or not served. | UNKNOWN and verified-absence tests |
+| AGM-006 | Existing service mapping treats the ORM default `minutes_prepared=False` as UNKNOWN when no explicit evidence exists. | Missing AGM evidence regression |
+| AUD-002 / AUD-003 | Corrected accounts-at-AGM basis to Section 183; removed categorical claims that every resolution is automatically void. AUD-003 explicitly identifies BLACK as NLC internal risk policy. | Engine/seed/canonical basis alignment |
+| AUD-004 | Reappointment mapping corrected to Section 210(3), subject to statutory exceptions. | Existing rule regression |
+| DIR-001 / DIR-002 / DIR-007 | Form XII director particulars mapped to Section 115; Form IX consent-to-act mapped separately to Section 92. | Rule and RJSC form mapping tests |
+| CHG-001 | Charge satisfaction requires a known satisfaction date and more than 21 days overdue; uses Section 172 / Form XXVIII. Missing date is UNKNOWN. | Missing-date, within-deadline and overdue tests |
+| CAP-003 / CAP-004 | Capital reduction mapped to Section 59; special-resolution filing mapped to Section 88(1) / 15 days. | Rule basis and deadline tests |
+| SH-003 | Form IV capital-increase filing uses its separate 15-day deadline under Section 56; Form XV remains a separate 60-day rule. | Seed and engine alignment |
+| DEF-002 | An unresolved notice count alone is now an UNKNOWN internal review signal, not a confirmed Companies Act offence or generic Tk 10,000 penalty. | Notice-evidence regression |
+| RJSC forms | Corrected Form IX, XII, XV, XVIII, XXVIII and Schedule X references and filing periods. Removed unsupported Form XIV mapping from the active rule-linked reference list. | Form count, statutory-section and deadline tests |
+| Score fingerprint | Hash now includes the evaluated company input snapshot, evaluation date, engine version, ILRMF version, output score/risk and rule outcomes. | Different-input fingerprint test |
+
+### Explicitly unchanged
+
+- ESC-003 / BLACK override thresholds and policy remain unchanged pending policy-owner approval.
+- The existing scoring verification allowlist has not been silently broadened.
+- Historical AGM records and stored score snapshots have not been rewritten by this branch.
+- No production deployment or database migration has been performed.
+
+### Remaining legal release gates
+
+1. A qualified Bangladesh company-law reviewer must independently approve each production rule and its exceptions. The canonical registry's `RECONCILE` statuses remain unresolved; code changes do not convert them to legally approved rules.
+2. Review all active rules, not only the corrected high-consequence subset, against the current consolidated Act, amendments, applicable rules and official RJSC forms.
+3. Resolve legal interpretation of Section 85 notice counting ("clear days"), accidental omission/non-receipt exceptions, and the exact application of Section 85(2)(b) to each company's Articles.
+4. Independently verify Section 81 first-AGM and subsequent-AGM interpretation and any applicable court extension before production approval.
+5. Complete the independent, statute-authored legal test corpus with reviewer identity, source URL, effective date and expected outcome for every active rule.
+6. Reconcile historical stored AGM deadlines and legacy records under a reviewed migration plan; do not infer verified facts from ORM defaults.
+7. Run full unit/integration CI, rule-parity audit and the full legal corpus after this branch is opened as a PR.
+
+**Official starting source:** Bangladesh Laws (Ministry of Law), Companies Act 1994: https://bdlaws.minlaw.gov.bd/act-788.html. Verify amendments and the applicable official RJSC form for each filing before approving a rule.
