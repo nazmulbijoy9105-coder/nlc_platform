@@ -316,3 +316,9 @@ async def test_dashboard_deadlines_require_active_user_membership():
     assert "is_active IS TRUE" in sql
     assert "days_remaining <= :days" in sql
     assert db.parameters == {"days": 30, "user_id": user_id}
+
+
+def test_not_evaluated_severity_is_a_persistable_database_enum_value():
+    from app.models.enums import SeverityLevel
+
+    assert SeverityLevel("NOT_EVALUATED") is SeverityLevel.NOT_EVALUATED
