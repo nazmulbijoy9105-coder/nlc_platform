@@ -378,6 +378,7 @@ FY_END_AGM_DEADLINE_DAYS = 182
 AGM_NOTICE_MINIMUM_DAYS = 21
 PRIVATE_COMPANY_QUORUM_SMALL = 2   # Section 85(2)(b): private company with ≤6 members
 PRIVATE_COMPANY_QUORUM_LARGE = 3   # Section 85(2)(b): private company with >6 members
+PRIVATE_COMPANY_QUORUM = PRIVATE_COMPANY_QUORUM_SMALL  # backward compat alias
 ANNUAL_RETURN_DEADLINE_DAYS = 21   # Companies Act 1994, Section 36 (Schedule X)
 DIRECTOR_FILING_DEADLINE_DAYS = 14
 SHARE_CERTIFICATE_DEADLINE_DAYS = 90
@@ -944,8 +945,8 @@ class NLCRuleEngine:
                 severity=Severity.RED,
                 score_impact=15,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=f"AGM quorum not met. {c.members_present_at_agm} present, need {PRIVATE_COMPANY_QUORUM}. Section 83.",
-                statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
+                description=f"AGM quorum not met. {c.members_present_at_agm} present, need {PRIVATE_COMPANY_QUORUM}. Section 85(2)(b).",
+                statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
                 detail={"present": c.members_present_at_agm, "required": PRIVATE_COMPANY_QUORUM}
             ))
 
@@ -957,7 +958,7 @@ class NLCRuleEngine:
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="AGM held but minutes not prepared. Section 89: minutes are prima facie evidence.",
-                statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
             ))
 
     # ───────────────────────────────────────────────────────────────────
@@ -1848,7 +1849,7 @@ class NLCRuleEngine:
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="Board meeting minutes not prepared. Section 89: minutes of all proceedings must be entered.",
-                statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
             ))
 
     # ───────────────────────────────────────────────────────────────────
