@@ -176,6 +176,19 @@ class TestCompanyService:
         distribution = await svc.get_risk_distribution(user_id=db_user.id)
         assert sum(item["company_count"] for item in distribution) == 1
 
+        # Revoking membership must remove the company from the next aggregate.
+        from sqlalchemy import update
+        await db.execute(
+            update(CompanyUserAccess)
+            .where(
+                CompanyUserAccess.user_id == db_user.id,
+                CompanyUserAccess.company_id == accessible.id,
+            )
+            .values(is_active=False)
+        )
+        await db.flush()
+        assert await svc.get_risk_distribution(user_id=db_user.id) == []
+
 
     @pytest.mark.asyncio
     async def test_upcoming_deadlines_are_scoped_to_active_company_access(self, db, db_user):
@@ -218,6 +231,24 @@ class TestCompanyService:
         returned_company_ids = {item["company_id"] for item in deadlines}
         assert str(accessible.id) in {str(value) for value in returned_company_ids}
         assert str(inaccessible.id) not in {str(value) for value in returned_company_ids}
+
+        # Revoked membership must not retain access to previously visible deadlines.
+        from sqlalchemy import update
+        await db.execute(
+            update(CompanyUserAccess)
+            .where(
+                CompanyUserAccess.user_id == db_user.id,
+                CompanyUserAccess.company_id == accessible.id,
+            )
+            .values(is_active=False)
+        )
+        await db.flush()
+        after_revocation = await svc.get_upcoming_deadlines(
+            days_ahead=30, user_id=db_user.id
+        )
+        assert str(accessible.id) not in {
+            str(item["company_id"]) for item in after_revocation
+        }
 
 
     @pytest.mark.asyncio
