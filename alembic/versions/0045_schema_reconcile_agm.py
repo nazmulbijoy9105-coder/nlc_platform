@@ -174,7 +174,11 @@ def upgrade():
     op.execute("""
         UPDATE legal_rules
         SET statutory_basis = 'Section 85(2)(b), Companies Act 1994 (Bangladesh)',
-            description = 'AGM quorum for a private company: statutory default is two members where total membership is up to six and three members where total membership exceeds six, unless the current Articles provide otherwise. Verify the current Articles, register of members and attendance record before evaluation.'
+            description = 'AGM quorum for a private company: statutory default is two members where total membership is up to six and three members where total membership exceeds six, unless the current Articles provide otherwise. Verify the current Articles, register of members and attendance record before evaluation.',
+            verification_status = 'PENDING',
+            verified_by = NULL,
+            verified_at = NULL,
+            verification_notes = 'Citation corrected; counsel validation and current Articles evidence review remain pending.'
         WHERE rule_id = 'AGM-005'
     """)
 
