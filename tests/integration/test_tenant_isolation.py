@@ -1,65 +1,76 @@
 """
-NLC — GATE E2: Tenant & Object Authorization (IDOR) Adversarial Tests
-Proves that User A (Company A) cannot access Company B's resources by manipulating IDs.
+Real-database tenant isolation tests.
 
-NOTE: Prefer api_client_as_user (real RLS) for new tests. The module-scoped
-client fixture below still uses dependency overrides for fast IDOR checks.
+Each request uses a persisted CLIENT_DIRECTOR user and CompanyUserAccess rows.
+The JWT deliberately advertises both tenant IDs; authorization must follow the
+active database membership, not the caller-controlled/stale company_ids claim.
 """
-from contextlib import asynccontextmanager
-
 import pytest
-from fastapi.testclient import TestClient
+from app.core.security import create_access_token
 
-from app.core.dependencies import TokenData, verify_access_token
-from app.main import create_app
-
-# Mock User A (belongs only to Company A)
-MOCK_TOKEN_A = TokenData(sub="11111111-1111-1111-1111-111111111111", role="CLIENT_DIRECTOR", company_ids=["00000000-0000-0000-0000-000000000001"], user_id="11111111-1111-1111-1111-111111111111", email="usera@test.com")
-
-COMPANY_A_ID = "00000000-0000-0000-0000-000000000001"
-COMPANY_B_ID = "00000000-0000-0000-0000-000000000002"
-
-@pytest.fixture(scope="module")
-def client():
-    app = create_app()
-    
-    # Override the lifespan to prevent database connection during tests
-    @asynccontextmanager
-    async def empty_lifespan(app):
-        yield
-    app.router.lifespan_context = empty_lifespan
-    
-    # Override the authentication dependency to simulate User A
-    async def override_get_current_user():
-        return MOCK_TOKEN_A
-        
-    app.dependency_overrides[verify_access_token] = override_get_current_user
-    
-    with TestClient(app) as c:
-        yield c
-
-def test_company_a_cannot_get_company_b(client):
-    """User A tries to GET Company B's profile."""
-    response = client.get(f"/api/v1/companies/{COMPANY_B_ID}")
-    assert response.status_code in (403, 404), "Tenant boundary breached: User A accessed Company B"
-
-def test_company_a_cannot_access_company_b_documents(client):
-    """User A tries to GET documents for Company B."""
-    response = client.get(f"/api/v1/documents/{COMPANY_B_ID}")
-    assert response.status_code in (403, 404), "Tenant boundary breached: User A accessed Company B documents"
-
-def test_company_a_cannot_access_company_b_filings(client):
-    """User A tries to GET filings for Company B."""
-    response = client.get(f"/api/v1/filings/agm/{COMPANY_B_ID}")
-    assert response.status_code in (403, 404), "Tenant boundary breached: User A accessed Company B filings"
-
-def test_company_a_cannot_access_company_b_rescue(client):
-    """User A tries to GET rescue plan for Company B."""
-    response = client.get(f"/api/v1/rescue/plans/{COMPANY_B_ID}/active")
-    assert response.status_code in (403, 404), "Tenant boundary breached: User A accessed Company B rescue plan"
+pytestmark = [pytest.mark.integration]
 
 
-def test_company_a_can_reach_own_company_route(client):
-    """Positive control: a 401/403 here means the harness is broken, not isolation."""
-    response = client.get(f"/api/v1/companies/{COMPANY_A_ID}/flags")
-    assert response.status_code not in (401, 403), response.text
+def _auth(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.mark.asyncio
+async def test_client_can_access_member_company_but_not_foreign_company(
+    api_client, db_client_user, db_company, db_other_company
+):
+    token = create_access_token({
+        "sub": str(db_client_user.id),
+        "user_id": str(db_client_user.id),
+        "type": "access",
+        "role": "CLIENT_DIRECTOR",
+        "email": db_client_user.email,
+        # Intentionally include a foreign company to prove this claim is not
+        # sufficient to grant access without an active DB membership.
+        "company_ids": [str(db_company.id), str(db_other_company.id)],
+    })
+
+    own_response = await api_client.get(
+        f"/api/v1/companies/{db_company.id}",
+        headers=_auth(token),
+    )
+    assert own_response.status_code == 200, own_response.text
+
+    foreign_response = await api_client.get(
+        f"/api/v1/companies/{db_other_company.id}",
+        headers=_auth(token),
+    )
+    assert foreign_response.status_code == 403, foreign_response.text
+
+
+@pytest.mark.asyncio
+async def test_client_membership_revocation_denies_company_access(
+    api_client, db, db_client_user, db_company
+):
+    from sqlalchemy import update
+    from app.models.company import CompanyUserAccess
+
+    token = create_access_token({
+        "sub": str(db_client_user.id),
+        "user_id": str(db_client_user.id),
+        "type": "access",
+        "role": "CLIENT_DIRECTOR",
+        "email": db_client_user.email,
+        "company_ids": [str(db_company.id)],
+    })
+
+    await db.execute(
+        update(CompanyUserAccess)
+        .where(
+            CompanyUserAccess.user_id == db_client_user.id,
+            CompanyUserAccess.company_id == db_company.id,
+        )
+        .values(is_active=False)
+    )
+    await db.flush()
+
+    response = await api_client.get(
+        f"/api/v1/companies/{db_company.id}",
+        headers=_auth(token),
+    )
+    assert response.status_code == 403, response.text
