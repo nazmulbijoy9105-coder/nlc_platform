@@ -252,6 +252,32 @@ def upgrade():
             )
         WHERE rule_id = 'AUD-001'
     """)
+    # AUD-003 is a lawyer-judgment issue, not an automatic invalidity/BLACK rule.
+    op.execute("""
+        UPDATE legal_rules
+        SET rule_name = 'AGM Held Without Completed Audit — Legal Review Required',
+            statutory_basis = 'Sections 183 and 210, Companies Act 1994 (Bangladesh)',
+            description = 'The AGM record states that the meeting was held without completed audit. A lawyer must review the accounts, auditor appointment, meeting record and applicable statutory provisions before determining legal consequences; no automatic invalidity or BLACK override is inferred.',
+            default_severity = 'YELLOW',
+            score_impact = 0,
+            is_black_override = FALSE,
+            verification_status = 'PENDING',
+            verified_by = NULL,
+            verified_at = NULL,
+            verification_notes = 'Potential statutory consequence requires case-specific counsel review; automatic BLACK override removed.'
+        WHERE rule_id = 'AUD-003'
+    """)
+    op.execute("""
+        UPDATE legal_rules
+        SET rule_condition = jsonb_set(
+            COALESCE(rule_condition, '{}'::jsonb),
+            '{trigger}',
+            to_jsonb('agm_held_this_cycle == True AND agm_held_without_audit == True'::text),
+            true
+        )
+        WHERE rule_id = 'AUD-003'
+    """)
+
     op.execute(
         "CREATE INDEX IF NOT EXISTS ix_quotations_rejected_by "
         "ON quotations (rejected_by)"
