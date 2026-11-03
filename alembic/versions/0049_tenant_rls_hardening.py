@@ -16,11 +16,57 @@ branch_labels = None
 depends_on = None
 
 
+
+def _execute_sql_script(sql: str) -> None:
+    """Execute a PostgreSQL script statement-by-statement for asyncpg."""
+    start = 0
+    i = 0
+    single_quoted = False
+    dollar_tag = None
+    while i < len(sql):
+        if dollar_tag:
+            if sql.startswith(dollar_tag, i):
+                i += len(dollar_tag)
+                dollar_tag = None
+                continue
+            i += 1
+            continue
+        char = sql[i]
+        if single_quoted:
+            if char == "'" and i + 1 < len(sql) and sql[i + 1] == "'":
+                i += 2
+                continue
+            if char == "'":
+                single_quoted = False
+            i += 1
+            continue
+        if char == "'":
+            single_quoted = True
+            i += 1
+            continue
+        if char == "$":
+            end = sql.find("$", i + 1)
+            if end != -1:
+                tag = sql[i:end + 1]
+                if all(c.isalnum() or c == "_" for c in tag[1:-1]):
+                    dollar_tag = tag
+                    i = end + 1
+                    continue
+        if char == ";":
+            statement = sql[start:i].strip()
+            if statement:
+                op.execute(statement)
+            start = i + 1
+        i += 1
+    tail = sql[start:].strip()
+    if tail:
+        op.execute(tail)
+
 def upgrade() -> None:
     # SECURITY DEFINER helpers read membership and role records without
     # recursively invoking RLS on those same tables. search_path is pinned to
     # prevent object-shadowing attacks. The migration owner owns these helpers.
-    op.execute("""
+    _execute_sql_script("""
         CREATE OR REPLACE FUNCTION public.nlc_current_user_id()
         RETURNS uuid
         LANGUAGE plpgsql
@@ -43,7 +89,7 @@ def upgrade() -> None:
     # Login needs one narrowly-scoped lookup before a user ID is available
     # for the normal transaction-local RLS context. It is callable only by the
     # backend application role and returns one matching account row.
-    op.execute("""
+    _execute_sql_script("""
         CREATE OR REPLACE FUNCTION public.nlc_auth_user_by_email(p_email text)
         RETURNS SETOF public.users
         LANGUAGE sql
@@ -53,7 +99,7 @@ def upgrade() -> None:
         AS 'SELECT u.* FROM public.users u WHERE lower(u.email) = lower(btrim(p_email)) LIMIT 1'
     """)
     op.execute("REVOKE ALL ON FUNCTION public.nlc_auth_user_by_email(text) FROM PUBLIC")
-    op.execute("""
+    _execute_sql_script("""
         DO $auth_grant$
         BEGIN
             IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
@@ -63,7 +109,7 @@ def upgrade() -> None:
         $auth_grant$
     """)
 
-    op.execute("""
+    _execute_sql_script("""
         CREATE OR REPLACE FUNCTION public.nlc_current_user_is_staff()
         RETURNS boolean
         LANGUAGE sql
@@ -83,7 +129,7 @@ def upgrade() -> None:
         $$;
     """)
 
-    op.execute("""
+    _execute_sql_script("""
         CREATE OR REPLACE FUNCTION public.nlc_can_access_company(p_company_id uuid)
         RETURNS boolean
         LANGUAGE sql
@@ -106,7 +152,7 @@ def upgrade() -> None:
         $$;
     """)
 
-    op.execute("""
+    _execute_sql_script("""
         CREATE OR REPLACE FUNCTION public.nlc_can_access_document(p_document_id uuid)
         RETURNS boolean
         LANGUAGE sql
@@ -125,7 +171,7 @@ def upgrade() -> None:
 
     # Remove default PUBLIC execution on privileged helpers. Grant only to the
     # dedicated application role when it exists (CI databases may not create it).
-    op.execute("""
+    _execute_sql_script("""
         REVOKE ALL ON FUNCTION public.nlc_current_user_id() FROM PUBLIC;
         REVOKE ALL ON FUNCTION public.nlc_current_user_is_staff() FROM PUBLIC;
         REVOKE ALL ON FUNCTION public.nlc_can_access_company(uuid) FROM PUBLIC;
@@ -145,7 +191,7 @@ def upgrade() -> None:
     # Company rows use id; all other tenant tables use company_id. Keep
     # engagements_admin_only unchanged: commercial engagement records remain
     # staff-only under the existing policy.
-    op.execute("""
+    _execute_sql_script("""
         ALTER TABLE public.companies ENABLE ROW LEVEL SECURITY;
         DROP POLICY IF EXISTS companies_access_policy ON public.companies;
         CREATE POLICY companies_tenant_access ON public.companies
@@ -179,7 +225,7 @@ def upgrade() -> None:
         "articles_verification_events",
     )
     for table in tenant_tables:
-        op.execute(sa.text(f"""
+        _execute_sql_script(f"""
             ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY;
             DROP POLICY IF EXISTS {table}_company_policy ON public.{table};
             DROP POLICY IF EXISTS {table}_tenant_access ON public.{table};
@@ -191,7 +237,7 @@ def upgrade() -> None:
 
     # Commercial engagements are staff-only. Replace the legacy ADMIN
     # sentinel check so authenticated staff requests use their real user ID.
-    op.execute("""
+    _execute_sql_script("""
         ALTER TABLE public.engagements ENABLE ROW LEVEL SECURITY;
         DROP POLICY IF EXISTS engagements_admin_only ON public.engagements;
         DROP POLICY IF EXISTS engagements_staff_only ON public.engagements;
@@ -215,7 +261,7 @@ def upgrade() -> None:
 
     # Membership rows: users may inspect their own active/inactive grants;
     # only current staff may grant, change, or revoke memberships.
-    op.execute("""
+    _execute_sql_script("""
         ALTER TABLE public.company_user_access ENABLE ROW LEVEL SECURITY;
         DROP POLICY IF EXISTS company_user_access_self_read ON public.company_user_access;
         DROP POLICY IF EXISTS company_user_access_staff_write ON public.company_user_access;
@@ -234,7 +280,7 @@ def upgrade() -> None:
     # User records: self access is required for authentication/profile
     # workflows. A trigger prevents self-service role or activation changes;
     # only current staff may change those authorization-critical attributes.
-    op.execute("""
+    _execute_sql_script("""
         CREATE OR REPLACE FUNCTION public.nlc_protect_user_security_fields()
         RETURNS trigger
         LANGUAGE plpgsql
@@ -254,7 +300,7 @@ def upgrade() -> None:
         END;
         $$
     """)
-    op.execute("""
+    _execute_sql_script("""
         DROP TRIGGER IF EXISTS users_protect_security_fields ON public.users;
         CREATE TRIGGER users_protect_security_fields
             BEFORE UPDATE ON public.users
@@ -275,7 +321,7 @@ def upgrade() -> None:
     """)
 
     # Rescue audit rows inherit tenant scope through their rescue plan.
-    op.execute("""
+    _execute_sql_script("""
         ALTER TABLE public.rescue_audit_log ENABLE ROW LEVEL SECURITY;
         DROP POLICY IF EXISTS rescue_audit_log_tenant_access ON public.rescue_audit_log;
         CREATE POLICY rescue_audit_log_tenant_access ON public.rescue_audit_log
@@ -301,7 +347,7 @@ def upgrade() -> None:
     """)
 
     # Access-log rows inherit the tenant boundary from their parent document.
-    op.execute("""
+    _execute_sql_script("""
         ALTER TABLE public.document_access_log ENABLE ROW LEVEL SECURITY;
         DROP POLICY IF EXISTS document_access_log_document_tenant ON public.document_access_log;
         CREATE POLICY document_access_log_document_tenant ON public.document_access_log
@@ -317,7 +363,7 @@ def upgrade() -> None:
     """)
 
     # User activity records are scoped by both actor and (when present) company.
-    op.execute("""
+    _execute_sql_script("""
         ALTER TABLE public.user_activity_logs ENABLE ROW LEVEL SECURITY;
         DROP POLICY IF EXISTS user_activity_logs_actor_tenant ON public.user_activity_logs;
         CREATE POLICY user_activity_logs_actor_tenant ON public.user_activity_logs
@@ -346,7 +392,7 @@ def upgrade() -> None:
 
     # Webhooks are user-owned, not company-owned. Replace the earlier policy
     # that attempted to cast the ADMIN sentinel to UUID and denied staff access.
-    op.execute("""
+    _execute_sql_script("""
         ALTER TABLE public.webhook_endpoints ENABLE ROW LEVEL SECURITY;
         DROP POLICY IF EXISTS webhook_endpoints_owner_scope ON public.webhook_endpoints;
         CREATE POLICY webhook_endpoints_owner_scope ON public.webhook_endpoints
@@ -388,7 +434,7 @@ def upgrade() -> None:
     # Mutations remain staff-only. The migration version table is not a
     # runtime API and is explicitly unavailable to the application role.
     for table in ("ai_prompt_templates", "legal_rules", "legal_rule_versions", "regulatory_rules", "sro_registry"):
-        op.execute(sa.text(f"""
+        _execute_sql_script(f"""
             ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY;
             DROP POLICY IF EXISTS {table}_authenticated_read ON public.{table};
             DROP POLICY IF EXISTS {table}_staff_write ON public.{table};
@@ -412,7 +458,7 @@ def upgrade() -> None:
     # TRUNCATE bypasses RLS. Runtime code must not be able to create triggers or
     # foreign keys. New tables may not inherit old default grants, so explicitly
     # grant the DML operations needed by the API before narrowing audit tables.
-    op.execute("""
+    _execute_sql_script("""
         DO $privileges$
         BEGIN
             IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
