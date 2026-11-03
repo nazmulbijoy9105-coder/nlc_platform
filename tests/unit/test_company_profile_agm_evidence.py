@@ -16,6 +16,7 @@ def test_missing_agm_record_keeps_attendance_and_auditor_status_unknown():
         "agm_minutes_prepared": None,
         "agm_quorum_met": None,
         "notice_sent_date": None,
+        "agm_notice_verified_absent": None,
     }
 
 
@@ -53,6 +54,77 @@ def test_default_zero_attendance_is_not_treated_as_verified_quorum_breach():
     assert evidence["agm_minutes_prepared"] is None
     assert evidence["agm_quorum_met"] is None
 
+
+
+def test_notice_missing_orm_default_is_not_verified_absence():
+    meeting = SimpleNamespace(
+        members_present=2,
+        auditor_reappointed=True,
+        minutes_prepared=True,
+        quorum_met=True,
+        notice_sent_date=None,
+        notice_missing=False,
+    )
+    evidence = _agm_profile_evidence(meeting)
+    assert evidence["agm_notice_verified_absent"] is None
+
+
+def test_explicit_notice_missing_is_mapped_as_verified_absence():
+    meeting = SimpleNamespace(
+        members_present=2,
+        auditor_reappointed=True,
+        minutes_prepared=True,
+        quorum_met=True,
+        notice_sent_date=None,
+        notice_missing=True,
+    )
+    evidence = _agm_profile_evidence(meeting)
+    assert evidence["agm_notice_verified_absent"] is True
+
+
+def test_agm_notice_missing_from_nlc_records_is_unknown_not_a_breach():
+    today = date.today()
+    profile = CompanyProfile(
+        company_id="agm-notice-unknown",
+        company_name="AGM Notice Unknown Ltd",
+        incorporation_date=date(today.year - 3, 1, 1),
+        agm_count=1,
+        last_agm_date=today,
+        agm_held_this_cycle=True,
+        notice_sent_date=None,
+        agm_notice_verified_absent=None,
+        first_auditor_appointed=True,
+        audit_complete=True,
+        annual_return_filed=True,
+    )
+    result = NLCRuleEngine().evaluate(profile)
+    flag = next((f for f in result.flags if f.rule_id == "AGM-004"), None)
+    assert flag is not None
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.severity.value == "NOT_EVALUATED"
+    assert flag.score_impact == 0
+
+
+def test_verified_agm_notice_absence_triggers_reviewable_finding():
+    today = date.today()
+    profile = CompanyProfile(
+        company_id="agm-notice-absent",
+        company_name="AGM Notice Absent Ltd",
+        incorporation_date=date(today.year - 3, 1, 1),
+        agm_count=1,
+        last_agm_date=today,
+        agm_held_this_cycle=True,
+        notice_sent_date=None,
+        agm_notice_verified_absent=True,
+        first_auditor_appointed=True,
+        audit_complete=True,
+        annual_return_filed=True,
+    )
+    result = NLCRuleEngine().evaluate(profile)
+    flag = next(f for f in result.flags if f.rule_id == "AGM-004")
+    assert flag.state == RuleState.NON_COMPLIANT
+    assert flag.severity.value == "RED"
+    assert flag.detail["notice_absence_verified"] is True
 
 
 def test_missing_agm_evidence_does_not_create_quorum_or_reappointment_flags():
