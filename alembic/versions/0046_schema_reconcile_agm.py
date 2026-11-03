@@ -92,6 +92,11 @@ AGM_COLUMNS = [
     ("articles_quorum_evidence_ref", sa.String(length=500)),
 ]
 
+AUDIT_COLUMNS = [
+    ("first_auditor_appointed", sa.Boolean()),
+    ("first_auditor_appointment_date", sa.Date()),
+]
+
 LEGAL_RULE_COLUMNS = [
     ("verified_by", sa.String(length=100)),
     ("verified_at", sa.Date()),
@@ -161,6 +166,7 @@ def _add_missing_columns(table_name, definitions):
 def upgrade():
     _add_missing_columns("companies", COMPANY_COLUMNS)
     _add_missing_columns("agms", AGM_COLUMNS)
+    _add_missing_columns("audits", AUDIT_COLUMNS)
 
     # A missing appointment record is unknown, not proof that no auditor was appointed.
     op.alter_column(
