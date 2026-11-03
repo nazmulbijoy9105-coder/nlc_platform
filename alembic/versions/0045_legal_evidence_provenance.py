@@ -28,7 +28,11 @@ def upgrade() -> None:
         ADD COLUMN IF NOT EXISTS moa_aoa_verified BOOLEAN NOT NULL DEFAULT FALSE,
         ADD COLUMN IF NOT EXISTS moa_aoa_verified_at TIMESTAMPTZ NULL,
         ADD COLUMN IF NOT EXISTS moa_aoa_verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
-        ADD COLUMN IF NOT EXISTS moa_aoa_evidence_ref TEXT NULL
+        ADD COLUMN IF NOT EXISTS moa_aoa_evidence_ref TEXT NULL,
+        ADD COLUMN IF NOT EXISTS first_auditor_appointment_verified BOOLEAN NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS first_auditor_appointment_verified_at TIMESTAMPTZ NULL,
+        ADD COLUMN IF NOT EXISTS first_auditor_appointment_verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+        ADD COLUMN IF NOT EXISTS first_auditor_appointment_evidence_ref TEXT NULL
     """)
 
     # AGM evidence is verified separately from its legacy database defaults.
@@ -41,7 +45,15 @@ def upgrade() -> None:
         ADD COLUMN IF NOT EXISTS quorum_required_verified BOOLEAN NOT NULL DEFAULT FALSE,
         ADD COLUMN IF NOT EXISTS quorum_evidence_ref TEXT NULL,
         ADD COLUMN IF NOT EXISTS quorum_verified_at TIMESTAMPTZ NULL,
-        ADD COLUMN IF NOT EXISTS quorum_verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL
+        ADD COLUMN IF NOT EXISTS quorum_verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+        ADD COLUMN IF NOT EXISTS auditor_reappointment_verified BOOLEAN NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS auditor_reappointment_evidence_ref TEXT NULL,
+        ADD COLUMN IF NOT EXISTS auditor_reappointment_verified_at TIMESTAMPTZ NULL,
+        ADD COLUMN IF NOT EXISTS auditor_reappointment_verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+        ADD COLUMN IF NOT EXISTS audit_completion_verified BOOLEAN NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS audit_completion_evidence_ref TEXT NULL,
+        ADD COLUMN IF NOT EXISTS audit_completion_verified_at TIMESTAMPTZ NULL,
+        ADD COLUMN IF NOT EXISTS audit_completion_verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL
     """)
 
     op.execute("""
@@ -64,6 +76,14 @@ def downgrade() -> None:
     op.execute("ALTER TABLE agms DROP CONSTRAINT IF EXISTS ck_agms_quorum_required_positive")
     op.execute("""
         ALTER TABLE agms
+        DROP COLUMN IF EXISTS audit_completion_verified_by,
+        DROP COLUMN IF EXISTS audit_completion_verified_at,
+        DROP COLUMN IF EXISTS audit_completion_evidence_ref,
+        DROP COLUMN IF EXISTS audit_completion_verified,
+        DROP COLUMN IF EXISTS auditor_reappointment_verified_by,
+        DROP COLUMN IF EXISTS auditor_reappointment_verified_at,
+        DROP COLUMN IF EXISTS auditor_reappointment_evidence_ref,
+        DROP COLUMN IF EXISTS auditor_reappointment_verified,
         DROP COLUMN IF EXISTS quorum_verified_by,
         DROP COLUMN IF EXISTS quorum_verified_at,
         DROP COLUMN IF EXISTS quorum_evidence_ref,
@@ -75,6 +95,10 @@ def downgrade() -> None:
     """)
     op.execute("""
         ALTER TABLE companies
+        DROP COLUMN IF EXISTS first_auditor_appointment_evidence_ref,
+        DROP COLUMN IF EXISTS first_auditor_appointment_verified_by,
+        DROP COLUMN IF EXISTS first_auditor_appointment_verified_at,
+        DROP COLUMN IF EXISTS first_auditor_appointment_verified,
         DROP COLUMN IF EXISTS moa_aoa_evidence_ref,
         DROP COLUMN IF EXISTS moa_aoa_verified_by,
         DROP COLUMN IF EXISTS moa_aoa_verified_at,
