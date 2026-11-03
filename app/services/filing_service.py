@@ -155,36 +155,48 @@ class AGMService(BaseService[AGM]):
     async def mark_held(
         self,
         agm_id: uuid.UUID,
-        agm_date: date,
-        members_present: int | None,
-        auditor_reappointed: bool | None,
-        quorum_required: int | None = None,
+        held_date: date,
+        members_present: int | None = None,
         quorum_met: bool | None = None,
+        auditor_reappointed: bool | None = None,
+        accounts_adopted: bool | None = None,
+        agm_held_without_audit: bool | None = None,
+        venue: str | None = None,
+        minutes_document_id: uuid.UUID | None = None,
+        quorum_required: int | None = None,
     ) -> AGM | None:
-        """
-        Record that an AGM was held on a given date.
-        Auto-calculates quorum, notice, and default status.
+        """Persist AGM facts without inferring quorum from a fixed threshold.
+
+        quorum_met must be explicitly determined from the company's Articles
+        and, where applicable, the Section 85(2)(b) statutory default.
         """
         agm = await self.get_by_id(agm_id)
         if not agm:
             return None
 
+        # Only calculate quorum when the applicable threshold has been reviewed.
         if quorum_met is None and members_present is not None and quorum_required is not None:
             quorum_met = members_present >= quorum_required
+
         is_default = False
         delay_days = 0
-        if agm.agm_deadline and agm_date > agm.agm_deadline:
+        if agm.agm_deadline and held_date > agm.agm_deadline:
             is_default = True
-            delay_days = (agm_date - agm.agm_deadline).days
+            delay_days = (held_date - agm.agm_deadline).days
 
         return await self.update_instance(
             agm,
             agm_held=True,
-            agm_date=agm_date,
+            agm_date=held_date,
+            venue=venue,
             members_present=members_present,
             quorum_required=quorum_required,
             quorum_met=quorum_met,
             auditor_reappointed=auditor_reappointed,
+            accounts_adopted=accounts_adopted,
+            agm_held_without_audit=agm_held_without_audit,
+            minutes_prepared=True if minutes_document_id else None,
+            minutes_document_id=minutes_document_id,
             is_default=is_default,
             delay_days=delay_days,
         )
