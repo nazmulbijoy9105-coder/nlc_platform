@@ -39,6 +39,7 @@ def upgrade() -> None:
     _add_if_missing("agms", sa.Column("venue", sa.String(length=255), nullable=True))
     _add_if_missing("agms", sa.Column("accounts_adopted", sa.Boolean(), nullable=True))
     _add_if_missing("agms", sa.Column("agm_held_without_audit", sa.Boolean(), nullable=True))
+    _add_if_missing("agms", sa.Column("quorum_basis", sa.String(length=64), nullable=True))
 
 
 def downgrade() -> None:
