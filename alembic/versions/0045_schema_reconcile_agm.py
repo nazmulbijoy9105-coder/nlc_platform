@@ -194,6 +194,20 @@ def upgrade():
             verification_notes = 'Citation corrected; counsel validation and current Articles evidence review remain pending.'
         WHERE rule_id = 'AGM-005'
     """)
+
+    # Correct the legacy AUD-001 seed/identity migration's fixed-30-day wording.
+    # The current evaluator uses the actual appointment date and calendar-month arithmetic.
+    op.execute("""
+        UPDATE legal_rules
+        SET rule_name = 'First Auditor Not Appointed Within One Calendar Month',
+            statutory_basis = 'Section 210(6), Companies Act 1994 (Bangladesh)',
+            description = 'The Board must appoint the first auditor within one calendar month of registration under Section 210(6). The deadline is a calendar month, not a fixed 30 days. Timeliness requires the actual appointment date.',
+            verification_status = 'PENDING',
+            verified_by = NULL,
+            verified_at = NULL,
+            verification_notes = 'Wording and evaluator aligned; counsel verification of statutory source and interpretation remains pending.'
+        WHERE rule_id = 'AUD-001'
+    """)
     op.execute(
         "CREATE INDEX IF NOT EXISTS ix_quotations_rejected_by "
         "ON quotations (rejected_by)"
