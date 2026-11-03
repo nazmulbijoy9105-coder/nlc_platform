@@ -43,6 +43,7 @@ class ArticlesReviewRequest(BaseModel):
     quorum_variation_exists: bool | None = None
     quorum_required: int | None = Field(default=None, ge=1, le=100)
     clause_reference: str | None = Field(default=None, min_length=1, max_length=255)
+    quorum_clause_text: str | None = Field(default=None, min_length=1, max_length=10000)
     reviewer_note: str | None = None
 
 
@@ -66,6 +67,7 @@ def _verification_payload(item: ArticlesVerification) -> dict:
         "quorum_variation_exists": item.quorum_variation_exists,
         "quorum_required": item.quorum_required,
         "clause_reference": item.clause_reference,
+        "quorum_clause_text": item.quorum_clause_text,
         "reviewer_note": item.reviewer_note,
         "revoked_by": str(item.revoked_by) if item.revoked_by else None,
         "revoked_at": item.revoked_at.isoformat() if item.revoked_at else None,
@@ -183,7 +185,7 @@ async def list_articles_verifications(
 
 @router.post(
     "/companies/{company_id}/articles-verification/{verification_id}/review",
-    dependencies=[Depends(require_roles("LEGAL_STAFF", "SUPER_ADMIN"))],
+    dependencies=[Depends(require_roles("LEGAL_STAFF"))],
 )
 async def review_articles_verification(
     company_id: uuid.UUID,
@@ -230,6 +232,8 @@ async def review_articles_verification(
             raise HTTPException(status_code=422, detail="Verification requires effective_from, the exact quorum clause reference, and an explicit quorum-variation decision.")
         if body.quorum_variation_exists and body.quorum_required is None:
             raise HTTPException(status_code=422, detail="A numeric quorum is required when the Articles vary the statutory default.")
+        if body.quorum_variation_exists and not body.quorum_clause_text:
+            raise HTTPException(status_code=422, detail="The exact alternative quorum clause text must be recorded.")
         if not body.quorum_variation_exists and body.quorum_required is not None:
             raise HTTPException(status_code=422, detail="Do not provide an alternative quorum when the reviewer confirms no variation.")
         current_verified = await db.scalar(
@@ -267,6 +271,7 @@ async def review_articles_verification(
         item.quorum_variation_exists = body.quorum_variation_exists
         item.quorum_required = body.quorum_required
         item.clause_reference = body.clause_reference.strip()
+        item.quorum_clause_text = body.quorum_clause_text.strip() if body.quorum_clause_text else None
         item.reviewer_note = body.reviewer_note
         action = "VERIFIED"
     else:
