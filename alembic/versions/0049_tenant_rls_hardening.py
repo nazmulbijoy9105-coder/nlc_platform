@@ -233,7 +233,7 @@ def upgrade() -> None:
                 FOR ALL
                 USING (public.nlc_can_access_company(company_id))
                 WITH CHECK (public.nlc_can_access_company(company_id));
-        """))
+        """)
 
     # Commercial engagements are staff-only. Replace the legacy ADMIN
     # sentinel check so authenticated staff requests use their real user ID.
@@ -453,7 +453,7 @@ def upgrade() -> None:
                 FOR ALL
                 USING (public.nlc_current_user_is_staff())
                 WITH CHECK (public.nlc_current_user_is_staff());
-        """))
+        """)
 
     # TRUNCATE bypasses RLS. Runtime code must not be able to create triggers or
     # foreign keys. New tables may not inherit old default grants, so explicitly
