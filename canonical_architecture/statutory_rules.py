@@ -815,7 +815,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
-        "evidence_required": ["AGM_RESOLUTION"],
+        "evidence_required": ["DOCUMENTARY_EVIDENCE"],
         "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
         "severity": "NOT_EVALUATED",
         "score_impact": 0,
