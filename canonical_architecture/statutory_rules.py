@@ -149,8 +149,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "INC-004": {
         "rule_id": "INC-004",
         "legal_domain": "Corporate",
-        "law": "Section 59, Companies Act 1994 (Bangladesh)",
-        "requirement": "Paid-Up Capital Exceeds Authorized Capital - Paid-up capital exceeds authorized capital. Section 150: company cannot issue shares beyond authorized capital. All excess allotments void.",
+        "law": "Section 53, Companies Act 1994 (Bangladesh)",
+        "requirement": "Paid-up capital exceeds the recorded authorised capital. Verify the Section 53 increase process and registered capital records; NLC escalates this as a BLACK capital-control risk, while the legal effect of any excess allotment requires case-specific review.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -404,8 +404,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "DIR-001": {
         "rule_id": "DIR-001",
         "legal_domain": "Corporate",
-        "law": "Section 92, Companies Act 1994 (Bangladesh)",
-        "requirement": "Director Appointment Not Filed Within 14 Days - Director appointment not filed via Form XII within 14 days. Section 92 requires 14-day filing (NOT 30 days). Until filed, third parties cannot verify director authority, invalidating contracts and resolutions.",
+        "law": "Section 115, Companies Act 1994 (Bangladesh)",
+        "requirement": "Director appointment particulars not filed via Form XII within 14 days under Section 115.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -419,8 +419,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "DIR-002": {
         "rule_id": "DIR-002",
         "legal_domain": "Corporate",
-        "law": "Section 92, Companies Act 1994 (Bangladesh)",
-        "requirement": "Director Departure Not Filed Within 14 Days - Director resignation/removal/death not filed via Form XII within 14 days. Section 92 requires 14-day filing. Until filed, departed director remains on public record as active, creating liability for post-departure obligations.",
+        "law": "Section 115, Companies Act 1994 (Bangladesh)",
+        "requirement": "Director resignation, removal or death particulars not filed via Form XII within 14 days under Section 115.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -494,8 +494,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "SH-003": {
         "rule_id": "SH-003",
         "legal_domain": "Corporate",
-        "law": "Section 52, Companies Act 1994 (Bangladesh)",
-        "requirement": "Capital Increase Not Filed — Form IV - Capital increase not filed via Form IV within 30 days of special resolution. Section 52 requires notice of increase. Unrecorded increases cause RJSC records to differ from actual capital.",
+        "law": "Section 56, Companies Act 1994 (Bangladesh)",
+        "requirement": "Notice of increase in share capital not filed via Form IV within 15 days under Section 56.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
