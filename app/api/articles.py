@@ -5,17 +5,20 @@ separate legal reviewer; decisions and revocations are append-only audited.
 """
 from __future__ import annotations
 
+import asyncio
+import hashlib
 import re
 import uuid
 from datetime import UTC, datetime
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
@@ -31,6 +34,15 @@ from app.models.enums import DocumentType
 from app.models.user import User
 
 router = APIRouter()
+
+
+class ArticlesUploadResponse(BaseModel):
+    document_id: str
+    company_id: str
+    title: str
+    checksum_sha256: str
+    file_size_bytes: int
+    status: str
 
 
 class ArticlesSubmitRequest(BaseModel):
@@ -87,6 +99,95 @@ def _event_payload(event: ArticlesVerificationEvent) -> dict:
         "note": event.note,
         "created_at": event.created_at.isoformat(),
     }
+
+
+
+@router.post(
+    "/companies/{company_id}/articles-document",
+    response_model=ArticlesUploadResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "LEGAL_STAFF", "SUPER_ADMIN"))],
+)
+async def upload_articles_document(
+    company_id: uuid.UUID,
+    file: UploadFile = File(...),
+    _: uuid.UUID = Depends(require_company_access()),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Upload a source PDF; compute its SHA-256 before it can be reviewed."""
+    if file.content_type != "application/pdf":
+        raise HTTPException(status_code=415, detail="Only PDF Articles documents are accepted.")
+    payload = await file.read(20 * 1024 * 1024 + 1)
+    if not payload or len(payload) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Articles PDF must be between 1 byte and 20 MB.")
+    if not payload.startswith(b"%PDF-"):
+        raise HTTPException(status_code=422, detail="Uploaded file does not have a valid PDF signature.")
+
+    checksum = hashlib.sha256(payload).hexdigest()
+    document_id = uuid.uuid4()
+    settings = get_settings()
+    s3_key = (
+        f"{settings.s3_document_prefix}ARTICLES_OF_ASSOCIATION/"
+        f"{company_id}/{document_id}.pdf"
+    )
+    document = Document(
+        id=document_id,
+        company_id=company_id,
+        document_type=DocumentType.ARTICLES_OF_ASSOCIATION,
+        title="Articles of Association (uploaded source)",
+        version=1,
+        s3_key=s3_key,
+        file_size_bytes=len(payload),
+        mime_type="application/pdf",
+        checksum_sha256=checksum,
+        ai_generated=False,
+        in_review_queue=True,
+        human_approved=False,
+        auto_sent_blocked=True,
+        is_client_visible=False,
+        created_by=current_user.id,
+        is_active=True,
+    )
+    db.add(document)
+    await db.flush()
+
+    def _put_source_pdf():
+        import boto3
+        client = boto3.client(
+            "s3",
+            region_name=settings.aws_region,
+            aws_access_key_id=settings.aws_key_id,
+            aws_secret_access_key=settings.aws_secret,
+        )
+        client.put_object(
+            Bucket=settings.s3_bucket_name,
+            Key=s3_key,
+            Body=payload,
+            ContentType="application/pdf",
+            ServerSideEncryption="AES256",
+            Metadata={
+                "document_id": str(document_id),
+                "company_id": str(company_id),
+                "sha256": checksum,
+            },
+        )
+
+    try:
+        await asyncio.to_thread(_put_source_pdf)
+    except Exception:
+        await db.rollback()
+        logger.exception("Articles source PDF upload failed", company_id=str(company_id))
+        raise HTTPException(status_code=503, detail="Articles document storage is temporarily unavailable.")
+
+    return ArticlesUploadResponse(
+        document_id=str(document.id),
+        company_id=str(company_id),
+        title=document.title,
+        checksum_sha256=checksum,
+        file_size_bytes=len(payload),
+        status="UPLOADED_PENDING_REVIEW",
+    )
 
 
 @router.post(
