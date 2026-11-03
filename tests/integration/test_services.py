@@ -342,7 +342,7 @@ class TestComplianceService:
         from app.services.compliance_service import ComplianceService
 
         svc = ComplianceService(db)
-        kpis = await svc.get_dashboard_kpis()
+        kpis = await svc.get_dashboard_kpis(user_id=uuid.uuid4())
         assert isinstance(kpis, dict)
 
     @pytest.mark.asyncio
