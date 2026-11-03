@@ -877,3 +877,39 @@ class TestRulesService:
         history = await svc.get_version_history("OFF-001")
         assert len(history) >= 1
         assert history[0].rule_id == "OFF-001"
+
+
+@pytest.mark.asyncio
+async def test_dashboard_kpis_are_scoped_to_active_memberships(db, db_user, db_company, db_other_company):
+    from app.models.company import CompanyUserAccess
+    from app.services.compliance_service import ComplianceService
+
+    db.add(CompanyUserAccess(
+        user_id=db_user.id,
+        company_id=db_company.id,
+        can_edit=True,
+        can_view_financials=True,
+        is_active=True,
+    ))
+    await db.flush()
+
+    svc = ComplianceService(db)
+    scoped = await svc.get_dashboard_kpis(user_id=db_user.id)
+    assert scoped["total_companies"] == 1
+    assert scoped["green_count"] == 1
+    assert scoped["yellow_count"] == 0
+
+    await db.execute(
+        update(CompanyUserAccess)
+        .where(
+            CompanyUserAccess.user_id == db_user.id,
+            CompanyUserAccess.company_id == db_company.id,
+        )
+        .values(is_active=False)
+    )
+    await db.flush()
+
+    revoked = await svc.get_dashboard_kpis(user_id=db_user.id)
+    assert revoked["total_companies"] == 0
+    assert revoked["green_count"] == 0
+    assert revoked["yellow_count"] == 0
