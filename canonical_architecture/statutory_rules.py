@@ -947,7 +947,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "DEF-001",
         "legal_domain": "Corporate",
         "law": "Section 94, Companies Act 1994 (Bangladesh)",
-        "requirement": "Director disqualification under Section 94: assess only a specified statutory or Articles ground, director identity, authoritative evidence, effective date and continuing status. Section 94 does not impose a universal five-year disqualification period.",
+        "requirement": "Director disqualification under Section 94: assess only a specified statutory or Articles ground, director identity, authoritative evidence, effective date and continuing status. The unpaid-call threshold remains disputed across Bengali/English materials (180 days versus six months) and requires lawyer review. Section 94 does not impose a universal five-year disqualification period.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
