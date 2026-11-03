@@ -12,6 +12,23 @@ class TestRJSCForms:
         assert "FORM_XV" in codes
         assert "FORM_117" in codes
 
+    def test_verified_form_sections_and_deadlines(self):
+        from app.models.rjsc_forms import RJSC_FORMS_REFERENCE
+        forms = {item["form_code"]: item for item in RJSC_FORMS_REFERENCE}
+        expected = {
+            "FORM_IV": ("Section 56", 15),
+            "FORM_VIII": ("Section 88(1)", 15),
+            "FORM_IX": ("Section 92", 30),
+            "FORM_XII": ("Section 115", 14),
+            "FORM_XV": ("Section 151", 60),
+            "FORM_XVIII": ("Section 159(1)", 21),
+            "FORM_XXVIII": ("Section 172", 21),
+            "SCHEDULE_X": ("Section 36", 21),
+        }
+        for code, (section, days) in expected.items():
+            assert forms[code]["section"] == section
+            assert forms[code]["deadline_days"] == days
+
     def test_each_form_has_rule_mapping(self):
         from app.models.rjsc_forms import RJSC_FORMS_REFERENCE
         for form in RJSC_FORMS_REFERENCE:
