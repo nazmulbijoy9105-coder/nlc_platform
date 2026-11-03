@@ -253,8 +253,11 @@ async def run_async_migrations() -> None:
     )
 
     async with connectable.connect() as connection:
-        # Set timezone for the session
+        # Set timezone in its own short transaction, then release it.
+        # Alembic must own the migration transaction so transaction_per_migration
+        # and autocommit enum migrations can commit safely between revisions.
         await connection.execute(text("SET timezone = 'UTC'"))
+        await connection.commit()
         await connection.run_sync(do_run_migrations)
         await connection.commit()
 
