@@ -24,6 +24,7 @@ def upgrade() -> None:
     op.execute("UPDATE agms SET quorum_required = NULL")
     op.execute("UPDATE agms SET quorum_met = NULL WHERE quorum_met IS TRUE")
     op.execute("UPDATE agms SET auditor_reappointed = NULL WHERE auditor_reappointed IS TRUE")
+    op.execute("UPDATE agms SET minutes_prepared = NULL WHERE minutes_prepared IS FALSE")
 
     op.alter_column(
         "agms", "members_present",
@@ -41,6 +42,10 @@ def upgrade() -> None:
         "agms", "auditor_reappointed",
         existing_type=sa.Boolean(), nullable=True, server_default=None,
     )
+    op.alter_column(
+        "agms", "minutes_prepared",
+        existing_type=sa.Boolean(), nullable=True, server_default=None,
+    )
 
 
 def downgrade() -> None:
@@ -54,6 +59,7 @@ def downgrade() -> None:
     op.execute("UPDATE agms SET quorum_required = 2 WHERE quorum_required IS NULL")
     op.execute("UPDATE agms SET quorum_met = TRUE WHERE quorum_met IS NULL")
     op.execute("UPDATE agms SET auditor_reappointed = TRUE WHERE auditor_reappointed IS NULL")
+    op.execute("UPDATE agms SET minutes_prepared = FALSE WHERE minutes_prepared IS NULL")
 
     op.alter_column(
         "agms", "members_present",
@@ -70,4 +76,8 @@ def downgrade() -> None:
     op.alter_column(
         "agms", "auditor_reappointed",
         existing_type=sa.Boolean(), nullable=False, server_default=sa.true(),
+    )
+    op.alter_column(
+        "agms", "minutes_prepared",
+        existing_type=sa.Boolean(), nullable=False, server_default=sa.false(),
     )
