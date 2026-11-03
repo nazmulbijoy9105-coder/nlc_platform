@@ -374,9 +374,10 @@ class EngineOutput:
 # BANGLADESH COMPANIES ACT 1994 CONSTANTS
 # ═══════════════════════════════════════════════════════════════════════
 
-FIRST_AGM_DEADLINE_DAYS = 548
-SUBSEQUENT_AGM_DEADLINE_DAYS = 456
-FY_END_AGM_DEADLINE_DAYS = 182
+# Companies Act 1994, Section 81: 18 calendar months for first AGM;
+# no more than 15 calendar months between subsequent AGMs.
+FIRST_AGM_DEADLINE_MONTHS = 18
+SUBSEQUENT_AGM_DEADLINE_MONTHS = 15
 AGM_NOTICE_MINIMUM_DAYS = 21
 # AGM quorum is Articles-dependent; Section 85(2)(b) supplies the default only where Articles do not.
 ANNUAL_RETURN_DEADLINE_DAYS = 21   # Companies Act 1994, Section 36 (Schedule X)
@@ -739,22 +740,25 @@ class NLCRuleEngine:
     # MODULE 1: AUDITOR
     # ───────────────────────────────────────────────────────────────────
     @staticmethod
-    def _add_one_month(d: date) -> date:
-        """Add one calendar month to a date (Section 210(6) "one month").
+    def _add_months(d: date, months: int) -> date:
+        """Add calendar months, clamping month-end dates to the target month.
 
-        A calendar month from Jan 15 = Feb 15; from Jan 31 = Feb 28/29
-        (last valid day of the target month). This is legally distinct
-        from adding 30 days.
+        Used for statutory periods expressed in months (Companies Act 1994
+        Sections 81 and 210(6)); do not approximate calendar months as 30 days.
         """
-        target_month = d.month + 1
-        target_year = d.year
-        if target_month > 12:
-            target_month = 1
-            target_year += 1
-        # Handle month-end overflow (Jan 31 → Feb 28/29)
+        if months < 0:
+            raise ValueError("months must be non-negative")
+        month_index = d.month - 1 + months
+        target_year = d.year + month_index // 12
+        target_month = month_index % 12 + 1
         import calendar as _cal
-        max_day = _cal.monthrange(target_year, target_month)[1]
-        return date(target_year, target_month, min(d.day, max_day))
+        target_day = min(d.day, _cal.monthrange(target_year, target_month)[1])
+        return date(target_year, target_month, target_day)
+
+    @staticmethod
+    def _add_one_month(d: date) -> date:
+        """Section 210(6): add one calendar month, not 30 days."""
+        return NLCRuleEngine._add_months(d, 1)
 
     def _run_auditor_rules(self, c: CompanyProfile) -> None:
         # P0 LEGAL FIX: Section 210(6) requires first auditor appointment
@@ -839,8 +843,13 @@ class NLCRuleEngine:
                 severity=Severity.BLACK,
                 score_impact=25,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="AGM held without completed audit. Section 151: AGM procedurally defective, potentially void.",
-                statutory_basis="Sections 151, 210, Companies Act 1994 (Bangladesh)",
+                description=(
+                    "AGM held without completed audit. Section 183 governs audited "
+                    "financial statements laid before the AGM. NLC classifies this "
+                    "evidence-backed finding as BLACK under its internal risk policy; "
+                    "the legal effect on the AGM or resolutions requires case-specific review."
+                ),
+                statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
                 detail={"override_to_black": True},
                 is_black_override=True,
             ))
@@ -873,7 +882,7 @@ class NLCRuleEngine:
             ))
             return
         if c.agm_count == 0:
-            deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
+            deadline = self._add_months(c.incorporation_date or self.today, FIRST_AGM_DEADLINE_MONTHS)
             if self.today > deadline:  # type: ignore
                 delay = (self.today - deadline).days  # type: ignore
                 severity = Severity.BLACK if delay > 365 else Severity.RED
@@ -890,10 +899,12 @@ class NLCRuleEngine:
             return
 
         if c.last_agm_date and c.agm_held_this_cycle is False:
-            cond_a = c.last_agm_date + timedelta(days=SUBSEQUENT_AGM_DEADLINE_DAYS)
-            cond_b = self._get_fy_end_deadline(c)
-            agm_deadline = min(cond_a, cond_b)
-            basis = "15_MONTH" if cond_a <= cond_b else "6_MONTH_FY"
+            # Section 81 sets a maximum 15-calendar-month interval.
+            # The former six-month-after-FY-end rule has no Companies Act anchor
+            # for ordinary private companies and is not applied to this rule.
+            agm_deadline = self._add_months(
+                c.last_agm_date, SUBSEQUENT_AGM_DEADLINE_MONTHS
+            )
 
             if self.today > agm_deadline:
                 delay = (self.today - agm_deadline).days
@@ -904,9 +915,17 @@ class NLCRuleEngine:
                     severity=severity,
                     score_impact=self._graduated_agm_deduction(delay),
                     revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description=f"AGM overdue by {delay} days. Section 81: deadline by {basis} rule.",
+                    description=(
+                        f"Subsequent AGM not held within 15 calendar months of "
+                        f"the preceding AGM. Section 81. Deadline: {agm_deadline.isoformat()}; "
+                        f"overdue by {delay} days."
+                    ),
                     statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
-                    detail={"delay_days": delay, "basis": basis}
+                    detail={
+                        "delay_days": delay,
+                        "deadline": str(agm_deadline),
+                        "calculation_method": "calendar_months",
+                    }
                 ))
 
         if c.agm_scheduled_date and c.notice_sent_date:
@@ -2434,28 +2453,19 @@ class NLCRuleEngine:
         if delay <= 180: return 5
         return 10
 
-    def _get_fy_end_deadline(self, c: CompanyProfile) -> date:
-        # FIX Defect 20: Use company's actual financial_year_end instead of hardcoded 30 June.
-        fy_end = c.financial_year_end
-        if fy_end is None:
-            # Fallback: use 6 months after incorporation, or today if no incorporation date
-            base = c.incorporation_date or self.today
-            fy_end = date(base.year, base.month, base.day)
-        while c.last_agm_date and c.last_agm_date > fy_end:
-            fy_end = date(fy_end.year + 1, fy_end.month, fy_end.day)
-        return fy_end + timedelta(days=FY_END_AGM_DEADLINE_DAYS)
-
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:
         if c.last_agm_date is None:
             if c.agm_count == 0:
-                deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
-                if self.today > deadline:  # type: ignore
-                    return (self.today - deadline).days // 365  # type: ignore
+                deadline = self._add_months(
+                    c.incorporation_date or self.today,
+                    FIRST_AGM_DEADLINE_MONTHS,
+                )
+                if self.today > deadline:
+                    return (self.today - deadline).days // 365
             return 0
-            
-        deadline = min(
-            c.last_agm_date + timedelta(days=SUBSEQUENT_AGM_DEADLINE_DAYS),
-            self._get_fy_end_deadline(c)
+
+        deadline = self._add_months(
+            c.last_agm_date, SUBSEQUENT_AGM_DEADLINE_MONTHS
         )
         if self.today > deadline:
             return (self.today - deadline).days // 365
