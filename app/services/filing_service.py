@@ -203,20 +203,9 @@ class AGMService(BaseService[AGM]):
             quorum_required = None
             quorum_met = None
             quorum_basis = "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
-        member_count = getattr(company, "member_count", None) if company else None
-        company_type = getattr(company, "company_type", None) if company else None
-        company_type = getattr(company_type, "value", company_type)
-
-        if company_type == "PRIVATE_LIMITED" and member_count is not None and member_count > 0:
-            quorum_required = 2 if member_count <= 6 else 3
-            quorum_met: bool | None = members_present >= quorum_required
-            quorum_basis = "SECTION_85_2_B_DEFAULT_ARTICLES_NOT_REVIEWED"
-        else:
-            # Do not invent a quorum where company type or verified membership
-            # is unavailable, or where a different company category applies.
-            quorum_required = None
-            quorum_met = None
-            quorum_basis = "NOT_EVALUATED"
+        # The verified Articles/member evidence branch above is authoritative.
+        # Do not overwrite its result with an unverified company.member_count
+        # fallback: that would silently ignore an Articles-specific quorum.
 
         is_default = bool(agm.agm_deadline and agm_date > agm.agm_deadline)
         delay_days = (agm_date - agm.agm_deadline).days if is_default and agm.agm_deadline else 0
