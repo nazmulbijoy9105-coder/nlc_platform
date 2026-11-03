@@ -88,17 +88,50 @@ async def test_articles_verification_submit_review_revoke_and_event_history(
     assert verified_profile["articles_quorum_required"] is None
     assert verified_profile["articles_quorum_verified_by"] == reviewed.json()["reviewed_by"]
 
-    events = await api_client.get(
+    second_document = await _articles_document(db, db_company.id)
+    second_document.checksum_sha256 = "b" * 64
+    second_document.title = "Amended Articles of Association"
+    await db.flush()
+    second_submission = await api_client.post(
+        f"/api/v1/companies/{db_company.id}/articles-verification",
+        headers=admin_headers,
+        json={"document_id": str(second_document.id)},
+    )
+    assert second_submission.status_code == 201, second_submission.text
+    second_verification = second_submission.json()
+    assert second_verification["status"] == "PENDING"
+
+    second_review = await api_client.post(
+        f"/api/v1/companies/{db_company.id}/articles-verification/{second_verification['id']}/review",
+        headers=legal_headers,
+        json={
+            "decision": "VERIFIED",
+            "effective_from": "2021-01-01",
+            "quorum_variation_exists": True,
+            "quorum_required": 3,
+            "clause_reference": "Amended Articles clause 21",
+            "reviewer_note": "Amended quorum provision checked against the executed amended document.",
+        },
+    )
+    assert second_review.status_code == 200, second_review.text
+    assert second_review.json()["status"] == "VERIFIED"
+
+    old_events = await api_client.get(
         f"/api/v1/companies/{db_company.id}/articles-verification/{verification['id']}/events",
         headers=admin_headers,
     )
-    assert events.status_code == 200, events.text
-    assert [event["action"] for event in events.json()] == ["SUBMITTED", "VERIFIED"]
+    assert [event["action"] for event in old_events.json()] == [
+        "SUBMITTED", "VERIFIED", "SUPERSEDED"
+    ]
+    amended_profile = await CompanyService(db).build_company_profile(db_company.id)
+    assert amended_profile["articles_quorum_verified"] is True
+    assert amended_profile["articles_quorum_required"] == 3
+    assert second_document.id.__str__() in amended_profile["articles_quorum_evidence_ref"]
 
     revoked = await api_client.post(
-        f"/api/v1/companies/{db_company.id}/articles-verification/{verification['id']}/revoke",
+        f"/api/v1/companies/{db_company.id}/articles-verification/{second_verification['id']}/revoke",
         headers=super_admin_headers,
-        json={"reason": "The executed Articles were superseded by an amended filing."},
+        json={"reason": "The executed amended Articles were superseded by a newly registered version."},
     )
     assert revoked.status_code == 200, revoked.text
     assert revoked.json()["status"] == "REVOKED"
@@ -109,7 +142,7 @@ async def test_articles_verification_submit_review_revoke_and_event_history(
     assert revoked_profile["articles_quorum_required"] is None
 
     final_events = await api_client.get(
-        f"/api/v1/companies/{db_company.id}/articles-verification/{verification['id']}/events",
+        f"/api/v1/companies/{db_company.id}/articles-verification/{second_verification['id']}/events",
         headers=admin_headers,
     )
     assert [event["action"] for event in final_events.json()] == [
