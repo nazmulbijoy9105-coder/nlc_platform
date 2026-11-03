@@ -153,6 +153,14 @@ def upgrade():
     _add_missing_columns("companies", COMPANY_COLUMNS)
     _add_missing_columns("agms", AGM_COLUMNS)
 
+    # A missing appointment record is unknown, not proof that no auditor was appointed.
+    op.alter_column(
+        "audits", "first_auditor_appointed",
+        existing_type=sa.Boolean(),
+        nullable=True,
+        server_default=None,
+    )
+
     # NULL means quorum not established; historical defaults of TRUE/2 would
     # fabricate a legal conclusion before Articles and membership are checked.
     op.alter_column(
