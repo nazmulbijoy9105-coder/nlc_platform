@@ -227,7 +227,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AUD-003": {
         "rule_id": "AUD-003",
         "legal_domain": "Corporate",
-        "law": "Sections 151, 210, Companies Act 1994 (Bangladesh)",
+        "law": "Sections 183 and 210, Companies Act 1994 (Bangladesh)",
         "requirement": "AGM Held Without Completed Audit — BLACK OVERRIDE - AGM held but no audit completed. Fundamental statutory breach invalidating AGM, accounts, and all resolutions. Company may be liable for fraudulent AGM. BLACK OVERRIDE: forces score to BLACK band. Corporate Rescue mandatory.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
@@ -235,8 +235,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
         "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
-        "severity": "BLACK",
-        "score_impact": 25,
+        "severity": "YELLOW",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "AUD-004": {
