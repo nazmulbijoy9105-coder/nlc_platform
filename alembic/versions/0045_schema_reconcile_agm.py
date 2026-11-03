@@ -77,6 +77,44 @@ AGM_COLUMNS = [
     ("quorum_basis", sa.String(length=64)),
 ]
 
+LEGAL_RULE_COLUMNS = [
+    ("verified_by", sa.String(length=100)),
+    ("verified_at", sa.Date()),
+    ("verification_notes", sa.Text()),
+]
+
+QUOTATION_COLUMNS = [
+    ("rejected_by", sa.dialects.postgresql.UUID(as_uuid=True)),
+]
+
+
+def _ensure_rescue_audit_log():
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS rescue_audit_log (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            rescue_plan_id UUID NOT NULL REFERENCES rescue_plans(id) ON DELETE CASCADE,
+            finding_id UUID NULL REFERENCES compliance_flags(id) ON DELETE SET NULL,
+            rule_id VARCHAR(50) NOT NULL,
+            rule_version VARCHAR(20) NOT NULL,
+            action_performed VARCHAR(200) NOT NULL,
+            actor_user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+            evidence_ref VARCHAR(500) NULL,
+            outcome VARCHAR(50) NOT NULL,
+            notes TEXT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+    """)
+    for name, column in (
+        ("ix_rescue_audit_log_plan_id", "rescue_plan_id"),
+        ("ix_rescue_audit_log_actor_id", "actor_user_id"),
+        ("ix_rescue_audit_log_finding_id", "finding_id"),
+        ("ix_rescue_audit_log_created_at", "created_at"),
+    ):
+        op.execute(
+            f"CREATE INDEX IF NOT EXISTS {name} ON rescue_audit_log ({column})"
+        )
+
 
 def _add_missing_columns(table_name, definitions):
     bind = op.get_bind()
@@ -95,6 +133,25 @@ def _add_missing_columns(table_name, definitions):
 def upgrade():
     _add_missing_columns("companies", COMPANY_COLUMNS)
     _add_missing_columns("agms", AGM_COLUMNS)
+    _add_missing_columns("legal_rules", LEGAL_RULE_COLUMNS)
+    _add_missing_columns("quotations", QUOTATION_COLUMNS)
+
+    # Historical 0035 requires PENDING, not VERIFIED, for unreviewed rules.
+    bind = op.get_bind()
+    legal_rule_columns = {c["name"]: c for c in inspect(bind).get_columns("legal_rules")}
+    if "verification_status" not in legal_rule_columns:
+        op.add_column(
+            "legal_rules",
+            sa.Column("verification_status", sa.String(length=20), nullable=False,
+                      server_default="PENDING"),
+        )
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_quotations_rejected_by "
+        "ON quotations (rejected_by)"
+    )
+
+    # Historical 0038 rescue audit evidence table, created idempotently.
+    _ensure_rescue_audit_log()
 
     # A quorum result must not be silently inferred for legacy rows.
     op.alter_column("agms", "quorum_met", existing_type=sa.Boolean(), nullable=True)
