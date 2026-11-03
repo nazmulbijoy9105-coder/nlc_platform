@@ -809,16 +809,16 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AUD-005": {
         "rule_id": "AUD-005",
         "legal_domain": "Corporate",
-        "law": "Section 210(2), Companies Act 1994 (Bangladesh)",
-        "requirement": "Subsequent Auditor Not Appointed - No auditor appointed for current FY. Section 210(2): mandatory at every AGM.",
+        "law": "Section 210(3), Companies Act 1994 (Bangladesh)",
+        "requirement": "Auditor reappointment decision is not recorded for the held AGM. Obtain the AGM resolution and check statutory exceptions. No separate 120-day Companies Act deadline is asserted.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
-        "exceptions": [],
-        "evidence_required": ["DOCUMENTARY_EVIDENCE"],
+        "exceptions": ["Section 210(3) statutory reappointment exceptions"],
+        "evidence_required": ["AGM_RESOLUTION"],
         "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 10,
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "BNK-001": {
