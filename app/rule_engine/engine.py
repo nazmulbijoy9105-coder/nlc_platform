@@ -2093,6 +2093,7 @@ class NLCRuleEngine:
         # Check for verified, structured disqualification grounds
         verified_grounds = []
         unverified_allegations = []
+        disputed_grounds = []
 
         if c.disqualification_grounds:
             for g in c.disqualification_grounds:
@@ -2102,20 +2103,21 @@ class NLCRuleEngine:
                 director_name = g.get("director_name")
                 effective_date = g.get("effective_date")
                 continuing = g.get("continuing_status")
-                if (
-                    ground_type in VALID_GROUNDS
-                    and isinstance(director_name, str) and director_name.strip()
+                base_evidence_complete = (
+                    isinstance(director_name, str) and director_name.strip()
                     and isinstance(evidence_ref, str) and evidence_ref.strip()
                     and isinstance(authority, str) and authority.strip()
-                    and effective_date
+                    and bool(effective_date)
                     and continuing is True
-                    and (
-                        ground_type != "UNPAID_CALL"
-                        or (
-                            isinstance(g.get("days_since_payment_due"), int)
-                            and g["days_since_payment_due"] >= 180
-                        )
-                    )
+                )
+                if ground_type == "UNPAID_CALL" and base_evidence_complete:
+                    # BDLaws Bengali text states 180 days; English materials and
+                    # some case materials describe six months. Keep this disputed
+                    # until a Bangladesh company-law reviewer resolves the text.
+                    disputed_grounds.append(g)
+                elif (
+                    ground_type in VALID_GROUNDS
+                    and base_evidence_complete
                     and (
                         ground_type != "AOA_PRESCRIBED"
                         or bool(g.get("aoa_provision_ref"))
@@ -2129,6 +2131,20 @@ class NLCRuleEngine:
         # → treat as unverified allegations, NOT as BLACK override
         if not c.disqualification_grounds and c.disqualification_details:
             unverified_allegations = c.disqualification_details
+
+        if disputed_grounds:
+            self._add_flag(ComplianceFlag(
+                rule_id="DEF-001",
+                flag_code="DIRECTOR_DISQUALIFICATION_GROUND_DISPUTED",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Unpaid-call disqualification evidence is recorded, but statutory materials differ on the threshold (180 days versus six months). Legal review is required before classifying this as a confirmed disqualification.",
+                statutory_basis="Section 94(1)(d), Companies Act 1994 (Bangladesh)",
+                state=RuleState.DISPUTED,
+                eval_state="UNKNOWN",
+                detail={"disputed_grounds": disputed_grounds, "legal_review_required": True},
+            ))
 
         if verified_grounds:
             disq_count = len(verified_grounds)
