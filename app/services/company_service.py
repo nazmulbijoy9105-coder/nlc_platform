@@ -36,6 +36,7 @@ def _agm_profile_evidence(latest_agm) -> dict:
             "agm_minutes_prepared": None,
             "agm_quorum_met": None,
             "notice_sent_date": None,
+            "agm_notice_verified_absent": None,
         }
 
     members_present = getattr(latest_agm, "members_present", None)
@@ -60,6 +61,11 @@ def _agm_profile_evidence(latest_agm) -> dict:
         "agm_minutes_prepared": minutes_prepared,
         "agm_quorum_met": quorum_met,
         "notice_sent_date": getattr(latest_agm, "notice_sent_date", None),
+        # False is the ORM default, not proof of service; only explicit True
+        # confirms that notice was verified as not served.
+        "agm_notice_verified_absent": (
+            True if getattr(latest_agm, "notice_missing", None) is True else None
+        ),
     }
 
 
@@ -419,6 +425,8 @@ class CompanyService(BaseService[Company]):
             "agm_held_this_cycle":        latest_agm.agm_held if latest_agm else (company.last_agm_date is not None and (date.today() - company.last_agm_date).days <= 456),
             "agm_minutes_prepared":       agm_profile_evidence["agm_minutes_prepared"],
             "agm_quorum_met":              agm_profile_evidence["agm_quorum_met"],
+            "notice_sent_date":             agm_profile_evidence["notice_sent_date"],
+            "agm_notice_verified_absent":   agm_profile_evidence["agm_notice_verified_absent"],
 
             # Audit State
             "first_auditor_appointed":    bool(company.first_auditor_appointed) if company.first_auditor_appointed is not None else None,
