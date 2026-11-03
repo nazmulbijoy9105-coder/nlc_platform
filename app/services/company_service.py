@@ -428,7 +428,9 @@ class CompanyService(BaseService[Company]):
             if status is not None
         }
         first_auditor_appointed = (
-            True
+            False
+            if first_auditor_appointment_date is not None and False in first_auditor_statuses
+            else True
             if first_auditor_appointment_date is not None
             else next(iter(first_auditor_statuses))
             if len(first_auditor_statuses) == 1
