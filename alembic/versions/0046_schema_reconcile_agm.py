@@ -227,7 +227,7 @@ def upgrade():
             rule_condition = jsonb_set(
                 COALESCE(rule_condition, '{}'::jsonb),
                 '{trigger}',
-                to_jsonb('agm_held_this_cycle == True AND current_articles_verified == True AND articles_quorum_verified_by IS NOT NULL AND articles_quorum_verified_at IS NOT NULL AND articles_quorum_evidence_ref IS NOT NULL AND members_total_at_agm > 0 AND members_total_evidence_ref IS NOT NULL AND members_present_evidence_ref IS NOT NULL AND members_present_at_agm <= members_total_at_agm AND members_present_at_agm < (articles_quorum_required IF SET ELSE (2 IF members_total_at_agm <= 6 ELSE 3))'::text),
+                to_jsonb('agm_held_this_cycle == True AND articles_quorum_verified == True AND articles_quorum_verified_by IS NOT NULL AND articles_quorum_verified_at IS NOT NULL AND articles_quorum_evidence_ref IS NOT NULL AND members_total_at_agm > 0 AND members_total_evidence_ref IS NOT NULL AND members_present_evidence_ref IS NOT NULL AND members_present_at_agm <= members_total_at_agm AND members_present_at_agm < (articles_quorum_required IF SET ELSE (2 IF members_total_at_agm <= 6 ELSE 3))'::text),
                 true
             )
         WHERE rule_id = 'AGM-005'
