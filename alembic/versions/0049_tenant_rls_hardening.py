@@ -187,6 +187,30 @@ def upgrade() -> None:
                 WITH CHECK (public.nlc_can_access_company(company_id));
         """))
 
+    # Commercial engagements are staff-only. Replace the legacy ADMIN
+    # sentinel check so authenticated staff requests use their real user ID.
+    op.execute("""
+        ALTER TABLE public.engagements ENABLE ROW LEVEL SECURITY;
+        DROP POLICY IF EXISTS engagements_admin_only ON public.engagements;
+        DROP POLICY IF EXISTS engagements_staff_only ON public.engagements;
+        CREATE POLICY engagements_staff_only ON public.engagements
+            FOR ALL
+            USING (public.nlc_current_user_is_staff())
+            WITH CHECK (public.nlc_current_user_is_staff());
+    """)
+
+    # PostgreSQL views otherwise execute with the view owner's privileges and
+    # can bypass base-table RLS. Force invoker permissions for every dashboard
+    # view so the same tenant policies apply to view queries.
+    for view in (
+        "vw_admin_dashboard_kpis",
+        "vw_company_flag_summary",
+        "vw_revenue_pipeline",
+        "vw_risk_distribution",
+        "vw_upcoming_deadlines",
+    ):
+        op.execute(sa.text(f"ALTER VIEW public.{view} SET (security_invoker = true)"))
+
     # Membership rows: users may inspect their own active/inactive grants;
     # only current staff may grant, change, or revoke memberships.
     op.execute("""
@@ -426,6 +450,20 @@ def upgrade() -> None:
                     public.regulatory_rules,
                     public.sro_registry
                 TO nlc_app_role;
+                GRANT SELECT ON TABLE
+                    public.vw_admin_dashboard_kpis,
+                    public.vw_company_flag_summary,
+                    public.vw_revenue_pipeline,
+                    public.vw_risk_distribution,
+                    public.vw_upcoming_deadlines
+                TO nlc_app_role;
+                REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE
+                    public.vw_admin_dashboard_kpis,
+                    public.vw_company_flag_summary,
+                    public.vw_revenue_pipeline,
+                    public.vw_risk_distribution,
+                    public.vw_upcoming_deadlines
+                FROM nlc_app_role;
 
                 REVOKE TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA public FROM nlc_app_role;
                 REVOKE UPDATE, DELETE, TRUNCATE ON TABLE public.user_activity_logs FROM nlc_app_role;
