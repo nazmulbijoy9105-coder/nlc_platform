@@ -284,74 +284,79 @@ class CompanyService(BaseService[Company]):
             }
         return dict(row)
 
-    async def get_risk_distribution(self, user_id: uuid.UUID | None = None) -> list[dict]:
-        """Return risk distribution limited to companies the caller may access.
+    async def get_risk_distribution(self, user_id: uuid.UUID) -> list[dict]:
+        """Return risk distribution for active companies in the user's memberships.
 
-        A NULL user_id is reserved for trusted system/admin-context callers
-        (e.g. background jobs). Interactive API callers must pass their ID.
+        Filter source companies before aggregation so global counts or
+        percentages cannot disclose another tenant's portfolio.
         """
+        accessible_company_ids = (
+            select(CompanyUserAccess.company_id)
+            .where(
+                CompanyUserAccess.user_id == user_id,
+                CompanyUserAccess.is_active.is_(True),
+            )
+        )
+        result = await self.db.execute(
+            select(
+                Company.current_risk_band.label("risk_band"),
+                func.count(Company.id).label("company_count"),
+            )
+            .where(
+                Company.is_active.is_(True),
+                Company.id.in_(accessible_company_ids),
+            )
+            .group_by(Company.current_risk_band)
+        )
+        rows = result.all()
+        total = sum(int(row.company_count) for row in rows)
+        if total == 0:
+            return []
+
+        order = {"BLACK": 0, "RED": 1, "YELLOW": 2, "GREEN": 3}
+        distribution = []
+        for row in rows:
+            band = row.risk_band.value if hasattr(row.risk_band, "value") else row.risk_band
+            distribution.append({
+                "risk_band": band,
+                "company_count": int(row.company_count),
+                "percentage": round(int(row.company_count) * 100.0 / total, 1),
+            })
+        return sorted(distribution, key=lambda item: order.get(str(item["risk_band"]), 4))
+
+    async def get_upcoming_deadlines(
+        self,
+        days_ahead: int,
+        user_id: uuid.UUID,
+    ) -> list[dict]:
+        """Return upcoming deadlines only for the user's active memberships."""
         result = await self.db.execute(
             text(
-                """
-                SELECT
-                    c.current_risk_band AS risk_band,
-                    COUNT(*) AS company_count,
-                    ROUND(
-                        COUNT(*) * 100.0 / NULLIF(SUM(COUNT(*)) OVER (), 0),
-                        1
-                    ) AS percentage
-                FROM companies c
-                WHERE c.is_active = TRUE
-                  AND (
-                    CAST(:user_id AS UUID) IS NULL
-                    OR EXISTS (
-                        SELECT 1
-                        FROM company_user_access cua
-                        WHERE cua.company_id = c.id
-                          AND cua.user_id = CAST(:user_id AS UUID)
-                          AND cua.is_active = TRUE
-                    )
-                  )
-                GROUP BY c.current_risk_band
-                ORDER BY CASE c.current_risk_band
-                    WHEN 'BLACK' THEN 1
-                    WHEN 'RED' THEN 2
-                    WHEN 'YELLOW' THEN 3
-                    WHEN 'GREEN' THEN 4
-                    ELSE 5
-                END
-                """
+                "SELECT * FROM vw_upcoming_deadlines "
+                "WHERE days_remaining <= :days "
+                "AND company_id IN ("
+                "  SELECT company_id FROM company_user_access "
+                "  WHERE user_id = :user_id AND is_active IS TRUE"
+                ") "
+                "ORDER BY days_remaining"
             ),
-            {"user_id": user_id},
+            {"days": days_ahead, "user_id": user_id},
         )
         return [dict(row) for row in result.mappings().all()]
 
-    async def get_upcoming_deadlines(self, days_ahead: int = 30, user_id: uuid.UUID | None = None) -> list[dict]:
-        """Fetch upcoming deadlines only for companies the caller may access.
+    async def get_upcoming_deadlines_for_system(self, days_ahead: int = 30) -> list[dict]:
+        """Portfolio-wide deadline scan for the privileged background worker.
 
-        A NULL user_id is reserved for trusted system/admin-context callers
-        (e.g. background jobs). Interactive API callers must pass their ID.
+        The caller must establish the database admin context before invoking
+        this method. User-facing API routes must use get_upcoming_deadlines()
+        with the authenticated user's ID.
         """
         result = await self.db.execute(
             text(
-                """
-                SELECT d.*
-                FROM vw_upcoming_deadlines d
-                WHERE d.days_remaining <= :days
-                  AND (
-                    CAST(:user_id AS UUID) IS NULL
-                    OR EXISTS (
-                        SELECT 1
-                        FROM company_user_access cua
-                        WHERE cua.company_id = d.company_id
-                          AND cua.user_id = CAST(:user_id AS UUID)
-                          AND cua.is_active = TRUE
-                    )
-                  )
-                ORDER BY d.days_remaining
-                """
+                "SELECT * FROM vw_upcoming_deadlines "
+                "WHERE days_remaining <= :days ORDER BY days_remaining"
             ),
-            {"days": days_ahead, "user_id": user_id},
+            {"days": days_ahead},
         )
         return [dict(row) for row in result.mappings().all()]
 
