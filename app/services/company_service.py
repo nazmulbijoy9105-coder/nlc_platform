@@ -35,6 +35,7 @@ def _agm_profile_evidence(latest_agm) -> dict:
             "auditor_reappointed_at_agm": None,
             "agm_minutes_prepared": None,
             "notice_sent_date": None,
+            "agm_scheduled_date": None,
         }
 
     members_present = getattr(latest_agm, "members_present", None)
@@ -52,6 +53,7 @@ def _agm_profile_evidence(latest_agm) -> dict:
         "auditor_reappointed_at_agm": getattr(latest_agm, "auditor_reappointed", None),
         "agm_minutes_prepared": minutes_prepared,
         "notice_sent_date": getattr(latest_agm, "notice_sent_date", None),
+        "agm_scheduled_date": getattr(latest_agm, "scheduled_date", None),
     }
 
 
@@ -558,7 +560,7 @@ class CompanyService(BaseService[Company]):
 
             # AGM Details
             "agm_adjourned_without_notice":  getattr(company, "agm_adjourned_without_notice", False),
-            "agm_scheduled_date":            getattr(company, "agm_scheduled_date", None),
+            "agm_scheduled_date":            agm_profile_evidence["agm_scheduled_date"] or getattr(company, "agm_scheduled_date", None),
             "notice_sent_date":              agm_profile_evidence["notice_sent_date"],
             "members_present_at_agm":        agm_profile_evidence["members_present_at_agm"],
             "auditor_reappointed_at_agm":    agm_profile_evidence["auditor_reappointed_at_agm"],
