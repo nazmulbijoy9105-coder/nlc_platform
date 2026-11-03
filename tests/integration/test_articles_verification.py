@@ -110,6 +110,7 @@ async def test_articles_verification_submit_review_revoke_and_event_history(
             "quorum_variation_exists": True,
             "quorum_required": 3,
             "clause_reference": "Amended Articles clause 21",
+            "quorum_clause_text": "The quorum for a general meeting shall be three members personally present.",
             "reviewer_note": "Amended quorum provision checked against the executed amended document.",
         },
     )
