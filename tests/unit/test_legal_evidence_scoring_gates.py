@@ -221,7 +221,6 @@ def test_section_94_unverified_disqualification_allegation_is_unknown():
                 "ground_type": "UNPAID_CALL",
                 "director_name": "Director A",
                 "evidence_ref": "NOTICE-001",
-                "authority": "RJSC",
                 "effective_date": "2026-01-01",
                 "continuing_status": True,
                 "days_since_payment_due": 120,
