@@ -2,7 +2,7 @@ AGM-001|First AGM Default|Section 81, Companies Act 1994 (Bangladesh)|RED|25|f|t
 AGM-002|Subsequent AGM Default|Section 81, Companies Act 1994 (Bangladesh)|YELLOW|20|f|t
 AGM-003|AGM Notice Defective|Companies Act 1994, Section 85|YELLOW|10|f|t
 AGM-004|AGM Notice Missing|Companies Act 1994, Section 85|RED|20|f|t
-AGM-005|AGM Quorum Not Met|Section 83, Companies Act 1994 (Bangladesh)|YELLOW|15|f|t
+AGM-005|AGM Quorum Not Met|Section 85(2)(b), Companies Act 1994 (Bangladesh)|YELLOW|15|f|t
 AGM-006|AGM Minutes Not Prepared|Companies Act 1994, Section 83|YELLOW|15|f|t
 AGM-007|AGM Adjourned Without Notice|Companies Act 1994, Section 84|YELLOW|5|f|t
 AR-001|Annual Return Default|Companies Act 1994, Section 119|YELLOW|20|f|t
