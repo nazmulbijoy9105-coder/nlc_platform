@@ -76,15 +76,16 @@ class AGM(FullMixin, Base):
 
     # ── Quorum ────────────────────────────────────────────────────
     # AGM-005: quorum not met
-    quorum_met: Mapped[bool] = mapped_column(Boolean, default=True)
-    members_present: Mapped[int] = mapped_column(Integer, default=0)
-    quorum_required: Mapped[int] = mapped_column(
-        Integer, default=2, comment="Section 83 CA 1994 — 2 members for private"
+    quorum_met: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
+    members_present: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    quorum_required: Mapped[int | None] = mapped_column(
+        Integer, nullable=True, default=None,
+        comment="Section 85(2)(b): Articles-dependent; statutory default varies by company/member count"
     )
 
     # ── Auditor ───────────────────────────────────────────────────
     # AGM-006: auditor not reappointed at AGM
-    auditor_reappointed: Mapped[bool] = mapped_column(Boolean, default=True)
+    auditor_reappointed: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
 
     # ── Minutes ───────────────────────────────────────────────────
     minutes_prepared: Mapped[bool] = mapped_column(Boolean, default=False)
