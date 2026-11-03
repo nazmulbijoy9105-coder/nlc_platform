@@ -423,7 +423,7 @@ class CompanyService(BaseService[Company]):
             # AGM State
             "agm_count":                  agm_count,
             "last_agm_date":              company.last_agm_date,
-            "agm_held_this_cycle":        latest_agm.agm_held if latest_agm else (company.last_agm_date is not None and date.today() <= NLCRuleEngine._add_months(company.last_agm_date, 15)),
+            "agm_held_this_cycle":        latest_agm.agm_held if latest_agm else (company.last_agm_date is not None and date.today() <= NLCRuleEngine._subsequent_agm_deadline(company.last_agm_date)),
             "agm_minutes_prepared":       agm_profile_evidence["agm_minutes_prepared"],
             "agm_quorum_met":              agm_profile_evidence["agm_quorum_met"],
             "agm_quorum_required":         agm_profile_evidence["agm_quorum_required"],
