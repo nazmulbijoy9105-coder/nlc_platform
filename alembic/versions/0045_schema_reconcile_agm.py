@@ -87,6 +87,19 @@ QUOTATION_COLUMNS = [
     ("rejected_by", sa.dialects.postgresql.UUID(as_uuid=True)),
 ]
 
+# Historical 0036 semantics: NULL means unknown; False means confirmed absent.
+NULLABLE_EVIDENCE_COLUMNS = [
+    "first_auditor_appointed",
+    "trade_license_obtained",
+    "factory_license_obtained",
+    "worker_compensation_filed",
+    "bsec_quarterly_report_filed",
+    "cg_certificate_obtained",
+    "board_independent_director",
+    "audit_committee_established",
+    "moa_aoa_filed",
+]
+
 
 def _ensure_rescue_audit_log():
     op.execute("""
@@ -152,6 +165,19 @@ def upgrade():
 
     # Historical 0038 rescue audit evidence table, created idempotently.
     _ensure_rescue_audit_log()
+
+    # Reapply 0036's fail-closed tri-state semantics where branches retained
+    # NOT NULL/default values. Existing values are preserved; defaults removed.
+    company_columns = {c["name"] for c in inspect(bind).get_columns("companies")}
+    for column_name in NULLABLE_EVIDENCE_COLUMNS:
+        if column_name in company_columns:
+            op.alter_column(
+                "companies",
+                column_name,
+                existing_type=sa.Boolean(),
+                nullable=True,
+                server_default=None,
+            )
 
     # A quorum result must not be silently inferred for legacy rows.
     op.alter_column("agms", "quorum_met", existing_type=sa.Boolean(), nullable=True)
