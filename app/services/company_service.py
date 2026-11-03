@@ -739,7 +739,9 @@ class CompanyService(BaseService[Company]):
             "director_consent_filed": company.director_consent_filed,
             "director_office_of_profit": company.director_office_of_profit,
             "managing_director_appointment_date": company.managing_director_appointment_date,
-            "member_count": company.member_count or 0,
+            "member_count": company.member_count,
+            "articles_quorum_verified": company.articles_quorum_verified,
+            "articles_quorum_required": company.articles_quorum_required,
             "business_commencement_declaration_filed": company.business_commencement_declaration_filed,
         })
 
