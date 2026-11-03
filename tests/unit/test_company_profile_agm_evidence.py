@@ -16,6 +16,14 @@ def test_missing_agm_record_keeps_attendance_and_auditor_status_unknown():
         "agm_minutes_prepared": None,
         "notice_sent_date": None,
         "agm_scheduled_date": None,
+        "members_present_evidence_ref": None,
+        "members_total_at_agm": None,
+        "members_total_evidence_ref": None,
+        "articles_quorum_verified": None,
+        "articles_quorum_required": None,
+        "articles_quorum_verified_by": None,
+        "articles_quorum_verified_at": None,
+        "articles_quorum_evidence_ref": None,
     }
 
 
