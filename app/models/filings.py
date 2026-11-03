@@ -60,6 +60,7 @@ class AGM(FullMixin, Base):
         Date, nullable=True, index=True,
         comment="Calculated: incorporation+548d (first) or FY end+182d (subsequent)"
     )
+    scheduled_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     notice_sent_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     notice_days_before: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # AGM-003: notice defective (< 21 days)
