@@ -860,11 +860,21 @@ class TestEscalationRules:
         matching _calculate_score's active flag filter. This prevents ESC-003
         from counting flags that would be filtered out in score calculation.
         """
-        # Create 2 genuine BLACK override conditions
+        # Two independently evidenced BLACK conditions: a verified
+        # Section 94 director disqualification and paid-up capital above
+        # authorised capital. AUD-003 is no longer an automatic BLACK rule.
         profile = build_profile(
             agm_held_this_cycle=True,
-            audit_complete=False,       # AUD-003: BLACK override
-            current_director_count=0,   # INC-003: BLACK override
+            agm_held_without_audit=False,
+            current_director_count=2,
+            directors_verified=True,
+            disqualification_grounds=[{
+                "ground_type": "UNPAID_CALL",
+                "evidence_ref": "test-evidence://court-or-rjsc-record",
+                "authority": "RJSC",
+            }],
+            paid_up_capital_bdt=2_000_000,
+            authorized_capital_bdt=1_000_000,
         )
         output = rule_engine.evaluate(profile)
 
@@ -1111,8 +1121,16 @@ class TestEngineIntegrity:
         """BLACK band company is correctly identified with score <= 29."""
         profile = build_profile(
             agm_held_this_cycle=True,
-            audit_complete=False,
-            current_director_count=0,
+            agm_held_without_audit=False,
+            current_director_count=2,
+            directors_verified=True,
+            disqualification_grounds=[{
+                "ground_type": "UNPAID_CALL",
+                "evidence_ref": "test-evidence://court-or-rjsc-record",
+                "authority": "RJSC",
+            }],
+            paid_up_capital_bdt=2_000_000,
+            authorized_capital_bdt=1_000_000,
         )
         output = rule_engine.evaluate(profile)
         assert output.score_breakdown.risk_band == "BLACK"
