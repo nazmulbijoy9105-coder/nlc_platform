@@ -38,7 +38,7 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | AUD-002 | Audit Not Completed Before AGM | Section 183, Companies Act 1994 (Bangladesh) | RED | 12 | no | Engine-aligned 2026-11-02 |
 | AUD-003 | AGM Held Without Completed Audit — BLACK OVERRIDE | Section 183, Companies Act 1994 (Bangladesh) | BLACK | 10 | YES | Corrected 2026-11-03; BLACK is NLC policy, not statutory consequence |
 | AUD-004 | Auditor Not Reappointed at AGM | Section 210(3), Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Corrected 2026-11-03; statutory exceptions apply |
-| AUD-005 | Subsequent Auditor Not Appointed | Section 210(3), Companies Act 1994 (Bangladesh) | RED | 10 | no | Engine-aligned 2026-11-02 |
+| AUD-005 | Subsequent Auditor Appointment Evidence Unknown | Section 210(3), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | Corrected 2026-11-03; no separate 120-day statutory deadline asserted |
 | BNK-001 | Winding Up Petition Filed | Bankruptcy Act 1997 (Bangladesh), Section 12 | BLACK | 10 | YES | Engine-aligned 2026-11-02 |
 | BNK-002 | Liquidator Appointed | Bankruptcy Act 1997 (Bangladesh), Section 14 | BLACK | 10 | YES | Engine-aligned 2026-11-02 |
 | BNK-003 | Court-Ordered Winding Up | Bankruptcy Act 1997 (Bangladesh), Section 18 | BLACK | 35 | YES | Engine-aligned 2026-11-02 |
