@@ -29,10 +29,10 @@ def upgrade():
         sa.Column("submitted_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("reviewed_by", UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=True),
         sa.Column("reviewed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("effective_from", sa.Date(), nullable=False),
+        sa.Column("effective_from", sa.Date(), nullable=True),
         sa.Column("quorum_variation_exists", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("quorum_required", sa.Integer(), nullable=True),
-        sa.Column("clause_reference", sa.String(255), nullable=False),
+        sa.Column("clause_reference", sa.String(255), nullable=True),
         sa.Column("reviewer_note", sa.Text(), nullable=True),
         sa.Column("revoked_by", UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=True),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
@@ -42,6 +42,7 @@ def upgrade():
         sa.CheckConstraint("status IN ('PENDING', 'VERIFIED', 'REJECTED', 'REVOKED', 'SUPERSEDED')", name="ck_articles_verifications_status"),
         sa.CheckConstraint("source_checksum_sha256 ~ '^[0-9a-f]{64}
         sa.CheckConstraint("quorum_required IS NULL OR quorum_required BETWEEN 1 AND 100", name="ck_articles_verifications_quorum"),
+        sa.CheckConstraint("status <> 'VERIFIED' OR (effective_from IS NOT NULL AND clause_reference IS NOT NULL)", name="ck_articles_verifications_verified_fields"),
         sa.CheckConstraint("quorum_variation_exists = FALSE OR quorum_required IS NOT NULL", name="ck_articles_verifications_variation_quorum"),
         sa.CheckConstraint(
             "(status = 'PENDING' AND reviewed_by IS NULL AND reviewed_at IS NULL) OR "
