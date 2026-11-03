@@ -419,11 +419,20 @@ class CompanyService(BaseService[Company]):
             company.first_auditor_appointment_date
             or (first_auditor_record.first_auditor_appointment_date if first_auditor_record else None)
         )
+        first_auditor_statuses = {
+            status
+            for status in (
+                [company.first_auditor_appointed]
+                + [a.first_auditor_appointed for a in audits_sorted]
+            )
+            if status is not None
+        }
         first_auditor_appointed = (
             True
             if first_auditor_appointment_date is not None
-            or any(a.first_auditor_appointed is True for a in audits_sorted)
-            else company.first_auditor_appointed
+            else next(iter(first_auditor_statuses))
+            if len(first_auditor_statuses) == 1
+            else None
         )
 
         agm_profile_evidence = _agm_profile_evidence(latest_agm)
