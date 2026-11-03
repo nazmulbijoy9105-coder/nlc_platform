@@ -193,3 +193,20 @@ def test_every_rule_has_rescue():
 def test_rescue_prerequisites_declared_and_unverified_not_frozen():
     for rid, r in STATUTORY_RULE_REGISTRY.items():
         assert r.provision_status.value in {"RECONCILE", "VERIFIED"}
+
+
+def test_aud002_canonical_rule_matches_pre_agm_section_183_evaluator():
+    rule = STATUTORY_RULE_REGISTRY["AUD-002"]
+    assert rule.law == "Section 183, Companies Act 1994 (Bangladesh)"
+    assert rule.provision == "Section 183"
+    assert "Section 151" not in rule.requirement
+    assert "automatically invalid" in rule.requirement.lower()
+    assert rule.provision_status.value == "RECONCILE"
+
+
+def test_aud003_is_non_scoring_lawyer_judgment_not_black_override():
+    rule = STATUTORY_RULE_REGISTRY["AUD-003"]
+    assert rule.severity.value == "NOT_EVALUATED"
+    assert rule.score_impact == 0
+    assert RuleState.REQUIRES_LAWYER_JUDGMENT in rule.evaluation_states
+    assert rule.provision_status.value == "RECONCILE"
