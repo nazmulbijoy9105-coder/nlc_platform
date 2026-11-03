@@ -163,6 +163,9 @@ class CompanyProfile:
     company_name: str
     company_type: str = "PRIVATE_LIMITED"
     member_count: int | None = None
+    members_total_at_agm: int | None = None
+    members_total_evidence_ref: str | None = None
+    members_present_evidence_ref: str | None = None
     articles_quorum_verified: bool | None = None
     articles_quorum_required: int | None = None
     articles_quorum_verified_by: str | None = None
@@ -1063,9 +1066,12 @@ class NLCRuleEngine:
             company_type = getattr(c.company_type, "value", c.company_type)
             quorum_inputs_verified = (
                 company_type == "PRIVATE_LIMITED"
-                and c.member_count is not None
-                and c.member_count > 0
+                and c.members_total_at_agm is not None
+                and c.members_total_at_agm > 0
                 and c.members_present_at_agm is not None
+                and bool(c.members_total_evidence_ref and c.members_total_evidence_ref.strip())
+                and bool(c.members_present_evidence_ref and c.members_present_evidence_ref.strip())
+                and c.members_present_at_agm <= c.members_total_at_agm
                 and c.articles_quorum_verified is True
                 and bool(c.articles_quorum_verified_by and c.articles_quorum_verified_by.strip())
                 and c.articles_quorum_verified_at is not None
@@ -1080,7 +1086,7 @@ class NLCRuleEngine:
                 # have been checked and no alternative quorum is recorded.
                 statutory_default = (
                     PRIVATE_COMPANY_QUORUM_SMALL
-                    if c.member_count <= 6
+                    if c.members_total_at_agm <= 6
                     else PRIVATE_COMPANY_QUORUM_LARGE
                 )
                 quorum_required = c.articles_quorum_required or statutory_default
@@ -1105,7 +1111,9 @@ class NLCRuleEngine:
                         statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh), subject to current Articles",
                         detail={
                             "present": c.members_present_at_agm,
-                            "member_count": c.member_count,
+                            "members_total_at_agm": c.members_total_at_agm,
+                            "members_total_evidence_ref": c.members_total_evidence_ref,
+                            "members_present_evidence_ref": c.members_present_evidence_ref,
                             "required": quorum_required,
                             "articles_quorum_verified": True,
                             "quorum_basis": quorum_basis,
@@ -1124,7 +1132,7 @@ class NLCRuleEngine:
                     )
                     else "invalid_articles_quorum_required"
                     if c.articles_quorum_required is not None and c.articles_quorum_required < 1
-                    else "member_count_or_attendance_unknown"
+                    else "meeting_membership_or_attendance_evidence_missing"
                 )
                 self._add_flag(ComplianceFlag(
                     rule_id="AGM-005",
@@ -1141,7 +1149,9 @@ class NLCRuleEngine:
                     statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh), subject to current Articles",
                     detail={
                         "present": c.members_present_at_agm,
-                        "member_count": c.member_count,
+                        "members_total_at_agm": c.members_total_at_agm,
+                        "members_total_evidence_ref": c.members_total_evidence_ref,
+                        "members_present_evidence_ref": c.members_present_evidence_ref,
                         "articles_quorum_verified": c.articles_quorum_verified,
                         "articles_quorum_required": c.articles_quorum_required,
                         "articles_quorum_verified_by": c.articles_quorum_verified_by,
