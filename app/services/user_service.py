@@ -18,7 +18,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select, update
+from sqlalchemy import select, text, update
 
 from app.core.security import (
     decrypt_totp_secret,
@@ -42,14 +42,18 @@ class UserService(BaseService[User]):
 
     async def get_by_email(self, email: str) -> User | None:
         """
-        Fetch user by email (case-insensitive).
-        Returns None if not found or deactivated.
+        Fetch an account for login through the restricted SECURITY DEFINER
+        lookup. This is the only pre-authentication read that bypasses the
+        normal transaction-local user RLS context. Inactive accounts are
+        returned so the API can reject them without disclosing account state
+        to unauthenticated callers.
         """
+        statement = select(User).from_statement(
+            text("SELECT * FROM public.nlc_auth_user_by_email(:email)")
+        )
         result = await self.db.execute(
-            select(User).where(
-                User.email == email.lower().strip(),
-                User.is_active,
-            )
+            statement,
+            {"email": email.lower().strip()},
         )
         return result.scalar_one_or_none()
 
