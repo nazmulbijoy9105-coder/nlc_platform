@@ -164,10 +164,10 @@ class Audit(FullMixin, Base):
     # AUD-001: audit not complete before AGM
     audit_complete: Mapped[bool] = mapped_column(Boolean, default=False)
     audit_signed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    # AUD-003: BLACK OVERRIDE — AGM held without audit
+    # AUD-003: AGM held without completed audit — legal review required
     agm_held_without_audit: Mapped[bool] = mapped_column(
         Boolean, default=False, index=True,
-        comment="AUD-003: BLACK override — AGM held without completed audit"
+        comment="AUD-003: recorded AGM held without completed audit; lawyer review required"
     )
     is_missing: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     delay_days: Mapped[int] = mapped_column(Integer, default=0)
