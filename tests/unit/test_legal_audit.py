@@ -175,6 +175,35 @@ class TestCalendarMonthDeadlines:
         assert deadline == date(2026, 1, 15)
 
 
+    def test_DATE_003_first_agm_uses_18_calendar_months(self):
+        """Section 81: 18 calendar months, not 548 fixed days."""
+        profile = _base_profile(
+            incorporation_date=date(2024, 1, 31),
+            agm_count=0,
+            last_agm_date=None,
+            agm_held_this_cycle=False,
+        )
+        on_deadline = NLCRuleEngine().evaluate(profile, today=date(2025, 7, 31))
+        after_deadline = NLCRuleEngine().evaluate(profile, today=date(2025, 8, 1))
+        assert _flag_by_id(on_deadline, "AGM-001") is None
+        assert _flag_by_id(after_deadline, "AGM-001") is not None
+
+    def test_DATE_004_subsequent_agm_uses_15_calendar_months(self):
+        """Section 81: 15 calendar months, including month-end clamping."""
+        profile = _base_profile(
+            incorporation_date=date(2020, 1, 1),
+            agm_count=1,
+            last_agm_date=date(2024, 1, 31),
+            agm_held_this_cycle=False,
+        )
+        on_deadline = NLCRuleEngine().evaluate(profile, today=date(2025, 4, 30))
+        after_deadline = NLCRuleEngine().evaluate(profile, today=date(2025, 5, 1))
+        assert _flag_by_id(on_deadline, "AGM-002") is None
+        flag = _flag_by_id(after_deadline, "AGM-002")
+        assert flag is not None
+        assert flag.detail["deadline"] == "2025-04-30"
+        assert flag.detail["calculation_method"] == "calendar_months"
+
 # ═══════════════════════════════════════════════════════════════════════
 # SCORE-001..004: Scoring engine correctness
 # ═══════════════════════════════════════════════════════════════════════
@@ -260,6 +289,14 @@ class TestScoringEngine:
 # ═══════════════════════════════════════════════════════════════════════
 
 class TestDeterminism:
+
+    def test_AUDIT_003_score_hash_includes_evidence_snapshot(self):
+        """Different input snapshots cannot silently reuse an evaluation hash."""
+        first = _base_profile(company_name="Snapshot A Ltd")
+        second = _base_profile(company_name="Snapshot B Ltd")
+        result_a = NLCRuleEngine().evaluate(first, today=date(2026, 11, 3))
+        result_b = NLCRuleEngine().evaluate(second, today=date(2026, 11, 3))
+        assert result_a.score_breakdown.score_hash != result_b.score_breakdown.score_hash
 
     def test_AUDIT_002_deterministic_output(self):
         """AUDIT-002: Same input → same output (deterministic)."""
