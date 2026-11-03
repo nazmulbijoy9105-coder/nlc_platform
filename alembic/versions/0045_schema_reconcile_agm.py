@@ -152,6 +152,16 @@ def upgrade():
     _add_missing_columns("legal_rules", LEGAL_RULE_COLUMNS)
     _add_missing_columns("quotations", QUOTATION_COLUMNS)
 
+    # Correct the historical AGM-005 citation/description. Earlier migration
+    # 0030 incorrectly grouped AGM-005 quorum with AGM-006 minutes under s.89.
+    # Keep legal verification PENDING: correcting a citation is not counsel approval.
+    op.execute("""
+        UPDATE legal_rules
+        SET statutory_basis = 'Section 85(2)(b), Companies Act 1994 (Bangladesh)',
+            description = 'AGM quorum for a private company: statutory default is two members where total membership is up to six and three members where total membership exceeds six, unless the current Articles provide otherwise. Verify the current Articles, register of members and attendance record before evaluation.'
+        WHERE rule_id = 'AGM-005'
+    """)
+
     # Historical 0035 requires PENDING, not VERIFIED, for unreviewed rules.
     bind = op.get_bind()
     legal_rule_columns = {c["name"]: c for c in inspect(bind).get_columns("legal_rules")}
