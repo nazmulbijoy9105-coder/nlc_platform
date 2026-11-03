@@ -39,12 +39,12 @@ def upgrade():
         sa.Column("revocation_reason", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.CheckConstraint("status IN ('PENDING', 'VERIFIED', 'REJECTED', 'REVOKED')", name="ck_articles_verifications_status"),
+        sa.CheckConstraint("status IN ('PENDING', 'VERIFIED', 'REJECTED', 'REVOKED', 'SUPERSEDED')", name="ck_articles_verifications_status"),
         sa.CheckConstraint("quorum_required IS NULL OR quorum_required BETWEEN 1 AND 100", name="ck_articles_verifications_quorum"),
         sa.CheckConstraint("quorum_variation_exists = FALSE OR quorum_required IS NOT NULL", name="ck_articles_verifications_variation_quorum"),
         sa.CheckConstraint(
             "(status = 'PENDING' AND reviewed_by IS NULL AND reviewed_at IS NULL) OR "
-            "(status IN ('VERIFIED', 'REJECTED', 'REVOKED') AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)",
+            "(status IN ('VERIFIED', 'REJECTED', 'REVOKED', 'SUPERSEDED') AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)",
             name="ck_articles_verifications_review_metadata",
         ),
         sa.CheckConstraint(
@@ -78,7 +78,7 @@ def upgrade():
         sa.Column("note", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.CheckConstraint("action IN ('SUBMITTED', 'VERIFIED', 'REJECTED', 'REVOKED')", name="ck_articles_verification_events_action"),
+        sa.CheckConstraint("action IN ('SUBMITTED', 'VERIFIED', 'REJECTED', 'REVOKED', 'SUPERSEDED')", name="ck_articles_verification_events_action"),
     )
     op.create_index("ix_articles_verification_events_company_id", "articles_verification_events", ["company_id"])
     op.create_index("ix_articles_verification_events_verification_id", "articles_verification_events", ["verification_id"])
