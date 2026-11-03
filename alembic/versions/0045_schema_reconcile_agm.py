@@ -30,6 +30,9 @@ COMPANY_COLUMNS = [
     ("member_count", sa.Integer()),
     ("articles_quorum_verified", sa.Boolean()),
     ("articles_quorum_required", sa.Integer()),
+    ("articles_quorum_verified_by", sa.String(length=100)),
+    ("articles_quorum_verified_at", sa.Date()),
+    ("articles_quorum_evidence_ref", sa.String(length=500)),
     ("business_commencement_declaration_filed", sa.Boolean()),
     # 0032
     ("on_rjsc_strike_off_list", sa.Boolean()),
