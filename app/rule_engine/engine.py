@@ -158,6 +158,7 @@ class CompanyProfile:
     company_id: str
     company_name: str
     company_type: str = "PRIVATE_LIMITED"
+    member_count: int | None = None
     incorporation_date: date | None = None
     financial_year_end: Optional[date] = field(default=None)
     agm_count: int | None = None
@@ -938,17 +939,67 @@ class NLCRuleEngine:
                     detail={"days_to_agm": days_rem}
                 ))
 
-        if c.agm_held_this_cycle and c.members_present_at_agm is not None and c.members_present_at_agm < PRIVATE_COMPANY_QUORUM:
-            self._add_flag(ComplianceFlag(
-                rule_id="AGM-005",
-                flag_code="AGM_QUORUM_DEFECTIVE",
-                severity=Severity.RED,
-                score_impact=15,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=f"AGM quorum not met. {c.members_present_at_agm} present, need {PRIVATE_COMPANY_QUORUM}. Section 85(2)(b).",
-                statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
-                detail={"present": c.members_present_at_agm, "required": PRIVATE_COMPANY_QUORUM}
-            ))
+        if c.agm_held_this_cycle:
+            company_type = getattr(c.company_type, "value", c.company_type)
+            if (
+                company_type == "PRIVATE_LIMITED"
+                and c.member_count is not None
+                and c.member_count > 0
+                and c.members_present_at_agm is not None
+            ):
+                quorum_required = (
+                    PRIVATE_COMPANY_QUORUM_SMALL
+                    if c.member_count <= 6
+                    else PRIVATE_COMPANY_QUORUM_LARGE
+                )
+                if c.members_present_at_agm < quorum_required:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-005",
+                        flag_code="AGM_QUORUM_DEFECTIVE",
+                        severity=Severity.RED,
+                        score_impact=15,
+                        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                        description=(
+                            f"AGM attendance {c.members_present_at_agm} is below the "
+                            f"Section 85(2)(b) statutory-default quorum of {quorum_required} "
+                            f"for a private company with {c.member_count} members. "
+                            "Articles-specific alternatives have not been reviewed."
+                        ),
+                        statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
+                        detail={
+                            "present": c.members_present_at_agm,
+                            "member_count": c.member_count,
+                            "required": quorum_required,
+                            "quorum_basis": "SECTION_85_2_B_DEFAULT_ARTICLES_NOT_REVIEWED",
+                        },
+                    ))
+            else:
+                # Do not apply the private-company default to other entity
+                # types or infer facts from missing/zero membership/attendance.
+                reason = (
+                    "company_type_not_supported"
+                    if company_type != "PRIVATE_LIMITED"
+                    else "member_count_or_attendance_unknown"
+                )
+                self._add_flag(ComplianceFlag(
+                    rule_id="AGM-005",
+                    flag_code="AGM_QUORUM_NOT_EVALUATED",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=(
+                        "AGM quorum cannot be determined from verified company type, "
+                        "total membership and attendance evidence. Obtain the current "
+                        "member register, attendance record and Articles before assessment."
+                    ),
+                    statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
+                    detail={
+                        "present": c.members_present_at_agm,
+                        "member_count": c.member_count,
+                        "reason": reason,
+                    },
+                    state=RuleState.UNKNOWN,
+                ))
 
         if c.agm_held_this_cycle and c.agm_minutes_prepared is False:
             self._add_flag(ComplianceFlag(
