@@ -173,6 +173,9 @@ def _add_missing_columns(table_name, definitions):
 
 
 def upgrade():
+    # Persist evidence-insufficient findings without coercing them to GREEN/YELLOW.
+    op.execute("ALTER TYPE severity_level ADD VALUE IF NOT EXISTS 'NOT_EVALUATED'")
+
     _add_missing_columns("companies", COMPANY_COLUMNS)
     _add_missing_columns("agms", AGM_COLUMNS)
     _add_missing_columns("audits", AUDIT_COLUMNS)
