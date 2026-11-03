@@ -35,7 +35,7 @@ Engine fires AUD-004 (line 542) for auditor-not-reappointed. Engine's AGM-006 (l
 
 | Concept | Seed Data | Engine |
 |---|---|---|
-| First auditor not appointed within 30 days (Sec 210(1)) | AUD-002 | AUD-001 |
+| First auditor not appointed within one calendar month (Sec 210(6)) | AUD-002 | AUD-001 |
 | Audit not complete before AGM (Sec 151) | AUD-001 | AUD-002 |
 
 The seed data has AUD-001 and AUD-002 **swapped** relative to the engine.
