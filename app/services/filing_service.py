@@ -59,23 +59,35 @@ class AGMService(BaseService[AGM]):
         Create an AGM record. Calculates is_default and delay_days automatically
         if agm_deadline is provided.
         """
-        # Populate a statutory deadline when callers do not supply one.
-        # First AGM: incorporation + 18 calendar months.
-        # Subsequent AGM: preceding AGM + 15 calendar months.
-        if agm_deadline is None:
-            company_result = await self.db.execute(
-                select(Company).where(Company.id == company_id)
+        # Always derive the statutory deadline from server-held company/AGM facts.
+        # Never trust a client-supplied due date as a legal deadline.
+        company_result = await self.db.execute(
+            select(Company).where(Company.id == company_id)
+        )
+        company = company_result.scalar_one_or_none()
+        if company is not None:
+            previous_agm_result = await self.db.execute(
+                select(AGM)
+                .where(AGM.company_id == company_id, AGM.agm_held.is_(True), AGM.agm_date.is_not(None))
+                .order_by(AGM.agm_date.desc())
+                .limit(1)
             )
-            company = company_result.scalar_one_or_none()
-            if company is not None:
-                if company.last_agm_date is not None:
-                    agm_deadline = self.calculate_subsequent_agm_deadline(
-                        company.last_agm_date, company.financial_year_end
-                    )
-                elif company.incorporation_date is not None:
-                    agm_deadline = self.calculate_first_agm_deadline(
-                        company.incorporation_date
-                    )
+            previous_agm = previous_agm_result.scalar_one_or_none()
+            previous_agm_date = (
+                previous_agm.agm_date if previous_agm is not None else company.last_agm_date
+            )
+            if previous_agm_date is not None:
+                agm_deadline = self.calculate_subsequent_agm_deadline(
+                    previous_agm_date, company.financial_year_end
+                )
+            elif company.incorporation_date is not None:
+                agm_deadline = self.calculate_first_agm_deadline(
+                    company.incorporation_date
+                )
+            else:
+                agm_deadline = None
+        else:
+            agm_deadline = None
 
         # Auto-calculate default status
         if agm_held and agm_date and agm_deadline:
