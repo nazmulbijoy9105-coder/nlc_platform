@@ -32,6 +32,8 @@ from .database import Base, get_db, set_admin_context, set_rls_context
 from .documents import (
     AIOutputLog,
     AIPromptTemplate,
+    ArticlesVerification,
+    ArticlesVerificationEvent,
     Document,
     DocumentAccessLog,
 )
@@ -94,6 +96,8 @@ __all__ = [
     "AGM",
     "AIOutputLog",
     "AIPromptTemplate",
+    "ArticlesVerification",
+    "ArticlesVerificationEvent",
     "AiModel",
     "AnnualReturn",
     "Audit",
