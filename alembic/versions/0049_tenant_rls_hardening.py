@@ -63,6 +63,19 @@ def _execute_sql_script(sql: str) -> None:
         op.execute(tail)
 
 def upgrade() -> None:
+    # Ensure the non-bypass runtime role exists in fresh CI databases too.
+    # Production already has this role; this is intentionally a no-op there.
+    _execute_sql_script("""
+        DO $role$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
+                CREATE ROLE nlc_app_role
+                    NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
+                    NOINHERIT NOREPLICATION NOBYPASSRLS;
+            END IF;
+        END
+        $role$
+    """)
     # SECURITY DEFINER helpers read membership and role records without
     # recursively invoking RLS on those same tables. search_path is pinned to
     # prevent object-shadowing attacks. The migration owner owns these helpers.
@@ -465,7 +478,7 @@ def upgrade() -> None:
                 REVOKE CREATE ON SCHEMA public FROM nlc_app_role;
                 GRANT USAGE ON SCHEMA public TO nlc_app_role;
                 EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM nlc_app_role';
-                EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM nlc_app_role';
+                EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO nlc_app_role';
 
                 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
                     public.agms,
@@ -505,6 +518,7 @@ def upgrade() -> None:
                     public.regulatory_rules,
                     public.sro_registry
                 TO nlc_app_role;
+                GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO nlc_app_role;
                 GRANT SELECT ON TABLE
                     public.vw_admin_dashboard_kpis,
                     public.vw_company_flag_summary,
