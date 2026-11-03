@@ -249,6 +249,25 @@ class TestAGMRules:
         assert flag.severity == Severity.NOT_EVALUATED
         assert flag.score_impact == 0
 
+    def test_AGM005_boolean_without_reviewer_date_and_source_is_not_evaluated(self, rule_engine, build_profile):
+        profile = build_profile(
+            agm_held_this_cycle=True,
+            member_count=5,
+            articles_quorum_verified=True,
+            articles_quorum_required=None,
+            articles_quorum_verified_by=None,
+            articles_quorum_verified_at=None,
+            articles_quorum_evidence_ref=None,
+            members_present_at_agm=1,
+        )
+        output = rule_engine.evaluate(profile)
+        flag = next(f for f in output.flags if f.rule_id == "AGM-005")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.eval_state == "UNKNOWN"
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
+
+
     # ── AGM-006: Auditor Not Reappointed ─────────────────────────────────────
 
     def test_AGM006_triggers_when_auditor_not_reappointed(self, rule_engine, build_profile):
