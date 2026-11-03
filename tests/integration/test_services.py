@@ -881,6 +881,7 @@ class TestRulesService:
 
 @pytest.mark.asyncio
 async def test_dashboard_kpis_are_scoped_to_active_memberships(db, db_user, db_company, db_other_company):
+    from sqlalchemy import update
     from app.models.company import CompanyUserAccess
     from app.services.compliance_service import ComplianceService
 
