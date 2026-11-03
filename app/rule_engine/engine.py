@@ -702,7 +702,7 @@ class NLCRuleEngine:
                         is_black_override=True,
                         revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                         description=f"RJSC-verified {c.company_type.lower().replace('_', ' ')} has {count} director(s); Section 90 requires at least {required}.",
-                        statutory_basis="Section 90(1), Companies Act 1994 (Bangladesh)" if required == 3 else "Section 90(2), Companies Act 1994 (Bangladesh)",
+                        statutory_basis="Sections 90(1) and 90(2), Companies Act 1994 (Bangladesh)",
                         detail={"current_count": count, "required": required,
                                 "private_subsidiary_of_public_company": c.is_private_subsidiary_of_public_company},
                     ))
@@ -1009,7 +1009,7 @@ class NLCRuleEngine:
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="AGM history unknown (data missing).",
-                statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
                 state=RuleState.UNKNOWN
             ))
             return
@@ -1025,7 +1025,7 @@ class NLCRuleEngine:
                     score_impact=self._graduated_agm_deduction(delay),
                     revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                     description=f"First AGM not held within 18 months. Section 81: overdue by {delay} days.",
-                    statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay, "deadline": str(deadline)}
                 ))
             return
@@ -1057,7 +1057,7 @@ class NLCRuleEngine:
                         score_impact=self._graduated_agm_deduction(delay),
                         revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                         description=f"AGM overdue by {delay} days. Section 81: deadline by {basis} rule.",
-                        statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
+                        statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
                         detail={"delay_days": delay, "basis": basis}
                     ))
 
