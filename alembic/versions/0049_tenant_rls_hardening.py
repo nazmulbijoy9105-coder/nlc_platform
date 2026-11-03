@@ -50,12 +50,7 @@ def upgrade() -> None:
         STABLE
         SECURITY DEFINER
         SET search_path = pg_catalog, public
-        AS $
-            SELECT u.*
-            FROM public.users u
-            WHERE lower(u.email) = lower(btrim(p_email))
-            LIMIT 1
-        $;
+        AS 'SELECT u.* FROM public.users u WHERE lower(u.email) = lower(btrim(p_email)) LIMIT 1';
         REVOKE ALL ON FUNCTION public.nlc_auth_user_by_email(text) FROM PUBLIC;
         DO $auth_grant$
         BEGIN
