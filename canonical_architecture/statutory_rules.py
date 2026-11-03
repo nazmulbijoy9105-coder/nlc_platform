@@ -1255,16 +1255,26 @@ def _legacy_rule(key: str, d: Dict[str, Any]) -> StatutoryRule:
         raise RuntimeError(f"{key}: unknown legacy keys {sorted(extra)}")
     if d["rule_id"] != key:
         raise RuntimeError(f"{key}: rule_id mismatch {d['rule_id']}")
-    if d["applicability"] != "ALL_ACTIVE_COMPANIES" or d["exceptions"]:
-        raise RuntimeError(f"{key}: narrowed applicability not representable")
-    if list(d["evidence_required"]) != ["DOCUMENTARY_EVIDENCE"]:
-        raise RuntimeError(f"{key}: unexpected legacy evidence keys")
+    applicability = d["applicability"]
+    if applicability == "ALL_ACTIVE_COMPANIES":
+        applies_if = None
+    elif applicability == "PRIVATE_COMPANIES_ONLY":
+        # Keep the statutory scope explicit in the canonical representation.
+        applies_if = "company_type == PRIVATE_LIMITED"
+    else:
+        raise RuntimeError(f"{key}: unsupported legacy applicability {applicability!r}")
+    if not isinstance(d["exceptions"], (list, tuple)):
+        raise RuntimeError(f"{key}: exceptions must be a list or tuple")
+    if not d["evidence_required"] or not all(
+        isinstance(item, str) and item for item in d["evidence_required"]
+    ):
+        raise RuntimeError(f"{key}: evidence_required must contain non-empty keys")
     auth = _LEGACY_AUTHORITY_OVERRIDE.get(key) or _LEGACY_AUTHORITY[d["legal_domain"]]
     return StatutoryRule(
         key, d["legal_domain"], d["law"], d["requirement"], d["provision"],
         d["provision_status"], auth,
-        (key + ":DOCUMENTARY_EVIDENCE",),   # per-rule key: shared key would couple all rules
-        Severity(d["severity"]), d["score_impact"])
+        tuple(d["evidence_required"]),
+        Severity(d["severity"]), d["score_impact"], applies_if=applies_if)
 
 
 for _k, _d in _LEGACY_RULE_DICTS.items():
