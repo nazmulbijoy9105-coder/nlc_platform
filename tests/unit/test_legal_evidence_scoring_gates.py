@@ -293,6 +293,51 @@ def test_pre_score_and_authoritative_raw_score_use_identical_category_caps():
 
 
 
+
+def test_short_agm_notice_with_verified_all_member_consent_is_not_defective():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            agm_scheduled_date=date(2026, 11, 20),
+            notice_sent_date=date(2026, 11, 10),
+            short_notice_consent_obtained=True,
+            short_notice_consent_verified=True,
+            short_notice_consent_evidence_ref="AGM-CONSENTS-001",
+        ),
+        today=date(2026, 11, 3),
+    )
+    assert "AGM-003" not in {flag.rule_id for flag in result.flags}
+
+
+def test_short_agm_notice_without_verified_consent_is_not_a_confirmed_breach():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            agm_scheduled_date=date(2026, 11, 20),
+            notice_sent_date=date(2026, 11, 10),
+            short_notice_consent_obtained=None,
+            short_notice_consent_verified=False,
+        ),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "AGM-003")
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.score_impact == 0
+
+
+def test_short_agm_notice_with_verified_absence_of_consent_is_defective():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            agm_scheduled_date=date(2026, 11, 20),
+            notice_sent_date=date(2026, 11, 10),
+            short_notice_consent_obtained=False,
+            short_notice_consent_verified=True,
+            short_notice_consent_evidence_ref="AGM-CONSENT-REVIEW-002",
+        ),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "AGM-003")
+    assert flag.state == RuleState.NON_COMPLIANT
+
+
 def test_section_81_first_agm_within_18_months_defers_next_agm_to_second_following_year():
     profile = _profile(
         incorporation_date=date(2025, 1, 1),
