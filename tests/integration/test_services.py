@@ -560,7 +560,9 @@ class TestFilingService:
         assert updated.quorum_basis == "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
 
     @pytest.mark.asyncio
-    async def test_mark_agm_held_large_private_company_requires_three_members(self, db, db_company):
+    async def test_mark_agm_held_large_private_company_uses_statutory_default_after_articles_review(
+        self, db, db_company
+    ):
         from app.services.filing_service import AGMService
 
         db_company.member_count = 7
@@ -570,24 +572,9 @@ class TestFilingService:
         db_company.articles_quorum_verified_at = date(2023, 4, 1)
         db_company.articles_quorum_evidence_ref = "test-evidence://current-articles"
         await db.flush()
+
         svc = AGMService(db)
         agm = await svc.create_agm(company_id=db_company.id, financial_year=2022)
-        assert updated.quorum_required == 2
-        assert updated.quorum_met is True
-        assert updated.quorum_basis == "SECTION_85_2_B_DEFAULT_ARTICLES_NOT_REVIEWED"
-
-    @pytest.mark.asyncio
-    async def test_mark_agm_held_large_private_company_uses_three_member_default(self, db, db_company):
-        from app.services.filing_service import AGMService
-
-        db_company.member_count = 7
-        await db.flush()
-        svc = AGMService(db)
-        agm = await svc.create_agm(
-            company_id=db_company.id,
-            financial_year=2022,
-            agm_due_date=date(2023, 6, 30),
-        )
         updated = await svc.mark_held(
             agm_id=agm.id,
             agm_date=date(2023, 5, 15),
@@ -600,21 +587,48 @@ class TestFilingService:
         assert updated is not None
         assert updated.quorum_required == 3
         assert updated.quorum_met is False
+        assert updated.quorum_basis == "SECTION_85_2_B_DEFAULT_ARTICLES_VERIFIED_NO_VARIATION"
 
     @pytest.mark.asyncio
-    async def test_mark_agm_held_unknown_membership_is_not_evaluated(self, db, db_company):
-    async def test_mark_agm_held_missing_member_count_is_not_evaluated(self, db, db_company):
+    async def test_mark_agm_held_uses_articles_specific_quorum_override(self, db, db_company):
+        from app.services.filing_service import AGMService
+
+        db_company.member_count = 7
+        db_company.articles_quorum_verified = True
+        db_company.articles_quorum_required = 4
+        db_company.articles_quorum_verified_by = "test-counsel"
+        db_company.articles_quorum_verified_at = date(2023, 4, 1)
+        db_company.articles_quorum_evidence_ref = "test-evidence://current-articles"
+        await db.flush()
+
+        svc = AGMService(db)
+        agm = await svc.create_agm(company_id=db_company.id, financial_year=2022)
+        updated = await svc.mark_held(
+            agm_id=agm.id,
+            agm_date=date(2023, 5, 15),
+            members_present=3,
+            auditor_reappointed=True,
+            members_total_at_agm=7,
+            members_total_evidence_ref="test-evidence://members-register-at-agm",
+            members_present_evidence_ref="test-evidence://agm-attendance-register",
+        )
+        assert updated is not None
+        assert updated.quorum_required == 4
+        assert updated.quorum_met is False
+        assert updated.quorum_basis == "ARTICLES_VERIFIED"
+
+    @pytest.mark.asyncio
+    async def test_mark_agm_held_missing_membership_evidence_is_not_evaluated(self, db, db_company):
         from app.services.filing_service import AGMService
 
         db_company.member_count = None
         await db.flush()
         svc = AGMService(db)
         agm = await svc.create_agm(company_id=db_company.id, financial_year=2024)
-        # Simulate a legacy/default quorum conclusion that must be cleared
-        # when the underlying membership evidence is unknown.
         agm.quorum_required = 2
         agm.quorum_met = True
         await db.flush()
+
         updated = await svc.mark_held(
             agm_id=agm.id,
             agm_date=date(2024, 5, 15),
@@ -624,7 +638,7 @@ class TestFilingService:
         assert updated is not None
         assert updated.quorum_required is None
         assert updated.quorum_met is None
-        assert updated.quorum_basis == "ARTICLES_NOT_VERIFIED_OR_QUORUM_INPUTS_UNKNOWN"
+        assert updated.quorum_basis == "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
 
     @pytest.mark.asyncio
     async def test_create_audit(self, db, db_company):
