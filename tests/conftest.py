@@ -560,6 +560,63 @@ async def db_user(db: AsyncSession) -> User:
 
 
 @pytest_asyncio.fixture
+async def db_client_user(db: AsyncSession, db_company: Company) -> User:
+    """Create a real client identity with membership in exactly db_company."""
+    from app.core.security import hash_password
+    from app.models.company import CompanyUserAccess
+    from app.models.enums import UserRole
+    from app.models.user import User
+
+    user = User(
+        id=uuid.uuid4(),
+        email=f"client_{uuid.uuid4().hex[:8]}@nlctest.com",
+        full_name="Tenant A Client",
+        password_hash=hash_password("TestPassword123!"),
+        role=UserRole.CLIENT_DIRECTOR,
+        is_active=True,
+        totp_enabled=False,
+    )
+    db.add(user)
+    await db.flush()
+    db.add(CompanyUserAccess(
+        user_id=user.id,
+        company_id=db_company.id,
+        can_edit=True,
+        can_view_financials=True,
+        is_active=True,
+    ))
+    await db.flush()
+    return user
+
+
+@pytest_asyncio.fixture
+async def db_other_company(db: AsyncSession) -> Company:
+    """Create a second real tenant with no membership for db_client_user."""
+    from app.models.company import Company
+    from app.models.enums import CompanyStatus, RiskBand
+
+    today = date.today()
+    company = Company(
+        id=uuid.uuid4(),
+        company_name="Other Tenant Ltd",
+        registration_number=f"C-OTHER-{uuid.uuid4().hex[:8].upper()}",
+        incorporation_date=today - timedelta(days=365 * 2),
+        registered_address="456 Other Street, Dhaka, Bangladesh",
+        company_type="PRIVATE_LIMITED",
+        financial_year_end=date(2025, 12, 31),
+        current_compliance_score=70,
+        current_risk_band=RiskBand.YELLOW,
+        company_status=CompanyStatus.ACTIVE,
+        is_active=True,
+        is_dormant=False,
+        is_fdi_registered=False,
+    )
+    db.add(company)
+    await db.flush()
+    return company
+
+
+@pytest_asyncio.fixture
 async def db_super_admin(db: AsyncSession) -> User:
     """Create a Super Admin user in the test DB."""
     from app.core.security import hash_password
