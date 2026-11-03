@@ -382,6 +382,7 @@ def build_profile():
             "capital_increase_date": None,
             "capital_increase_resolution": True,
             "first_auditor_appointed": True,
+            "first_auditor_appointment_date": today - timedelta(days=365 * 3) + timedelta(days=20),
             "tin_obtained": True,
             "vat_registered": True,
             "trade_license_obtained": True,
