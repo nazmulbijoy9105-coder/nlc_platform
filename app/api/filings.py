@@ -108,6 +108,8 @@ class AuditCreateRequest(BaseModel):
     financial_year: int = Field(ge=2000, le=2100)
     auditor_firm: str | None = None
     auditor_icab_number: str | None = None
+    first_auditor_appointed: bool | None = None
+    first_auditor_appointment_date: date | None = None
 
 
 class AuditMarkCompleteRequest(BaseModel):
@@ -125,6 +127,8 @@ class AuditResponse(BaseModel):
     is_complete: bool
     signed_date: str | None
     auditor_firm: str | None
+    first_auditor_appointed: bool | None = None
+    first_auditor_appointment_date: str | None = None
     audit_opinion: str | None
     created_at: str
 
@@ -432,6 +436,8 @@ async def create_audit(
         financial_year=body.financial_year,
         auditor_firm=body.auditor_firm,
         icab_number=body.auditor_icab_number,
+        first_auditor_appointed=body.first_auditor_appointed,
+        first_auditor_appointment_date=body.first_auditor_appointment_date,
     )
     return _audit_to_response(audit)
 
@@ -706,6 +712,11 @@ def _audit_to_response(audit) -> AuditResponse:
         is_complete=audit.audit_complete,
         signed_date=audit.audit_signed_date.isoformat() if audit.audit_signed_date else None,
         auditor_firm=audit.auditor_firm,
+        first_auditor_appointed=audit.first_auditor_appointed,
+        first_auditor_appointment_date=(
+            audit.first_auditor_appointment_date.isoformat()
+            if audit.first_auditor_appointment_date else None
+        ),
         audit_opinion=(
             ("QUALIFIED" if audit.report_qualified else "UNQUALIFIED")
             if audit.audit_complete else None
