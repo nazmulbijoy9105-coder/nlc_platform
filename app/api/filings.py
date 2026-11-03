@@ -231,7 +231,8 @@ async def list_all_filings(
     # Role-based company filter
     if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):
         accessible = select(CompanyUserAccess.company_id).where(
-            CompanyUserAccess.user_id == current_user.id
+            CompanyUserAccess.user_id == current_user.id,
+            CompanyUserAccess.is_active.is_(True),
         )
         company_filter = Company.id.in_(accessible)
     else:
