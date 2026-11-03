@@ -1039,22 +1039,21 @@ class NLCRuleEngine:
                     eval_state="UNKNOWN",
                     detail={"extension_until": str(c.agm_extension_granted_until)},
                 ))
-                return
-            basis = "VALIDATED_EXTENSION" if c.agm_extension_granted_until else "SECTION_81(1)"
-
-            if self.today > agm_deadline:
-                delay = (self.today - agm_deadline).days
-                severity = Severity.BLACK if delay > 365 else Severity.RED
-                self._add_flag(ComplianceFlag(
-                    rule_id="AGM-002",
-                    flag_code="SUBSEQUENT_AGM_DEFAULT",
-                    severity=severity,
-                    score_impact=self._graduated_agm_deduction(delay),
-                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description=f"AGM overdue by {delay} days. Section 81: deadline by {basis} rule.",
-                    statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
-                    detail={"delay_days": delay, "basis": basis}
-                ))
+            else:
+                basis = "VALIDATED_EXTENSION" if c.agm_extension_granted_until else "SECTION_81(1)"
+                if self.today > agm_deadline:
+                    delay = (self.today - agm_deadline).days
+                    severity = Severity.BLACK if delay > 365 else Severity.RED
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-002",
+                        flag_code="SUBSEQUENT_AGM_DEFAULT",
+                        severity=severity,
+                        score_impact=self._graduated_agm_deduction(delay),
+                        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                        description=f"AGM overdue by {delay} days. Section 81: deadline by {basis} rule.",
+                        statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
+                        detail={"delay_days": delay, "basis": basis}
+                    ))
 
         if c.agm_scheduled_date and c.notice_sent_date:
             clear_days = (c.agm_scheduled_date - c.notice_sent_date).days - 1
