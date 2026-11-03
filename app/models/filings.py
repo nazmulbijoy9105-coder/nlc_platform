@@ -93,6 +93,10 @@ class AGM(FullMixin, Base):
     # ── Auditor ───────────────────────────────────────────────────
     # AGM-006: auditor not reappointed at AGM
     auditor_reappointed: Mapped[bool] = mapped_column(Boolean, default=True)
+    auditor_reappointment_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    auditor_reappointment_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    auditor_reappointment_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    auditor_reappointment_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     # ── Minutes ───────────────────────────────────────────────────
     minutes_prepared: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -148,6 +152,10 @@ class Audit(FullMixin, Base):
     # ── Completion ────────────────────────────────────────────────
     # AUD-001: audit not complete before AGM
     audit_complete: Mapped[bool] = mapped_column(Boolean, default=False)
+    audit_completion_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    audit_completion_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    audit_completion_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    audit_completion_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     audit_signed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     # AUD-003: BLACK OVERRIDE — AGM held without audit
     agm_held_without_audit: Mapped[bool] = mapped_column(
