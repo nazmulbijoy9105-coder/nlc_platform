@@ -366,7 +366,7 @@ class TestFilings:
         result = response.json()
         assert result["quorum_met"] is None
         assert result["quorum_required"] is None
-        assert result["quorum_basis"] == "ARTICLES_NOT_VERIFIED_OR_QUORUM_INPUTS_UNKNOWN"
+        assert result["quorum_basis"] == "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
         assert result["venue"] == "Registered Office"
         assert result["accounts_adopted"] is True
         assert result["agm_held_without_audit"] is False
