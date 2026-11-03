@@ -2078,11 +2078,11 @@ class NLCRuleEngine:
         # period. The previous description claiming "Cannot act as director
         # for 5 years" was legally unsupported and has been removed.
         #
-        # Evidence gating: BLACK override fires ONLY when structured
-        # disqualification_grounds contain verified entries with:
-        #   - ground_type (one of the S94 grounds above)
-        #   - evidence_ref (court order / insolvency certificate / etc.)
-        # Without verified evidence, emit as NOT_EVALUATED, not BLACK.
+        # Evidence gating: Section 94 findings require structured grounds,
+        # director identity, authoritative evidence, effective date and current
+        # status. DEF-001 is not a BLACK override and is excluded from scoring
+        # pending independent legal approval. Unpaid-call threshold is DISPUTED
+        # across official Bengali and English/case materials.
         # ═════════════════════════════════════════════════════════════════
 
         VALID_GROUNDS = {
