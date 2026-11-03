@@ -594,61 +594,62 @@ class NLCRuleEngine:
         # MoA/AoA (Section 23), so absence in NLC's database means the
         # documents haven't been uploaded/verified — not that they don't exist.
         # The correct state is NOT_EVALUATED, not RED.
-        if c.moa_aoa_filed is None:
-            # Unknown — no data in NLC system
+        if c.moa_aoa_verified is not True:
             self._add_flag(ComplianceFlag(
                 rule_id="INC-001",
                 flag_code="MOA_AOA_NOT_VERIFIED",
                 severity=Severity.NOT_EVALUATED,
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=(
-                    "Memorandum and Articles of Association not verified in NLC records. "
-                    "Section 23 requires MoA/AoA for registration — absence in NLC "
-                    "database is a data gap, not a confirmed legal breach. "
-                    "Verify with RJSC registry."
-                ),
+                description="MoA/AoA status has not been explicitly verified against RJSC or authenticated company records. Stored values alone are not proof.",
                 statutory_basis="Section 23, Companies Act 1994 (Bangladesh)",
                 state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"verification_status": "not_verified"},
             ))
         elif c.moa_aoa_filed is False and self._is_old_enough_to_assess(c):
-            # Confirmed missing after verification — only then is it a breach
             self._add_flag(ComplianceFlag(
                 rule_id="INC-001",
                 flag_code="MOA_AOA_CONFIRMED_MISSING",
                 severity=Severity.RED,
                 score_impact=15,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=(
-                    "Memorandum and Articles of Association confirmed missing after "
-                    "verification with RJSC. Section 23: every company must have a "
-                    "registered MoA/AoA."
-                ),
+                description="MoA/AoA absence was explicitly verified against RJSC or authenticated company records. Confirm the underlying registry record and history.",
                 statutory_basis="Section 23, Companies Act 1994 (Bangladesh)",
                 detail={"verification_status": "confirmed_missing"},
             ))
 
 
-        if (c.company_type == "PRIVATE_LIMITED" and c.directors_verified
-                and c.current_director_count is not None
-                and c.current_director_count < 2):  # RULE-001: only fire when verified against RJSC
-            inc003_impact = 15
-            inc003_desc = (
-                "Private company has NO directors. Section 90(2) requires minimum 2. Director records require verification - absence in NLC database does not confirm actual absence."
-                if c.current_director_count == 0
-                else "Private company has only 1 director. Section 90(2) requires minimum 2."
-            )
-            self._add_flag(ComplianceFlag(
-                rule_id="INC-003",
-                flag_code="MINIMUM_DIRECTORS_NOT_MET",
-                severity=Severity.BLACK,
-                score_impact=inc003_impact,
-                is_black_override=True,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=inc003_desc,
-                statutory_basis="Section 90(2), Companies Act 1994 (Bangladesh)",
-                detail={"current_count": c.current_director_count, "required": 2}
-            ))
+        if c.company_type == "PRIVATE_LIMITED" and c.directors_verified is True and c.current_director_count is not None:
+            count = c.current_director_count
+            if count == 2 and c.is_private_subsidiary_of_public_company is None:
+                self._add_flag(ComplianceFlag(
+                    rule_id="INC-003",
+                    flag_code="DIRECTOR_MINIMUM_APPLICABILITY_UNKNOWN",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="Two directors are verified, but private-subsidiary status is unknown; Section 90(1) may require three.",
+                    statutory_basis="Sections 90(1) and 90(2), Companies Act 1994 (Bangladesh)",
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                    detail={"current_count": count, "subsidiary_status": "UNKNOWN"},
+                ))
+            else:
+                required = 3 if c.is_private_subsidiary_of_public_company is True else 2
+                if count < required:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="INC-003",
+                        flag_code="MINIMUM_DIRECTORS_NOT_MET",
+                        severity=Severity.BLACK,
+                        score_impact=15,
+                        is_black_override=True,
+                        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                        description=f"RJSC-verified private company has {count} director(s); Section 90 requires at least {required}.",
+                        statutory_basis="Section 90(1), Companies Act 1994 (Bangladesh)" if required == 3 else "Section 90(2), Companies Act 1994 (Bangladesh)",
+                        detail={"current_count": count, "required": required,
+                                "private_subsidiary_of_public_company": c.is_private_subsidiary_of_public_company},
+                    ))
 
         if c.paid_up_capital_bdt > c.authorized_capital_bdt:
             self._add_flag(ComplianceFlag(
@@ -747,22 +748,19 @@ class NLCRuleEngine:
     # MODULE 1: AUDITOR
     # ───────────────────────────────────────────────────────────────────
     @staticmethod
-    def _add_one_month(d: date) -> date:
-        """Add one calendar month to a date (Section 210(6) "one month").
-
-        A calendar month from Jan 15 = Feb 15; from Jan 31 = Feb 28/29
-        (last valid day of the target month). This is legally distinct
-        from adding 30 days.
-        """
-        target_month = d.month + 1
-        target_year = d.year
-        if target_month > 12:
-            target_month = 1
-            target_year += 1
-        # Handle month-end overflow (Jan 31 → Feb 28/29)
+    def _add_months(d: date, months: int) -> date:
+        """Add calendar months, clamping to the last valid day of the target month."""
         import calendar as _cal
-        max_day = _cal.monthrange(target_year, target_month)[1]
-        return date(target_year, target_month, min(d.day, max_day))
+        month_index = d.year * 12 + d.month - 1 + months
+        target_year, zero_month = divmod(month_index, 12)
+        target_month = zero_month + 1
+        last_day = _cal.monthrange(target_year, target_month)[1]
+        return date(target_year, target_month, min(d.day, last_day))
+
+    @staticmethod
+    def _add_one_month(d: date) -> date:
+        """Section 210(6): one calendar month, not a fixed 30-day period."""
+        return NLCRuleEngine._add_months(d, 1)
 
     def _run_auditor_rules(self, c: CompanyProfile) -> None:
         # P0 LEGAL FIX: Section 210(6) requires first auditor appointment
@@ -861,7 +859,7 @@ class NLCRuleEngine:
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="Auditor not reappointed at AGM. Section 210(3): mandatory at every AGM.",
-                statutory_basis="Section 210(2), Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 210(3), Companies Act 1994 (Bangladesh)",
             ))
 
     # ───────────────────────────────────────────────────────────────────
@@ -881,7 +879,7 @@ class NLCRuleEngine:
             ))
             return
         if c.agm_count == 0:
-            deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
+            deadline = self._add_months(c.incorporation_date, 18)
             if self.today > deadline:  # type: ignore
                 delay = (self.today - deadline).days  # type: ignore
                 severity = Severity.BLACK if delay > 365 else Severity.RED
@@ -898,10 +896,12 @@ class NLCRuleEngine:
             return
 
         if c.last_agm_date and c.agm_held_this_cycle is False:
-            cond_a = c.last_agm_date + timedelta(days=SUBSEQUENT_AGM_DEADLINE_DAYS)
-            cond_b = self._get_fy_end_deadline(c)
-            agm_deadline = min(cond_a, cond_b)
-            basis = "15_MONTH" if cond_a <= cond_b else "6_MONTH_FY"
+            # Section 81(1): at least one AGM in each calendar year and
+            # no more than 15 months between successive AGMs.
+            fifteen_month_deadline = self._add_months(c.last_agm_date, 15)
+            calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
+            agm_deadline = min(fifteen_month_deadline, calendar_year_deadline)
+            basis = "15_MONTH" if fifteen_month_deadline <= calendar_year_deadline else "CALENDAR_YEAR"
 
             if self.today > agm_deadline:
                 delay = (self.today - agm_deadline).days
@@ -946,19 +946,31 @@ class NLCRuleEngine:
                     detail={"days_to_agm": days_rem}
                 ))
 
-        if (c.agm_held_this_cycle
-                and c.members_present_at_agm is not None
-                and c.members_present_at_agm < PRIVATE_COMPANY_QUORUM):
-            self._add_flag(ComplianceFlag(
-                rule_id="AGM-005",
-                flag_code="AGM_QUORUM_DEFECTIVE",
-                severity=Severity.RED,
-                score_impact=15,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=f"AGM quorum not met. {c.members_present_at_agm} present, need {PRIVATE_COMPANY_QUORUM}. Section 83.",
-                statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
-                detail={"present": c.members_present_at_agm, "required": PRIVATE_COMPANY_QUORUM}
-            ))
+        if c.agm_held_this_cycle and c.members_present_at_agm is not None:
+            if c.agm_quorum_basis_verified is not True or c.agm_quorum_required is None:
+                self._add_flag(ComplianceFlag(
+                    rule_id="AGM-005",
+                    flag_code="AGM_QUORUM_BASIS_NOT_VERIFIED",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="Attendance is recorded, but the applicable quorum has not been verified from the Articles and Section 85(2)(b).",
+                    statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                    detail={"present": c.members_present_at_agm, "quorum_required": None},
+                ))
+            elif c.members_present_at_agm < c.agm_quorum_required:
+                self._add_flag(ComplianceFlag(
+                    rule_id="AGM-005",
+                    flag_code="AGM_QUORUM_DEFECTIVE",
+                    severity=Severity.RED,
+                    score_impact=15,
+                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                    description=f"Recorded attendance ({c.members_present_at_agm}) is below verified quorum ({c.agm_quorum_required}).",
+                    statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh), read with the Articles",
+                    detail={"present": c.members_present_at_agm, "required": c.agm_quorum_required},
+                ))
 
         if c.agm_held_this_cycle and c.agm_minutes_prepared is False:
             self._add_flag(ComplianceFlag(
@@ -2209,9 +2221,24 @@ class NLCRuleEngine:
         else:
             exposure = ExposureBand.SEVERE
 
-        flag_signatures = sorted(f"{f.rule_id}:{f.state!s}:{f.severity!s}:{f.score_impact}" for f in active)  # RULE-009: include state/severity/score_impact
-        hash_str = f"{final}:{','.join(flag_signatures)}:{RULE_ENGINE_VERSION}"
-        score_hash = hashlib.sha256(hash_str.encode()).hexdigest()[:16]
+        flag_signatures = sorted(
+            f"{f.rule_id}:{f.state!s}:{f.eval_state}:{f.severity!s}:{f.score_impact}:{f.rule_version}"
+            for f in active
+        )
+        hash_payload = {
+            "company_profile": asdict(company),
+            "evaluation_date": self.today.isoformat(),
+            "engine_version": RULE_ENGINE_VERSION,
+            "ilrmf_version": ILRMF_VERSION,
+            "verified_rule_ids": sorted(VERIFIED_RULE_IDS),
+            "flags": flag_signatures,
+            "final_score": final,
+        }
+        hash_str = json.dumps(
+            hash_payload, sort_keys=True, separators=(",", ":"),
+            default=lambda value: value.value if isinstance(value, Enum) else value.isoformat() if isinstance(value, date) else str(value),
+        )
+        score_hash = hashlib.sha256(hash_str.encode("utf-8")).hexdigest()
 
         return ScoreBreakdown(
             agm_score=max(0, 20 - agm_ded),
@@ -2444,7 +2471,7 @@ class NLCRuleEngine:
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:
         if c.last_agm_date is None:
             if c.agm_count == 0:
-                deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
+                deadline = self._add_months(c.incorporation_date, 18)
                 if self.today > deadline:  # type: ignore
                     return (self.today - deadline).days // 365  # type: ignore
             return 0
