@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+import structlog
 
 from app.core.config import get_settings
 from app.core.dependencies import (
@@ -34,6 +35,7 @@ from app.models.enums import DocumentType
 from app.models.user import User
 
 router = APIRouter()
+logger = structlog.get_logger(__name__)
 
 
 class ArticlesUploadResponse(BaseModel):
