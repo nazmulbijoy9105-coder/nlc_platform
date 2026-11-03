@@ -408,6 +408,23 @@ class CompanyService(BaseService[Company]):
         # ── Audit State ───────────────────────────────────────────
         audits_sorted = sorted(company.audits, key=lambda a: a.financial_year, reverse=True)
         latest_audit = audits_sorted[0] if audits_sorted else None
+        # First-auditor appointment facts may be recorded on an Audit row.
+        # Prefer an evidenced appointment date over a stale company-level
+        # boolean; a boolean alone is not enough to verify timeliness.
+        first_auditor_record = next(
+            (a for a in reversed(audits_sorted) if a.first_auditor_appointment_date),
+            None,
+        )
+        first_auditor_appointment_date = (
+            company.first_auditor_appointment_date
+            or (first_auditor_record.first_auditor_appointment_date if first_auditor_record else None)
+        )
+        first_auditor_appointed = (
+            True
+            if first_auditor_appointment_date is not None
+            or any(a.first_auditor_appointed is True for a in audits_sorted)
+            else company.first_auditor_appointed
+        )
 
         agm_profile_evidence = _agm_profile_evidence(latest_agm)
 
@@ -470,8 +487,8 @@ class CompanyService(BaseService[Company]):
             "agm_minutes_prepared":       agm_profile_evidence["agm_minutes_prepared"],
 
             # Audit State
-            "first_auditor_appointed":    bool(company.first_auditor_appointed) if company.first_auditor_appointed is not None else None,
-            "first_auditor_appointment_date": company.first_auditor_appointment_date,
+            "first_auditor_appointed":    first_auditor_appointed,
+            "first_auditor_appointment_date": first_auditor_appointment_date,
             "audit_complete":             latest_audit.audit_complete if latest_audit else None,
             "last_audit_signed_date":     company.last_audit_signed_date,
 
