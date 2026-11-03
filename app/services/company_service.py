@@ -37,6 +37,9 @@ def _agm_profile_evidence(latest_agm) -> dict:
             "auditor_reappointment_evidence_ref": None,
             "agm_minutes_prepared": None,
             "notice_sent_date": None,
+            "short_notice_consent_obtained": None,
+            "short_notice_consent_verified": False,
+            "short_notice_consent_evidence_ref": None,
         }
 
     attendance_verified = (
@@ -89,6 +92,22 @@ def _agm_profile_evidence(latest_agm) -> dict:
         "auditor_reappointment_evidence_ref": getattr(latest_agm, "auditor_reappointment_evidence_ref", None),
         "agm_minutes_prepared": minutes_prepared,
         "notice_sent_date": getattr(latest_agm, "notice_sent_date", None),
+        "short_notice_consent_obtained": (
+            getattr(latest_agm, "short_notice_consent_obtained", None)
+            if (
+                getattr(latest_agm, "short_notice_consent_verified", False) is True
+                and bool(getattr(latest_agm, "short_notice_consent_evidence_ref", None))
+                and getattr(latest_agm, "short_notice_consent_verified_at", None) is not None
+                and getattr(latest_agm, "short_notice_consent_verified_by", None) is not None
+            ) else None
+        ),
+        "short_notice_consent_verified": (
+            getattr(latest_agm, "short_notice_consent_verified", False) is True
+            and bool(getattr(latest_agm, "short_notice_consent_evidence_ref", None))
+            and getattr(latest_agm, "short_notice_consent_verified_at", None) is not None
+            and getattr(latest_agm, "short_notice_consent_verified_by", None) is not None
+        ),
+        "short_notice_consent_evidence_ref": getattr(latest_agm, "short_notice_consent_evidence_ref", None),
     }
 
 
@@ -680,6 +699,9 @@ class CompanyService(BaseService[Company]):
             "agm_adjourned_without_notice":  getattr(company, "agm_adjourned_without_notice", False),
             "agm_scheduled_date":            getattr(company, "agm_scheduled_date", None),
             "notice_sent_date":              agm_profile_evidence["notice_sent_date"],
+            "short_notice_consent_obtained": agm_profile_evidence.get("short_notice_consent_obtained"),
+            "short_notice_consent_verified": agm_profile_evidence.get("short_notice_consent_verified", False),
+            "short_notice_consent_evidence_ref": agm_profile_evidence.get("short_notice_consent_evidence_ref"),
             "members_present_at_agm":        agm_profile_evidence["members_present_at_agm"],
             "agm_attendance_verified":       agm_profile_evidence.get("agm_attendance_verified", False),
             "agm_attendance_evidence_ref":   agm_profile_evidence.get("agm_attendance_evidence_ref"),
