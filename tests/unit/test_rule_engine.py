@@ -190,7 +190,10 @@ class TestAGMRules:
     def test_AGM005_triggers_when_quorum_not_met(self, rule_engine, build_profile):
         profile = build_profile(
             agm_held_this_cycle=True,
-            members_present_at_agm=1,  # Below quorum of 2
+            member_count=5,
+            articles_quorum_verified=True,
+            articles_quorum_required=None,
+            members_present_at_agm=1,  # Below statutory default quorum of 2
         )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "AGM-005")
@@ -198,10 +201,53 @@ class TestAGMRules:
     def test_AGM005_no_trigger_when_quorum_met(self, rule_engine, build_profile):
         profile = build_profile(
             agm_held_this_cycle=True,
+            member_count=5,
+            articles_quorum_verified=True,
+            articles_quorum_required=None,
             members_present_at_agm=3,
         )
         output = rule_engine.evaluate(profile)
         assert_flag_not_triggered(output, "AGM-005")
+
+    def test_AGM005_large_private_company_uses_three_member_default(self, rule_engine, build_profile):
+        profile = build_profile(
+            agm_held_this_cycle=True,
+            member_count=7,
+            articles_quorum_verified=True,
+            articles_quorum_required=None,
+            members_present_at_agm=2,
+        )
+        output = rule_engine.evaluate(profile)
+        flag = next(f for f in output.flags if f.rule_id == "AGM-005")
+        assert flag.detail["required"] == 3
+        assert flag.detail["quorum_basis"] == "SECTION_85_2_B_DEFAULT_ARTICLES_VERIFIED_NO_VARIATION"
+
+    def test_AGM005_articles_alternative_quorum_overrides_statutory_default(self, rule_engine, build_profile):
+        profile = build_profile(
+            agm_held_this_cycle=True,
+            member_count=5,
+            articles_quorum_verified=True,
+            articles_quorum_required=4,
+            members_present_at_agm=3,
+        )
+        output = rule_engine.evaluate(profile)
+        flag = next(f for f in output.flags if f.rule_id == "AGM-005")
+        assert flag.detail["required"] == 4
+        assert flag.detail["quorum_basis"] == "ARTICLES_VERIFIED"
+
+    def test_AGM005_unknown_articles_quorum_is_not_evaluated(self, rule_engine, build_profile):
+        profile = build_profile(
+            agm_held_this_cycle=True,
+            member_count=5,
+            articles_quorum_verified=None,
+            articles_quorum_required=None,
+            members_present_at_agm=1,
+        )
+        output = rule_engine.evaluate(profile)
+        flag = next(f for f in output.flags if f.rule_id == "AGM-005")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
 
     # ── AGM-006: Auditor Not Reappointed ─────────────────────────────────────
 
