@@ -467,7 +467,7 @@ CATEGORY_CAPS: dict[str, tuple[int, tuple[str, ...]]] = {
 # Unverified rules still generate flags (for visibility) but their
 # score_impact is excluded from _calculate_score() and _calculate_raw_score().
 #
-# Rationale: statutory citations for these 39 rules have undergone an
+# Rationale: statutory citations for these 38 rules have undergone an
 # internal source check against the Companies Act 1994 (Bangladesh) text.
 # This is not independent legal approval or a complete amendment review.
 # Rules not yet internally verified
@@ -486,7 +486,7 @@ VERIFIED_RULE_IDS: frozenset[str] = frozenset({
     # Registered Office (1 rule)
     "OFF-001",
     # Directors module (7 rules)
-    "DIR-001", "DIR-002", "DIR-003", "DIR-004",
+    "DIR-001", "DIR-002", "DIR-003",
     "DIR-007", "DIR-008", "DIR-010",
     # Capital module (3 rules)
     "CAP-001", "CAP-002", "CAP-003",
@@ -701,7 +701,7 @@ class NLCRuleEngine:
                         score_impact=15,
                         is_black_override=True,
                         revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                        description=f"RJSC-verified private company has {count} director(s); Section 90 requires at least {required}.",
+                        description=f"RJSC-verified {c.company_type.lower().replace('_', ' ')} has {count} director(s); Section 90 requires at least {required}.",
                         statutory_basis="Section 90(1), Companies Act 1994 (Bangladesh)" if required == 3 else "Section 90(2), Companies Act 1994 (Bangladesh)",
                         detail={"current_count": count, "required": required,
                                 "private_subsidiary_of_public_company": c.is_private_subsidiary_of_public_company},
@@ -1218,7 +1218,7 @@ class NLCRuleEngine:
                     score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Director filing status unknown for {change.director_id}.",
-                    statutory_basis="Section 90, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                     detail={"director_id": change.director_id},
                     state=RuleState.UNKNOWN
                 ))
@@ -1245,18 +1245,20 @@ class NLCRuleEngine:
                         score_impact=10 if delay > 90 else 5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=f"Director {change.event_type} not filed via Form XII. Section 115: 14-day deadline. Overdue by {delay} days.",
-                        statutory_basis="Section 93, Companies Act 1994 (Bangladesh)",
+                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "delay": delay, "type": change.event_type}
                     ))
                     self._add_flag(ComplianceFlag(
                         rule_id="DIR-004",
-                        flag_code="DEPARTED_DIRECTOR_STILL_LIABLE",
-                        severity=Severity.RED,
-                        score_impact=10,
-                        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                        description="Departed director still liable until Form XII filed. Section 115: filing required to release liability.",
-                        statutory_basis="Section 109, Companies Act 1994 (Bangladesh)",
-                        detail={"director_id": change.director_id}
+                        flag_code="LATE_CESSATION_FILING_LEGAL_EFFECT_REVIEW",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="Cessation particulars were filed late or remain unfiled. The legal effect on third-party reliance and any continuing liability requires case-specific legal review; non-filing alone does not automatically establish continuing director liability.",
+                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
+                        detail={"director_id": change.director_id, "legal_review_required": True},
+                        state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                        eval_state="UNKNOWN",
                     ))
 
                 if delay > 365:
