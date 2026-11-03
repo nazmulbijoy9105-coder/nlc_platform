@@ -996,7 +996,7 @@ class NLCRuleEngine:
                     state=RuleState.UNKNOWN,
                 ))
 
-        if c.agm_scheduled_date and c.notice_sent_date is None:
+        if c.agm_scheduled_date and c.notice_sent_date is None and not c.agm_held_this_cycle:
             warn = c.agm_scheduled_date - timedelta(days=AGM_NOTICE_MINIMUM_DAYS)
             if self.today >= warn:
                 days_rem = (c.agm_scheduled_date - self.today).days
@@ -1021,6 +1021,43 @@ class NLCRuleEngine:
                     },
                     state=RuleState.UNKNOWN,
                 ))
+
+        if c.agm_held_this_cycle and c.notice_sent_date is None:
+            # The meeting is recorded as held, but no notice dispatch evidence
+            # exists. Section 85's accidental omission/non-receipt exception
+            # prevents a categorical legal conclusion from this fact alone.
+            self._add_flag(ComplianceFlag(
+                rule_id="AGM-004",
+                flag_code="AGM_HELD_NOTICE_EVIDENCE_MISSING",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "AGM is recorded as held but no notice dispatch date is "
+                    "recorded. Verify member-level service, accidental omission "
+                    "and non-receipt evidence before determining legal effect."
+                ),
+                statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
+                detail={"reason": "held_meeting_notice_evidence_missing"},
+                state=RuleState.UNKNOWN,
+            ))
+
+        if c.agm_held_this_cycle and c.agm_scheduled_date is None and c.notice_sent_date is not None:
+            self._add_flag(ComplianceFlag(
+                rule_id="AGM-003",
+                flag_code="AGM_MEETING_DATE_MISSING_FOR_NOTICE_ASSESSMENT",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "AGM is recorded as held and a notice dispatch date exists, "
+                    "but the meeting date is missing. The 21-clear-day requirement "
+                    "cannot be calculated."
+                ),
+                statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
+                detail={"reason": "meeting_date_missing_for_clear_day_calculation"},
+                state=RuleState.UNKNOWN,
+            ))
 
         if c.agm_held_this_cycle:
             company_type = getattr(c.company_type, "value", c.company_type)
