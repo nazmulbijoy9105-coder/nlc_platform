@@ -1,6 +1,6 @@
 # NLC platform — FINAL acceptance sweep (post-commit 26ea991).
 # Pins: restored eval_state guards (F-29 x3, F-30 black_count, 39b4b9d severity floor),
-#       cleaned F3 comment artifact (D16), VERIFIED_RULE_IDS = 41 pin (D15).
+#       cleaned F3 comment artifact (D16), VERIFIED_RULE_IDS = 40 pin (AGM-005 pending counsel).
 # Run from Git Bash (any location):  bash nlc_verify_final.sh
 # Optional repo override (testing):  NLC_REPO=/path/to/repo bash nlc_verify_final.sh
 # NOTE: save/edit this file with LF line endings (not CRLF) or Git Bash will choke.
@@ -98,7 +98,7 @@ else
   ISSUES=$((ISSUES+1))
 fi
 
-echo "===== G5 VERIFIED_RULE_IDS PIN (expect 41; AR-001/SH-002/ESC-003 excluded) ====="
+echo "===== G5 VERIFIED_RULE_IDS PIN (expect 40; AR-001/SH-002/ESC-003/AGM-005 excluded) ====="
 python - "$ENGINE" <<'PY'
 import re, sys
 path = sys.argv[1]
@@ -136,13 +136,13 @@ print(f"VERIFIED_RULE_IDS: {len(uniq)} unique ids (raw {len(ids)}), sample: {sor
 if dupes:
     print(f"X: {dupes} duplicate entr(ies) in VERIFIED_RULE_IDS near: {hint!r}")
     sys.exit(1)
-if len(uniq) != 41:
-    print(f"X: expected 41 verified rules, found {len(uniq)} — definition form near: {hint!r}")
+if len(uniq) != 40:
+    print(f"X: expected 40 verified rules, found {len(uniq)} — definition form near: {hint!r}")
     sys.exit(1)
 if forbidden:
     print(f"X: forbidden members present: {forbidden}")
     sys.exit(1)
-print("OK: 41 rules; AR-001 / SH-002 / ESC-003 excluded")
+print("OK: 40 rules; AR-001 / SH-002 / ESC-003 / AGM-005 excluded")
 sys.exit(0)
 PY
 if [ $? -ne 0 ]; then ISSUES=$((ISSUES+1)); fi
