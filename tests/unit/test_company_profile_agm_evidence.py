@@ -168,6 +168,26 @@ def test_first_auditor_boolean_without_appointment_date_is_not_evaluated():
     assert flag.score_impact == 0
 
 
+def test_first_auditor_false_status_conflicting_with_appointment_date_is_not_evaluated():
+    registration = date(2026, 1, 1)
+    profile = CompanyProfile(
+        company_id="auditor-contradictory-test",
+        company_name="Auditor Contradictory Test Ltd",
+        incorporation_date=registration,
+        first_auditor_appointed=False,
+        first_auditor_appointment_date=date(2026, 1, 10),
+        audit_complete=True,
+        annual_return_filed=True,
+    )
+
+    result = NLCRuleEngine().evaluate(profile, today=date(2026, 3, 10))
+    flag = next(flag for flag in result.flags if flag.rule_id == "AUD-001")
+    assert flag.flag_code == "FIRST_AUDITOR_EVIDENCE_CONTRADICTORY"
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.score_impact == 0
+
+
 def test_director_count_from_local_records_is_not_rjsc_verified():
     today = date.today()
     profile = CompanyProfile(
