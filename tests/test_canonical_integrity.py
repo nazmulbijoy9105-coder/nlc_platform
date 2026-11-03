@@ -62,6 +62,17 @@ def test_first_auditor_canonical_rule_matches_calendar_month_evaluator():
     # Correct wording is not proof of lawyer verification.
     assert rule.provision_status.value == "RECONCILE"
 
+def test_agm_notice_rules_do_not_assert_automatic_nullity():
+    defective = STATUTORY_RULE_REGISTRY["AGM-003"].requirement.lower()
+    missing = STATUTORY_RULE_REGISTRY["AGM-004"].requirement.lower()
+    for text in (defective, missing):
+        assert "accidental omission" in text
+        assert "non-receipt" in text
+        assert "required" in text and "consent" in text
+    assert "all resolutions void" not in missing
+    assert STATUTORY_RULE_REGISTRY["AGM-003"].provision_status.value == "RECONCILE"
+    assert STATUTORY_RULE_REGISTRY["AGM-004"].provision_status.value == "RECONCILE"
+
 
 # --- evaluation ------------------------------------------------------------
 def test_missing_evidence_is_unknown_not_noncompliant():  # R-008
