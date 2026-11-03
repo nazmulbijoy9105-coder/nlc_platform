@@ -13,6 +13,8 @@ def test_missing_agm_record_keeps_attendance_and_auditor_status_unknown():
     assert evidence == {
         "members_present_at_agm": None,
         "auditor_reappointed_at_agm": None,
+        "auditor_reappointment_verified": False,
+        "auditor_reappointment_evidence_ref": None,
         "agm_minutes_prepared": None,
         "notice_sent_date": None,
     }
@@ -109,6 +111,9 @@ def test_verified_zero_directors_triggers_minimum_director_rule():
         incorporation_date=date(today.year - 2, 1, 1),
         current_director_count=0,
         directors_verified=True,
+        directors_verification_evidence_ref="RJSC-DIRECTORS-001",
+        directors_verified_at=today,
+        directors_verified_by="reviewer-001",
         agm_count=1,
         annual_return_filed=True,
         first_auditor_appointed=True,
