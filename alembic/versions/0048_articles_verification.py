@@ -41,7 +41,10 @@ def upgrade():
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.CheckConstraint("status IN ('PENDING', 'VERIFIED', 'REJECTED', 'REVOKED', 'SUPERSEDED')", name="ck_articles_verifications_status"),
-        sa.CheckConstraint("source_checksum_sha256 ~ '^[0-9a-f]{64}
+        sa.CheckConstraint("source_checksum_sha256 ~ '^[0-9a-f]{64}$'", name="ck_articles_verifications_checksum"),
+        sa.CheckConstraint("source_document_version >= 1", name="ck_articles_verifications_document_version"),
+        sa.CheckConstraint("quorum_required IS NULL OR quorum_required BETWEEN 1 AND 100", name="ck_articles_verifications_quorum"),
+        sa.CheckConstraint("status <> 'VERIFIED' OR (effective_from IS NOT NULL AND clause_reference IS NOT NULL)", name="ck_articles_verifications_verified_fields"),
         sa.CheckConstraint("status <> 'VERIFIED' OR quorum_variation_exists = FALSE OR quorum_clause_text IS NOT NULL", name="ck_articles_verifications_quorum_text"),
         sa.CheckConstraint("quorum_variation_exists = FALSE OR quorum_required IS NOT NULL", name="ck_articles_verifications_variation_quorum"),
         sa.CheckConstraint(
@@ -55,6 +58,7 @@ def upgrade():
             name="ck_articles_verifications_revocation_metadata",
         ),
     )
+
     op.create_index("ix_articles_verifications_company_id", "articles_verifications", ["company_id"])
     op.create_index("ix_articles_verifications_document_id", "articles_verifications", ["document_id"])
     op.create_index("ix_articles_verifications_status", "articles_verifications", ["status"])
