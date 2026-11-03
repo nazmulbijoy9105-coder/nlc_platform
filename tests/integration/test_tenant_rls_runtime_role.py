@@ -39,6 +39,16 @@ async def test_non_bypass_app_role_sees_only_active_member_companies(
 
 @pytest.mark.asyncio
 async def test_app_role_has_no_schema_creation_or_truncate_privilege(db):
+    role = await db.execute(
+        text(
+            "SELECT rolsuper, rolbypassrls FROM pg_roles "
+            "WHERE rolname = 'nlc_app_role'"
+        )
+    )
+    is_superuser, bypasses_rls = role.one()
+    assert is_superuser is False
+    assert bypasses_rls is False
+
     can_create = await db.execute(
         text("SELECT has_schema_privilege('nlc_app_role', 'public', 'CREATE')")
     )
