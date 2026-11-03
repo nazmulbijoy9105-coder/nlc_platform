@@ -523,7 +523,9 @@ def queue_deadline_warning_notifications(
 
             # Get all upcoming deadlines within max warning window
             max_days = max(warning_days)
-            deadlines = await company_svc.get_upcoming_deadlines(
+            # This task runs under set_admin_context() and is the only
+            # caller permitted to scan the complete portfolio.
+            deadlines = await company_svc.get_upcoming_deadlines_for_system(
                 days_ahead=max_days
             )
 
