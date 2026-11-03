@@ -70,7 +70,13 @@ def test_missing_agm_evidence_does_not_create_quorum_or_reappointment_flags():
     result = NLCRuleEngine().evaluate(profile)
     fired_rule_ids = {flag.rule_id for flag in result.flags}
 
-    assert "AGM-005" not in fired_rule_ids
+    # Unknown membership/attendance is represented as NOT_EVALUATED,
+    # never as a quorum violation or score deduction.
+    quorum = [flag for flag in result.flags if flag.rule_id == "AGM-005"]
+    assert len(quorum) == 1
+    assert quorum[0].state == RuleState.UNKNOWN
+    assert quorum[0].severity.value == "NOT_EVALUATED"
+    assert quorum[0].score_impact == 0
     assert "AGM-006" not in fired_rule_ids
     assert "AUD-004" not in fired_rule_ids
 
