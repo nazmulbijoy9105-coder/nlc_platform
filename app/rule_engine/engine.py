@@ -164,6 +164,10 @@ class CompanyProfile:
     incorporation_date: date | None = None
     financial_year_end: Optional[date] = field(default=None)
     agm_count: int | None = None
+    agm_history_verified: bool = False
+    agm_history_evidence_ref: str | None = None
+    agm_history_verified_at: date | None = None
+    agm_history_verified_by: str | None = None
     last_agm_date: Optional[date] = None
     agm_extension_granted_until: date | None = None
     agm_extension_application_date: date | None = None
