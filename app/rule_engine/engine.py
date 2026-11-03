@@ -174,6 +174,8 @@ class CompanyProfile:
     agm_quorum_required: int | None = None
     agm_quorum_basis_verified: bool = False
     agm_attendance_verified: bool = False
+    agm_attendance_evidence_ref: str | None = None
+    agm_quorum_evidence_ref: str | None = None
     auditor_reappointed_at_agm: bool | None = None
     accounts_adopted_at_agm: bool = False
     agm_minutes_prepared: bool | None = None
@@ -196,8 +198,13 @@ class CompanyProfile:
     shareholders_list_attached: bool = False
     director_changes: List[DirectorChange] = field(default_factory=list)
     current_director_count: int | None = None
-    directors_verified: bool = False  # True only when director count verified against RJSC registry
+    directors_verified: bool = False
+    directors_verification_evidence_ref: str | None = None
+    directors_verified_at: date | None = None
+    directors_verified_by: str | None = None
     is_private_subsidiary_of_public_company: bool | None = None
+    subsidiary_status_verified: bool = False
+    subsidiary_status_evidence_ref: str | None = None
     minimum_directors_met: bool | None = None
     shareholder_change_date: Optional[date] = None
     form_xv_filed: bool = False
@@ -295,6 +302,9 @@ class CompanyProfile:
     moa_aoa_filed: bool | None = None
     # Stored legacy booleans are not proof of registry verification.
     moa_aoa_verified: bool = False
+    moa_aoa_evidence_ref: str | None = None
+    moa_aoa_verified_at: date | None = None
+    moa_aoa_verified_by: str | None = None
     annual_turnover_bdt: float = 0.0
     name_change_pending: bool = False
     name_change_date: Optional[date] = None
@@ -595,7 +605,12 @@ class NLCRuleEngine:
         # MoA/AoA (Section 23), so absence in NLC's database means the
         # documents haven't been uploaded/verified — not that they don't exist.
         # The correct state is NOT_EVALUATED, not RED.
-        if c.moa_aoa_verified is not True:
+        if not (
+            c.moa_aoa_verified is True
+            and bool(c.moa_aoa_evidence_ref)
+            and c.moa_aoa_verified_at is not None
+            and bool(c.moa_aoa_verified_by)
+        ):
             self._add_flag(ComplianceFlag(
                 rule_id="INC-001",
                 flag_code="MOA_AOA_NOT_VERIFIED",
@@ -621,9 +636,11 @@ class NLCRuleEngine:
             ))
 
 
-        if c.company_type == "PRIVATE_LIMITED" and c.directors_verified is True and c.current_director_count is not None:
+        if c.company_type in ("PRIVATE_LIMITED", "PUBLIC_LIMITED") and c.directors_verified is True and bool(c.directors_verification_evidence_ref) and c.directors_verified_at is not None and bool(c.directors_verified_by) and c.current_director_count is not None:
             count = c.current_director_count
-            if count == 2 and c.is_private_subsidiary_of_public_company is None:
+            if (c.company_type == "PRIVATE_LIMITED" and count == 2
+                    and (c.subsidiary_status_verified is not True
+                         or not c.subsidiary_status_evidence_ref)):
                 self._add_flag(ComplianceFlag(
                     rule_id="INC-003",
                     flag_code="DIRECTOR_MINIMUM_APPLICABILITY_UNKNOWN",
@@ -637,7 +654,10 @@ class NLCRuleEngine:
                     detail={"current_count": count, "subsidiary_status": "UNKNOWN"},
                 ))
             else:
-                required = 3 if c.is_private_subsidiary_of_public_company is True else 2
+                required = 3 if (
+                    c.company_type == "PUBLIC_LIMITED"
+                    or (c.company_type == "PRIVATE_LIMITED" and c.is_private_subsidiary_of_public_company is True)
+                ) else 2
                 if count < required:
                     self._add_flag(ComplianceFlag(
                         rule_id="INC-003",
@@ -954,7 +974,9 @@ class NLCRuleEngine:
 
         if c.agm_held_this_cycle and c.members_present_at_agm is not None:
             if (c.agm_attendance_verified is not True
+                    or not c.agm_attendance_evidence_ref
                     or c.agm_quorum_basis_verified is not True
+                    or not c.agm_quorum_evidence_ref
                     or c.agm_quorum_required is None):
                 self._add_flag(ComplianceFlag(
                     rule_id="AGM-005",
