@@ -144,7 +144,7 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | 2026-11-02 | AUD-001: Section 210(6), one calendar month (was 210(1) / 30 days) |
 | 2026-11-02 | DEF-001: Section 94 evidence-required (was Section 297) |
 | 2026-11-02 | REG-002: Sec 34/89/174 internal vs Sec 115 RJSC filing |
-| 2026-11-02 | AGM-005/006: Section 89; CHG-001: Section 159; TR-*: Section 38; etc. |
+| 2026-11-02 | AGM-005: Section 85(2)(b), subject to current Articles; AGM-006: Section 89; CHG-001: Section 159; TR-*: Section 38; etc. |
 
 ## Explicit non-claims
 
