@@ -90,10 +90,11 @@ class AGMResponse(BaseModel):
     filed_date: str | None
     quorum_met: bool | None
     quorum_required: int | None = None
+    quorum_basis: str | None = None
     venue: str | None = None
     auditor_reappointed: bool | None
     accounts_adopted: bool | None
-    agm_held_without_audit: bool
+    agm_held_without_audit: bool | None
     is_default: bool
     created_at: str
 
@@ -684,10 +685,11 @@ def _agm_to_response(agm) -> AGMResponse:
         filed_date=agm.rjsc_filing_date.isoformat() if agm.rjsc_filing_date else None,
         quorum_met=agm.quorum_met,
         quorum_required=agm.quorum_required,
+        quorum_basis=agm.quorum_basis,
         venue=getattr(agm, "venue", None),
         auditor_reappointed=agm.auditor_reappointed,
         accounts_adopted=getattr(agm, "accounts_adopted", None),
-        agm_held_without_audit=bool(getattr(agm, "agm_held_without_audit", False)),
+        agm_held_without_audit=getattr(agm, "agm_held_without_audit", None),
         is_default=agm.is_default,
         created_at=agm.created_at.isoformat() if hasattr(agm, 'created_at') and agm.created_at else '',
     )
