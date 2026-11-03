@@ -256,7 +256,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AGM-001": {
         "rule_id": "AGM-001",
         "legal_domain": "Corporate",
-        "law": "Section 81, Companies Act 1994 (Bangladesh)",
+        "law": "Section 81(1), Companies Act 1994 (Bangladesh)",
         "requirement": "First AGM Default - First AGM not held within 18 months (548 days) of incorporation. Section 81 is mandatory; no waiver for private companies. Default counts from day after deadline.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
@@ -271,7 +271,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AGM-002": {
         "rule_id": "AGM-002",
         "legal_domain": "Corporate",
-        "law": "Section 81, Companies Act 1994 (Bangladesh)",
+        "law": "Section 81(1), Companies Act 1994 (Bangladesh)",
         "requirement": "Subsequent AGM Default - Subsequent AGM not held within 15 months of preceding AGM, or 6 months of FY end — whichever earlier. Section 81 makes no exception for size or dormancy.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
@@ -451,16 +451,16 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "DIR-004": {
         "rule_id": "DIR-004",
         "legal_domain": "Corporate",
-        "law": "Section 92, Companies Act 1994 (Bangladesh)",
-        "requirement": "Departed Director Still Active on RJSC Register - Departed director still recorded as active on RJSC register because Form XII not filed. Departed director continues to bear personal liability for obligations while on record. Enables fraudulent authority claims.",
+        "law": "Section 115, Companies Act 1994 (Bangladesh)",
+        "requirement": "Late or missing Form XII cessation particulars require case-specific review of the filing default, actual cessation date and third-party reliance. Non-filing alone does not automatically establish continuing director liability.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
         "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 10,
+        "severity": "YELLOW",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "SH-001": {
