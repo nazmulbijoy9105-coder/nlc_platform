@@ -210,9 +210,6 @@ class AGMService(BaseService[AGM]):
         is_default = bool(agm.agm_deadline and agm_date > agm.agm_deadline)
         delay_days = (agm_date - agm.agm_deadline).days if is_default and agm.agm_deadline else 0
 
-        is_default = bool(agm.agm_deadline and agm_date > agm.agm_deadline)
-        delay_days = (agm_date - agm.agm_deadline).days if is_default and agm.agm_deadline else 0
-
         updated = await self.update_instance(
             agm,
             agm_held=True,
