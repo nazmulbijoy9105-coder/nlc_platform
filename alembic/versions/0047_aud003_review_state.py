@@ -17,6 +17,13 @@ depends_on = None
 
 
 def upgrade():
+    # PostgreSQL requires ALTER TYPE ADD VALUE to commit before the new enum
+    # label is used by subsequent UPDATE statements. Use Alembic's explicit
+    # autocommit block so this also works when the migration chain is wrapped
+    # in a larger transaction by a deployment runner.
+    with op.get_context().autocommit_block():
+        op.execute("ALTER TYPE severity_level ADD VALUE IF NOT EXISTS 'NOT_EVALUATED'")
+
     op.execute("""
         UPDATE legal_rules
         SET statutory_basis = 'Section 183, Companies Act 1994 (Bangladesh)',
