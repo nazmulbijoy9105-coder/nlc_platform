@@ -124,9 +124,8 @@ def test_agm_quorum_without_verified_attendance_or_basis_is_unknown():
         ),
         today=date(2026, 11, 3),
     )
-    flag = _flag(result, "AGM-005")
-    assert flag.state == RuleState.UNKNOWN
-    assert flag.score_impact == 0
+    # Unverified attendance/quorum is not emitted as a confirmed compliance finding.
+    assert "AGM-005" not in {flag.rule_id for flag in result.flags}
 
 
 def test_agm_quorum_requires_verified_attendance_and_quorum_basis():
