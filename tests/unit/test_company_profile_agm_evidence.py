@@ -14,6 +14,7 @@ def test_missing_agm_record_keeps_attendance_and_auditor_status_unknown():
         "members_present_at_agm": None,
         "auditor_reappointed_at_agm": None,
         "agm_minutes_prepared": None,
+        "agm_quorum_met": None,
         "notice_sent_date": None,
     }
 
@@ -23,6 +24,7 @@ def test_agm_profile_evidence_comes_from_the_latest_agm_record():
         members_present=3,
         auditor_reappointed=False,
         minutes_prepared=True,
+        quorum_met=False,
         notice_sent_date=date(2026, 1, 1),
     )
 
@@ -31,6 +33,7 @@ def test_agm_profile_evidence_comes_from_the_latest_agm_record():
     assert evidence["members_present_at_agm"] == 3
     assert evidence["auditor_reappointed_at_agm"] is False
     assert evidence["agm_minutes_prepared"] is True
+    assert evidence["agm_quorum_met"] is False
     assert evidence["notice_sent_date"] == date(2026, 1, 1)
 
 
@@ -39,6 +42,7 @@ def test_default_zero_attendance_is_not_treated_as_verified_quorum_breach():
         members_present=0,
         auditor_reappointed=True,
         minutes_prepared=False,
+        quorum_met=True,
         notice_sent_date=None,
     )
 
@@ -47,6 +51,7 @@ def test_default_zero_attendance_is_not_treated_as_verified_quorum_breach():
     assert evidence["members_present_at_agm"] is None
     assert evidence["auditor_reappointed_at_agm"] is True
     assert evidence["agm_minutes_prepared"] is None
+    assert evidence["agm_quorum_met"] is None
 
 
 
@@ -73,6 +78,51 @@ def test_missing_agm_evidence_does_not_create_quorum_or_reappointment_flags():
     assert "AGM-005" not in fired_rule_ids
     assert "AGM-006" not in fired_rule_ids
     assert "AUD-004" not in fired_rule_ids
+
+
+def test_recorded_failed_agm_quorum_triggers_section_85_2_b_finding():
+    today = date.today()
+    profile = CompanyProfile(
+        company_id="agm-quorum-failed",
+        company_name="AGM Quorum Failed Ltd",
+        incorporation_date=date(today.year - 3, 1, 1),
+        agm_count=1,
+        last_agm_date=today,
+        agm_held_this_cycle=True,
+        members_present_at_agm=2,
+        member_count=8,
+        agm_quorum_met=False,
+        first_auditor_appointed=True,
+        audit_complete=True,
+        annual_return_filed=True,
+    )
+
+    result = NLCRuleEngine().evaluate(profile)
+    flag = next(flag for flag in result.flags if flag.rule_id == "AGM-005")
+    assert flag.statutory_basis == "Section 85(2)(b), Companies Act 1994 (Bangladesh)"
+    assert flag.detail["quorum_met_recorded"] is False
+    assert flag.detail["member_count"] == 8
+
+
+def test_low_attendance_alone_does_not_infer_quorum_without_articles_review():
+    today = date.today()
+    profile = CompanyProfile(
+        company_id="agm-quorum-unknown",
+        company_name="AGM Quorum Unknown Ltd",
+        incorporation_date=date(today.year - 3, 1, 1),
+        agm_count=1,
+        last_agm_date=today,
+        agm_held_this_cycle=True,
+        members_present_at_agm=1,
+        member_count=8,
+        agm_quorum_met=None,
+        first_auditor_appointed=True,
+        audit_complete=True,
+        annual_return_filed=True,
+    )
+
+    result = NLCRuleEngine().evaluate(profile)
+    assert "AGM-005" not in {flag.rule_id for flag in result.flags}
 
 
 def test_director_count_from_local_records_is_not_rjsc_verified():
