@@ -166,6 +166,53 @@ def test_unverified_red_finding_does_not_force_red_risk_band():
     assert score.final_score == 100
 
 
+
+def test_unverified_first_auditor_absence_is_not_a_confirmed_violation():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            first_auditor_appointed=False,
+            first_auditor_appointment_verified=False,
+        ),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "AUD-001")
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.score_impact == 0
+
+
+def test_verified_audit_missing_at_agm_requires_lawyer_judgment_not_black():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            audit_complete=False,
+            audit_completion_verified=True,
+            audit_completion_evidence_ref="AUDIT-REVIEW-001",
+            audit_completion_verified_at=date(2026, 11, 1),
+            audit_completion_verified_by="reviewer-001",
+        ),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "AUD-003")
+    assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+    assert flag.is_black_override is False
+    assert flag.score_impact == 0
+
+
+def test_public_company_requires_three_verified_directors():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            company_type="PUBLIC_LIMITED",
+            current_director_count=2,
+            directors_verified=True,
+            directors_verification_evidence_ref="RJSC-DIRECTORS-PUBLIC-001",
+            directors_verified_at=date(2026, 11, 1),
+            directors_verified_by="reviewer-001",
+        ),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "INC-003")
+    assert flag.state == RuleState.NON_COMPLIANT
+    assert flag.detail["required"] == 3
+
 def test_score_hash_changes_when_evidence_inputs_change():
     engine = NLCRuleEngine()
     first = engine.evaluate(_profile(member_count=2), today=date(2026, 11, 3))
