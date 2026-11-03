@@ -577,6 +577,9 @@ class TestFilingService:
             agm_date=date(2023, 5, 15),
             members_present=2,
             auditor_reappointed=True,
+            members_total_at_agm=7,
+            members_total_evidence_ref="test-evidence://members-register-at-agm",
+            members_present_evidence_ref="test-evidence://agm-attendance-register",
         )
         assert updated is not None
         assert updated.quorum_required == 3
