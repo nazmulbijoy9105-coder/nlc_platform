@@ -80,6 +80,8 @@ def test_two_verified_directors_with_unknown_subsidiary_status_are_not_black():
             directors_verified_by="reviewer-001",
             is_private_subsidiary_of_public_company=None,
             subsidiary_status_verified=False,
+            subsidiary_status_verified_at=None,
+            subsidiary_status_verified_by=None,
         ),
         today=date(2026, 11, 3),
     )
@@ -99,6 +101,8 @@ def test_private_subsidiary_of_public_company_requires_three_verified_directors(
             is_private_subsidiary_of_public_company=True,
             subsidiary_status_verified=True,
             subsidiary_status_evidence_ref="GROUP-STRUCTURE-002",
+            subsidiary_status_verified_at=date(2026, 11, 1),
+            subsidiary_status_verified_by="reviewer-001",
         ),
         today=date(2026, 11, 3),
     )
