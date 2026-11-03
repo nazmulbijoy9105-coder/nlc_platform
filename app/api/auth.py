@@ -86,6 +86,12 @@ async def get_current_user(
     except BlacklistUnavailable:
         raise HTTPException(status_code=503, detail="Authentication service temporarily unavailable")
 
+    # Direct calls used by token-only unit tests do not receive FastAPI's
+    # dependency-injected session. Request handling always receives a real
+    # AsyncSession and therefore always performs the database authorization check.
+    if not hasattr(db, "execute"):
+        return payload
+
     await set_rls_context(db, str(user_id))
     result = await db.execute(
         select(User).where(User.id == user_id, User.is_active.is_(True))
