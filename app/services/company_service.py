@@ -473,27 +473,10 @@ class CompanyService(BaseService[Company]):
         ) or date.today()
         verified_articles = await self.db.scalar(
             select(ArticlesVerification)
-            .join(
-                Document,
-                and_(
-                    Document.id == ArticlesVerification.document_id,
-                    Document.company_id == ArticlesVerification.company_id,
-                ),
-            )
             .where(
                 ArticlesVerification.company_id == company_id,
                 ArticlesVerification.status.in_(("VERIFIED", "SUPERSEDED", "REVOKED")),
                 ArticlesVerification.effective_from <= articles_as_of,
-                Document.is_active.is_(True),
-                Document.document_type == "ARTICLES_OF_ASSOCIATION",
-                Document.version == ArticlesVerification.source_document_version,
-                Document.checksum_sha256 == ArticlesVerification.source_checksum_sha256,
-                or_(
-                    ArticlesVerification.revoked_at.is_(None),
-                    ArticlesVerification.revoked_at > datetime.combine(
-                        articles_as_of, datetime.min.time(), tzinfo=UTC
-                    ),
-                ),
             )
             .order_by(
                 ArticlesVerification.effective_from.desc(),
@@ -501,6 +484,29 @@ class CompanyService(BaseService[Company]):
             )
             .limit(1)
         )
+        if verified_articles is not None:
+            # Never fall back to an older Articles version when the newest
+            # effective record has been revoked or its source file changed.
+            source_document = await self.db.scalar(
+                select(Document).where(
+                    Document.id == verified_articles.document_id,
+                    Document.company_id == company_id,
+                    Document.is_active.is_(True),
+                    Document.document_type == "ARTICLES_OF_ASSOCIATION",
+                    Document.version == verified_articles.source_document_version,
+                    func.lower(Document.checksum_sha256) == verified_articles.source_checksum_sha256,
+                )
+            )
+            if (
+                source_document is None
+                or (
+                    verified_articles.status == "REVOKED"
+                    and verified_articles.revoked_at is not None
+                    and verified_articles.revoked_at.date() <= articles_as_of
+                )
+            ):
+                verified_articles = None
+
         agm_profile_evidence.update({
             "articles_quorum_verified": verified_articles is not None,
             "articles_quorum_required": (
