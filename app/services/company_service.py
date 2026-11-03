@@ -324,6 +324,21 @@ class CompanyService(BaseService[Company]):
         )
         return [dict(row) for row in result.mappings().all()]
 
+    async def get_upcoming_deadlines_for_system(self, days_ahead: int = 30) -> list[dict]:
+        """System-only deadline scan for privileged background workers.
+
+        Call only from a worker transaction after set_admin_context(). User
+        facing APIs must call get_upcoming_deadlines(days_ahead, user_id).
+        """
+        result = await self.db.execute(
+            text(
+                "SELECT * FROM vw_upcoming_deadlines "
+                "WHERE days_remaining <= :days ORDER BY days_remaining"
+            ),
+            {"days": days_ahead},
+        )
+        return [dict(row) for row in result.mappings().all()]
+
     # ── UPDATE ────────────────────────────────────────────────────
 
     async def update_compliance_state(
