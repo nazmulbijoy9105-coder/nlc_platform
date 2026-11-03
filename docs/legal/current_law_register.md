@@ -171,3 +171,57 @@ F-series queue (F-22..F-33) unchanged by this section; EA rows add cross-cutting
   ESC-003 escalation threshold <=29 mirrors the BLACK band; NOT_EVALUATED band exists for
   insufficient data. Failure-safe direction (missing data != proven breach) matches the
   eval_state UNKNOWN design already in the engine.
+
+
+## 2026-11-03 - Legal evidence and scoring gate hardening
+
+This section records code-level safeguards added on branch `fix/legal-rule-scoring-validation`.
+It does NOT certify every rule as legally validated. Existing `RECONCILE` entries remain
+excluded from production scoring unless independently approved.
+
+### Corrections and controls implemented
+
+| Area | Change | Production effect |
+| --- | --- | --- |
+| AGM timing (s.81) | First AGM uses 18 calendar months; subsequent AGM deadline uses the earlier of the next 31 December and 15 calendar months after the previous AGM. | Removes fixed 548/456-day approximations from the engine's primary and escalation calculations. Registrar extensions and court orders still need explicit data handling. |
+| AGM quorum (s.85(2)(b)) | Quorum is taken from a verified AGM record and verified Articles/statutory basis. The model records verified attendance, quorum requirement and evidence reference. | Missing or default-valued attendance/quorum cannot create a scored breach. AGM-005 is excluded from the verified scoring allowlist pending independent legal approval of the Articles-specific application. |
+| Director minimum (s.90) | Distinguishes a public company/private subsidiary of a public company (three directors) from other private companies (two). | No BLACK finding from unverified local director rows; subsidiary classification is required where two directors are recorded. |
+| Director particulars (s.115) | Engine and seed references for Form XII appointment/cessation particulars use s.115, not s.90/s.93. | Citation correction; filing default is not represented as automatically invalidating the appointment or cessation. |
+| First auditor (s.210(6)) | Retains calendar-month arithmetic, separate from the auditor's own Registrar notification duty under s.210(2). | Avoids treating one calendar month as 30 fixed days. |
+| INC-001 (s.23) | A legacy `moa_aoa_filed` boolean cannot create a confirmed breach without explicit verification provenance. | Unverified values remain UNKNOWN and score impact is zero. |
+| DEF-001 (s.94) | Canonical legal description removes the unsupported universal five-year disqualification claim. Engine requires structured grounds and authoritative evidence for BLACK. | Unverified allegations remain UNKNOWN. |
+
+### New evidence provenance fields
+
+Migration `0045_legal_evidence_provenance` adds explicit verification metadata for:
+- RJSC-verified director counts and public-subsidiary classification;
+- MoA/AoA verification, reviewer, timestamp and evidence reference;
+- AGM attendance verification and verified quorum basis/evidence reference.
+
+Legacy database values are deliberately not backfilled as verified. Defaults are unverified.
+
+### Scoring integrity
+
+- UNKNOWN, DISPUTED, REQUIRES_LAWYER_JUDGMENT and other non-confirmed states are excluded from deductions.
+- VERIFIED_ABSENT is accepted only as an explicit confirmed state.
+- BLACK override and severity escalation require a confirmed violation state.
+- Score hash now includes the complete profile input, evaluation date, engine/ILRMF versions, verified-rule allowlist and evaluated flag signatures.
+- ESC-003's policy threshold and override design remain unchanged pending the documented F-33 owner decision.
+
+### Legal review still required before calling the corpus legally validated
+
+1. Independent Bangladesh company-law review of every active rule and all amendments effective on the assessment date.
+2. Confirm Section 85 quorum application against each company's Articles and the precise member-count bracket; do not assume a universal two-member threshold.
+3. Confirm statutory extensions, court orders and other exceptions for AGM timing.
+4. Review AUD-001 through AUD-004, director filing consequences, DEF-001 evidence sufficiency, strike-off rules and all non-Companies-Act regimes.
+5. Approve the production allowlist by named reviewer and date. A software test or internal citation check is not independent legal approval.
+
+### Primary source references used for this round
+
+- Bangladesh Companies Act 1994, official Laws of Bangladesh portal: https://bdlaws.minlaw.gov.bd/act-788.html
+- Section 90 official text (minimum director numbers): https://bdlaws.minlaw.gov.bd/act-788/section-32914.html
+- Section 85 text (meeting and quorum provisions): https://www.bdlawportal.com/acts/কোম্পানী-আইন-১৯৯৪/section-85-সভা-ও-ভোট-সম্পর্কিত-বিধান
+- Section 81 first/subsequent AGM timing, Companies Act 1994 text: https://www.icnl.org/research/library/bangladesh_comp/
+- ICAB Corporate Laws Manual: https://www.icab.org.bd/icabadmin/uploads/ckeditor/6665Corporate%20Laws%20Manual%20Final%202021.pdf
+
+Source review status: source text checked for this targeted round; full amendment-by-amendment legal review and independent sign-off remain OPEN.
