@@ -300,7 +300,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "AGM-004",
         "legal_domain": "Corporate",
         "law": "Section 85, Companies Act 1994 (Bangladesh)",
-        "requirement": "AGM Notice Missing - No written AGM notice sent to members. Section 85 requires notice specifying date, time, place, and business. AGM without proper notice is a nullity — all resolutions void.",
+        "requirement": "AGM notice verified as not served. Confirm actual service and the statutory exception for accidental omission or non-receipt before determining whether proceedings or resolutions are affected. Missing NLC records alone remain UNKNOWN.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
