@@ -296,6 +296,46 @@ def upgrade() -> None:
             );
     """)
 
+    # Webhooks are user-owned, not company-owned. Replace the earlier policy
+    # that attempted to cast the ADMIN sentinel to UUID and denied staff access.
+    op.execute("""
+        ALTER TABLE public.webhook_endpoints ENABLE ROW LEVEL SECURITY;
+        DROP POLICY IF EXISTS webhook_endpoints_owner_scope ON public.webhook_endpoints;
+        CREATE POLICY webhook_endpoints_owner_scope ON public.webhook_endpoints
+            FOR ALL
+            USING (
+                public.nlc_current_user_is_staff()
+                OR user_id = public.nlc_current_user_id()
+            )
+            WITH CHECK (
+                public.nlc_current_user_is_staff()
+                OR user_id = public.nlc_current_user_id()
+            );
+
+        ALTER TABLE public.webhook_deliveries ENABLE ROW LEVEL SECURITY;
+        DROP POLICY IF EXISTS webhook_deliveries_owner_scope ON public.webhook_deliveries;
+        CREATE POLICY webhook_deliveries_owner_scope ON public.webhook_deliveries
+            FOR ALL
+            USING (
+                public.nlc_current_user_is_staff()
+                OR EXISTS (
+                    SELECT 1
+                    FROM public.webhook_endpoints e
+                    WHERE e.id = webhook_deliveries.endpoint_id
+                      AND e.user_id = public.nlc_current_user_id()
+                )
+            )
+            WITH CHECK (
+                public.nlc_current_user_is_staff()
+                OR EXISTS (
+                    SELECT 1
+                    FROM public.webhook_endpoints e
+                    WHERE e.id = webhook_deliveries.endpoint_id
+                      AND e.user_id = public.nlc_current_user_id()
+                )
+            );
+    """)
+
     # Global reference/corpus data is readable to authenticated sessions.
     # Mutations remain staff-only. The migration version table is not a
     # runtime API and is explicitly unavailable to the application role.
@@ -354,6 +394,8 @@ def upgrade() -> None:
                     public.articles_verifications,
                     public.articles_verification_events,
                     public.rescue_audit_log,
+                    public.webhook_endpoints,
+                    public.webhook_deliveries,
                     public.document_access_log,
                     public.user_activity_logs,
                     public.users,
