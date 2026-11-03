@@ -44,6 +44,7 @@ def _agm_profile_evidence(latest_agm) -> dict:
             "agm_minutes_prepared": None,
             "notice_sent_date": None,
             "agm_scheduled_date": None,
+            "agm_held_without_audit": None,
         }
 
     members_present = getattr(latest_agm, "members_present", None)
@@ -71,6 +72,7 @@ def _agm_profile_evidence(latest_agm) -> dict:
         "agm_minutes_prepared": minutes_prepared,
         "notice_sent_date": getattr(latest_agm, "notice_sent_date", None),
         "agm_scheduled_date": getattr(latest_agm, "scheduled_date", None),
+        "agm_held_without_audit": getattr(latest_agm, "agm_held_without_audit", None),
     }
 
 
