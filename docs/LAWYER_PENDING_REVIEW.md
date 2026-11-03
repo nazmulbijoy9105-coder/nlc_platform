@@ -117,15 +117,18 @@ allotment (wrong concept). The description text should say "Section 183".
 **Status:** Description text mismatch — basis is likely correct.
 **Fix needed:** Update description text from "Section 151" to "Section 183".
 
-### 5. AUD-003: AGM Held Without Completed Audit — Sections 151, 210
+### 5. AUD-003: AGM Held Without Completed Audit — Case-Specific Legal Review
 
-**Current engine citation:** Sections 151, 210
+**Current engine/canonical candidate basis:** Sections 183 and 210, Companies Act 1994 (Bangladesh).
 
-**Issue:** S151 = Return as to allotment (wrong concept for audit at AGM).
-The correct sections are likely S183 (Annual balance sheet) and S210
-(Appointment and remuneration of auditors).
+**Current implementation:** A verified record that an AGM was held without a completed audit creates a NOT_EVALUATED / REQUIRES_LAWYER_JUDGMENT finding with zero score impact. The engine does not presume that the AGM or its resolutions are automatically invalid and does not trigger BLACK or Corporate Rescue solely from this fact.
 
-**Status:** Needs verification — S151 may be incorrect.
+**Counsel verification required:**
+- Confirm the applicable duties under Sections 183 and 210 for the relevant company, accounts and auditor facts.
+- Determine whether any specific statutory consequence follows from the actual meeting record and accounts.
+- Confirm whether additional provisions, Articles or case-specific facts change the analysis.
+
+**Status:** PENDING. AUD-003 is not a BLACK override and is excluded from authoritative scoring until counsel approves a precise, testable legal proposition.
 
 ### 6. Deadline Constants
 
