@@ -199,6 +199,10 @@ def downgrade() -> None:
     """)
     op.execute("""
         ALTER TABLE companies
+        DROP COLUMN IF EXISTS agm_history_verified_by,
+        DROP COLUMN IF EXISTS agm_history_verified_at,
+        DROP COLUMN IF EXISTS agm_history_evidence_ref,
+        DROP COLUMN IF EXISTS agm_history_verified,
         DROP COLUMN IF EXISTS agm_extension_verified_by,
         DROP COLUMN IF EXISTS agm_extension_verified_at,
         DROP COLUMN IF EXISTS agm_extension_evidence_ref,
