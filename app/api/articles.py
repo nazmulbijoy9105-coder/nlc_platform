@@ -144,24 +144,24 @@ async def submit_articles_for_verification(
         submitted_by=current_user.id,
         submitted_at=now,
     )
-    db.add(item)
-    await db.flush()
-    db.add(ArticlesVerificationEvent(
-        company_id=company_id,
-        verification_id=item.id,
-        actor_id=current_user.id,
-        action="SUBMITTED",
-        previous_status=None,
-        new_status="PENDING",
-        source_checksum_sha256=item.source_checksum_sha256,
-        note="Source document submitted for independent legal review.",
-        created_at=now,
-    ))
     try:
+        db.add(item)
+        await db.flush()
+        db.add(ArticlesVerificationEvent(
+            company_id=company_id,
+            verification_id=item.id,
+            actor_id=current_user.id,
+            action="SUBMITTED",
+            previous_status=None,
+            new_status="PENDING",
+            source_checksum_sha256=item.source_checksum_sha256,
+            note="Source document submitted for independent legal review.",
+            created_at=now,
+        ))
         await db.flush()
     except IntegrityError:
         await db.rollback()
-        raise HTTPException(status_code=409, detail="An active Articles verification already exists.")
+        raise HTTPException(status_code=409, detail="An Articles verification is already pending.")
     return _verification_payload(item)
 
 
