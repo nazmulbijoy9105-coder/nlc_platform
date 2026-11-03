@@ -411,6 +411,8 @@ def build_profile():
             "director_consent_filed": True,
             "director_office_of_profit": False,
             "member_count": 5,
+            "articles_quorum_verified": True,
+            "articles_quorum_required": None,
             "business_commencement_declaration_filed": True,
         }
         defaults.update(overrides)
