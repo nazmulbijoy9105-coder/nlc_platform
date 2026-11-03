@@ -203,7 +203,7 @@ def test_aud002_canonical_rule_matches_pre_agm_section_183_evaluator():
     assert "automatically invalid" in rule.requirement.lower()
     assert rule.severity.value == "YELLOW"
     assert rule.score_impact == 0
-    assert rule.evaluation_states == [RuleState.UNKNOWN]
+    assert rule.evaluation_states == (RuleState.UNKNOWN,)
     assert rule.provision_status.value == "RECONCILE"
 
 
