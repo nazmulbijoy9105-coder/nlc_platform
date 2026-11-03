@@ -252,3 +252,9 @@ The consolidated BDLaws text includes the Companies (Amendment) Act 2020 and Com
 These controls are implemented in code and covered by new regression tests; their CI status must be checked on the resulting pull request. The database migration adds the provenance fields with unverified defaults. No legacy company/AGM/audit booleans are backfilled as verified.
 
 Still open: a secure reviewer-facing workflow for setting these verification fields; explicit support for court directions and other statutory exceptions; complete independent review of all active rules; and signed legal approval of the production scoring allowlist.
+
+
+- Section 81(1) first-AGM proviso is now represented: where the first AGM is held within 18 months of incorporation, no AGM is required in the incorporation year or the following year. The next required AGM is due by 31 December of the second following year; ordinary 15-month/calendar-year rules then resume.
+- AGM deadline scoring now requires company-level verified AGM history (evidence reference, reviewer and timestamp). Missing or unverified history cannot create an automatic Section 81 default.
+- Section 85(1)(a) short-notice exception is now evidence-gated. A shorter AGM notice is not automatically defective where written consent from all members entitled to attend and vote is verified. Missing consent evidence produces UNKNOWN, not a confirmed breach.
+- Section 85 quorum findings also require verified attendance and the applicable quorum from the Articles/statutory default.
