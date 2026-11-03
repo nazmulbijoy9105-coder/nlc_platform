@@ -67,6 +67,7 @@ class AGMMarkHeldRequest(BaseModel):
     held_date: date
     venue: str | None = None
     members_present: int | None = Field(default=None, ge=0)
+    quorum_required: int | None = Field(default=None, ge=1)
     quorum_met: bool | None = None
     auditor_reappointed: bool | None = None
     accounts_adopted: bool | None = None
@@ -89,6 +90,7 @@ class AGMResponse(BaseModel):
     held_date: str | None
     filed_date: str | None
     quorum_met: bool | None
+    quorum_required: int | None
     auditor_reappointed: bool | None
     accounts_adopted: bool | None
     agm_held_without_audit: bool | None
@@ -354,6 +356,7 @@ async def mark_agm_held(
         held_date=body.held_date,
         venue=body.venue,
         members_present=body.members_present,
+        quorum_required=body.quorum_required,
         quorum_met=body.quorum_met,
         auditor_reappointed=body.auditor_reappointed,
         accounts_adopted=body.accounts_adopted,
@@ -688,6 +691,7 @@ def _agm_to_response(agm) -> AGMResponse:
         held_date=agm.agm_date.isoformat() if agm.agm_date else None,
         filed_date=agm.rjsc_filing_date.isoformat() if agm.rjsc_filing_date else None,
         quorum_met=agm.quorum_met,
+        quorum_required=agm.quorum_required,
         auditor_reappointed=agm.auditor_reappointed,
         accounts_adopted=agm.accounts_adopted,
         agm_held_without_audit=agm.agm_held_without_audit,
