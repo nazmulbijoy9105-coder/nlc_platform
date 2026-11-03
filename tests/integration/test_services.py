@@ -451,6 +451,7 @@ class TestFilingService:
         assert updated.auditor_reappointed is True
         assert updated.quorum_required == 2
         assert updated.quorum_met is True
+        assert updated.quorum_basis == "SECTION_85_2_B_DEFAULT_ARTICLES_NOT_REVIEWED"
 
     @pytest.mark.asyncio
     async def test_mark_agm_held_large_private_company_uses_three_member_default(self, db, db_company):
