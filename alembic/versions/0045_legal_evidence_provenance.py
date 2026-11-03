@@ -55,7 +55,12 @@ def upgrade() -> None:
         ADD COLUMN IF NOT EXISTS auditor_reappointment_verified BOOLEAN NOT NULL DEFAULT FALSE,
         ADD COLUMN IF NOT EXISTS auditor_reappointment_evidence_ref TEXT NULL,
         ADD COLUMN IF NOT EXISTS auditor_reappointment_verified_at TIMESTAMPTZ NULL,
-        ADD COLUMN IF NOT EXISTS auditor_reappointment_verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL
+        ADD COLUMN IF NOT EXISTS auditor_reappointment_verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+        ADD COLUMN IF NOT EXISTS short_notice_consent_obtained BOOLEAN NULL,
+        ADD COLUMN IF NOT EXISTS short_notice_consent_verified BOOLEAN NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS short_notice_consent_evidence_ref TEXT NULL,
+        ADD COLUMN IF NOT EXISTS short_notice_consent_verified_at TIMESTAMPTZ NULL,
+        ADD COLUMN IF NOT EXISTS short_notice_consent_verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL
     """)
 
     op.execute("""
@@ -87,6 +92,13 @@ def upgrade() -> None:
             auditor_reappointment_evidence_ref IS NOT NULL
             AND auditor_reappointment_verified_at IS NOT NULL
             AND auditor_reappointment_verified_by IS NOT NULL
+        )),
+        ADD CONSTRAINT ck_agms_short_notice_consent_provenance
+        CHECK (NOT short_notice_consent_verified OR (
+            short_notice_consent_obtained IS NOT NULL
+            AND short_notice_consent_evidence_ref IS NOT NULL
+            AND short_notice_consent_verified_at IS NOT NULL
+            AND short_notice_consent_verified_by IS NOT NULL
         ))
     """)
     op.execute("""
@@ -139,6 +151,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute("""
         ALTER TABLE agms
+        DROP CONSTRAINT IF EXISTS ck_agms_short_notice_consent_provenance,
         DROP CONSTRAINT IF EXISTS ck_agms_auditor_reappointment_provenance,
         DROP CONSTRAINT IF EXISTS ck_agms_quorum_verification_provenance,
         DROP CONSTRAINT IF EXISTS ck_agms_attendance_verification_provenance,
@@ -158,6 +171,11 @@ def downgrade() -> None:
         DROP COLUMN IF EXISTS auditor_reappointment_verified_by,
         DROP COLUMN IF EXISTS auditor_reappointment_verified_at,
         DROP COLUMN IF EXISTS auditor_reappointment_evidence_ref,
+        DROP COLUMN IF EXISTS short_notice_consent_verified_by,
+        DROP COLUMN IF EXISTS short_notice_consent_verified_at,
+        DROP COLUMN IF EXISTS short_notice_consent_evidence_ref,
+        DROP COLUMN IF EXISTS short_notice_consent_verified,
+        DROP COLUMN IF EXISTS short_notice_consent_obtained,
         DROP COLUMN IF EXISTS auditor_reappointment_verified,
         DROP COLUMN IF EXISTS quorum_verified_by,
         DROP COLUMN IF EXISTS quorum_verified_at,
