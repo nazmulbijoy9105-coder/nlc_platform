@@ -15,6 +15,7 @@ def test_missing_agm_record_keeps_attendance_and_auditor_status_unknown():
         "auditor_reappointed_at_agm": None,
         "agm_minutes_prepared": None,
         "notice_sent_date": None,
+        "agm_scheduled_date": None,
     }
 
 
