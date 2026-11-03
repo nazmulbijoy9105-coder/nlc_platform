@@ -6,8 +6,8 @@
 **TARGET DATE:** [TO BE SET]  
 
 Version: **2.2.0**  
-Date: 2026-11-02  
-Branch: main @ production-gate  
+Date: 2026-11-03  
+Branch: fix/legal-validation-agm-quorum-scoring (draft; not production-approved)  
 Rule corpus: **85** ILRMF rules (engine ↔ seed ID + statutory_basis parity)
 
 This matrix maps every active `rule_id` to its `statutory_basis` as implemented in
@@ -26,8 +26,8 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | AGM-001 | First AGM Default | Section 81, Companies Act 1994 (Bangladesh) | RED | 20 | no | Engine-aligned 2026-11-02 |
 | AGM-002 | Subsequent AGM Default | Section 81, Companies Act 1994 (Bangladesh) | RED | 20 | no | Engine-aligned 2026-11-02 |
 | AGM-003 | AGM Notice Defective — Insufficient Days | Section 85, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| AGM-004 | AGM Notice Missing | Section 85, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
-| AGM-005 | AGM Quorum Not Met | Section 89, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
+| AGM-004 | AGM Notice Missing | Section 85, Companies Act 1994 (Bangladesh) | RED / UNKNOWN | 15 / 0 | no | Corrected 2026-11-03; requires verified absence |
+| AGM-005 | AGM Quorum Not Met | Section 85(2)(b), Companies Act 1994 (Bangladesh) | RED | 15 | no | Corrected 2026-11-03; Articles-dependent; reviewer pending |
 | AGM-006 | AGM Minutes Not Prepared | Section 89, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | AGM-007 | AGM Adjourned Without Proper Notice | Section 130, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | AR-001 | Annual Return Default — Single Year | Section 36 (Schedule X), Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
@@ -36,8 +36,8 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | AR-004 | Annual Return Filed But Incomplete | Section 36, Schedule X, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
 | AUD-001 | First Auditor Not Appointed Within One Calendar Month | Section 210(6), Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
 | AUD-002 | Audit Not Completed Before AGM | Section 183, Companies Act 1994 (Bangladesh) | RED | 12 | no | Engine-aligned 2026-11-02 |
-| AUD-003 | AGM Held Without Completed Audit — BLACK OVERRIDE | Sections 151, 210, Companies Act 1994 (Bangladesh) | BLACK | 10 | YES | Engine-aligned 2026-11-02 |
-| AUD-004 | Auditor Not Reappointed at AGM | Section 210(2), Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
+| AUD-003 | AGM Held Without Completed Audit — BLACK OVERRIDE | Section 183, Companies Act 1994 (Bangladesh) | BLACK | 10 | YES | Corrected 2026-11-03; BLACK is NLC policy, not statutory consequence |
+| AUD-004 | Auditor Not Reappointed at AGM | Section 210(3), Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Corrected 2026-11-03; statutory exceptions apply |
 | AUD-005 | Subsequent Auditor Not Appointed | Section 210(3), Companies Act 1994 (Bangladesh) | RED | 10 | no | Engine-aligned 2026-11-02 |
 | BNK-001 | Winding Up Petition Filed | Bankruptcy Act 1997 (Bangladesh), Section 12 | BLACK | 10 | YES | Engine-aligned 2026-11-02 |
 | BNK-002 | Liquidator Appointed | Bankruptcy Act 1997 (Bangladesh), Section 14 | BLACK | 10 | YES | Engine-aligned 2026-11-02 |
@@ -51,13 +51,13 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | BSEC-004 | Audit Committee Not Established | Foreign Exchange Regulation Act 1947 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | CAP-001 | Capital Alteration Without Proper Resolution | Section 53, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | CAP-002 | Charge Not Registered With RJSC Within 21 Days | Section 159(1), Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| CAP-003 | Capital Reduction Without Court Order | Section 150, Companies Act 1994 (Bangladesh) | BLACK | 15 | YES | Engine-aligned 2026-11-02 |
-| CAP-004 | Special Resolution Not Filed With RJSC | Section 88, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
-| CHG-001 | Charge Satisfaction Not Filed | Section 159, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
+| CAP-003 | Capital Reduction Without Court Order | Section 59, Companies Act 1994 (Bangladesh) | BLACK | 15 | YES | Corrected 2026-11-03 |
+| CAP-004 | Special Resolution Not Filed With RJSC | Section 88(1), Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Corrected 2026-11-03; 15-day deadline |
+| CHG-001 | Charge Satisfaction Not Filed | Section 172, Companies Act 1994 (Bangladesh) | YELLOW / UNKNOWN | 3 / 0 | no | Corrected 2026-11-03; Form XXVIII, date evidence required |
 | DEF-001 | Director Disqualified | Section 94, Companies Act 1994 (Bangladesh) | BLACK | 20 | YES | Engine-aligned 2026-11-02 |
-| DEF-002 | Unresolved Penalty Notices | Section 397, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| DIR-001 | Director Appointment Not Filed Within 14 Days | Section 90, Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
-| DIR-002 | Director Departure Not Filed Within 14 Days | Section 93, Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
+| DEF-002 | Unresolved Penalty Notices | Notice-specific basis not verified | NOT_EVALUATED | 0 | no | Corrected 2026-11-03; notice evidence required |
+| DIR-001 | Director Appointment Not Filed Within 14 Days | Section 115, Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Corrected 2026-11-03 |
+| DIR-002 | Director Departure Not Filed Within 14 Days | Section 115, Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Corrected 2026-11-03 |
 | DIR-003 | Major Director Filing Irregularity — Over 1 Year | Section 115, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
 | DIR-004 | Departed Director Still Active on RJSC Register | Section 109, Companies Act 1994 (Bangladesh) | RED | 10 | no | Engine-aligned 2026-11-02 |
 | DIR-005 | Register of Directors Interests Missing | Section 130, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
