@@ -164,13 +164,13 @@ class CompanyProfile:
     agm_count: int | None = None
     last_agm_date: Optional[date] = None
     agm_held_this_cycle: bool = False
-    agm_held_without_audit: bool = False
+    agm_held_without_audit: bool | None = None
     agm_scheduled_date: Optional[date] = None
     notice_sent_date: Optional[date] = None
     agm_notice_verified_absent: bool | None = None
     members_present_at_agm: int | None = None
     auditor_reappointed_at_agm: bool | None = None
-    accounts_adopted_at_agm: bool = False
+    accounts_adopted_at_agm: bool | None = None
     agm_minutes_prepared: bool | None = None
     # Explicit quorum determination recorded for the AGM after checking the Articles and Act.
     agm_quorum_met: bool | None = None
