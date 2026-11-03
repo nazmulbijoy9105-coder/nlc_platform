@@ -485,7 +485,7 @@ VERIFIED_RULE_IDS: frozenset[str] = frozenset({
     "REG-001", "REG-002", "REG-003",
     # Registered Office (1 rule)
     "OFF-001",
-    # Directors module (7 rules)
+    # Directors module (6 rules)
     "DIR-001", "DIR-002", "DIR-003",
     "DIR-007", "DIR-008", "DIR-010",
     # Capital module (3 rules)
