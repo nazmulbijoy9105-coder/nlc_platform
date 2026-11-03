@@ -1,4 +1,5 @@
 import os
+import uuid
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
@@ -66,10 +67,15 @@ class UserResponse(BaseModel):
     requires_2fa: bool  # ← frontend field name (was missing)
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db=Depends(get_db),
+):
+    """Validate token revocation and reload active authorization from PostgreSQL."""
     payload = decode_token(token, expected_type="access")
     jti = payload.get("jti") if payload else None
-    if not payload or not isinstance(jti, str) or not jti:
+    user_id = (payload or {}).get("sub") or (payload or {}).get("user_id")
+    if not payload or not isinstance(jti, str) or not jti or not user_id:
         raise HTTPException(status_code=401, detail="Invalid or expired access token")
     from starlette.concurrency import run_in_threadpool
 
@@ -79,6 +85,17 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
             raise HTTPException(status_code=401, detail="Token has been revoked")
     except BlacklistUnavailable:
         raise HTTPException(status_code=503, detail="Authentication service temporarily unavailable")
+
+    await set_rls_context(db, str(user_id))
+    result = await db.execute(
+        select(User).where(User.id == user_id, User.is_active.is_(True))
+    )
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User account is inactive or unavailable")
+    db_role = user.role.value if hasattr(user.role, "value") else str(user.role)
+    if db_role != payload.get("role"):
+        raise HTTPException(status_code=401, detail="Account permissions changed. Please sign in again")
     return payload
 
 
@@ -93,7 +110,10 @@ async def login(request: Request,body: LoginBody, db=Depends(get_db)):
     if not user:
         # Don't reveal whether email exists — return generic error
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
+
+    # Establish transaction-local tenant context before any user or audit write.
+    await set_rls_context(db, str(user.id))
+
     # Check account lockout
     if await svc.check_lockout(user):
         raise HTTPException(status_code=423, detail="Account temporarily locked due to too many failed attempts. Try again later.")
@@ -267,6 +287,7 @@ async def verify_2fa(request: Request, body: Verify2FARequest, db=Depends(get_db
     if not payload or not isinstance(jti, str) or not jti or not user_id or not exp:
         raise HTTPException(status_code=401, detail="Invalid or expired 2FA challenge")
 
+    await set_rls_context(db, str(user_id))
     result = await db.execute(
         select(User).where(User.id == user_id, User.is_active.is_(True))
     )
@@ -309,9 +330,12 @@ async def verify_2fa(request: Request, body: Verify2FARequest, db=Depends(get_db
 async def refresh_token(body: RefreshRequest, db=Depends(get_db)):
     """Exchange a valid refresh token for a new access token."""
     payload = decode_token(body.refresh_token, expected_type="refresh")
-    if not payload:
+    if not payload or not payload.get("sub"):
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
-    result = await db.execute(select(User).where(User.id == payload.get("sub")))
+    await set_rls_context(db, str(payload["sub"]))
+    result = await db.execute(
+        select(User).where(User.id == payload.get("sub"), User.is_active.is_(True))
+    )
     user = result.scalar_one_or_none()
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or deactivated")
@@ -382,7 +406,7 @@ async def change_password(
     db=Depends(get_db),
 ):
     """Change password with strength validation."""
-    payload = await get_current_user(token)
+    payload = await get_current_user(token, db)
     
     result = await db.execute(select(User).where(User.id == payload.get("sub")))
     user = result.scalar_one_or_none()
@@ -439,8 +463,12 @@ async def signup(body: SignupRequest, db=Depends(get_db)):
     if not is_strong:
         raise HTTPException(status_code=422, detail=msg)
     
-    # Create user
+    # Create user under a self-only RLS context. The role is always the
+    # lowest-privilege client role; caller-supplied role is ignored.
+    new_user_id = uuid.uuid4()
+    await set_rls_context(db, str(new_user_id))
     user = User(
+        id=new_user_id,
         email=body.email.lower().strip(),
         full_name=body.full_name,
         role=UserRole.CLIENT_VIEW_ONLY,
