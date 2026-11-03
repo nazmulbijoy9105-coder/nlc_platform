@@ -49,12 +49,29 @@ def _agm_profile_evidence(latest_agm) -> dict:
 
     return {
         "members_present_at_agm": members_present,
-        "agm_attendance_verified": getattr(latest_agm, "members_present_verified", False) is True,
+        "agm_attendance_verified": (
+            getattr(latest_agm, "members_present_verified", False) is True
+            and bool(getattr(latest_agm, "members_present_evidence_ref", None))
+            and getattr(latest_agm, "members_present_verified_at", None) is not None
+            and getattr(latest_agm, "members_present_verified_by", None) is not None
+        ),
+        "agm_attendance_evidence_ref": getattr(latest_agm, "members_present_evidence_ref", None),
         "agm_quorum_required": (
             getattr(latest_agm, "quorum_required", None)
-            if getattr(latest_agm, "quorum_required_verified", False) is True else None
+            if (
+                getattr(latest_agm, "quorum_required_verified", False) is True
+                and bool(getattr(latest_agm, "quorum_evidence_ref", None))
+                and getattr(latest_agm, "quorum_verified_at", None) is not None
+                and getattr(latest_agm, "quorum_verified_by", None) is not None
+            ) else None
         ),
-        "agm_quorum_basis_verified": getattr(latest_agm, "quorum_required_verified", False) is True,
+        "agm_quorum_basis_verified": (
+            getattr(latest_agm, "quorum_required_verified", False) is True
+            and bool(getattr(latest_agm, "quorum_evidence_ref", None))
+            and getattr(latest_agm, "quorum_verified_at", None) is not None
+            and getattr(latest_agm, "quorum_verified_by", None) is not None
+        ),
+        "agm_quorum_evidence_ref": getattr(latest_agm, "quorum_evidence_ref", None),
         "auditor_reappointed_at_agm": getattr(latest_agm, "auditor_reappointed", None),
         "agm_minutes_prepared": minutes_prepared,
         "notice_sent_date": getattr(latest_agm, "notice_sent_date", None),
@@ -476,8 +493,31 @@ class CompanyService(BaseService[Company]):
             "penalty_notices_received":     company.penalty_notices_received,
             "penalty_notices_resolved":     company.penalty_notices_resolved,
             "current_director_count": len([d for d in company.directors if d.director_status.value == "ACTIVE"]) if company.directors is not None else None,
-            "directors_verified": company.directors_verified is True,
-            "is_private_subsidiary_of_public_company": company.is_private_subsidiary_of_public_company,
+            "directors_verified": (
+                company.directors_verified is True
+                and bool(company.directors_verification_evidence_ref)
+                and company.directors_verified_at is not None
+                and company.directors_verified_by is not None
+            ),
+            "directors_verification_evidence_ref": company.directors_verification_evidence_ref,
+            "directors_verified_at": company.directors_verified_at.date() if company.directors_verified_at else None,
+            "directors_verified_by": str(company.directors_verified_by) if company.directors_verified_by else None,
+            "is_private_subsidiary_of_public_company": (
+                company.is_private_subsidiary_of_public_company
+                if (
+                    company.subsidiary_status_verified is True
+                    and bool(company.subsidiary_status_evidence_ref)
+                    and company.subsidiary_status_verified_at is not None
+                    and company.subsidiary_status_verified_by is not None
+                ) else None
+            ),
+            "subsidiary_status_verified": (
+                company.subsidiary_status_verified is True
+                and bool(company.subsidiary_status_evidence_ref)
+                and company.subsidiary_status_verified_at is not None
+                and company.subsidiary_status_verified_by is not None
+            ),
+            "subsidiary_status_evidence_ref": company.subsidiary_status_evidence_ref,
 
             # BSEC Corporate Governance
             "bsec_listed":                   getattr(company, "bsec_listed", False),
@@ -544,7 +584,15 @@ class CompanyService(BaseService[Company]):
 
             # Corporate Structure Changes
             "moa_aoa_filed":                getattr(company, "moa_aoa_filed", None),
-            "moa_aoa_verified":             company.moa_aoa_verified is True,
+            "moa_aoa_verified": (
+                company.moa_aoa_verified is True
+                and bool(company.moa_aoa_evidence_ref)
+                and company.moa_aoa_verified_at is not None
+                and company.moa_aoa_verified_by is not None
+            ),
+            "moa_aoa_evidence_ref": company.moa_aoa_evidence_ref,
+            "moa_aoa_verified_at": company.moa_aoa_verified_at.date() if company.moa_aoa_verified_at else None,
+            "moa_aoa_verified_by": str(company.moa_aoa_verified_by) if company.moa_aoa_verified_by else None,
             "name_change_pending":          getattr(company, "name_change_pending", False),
             "name_change_date":             getattr(company, "name_change_date", None),
             "name_change_sr_passed":         getattr(company, "name_change_sr_passed", False),
@@ -569,8 +617,10 @@ class CompanyService(BaseService[Company]):
             "notice_sent_date":              agm_profile_evidence["notice_sent_date"],
             "members_present_at_agm":        agm_profile_evidence["members_present_at_agm"],
             "agm_attendance_verified":       agm_profile_evidence.get("agm_attendance_verified", False),
+            "agm_attendance_evidence_ref":   agm_profile_evidence.get("agm_attendance_evidence_ref"),
             "agm_quorum_required":           agm_profile_evidence.get("agm_quorum_required"),
             "agm_quorum_basis_verified":     agm_profile_evidence.get("agm_quorum_basis_verified", False),
+            "agm_quorum_evidence_ref":       agm_profile_evidence.get("agm_quorum_evidence_ref"),
             "auditor_reappointed_at_agm":    agm_profile_evidence["auditor_reappointed_at_agm"],
             "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", False),
 
