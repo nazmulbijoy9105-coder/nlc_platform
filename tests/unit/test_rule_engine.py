@@ -360,10 +360,14 @@ class TestAuditRules:
         """Audit not complete before scheduled AGM → AUD-002."""
         profile = build_profile(
             agm_scheduled_date=date.today() + timedelta(days=10),
+            agm_held_this_cycle=False,
             audit_complete=False,
         )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "AUD-002")
+        flag = next(flag for flag in output.flags if flag.rule_id == "AUD-002")
+        assert flag.score_impact == 0
+        assert flag.state == RuleState.UNKNOWN
 
 
     def test_AUD002_no_trigger_when_auditor_appointed(self, rule_engine, build_profile):
