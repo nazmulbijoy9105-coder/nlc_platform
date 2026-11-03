@@ -79,7 +79,6 @@ RJSC_FORMS_REFERENCE = [
     {"form_code": "FORM_XV", "form_number": "XV", "form_name": "Return of Allotment", "section": "Section 151", "rule_id": "SH-001", "deadline_days": 60},
     {"form_code": "FORM_XVII", "form_number": "XVII", "form_name": "Share Transfer Registration", "section": "Section 108", "rule_id": "TR-001", "deadline_days": 0},
     {"form_code": "FORM_XVIII", "form_number": "XVIII", "form_name": "Registration of Charge", "section": "Section 159(1)", "rule_id": "CAP-002", "deadline_days": 21},
-    {"form_code": "FORM_XIX", "form_number": "XIX", "form_name": "Modification of Charge", "section": "Section 167(3)", "rule_id": None, "deadline_days": 21},
     {"form_code": "FORM_117", "form_number": "117", "form_name": "Transfer Instrument", "section": "Section 108", "rule_id": "TR-001", "deadline_days": 0},
     {"form_code": "FORM_XXVIII", "form_number": "XXVIII", "form_name": "Notice of Satisfaction of Charge", "section": "Section 172", "rule_id": "CHG-001", "deadline_days": 21},
     {"form_code": "SCHEDULE_X", "form_number": "Schedule X", "form_name": "Annual Return", "section": "Section 36", "rule_id": "AR-001", "deadline_days": 21},
