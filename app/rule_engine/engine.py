@@ -2082,6 +2082,10 @@ class NLCRuleEngine:
                     and effective_date
                     and continuing is True
                     and (
+                        ground_type != "UNPAID_CALL"
+                        or int(g.get("days_since_payment_due", 0)) >= 180
+                    )
+                    and (
                         ground_type != "AOA_PRESCRIBED"
                         or bool(g.get("aoa_provision_ref"))
                     )
@@ -2100,7 +2104,6 @@ class NLCRuleEngine:
             # Disqualification is a statutory finding; automatic BLACK is an
             # NLC risk-policy choice, not a consequence prescribed by Section 94.
             impact = 10
-            is_override = False
             ground_summary = "; ".join(
                 f"{g.get('director_name', 'Director')}: {g.get('ground_type', 'unknown')}"
                 for g in verified_grounds
