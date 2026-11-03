@@ -37,8 +37,14 @@ def _agm_profile_evidence(latest_agm) -> dict:
             "notice_sent_date": None,
         }
 
+    attendance_verified = (
+        getattr(latest_agm, "members_present_verified", False) is True
+        and bool(getattr(latest_agm, "members_present_evidence_ref", None))
+        and getattr(latest_agm, "members_present_verified_at", None) is not None
+        and getattr(latest_agm, "members_present_verified_by", None) is not None
+    )
     members_present = getattr(latest_agm, "members_present", None)
-    if members_present == 0:
+    if members_present == 0 and not attendance_verified:
         members_present = None
 
     minutes_prepared = getattr(latest_agm, "minutes_prepared", None)
@@ -49,12 +55,7 @@ def _agm_profile_evidence(latest_agm) -> dict:
 
     return {
         "members_present_at_agm": members_present,
-        "agm_attendance_verified": (
-            getattr(latest_agm, "members_present_verified", False) is True
-            and bool(getattr(latest_agm, "members_present_evidence_ref", None))
-            and getattr(latest_agm, "members_present_verified_at", None) is not None
-            and getattr(latest_agm, "members_present_verified_by", None) is not None
-        ),
+        "agm_attendance_verified": attendance_verified,
         "agm_attendance_evidence_ref": getattr(latest_agm, "members_present_evidence_ref", None),
         "agm_quorum_required": (
             getattr(latest_agm, "quorum_required", None)
@@ -509,6 +510,7 @@ class CompanyService(BaseService[Company]):
                     and bool(company.subsidiary_status_evidence_ref)
                     and company.subsidiary_status_verified_at is not None
                     and company.subsidiary_status_verified_by is not None
+                    and company.is_private_subsidiary_of_public_company is not None
                 ) else None
             ),
             "subsidiary_status_verified": (
@@ -518,6 +520,8 @@ class CompanyService(BaseService[Company]):
                 and company.subsidiary_status_verified_by is not None
             ),
             "subsidiary_status_evidence_ref": company.subsidiary_status_evidence_ref,
+            "subsidiary_status_verified_at": company.subsidiary_status_verified_at.date() if company.subsidiary_status_verified_at else None,
+            "subsidiary_status_verified_by": str(company.subsidiary_status_verified_by) if company.subsidiary_status_verified_by else None,
 
             # BSEC Corporate Governance
             "bsec_listed":                   getattr(company, "bsec_listed", False),
