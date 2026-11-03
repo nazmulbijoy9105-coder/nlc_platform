@@ -449,6 +449,50 @@ class TestFilingService:
         assert updated is not None
         assert updated.agm_date == date(2022, 5, 15)
         assert updated.auditor_reappointed is True
+        assert updated.quorum_required == 2
+        assert updated.quorum_met is True
+
+    @pytest.mark.asyncio
+    async def test_mark_agm_held_large_private_company_requires_three_members(self, db, db_company):
+        from app.services.filing_service import AGMService
+
+        db_company.member_count = 7
+        await db.flush()
+        svc = AGMService(db)
+        agm = await svc.create_agm(company_id=db_company.id, financial_year=2022)
+        updated = await svc.mark_held(
+            agm_id=agm.id,
+            agm_date=date(2023, 5, 15),
+            members_present=2,
+            auditor_reappointed=True,
+        )
+        assert updated is not None
+        assert updated.quorum_required == 3
+        assert updated.quorum_met is False
+
+    @pytest.mark.asyncio
+    async def test_mark_agm_held_unknown_membership_is_not_evaluated(self, db, db_company):
+        from app.services.filing_service import AGMService
+
+        db_company.member_count = None
+        await db.flush()
+        svc = AGMService(db)
+        agm = await svc.create_agm(company_id=db_company.id, financial_year=2024)
+        # Simulate a legacy/default quorum conclusion that must be cleared
+        # when the underlying membership evidence is unknown.
+        agm.quorum_required = 2
+        agm.quorum_met = True
+        await db.flush()
+        updated = await svc.mark_held(
+            agm_id=agm.id,
+            agm_date=date(2024, 5, 15),
+            members_present=2,
+            auditor_reappointed=True,
+        )
+        assert updated is not None
+        assert updated.quorum_required is None
+        assert updated.quorum_met is None
+        assert updated.quorum_basis == "NOT_EVALUATED"
 
     @pytest.mark.asyncio
     async def test_create_audit(self, db, db_company):
