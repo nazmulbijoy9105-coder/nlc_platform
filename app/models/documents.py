@@ -13,12 +13,16 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
+    Date,
     DateTime,
     Enum,
+    Index,
     ForeignKey,
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -126,6 +130,81 @@ class Document(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             f"<Document {self.document_type} — {self.title[:40]} "
             f"approved={self.human_approved}>"
         )
+
+
+class ArticlesVerification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Version-pinned human review of a company's Articles of Association."""
+
+    __tablename__ = "articles_verifications"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('PENDING', 'VERIFIED', 'REJECTED', 'REVOKED')",
+            name="ck_articles_verifications_status",
+        ),
+        CheckConstraint(
+            "quorum_required IS NULL OR quorum_required BETWEEN 1 AND 100",
+            name="ck_articles_verifications_quorum",
+        ),
+        Index(
+            "uq_articles_verifications_active_verified",
+            "company_id",
+            unique=True,
+            postgresql_where=(__import__("sqlalchemy").text("status = 'VERIFIED'")),
+        ),
+    )
+
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("documents.id", ondelete="RESTRICT"),
+        nullable=False, index=True,
+    )
+    source_checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_document_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING")
+    submitted_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False,
+    )
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True,
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    effective_from: Mapped[date | None] = mapped_column(Date, nullable=True)
+    quorum_required: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    clause_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reviewer_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    revoked_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True,
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revocation_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class ArticlesVerificationEvent(UUIDPrimaryKeyMixin, Base):
+    """Append-only event trail for Articles verification lifecycle."""
+
+    __tablename__ = "articles_verification_events"
+
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    verification_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("articles_verifications.id", ondelete="RESTRICT"),
+        nullable=False, index=True,
+    )
+    actor_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False,
+    )
+    action: Mapped[str] = mapped_column(String(20), nullable=False)
+    previous_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    new_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    source_checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class DocumentAccessLog(AuditMixin, Base):
