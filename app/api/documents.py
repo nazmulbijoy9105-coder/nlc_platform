@@ -167,7 +167,8 @@ async def list_all_documents(
         filters.append(Document.company_id == company_id)  # type: ignore
     if is_client:
         accessible = select(CompanyUserAccess.company_id).where(
-            CompanyUserAccess.user_id == current_user.id
+            CompanyUserAccess.user_id == current_user.id,
+            CompanyUserAccess.is_active.is_(True),
         )
         filters.append(Document.company_id.in_(accessible))  # type: ignore
 
@@ -379,6 +380,7 @@ async def _assert_document_company_access(
         select(CompanyUserAccess.id).where(
             CompanyUserAccess.user_id == current_user.id,
             CompanyUserAccess.company_id == doc.company_id,
+            CompanyUserAccess.is_active.is_(True),
         ).limit(1)
     )
     if result.scalar_one_or_none() is None:
