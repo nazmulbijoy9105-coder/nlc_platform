@@ -145,6 +145,9 @@ class AGMService(BaseService[AGM]):
         accounts_adopted: bool | None = None,
         agm_held_without_audit: bool | None = None,
         minutes_document_id: uuid.UUID | None = None,
+        members_total_at_agm: int | None = None,
+        members_total_evidence_ref: str | None = None,
+        members_present_evidence_ref: str | None = None,
     ) -> AGM | None:
         """Record an AGM and assess quorum only after current Articles are verified.
 
@@ -156,7 +159,6 @@ class AGMService(BaseService[AGM]):
             return None
 
         company = await self.db.get(Company, agm.company_id)
-        member_count = getattr(company, "member_count", None) if company else None
         company_type = getattr(company, "company_type", None) if company else None
         company_type = getattr(company_type, "value", company_type)
 
@@ -171,14 +173,22 @@ class AGMService(BaseService[AGM]):
             and bool(articles_evidence_ref.strip())
         )
         articles_quorum_required = getattr(company, "articles_quorum_required", None)
+        membership_evidence_verified = (
+            isinstance(members_total_at_agm, int)
+            and members_total_at_agm > 0
+            and isinstance(members_total_evidence_ref, str)
+            and bool(members_total_evidence_ref.strip())
+            and isinstance(members_present_evidence_ref, str)
+            and bool(members_present_evidence_ref.strip())
+            and members_present <= members_total_at_agm
+        )
         if (
             company_type == "PRIVATE_LIMITED"
-            and member_count is not None
-            and member_count > 0
+            and membership_evidence_verified
             and articles_verified
             and (articles_quorum_required is None or articles_quorum_required >= 1)
         ):
-            statutory_default = 2 if member_count <= 6 else 3
+            statutory_default = 2 if members_total_at_agm <= 6 else 3
             quorum_required = articles_quorum_required or statutory_default
             quorum_met: bool | None = members_present >= quorum_required
             quorum_basis = (
@@ -189,7 +199,7 @@ class AGMService(BaseService[AGM]):
         else:
             quorum_required = None
             quorum_met = None
-            quorum_basis = "ARTICLES_NOT_VERIFIED_OR_QUORUM_INPUTS_UNKNOWN"
+            quorum_basis = "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
 
         is_default = bool(agm.agm_deadline and agm_date > agm.agm_deadline)
         delay_days = (agm_date - agm.agm_deadline).days if is_default and agm.agm_deadline else 0
@@ -204,6 +214,16 @@ class AGMService(BaseService[AGM]):
             accounts_adopted=accounts_adopted,
             agm_held_without_audit=agm_held_without_audit,
             minutes_document_id=minutes_document_id,
+            members_total_at_agm=members_total_at_agm,
+            members_total_evidence_ref=members_total_evidence_ref,
+            members_present_evidence_ref=members_present_evidence_ref,
+            articles_quorum_verified=articles_verified,
+            articles_quorum_required=articles_quorum_required if articles_verified else None,
+            articles_quorum_verified_by=articles_reviewer if articles_verified else None,
+            articles_quorum_verified_at=(
+                getattr(company, "articles_quorum_verified_at", None) if articles_verified else None
+            ),
+            articles_quorum_evidence_ref=articles_evidence_ref if articles_verified else None,
             is_default=is_default,
             delay_days=delay_days,
         )
