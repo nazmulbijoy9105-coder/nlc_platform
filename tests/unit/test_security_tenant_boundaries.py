@@ -249,3 +249,63 @@ class TestWebhookTenantBoundaries:
         sql = _sql(stmt)
         assert str(owner_id).replace("-", "") in sql.replace("-", ""), \
             f"Owner ID not found in query: {sql}"
+
+
+@pytest.mark.asyncio
+async def test_dashboard_risk_distribution_is_scoped_before_aggregation():
+    """Counts and percentages must use only active companies in live memberships."""
+    from types import SimpleNamespace
+    from app.services.company_service import CompanyService
+
+    user_id = uuid.uuid4()
+    db = _DB(_Result([
+        SimpleNamespace(risk_band="RED", company_count=1),
+        SimpleNamespace(risk_band="GREEN", company_count=1),
+    ]))
+
+    rows = await CompanyService(db).get_risk_distribution(user_id)
+
+    assert rows == [
+        {"risk_band": "RED", "company_count": 1, "percentage": 50.0},
+        {"risk_band": "GREEN", "company_count": 1, "percentage": 50.0},
+    ]
+    sql = _sql(db.statements[0])
+    assert "companies.is_active IS true" in sql
+    assert "company_user_access.user_id" in sql
+    assert "company_user_access.is_active IS true" in sql
+    assert str(user_id).replace("-", "") in sql.replace("-", "")
+
+
+@pytest.mark.asyncio
+async def test_dashboard_risk_distribution_returns_empty_for_no_accessible_companies():
+    from app.services.company_service import CompanyService
+
+    db = _DB(_Result([]))
+    assert await CompanyService(db).get_risk_distribution(uuid.uuid4()) == []
+
+
+@pytest.mark.asyncio
+async def test_dashboard_deadlines_filter_by_active_user_membership():
+    from app.services.company_service import CompanyService
+
+    user_id = uuid.uuid4()
+
+    class _Mappings:
+        def all(self):
+            return []
+
+    class _DeadlineResult:
+        def mappings(self):
+            return _Mappings()
+
+    db = _DB(_DeadlineResult())
+    assert await CompanyService(db).get_upcoming_deadlines(30, user_id) == []
+
+    statement = db.statements[0]
+    sql = str(statement)
+    assert "company_id IN" in sql
+    assert "company_user_access" in sql
+    assert "user_id = :user_id" in sql
+    assert "is_active IS TRUE" in sql
+    assert "days_remaining <= :days" in sql
+    assert statement.compile().params == {"days": 30, "user_id": user_id}
