@@ -377,3 +377,36 @@ def test_black_override_is_reported_separately_from_category_deduction():
         "applied": 0,
         "status": "BLACK_OVERRIDE_POLICY",
     }
+
+
+def test_aud002_pre_agm_reminder_is_non_scoring_and_unknown():
+    today = date(2026, 11, 4)
+    profile = CompanyProfile(
+        company_id="aud002-reminder-test",
+        company_name="AUD002 Reminder Test Ltd",
+        incorporation_date=date(2020, 1, 1),
+        agm_scheduled_date=date(2026, 11, 20),
+        agm_held_this_cycle=False,
+        audit_complete=False,
+    )
+
+    result = NLCRuleEngine().evaluate(profile, today=today)
+    flag = next(flag for flag in result.flags if flag.rule_id == "AUD-002")
+    assert flag.score_impact == 0
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.detail["reminder_only"] is True
+
+
+def test_aud002_does_not_issue_pre_agm_reminder_after_meeting_date():
+    profile = CompanyProfile(
+        company_id="aud002-after-date-test",
+        company_name="AUD002 After Date Test Ltd",
+        incorporation_date=date(2020, 1, 1),
+        agm_scheduled_date=date(2026, 10, 1),
+        agm_held_this_cycle=False,
+        audit_complete=False,
+    )
+
+    result = NLCRuleEngine().evaluate(profile, today=date(2026, 11, 4))
+    assert "AUD-002" not in {flag.rule_id for flag in result.flags}
