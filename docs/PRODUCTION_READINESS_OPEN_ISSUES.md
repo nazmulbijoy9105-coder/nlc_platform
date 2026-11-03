@@ -30,6 +30,8 @@ NLC is **not accepted as production-ready**. The production database's Alembic r
 
 | DB-006 | P0 | Non-idempotent rescue migration | Revision `b10c91ac6860` adds `companies.rescue_generation_error` without `IF NOT EXISTS`, but security-audit branch already contains the column while its Alembic marker remains 0042. | Read-only catalog check: security-audit has rescue column, dedup column/index and webhook tables while revision remains 0042; production has none of these objects and is also at 0042. | PATCHED IN DRAFT PR: migration now uses `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`. CI pending. Verify migration graph and all branch states before any Alembic upgrade. |
 
+| DB-007 | P0 | ORM/schema defaults and unknown evidence | Historical 0031/0033 migrations and current Company ORM specify several boolean/member-count defaults (including `true` and `0`). The proposed 0045 intentionally adds missing historical columns as nullable/no-default to avoid inventing legal facts. | Source comparison confirms all 48 column names from 0031-0033 are covered, but physical nullability/defaults will not yet exactly match all current ORM declarations. | OPEN. Before calling schema reconciliation complete, reconcile ORM nullability/default semantics and evaluator treatment of NULL. Never backfill `true`, `false` or zero member counts as if they were verified evidence. |
+
 ## Database reconciliation detail
 
 ### Sampled missing columns on production
