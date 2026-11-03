@@ -34,12 +34,19 @@ def _agm_profile_evidence(latest_agm) -> dict:
             "members_present_at_agm": None,
             "auditor_reappointed_at_agm": None,
             "agm_minutes_prepared": None,
+            "agm_quorum_met": None,
             "notice_sent_date": None,
         }
 
     members_present = getattr(latest_agm, "members_present", None)
     if members_present == 0:
         members_present = None
+
+    quorum_met = getattr(latest_agm, "quorum_met", None)
+    # Zero attendance is the ORM default/unrecorded sentinel in legacy rows; do not
+    # treat the model's default quorum_met=True as a verified determination.
+    if members_present is None:
+        quorum_met = None
 
     minutes_prepared = getattr(latest_agm, "minutes_prepared", None)
     # The ORM column defaults to False, so False alone cannot establish that
@@ -51,6 +58,7 @@ def _agm_profile_evidence(latest_agm) -> dict:
         "members_present_at_agm": members_present,
         "auditor_reappointed_at_agm": getattr(latest_agm, "auditor_reappointed", None),
         "agm_minutes_prepared": minutes_prepared,
+        "agm_quorum_met": quorum_met,
         "notice_sent_date": getattr(latest_agm, "notice_sent_date", None),
     }
 
@@ -410,6 +418,7 @@ class CompanyService(BaseService[Company]):
             "last_agm_date":              company.last_agm_date,
             "agm_held_this_cycle":        latest_agm.agm_held if latest_agm else (company.last_agm_date is not None and (date.today() - company.last_agm_date).days <= 456),
             "agm_minutes_prepared":       agm_profile_evidence["agm_minutes_prepared"],
+            "agm_quorum_met":              agm_profile_evidence["agm_quorum_met"],
 
             # Audit State
             "first_auditor_appointed":    bool(company.first_auditor_appointed) if company.first_auditor_appointed is not None else None,
