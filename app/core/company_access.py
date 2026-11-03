@@ -66,6 +66,7 @@ async def require_company_access(
             select(CompanyUserAccess).where(
                 CompanyUserAccess.user_id == current_user.id,
                 CompanyUserAccess.company_id == cid,
+                CompanyUserAccess.is_active.is_(True),
             )
         )
         access = result.scalar_one_or_none()
