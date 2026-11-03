@@ -102,10 +102,12 @@ F-series queue (F-22..F-33) unchanged by this section; EA rows add cross-cutting
   its text is rebuilt. Note: the only "5 years" concept nearby is s.110 (managing-director tenure
   limit), unrelated to disqualification; the 5-year post-conviction bar is a foreign-law pattern.
 
-### EA-02 - AUD-001 calendar month vs 30 days (audit s.4D) - OPEN, P0
-- VERDICT: audit CORRECT. Flag text "1 month (30 days)" conflates calendar month with 30 days;
-  s.210(6) says one month (calendar). Distinguish s.210(6) Board appointment from the auditor's
-  own filing duty under s.210(2).
+### EA-02 - AUD-001 calendar month vs 30 days - IMPLEMENTATION PATCHED, COUNSEL REVIEW OPEN, P0
+- Section 210(6) is implemented as one calendar month from registration, not a fixed 30-day interval.
+- The evaluator compares the actual appointment date; a Boolean without date evidence is NOT_EVALUATED.
+- Appointment-date evidence stored on Audit records is passed into the deterministic CompanyProfile.
+- Counsel must still verify the authoritative statutory text, effective date and interpretation.
+- Keep distinct the Board's first-appointment duty under s.210(6) and the auditor's separate filing duty under s.210(2).
 - Arithmetic (computed): overdue 1813 days => deadline = 2021-11-12 exactly. With incorporation
   2021-10-12, +1 calendar month reproduces 1813 while +30 days gives 1814; with incorporation
   2021-10-13, +30 days gives 1813. PDF shows no incorporation date => not independently
