@@ -260,6 +260,7 @@ def upgrade():
             description = 'The AGM record states that the meeting was held without completed audit. A lawyer must review the accounts, auditor appointment, meeting record and applicable statutory provisions before determining legal consequences; no automatic invalidity or BLACK override is inferred.',
             default_severity = 'YELLOW',
             score_impact = 0,
+            revenue_tier = 'COMPLIANCE_PACKAGE',
             is_black_override = FALSE,
             verification_status = 'PENDING',
             verified_by = NULL,
