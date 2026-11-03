@@ -19,6 +19,7 @@ class RuleState(str, Enum):
     NOT_APPLICABLE = "NOT_APPLICABLE"
     CONDITIONAL = "CONDITIONAL"      # defined; no evaluator emits it yet
     CONTRADICTORY = "CONTRADICTORY"
+    REQUIRES_LAWYER_JUDGMENT = "REQUIRES_LAWYER_JUDGMENT"
 
 
 class ProvisionStatus(str, Enum):
@@ -34,7 +35,8 @@ class Severity(str, Enum):
 
 
 _BASE_STATES = (RuleState.COMPLIANT, RuleState.NON_COMPLIANT,
-                RuleState.UNKNOWN, RuleState.CONTRADICTORY)
+                RuleState.UNKNOWN, RuleState.CONTRADICTORY,
+                RuleState.REQUIRES_LAWYER_JUDGMENT)
 _COMMON_INVARIANTS = ("R-001", "R-002", "R-003", "R-005", "R-007", "R-008",
                       "R-009", "R-010", "R-012", "R-014", "R-018", "R-019")
 
@@ -126,7 +128,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
+        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
         "severity": "RED",
         "score_impact": 15,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
