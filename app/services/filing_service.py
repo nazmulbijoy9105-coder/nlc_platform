@@ -93,6 +93,7 @@ class AGMService(BaseService[AGM]):
             members_present=members_present,
             quorum_required=quorum_required,
             quorum_met=quorum_met,
+            quorum_basis=quorum_basis,
             auditor_reappointed=auditor_reappointed,
             minutes_prepared=minutes_prepared,
             minutes_filed_rjsc=minutes_filed_rjsc,
@@ -165,11 +166,13 @@ class AGMService(BaseService[AGM]):
         if company_type == "PRIVATE_LIMITED" and member_count is not None and member_count > 0:
             quorum_required = 2 if member_count <= 6 else 3
             quorum_met: bool | None = members_present >= quorum_required
+            quorum_basis = "SECTION_85_2_B_DEFAULT_ARTICLES_NOT_REVIEWED"
         else:
             # Do not invent a quorum where company type or verified membership
             # is unavailable, or where a different company category applies.
             quorum_required = None
             quorum_met = None
+            quorum_basis = "NOT_EVALUATED"
 
         is_default = bool(agm.agm_deadline and agm_date > agm.agm_deadline)
         delay_days = (agm_date - agm.agm_deadline).days if is_default and agm.agm_deadline else 0
