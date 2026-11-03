@@ -171,6 +171,7 @@ def downgrade() -> None:
     op.execute("""
         ALTER TABLE companies
         DROP CONSTRAINT IF EXISTS ck_companies_agm_extension_verification_provenance,
+        DROP CONSTRAINT IF EXISTS ck_companies_agm_history_verification_provenance,
         DROP CONSTRAINT IF EXISTS ck_companies_first_auditor_verification_provenance,
         DROP CONSTRAINT IF EXISTS ck_companies_moa_aoa_verification_provenance,
         DROP CONSTRAINT IF EXISTS ck_companies_subsidiary_verification_provenance,
