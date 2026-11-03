@@ -32,6 +32,14 @@ def _agm_profile_evidence(latest_agm) -> dict:
     if latest_agm is None:
         return {
             "members_present_at_agm": None,
+            "members_present_evidence_ref": None,
+            "members_total_at_agm": None,
+            "members_total_evidence_ref": None,
+            "articles_quorum_verified": None,
+            "articles_quorum_required": None,
+            "articles_quorum_verified_by": None,
+            "articles_quorum_verified_at": None,
+            "articles_quorum_evidence_ref": None,
             "auditor_reappointed_at_agm": None,
             "agm_minutes_prepared": None,
             "notice_sent_date": None,
@@ -39,7 +47,8 @@ def _agm_profile_evidence(latest_agm) -> dict:
         }
 
     members_present = getattr(latest_agm, "members_present", None)
-    if members_present == 0:
+    members_present_evidence_ref = getattr(latest_agm, "members_present_evidence_ref", None)
+    if members_present == 0 and not members_present_evidence_ref:
         members_present = None
 
     minutes_prepared = getattr(latest_agm, "minutes_prepared", None)
@@ -50,6 +59,14 @@ def _agm_profile_evidence(latest_agm) -> dict:
 
     return {
         "members_present_at_agm": members_present,
+        "members_present_evidence_ref": members_present_evidence_ref,
+        "members_total_at_agm": getattr(latest_agm, "members_total_at_agm", None),
+        "members_total_evidence_ref": getattr(latest_agm, "members_total_evidence_ref", None),
+        "articles_quorum_verified": getattr(latest_agm, "articles_quorum_verified", None),
+        "articles_quorum_required": getattr(latest_agm, "articles_quorum_required", None),
+        "articles_quorum_verified_by": getattr(latest_agm, "articles_quorum_verified_by", None),
+        "articles_quorum_verified_at": getattr(latest_agm, "articles_quorum_verified_at", None),
+        "articles_quorum_evidence_ref": getattr(latest_agm, "articles_quorum_evidence_ref", None),
         "auditor_reappointed_at_agm": getattr(latest_agm, "auditor_reappointed", None),
         "agm_minutes_prepared": minutes_prepared,
         "notice_sent_date": getattr(latest_agm, "notice_sent_date", None),
@@ -648,6 +665,9 @@ class CompanyService(BaseService[Company]):
             "agm_scheduled_date":            agm_profile_evidence["agm_scheduled_date"] or getattr(company, "agm_scheduled_date", None),
             "notice_sent_date":              agm_profile_evidence["notice_sent_date"],
             "members_present_at_agm":        agm_profile_evidence["members_present_at_agm"],
+            "members_present_evidence_ref":  agm_profile_evidence["members_present_evidence_ref"],
+            "members_total_at_agm":          agm_profile_evidence["members_total_at_agm"],
+            "members_total_evidence_ref":    agm_profile_evidence["members_total_evidence_ref"],
             "auditor_reappointed_at_agm":    agm_profile_evidence["auditor_reappointed_at_agm"],
             "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", False),
 
@@ -767,11 +787,11 @@ class CompanyService(BaseService[Company]):
             "director_office_of_profit": company.director_office_of_profit,
             "managing_director_appointment_date": company.managing_director_appointment_date,
             "member_count": company.member_count,
-            "articles_quorum_verified": company.articles_quorum_verified,
-            "articles_quorum_required": company.articles_quorum_required,
-            "articles_quorum_verified_by": company.articles_quorum_verified_by,
-            "articles_quorum_verified_at": company.articles_quorum_verified_at,
-            "articles_quorum_evidence_ref": company.articles_quorum_evidence_ref,
+            "articles_quorum_verified": agm_profile_evidence["articles_quorum_verified"],
+            "articles_quorum_required": agm_profile_evidence["articles_quorum_required"],
+            "articles_quorum_verified_by": agm_profile_evidence["articles_quorum_verified_by"],
+            "articles_quorum_verified_at": agm_profile_evidence["articles_quorum_verified_at"],
+            "articles_quorum_evidence_ref": agm_profile_evidence["articles_quorum_evidence_ref"],
             "business_commencement_declaration_filed": company.business_commencement_declaration_filed,
         })
 
