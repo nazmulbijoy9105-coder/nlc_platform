@@ -147,6 +147,10 @@ class ArticlesVerification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             name="ck_articles_verifications_quorum",
         ),
         CheckConstraint(
+            "status <> 'VERIFIED' OR (effective_from IS NOT NULL AND clause_reference IS NOT NULL)",
+            name="ck_articles_verifications_verified_fields",
+        ),
+        CheckConstraint(
             "quorum_variation_exists = FALSE OR quorum_required IS NOT NULL",
             name="ck_articles_verifications_variation_quorum",
         ),
@@ -193,10 +197,10 @@ class ArticlesVerification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True,
     )
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    effective_from: Mapped[date] = mapped_column(Date, nullable=False)
+    effective_from: Mapped[date | None] = mapped_column(Date, nullable=True)
     quorum_variation_exists: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
     quorum_required: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    clause_reference: Mapped[str] = mapped_column(String(255), nullable=False)
+    clause_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
     reviewer_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     revoked_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True,
