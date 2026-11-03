@@ -170,6 +170,8 @@ class CompanyProfile:
     auditor_reappointed_at_agm: bool | None = None
     accounts_adopted_at_agm: bool = False
     agm_minutes_prepared: bool | None = None
+    # Explicit quorum determination recorded for the AGM after checking the Articles and Act.
+    agm_quorum_met: bool | None = None
     first_auditor_appointed: bool | None = None
     first_auditor_appointment_date: Optional[date] = None
     audit_complete: bool = False
@@ -376,7 +378,7 @@ FIRST_AGM_DEADLINE_DAYS = 548
 SUBSEQUENT_AGM_DEADLINE_DAYS = 456
 FY_END_AGM_DEADLINE_DAYS = 182
 AGM_NOTICE_MINIMUM_DAYS = 21
-PRIVATE_COMPANY_QUORUM = 2
+# AGM quorum is Articles-dependent; Section 85(2)(b) supplies the default only where Articles do not.
 ANNUAL_RETURN_DEADLINE_DAYS = 21   # Companies Act 1994, Section 36 (Schedule X)
 DIRECTOR_FILING_DEADLINE_DAYS = 14
 SHARE_CERTIFICATE_DEADLINE_DAYS = 90
@@ -850,8 +852,8 @@ class NLCRuleEngine:
                 severity=Severity.YELLOW,
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="Auditor not reappointed at AGM. Section 210(3): mandatory at every AGM.",
-                statutory_basis="Section 210(2), Companies Act 1994 (Bangladesh)",
+                description="Retiring auditor not reappointed at AGM and no recorded statutory exception. Section 210(3) governs reappointment, subject to its stated exceptions.",
+                statutory_basis="Section 210(3), Companies Act 1994 (Bangladesh)",
             ))
 
     # ───────────────────────────────────────────────────────────────────
@@ -936,16 +938,30 @@ class NLCRuleEngine:
                     detail={"days_to_agm": days_rem}
                 ))
 
-        if c.agm_held_this_cycle and c.members_present_at_agm is not None and c.members_present_at_agm < PRIVATE_COMPANY_QUORUM:
+        # Section 85(2)(b) is a default rule only where the Articles do not provide otherwise.
+        # The statutory default differs by company/member count (private: 2 if <=6 members,
+        # 3 if >6; other companies: 5). Do not infer the applicable threshold from a hard-coded
+        # private-company constant. Use the quorum determination explicitly recorded for this AGM.
+        if (c.agm_held_this_cycle and c.members_present_at_agm is not None
+                and c.agm_quorum_met is False):
             self._add_flag(ComplianceFlag(
                 rule_id="AGM-005",
                 flag_code="AGM_QUORUM_DEFECTIVE",
                 severity=Severity.RED,
                 score_impact=15,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=f"AGM quorum not met. {c.members_present_at_agm} present, need {PRIVATE_COMPANY_QUORUM}. Section 83.",
-                statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
-                detail={"present": c.members_present_at_agm, "required": PRIVATE_COMPANY_QUORUM}
+                description=(
+                    "The AGM record confirms that the applicable quorum was not met. "
+                    "The required quorum must be determined from the company's Articles "
+                    "and, where the Articles make no different provision, Section 85(2)(b)."
+                ),
+                statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
+                detail={
+                    "present": c.members_present_at_agm,
+                    "member_count": c.member_count,
+                    "quorum_met_recorded": False,
+                    "quorum_basis": "company Articles; statutory default under Section 85(2)(b) where applicable",
+                },
             ))
 
         if c.agm_held_this_cycle and c.agm_minutes_prepared is False:
