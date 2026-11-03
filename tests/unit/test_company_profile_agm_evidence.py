@@ -15,6 +15,7 @@ def test_missing_agm_record_keeps_attendance_and_auditor_status_unknown():
         "auditor_reappointed_at_agm": None,
         "agm_minutes_prepared": None,
         "agm_quorum_met": None,
+        "agm_quorum_required": None,
         "notice_sent_date": None,
         "agm_notice_verified_absent": None,
         "agm_held_without_audit": None,
@@ -28,6 +29,7 @@ def test_agm_profile_evidence_comes_from_the_latest_agm_record():
         auditor_reappointed=False,
         minutes_prepared=True,
         quorum_met=False,
+        quorum_required=3,
         notice_sent_date=date(2026, 1, 1),
         notice_missing=False,
         agm_held_without_audit=True,
@@ -40,6 +42,7 @@ def test_agm_profile_evidence_comes_from_the_latest_agm_record():
     assert evidence["auditor_reappointed_at_agm"] is False
     assert evidence["agm_minutes_prepared"] is True
     assert evidence["agm_quorum_met"] is False
+    assert evidence["agm_quorum_required"] == 3
     assert evidence["notice_sent_date"] == date(2026, 1, 1)
     assert evidence["agm_held_without_audit"] is True
     assert evidence["accounts_adopted_at_agm"] is True
