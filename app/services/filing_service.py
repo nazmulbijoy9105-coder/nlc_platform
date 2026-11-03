@@ -44,7 +44,7 @@ class AGMService(BaseService[AGM]):
         members_present: int | None = None,
         quorum_required: int | None = None,
         auditor_reappointed: bool | None = None,
-        minutes_prepared: bool = False,
+        minutes_prepared: bool | None = None,
         minutes_filed_rjsc: bool = False,
         rjsc_filing_date: date | None = None,
         is_default: bool = False,
@@ -165,6 +165,8 @@ class AGMService(BaseService[AGM]):
         venue: str | None = None,
         minutes_document_id: uuid.UUID | None = None,
         quorum_required: int | None = None,
+        minutes_prepared: bool | None = None,
+        notice_missing: bool | None = None,
     ) -> AGM | None:
         """Persist AGM facts without inferring quorum from a fixed threshold.
 
@@ -199,8 +201,9 @@ class AGMService(BaseService[AGM]):
             auditor_reappointed=auditor_reappointed,
             accounts_adopted=accounts_adopted,
             agm_held_without_audit=agm_held_without_audit,
-            minutes_prepared=True if minutes_document_id else False,
+            minutes_prepared=True if minutes_document_id else minutes_prepared,
             minutes_document_id=minutes_document_id,
+            notice_missing=notice_missing if notice_missing is not None else agm.notice_missing,
             is_default=is_default,
             delay_days=delay_days,
         )
