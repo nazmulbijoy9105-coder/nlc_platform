@@ -82,7 +82,7 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | LBR-003 | Labour Court Order Pending | Labour Act 2006 (Bangladesh), Section 209 | RED | 15 | no | Engine-aligned 2026-11-02 |
 | MEM-001 | Company Operating with Fewer than Minimum Members | Section 222, Companies Act 1994 (Bangladesh) | RED | 10 | no | Engine-aligned 2026-11-02 |
 | OFF-001 | Change of Registered Office Not Filed Within 28 Days | Section 77, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
-| REG-001 | Statutory Registers Incomplete | Section 34, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
+| REG-001 | Statutory Registers Incomplete | Register-specific Companies Act provisions | YELLOW | 5 | no | Corrected 2026-11-03; no blanket section citation |
 | REG-002 | Core Statutory Registers Missing | Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh) | RED | 10 | no | Engine-aligned 2026-11-02 |
 | REG-003 | Registers Not Kept at Registered Office | Section 34(2), Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
 | SH-001 | Share Allotment Not Filed — Form XV | Section 151, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
