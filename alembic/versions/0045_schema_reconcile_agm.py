@@ -168,6 +168,16 @@ def upgrade():
     _add_missing_columns("legal_rules", LEGAL_RULE_COLUMNS)
     _add_missing_columns("quotations", QUOTATION_COLUMNS)
 
+    # Historical 0035 requires PENDING, not VERIFIED, for unreviewed rules.
+    bind = op.get_bind()
+    legal_rule_columns = {c["name"]: c for c in inspect(bind).get_columns("legal_rules")}
+    if "verification_status" not in legal_rule_columns:
+        op.add_column(
+            "legal_rules",
+            sa.Column("verification_status", sa.String(length=20), nullable=False,
+                      server_default="PENDING"),
+        )
+
     # Correct the historical AGM-005 citation/description. Earlier migration
     # 0030 incorrectly grouped AGM-005 quorum with AGM-006 minutes under s.89.
     # Keep legal verification PENDING: correcting a citation is not counsel approval.
@@ -181,16 +191,6 @@ def upgrade():
             verification_notes = 'Citation corrected; counsel validation and current Articles evidence review remain pending.'
         WHERE rule_id = 'AGM-005'
     """)
-
-    # Historical 0035 requires PENDING, not VERIFIED, for unreviewed rules.
-    bind = op.get_bind()
-    legal_rule_columns = {c["name"]: c for c in inspect(bind).get_columns("legal_rules")}
-    if "verification_status" not in legal_rule_columns:
-        op.add_column(
-            "legal_rules",
-            sa.Column("verification_status", sa.String(length=20), nullable=False,
-                      server_default="PENDING"),
-        )
     op.execute(
         "CREATE INDEX IF NOT EXISTS ix_quotations_rejected_by "
         "ON quotations (rejected_by)"
