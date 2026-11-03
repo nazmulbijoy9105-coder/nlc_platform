@@ -24,6 +24,7 @@ def test_missing_agm_record_keeps_attendance_and_auditor_status_unknown():
         "articles_quorum_verified_by": None,
         "articles_quorum_verified_at": None,
         "articles_quorum_evidence_ref": None,
+        "agm_held_without_audit": None,
     }
 
 
