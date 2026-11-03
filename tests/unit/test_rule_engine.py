@@ -190,12 +190,7 @@ class TestAGMRules:
     def test_AGM005_triggers_when_quorum_not_met(self, rule_engine, build_profile):
         profile = build_profile(
             agm_held_this_cycle=True,
-            members_present_at_agm=1,  # Usually need minimum 2
-        )
-        # Inject quorum_met=False signal
-        profile = build_profile(
-            agm_held_this_cycle=True,
-            members_present_at_agm=0,
+            members_present_at_agm=1,  # Below quorum of 2
         )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "AGM-005")
