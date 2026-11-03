@@ -50,15 +50,17 @@ def upgrade() -> None:
         STABLE
         SECURITY DEFINER
         SET search_path = pg_catalog, public
-        AS 'SELECT u.* FROM public.users u WHERE lower(u.email) = lower(btrim(p_email)) LIMIT 1';
-        REVOKE ALL ON FUNCTION public.nlc_auth_user_by_email(text) FROM PUBLIC;
+        AS 'SELECT u.* FROM public.users u WHERE lower(u.email) = lower(btrim(p_email)) LIMIT 1'
+    """)
+    op.execute("REVOKE ALL ON FUNCTION public.nlc_auth_user_by_email(text) FROM PUBLIC")
+    op.execute("""
         DO $auth_grant$
         BEGIN
             IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
                 GRANT EXECUTE ON FUNCTION public.nlc_auth_user_by_email(text) TO nlc_app_role;
             END IF;
         END
-        $auth_grant$;
+        $auth_grant$
     """)
 
     op.execute("""
@@ -238,7 +240,7 @@ def upgrade() -> None:
         LANGUAGE plpgsql
         SECURITY DEFINER
         SET search_path = pg_catalog, public
-        AS $
+        AS $$
         BEGIN
             IF NOT public.nlc_current_user_is_staff()
                AND (
@@ -250,13 +252,14 @@ def upgrade() -> None:
             END IF;
             RETURN NEW;
         END;
-        $;
+        $$
+    """)
+    op.execute("""
         DROP TRIGGER IF EXISTS users_protect_security_fields ON public.users;
         CREATE TRIGGER users_protect_security_fields
             BEFORE UPDATE ON public.users
             FOR EACH ROW
             EXECUTE FUNCTION public.nlc_protect_user_security_fields();
-
         ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
         DROP POLICY IF EXISTS users_self_or_staff ON public.users;
         CREATE POLICY users_self_or_staff ON public.users
