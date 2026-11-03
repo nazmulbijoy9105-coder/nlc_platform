@@ -105,6 +105,9 @@ AUDIT_COLUMNS = [
     ("first_auditor_appointed", sa.Boolean()),
     ("first_auditor_appointment_date", sa.Date()),
 ]
+COMPLIANCE_FLAG_COLUMNS = [
+    ("evaluation_state", sa.String(length=32)),
+]
 
 LEGAL_RULE_COLUMNS = [
     ("verified_by", sa.String(length=100)),
@@ -179,6 +182,20 @@ def upgrade():
     _add_missing_columns("companies", COMPANY_COLUMNS)
     _add_missing_columns("agms", AGM_COLUMNS)
     _add_missing_columns("audits", AUDIT_COLUMNS)
+    _add_missing_columns("compliance_flags", COMPLIANCE_FLAG_COLUMNS)
+    op.execute("""
+        UPDATE compliance_flags
+        SET evaluation_state = CASE
+            WHEN severity::text = 'NOT_EVALUATED' THEN 'UNKNOWN'
+            ELSE 'LEGACY_UNCLASSIFIED'
+        END
+        WHERE evaluation_state IS NULL
+    """)
+    op.alter_column(
+        "compliance_flags", "evaluation_state",
+        existing_type=sa.String(length=32),
+        nullable=False,
+    )
 
     # A missing appointment record is unknown, not proof that no auditor was appointed.
     op.alter_column(
