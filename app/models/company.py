@@ -276,6 +276,17 @@ class Company(FullMixin, Base):
     minutes_book_agm_maintained: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     minutes_book_board_maintained: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
+    # ── Legal verification provenance ────────────────────────────────
+    directors_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    directors_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    directors_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    directors_verification_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_private_subsidiary_of_public_company: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    moa_aoa_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    moa_aoa_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    moa_aoa_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    moa_aoa_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # ── AGM Details ────────────────────────────────────────────────────
     agm_scheduled_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     notice_sent_date: Mapped[date | None] = mapped_column(Date, nullable=True)
