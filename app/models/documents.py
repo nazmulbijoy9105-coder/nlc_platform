@@ -138,7 +138,7 @@ class ArticlesVerification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "articles_verifications"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('PENDING', 'VERIFIED', 'REJECTED', 'REVOKED')",
+            "status IN ('PENDING', 'VERIFIED', 'REJECTED', 'REVOKED', 'SUPERSEDED')",
             name="ck_articles_verifications_status",
         ),
         CheckConstraint(
@@ -151,7 +151,7 @@ class ArticlesVerification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         ),
         CheckConstraint(
             "(status = 'PENDING' AND reviewed_by IS NULL AND reviewed_at IS NULL) "
-            "OR (status IN ('VERIFIED', 'REJECTED', 'REVOKED') AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)",
+            "OR (status IN ('VERIFIED', 'REJECTED', 'REVOKED', 'SUPERSEDED') AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)",
             name="ck_articles_verifications_review_metadata",
         ),
         CheckConstraint(
@@ -209,7 +209,7 @@ class ArticlesVerificationEvent(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "articles_verification_events"
     __table_args__ = (
         CheckConstraint(
-            "action IN ('SUBMITTED', 'VERIFIED', 'REJECTED', 'REVOKED')",
+            "action IN ('SUBMITTED', 'VERIFIED', 'REJECTED', 'REVOKED', 'SUPERSEDED')",
             name="ck_articles_verification_events_action",
         ),
     )
