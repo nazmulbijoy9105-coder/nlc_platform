@@ -536,6 +536,7 @@ async def db_company(db: AsyncSession) -> Company:
         incorporation_date=today - timedelta(days=365 * 2),
         registered_address="123 Test Street, Dhaka, Bangladesh",
         company_type="PRIVATE_LIMITED",
+        member_count=5,
         financial_year_end=date(2025, 12, 31),
         current_compliance_score=85,
         current_risk_band=RiskBand.GREEN,
