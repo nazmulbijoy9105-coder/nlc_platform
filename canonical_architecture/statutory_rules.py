@@ -120,7 +120,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "INC-001",
         "legal_domain": "Corporate",
         "law": "Section 23, Companies Act 1994 (Bangladesh)",
-        "requirement": "Memorandum and Articles of Association not filed with RJSC. Section 23: constitutional documents must be filed.",
+        "requirement": "The memorandum and, where the company has articles, the articles must be delivered to the Registrar for registration under Section 23. Absence from NLC records is not proof of non-filing; verify the registered documents with RJSC before recording a breach.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
