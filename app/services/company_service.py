@@ -206,7 +206,8 @@ class CompanyService(BaseService[Company]):
             filters.append(Company.id.in_(uuids))  # type: ignore
         if user_id is not None:
             accessible_company_ids = select(CompanyUserAccess.company_id).where(
-                CompanyUserAccess.user_id == user_id
+                CompanyUserAccess.user_id == user_id,
+                CompanyUserAccess.is_active.is_(True),
             )
             filters.append(Company.id.in_(accessible_company_ids))  # type: ignore
         if search and search.strip():
