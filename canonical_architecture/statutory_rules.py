@@ -209,8 +209,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AUD-002": {
         "rule_id": "AUD-002",
         "legal_domain": "Corporate",
-        "law": "Section 151, Companies Act 1994 (Bangladesh)",
-        "requirement": "Audit Not Completed Before AGM - Annual audit not completed before AGM. Section 151: directors must lay audited accounts at AGM. Presenting unaudited accounts renders adoption invalid and exposes directors to liability.",
+        "law": "Section 183, Companies Act 1994 (Bangladesh)",
+        "requirement": "Annual audit not completed before AGM. Section 183 governs the audited financial statements to be laid before the AGM. Do not infer that all AGM resolutions are automatically void; legal consequences require case-specific review.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -959,7 +959,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "DEF-002": {
         "rule_id": "DEF-002",
         "legal_domain": "Corporate",
-        "law": "Notice-specific statutory basis required; Companies Act 1994 (Bangladesh) only where applicable",
+        "law": "Notice-specific legal basis not verified",
         "requirement": "Unresolved penalty notices. Verify each notice's issuing authority, enabling provision, amount, recipient and status. Do not apply a generic Companies Act section or penalty amount to unrelated notices.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
