@@ -159,6 +159,8 @@ class CompanyProfile:
     company_name: str
     company_type: str = "PRIVATE_LIMITED"
     member_count: int | None = None
+    articles_quorum_verified: bool | None = None
+    articles_quorum_required: int | None = None
     incorporation_date: date | None = None
     financial_year_end: Optional[date] = field(default=None)
     agm_count: int | None = None
@@ -1014,16 +1016,30 @@ class NLCRuleEngine:
 
         if c.agm_held_this_cycle:
             company_type = getattr(c.company_type, "value", c.company_type)
-            if (
+            quorum_inputs_verified = (
                 company_type == "PRIVATE_LIMITED"
                 and c.member_count is not None
                 and c.member_count > 0
                 and c.members_present_at_agm is not None
-            ):
-                quorum_required = (
+                and c.articles_quorum_verified is True
+                and (
+                    c.articles_quorum_required is None
+                    or c.articles_quorum_required >= 1
+                )
+            )
+            if quorum_inputs_verified:
+                # Section 85(2)(b) default applies only after current Articles
+                # have been checked and no alternative quorum is recorded.
+                statutory_default = (
                     PRIVATE_COMPANY_QUORUM_SMALL
                     if c.member_count <= 6
                     else PRIVATE_COMPANY_QUORUM_LARGE
+                )
+                quorum_required = c.articles_quorum_required or statutory_default
+                quorum_basis = (
+                    "ARTICLES_VERIFIED"
+                    if c.articles_quorum_required is not None
+                    else "SECTION_85_2_B_DEFAULT_ARTICLES_VERIFIED_NO_VARIATION"
                 )
                 if c.members_present_at_agm < quorum_required:
                     self._add_flag(ComplianceFlag(
@@ -1034,24 +1050,27 @@ class NLCRuleEngine:
                         revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                         description=(
                             f"AGM attendance {c.members_present_at_agm} is below the "
-                            f"Section 85(2)(b) statutory-default quorum of {quorum_required} "
-                            f"for a private company with {c.member_count} members. "
-                            "Articles-specific alternatives have not been reviewed."
+                            f"verified quorum requirement of {quorum_required}. "
+                            "The requirement is based on the current Articles or, "
+                            "where no variation is recorded, Section 85(2)(b)."
                         ),
-                        statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
+                        statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh), subject to current Articles",
                         detail={
                             "present": c.members_present_at_agm,
                             "member_count": c.member_count,
                             "required": quorum_required,
-                            "quorum_basis": "SECTION_85_2_B_DEFAULT_ARTICLES_NOT_REVIEWED",
+                            "articles_quorum_verified": True,
+                            "quorum_basis": quorum_basis,
                         },
                     ))
             else:
-                # Do not apply the private-company default to other entity
-                # types or infer facts from missing/zero membership/attendance.
                 reason = (
                     "company_type_not_supported"
                     if company_type != "PRIVATE_LIMITED"
+                    else "articles_quorum_not_verified"
+                    if c.articles_quorum_verified is not True
+                    else "invalid_articles_quorum_required"
+                    if c.articles_quorum_required is not None and c.articles_quorum_required < 1
                     else "member_count_or_attendance_unknown"
                 )
                 self._add_flag(ComplianceFlag(
@@ -1061,14 +1080,17 @@ class NLCRuleEngine:
                     score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=(
-                        "AGM quorum cannot be determined from verified company type, "
-                        "total membership and attendance evidence. Obtain the current "
-                        "member register, attendance record and Articles before assessment."
+                        "AGM quorum cannot be determined until the current Articles, "
+                        "member register and attendance record are verified. "
+                        "The statutory default must not be applied without checking "
+                        "whether the Articles provide otherwise."
                     ),
-                    statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh), subject to current Articles",
                     detail={
                         "present": c.members_present_at_agm,
                         "member_count": c.member_count,
+                        "articles_quorum_verified": c.articles_quorum_verified,
+                        "articles_quorum_required": c.articles_quorum_required,
                         "reason": reason,
                     },
                     state=RuleState.UNKNOWN,
