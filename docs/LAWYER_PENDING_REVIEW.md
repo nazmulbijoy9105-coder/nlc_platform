@@ -25,10 +25,7 @@ appointment deadline (30 days from incorporation)?
 - The PDF text for S210 is truncated — subsections beyond (1) are not
   visible in the machine-extracted text
 
-**What the engine checks:** First auditor not appointed within 30 days
-(1 month) of incorporation. The engine uses `Section 210(6)` as the
-statutory basis, implying a subsection (6) exists about first auditor
-appointment by the Board within 30 days.
+**What the engine checks:** The Board's first-auditor appointment date against one calendar month from registration under Section 210(6). A recorded boolean without the appointment date is NOT_EVALUATED. The statutory source and interpretation remain subject to independent counsel verification.
 
 **What needs verification:**
 - Does Section 210(6) exist in the Companies Act 1994?
@@ -144,7 +141,7 @@ the current gazetted Act text:
 | `CHARGE_REGISTRATION_DEADLINE_DAYS` | 21 | S159(1) | ⚠️ Needs verification |
 | `SHARE_CERTIFICATE_DEADLINE_DAYS` | 90 | S158 | ⚠️ Needs verification |
 | `SPECIAL_RESOLUTION_DEADLINE_DAYS` | 15 | S88 | ⚠️ Needs verification |
-| `FIRST_AUDITOR_DEADLINE_DAYS` | 30 | S210(6)? | ⚠️ Needs verification |
+| AUD-001 deadline | One calendar month | S210(6) | ⚠️ Counsel source verification pending |
 | `ANNUAL_RETURN_DEADLINE_DAYS` | 21 | S36 | ✅ Verified |
 
 ---
@@ -153,7 +150,7 @@ the current gazetted Act text:
 
 | # | Rule | Question | Impact if wrong |
 |---|---|---|---|
-| 1 | AUD-001 | Does S210(6) exist? 30-day deadline? | First auditor check disabled |
+| 1 | AUD-001 | Confirm the authoritative text and application of Section 210(6): Board appointment within one calendar month of registration, calculated by calendar month. | Evaluator now requires appointment-date evidence; counsel approval remains pending |
 | 2 | SH-001 | S151 vs S50 for allotment returns? | Allotment check disabled |
 | 3 | SH-002 | S158 vs S46 for certificate issuance? | Certificate check disabled |
 | 4 | AUD-002 | Description says S151, should be S183? | Description text mismatch |
