@@ -79,9 +79,9 @@ class AGM(FullMixin, Base):
 
     # ── Quorum ────────────────────────────────────────────────────
     # AGM-005: quorum not met
-    quorum_met: Mapped[bool] = mapped_column(Boolean, default=True)
+    quorum_met: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=True)
     members_present: Mapped[int] = mapped_column(Integer, default=0)
-    quorum_required: Mapped[int] = mapped_column(
+    quorum_required: Mapped[int | None] = mapped_column(
         Integer, default=2, comment="Section 83 CA 1994 — 2 members for private"
     )
 
