@@ -183,8 +183,8 @@ The following confirmed implementation defects have been corrected in this branc
 |---|---|---|
 | AGM-001 / AGM-002 | First AGM uses 18 calendar months; subsequent AGMs use 15 calendar months. Removed fixed 548/456-day approximations and generic FY-end + 6-month trigger for ordinary private companies. | Month-end, leap-year and boundary-date tests |
 | AGM scheduling | Filing service and company-profile fallback now use the same calendar-month calculation; new AGM records calculate the statutory deadline when one is not supplied. | Shared service deadline test |
-| AGM-005 | Quorum breach requires a recorded failed quorum determination; Section 85(2)(b) default is Articles-dependent and is no longer represented as a universal fixed two-member threshold. | Explicit failed quorum and UNKNOWN tests |
-| AGM-004 | Missing notice date is an evidence gap. A scored breach requires explicit verified notice absence; ORM default `False` is not treated as proof that notice was served or not served. | UNKNOWN and verified-absence tests |
+| AGM-005 | Quorum breach requires a recorded failed quorum determination; Section 85(2)(b) default is Articles-dependent and is no longer represented as a universal fixed two-member threshold. | Explicit failed quorum and UNKNOWN tests; nullable fields migration 0045 |
+| AGM-004 | Missing notice date is an evidence gap. A scored breach requires explicit verified notice absence; ORM default `False` is not treated as proof that notice was served or not served. | UNKNOWN and verified-absence tests; API persists explicit notice_missing evidence |
 | AGM-006 | Existing service mapping treats the ORM default `minutes_prepared=False` as UNKNOWN when no explicit evidence exists. | Missing AGM evidence regression |
 | AUD-002 / AUD-003 | Corrected accounts-at-AGM basis to Section 183; removed categorical claims that every resolution is automatically void. AUD-003 explicitly identifies BLACK as NLC internal risk policy. | Engine/seed/canonical basis alignment |
 | AUD-004 | Reappointment mapping corrected to Section 210(3), subject to statutory exceptions. | Existing rule regression |
@@ -200,8 +200,8 @@ The following confirmed implementation defects have been corrected in this branc
 
 - ESC-003 / BLACK override thresholds and policy remain unchanged pending policy-owner approval.
 - The existing scoring verification allowlist has not been silently broadened.
-- Historical AGM records and stored score snapshots have not been rewritten by this branch.
-- No production deployment or database migration has been performed.
+- Migration 0045 converts legacy ORM-default AGM evidence (zero attendance, default quorum/positive auditor values, default minutes-false) to NULL/UNKNOWN; explicit negative evidence is preserved. Historical score snapshots are not rewritten.
+- Migration 0045 is committed but has not been applied to any database; no production deployment has been performed.
 
 ### Remaining legal release gates
 
