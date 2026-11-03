@@ -49,6 +49,12 @@ def _agm_profile_evidence(latest_agm) -> dict:
 
     return {
         "members_present_at_agm": members_present,
+        "agm_attendance_verified": getattr(latest_agm, "members_present_verified", False) is True,
+        "agm_quorum_required": (
+            getattr(latest_agm, "quorum_required", None)
+            if getattr(latest_agm, "quorum_required_verified", False) is True else None
+        ),
+        "agm_quorum_basis_verified": getattr(latest_agm, "quorum_required_verified", False) is True,
         "auditor_reappointed_at_agm": getattr(latest_agm, "auditor_reappointed", None),
         "agm_minutes_prepared": minutes_prepared,
         "notice_sent_date": getattr(latest_agm, "notice_sent_date", None),
@@ -470,8 +476,8 @@ class CompanyService(BaseService[Company]):
             "penalty_notices_received":     company.penalty_notices_received,
             "penalty_notices_resolved":     company.penalty_notices_resolved,
             "current_director_count": len([d for d in company.directors if d.director_status.value == "ACTIVE"]) if company.directors is not None else None,
-            # Local records are not independently verified against RJSC.
-            "directors_verified": False,
+            "directors_verified": company.directors_verified is True,
+            "is_private_subsidiary_of_public_company": company.is_private_subsidiary_of_public_company,
 
             # BSEC Corporate Governance
             "bsec_listed":                   getattr(company, "bsec_listed", False),
@@ -537,7 +543,8 @@ class CompanyService(BaseService[Company]):
             "paid_up_ge_authorized":        getattr(company, "paid_up_ge_authorized", False),
 
             # Corporate Structure Changes
-            "moa_aoa_filed":                getattr(company, "moa_aoa_filed", False),
+            "moa_aoa_filed":                getattr(company, "moa_aoa_filed", None),
+            "moa_aoa_verified":             company.moa_aoa_verified is True,
             "name_change_pending":          getattr(company, "name_change_pending", False),
             "name_change_date":             getattr(company, "name_change_date", None),
             "name_change_sr_passed":         getattr(company, "name_change_sr_passed", False),
@@ -561,6 +568,9 @@ class CompanyService(BaseService[Company]):
             "agm_scheduled_date":            getattr(company, "agm_scheduled_date", None),
             "notice_sent_date":              agm_profile_evidence["notice_sent_date"],
             "members_present_at_agm":        agm_profile_evidence["members_present_at_agm"],
+            "agm_attendance_verified":       agm_profile_evidence.get("agm_attendance_verified", False),
+            "agm_quorum_required":           agm_profile_evidence.get("agm_quorum_required"),
+            "agm_quorum_basis_verified":     agm_profile_evidence.get("agm_quorum_basis_verified", False),
             "auditor_reappointed_at_agm":    agm_profile_evidence["auditor_reappointed_at_agm"],
             "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", False),
 
