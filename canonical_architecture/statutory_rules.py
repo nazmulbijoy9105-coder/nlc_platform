@@ -286,8 +286,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AGM-003": {
         "rule_id": "AGM-003",
         "legal_domain": "Corporate",
-        "law": "Section 85, Companies Act 1994 (Bangladesh)",
-        "requirement": "AGM Notice Defective — Insufficient Days - AGM notice sent with fewer than 21 clear days before meeting. Section 85 requires 21 clear days. 'Clear days' excludes day of service and day of meeting. Resolutions at improperly noticed AGM may be void.",
+        "law": "Section 85(1)(a), Companies Act 1994 (Bangladesh)",
+        "requirement": "AGM short notice may be valid with written consent of all members entitled to attend and vote. Do not classify as defective unless absence of the required consent is verified.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -301,8 +301,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AGM-004": {
         "rule_id": "AGM-004",
         "legal_domain": "Corporate",
-        "law": "Section 85, Companies Act 1994 (Bangladesh)",
-        "requirement": "AGM Notice Missing - No written AGM notice sent to members. Section 85 requires notice specifying date, time, place, and business. AGM without proper notice is a nullity — all resolutions void.",
+        "law": "Section 85(1)(a), Companies Act 1994 (Bangladesh)",
+        "requirement": "No notice date is recorded before the AGM. A defect is confirmed only where written short-notice consent from all members entitled to attend and vote is verified absent; otherwise legal status remains unknown.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
