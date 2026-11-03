@@ -49,7 +49,7 @@ def test_legacy_null_attendance_keeps_quorum_unknown():
     meeting = SimpleNamespace(
         members_present=None,
         auditor_reappointed=None,
-        minutes_prepared=False,
+        minutes_prepared=None,
         quorum_met=None,
         notice_sent_date=None,
     )
@@ -60,6 +60,21 @@ def test_legacy_null_attendance_keeps_quorum_unknown():
     assert evidence["auditor_reappointed_at_agm"] is None
     assert evidence["agm_minutes_prepared"] is None
     assert evidence["agm_quorum_met"] is None
+
+
+def test_explicit_minutes_absence_is_preserved_after_nullable_migration():
+    meeting = SimpleNamespace(
+        members_present=2,
+        auditor_reappointed=None,
+        minutes_prepared=False,
+        quorum_met=None,
+        notice_sent_date=None,
+        notice_missing=False,
+        agm_held_without_audit=None,
+        accounts_adopted=None,
+    )
+    evidence = _agm_profile_evidence(meeting)
+    assert evidence["agm_minutes_prepared"] is False
 
 
 def test_explicit_zero_attendance_and_failed_quorum_are_preserved():
@@ -86,6 +101,7 @@ def test_agm_evidence_columns_are_nullable_where_legacy_defaults_were_ambiguous(
     assert AGM.__table__.c.quorum_required.nullable is True
     assert AGM.__table__.c.quorum_met.nullable is True
     assert AGM.__table__.c.auditor_reappointed.nullable is True
+    assert AGM.__table__.c.minutes_prepared.nullable is True
     assert AGM.__table__.c.accounts_adopted.nullable is True
     assert AGM.__table__.c.agm_held_without_audit.nullable is True
 
