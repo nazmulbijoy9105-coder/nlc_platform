@@ -225,3 +225,17 @@ Legacy database values are deliberately not backfilled as verified. Defaults are
 - ICAB Corporate Laws Manual: https://www.icab.org.bd/icabadmin/uploads/ckeditor/6665Corporate%20Laws%20Manual%20Final%202021.pdf
 
 Source review status: source text checked for this targeted round; full amendment-by-amendment legal review and independent sign-off remain OPEN.
+
+
+### Follow-up hardening in this branch
+
+- Section 81 Registrar extension handling now requires the application date to fall within 30 days after the base deadline, a verified grant date, evidence reference, reviewer and timestamp. The granted date is capped at the earlier of 90 days after the base deadline or 31 December of the relevant calendar year. An unverified or out-of-limit extension becomes a lawyer-review state and suppresses automatic default/escalation.
+- AGM escalation-year calculation now uses the same calendar-month/Section 81 deadline as the primary AGM rule. It no longer uses a separate 456-day/FY+6-month approximation.
+- First auditor appointment status, audit completion and auditor reappointment are now separately evidence-gated. Legacy false defaults do not become confirmed violations.
+- DEF-001 now requires director identity, a specified statutory/Articles ground, authority, evidence reference, effective date and continuing status. Unpaid-call evidence must also establish at least 180 days after the last payment date; an Articles ground must identify the relevant Articles provision. DEF-001 no longer forces BLACK and is excluded from the scoring allowlist pending independent legal approval.
+- AUD-003 is a lawyer-judgment state, has zero score impact and cannot force BLACK.
+- The pre-escalation score and authoritative raw score now use the same verified-rule gate and category caps.
+
+These controls are implemented in code and covered by new regression tests; their CI status must be checked on the resulting pull request. The database migration adds the provenance fields with unverified defaults. No legacy company/AGM/audit booleans are backfilled as verified.
+
+Still open: a secure reviewer-facing workflow for setting these verification fields; explicit support for court directions and other statutory exceptions; complete independent review of all active rules; and signed legal approval of the production scoring allowlist.
