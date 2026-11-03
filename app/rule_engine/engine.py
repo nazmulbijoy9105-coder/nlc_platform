@@ -205,6 +205,8 @@ class CompanyProfile:
     is_private_subsidiary_of_public_company: bool | None = None
     subsidiary_status_verified: bool = False
     subsidiary_status_evidence_ref: str | None = None
+    subsidiary_status_verified_at: date | None = None
+    subsidiary_status_verified_by: str | None = None
     minimum_directors_met: bool | None = None
     shareholder_change_date: Optional[date] = None
     form_xv_filed: bool = False
@@ -623,6 +625,19 @@ class NLCRuleEngine:
                 eval_state="UNKNOWN",
                 detail={"verification_status": "not_verified"},
             ))
+        elif c.moa_aoa_filed is None:
+            self._add_flag(ComplianceFlag(
+                rule_id="INC-001",
+                flag_code="MOA_AOA_VERIFIED_STATUS_MISSING",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="A reviewer recorded a verification event but did not record whether the MoA/AoA was filed.",
+                statutory_basis="Section 23, Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"verification_status": "incomplete"},
+            ))
         elif c.moa_aoa_filed is False and self._is_old_enough_to_assess(c):
             self._add_flag(ComplianceFlag(
                 rule_id="INC-001",
@@ -640,7 +655,9 @@ class NLCRuleEngine:
             count = c.current_director_count
             if (c.company_type == "PRIVATE_LIMITED" and count == 2
                     and (c.subsidiary_status_verified is not True
-                         or not c.subsidiary_status_evidence_ref)):
+                         or not c.subsidiary_status_evidence_ref
+                         or c.subsidiary_status_verified_at is None
+                         or not c.subsidiary_status_verified_by)):
                 self._add_flag(ComplianceFlag(
                     rule_id="INC-003",
                     flag_code="DIRECTOR_MINIMUM_APPLICABILITY_UNKNOWN",
