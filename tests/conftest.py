@@ -414,6 +414,15 @@ def build_profile():
             "business_commencement_declaration_filed": True,
         }
         defaults.update(overrides)
+        # Keep fixture appointment evidence consistent with any overridden
+        # registration date unless a test explicitly supplies its own date.
+        if "first_auditor_appointment_date" not in overrides:
+            if defaults.get("first_auditor_appointed") is True and defaults.get("incorporation_date"):
+                defaults["first_auditor_appointment_date"] = (
+                    defaults["incorporation_date"] + timedelta(days=15)
+                )
+            else:
+                defaults["first_auditor_appointment_date"] = None
         return CompanyProfile(**defaults)
 
     return _build
