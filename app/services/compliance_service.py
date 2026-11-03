@@ -294,10 +294,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 )
             )
             existing_flag = existing.scalar_one_or_none()
-            evaluation_state = getattr(
-                getattr(flag, "state", None),
-                "value",
-                getattr(flag, "state", "LEGACY_UNCLASSIFIED"),
+            state_value = getattr(flag, "state", None)
+            evaluation_state = (
+                getattr(state_value, "value", state_value)
+                or "LEGACY_UNCLASSIFIED"
             )
             severity_value = getattr(flag.severity, "value", flag.severity)
             revenue_tier_value = getattr(
