@@ -346,6 +346,13 @@ class TestFilings:
         from app.services.filing_service import AGMService
 
         agm = await AGMService(db).create_agm(company_id=db_company.id, financial_year=2021)
+    async def test_mark_agm_held_contract(self, api_client, staff_token, db_company, db):
+        from app.services.filing_service import AGMService
+
+        agm = await AGMService(db).create_agm(
+            company_id=db_company.id,
+            financial_year=2021,
+        )
         response = await api_client.patch(
             f"/api/v1/filings/agm/{agm.id}/held",
             headers=_auth(staff_token),
@@ -367,6 +374,8 @@ class TestFilings:
         assert result["quorum_met"] is None
         assert result["quorum_required"] is None
         assert result["quorum_basis"] == "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
+        assert result["quorum_met"] is True
+        assert result["quorum_required"] == 2
         assert result["venue"] == "Registered Office"
         assert result["accounts_adopted"] is True
         assert result["agm_held_without_audit"] is False

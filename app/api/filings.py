@@ -72,6 +72,9 @@ class AGMMarkHeldRequest(BaseModel):
     members_total_at_agm: int | None = Field(default=None, ge=1)
     members_total_evidence_ref: str | None = None
     members_present_evidence_ref: str | None = None
+    # Deprecated compatibility input. The server derives quorum from company
+    # membership and does not trust a client-provided compliance conclusion.
+    quorum_met: bool | None = None
     auditor_reappointed: bool
     accounts_adopted: bool | None = None
     agm_held_without_audit: bool | None = None
@@ -711,6 +714,10 @@ def _agm_to_response(agm) -> AGMResponse:
         auditor_reappointed=agm.auditor_reappointed,
         accounts_adopted=agm.accounts_adopted,
         agm_held_without_audit=agm.agm_held_without_audit,
+        venue=getattr(agm, "venue", None),
+        auditor_reappointed=agm.auditor_reappointed,
+        accounts_adopted=getattr(agm, "accounts_adopted", None),
+        agm_held_without_audit=getattr(agm, "agm_held_without_audit", None),
         is_default=agm.is_default,
         created_at=agm.created_at.isoformat() if hasattr(agm, 'created_at') and agm.created_at else '',
     )

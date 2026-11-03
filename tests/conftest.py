@@ -383,6 +383,7 @@ def build_profile():
             "capital_increase_resolution": True,
             "first_auditor_appointed": True,
             "first_auditor_appointment_date": today - timedelta(days=365 * 3) + timedelta(days=20),
+            "first_auditor_appointment_date": today - timedelta(days=365 * 3) + timedelta(days=15),
             "tin_obtained": True,
             "vat_registered": True,
             "trade_license_obtained": True,
@@ -422,6 +423,15 @@ def build_profile():
             "business_commencement_declaration_filed": True,
         }
         defaults.update(overrides)
+        # Keep fixture appointment evidence consistent with any overridden
+        # registration date unless a test explicitly supplies its own date.
+        if "first_auditor_appointment_date" not in overrides:
+            if defaults.get("first_auditor_appointed") is True and defaults.get("incorporation_date"):
+                defaults["first_auditor_appointment_date"] = (
+                    defaults["incorporation_date"] + timedelta(days=15)
+                )
+            else:
+                defaults["first_auditor_appointment_date"] = None
         return CompanyProfile(**defaults)
 
     return _build
@@ -444,6 +454,7 @@ def black_band_profile(build_profile):
         last_agm_date=None,
         audit_complete=False,
         first_auditor_appointed=False,
+        first_auditor_appointment_date=None,
         unfiled_returns_count=3,
         annual_return_filed=False,
         agm_held_without_audit=True,

@@ -572,6 +572,22 @@ class TestFilingService:
         await db.flush()
         svc = AGMService(db)
         agm = await svc.create_agm(company_id=db_company.id, financial_year=2022)
+        assert updated.quorum_required == 2
+        assert updated.quorum_met is True
+        assert updated.quorum_basis == "SECTION_85_2_B_DEFAULT_ARTICLES_NOT_REVIEWED"
+
+    @pytest.mark.asyncio
+    async def test_mark_agm_held_large_private_company_uses_three_member_default(self, db, db_company):
+        from app.services.filing_service import AGMService
+
+        db_company.member_count = 7
+        await db.flush()
+        svc = AGMService(db)
+        agm = await svc.create_agm(
+            company_id=db_company.id,
+            financial_year=2022,
+            agm_due_date=date(2023, 6, 30),
+        )
         updated = await svc.mark_held(
             agm_id=agm.id,
             agm_date=date(2023, 5, 15),
@@ -587,6 +603,7 @@ class TestFilingService:
 
     @pytest.mark.asyncio
     async def test_mark_agm_held_unknown_membership_is_not_evaluated(self, db, db_company):
+    async def test_mark_agm_held_missing_member_count_is_not_evaluated(self, db, db_company):
         from app.services.filing_service import AGMService
 
         db_company.member_count = None

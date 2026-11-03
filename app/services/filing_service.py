@@ -95,6 +95,7 @@ class AGMService(BaseService[AGM]):
             members_present=members_present,
             quorum_required=quorum_required,
             quorum_met=quorum_met,
+            quorum_basis=quorum_basis,
             auditor_reappointed=auditor_reappointed,
             minutes_prepared=minutes_prepared,
             minutes_filed_rjsc=minutes_filed_rjsc,
@@ -153,6 +154,15 @@ class AGMService(BaseService[AGM]):
 
         Section 85(2)(b) supplies the private-company default only where the
         current Articles have been checked and no alternative quorum applies.
+    ) -> AGM | None:
+        """
+        Record an AGM using server-derived quorum, not a client-supplied boolean.
+
+        Section 85(2)(b) private-company default:
+        2 members where total membership is not more than 6; 3 where it is
+        more than 6. Articles-specific overrides are not yet modelled, so this
+        is a statutory-default assessment and must not be presented as a
+        final Articles-compliant legal determination.
         """
         agm = await self.get_by_id(agm_id)
         if not agm:
@@ -200,6 +210,23 @@ class AGMService(BaseService[AGM]):
             quorum_required = None
             quorum_met = None
             quorum_basis = "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
+        member_count = getattr(company, "member_count", None) if company else None
+        company_type = getattr(company, "company_type", None) if company else None
+        company_type = getattr(company_type, "value", company_type)
+
+        if company_type == "PRIVATE_LIMITED" and member_count is not None and member_count > 0:
+            quorum_required = 2 if member_count <= 6 else 3
+            quorum_met: bool | None = members_present >= quorum_required
+            quorum_basis = "SECTION_85_2_B_DEFAULT_ARTICLES_NOT_REVIEWED"
+        else:
+            # Do not invent a quorum where company type or verified membership
+            # is unavailable, or where a different company category applies.
+            quorum_required = None
+            quorum_met = None
+            quorum_basis = "NOT_EVALUATED"
+
+        is_default = bool(agm.agm_deadline and agm_date > agm.agm_deadline)
+        delay_days = (agm_date - agm.agm_deadline).days if is_default and agm.agm_deadline else 0
 
         is_default = bool(agm.agm_deadline and agm_date > agm.agm_deadline)
         delay_days = (agm_date - agm.agm_deadline).days if is_default and agm.agm_deadline else 0
@@ -210,6 +237,8 @@ class AGMService(BaseService[AGM]):
             agm_date=agm_date,
             venue=venue,
             members_present=members_present,
+            quorum_required=quorum_required,
+            quorum_met=quorum_met,
             auditor_reappointed=auditor_reappointed,
             accounts_adopted=accounts_adopted,
             agm_held_without_audit=agm_held_without_audit,
