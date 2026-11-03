@@ -467,8 +467,10 @@ CATEGORY_CAPS: dict[str, tuple[int, tuple[str, ...]]] = {
 # Unverified rules still generate flags (for visibility) but their
 # score_impact is excluded from _calculate_score() and _calculate_raw_score().
 #
-# Rationale: statutory citations for these 41 rules have been audited
-# against the Companies Act 1994 (Bangladesh) PDF. Rules not yet verified
+# Rationale: statutory citations for these 39 rules have undergone an
+# internal source check against the Companies Act 1994 (Bangladesh) text.
+# This is not independent legal approval or a complete amendment review.
+# Rules not yet internally verified
 # (AUD-*, SH-*, TR-002~006, ESC-003~005, TAX-*, LBR-*, BNK-*, FX-*,
 # BSEC-*) require lawyer review before they can influence the score.
 #
