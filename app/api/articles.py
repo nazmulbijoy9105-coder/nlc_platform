@@ -133,7 +133,7 @@ async def submit_articles_for_verification(
     if existing:
         raise HTTPException(
             status_code=409,
-            detail="An Articles verification is already pending or active. Reject or revoke it before submitting a replacement.",
+            detail="An Articles verification submission is already pending. Review it before submitting another copy.",
         )
 
     now = datetime.now(UTC)
@@ -228,11 +228,11 @@ async def review_articles_verification(
 
     now = datetime.now(UTC)
     if body.decision == "VERIFIED":
-        if body.effective_from is None or body.clause_reference is None or body.quorum_variation_exists is None:
+        if body.effective_from is None or not body.clause_reference or not body.clause_reference.strip() or body.quorum_variation_exists is None:
             raise HTTPException(status_code=422, detail="Verification requires effective_from, the exact quorum clause reference, and an explicit quorum-variation decision.")
         if body.quorum_variation_exists and body.quorum_required is None:
             raise HTTPException(status_code=422, detail="A numeric quorum is required when the Articles vary the statutory default.")
-        if body.quorum_variation_exists and not body.quorum_clause_text:
+        if body.quorum_variation_exists and (not body.quorum_clause_text or not body.quorum_clause_text.strip()):
             raise HTTPException(status_code=422, detail="The exact alternative quorum clause text must be recorded.")
         if not body.quorum_variation_exists and body.quorum_required is not None:
             raise HTTPException(status_code=422, detail="Do not provide an alternative quorum when the reviewer confirms no variation.")
@@ -325,6 +325,9 @@ async def revoke_articles_verification(
         raise HTTPException(status_code=409, detail="Only an active verified Articles record can be revoked.")
     if item.reviewed_by == current_user.id:
         raise HTTPException(status_code=403, detail="A different legal reviewer must revoke this verification.")
+
+    if not body.reason.strip():
+        raise HTTPException(status_code=422, detail="A non-empty revocation reason is required.")
 
     now = datetime.now(UTC)
     item.status = "REVOKED"
