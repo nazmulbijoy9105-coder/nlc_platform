@@ -24,6 +24,10 @@ def _profile(**overrides):
         "audit_complete": True,
         "annual_return_filed": True,
         "moa_aoa_filed": True,
+        "moa_aoa_verified": False,
+        "moa_aoa_evidence_ref": None,
+        "moa_aoa_verified_at": None,
+        "moa_aoa_verified_by": None,
     }
     values.update(overrides)
     return CompanyProfile(**values)
@@ -52,7 +56,13 @@ def test_unverified_legacy_moa_false_is_unknown_not_a_breach():
 
 def test_verified_moa_absence_can_be_evaluated_as_a_breach():
     result = NLCRuleEngine().evaluate(
-        _profile(moa_aoa_filed=False, moa_aoa_verified=True),
+        _profile(
+            moa_aoa_filed=False,
+            moa_aoa_verified=True,
+            moa_aoa_evidence_ref="RJSC-CERT-REF-001",
+            moa_aoa_verified_at=date(2026, 11, 1),
+            moa_aoa_verified_by="reviewer-001",
+        ),
         today=date(2026, 11, 3),
     )
     flag = _flag(result, "INC-001")
@@ -65,7 +75,11 @@ def test_two_verified_directors_with_unknown_subsidiary_status_are_not_black():
         _profile(
             current_director_count=2,
             directors_verified=True,
+            directors_verification_evidence_ref="RJSC-DIRECTORS-001",
+            directors_verified_at=date(2026, 11, 1),
+            directors_verified_by="reviewer-001",
             is_private_subsidiary_of_public_company=None,
+            subsidiary_status_verified=False,
         ),
         today=date(2026, 11, 3),
     )
@@ -79,7 +93,12 @@ def test_private_subsidiary_of_public_company_requires_three_verified_directors(
         _profile(
             current_director_count=2,
             directors_verified=True,
+            directors_verification_evidence_ref="RJSC-DIRECTORS-002",
+            directors_verified_at=date(2026, 11, 1),
+            directors_verified_by="reviewer-001",
             is_private_subsidiary_of_public_company=True,
+            subsidiary_status_verified=True,
+            subsidiary_status_evidence_ref="GROUP-STRUCTURE-002",
         ),
         today=date(2026, 11, 3),
     )
@@ -94,8 +113,10 @@ def test_agm_quorum_without_verified_attendance_or_basis_is_unknown():
         _profile(
             members_present_at_agm=2,
             agm_attendance_verified=False,
+            agm_attendance_evidence_ref=None,
             agm_quorum_required=3,
             agm_quorum_basis_verified=True,
+            agm_quorum_evidence_ref="AOA-QUORUM-001",
         ),
         today=date(2026, 11, 3),
     )
@@ -109,8 +130,10 @@ def test_agm_quorum_requires_verified_attendance_and_quorum_basis():
         _profile(
             members_present_at_agm=2,
             agm_attendance_verified=True,
+            agm_attendance_evidence_ref="AGM-MINUTES-001",
             agm_quorum_required=3,
             agm_quorum_basis_verified=True,
+            agm_quorum_evidence_ref="AOA-QUORUM-001",
         ),
         today=date(2026, 11, 3),
     )
