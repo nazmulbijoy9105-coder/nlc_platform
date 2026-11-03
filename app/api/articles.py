@@ -5,6 +5,7 @@ separate legal reviewer; decisions and revocations are append-only audited.
 """
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import UTC, datetime
 from typing import Literal
@@ -111,7 +112,7 @@ async def submit_articles_for_verification(
         document is None
         or not document.s3_key
         or not document.checksum_sha256
-        or len(document.checksum_sha256) != 64
+        or re.fullmatch(r"[0-9a-fA-F]{64}", document.checksum_sha256) is None
     ):
         raise HTTPException(
             status_code=422,
@@ -122,7 +123,7 @@ async def submit_articles_for_verification(
         select(ArticlesVerification.id)
         .where(
             ArticlesVerification.company_id == company_id,
-            ArticlesVerification.status.in_(("PENDING", "VERIFIED")),
+            ArticlesVerification.status == "PENDING",
         )
         .with_for_update()
         .limit(1)
@@ -231,8 +232,38 @@ async def review_articles_verification(
             raise HTTPException(status_code=422, detail="A numeric quorum is required when the Articles vary the statutory default.")
         if not body.quorum_variation_exists and body.quorum_required is not None:
             raise HTTPException(status_code=422, detail="Do not provide an alternative quorum when the reviewer confirms no variation.")
+        current_verified = await db.scalar(
+            select(ArticlesVerification)
+            .where(
+                ArticlesVerification.company_id == company_id,
+                ArticlesVerification.status == "VERIFIED",
+                ArticlesVerification.id != item.id,
+            )
+            .with_for_update()
+            .limit(1)
+        )
+        if current_verified is not None:
+            if current_verified.effective_from >= body.effective_from:
+                raise HTTPException(
+                    status_code=409,
+                    detail="A replacement Articles verification must have a later effective date. Revoke the current verification before correcting historical dates.",
+                )
+            current_verified.status = "SUPERSEDED"
+            await db.flush()
+            db.add(ArticlesVerificationEvent(
+                company_id=company_id,
+                verification_id=current_verified.id,
+                actor_id=current_user.id,
+                action="SUPERSEDED",
+                previous_status="VERIFIED",
+                new_status="SUPERSEDED",
+                source_checksum_sha256=current_verified.source_checksum_sha256,
+                note=f"Superseded by verification submission {item.id}.",
+                created_at=now,
+            ))
+            await db.flush()
         item.status = "VERIFIED"
-        item.effective_from = body.effective_from.date()
+        item.effective_from = body.effective_from
         item.quorum_variation_exists = body.quorum_variation_exists
         item.quorum_required = body.quorum_required
         item.clause_reference = body.clause_reference.strip()
