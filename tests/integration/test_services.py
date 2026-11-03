@@ -150,6 +150,77 @@ class TestCompanyService:
         assert db_company.id in ids
 
     @pytest.mark.asyncio
+    async def test_risk_distribution_is_scoped_to_active_company_access(self, db, db_user):
+        import uuid
+        from app.models.company import CompanyUserAccess
+        from app.services.company_service import CompanyService
+
+        svc = CompanyService(db)
+        accessible = await svc.create_company(
+            company_name="Accessible Dashboard Ltd",
+            registration_number=f"AD-{uuid.uuid4().hex[:8].upper()}",
+            incorporation_date=date(2020, 1, 1),
+            company_type="PRIVATE_LIMITED",
+            financial_year_end=date(2025, 12, 31),
+        )
+        inaccessible = await svc.create_company(
+            company_name="Inaccessible Dashboard Ltd",
+            registration_number=f"ID-{uuid.uuid4().hex[:8].upper()}",
+            incorporation_date=date(2020, 1, 1),
+            company_type="PRIVATE_LIMITED",
+            financial_year_end=date(2025, 12, 31),
+        )
+        db.add(CompanyUserAccess(company_id=accessible.id, user_id=db_user.id, is_active=True))
+        await db.flush()
+
+        distribution = await svc.get_risk_distribution(user_id=db_user.id)
+        assert sum(item["company_count"] for item in distribution) == 1
+
+
+    @pytest.mark.asyncio
+    async def test_upcoming_deadlines_are_scoped_to_active_company_access(self, db, db_user):
+        import uuid
+        from app.models.company import CompanyUserAccess
+        from app.services.company_service import CompanyService
+        from app.services.filing_service import AGMService
+
+        svc = CompanyService(db)
+        accessible = await svc.create_company(
+            company_name="Accessible Deadline Ltd",
+            registration_number=f"ADL-{uuid.uuid4().hex[:8].upper()}",
+            incorporation_date=date(2020, 1, 1),
+            company_type="PRIVATE_LIMITED",
+            financial_year_end=date(2025, 12, 31),
+        )
+        inaccessible = await svc.create_company(
+            company_name="Inaccessible Deadline Ltd",
+            registration_number=f"IDL-{uuid.uuid4().hex[:8].upper()}",
+            incorporation_date=date(2020, 1, 1),
+            company_type="PRIVATE_LIMITED",
+            financial_year_end=date(2025, 12, 31),
+        )
+        db.add(CompanyUserAccess(company_id=accessible.id, user_id=db_user.id, is_active=True))
+        deadline = date.today() + timedelta(days=10)
+        filing_service = AGMService(db)
+        await filing_service.create_agm(
+            company_id=accessible.id,
+            financial_year=2025,
+            agm_deadline=deadline,
+        )
+        await filing_service.create_agm(
+            company_id=inaccessible.id,
+            financial_year=2025,
+            agm_deadline=deadline,
+        )
+        await db.flush()
+
+        deadlines = await svc.get_upcoming_deadlines(days_ahead=30, user_id=db_user.id)
+        returned_company_ids = {item["company_id"] for item in deadlines}
+        assert str(accessible.id) in {str(value) for value in returned_company_ids}
+        assert str(inaccessible.id) not in {str(value) for value in returned_company_ids}
+
+
+    @pytest.mark.asyncio
     async def test_portfolio_stats_returns_dict(self, db):
         from app.services.company_service import CompanyService
 
