@@ -67,18 +67,9 @@ def upgrade() -> None:
     """)
 
     op.execute("""
-        DO $
-        BEGIN
-            IF NOT EXISTS (
-                SELECT 1 FROM pg_constraint
-                WHERE conname = 'ck_agms_quorum_required_positive'
-            ) THEN
-                ALTER TABLE agms
-                ADD CONSTRAINT ck_agms_quorum_required_positive
-                CHECK (quorum_required IS NULL OR quorum_required > 0);
-            END IF;
-        END
-        $$;
+        ALTER TABLE agms
+        ADD CONSTRAINT ck_agms_quorum_required_positive
+        CHECK (quorum_required IS NULL OR quorum_required > 0)
     """)
 
 
