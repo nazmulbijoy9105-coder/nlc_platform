@@ -27,7 +27,7 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | AGM-002 | Subsequent AGM Default | Section 81, Companies Act 1994 (Bangladesh) | RED | 20 | no | Engine-aligned 2026-11-02 |
 | AGM-003 | AGM Notice Defective — Insufficient Days | Section 85, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | AGM-004 | AGM Notice Missing | Section 85, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
-| AGM-005 | AGM Quorum Not Met | Section 89, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
+| AGM-005 | AGM Quorum Not Met | Section 85(2)(b), Companies Act 1994 (Bangladesh), subject to current Articles | RED | 15 | no | Counsel verification pending; membership and Articles evidence required |
 | AGM-006 | AGM Minutes Not Prepared | Section 89, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | AGM-007 | AGM Adjourned Without Proper Notice | Section 130, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | AR-001 | Annual Return Default — Single Year | Section 36 (Schedule X), Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
