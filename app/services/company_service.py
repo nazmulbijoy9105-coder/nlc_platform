@@ -742,6 +742,9 @@ class CompanyService(BaseService[Company]):
             "member_count": company.member_count,
             "articles_quorum_verified": company.articles_quorum_verified,
             "articles_quorum_required": company.articles_quorum_required,
+            "articles_quorum_verified_by": company.articles_quorum_verified_by,
+            "articles_quorum_verified_at": company.articles_quorum_verified_at,
+            "articles_quorum_evidence_ref": company.articles_quorum_evidence_ref,
             "business_commencement_declaration_filed": company.business_commencement_declaration_filed,
         })
 
