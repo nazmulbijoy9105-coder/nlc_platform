@@ -109,7 +109,7 @@ it should be added and the canonical updated from S46 → S158.
 
 **Current engine citation and description:** Section 183, Companies Act 1994 (Bangladesh).
 
-**Current implementation:** A pre-AGM warning is raised when the scheduled AGM is within the statutory notice window and verified audit-completion evidence is absent. The evaluator does not presume that AGM resolutions are automatically invalid.
+**Current implementation:** A pre-AGM warning is raised only while the scheduled AGM is still in the future and within the configured notice window. It has zero score impact and UNKNOWN evaluation state; it is a reminder, not proof that a deadline has been breached. The evaluator does not presume that AGM resolutions are automatically invalid.
 
 **Counsel verification required:** Confirm the applicable Section 183 duties, required accounts and evidence, and the proper interaction with the AGM timetable.
 
@@ -153,7 +153,7 @@ the current gazetted Act text:
 | 1 | AUD-001 | Confirm the authoritative text and application of Section 210(6): Board appointment within one calendar month of registration, calculated by calendar month. | Evaluator now requires appointment-date evidence; counsel approval remains pending |
 | 2 | SH-001 | S151 vs S50 for allotment returns? | Allotment check disabled |
 | 3 | SH-002 | S158 vs S46 for certificate issuance? | Certificate check disabled |
-| 4 | AUD-002 | Confirm Section 183 duties and pre-AGM evidence/window | Counsel verification pending |
+| 4 | AUD-002 | Confirm Section 183 duties and pre-AGM evidence/window | Reminder only; zero score impact; counsel verification pending |
 | 5 | AUD-003 | Confirm case-specific consequences under Sections 183 and 210; no automatic invalidity | Lawyer judgment; excluded from scoring and BLACK override |
 | 6 | Deadlines | 4 constants need verification | Score accuracy affected |
 
