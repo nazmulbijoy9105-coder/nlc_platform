@@ -55,12 +55,14 @@ class StatutoryRule:
     score_impact: int
     applies_if: Optional[str] = None      # company fact that must be True, else NOT_APPLICABLE
     exceptions: Tuple[str, ...] = ()      # company facts that, if True, make it NOT_APPLICABLE
+    allowed_states: Optional[Tuple[RuleState, ...]] = None
 
     @property
     def evaluation_states(self) -> Tuple[RuleState, ...]:
-        if self.applies_if or self.exceptions:
-            return _BASE_STATES + (RuleState.NOT_APPLICABLE,)
-        return _BASE_STATES
+        states = self.allowed_states or _BASE_STATES
+        if (self.applies_if or self.exceptions) and RuleState.NOT_APPLICABLE not in states:
+            return states + (RuleState.NOT_APPLICABLE,)
+        return states
 
     @property
     def invariants(self) -> Tuple[str, ...]:
@@ -1272,11 +1274,20 @@ def _legacy_rule(key: str, d: Dict[str, Any]) -> StatutoryRule:
     ):
         raise RuntimeError(f"{key}: evidence_required must contain non-empty keys")
     auth = _LEGACY_AUTHORITY_OVERRIDE.get(key) or _LEGACY_AUTHORITY[d["legal_domain"]]
+    allowed_states = tuple(d.get("evaluation_states", _BASE_STATES))
+    # R-008: every evidence-dependent rule must be able to remain UNKNOWN.
+    if d["evidence_required"] and RuleState.UNKNOWN not in allowed_states:
+        allowed_states += (RuleState.UNKNOWN,)
+    exceptions = tuple(d["exceptions"])
+    if exceptions and RuleState.NOT_APPLICABLE not in allowed_states:
+        allowed_states += (RuleState.NOT_APPLICABLE,)
     return StatutoryRule(
         key, d["legal_domain"], d["law"], d["requirement"], d["provision"],
         d["provision_status"], auth,
         tuple(d["evidence_required"]),
-        Severity(d["severity"]), d["score_impact"], applies_if=applies_if)
+        Severity(d["severity"]), d["score_impact"],
+        applies_if=applies_if, exceptions=exceptions,
+        allowed_states=allowed_states)
 
 
 for _k, _d in _LEGACY_RULE_DICTS.items():
