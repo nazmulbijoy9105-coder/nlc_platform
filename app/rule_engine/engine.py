@@ -978,7 +978,17 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     # MODULE 2: AGM
     # ───────────────────────────────────────────────────────────────────
+    def _agm_history_is_verified(self, c: CompanyProfile) -> bool:
+        return (
+            c.agm_history_verified is True
+            and bool(c.agm_history_evidence_ref)
+            and c.agm_history_verified_at is not None
+            and bool(c.agm_history_verified_by)
+        )
+
     def _subsequent_agm_deadline(self, c: CompanyProfile) -> date | None:
+        if not self._agm_history_is_verified(c):
+            return None
         if c.last_agm_date is None:
             return None
         # Section 81(1) proviso: if the first AGM is held within 18 months
@@ -1023,55 +1033,53 @@ class NLCRuleEngine:
         return c.agm_extension_granted_until
 
     def _run_agm_rules(self, c: CompanyProfile) -> None:
-        if c.agm_count is None or c.incorporation_date is None:
-            self._add_flag(ComplianceFlag(
-                rule_id="AGM-001",
-                flag_code="AGM_STATUS_UNKNOWN",
-                severity=Severity.YELLOW,
-                score_impact=0,
-                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="AGM history unknown (data missing).",
-                statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
-                state=RuleState.UNKNOWN
-            ))
-            return
-        if c.agm_count == 0:
-            deadline = self._add_months(c.incorporation_date, 18)
-            if self.today > deadline:  # type: ignore
-                delay = (self.today - deadline).days  # type: ignore
-                severity = Severity.BLACK if delay > 365 else Severity.RED
+        if self._agm_history_is_verified(c):
+            if c.agm_count is None or c.incorporation_date is None:
                 self._add_flag(ComplianceFlag(
                     rule_id="AGM-001",
-                    flag_code="FIRST_AGM_DEFAULT",
-                    severity=severity,
-                    score_impact=self._graduated_agm_deduction(delay),
-                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description=f"First AGM not held within 18 months. Section 81: overdue by {delay} days.",
-                    statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
-                    detail={"delay_days": delay, "deadline": str(deadline)}
-                ))
-            return
-
-        if c.last_agm_date and c.agm_held_this_cycle is False:
-            agm_deadline = self._subsequent_agm_deadline(c)
-            if agm_deadline is None:
-                self._add_flag(ComplianceFlag(
-                    rule_id="AGM-002",
-                    flag_code="AGM_EXTENSION_REQUIRES_REVIEW",
+                    flag_code="AGM_STATUS_UNKNOWN",
                     severity=Severity.NOT_EVALUATED,
                     score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="An AGM extension is recorded but its statutory validity or evidence provenance is not verified. No automatic default determination is made.",
+                    description="AGM history is marked verified but the required count or incorporation date is missing.",
                     statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
-                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    state=RuleState.UNKNOWN,
                     eval_state="UNKNOWN",
-                    detail={"extension_until": str(c.agm_extension_granted_until)},
                 ))
-            else:
-                basis = "VALIDATED_EXTENSION" if c.agm_extension_granted_until else "SECTION_81(1)"
-                if self.today > agm_deadline:
+            elif c.agm_count == 0:
+                deadline = self._add_months(c.incorporation_date, 18)
+                if self.today > deadline:
+                    delay = (self.today - deadline).days
+                    severity = Severity.BLACK if delay > 365 else Severity.RED
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-001",
+                        flag_code="FIRST_AGM_DEFAULT",
+                        severity=severity,
+                        score_impact=self._graduated_agm_deduction(delay),
+                        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                        description=f"First AGM not held within 18 months. Section 81: overdue by {delay} days.",
+                        statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                        detail={"delay_days": delay, "deadline": str(deadline)}
+                    ))
+            elif c.agm_count > 0 and c.last_agm_date and c.agm_held_this_cycle is False:
+                agm_deadline = self._subsequent_agm_deadline(c)
+                if agm_deadline is None:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-002",
+                        flag_code="AGM_EXTENSION_REQUIRES_REVIEW",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="A recorded AGM extension is not supported by verified application and grant evidence. No automatic default determination is made.",
+                        statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                        state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                        eval_state="UNKNOWN",
+                        detail={"extension_until": str(c.agm_extension_granted_until)},
+                    ))
+                elif self.today > agm_deadline:
                     delay = (self.today - agm_deadline).days
                     severity = Severity.BLACK if delay > 365 else Severity.RED
+                    basis = "VALIDATED_EXTENSION" if c.agm_extension_granted_until else "SECTION_81(1)"
                     self._add_flag(ComplianceFlag(
                         rule_id="AGM-002",
                         flag_code="SUBSEQUENT_AGM_DEFAULT",
@@ -1082,6 +1090,18 @@ class NLCRuleEngine:
                         statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
                         detail={"delay_days": delay, "basis": basis}
                     ))
+            elif c.agm_count > 0 and c.last_agm_date is None:
+                self._add_flag(ComplianceFlag(
+                    rule_id="AGM-002",
+                    flag_code="LAST_AGM_DATE_UNVERIFIED",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="AGM history is marked verified but the last AGM date is missing.",
+                    statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                ))
 
         consent_verified = (
             c.short_notice_consent_verified is True
@@ -2713,6 +2733,8 @@ class NLCRuleEngine:
         return fy_end + timedelta(days=FY_END_AGM_DEADLINE_DAYS)
 
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:
+        if not self._agm_history_is_verified(c):
+            return 0
         if c.last_agm_date is None:
             if c.agm_count == 0:
                 if c.incorporation_date is not None:
