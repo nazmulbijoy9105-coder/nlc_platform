@@ -335,6 +335,7 @@ def build_profile():
             "agm_count": 3,
             "last_agm_date": today - timedelta(days=60),
             "agm_held_this_cycle": True,
+            "agm_held_without_audit": False,
             "agm_scheduled_date": None,
             "notice_sent_date": today - timedelta(days=84),  # 21+ days before AGM
             "members_present_at_agm": 3,
