@@ -69,6 +69,9 @@ class AGMMarkHeldRequest(BaseModel):
     members_present: int = Field(ge=0)
     # Deprecated compatibility input; quorum is derived server-side.
     quorum_met: bool | None = None
+    members_total_at_agm: int | None = Field(default=None, ge=1)
+    members_total_evidence_ref: str | None = None
+    members_present_evidence_ref: str | None = None
     auditor_reappointed: bool
     accounts_adopted: bool | None = None
     agm_held_without_audit: bool | None = None
@@ -91,6 +94,9 @@ class AGMResponse(BaseModel):
     quorum_met: bool | None
     quorum_required: int | None = None
     quorum_basis: str | None = None
+    members_total_at_agm: int | None = None
+    members_total_evidence_ref: str | None = None
+    members_present_evidence_ref: str | None = None
     venue: str | None = None
     auditor_reappointed: bool | None
     accounts_adopted: bool | None
@@ -363,6 +369,9 @@ async def mark_agm_held(
         accounts_adopted=body.accounts_adopted,
         agm_held_without_audit=body.agm_held_without_audit,
         minutes_document_id=body.minutes_document_id,
+        members_total_at_agm=body.members_total_at_agm,
+        members_total_evidence_ref=body.members_total_evidence_ref,
+        members_present_evidence_ref=body.members_present_evidence_ref,
     )
     if not agm:
         raise HTTPException(status_code=404, detail="AGM record not found.")
@@ -695,6 +704,9 @@ def _agm_to_response(agm) -> AGMResponse:
         quorum_met=agm.quorum_met,
         quorum_required=agm.quorum_required,
         quorum_basis=agm.quorum_basis,
+        members_total_at_agm=agm.members_total_at_agm,
+        members_total_evidence_ref=agm.members_total_evidence_ref,
+        members_present_evidence_ref=agm.members_present_evidence_ref,
         venue=agm.venue,
         auditor_reappointed=agm.auditor_reappointed,
         accounts_adopted=agm.accounts_adopted,
