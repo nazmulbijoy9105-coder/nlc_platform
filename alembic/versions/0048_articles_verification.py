@@ -139,6 +139,34 @@ def upgrade():
                OR NEW.submitted_at IS DISTINCT FROM OLD.submitted_at THEN
                 RAISE EXCEPTION 'Articles verification source identity is immutable';
             END IF;
+
+            IF OLD.status <> 'PENDING' AND (
+                NEW.reviewed_by IS DISTINCT FROM OLD.reviewed_by
+                OR NEW.reviewed_at IS DISTINCT FROM OLD.reviewed_at
+                OR NEW.effective_from IS DISTINCT FROM OLD.effective_from
+                OR NEW.quorum_variation_exists IS DISTINCT FROM OLD.quorum_variation_exists
+                OR NEW.quorum_required IS DISTINCT FROM OLD.quorum_required
+                OR NEW.clause_reference IS DISTINCT FROM OLD.clause_reference
+                OR NEW.reviewer_note IS DISTINCT FROM OLD.reviewer_note
+            ) THEN
+                RAISE EXCEPTION 'Articles reviewer decision is immutable after review';
+            END IF;
+
+            IF OLD.status = 'PENDING' AND NEW.status NOT IN ('PENDING', 'VERIFIED', 'REJECTED') THEN
+                RAISE EXCEPTION 'Invalid Articles verification transition';
+            ELSIF OLD.status = 'VERIFIED' AND NEW.status NOT IN ('VERIFIED', 'REVOKED', 'SUPERSEDED') THEN
+                RAISE EXCEPTION 'Invalid Articles verification transition';
+            ELSIF OLD.status IN ('REJECTED', 'REVOKED', 'SUPERSEDED') AND NEW.status <> OLD.status THEN
+                RAISE EXCEPTION 'Terminal Articles verification state cannot be reopened';
+            END IF;
+
+            IF OLD.status IN ('REJECTED', 'REVOKED', 'SUPERSEDED') AND (
+                NEW.revoked_by IS DISTINCT FROM OLD.revoked_by
+                OR NEW.revoked_at IS DISTINCT FROM OLD.revoked_at
+                OR NEW.revocation_reason IS DISTINCT FROM OLD.revocation_reason
+            ) THEN
+                RAISE EXCEPTION 'Terminal Articles verification metadata is immutable';
+            END IF;
             RETURN NEW;
         END;
         $$ LANGUAGE plpgsql
@@ -147,6 +175,19 @@ def upgrade():
         CREATE TRIGGER articles_verification_source_immutable
         BEFORE UPDATE ON articles_verifications
         FOR EACH ROW EXECUTE FUNCTION protect_articles_verification_source()
+    """)
+    op.execute("""
+        CREATE OR REPLACE FUNCTION prevent_articles_verification_delete()
+        RETURNS trigger AS $
+        BEGIN
+            RAISE EXCEPTION 'Articles verification records are retained as legal evidence';
+        END;
+        $ LANGUAGE plpgsql
+    """)
+    op.execute("""
+        CREATE TRIGGER articles_verifications_no_delete
+        BEFORE DELETE ON articles_verifications
+        FOR EACH ROW EXECUTE FUNCTION prevent_articles_verification_delete()
     """)
 
 
