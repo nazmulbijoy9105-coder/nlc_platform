@@ -322,14 +322,53 @@ def upgrade() -> None:
         """))
 
     # TRUNCATE bypasses RLS. Runtime code must not be able to create triggers or
-    # foreign keys. Preserve ordinary DML grants for application workflows.
+    # foreign keys. New tables may not inherit old default grants, so explicitly
+    # grant the DML operations needed by the API before narrowing audit tables.
     op.execute("""
         DO $privileges$
         BEGIN
             IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
+                GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
+                    public.agms,
+                    public.annual_returns,
+                    public.audits,
+                    public.companies,
+                    public.company_user_access,
+                    public.compliance_flags,
+                    public.compliance_score_history,
+                    public.directors,
+                    public.documents,
+                    public.notifications,
+                    public.registered_office_history,
+                    public.rescue_plans,
+                    public.rescue_steps,
+                    public.rjsc_form_filings,
+                    public.share_transfers,
+                    public.shareholders,
+                    public.statutory_registers,
+                    public.tasks,
+                    public.ai_output_log,
+                    public.compliance_calendar_events,
+                    public.compliance_events,
+                    public.quotations,
+                    public.articles_verifications,
+                    public.articles_verification_events,
+                    public.rescue_audit_log,
+                    public.document_access_log,
+                    public.user_activity_logs,
+                    public.users,
+                    public.ai_prompt_templates,
+                    public.legal_rules,
+                    public.legal_rule_versions,
+                    public.regulatory_rules,
+                    public.sro_registry
+                TO nlc_app_role;
+
                 REVOKE TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA public FROM nlc_app_role;
                 REVOKE UPDATE, DELETE, TRUNCATE ON TABLE public.user_activity_logs FROM nlc_app_role;
                 REVOKE UPDATE, DELETE, TRUNCATE ON TABLE public.document_access_log FROM nlc_app_role;
+                REVOKE UPDATE, DELETE, TRUNCATE ON TABLE public.articles_verification_events FROM nlc_app_role;
+                REVOKE UPDATE, DELETE, TRUNCATE ON TABLE public.rescue_audit_log FROM nlc_app_role;
                 REVOKE ALL ON TABLE public.alembic_version FROM nlc_app_role;
             END IF;
         END
