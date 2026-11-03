@@ -26,8 +26,8 @@ from pathlib import Path
 ENGINE_PATH = Path(__file__).resolve().parents[1] / "app" / "rule_engine" / "engine.py"
 
 EXPECTED_GUARD_SITES = 5          # F-29 x3 + F-30 black_count + 39b4b9d severity floor
-EXPECTED_VERIFIED_COUNT = 41      # D15-verified register (post 64d9259 trim, confirmed 2026-10-30)
-FORBIDDEN_RULE_IDS = ("AR-001", "SH-002", "ESC-003")   # unscored: AR/SH informational, ESC-003 is the surcharge itself
+EXPECTED_VERIFIED_COUNT = 40      # AGM-005 removed pending independent Bangladesh counsel approval
+FORBIDDEN_RULE_IDS = ("AR-001", "SH-002", "ESC-003", "AGM-005")   # unscored: AR/SH informational, ESC-003 is the surcharge itself
 LIFECYCLE_ALLOWED = 1             # one lifecycle site is un-gated by design
 
 GUARD = 'f.eval_state != "UNKNOWN"'
