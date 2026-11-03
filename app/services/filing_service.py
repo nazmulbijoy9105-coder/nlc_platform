@@ -257,7 +257,7 @@ class AuditService(BaseService[Audit]):
         icab_number: str | None = None,
         audit_complete: bool = False,
         audit_signed_date: date | None = None,
-        first_auditor_appointed: bool = False,
+        first_auditor_appointed: bool | None = None,
         first_auditor_appointment_date: date | None = None,
         first_auditor_delay_days: int = 0,
         report_qualified: bool = False,
