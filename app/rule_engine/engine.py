@@ -855,20 +855,29 @@ class NLCRuleEngine:
                     statutory_basis="Section 210(3), Companies Act 1994 (Bangladesh)",
                 ))
 
-        if c.agm_scheduled_date and c.audit_complete is False:
-            warning = c.agm_scheduled_date - timedelta(days=AGM_NOTICE_MINIMUM_DAYS)
-            if self.today >= warning:
-                days_to = (c.agm_scheduled_date - self.today).days
+        if (
+            c.agm_scheduled_date
+            and c.audit_complete is False
+            and not c.agm_held_this_cycle
+        ):
+            days_to = (c.agm_scheduled_date - self.today).days
+            if 0 <= days_to <= AGM_NOTICE_MINIMUM_DAYS:
                 severity = Severity.RED if days_to < 14 else Severity.YELLOW
                 self._add_flag(ComplianceFlag(
                     rule_id="AUD-002",
                     flag_code="AUDIT_MISSING_PRE_AGM",
                     severity=severity,
-                    score_impact=12,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Audit not complete. AGM in {days_to} days. Section 183 requires audited accounts to be laid before the AGM.",
-                    statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
-                    detail={"days_to_agm": days_to}
+                    description=(
+                        f"Audit completion is not yet evidenced and the AGM is in {days_to} days. "
+                        "This is a pre-AGM reminder, not a finding that a statutory deadline has "
+                        "already been breached. Confirm the audit status before the meeting."
+                    ),
+                    statutory_basis="Section 183, Companies Act 1994 (Bangladesh); counsel verification pending",
+                    detail={"days_to_agm": days_to, "reminder_only": True},
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
                 ))
 
         if c.agm_held_this_cycle and c.agm_held_without_audit is True:
