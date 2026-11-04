@@ -901,30 +901,33 @@ class NLCRuleEngine:
         if c.agm_held_this_cycle and c.audit_complete is False:
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-003",
-                flag_code="AGM_HELD_WITHOUT_VALID_AUDIT",
-                severity=Severity.BLACK,
-                score_impact=25,
-                revenue_tier=RevenueTier.CORPORATE_RESCUE,
+                flag_code="AGM_AUDIT_STATUS_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description=(
-                    "AGM held without completed audit. Section 183 governs audited "
-                    "financial statements laid before the AGM. NLC classifies this "
-                    "evidence-backed finding as BLACK under its internal risk policy; "
-                    "the legal effect on the AGM or resolutions requires case-specific review."
+                    "The record says the audit was incomplete when the AGM was held. "
+                    "The underlying accounts, audit evidence, meeting record and legal "
+                    "consequences must be reviewed before classifying this as a breach."
                 ),
                 statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
-                detail={"override_to_black": True},
-                is_black_override=True,
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={"override_to_black": False},
+                is_black_override=False,
             ))
 
         if c.agm_held_this_cycle and c.auditor_reappointed_at_agm is False:
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-004",
-                flag_code="AUDITOR_NOT_REAPPOINTED",
-                severity=Severity.YELLOW,
-                score_impact=5,
+                flag_code="AUDITOR_REAPPOINTMENT_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="Retiring auditor not reappointed at AGM and no recorded statutory exception. Section 210(3) governs reappointment, subject to its stated exceptions.",
+                description="Auditor reappointment is recorded as declined. Check the statutory exceptions and notice requirements under Section 210(3) before determining non-compliance.",
                 statutory_basis="Section 210(3), Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
             ))
 
     # ───────────────────────────────────────────────────────────────────
@@ -1005,12 +1008,14 @@ class NLCRuleEngine:
             if clear_days < AGM_NOTICE_MINIMUM_DAYS:
                 self._add_flag(ComplianceFlag(
                     rule_id="AGM-003",
-                    flag_code="AGM_NOTICE_DEFECTIVE",
-                    severity=Severity.YELLOW,
-                    score_impact=5,
+                    flag_code="AGM_SHORT_NOTICE_REQUIRES_REVIEW",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"AGM notice issued with {clear_days} clear days. Section 85 requires 21 clear days. NOTE: Section 85 permits shorter notice with member consent, and accidental omission/non-receipt does not invalidate proceedings.",
-                    statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
+                    description="Recorded notice was shorter than 21 days. Verify written consent of all members entitled to attend and vote, as well as service and accidental-omission facts, before determining a breach.",
+                    statutory_basis="Section 85(1)(a), Companies Act 1994 (Bangladesh)",
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
                     detail={"clear_days": clear_days}
                 ))
 
@@ -1021,12 +1026,14 @@ class NLCRuleEngine:
                 if c.agm_notice_verified_absent is True:
                     self._add_flag(ComplianceFlag(
                         rule_id="AGM-004",
-                        flag_code="AGM_NOTICE_VERIFIED_ABSENT",
-                        severity=Severity.RED,
-                        score_impact=15,
+                        flag_code="AGM_NOTICE_ABSENCE_REQUIRES_REVIEW",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"AGM notice verified as not served. Section 85 requires written notice; check the statutory accidental-omission/non-receipt exception before determining the validity of proceedings.",
+                        description="Notice absence is recorded. Assess Section 85's accidental-omission and non-receipt provisions, consent and actual service evidence before determining legal effect.",
                         statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
+                        state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                        eval_state="UNKNOWN",
                         detail={"days_to_agm": days_rem, "notice_absence_verified": True}
                     ))
                 else:
@@ -1111,12 +1118,14 @@ class NLCRuleEngine:
         if c.agm_held_this_cycle and c.agm_minutes_prepared is False:
             self._add_flag(ComplianceFlag(
                 rule_id="AGM-006",
-                flag_code="AGM_MINUTES_NOT_PREPARED",
-                severity=Severity.YELLOW,
-                score_impact=5,
+                flag_code="AGM_MINUTES_STATUS_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="AGM held but minutes not prepared. Section 89: minutes are prima facie evidence.",
+                description="The record says AGM minutes were not prepared. Verify the minute book and contemporaneous records before determining non-compliance under Section 89.",
                 statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
             ))
 
     # ───────────────────────────────────────────────────────────────────
