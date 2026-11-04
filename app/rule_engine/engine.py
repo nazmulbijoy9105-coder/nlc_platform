@@ -1098,15 +1098,17 @@ class NLCRuleEngine:
             self._add_flag(ComplianceFlag(
                 rule_id="AGM-005",
                 flag_code="AGM_QUORUM_DEFECTIVE",
-                severity=Severity.RED,
-                score_impact=15,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description=(
-                    "The recorded AGM determination states that the applicable quorum was not met. "
-                    "The required quorum must be derived from the Articles and, where applicable, "
-                    "the Section 85(2)(b) statutory default."
+                    "The record states that quorum was not met. Confirm the Articles, "
+                    "attendance evidence and any applicable Section 85(2)(b) default "
+                    "before determining non-compliance."
                 ),
                 statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
                 detail={
                     "present": c.members_present_at_agm,
                     "member_count": c.member_count,
