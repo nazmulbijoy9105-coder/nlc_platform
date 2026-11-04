@@ -73,6 +73,8 @@ class AGM(FullMixin, Base):
     venue: Mapped[str | None] = mapped_column(String(255), nullable=True)
     accounts_adopted: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     agm_held_without_audit: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
+    accounts_adopted: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    agm_held_without_audit: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     # AGM-001 / AGM-002: default flags
     is_default: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     delay_days: Mapped[int] = mapped_column(Integer, default=0)
@@ -84,7 +86,13 @@ class AGM(FullMixin, Base):
     quorum_required: Mapped[int | None] = mapped_column(
         Integer, nullable=True, default=None,
         comment="Section 85(2)(b): Articles-dependent; statutory default varies by company/member count"
+    quorum_met: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=True)
+    members_present: Mapped[int] = mapped_column(Integer, default=0)
+    quorum_required: Mapped[int | None] = mapped_column(
+        Integer, nullable=True, default=2,
+        comment="Section 85(2)(b) statutory default; Articles may provide otherwise"
     )
+    quorum_basis: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     # ── Auditor ───────────────────────────────────────────────────
     # AGM-006: auditor not reappointed at AGM

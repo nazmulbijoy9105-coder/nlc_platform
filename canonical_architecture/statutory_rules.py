@@ -197,6 +197,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "legal_domain": "Corporate",
         "law": "Section 210(6), Companies Act 1994 (Bangladesh)",
         "requirement": "First auditor not appointed by the Board within one month of the date of registration. Section 210(6) governs appointment of the first auditor and its term ends at the conclusion of the first AGM.",
+        "requirement": "First auditor not appointed by the Board within one month of registration. The engine calculates the one-month period using calendar-month semantics, not a fixed 30-day interval.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
