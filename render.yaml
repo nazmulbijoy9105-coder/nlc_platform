@@ -55,5 +55,7 @@ services:
         sync: false
       - key: CELERY_BROKER_URL
         sync: false
+      - key: NLC_RLS_HMAC_SECRET
+        sync: false
       - key: ENVIRONMENT
         value: production
