@@ -801,7 +801,7 @@ class NLCRuleEngine:
                 score_impact=10,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description="Business commenced without Section 150 declaration filed with Registrar.",
-                statutory_basis="Section 150, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 59, Companies Act 1994 (Bangladesh)",
             ))
 
         if c.trade_license_obtained is False:
@@ -1700,8 +1700,8 @@ class NLCRuleEngine:
                     severity=Severity.YELLOW,
                     score_impact=3,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Charge satisfaction not filed via Form XIX. Section 159.",
-                    statutory_basis="Section 159, Companies Act 1994 (Bangladesh)",
+                    description="Charge satisfaction not filed with the Registrar under Section 87(2).",
+                    statutory_basis="Section 87(2), Companies Act 1994 (Bangladesh)",
                     detail={"charge_id": charge.charge_id, "charge_type": charge.charge_type}
                 ))
 
@@ -1712,7 +1712,7 @@ class NLCRuleEngine:
                 severity=Severity.BLACK,
                 score_impact=15,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Capital reduction without court order. Section 150.",
+                description="Capital reduction without compliance with the court-confirmation procedure under Section 59.",
                 statutory_basis="Section 150, Companies Act 1994 (Bangladesh)",
                 is_black_override=True,
             ))
