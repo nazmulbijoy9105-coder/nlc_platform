@@ -118,3 +118,42 @@ async def test_valid_signed_identity_resolves_to_authenticated_user(db, db_clien
     resolved = await db.execute(text("SELECT public.nlc_current_user_id()"))
     assert valid.scalar_one() is True
     assert str(resolved.scalar_one()) == str(db_client_user.id)
+
+
+@pytest.mark.asyncio
+async def test_revoked_membership_stops_company_access_immediately(db, db_client_user, db_company):
+    from sqlalchemy import text
+
+    await set_rls_context(db, str(db_client_user.id))
+    await db.execute(
+        text(
+            "UPDATE company_user_access SET is_active = FALSE "
+            "WHERE user_id = :user_id AND company_id = :company_id"
+        ),
+        {"user_id": db_client_user.id, "company_id": db_company.id},
+    )
+    await db.execute(text("SET LOCAL ROLE nlc_app_role"))
+    result = await db.execute(
+        text("SELECT public.nlc_can_access_company(:company_id)"),
+        {"company_id": db_company.id},
+    )
+    assert result.scalar_one() is False
+
+
+@pytest.mark.asyncio
+async def test_deactivated_user_loses_database_tenant_access(db, db_client_user, db_company):
+    from app.models.database import set_admin_context
+
+    # Only a trusted staff/service context may change activation state.
+    await set_admin_context(db)
+    await db.execute(
+        text("UPDATE users SET is_active = FALSE WHERE id = :user_id"),
+        {"user_id": db_client_user.id},
+    )
+    await set_rls_context(db, str(db_client_user.id))
+    await db.execute(text("SET LOCAL ROLE nlc_app_role"))
+    result = await db.execute(
+        text("SELECT public.nlc_can_access_company(:company_id)"),
+        {"company_id": db_company.id},
+    )
+    assert result.scalar_one() is False
