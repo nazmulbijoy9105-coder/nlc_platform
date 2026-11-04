@@ -1029,24 +1029,13 @@ class NLCRuleEngine:
             return None
         if c.last_agm_date is None:
             return None
-        # Section 81(1) proviso: if the first AGM is held within 18 months
-        # of incorporation, no AGM is required in the incorporation year or
-        # the following year. The first subsequent AGM is therefore due by
-        # 31 December of the second following year; the ordinary 15-month
-        # interval resumes after that AGM.
-        if c.agm_count == 1 and c.incorporation_date is not None:
-            first_agm_deadline = self._add_months(c.incorporation_date, 18)
-            if c.last_agm_date <= first_agm_deadline:
-                calendar_year_deadline = date(c.incorporation_date.year + 2, 12, 31)
-                base_deadline = calendar_year_deadline
-            else:
-                fifteen_month_deadline = self._add_months(c.last_agm_date, 15)
-                calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
-                base_deadline = min(fifteen_month_deadline, calendar_year_deadline)
-        else:
-            fifteen_month_deadline = self._add_months(c.last_agm_date, 15)
-            calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
-            base_deadline = min(fifteen_month_deadline, calendar_year_deadline)
+        # Section 81(1): every subsequent AGM must be held in each
+        # calendar year and no more than 15 months may elapse between AGMs.
+        # The first-AGM proviso does not erase the separate 15-month cap
+        # measured from the actual first AGM date.
+        fifteen_month_deadline = self._add_months(c.last_agm_date, 15)
+        calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
+        base_deadline = min(fifteen_month_deadline, calendar_year_deadline)
         if c.agm_extension_granted_until is None:
             return base_deadline
         extension_verified = (
