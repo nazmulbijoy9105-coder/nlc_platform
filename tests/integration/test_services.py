@@ -398,6 +398,10 @@ class TestFilingService:
         assert agm.id is not None
         assert agm.company_id == db_company.id
         assert agm.financial_year == 2023
+        assert agm.agm_deadline == date(2024, 6, 30)
+        assert agm.quorum_met is None
+        assert agm.quorum_required is None
+        assert agm.auditor_reappointed is None
 
     @pytest.mark.asyncio
     async def test_create_agm_duplicate_year_raises(self, db, db_company):
