@@ -43,6 +43,7 @@ class AGMService(BaseService[AGM]):
         notice_sent_date: date | None = None,
         members_present: int = 0,
         quorum_required: int | None = None,
+        quorum_basis: str | None = None,
         auditor_reappointed: bool = True,
         minutes_prepared: bool = False,
         minutes_filed_rjsc: bool = False,
@@ -76,9 +77,12 @@ class AGMService(BaseService[AGM]):
             if days_notice < 0:
                 notice_missing = True
 
-        # Quorum check
-        if agm_held and quorum_required is not None:
-            quorum_met = members_present >= quorum_required
+        # Do not infer a legal quorum conclusion from a caller-supplied
+        # number. Articles and attendance evidence are verified in mark_held().
+        if agm_held:
+            quorum_required = None
+            quorum_met = None
+            quorum_basis = "NOT_EVALUATED"
 
         return await self.create(
             company_id=company_id,
