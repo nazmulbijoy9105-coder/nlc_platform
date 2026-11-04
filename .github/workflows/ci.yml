@@ -87,6 +87,13 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-asyncio
 
+      - name: Validate Alembic graph and fresh upgrade
+        run: |
+          alembic heads
+          test "$(alembic heads | wc -l)" -eq 1
+          alembic upgrade head
+          alembic upgrade head
+
       - name: Compile check
         run: python -m compileall app/
 
