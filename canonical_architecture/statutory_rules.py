@@ -1144,7 +1144,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "TAX-003",
         "legal_domain": "Tax",
         "law": "Income Tax Act 2023, Sections 166 and 171; Tax Day under Section 2 must be taxpayer-specific",
-        "requirement": "Company return deadline must be derived from current Section 171 and the taxpayer-specific Tax Day definition in Section 2, including applicable amendments, exclusions and extensions."
+        "requirement": "Company return deadline must be derived from current Section 171 and the taxpayer-specific Tax Day definition in Section 2, including applicable amendments, exclusions and extensions.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -1159,7 +1159,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "TAX-004",
         "legal_domain": "Tax",
         "law": "Income Tax Act 2023, Sections 154-157, including Section 155 instalment dates",
-        "requirement": "Advance tax liability and instalments must be evaluated under Sections 154-157, including Section 155 dates, public-holiday adjustment, new-assessee treatment and taxpayer-specific eligibility."
+        "requirement": "Advance tax liability and instalments must be evaluated under Sections 154-157, including Section 155 dates, public-holiday adjustment, new-assessee treatment and taxpayer-specific eligibility.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
