@@ -491,3 +491,57 @@ async def test_agm_attendance_count_cannot_exceed_reviewed_members_count(
         json={"decision": "VERIFIED", "verified_count": 2, "reviewer_note": "Two persons signed the attendance register."},
     )
     assert attendance_review.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_agm_evidence_revocation_is_audited_and_removes_quorum_eligibility(
+    api_client, db, db_company, admin_headers, legal_headers, super_admin_headers
+):
+    await _grant_staff_memberships(db, db_company.id)
+    agm = AGM(company_id=db_company.id, financial_year=2025)
+    document = Document(
+        company_id=db_company.id,
+        document_type=DocumentType.OTHER,
+        title="AGM_EVIDENCE:MEMBERS_REGISTER",
+        s3_key=f"companies/{db_company.id}/members-register-revoke.pdf",
+        checksum_sha256="b" * 64,
+        version=1,
+        ai_generated=False,
+        is_active=True,
+    )
+    db.add_all([agm, document])
+    await db.flush()
+    submitted = await api_client.post(
+        f"/api/v1/companies/{db_company.id}/agm-evidence",
+        headers=admin_headers,
+        json={
+            "agm_id": str(agm.id),
+            "document_id": str(document.id),
+            "meeting_date": "2025-07-01",
+            "evidence_kind": "MEMBERS_REGISTER",
+        },
+    )
+    assert submitted.status_code == 201, submitted.text
+    verification_id = submitted.json()["id"]
+    reviewed = await api_client.post(
+        f"/api/v1/companies/{db_company.id}/agm-evidence/{verification_id}/review",
+        headers=legal_headers,
+        json={"decision": "VERIFIED", "verified_count": 6, "reviewer_note": "Six members appear in the source register."},
+    )
+    assert reviewed.status_code == 200, reviewed.text
+
+    revoked = await api_client.post(
+        f"/api/v1/companies/{db_company.id}/agm-evidence/{verification_id}/revoke",
+        headers=super_admin_headers,
+        json={"reason": "A later inspection found the uploaded register was incomplete."},
+    )
+    assert revoked.status_code == 200, revoked.text
+    assert revoked.json()["status"] == "REVOKED"
+    assert revoked.json()["revocation_reason"]
+
+    events = await api_client.get(
+        f"/api/v1/companies/{db_company.id}/agm-evidence/{verification_id}/events",
+        headers=admin_headers,
+    )
+    assert events.status_code == 200, events.text
+    assert [event["action"] for event in events.json()] == ["SUBMITTED", "VERIFIED", "REVOKED"]
