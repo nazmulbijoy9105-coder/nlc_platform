@@ -197,7 +197,7 @@ class AGMService(BaseService[AGM]):
                     Document.id == verified_articles.document_id,
                     Document.company_id == agm.company_id,
                     Document.is_active.is_(True),
-                    Document.document_type == "ARTICLES_OF_ASSOCIATION",
+                    Document.document_type == DocumentType.ARTICLES_OF_ASSOCIATION,
                     Document.version == verified_articles.source_document_version,
                 )
             )
