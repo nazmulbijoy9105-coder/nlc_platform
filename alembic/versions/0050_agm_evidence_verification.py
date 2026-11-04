@@ -49,6 +49,7 @@ def upgrade() -> None:
             "status <> 'VERIFIED' OR evidence_kind <> 'MEMBERS_REGISTER' OR verified_count >= 1",
             name="ck_agm_evidence_member_count_positive",
         ),
+        sa.CheckConstraint("status <> 'VERIFIED' OR reviewed_by IS DISTINCT FROM submitted_by", name="ck_agm_evidence_four_eyes"),
     )
     for name, column in (
         ("ix_agm_evidence_verifications_company_id", "company_id"),
