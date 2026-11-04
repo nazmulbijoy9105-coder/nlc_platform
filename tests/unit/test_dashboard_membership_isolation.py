@@ -1,7 +1,6 @@
 """Dashboard aggregates must be scoped to active tenant memberships."""
 import asyncio
 import uuid
-from unittest.mock import AsyncMock
 
 import pytest
 
