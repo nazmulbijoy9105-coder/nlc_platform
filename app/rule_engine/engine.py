@@ -2048,28 +2048,28 @@ class NLCRuleEngine:
                     severity=Severity.RED, score_impact=10,
                     revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                     description="BSEC quarterly report not filed.",
-                    statutory_basis="BSEC Corporate Governance Code 2023, Para 8"))
+                    statutory_basis="Applicable BSEC listing/securities reporting instrument — exact rule and reporting period require verification"))
             if c.cg_certificate_obtained is False:
                 self._add_flag(ComplianceFlag(
                     rule_id="BSEC-002", flag_code="CG_CERTIFICATE_NOT_OBTAINED",
                     severity=Severity.RED, score_impact=10,
                     revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                     description="CG certificate not obtained.",
-                    statutory_basis="BSEC Corporate Governance Code 2023, Para 9"))
+                    statutory_basis="BSEC Corporate Governance Code 2018, as amended in 2023 and 2024 — certification condition requires verification"))
             if c.board_independent_director is False:
                 self._add_flag(ComplianceFlag(
                     rule_id="BSEC-003", flag_code="BOARD_COMPOSITION_NON_COMPLIANT",
                     severity=Severity.YELLOW, score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description="Board composition non-compliant.",
-                    statutory_basis="BSEC Corporate Governance Code 2023, Para 5"))
+                    statutory_basis="BSEC Corporate Governance Code 2018, as amended in 2023 and 2024, Condition 1 — board composition"))
             if c.audit_committee_established is False:
                 self._add_flag(ComplianceFlag(
                     rule_id="BSEC-004", flag_code="AUDIT_COMMITTEE_NOT_ESTABLISHED",
                     severity=Severity.YELLOW, score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description="Audit committee not established.",
-                    statutory_basis="BSEC Corporate Governance Code 2023, Para 6"))
+                    statutory_basis="BSEC Corporate Governance Code 2018, as amended in 2023 and 2024, Condition 5 — audit committee"))
 
     # MODULE 16: FOREIGN EXCHANGE
     def _run_fx_rules(self, c: CompanyProfile) -> None:
