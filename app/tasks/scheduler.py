@@ -81,7 +81,7 @@ async def _database_health_check() -> None:
     try:
         from sqlalchemy import text
 
-        from app.models.database import AsyncSessionLocal
+        from app.models.database import AsyncSessionLocal, set_app_role
         async with AsyncSessionLocal() as db:
             await set_app_role(db)
             await db.execute(text("SELECT 1"))
