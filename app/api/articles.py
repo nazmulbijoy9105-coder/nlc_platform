@@ -355,7 +355,10 @@ async def review_articles_verification(
             .limit(1)
         )
         if current_verified is not None:
-            if current_verified.effective_from >= body.effective_from:
+            current_effective_from = current_verified.effective_from
+            if isinstance(current_effective_from, datetime):
+                current_effective_from = current_effective_from.date()
+            if current_effective_from >= body.effective_from:
                 raise HTTPException(
                     status_code=409,
                     detail="A replacement Articles verification must have a later effective date. Revoke the current verification before correcting historical dates.",

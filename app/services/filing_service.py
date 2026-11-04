@@ -44,12 +44,14 @@ class AGMService(BaseService[AGM]):
         *,
         agm_type: str = "ANNUAL",
         agm_deadline: date | None = None,
+        agm_due_date: date | None = None,
         scheduled_date: date | None = None,
         agm_held: bool = False,
         agm_date: date | None = None,
         notice_sent_date: date | None = None,
         members_present: int = 0,
         quorum_required: int | None = None,
+        quorum_basis: str | None = None,
         auditor_reappointed: bool = True,
         minutes_prepared: bool = False,
         minutes_filed_rjsc: bool = False,
@@ -60,7 +62,6 @@ class AGMService(BaseService[AGM]):
         notice_missing: bool = False,
         quorum_met: bool | None = None,
         created_by: uuid.UUID | None = None,
-        agm_due_date=None
     ) -> AGM:
         """
         Create an AGM record. Calculates is_default and delay_days automatically
@@ -79,6 +80,20 @@ class AGMService(BaseService[AGM]):
             is_default = True
             delay_days = (date.today() - agm_deadline).days
 
+        # Notice check
+        if agm_held and notice_sent_date and agm_date:
+            days_notice = (agm_date - notice_sent_date).days
+            if days_notice < 21:
+                notice_defective = True
+            if days_notice < 0:
+                notice_missing = True
+
+        # Do not infer a legal quorum conclusion from a caller-supplied
+        # number. Articles and attendance evidence are verified in mark_held().
+        if agm_held:
+            quorum_required = None
+            quorum_met = None
+            quorum_basis = "NOT_EVALUATED"
         # AGM creation only creates a planned record. A held AGM must be
         # recorded through mark_held(), which derives quorum exclusively from
         # reviewed, version-pinned Articles, members-register and attendance

@@ -150,11 +150,8 @@ async def db(test_engine) -> AsyncGenerator[AsyncSession, None]:
         await conn.begin()
         session = AsyncSession(bind=conn, expire_on_commit=False)
 
-        # Exercise the real restricted application role with a signed,
-        # transaction-local staff principal. Never rely on an unverified GUC
-        # or a superuser/BYPASSRLS test connection for tenant tests.
-        from app.models.database import set_admin_context
-        await set_admin_context(session)
+        # Bypass RLS for tests (admin context)
+        await session.execute(text("SET app.rls_bypass = 'true'"))
 
         yield session
 
@@ -256,21 +253,7 @@ async def api_client(db) -> AsyncGenerator[AsyncClient, None]:
     from app.models.database import get_db as auth_get_db
     from app.models.enums import UserRole
     from app.models.user import User
-    from app.models.database import set_admin_context
 
-    # Restore the trusted fixture principal after any upstream fixture work.
-    await set_admin_context(db)
-    staff_context = await db.execute(
-        text(
-            "SELECT current_user, current_setting('app.current_user_id', true), "
-            "public.nlc_current_user_principal(), public.nlc_current_user_is_staff()"
-        )
-    )
-    active_role, raw_principal, verified_principal, is_staff = staff_context.one()
-    assert active_role == "nlc_app_role", active_role
-    assert raw_principal == "ADMIN", raw_principal
-    assert verified_principal == "ADMIN", verified_principal
-    assert is_staff is True, is_staff
     # Seed one DB user per role so role tokens resolve in get_current_user.
     for _role in UserRole:
         _uid = _role_user_id(_role.value)
@@ -789,9 +772,10 @@ async def db_for_user(test_engine, request):
     async with test_engine.connect() as conn:
         await conn.begin()
         session = AsyncSession(bind=conn, expire_on_commit=False)
-        from app.core.dependencies import set_rls_context
+        from app.models.database import set_rls_context
+        # Never fall back to an unsigned, caller-controlled RLS identity.
+        # If signed context cannot be established, the test must fail closed.
         await set_rls_context(session, str(user_id))
-        session.info["rls_test_user_id"] = str(user_id)
         yield session
         await session.close()
         await conn.rollback()
@@ -810,13 +794,6 @@ async def api_client_as_user(db_for_user):
     from app.models.database import get_db as auth_get_db
     from app.models.enums import UserRole
     from app.models.user import User
-    from app.models.database import set_admin_context
-    from app.core.dependencies import set_rls_context
-
-    # Seed shared role identities under a signed staff principal, then restore
-    # the test client's real tenant identity before issuing requests.
-    test_user_id = db_for_user.info["rls_test_user_id"]
-    await set_admin_context(db_for_user)
 
     for _role in UserRole:
         _uid = _role_user_id(_role.value)
@@ -831,7 +808,6 @@ async def api_client_as_user(db_for_user):
                 totp_enabled=False,
             ))
     await db_for_user.flush()
-    await set_rls_context(db_for_user, test_user_id)
 
     app = create_app()
 

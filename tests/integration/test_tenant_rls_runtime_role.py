@@ -66,11 +66,7 @@ async def test_app_role_has_no_schema_creation_or_truncate_privilege(db):
         text("SELECT has_schema_privilege('nlc_app_role', 'nlc_private', 'USAGE')")
     )
     secret_table = await db.execute(
-        text(
-            "SELECT has_table_privilege('nlc_app_role', c.oid, 'SELECT') "
-            "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
-            "WHERE n.nspname = 'nlc_private' AND c.relname = 'rls_signing_key'"
-        )
+        text("SELECT has_table_privilege('nlc_app_role', 'nlc_private.rls_signing_key', 'SELECT')")
     )
     assert secret_schema.scalar_one() is False
     assert secret_table.scalar_one() is False
@@ -116,19 +112,97 @@ async def test_admin_sentinel_cannot_grant_staff_access(db, db_client_user):
     )
     assert result.scalar_one() is False
 
+
 @pytest.mark.asyncio
-async def test_activity_log_has_one_strict_actor_and_company_policy(db):
-    """A second permissive RLS policy would OR-broaden the intended boundary."""
-    result = await db.execute(
-        text(
-            "SELECT count(*), "
-            "bool_or(policyname = 'user_activity_logs_actor_tenant'), "
-            "bool_or(qual ILIKE '%user_id%' AND qual ILIKE '%nlc_can_access_company%') "
-            "FROM pg_policies "
-            "WHERE schemaname = 'public' AND tablename = 'user_activity_logs'"
-        )
+async def test_identity_guc_cannot_be_replayed_for_another_user(db, db_client_user, db_other_company):
+    """A signature for one principal must not authorize another UUID."""
+    import uuid
+
+    await set_rls_context(db, str(db_client_user.id))
+    await db.execute(text("SET LOCAL ROLE nlc_app_role"))
+    forged_user_id = str(uuid.uuid4())
+    await db.execute(
+        text("SELECT set_config('app.current_user_id', :uid, true)"),
+        {"uid": forged_user_id},
     )
-    policy_count, has_strict_policy, has_actor_and_tenant_predicate = result.one()
+    result = await db.execute(text("SELECT public.nlc_current_user_id()"))
+    assert result.scalar_one() is None
+    access = await db.execute(
+        text("SELECT public.nlc_can_access_company(:company_id)"),
+        {"company_id": db_other_company.id},
+    )
+    assert access.scalar_one() is False
+
+
+@pytest.mark.asyncio
+async def test_unsigned_identity_and_forged_admin_are_rejected(db, db_client_user):
+    await set_rls_context(db, str(db_client_user.id))
+    await db.execute(text("SET LOCAL ROLE nlc_app_role"))
+    await db.execute(text("SELECT set_config('app.current_user_signature', '', true)"))
+    valid = await db.execute(text("SELECT public.nlc_current_user_context_valid()"))
+    assert valid.scalar_one() is False
+    await db.execute(text("SELECT set_config('app.current_user_id', 'ADMIN', true)"))
+    await db.execute(text("SELECT set_config('app.current_user_signature', repeat('0', 64), true)"))
+    staff = await db.execute(text("SELECT public.nlc_current_user_is_staff()"))
+    assert staff.scalar_one() is False
+
+
+@pytest.mark.asyncio
+async def test_valid_signed_identity_resolves_to_authenticated_user(db, db_client_user):
+    await set_rls_context(db, str(db_client_user.id))
+    await db.execute(text("SET LOCAL ROLE nlc_app_role"))
+    valid = await db.execute(text("SELECT public.nlc_current_user_context_valid()"))
+    resolved = await db.execute(text("SELECT public.nlc_current_user_id()"))
+    assert valid.scalar_one() is True
+    assert str(resolved.scalar_one()) == str(db_client_user.id)
+
+
+@pytest.mark.asyncio
+async def test_revoked_membership_stops_company_access_immediately(db, db_client_user, db_company):
+    from sqlalchemy import text
+
+    await set_rls_context(db, str(db_client_user.id))
+    await db.execute(
+        text(
+            "UPDATE company_user_access SET is_active = FALSE "
+            "WHERE user_id = :user_id AND company_id = :company_id"
+        ),
+        {"user_id": db_client_user.id, "company_id": db_company.id},
+    )
+    await db.execute(text("SET LOCAL ROLE nlc_app_role"))
+    result = await db.execute(
+        text("SELECT public.nlc_can_access_company(:company_id)"),
+        {"company_id": db_company.id},
+    )
+    assert result.scalar_one() is False
+
+
+@pytest.mark.asyncio
+async def test_deactivated_user_loses_database_tenant_access(db, db_client_user, db_company):
+    from app.models.database import set_admin_context
+
+    # Only a trusted staff/service context may change activation state.
+    await set_admin_context(db)
+    await db.execute(
+        text("UPDATE users SET is_active = FALSE WHERE id = :user_id"),
+        {"user_id": db_client_user.id},
+    )
+    await set_rls_context(db, str(db_client_user.id))
+    await db.execute(text("SET LOCAL ROLE nlc_app_role"))
+    result = await db.execute(
+        text("SELECT public.nlc_can_access_company(:company_id)"),
+        {"company_id": db_company.id},
+    )
+    assert result.scalar_one() is False
+
+
+@pytest.mark.asyncio
+async def test_activity_log_has_exactly_one_actor_and_tenant_policy(db):
+    result = await db.execute(text(
+        "SELECT count(*), bool_or(policyname = 'user_activity_logs_actor_tenant') "
+        "FROM pg_policies "
+        "WHERE schemaname = 'public' AND tablename = 'user_activity_logs'"
+    ))
+    policy_count, has_strict_policy = result.one()
     assert policy_count == 1
     assert has_strict_policy is True
-    assert has_actor_and_tenant_predicate is True

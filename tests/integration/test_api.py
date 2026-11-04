@@ -825,6 +825,7 @@ class TestRules:
             assert len(rules) >= 9
             black_ids = {r["rule_id"] for r in rules}
             assert {"TR-005", "ESC-002", "ESC-003"}.issubset(black_ids)
+            assert "AUD-003" not in black_ids
 
     @pytest.mark.asyncio
     async def test_get_rule_summary(self, api_client, super_admin_token):

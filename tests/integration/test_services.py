@@ -43,9 +43,6 @@ async def _seed_verified_articles(db, company, submitter_id, reviewer_id, quorum
         is_active=True,
     )
     db.add(document)
-    # Persist the composite-key parent before creating the tenant-bound
-    # verification row; the DB constraint is the final isolation boundary.
-    await db.flush()
     now = datetime.now(timezone.utc)
     verification = ArticlesVerification(
         id=uuid.uuid4(),
@@ -916,6 +913,7 @@ class TestRulesService:
         assert len(black_rules) >= 4  # V3 expansion added more BLACK rules
         black_ids = {r.rule_id for r in black_rules}
         assert {"TR-005", "ESC-002", "ESC-003"}.issubset(black_ids)
+        assert "AUD-003" not in black_ids
         assert len(black_ids) >= 4  # V3 expansion added more BLACK rules
 
     @pytest.mark.asyncio

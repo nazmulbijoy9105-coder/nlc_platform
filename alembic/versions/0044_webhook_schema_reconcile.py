@@ -53,35 +53,20 @@ def upgrade() -> None:
     op.execute("ALTER TABLE webhook_endpoints ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE webhook_deliveries ENABLE ROW LEVEL SECURITY")
     op.execute("DROP POLICY IF EXISTS webhook_endpoints_owner_scope ON webhook_endpoints")
+    # Fail closed until migration 0049 installs signed identity verification.
     op.execute("""
         CREATE POLICY webhook_endpoints_owner_scope ON webhook_endpoints
-        USING (
-            user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
-        )
-        WITH CHECK (
-            user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
-        )
+        USING (FALSE)
+        WITH CHECK (FALSE)
     """)
     op.execute("DROP POLICY IF EXISTS webhook_deliveries_owner_scope ON webhook_deliveries")
     op.execute("""
         CREATE POLICY webhook_deliveries_owner_scope ON webhook_deliveries
-        USING (
-            EXISTS (
-                SELECT 1 FROM webhook_endpoints e
-                WHERE e.id = webhook_deliveries.endpoint_id
-                  AND e.user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
-            )
-        )
-        WITH CHECK (
-            EXISTS (
-                SELECT 1 FROM webhook_endpoints e
-                WHERE e.id = webhook_deliveries.endpoint_id
-                  AND e.user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
-            )
-        )
+        USING (FALSE)
+        WITH CHECK (FALSE)
     """)
     op.execute("""
-        DO $$
+        DO $priv$
         BEGIN
             IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
                 REVOKE ALL PRIVILEGES ON webhook_endpoints FROM nlc_app_role;
@@ -90,7 +75,7 @@ def upgrade() -> None:
                 GRANT SELECT, INSERT, UPDATE, DELETE ON webhook_deliveries TO nlc_app_role;
             END IF;
         END
-        $$
+        $priv$;
     """)
 
 
