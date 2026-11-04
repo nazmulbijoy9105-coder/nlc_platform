@@ -148,8 +148,8 @@ class ChargeEvent:
     charge_type: str
     amount_bdt: float
     charge_holder: str
-    form_viii_filed: bool = False
-    form_viii_filed_date: Optional[date] = None
+    form_xviii_filed: bool = False
+    form_xviii_filed_date: Optional[date] = None
     form_xix_filed: bool = False
     form_xxviii_filed: bool = False
     satisfied: bool = False
@@ -1656,7 +1656,7 @@ class NLCRuleEngine:
             ))
 
         for charge in c.charges:
-            if not charge.form_viii_filed:
+            if not charge.form_xviii_filed:
                 delay = (self.today - charge.creation_date).days
                 if delay > CHARGE_REGISTRATION_DEADLINE_DAYS:
                     self._add_flag(ComplianceFlag(
