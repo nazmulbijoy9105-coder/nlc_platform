@@ -33,7 +33,7 @@ jobs:
         run: python -m pytest tests/unit -q --tb=short
 
       - name: Rule parity audit
-        run: python tools/audit_rule_parity.py --no-db --no-api
+        run: python tools/audit_rule_parity.py --no-db
 
       - name: Rule verification status check
         run: python scripts/check_rule_verification.py
