@@ -447,11 +447,7 @@ class TestProductionGate:
 
     def test_verified_rules_in_set(self):
         """Verify the internally checked scoring allowlist and pending legal approvals."""
-        assert "AGM-001" in VERIFIED_RULE_IDS
-        assert "OFF-001" not in VERIFIED_RULE_IDS
-        assert "DEF-001" not in VERIFIED_RULE_IDS
-        assert "DEF-001" not in VERIFIED_RULE_IDS
-        assert len(VERIFIED_RULE_IDS) == 0
+        assert VERIFIED_RULE_IDS == frozenset()
 
     def test_unverified_rules_excluded_from_score(self):
         """AUD-001 (unverified) should not affect score even if it fires."""
@@ -468,8 +464,8 @@ class TestProductionGate:
             assert "AUD-001" not in VERIFIED_RULE_IDS, \
                 "AUD-001 should NOT be in VERIFIED_RULE_IDS"
 
-    def test_verified_rule_affects_score(self):
-        """AGM-001 (verified) should affect score when it fires."""
+    def test_unapproved_agm_rule_does_not_affect_score(self):
+        """AGM-001 remains visible but cannot affect score before legal approval."""
         c = _base_profile(
             incorporation_date=date(2020, 1, 1),  # 4+ years, no AGM
             last_agm_date=None,
@@ -477,6 +473,7 @@ class TestProductionGate:
         )
         result = _engine().evaluate(c)
         agm_flag = _flag_by_id(result, "AGM-001")
-        if agm_flag and agm_flag.state == RuleState.NON_COMPLIANT:
-            assert "AGM-001" in VERIFIED_RULE_IDS, \
-                "AGM-001 should be in VERIFIED_RULE_IDS"
+        assert "AGM-001" not in VERIFIED_RULE_IDS
+        assert result.score_breakdown.final_score == 100
+        if agm_flag is not None:
+            assert agm_flag.score_impact == 0 or result.score_breakdown.agm_score == 20
