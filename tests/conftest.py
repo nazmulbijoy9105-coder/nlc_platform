@@ -150,8 +150,11 @@ async def db(test_engine) -> AsyncGenerator[AsyncSession, None]:
         await conn.begin()
         session = AsyncSession(bind=conn, expire_on_commit=False)
 
-        # Bypass RLS for tests (admin context)
-        await session.execute(text("SET app.rls_bypass = 'true'"))
+        # Exercise the real restricted application role with a signed,
+        # transaction-local staff principal. Never rely on an unverified GUC
+        # or a superuser/BYPASSRLS test connection for tenant tests.
+        from app.models.database import set_admin_context
+        await set_admin_context(session)
 
         yield session
 
