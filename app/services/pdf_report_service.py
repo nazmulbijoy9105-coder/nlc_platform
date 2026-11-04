@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from fastapi import Response
+from fastapi import HTTPException, Response
 from sqlalchemy import select
 
 from app.models.compliance import ComplianceScoreHistory
@@ -30,6 +30,10 @@ from app.services.rescue_service import RescueService
 
 REPORT_TZ = ZoneInfo("Asia/Dhaka")
 LOGO_FILE = "nlc_logo.png"
+
+
+class ScoreReconciliationError(ValueError):
+    """Raised when a PDF cannot prove that its displayed score reconciles."""
 
 # Brand colours sampled from the Neum Lex Counsel logo.
 NAVY = "#0f233c"
@@ -153,10 +157,11 @@ def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue
         urgency = "<strong>Company is in good compliance standing.</strong> No critical issues detected. Continue regular monitoring."
 
     parts = [urgency]
+    score_summary = "NOT EVALUATED" if band == "NOT_EVALUATED" else f"{score}/100"
     parts.append(
         f"Active flags: <strong>{flag_count}</strong> "
         f"({black_count} BLACK, {red_count} RED, {yellow_count} YELLOW). "
-        f"Compliance score: <strong>{score}/100</strong>."
+        f"Compliance score: <strong>{esc(score_summary)}</strong>."
     )
 
     if rescue_plan is not None:
@@ -285,7 +290,7 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
     Suppressed when band is BLACK (score is overridden to 0, reconciliation meaningless).
     Shows 'Category cap applied (XXX)' rows when a category's raw deduction exceeds its cap.
     """
-    if band == "BLACK":
+    if band in ("BLACK", "NOT_EVALUATED"):
         return ""
 
     # Group flags by category and sum raw deductions
@@ -321,6 +326,10 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
             )
 
     indicated_score = max(0, 100 - effective_total)
+    if indicated_score != score:
+        raise ScoreReconciliationError(
+            f"PDF score reconciliation mismatch: displayed={score}, indicated={indicated_score}"
+        )
 
     return f"""
     <div class="score-reconciliation" style="margin:8px 0;padding:8px;background:#F8F9FA;border:1px solid #E0E0E0;border-radius:4px;">
@@ -353,6 +362,8 @@ def build_compliance_report_html(
     score = company.current_compliance_score or 0
     band = company.current_risk_band or "NOT_EVALUATED"
     company_name = company.company_name or "[COMPANY NAME NOT ON FILE]"
+    score_display = "NOT EVALUATED" if band == "NOT_EVALUATED" else f"{score} / 100"
+    score_css_class = "score-warn" if band == "NOT_EVALUATED" else _score_class(score)
 
     if flags:
         rows = "".join(
@@ -405,7 +416,7 @@ def build_compliance_report_html(
     </table>
 
         <div class="score-box">
-        <div class="score-number {_score_class(score)}">{esc(score)} / 100</div>
+        <div class="score-number {score_css_class}">{esc(score_display)}</div>
         <div class="band">Risk Band: {esc(band)}</div>
         {('<div style="font-size:11px;color:#B91C1C;margin-top:8px;"><strong>Score Override:</strong> A BLACK-severity rule has been triggered. The compliance score is set to 0 regardless of accumulated deductions, as the company has a critical legal deficiency requiring immediate remediation.</div>') if band == 'BLACK' else ''}
     </div>
@@ -458,18 +469,51 @@ class PDFReportService:
             .limit(1)
         )
         snapshot = score_snapshot.scalar_one_or_none()
-        snapshot_hash = snapshot.score_hash if snapshot else "unknown"
-        engine_version = snapshot.engine_version if snapshot else "unknown"
+        if snapshot is None:
+            raise HTTPException(
+                status_code=409,
+                detail="PDF withheld: no authoritative evaluation snapshot exists for this company.",
+            )
+        if (
+            getattr(snapshot, "evaluation_status", None) != "COMPLETED"
+            or not getattr(snapshot, "score_hash", None)
+            or not getattr(snapshot, "engine_version", None)
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="PDF withheld: the latest evaluation snapshot is incomplete or lacks audit identity.",
+            )
+        if (
+            company.current_compliance_score is None
+            or company.current_risk_band is None
+            or snapshot.score != company.current_compliance_score
+            or snapshot.risk_band != company.current_risk_band
+            or company.last_evaluated_at is None
+            or snapshot.calculated_at != company.last_evaluated_at
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="PDF withheld: stored company score, risk band or evaluation time does not match the latest snapshot.",
+            )
 
-        html_content = build_compliance_report_html(
-            company,
-            flags,
-            datetime.now(REPORT_TZ),
-            logo_uri=asset_uri(LOGO_FILE),
-            rescue_plan=rescue_plan,
-            engine_version=engine_version,
-            snapshot_hash=snapshot_hash,
-        )
+        snapshot_hash = snapshot.score_hash
+        engine_version = snapshot.engine_version
+
+        try:
+            html_content = build_compliance_report_html(
+                company,
+                flags,
+                datetime.now(REPORT_TZ),
+                logo_uri=asset_uri(LOGO_FILE),
+                rescue_plan=rescue_plan,
+                engine_version=engine_version,
+                snapshot_hash=snapshot_hash,
+            )
+        except ScoreReconciliationError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail="PDF withheld: score reconciliation does not match the authoritative evaluation.",
+            ) from exc
         pdf_bytes = await render_html_to_pdf_async(html_content)
 
         filename = f"compliance_report_{safe_filename_part(company.registration_number)}.pdf"
