@@ -43,6 +43,9 @@ async def _seed_verified_articles(db, company, submitter_id, reviewer_id, quorum
         is_active=True,
     )
     db.add(document)
+    # Persist the composite-key parent before creating the tenant-bound
+    # verification row; the DB constraint is the final isolation boundary.
+    await db.flush()
     now = datetime.now(timezone.utc)
     verification = ArticlesVerification(
         id=uuid.uuid4(),
