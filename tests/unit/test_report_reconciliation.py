@@ -2,7 +2,9 @@
 from datetime import date, datetime
 from types import SimpleNamespace
 
-from app.services.pdf_report_service import build_compliance_report_html
+import pytest
+
+from app.services.pdf_report_service import ScoreReconciliationError, build_compliance_report_html
 from app.services.rescue_service import _derive_plan_target
 
 WHEN = datetime(2026, 10, 30, 12, 0, 0)
@@ -73,3 +75,8 @@ def test_derive_plan_target_from_steps():
 
 def test_derive_plan_target_empty():
     assert _derive_plan_target(None, []) is None
+
+
+def test_reconciliation_mismatch_is_rejected():
+    with pytest.raises(ScoreReconciliationError):
+        build_compliance_report_html(_company(score=74), FLAGS, WHEN)
