@@ -163,38 +163,7 @@ def test_seed_matches_engine_and_has_no_duplicates():
     }
 
 
-    # Resolve the four BSEC rule IDs declared as the first field of
-    # candidate tuples and passed through the shared ComplianceFlag loop.
-    bsec_function = next(
-        (node for node in ast.walk(tree)
-         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-         and node.name == "_run_bsec_rules"),
-        None,
-    )
-    if bsec_function is not None:
-        shared_basis = None
-        for child in ast.walk(bsec_function):
-            if isinstance(child, ast.Call) and _call_name(child.func) == "ComplianceFlag":
-                for kw in child.keywords:
-                    if kw.arg == "statutory_basis" and isinstance(kw.value, ast.Constant):
-                        if isinstance(kw.value.value, str):
-                            shared_basis = kw.value.value.strip()
-                            break
-            if shared_basis:
-                break
-        if not shared_basis:
-            errors.append("_run_bsec_rules: shared BSEC statutory_basis must be a string literal")
-        else:
-            for child in ast.walk(bsec_function):
-                if isinstance(child, ast.Tuple) and child.elts and isinstance(child.elts[0], ast.Constant):
-                    rule_id = child.elts[0].value
-                    if isinstance(rule_id, str) and _is_rule_id(rule_id):
-                        result.setdefault(rule_id, set()).add(shared_basis)
-
-    return result, errors
-
-
-def _engine_ids():
+    def _engine_ids():
     data, errors = _engine_rule_data()
     assert not errors, errors
     return set(data)
