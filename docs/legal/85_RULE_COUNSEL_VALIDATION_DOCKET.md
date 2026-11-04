@@ -475,7 +475,7 @@ This docket expands the source triage into a separate signed-review record for e
 - **Minimum negative tests:** wrong company class; unknown fact; missing document only; valid extension/condonation; timely filing; appeal/stay/order; inapplicable sector/listing; contradictory evidence.
 - **Counsel decision:** PENDING — reviewer, enrolment/chamber, signed date, exact scope and next review required.
 
-### BSEC-002 — CG Certificate Not Obtained
+### BSEC-002 — CG Certificate Status Requires Verification
 
 - **Catalogue anchor:** BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification
 - **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
@@ -492,7 +492,7 @@ This docket expands the source triage into a separate signed-review record for e
 - **Minimum negative tests:** wrong company class; unknown fact; missing document only; valid extension/condonation; timely filing; appeal/stay/order; inapplicable sector/listing; contradictory evidence.
 - **Counsel decision:** PENDING — reviewer, enrolment/chamber, signed date, exact scope and next review required.
 
-### BSEC-003 — Board Composition Non-Compliant
+### BSEC-003 — Board Composition Status Requires Verification
 
 - **Catalogue anchor:** BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification
 - **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
@@ -509,7 +509,7 @@ This docket expands the source triage into a separate signed-review record for e
 - **Minimum negative tests:** wrong company class; unknown fact; missing document only; valid extension/condonation; timely filing; appeal/stay/order; inapplicable sector/listing; contradictory evidence.
 - **Counsel decision:** PENDING — reviewer, enrolment/chamber, signed date, exact scope and next review required.
 
-### BSEC-004 — Audit Committee Not Established
+### BSEC-004 — Audit Committee Status Requires Verification
 
 - **Catalogue anchor:** BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification
 - **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
@@ -1514,6 +1514,9 @@ This docket expands the source triage into a separate signed-review record for e
 - Bangladesh Government Press extraordinary gazettes: https://dpp.gov.bd/bgpress/index.php/document/extraordinary_gazettes_monthly/2026-04-14
 
 The NBR's current site separately lists Finance Act 2026 (6 July 2026), the authentic English Income Tax Act (20 November 2025), and dedicated VAT/Income Tax Rules and SRO directories. Each applicable instrument must be downloaded and mapped; a landing page is not proof that every SRO was reviewed.
+
+- **BSEC scope and condition map:** The 2018 Code is imposed on companies listed on a Bangladesh stock exchange; Condition 2 separately addresses subsidiary-company board governance. Condition 1 governs board composition; Condition 5 the Audit Committee; Condition 8 maintaining a company website; Condition 9 annual corporate-governance certification/reporting. Quarterly financial reporting is not Condition 8. For NLC's private-limited-company product, do not apply the listed-issuer Code universally; subsidiary scope requires separate modelling and evidence.
+- **Amendment chronology:** BSEC's 20 November 2023 notification (No. BSEC/CMRRCD/2009-193/66/PRD/148) amended the Code; the 29 April 2024 Gazette (No. BSEC/CMRRCD/2009-193/76/PRD/151) inserted at least one female independent director under Condition 1(2)(a), initially within one year. BSEC's official register lists a further 26 July 2026 extension; published reports state the current deadline is 31 December 2026. Obtain and pin the original 2026 notice before automating the deadline.
 
 ## Current research findings requiring counsel confirmation
 
