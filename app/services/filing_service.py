@@ -203,6 +203,9 @@ class AGMService(BaseService[AGM]):
             )
             source_matches = (
                 source_document is not None
+                and verified_articles.reviewed_by is not None
+                and verified_articles.reviewed_by != verified_articles.submitted_by
+                and source_document.ai_generated is False
                 and isinstance(source_document.checksum_sha256, str)
                 and source_document.checksum_sha256.lower()
                     == verified_articles.source_checksum_sha256.lower()
