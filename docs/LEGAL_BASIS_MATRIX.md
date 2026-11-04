@@ -27,7 +27,7 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | AGM-002 | Subsequent AGM Default | Section 81, Companies Act 1994 (Bangladesh) | RED | 20 | no | Engine-aligned 2026-11-02 |
 | AGM-003 | AGM Notice Defective — Insufficient Days | Section 85, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | AGM-004 | AGM Notice Missing | Section 85, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
-| AGM-005 | AGM Quorum Not Met | Section 89, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
+| AGM-005 | AGM Quorum Not Met | Section 85(2)(b), Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
 | AGM-006 | AGM Minutes Not Prepared | Section 89, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | AGM-007 | AGM Adjourned Without Proper Notice | Section 130, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | AR-001 | Annual Return Default — Single Year | Section 36 (Schedule X), Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
@@ -51,9 +51,9 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | BSEC-004 | Audit Committee Not Established | Foreign Exchange Regulation Act 1947 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | CAP-001 | Capital Alteration Without Proper Resolution | Section 53, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | CAP-002 | Charge Not Registered With RJSC Within 21 Days | Section 159(1), Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| CAP-003 | Capital Reduction Without Court Order | Section 150, Companies Act 1994 (Bangladesh) | BLACK | 15 | YES | Engine-aligned 2026-11-02 |
+| CAP-003 | Capital Reduction Without Court Order | Section 59, Companies Act 1994 (Bangladesh) | BLACK | 15 | YES | Engine-aligned 2026-11-02 |
 | CAP-004 | Special Resolution Not Filed With RJSC | Section 88, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
-| CHG-001 | Charge Satisfaction Not Filed | Section 159, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
+| CHG-001 | Charge Satisfaction Not Filed | Section 87(2), Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
 | DEF-001 | Director Disqualified | Section 94, Companies Act 1994 (Bangladesh) | BLACK | 20 | YES | Engine-aligned 2026-11-02 |
 | DEF-002 | Unresolved Penalty Notices | Section 397, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | DIR-001 | Director Appointment Not Filed Within 14 Days | Section 90, Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
@@ -144,7 +144,7 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | 2026-11-02 | AUD-001: Section 210(6), one calendar month (was 210(1) / 30 days) |
 | 2026-11-02 | DEF-001: Section 94 evidence-required (was Section 297) |
 | 2026-11-02 | REG-002: Sec 34/89/174 internal vs Sec 115 RJSC filing |
-| 2026-11-02 | AGM-005/006: Section 89; CHG-001: Section 159; TR-*: Section 38; etc. |
+| 2026-11-02 | AGM-005: Section 85(2)(b); AGM-006: Section 89; CHG-001: Section 87(2); CAP-003: Section 59; TR-*: Section 38; etc. |
 
 ## Explicit non-claims
 
