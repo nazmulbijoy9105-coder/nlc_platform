@@ -10,6 +10,8 @@ Every create/update triggers a score re-evaluation via background task.
 """
 from __future__ import annotations
 
+import calendar
+
 from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
