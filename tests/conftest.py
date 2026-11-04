@@ -770,14 +770,10 @@ async def db_for_user(test_engine, request):
     async with test_engine.connect() as conn:
         await conn.begin()
         session = AsyncSession(bind=conn, expire_on_commit=False)
-        try:
-            from app.core.dependencies import set_rls_context
-            await set_rls_context(session, str(user_id))
-        except Exception:
-            await session.execute(
-                text("SELECT set_config('app.current_user_id', :uid, true)"),
-                {"uid": str(user_id)},
-            )
+        from app.models.database import set_rls_context
+        # Never fall back to an unsigned, caller-controlled RLS identity.
+        # If signed context cannot be established, the test must fail closed.
+        await set_rls_context(session, str(user_id))
         yield session
         await session.close()
         await conn.rollback()
