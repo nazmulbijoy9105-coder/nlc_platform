@@ -169,10 +169,12 @@ def upgrade() -> None:
             END IF;
             RETURN NEW;
         END;
-        $$;
+        $;
+    """)
+    op.execute("""
         CREATE TRIGGER agm_evidence_source_immutable
         BEFORE UPDATE ON public.agm_evidence_verifications
-        FOR EACH ROW EXECUTE FUNCTION public.nlc_protect_agm_evidence_verification();
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_protect_agm_evidence_verification()
     """)
     op.execute("""
         CREATE OR REPLACE FUNCTION public.nlc_prevent_agm_evidence_delete()
