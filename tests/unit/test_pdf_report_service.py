@@ -29,8 +29,8 @@ COMPANY = SimpleNamespace(
     id="test-company-id",
     company_name=MALICIOUS_NAME,
     registration_number="C-1\r\nX-Evil: 1/2020",
-    current_compliance_score=62,
-    current_risk_band="AMBER",
+    current_compliance_score=None,
+    current_risk_band="NOT_EVALUATED",
 )
 FLAGS = [
     SimpleNamespace(
@@ -131,7 +131,8 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
     assert "<script" not in page
     assert "&lt;img" in page
     assert "Acme &amp; Sons &quot;Ltd&quot;" in page
-    assert "AGM-001" in page and "RED" in page and "-15 pts" in page
+    assert "AGM-001" in page and "RED" in page and "Not scored — pending independent legal approval" in page
+    assert "NOT RELEASED" in page
 
 
 # --------------------------------------------------------------------------- HTML builder
@@ -146,7 +147,7 @@ def test_html_builder_handles_empty_flags_and_missing_values():
     )
     page = build_compliance_report_html(company, [], WHEN)
     assert "No active compliance flags." in page
-    assert "0 / 100" in page
+    assert "NOT RELEASED" in page
     assert "NOT_EVALUATED" in page
     assert "20 October 2026" in page
     assert "score-bad" in page
@@ -259,8 +260,8 @@ def test_real_render_with_logo_still_blocks_injected_markup(tmp_path):
     company = SimpleNamespace(
         company_name=f'<link rel="attachment" href="{secret.as_uri()}">',
         registration_number="X-1",
-        current_compliance_score=50,
-        current_risk_band="AMBER",
+        current_compliance_score=None,
+        current_risk_band="NOT_EVALUATED",
     )
     page = build_compliance_report_html(
         company, FLAGS, WHEN, logo_uri=pdf_render.asset_uri(LOGO_FILE)
@@ -275,8 +276,8 @@ def test_real_render_of_report_with_bengali_text():
     company = SimpleNamespace(
         company_name="নিউম লেক্স কাউন্সেল লিমিটেড",
         registration_number="C-123456/2020",
-        current_compliance_score=82,
-        current_risk_band="GREEN",
+        current_compliance_score=None,
+        current_risk_band="NOT_EVALUATED",
     )
     pdf = pdf_render.render_html_to_pdf(build_compliance_report_html(company, FLAGS, WHEN))
     assert pdf.startswith(b"%PDF")
