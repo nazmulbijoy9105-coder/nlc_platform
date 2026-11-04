@@ -1820,15 +1820,16 @@ class NLCRuleEngine:
 
         unresolved = (c.penalty_notices_received or 0) - (c.penalty_notices_resolved or 0)  # type: ignore
         if unresolved > 0:
-            sev = Severity.RED if unresolved >= 3 else Severity.YELLOW
             self._add_flag(ComplianceFlag(
                 rule_id="DEF-002",
-                flag_code="PENALTY_PROSECUTION_RISK",
-                severity=sev,
-                score_impact=8 if unresolved >= 3 else 5,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=f"{unresolved} unresolved penalties. Sec 447: fine up to Tk 10,000.",
-                statutory_basis="Section 397, Companies Act 1994 (Bangladesh)",
+                flag_code="PENALTY_NOTICE_REQUIRES_CASE_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=f"{unresolved} penalty/prosecution notice item(s) are unresolved. Each notice must be matched to its alleged offence, enabling section, issuing authority, response deadline, appeal/stay and current disposition; no universal Companies Act penalty provision applies.",
+                statutory_basis="Case-specific enabling provision required; not a universal section",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
                 detail={"unresolved": unresolved}
             ))
 
