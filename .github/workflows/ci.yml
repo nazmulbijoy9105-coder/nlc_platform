@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, fix/agm-schema-forward-reconcile-clean-20261103]
 
 jobs:
   unit-tests:
