@@ -367,18 +367,18 @@ class TestAuditRules:
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "AUD-003")
 
-    @pytest.mark.black
-    def test_AUD003_forces_black_band(self, rule_engine, build_profile):
-        """AUD-003 is a BLACK override — band must be BLACK regardless of other scores."""
+    def test_AUD003_requires_legal_review_not_black_override(self, rule_engine, build_profile):
+        """Section 183 consequences are not an automatic NLC BLACK override."""
         profile = build_profile(
             agm_held_this_cycle=True,
             audit_complete=False,
             agm_held_without_audit=True,
         )
         output = rule_engine.evaluate(profile)
-        # Score may be high but band must be forced BLACK
-        assert output.score_breakdown.override_applied is True
-        assert output.score_breakdown.final_score <= 29
+        flag = next(f for f in output.flags if f.rule_id == "AUD-003")
+        assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+        assert flag.score_impact == 0
+        assert output.score_breakdown.override_applied is False
 
     @pytest.mark.black
     def test_AUD003_no_trigger_when_audit_done_before_agm(self, rule_engine, build_profile):
