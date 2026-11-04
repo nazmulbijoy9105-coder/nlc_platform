@@ -485,39 +485,13 @@ CATEGORY_CAPS: dict[str, tuple[int, tuple[str, ...]]] = {
 #
 # BLACK-severity rules (DEF-001) are ALWAYS enforced regardless of
 # verification status — critical safety overrides cannot be gated.
-VERIFIED_RULE_IDS: frozenset[str] = frozenset({
-    # AGM module (7 rules)
-    "AGM-001", "AGM-002", "AGM-003", "AGM-004",
-    # AGM-005 remains excluded until the AOA-specific quorum basis is verified.
-    "AGM-006", "AGM-007",
-    # Registers module (3 rules)
-    "REG-001", "REG-002", "REG-003",
-    # Registered Office (1 rule)
-    "OFF-001",
-    # Directors module (6 rules)
-    "DIR-001", "DIR-002", "DIR-003",
-    "DIR-007", "DIR-008", "DIR-010",
-    # Capital module (3 rules)
-    "CAP-001", "CAP-002", "CAP-003",
-    # Charges (1 rule)
-    "CHG-001",
-    # Structural changes (3 rules)
-    "STR-001", "STR-002", "STR-003",
-    # Accounts (3 rules)
-    "ACC-001", "ACC-002", "ACC-003",
-    # Board meetings (3 rules)
-    "BOD-001", "BOD-002", "BOD-003",
-    # Incorporation (4 rules)
-    "INC-001", "INC-003", "INC-004", "INC-007",
-    # Members (1 rule)
-    "MEM-001",
-    # Share transfers (1 rule)
-    "TR-001",
-    # Escalation (2 rules)
-    "ESC-001", "ESC-002",
-    # Director disqualification rules remain outside scoring pending independent legal review.
-    "DEF-002",
-})
+VERIFIED_RULE_IDS: frozenset[str] = frozenset()
+# Fail-closed legal release gate: no rule may affect a legal score or BLACK
+# override until its exact current-law source, applicability, exceptions,
+# evidence standard and effective date have named independent legal approval.
+# Keep rules visible as provisional findings; populate this allowlist only
+# from a signed, versioned legal approval register.
+
 
 REVENUE_TIER_MAP = {
     Severity.GREEN: RevenueTier.COMPLIANCE_PACKAGE,
@@ -801,7 +775,7 @@ class NLCRuleEngine:
                 score_impact=10,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description="Business commenced without Section 150 declaration filed with Registrar.",
-                statutory_basis="Section 150, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Sections 59-60, Companies Act 1994 (Bangladesh)",
             ))
 
         if c.trade_license_obtained is False:
@@ -1700,8 +1674,8 @@ class NLCRuleEngine:
                     severity=Severity.YELLOW,
                     score_impact=3,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Charge satisfaction not filed via Form XIX. Section 159.",
-                    statutory_basis="Section 159, Companies Act 1994 (Bangladesh)",
+                    description="Charge satisfaction not filed via Form XXVIII. Section 172; RJSC process guidance states 21 days. Verify charge satisfaction date and receipt before concluding default.",
+                    statutory_basis="Section 172, Companies Act 1994 (Bangladesh)",
                     detail={"charge_id": charge.charge_id, "charge_type": charge.charge_type}
                 ))
 
@@ -1712,7 +1686,7 @@ class NLCRuleEngine:
                 severity=Severity.BLACK,
                 score_impact=15,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Capital reduction without court order. Section 150.",
+                description="Capital reduction without the required court confirmation. Sections 59-60 govern reduction and confirmation; assess the court order and registration evidence.",
                 statutory_basis="Section 150, Companies Act 1994 (Bangladesh)",
                 is_black_override=True,
             ))
@@ -1726,7 +1700,7 @@ class NLCRuleEngine:
                     severity=Severity.YELLOW if delay < 90 else Severity.RED,
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Special resolution not filed. Section 87: 30-day deadline. Unfiled resolution not binding.",
+                    description=f"Special resolution filing not evidenced within 15 days. Section 88(1); determine the resolution date and filing receipt.",
                     statutory_basis="Section 88, Companies Act 1994 (Bangladesh)",
                     detail={"delay": delay}
                 ))
@@ -1783,8 +1757,8 @@ class NLCRuleEngine:
                     severity=t3_sev,
                     score_impact=t3_imp,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE if delay <= 90 else RevenueTier.STRUCTURED_REGULARIZATION,
-                    description=f"Annual tax return overdue by {delay} days. ITA 2023 Sec 75.",
-                    statutory_basis="Income Tax Act 2023, Section 75",
+                    description=f"Annual tax return may be overdue by {delay} days. Income Tax Act 2023 Sections 166 and 171 and the applicable Tax Day definition must be verified for this taxpayer and assessment year.",
+                    statutory_basis="Income Tax Act 2023, Sections 166 and 171 (taxpayer-specific Tax Day requires verification)",
                     detail={"delay_days": delay, "fy_year": fy_end.year}
                 ))
 
@@ -1815,8 +1789,8 @@ class NLCRuleEngine:
                     severity=Severity.YELLOW,
                     score_impact=min(len(missed) * 2, 5),
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Advance tax missed: {', '.join(missed)}. ITA 2023 Sec 74.",
-                    statutory_basis="Income Tax Act 2023, Section 74",
+                    description=f"Advance tax instalment status requires review: {', '.join(missed)}. Income Tax Act 2023 Sections 154-157; due dates and liability require taxpayer-specific verification.",
+                    statutory_basis="Income Tax Act 2023, Sections 154-157",
                     detail={"quarters": missed}
                 ))
 
@@ -1872,8 +1846,8 @@ class NLCRuleEngine:
                     rule_id="STR-001", flag_code="NAME_CHANGE_NOT_FILED",
                     severity=sev, score_impact=8 if delay > 90 else 3,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Name change not filed. Sec 20: Special Resolution + RJSC filing. Overdue {delay} days.",
-                    statutory_basis="Section 20, Companies Act 1994 (Bangladesh)",
+                    description=f"Name change not filed. Section 11 applies to change of company name; special-resolution filing under Section 88(1) is within 15 days. Overdue {delay} days.",
+                    statutory_basis="Sections 11 and 88(1), Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay}
                 ))
 
@@ -1885,8 +1859,8 @@ class NLCRuleEngine:
                     rule_id="STR-002", flag_code="OBJECT_CLAUSE_CHANGE_NOT_FILED",
                     severity=sev, score_impact=8 if delay > 90 else 3,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"MoA object clause change not filed. Sec 17. Overdue {delay} days.",
-                    statutory_basis="Section 17, Companies Act 1994 (Bangladesh)",
+                    description=f"Memorandum object-clause alteration not filed. Sections 12 and 88(1) apply to the resolution filing; court confirmation/registration requirements under Sections 15-16 must be assessed separately. Overdue {delay} days.",
+                    statutory_basis="Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay}
                 ))
 
@@ -1898,8 +1872,8 @@ class NLCRuleEngine:
                     rule_id="STR-003", flag_code="AOA_ALTERATION_NOT_FILED",
                     severity=sev, score_impact=8 if delay > 90 else 3,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"AoA alteration not filed. Sec 18. Overdue {delay} days.",
-                    statutory_basis="Section 18, Companies Act 1994 (Bangladesh)",
+                    description=f"Articles alteration not filed. Section 20 and the special-resolution filing requirement in Section 88(1) apply; confirm any further registration steps before calculating a deadline. Overdue {delay} days.",
+                    statutory_basis="Sections 20 and 88(1), Companies Act 1994 (Bangladesh)",
                     detail={"delay_days": delay}
                 ))
 
@@ -2538,7 +2512,8 @@ class NLCRuleEngine:
         final = raw
         critical = [
             f for f in active
-            if f.is_black_override
+            if f.rule_id in VERIFIED_RULE_IDS
+            and f.is_black_override
             and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and f.eval_state == "VIOLATION"
         ]
