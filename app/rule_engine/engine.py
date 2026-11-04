@@ -174,6 +174,7 @@ class CompanyProfile:
     agm_minutes_prepared: bool | None = None
     # Explicit quorum determination recorded for the AGM after checking the Articles and Act.
     agm_quorum_met: bool | None = None
+    agm_quorum_required: int | None = None
     first_auditor_appointed: bool | None = None
     first_auditor_appointment_date: Optional[date] = None
     audit_complete: bool = False
@@ -395,6 +396,7 @@ REGISTERED_OFFICE_DEADLINE_DAYS = 28
 # legally incorrect for months with 28/29/31 days. We now compute the
 # deadline by adding one calendar month to the incorporation date.
 FIRST_AUDITOR_DEADLINE_DAYS = 30  # DEPRECATED: kept for backward compat, use _add_one_month()
+FIRST_AGM_DEADLINE_DAYS = 548  # DEPRECATED compatibility alias; calculations use 18 calendar months.
 CHARGE_REGISTRATION_DEADLINE_DAYS = 21  # Section 159(1): charge registration within 21 days of creation
 ALLOTMENT_FILING_DEADLINE_DAYS = 60  # Form XV, Section 151
 CAPITAL_INCREASE_FILING_DEADLINE_DAYS = 15  # Form IV, Section 56
@@ -1076,6 +1078,35 @@ class NLCRuleEngine:
                     statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
                     detail={"days_to_agm": days_rem}
                 ))
+
+        # Only a recorded determination that has already considered the Articles
+        # and Section 85(2)(b) may create a quorum finding. Attendance alone is not enough.
+        if (
+            c.agm_held_this_cycle
+            and c.members_present_at_agm is not None
+            and c.agm_quorum_met is False
+            and c.agm_quorum_required is not None
+            and c.agm_quorum_required > 0
+        ):
+            self._add_flag(ComplianceFlag(
+                rule_id="AGM-005",
+                flag_code="AGM_QUORUM_DEFECTIVE",
+                severity=Severity.RED,
+                score_impact=15,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                description=(
+                    "The recorded AGM determination states that the applicable quorum was not met. "
+                    "The required quorum must be derived from the Articles and, where applicable, "
+                    "the Section 85(2)(b) statutory default."
+                ),
+                statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
+                detail={
+                    "present": c.members_present_at_agm,
+                    "member_count": c.member_count,
+                    "quorum_required_recorded": c.agm_quorum_required,
+                    "quorum_met_recorded": False,
+                },
+            ))
 
         if c.agm_held_this_cycle and c.agm_minutes_prepared is False:
             self._add_flag(ComplianceFlag(
