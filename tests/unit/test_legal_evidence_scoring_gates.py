@@ -461,7 +461,7 @@ def test_labour_section_326_expiry_requires_verified_licence_class_and_direction
 
 def test_vat_registration_threshold_uses_current_50_lakh_value_and_fails_closed():
     below = NLCRuleEngine().evaluate(
-        _profile(vat_registered=False, annual_turnover_bdt=4_999_999),
+        _profile(vat_registered=False, annual_turnover_bdt=2_999_999),
         today=date(2026, 11, 4),
     )
     assert not any(flag.rule_id == "TAX-002" for flag in below.flags)
@@ -477,6 +477,22 @@ def test_vat_registration_threshold_uses_current_50_lakh_value_and_fails_closed(
     assert flag.score_impact == 0
     assert flag.detail["registration_threshold_bdt"] == 5_000_000
     assert flag.detail["turnover_tax_enlistment_threshold_bdt"] == 3_000_000
+
+
+def test_vat_turnover_tax_enlistment_band_is_review_only():
+    result = NLCRuleEngine().evaluate(
+        _profile(vat_registered=False, annual_turnover_bdt=4_000_000),
+        today=date(2026, 11, 4),
+    )
+    flag = _flag(result, "TAX-002")
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.score_impact == 0
+    assert flag.detail["turnover_tax_enlistment_threshold_bdt"] == 3_000_000
+    assert flag.detail["registration_threshold_bdt"] == 5_000_000
+    assert flag.detail["turnover_tax_enlistment_application_window_days"] == 30
+
 
 
 def test_vat_return_status_without_verified_tax_period_is_not_a_default():
