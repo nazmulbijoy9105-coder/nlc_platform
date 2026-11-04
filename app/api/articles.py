@@ -721,6 +721,8 @@ async def review_agm_evidence(
         raise HTTPException(status_code=404, detail="AGM evidence submission not found.")
     if item.status != "PENDING":
         raise HTTPException(status_code=409, detail="Only pending AGM evidence can be reviewed.")
+    if not body.reviewer_note.strip():
+        raise HTTPException(status_code=422, detail="A non-empty reviewer note is required.")
     if item.submitted_by == current_user.id:
         raise HTTPException(status_code=403, detail="The submitter cannot review their own evidence.")
 
