@@ -293,7 +293,9 @@ def test_pre_score_and_authoritative_raw_score_use_identical_category_caps():
     engine = NLCRuleEngine()
     breakdown = engine._calculate_score(flags, profile)
     assert engine._calculate_raw_score(flags) == breakdown.raw_total
-    assert breakdown.raw_total == 55
+    # Legal approval register is fail-closed: unapproved findings remain visible
+    # but none may affect the authoritative compliance score.
+    assert breakdown.raw_total == 100
 
 
 
@@ -420,3 +422,21 @@ def test_verified_absence_is_a_scoring_state_but_unknown_is_not():
     score = NLCRuleEngine()._calculate_score([verified_absent], profile)
     assert score.agm_score == 0
     assert score.final_score == 80
+
+def test_unapproved_black_override_cannot_force_zero_score():
+    profile = _profile()
+    unapproved_black = ComplianceFlag(
+        rule_id="INC-003",
+        flag_code="UNAPPROVED_BLACK_TEST",
+        severity=Severity.BLACK,
+        score_impact=15,
+        revenue_tier=RevenueTier.CORPORATE_RESCUE,
+        description="Unapproved legal mapping must not force BLACK.",
+        statutory_basis="Section 90, Companies Act 1994 (Bangladesh)",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+        is_black_override=True,
+    )
+    score = NLCRuleEngine()._calculate_score([unapproved_black], profile)
+    assert score.final_score == 100
+    assert score.black_override_applied is False
