@@ -74,3 +74,47 @@ async def test_admin_sentinel_cannot_grant_staff_access(db, db_client_user):
         text("SELECT public.nlc_current_user_is_staff()")
     )
     assert result.scalar_one() is False
+
+
+@pytest.mark.asyncio
+async def test_identity_guc_cannot_be_replayed_for_another_user(db, db_client_user, db_other_company):
+    """A signature for one principal must not authorize another UUID."""
+    import uuid
+
+    await set_rls_context(db, str(db_client_user.id))
+    await db.execute(text("SET LOCAL ROLE nlc_app_role"))
+    forged_user_id = str(uuid.uuid4())
+    await db.execute(
+        text("SELECT set_config('app.current_user_id', :uid, true)"),
+        {"uid": forged_user_id},
+    )
+    result = await db.execute(text("SELECT public.nlc_current_user_id()"))
+    assert result.scalar_one() is None
+    access = await db.execute(
+        text("SELECT public.nlc_can_access_company(:company_id)"),
+        {"company_id": db_other_company.id},
+    )
+    assert access.scalar_one() is False
+
+
+@pytest.mark.asyncio
+async def test_unsigned_identity_and_forged_admin_are_rejected(db, db_client_user):
+    await set_rls_context(db, str(db_client_user.id))
+    await db.execute(text("SET LOCAL ROLE nlc_app_role"))
+    await db.execute(text("SELECT set_config('app.current_user_signature', '', true)"))
+    valid = await db.execute(text("SELECT public.nlc_current_user_context_valid()"))
+    assert valid.scalar_one() is False
+    await db.execute(text("SELECT set_config('app.current_user_id', 'ADMIN', true)"))
+    await db.execute(text("SELECT set_config('app.current_user_signature', repeat('0', 64), true)"))
+    staff = await db.execute(text("SELECT public.nlc_current_user_is_staff()"))
+    assert staff.scalar_one() is False
+
+
+@pytest.mark.asyncio
+async def test_valid_signed_identity_resolves_to_authenticated_user(db, db_client_user):
+    await set_rls_context(db, str(db_client_user.id))
+    await db.execute(text("SET LOCAL ROLE nlc_app_role"))
+    valid = await db.execute(text("SELECT public.nlc_current_user_context_valid()"))
+    resolved = await db.execute(text("SELECT public.nlc_current_user_id()"))
+    assert valid.scalar_one() is True
+    assert str(resolved.scalar_one()) == str(db_client_user.id)
