@@ -20,11 +20,11 @@ from sqlalchemy import (
     ForeignKey,
     ForeignKeyConstraint,
     Index,
-    UniqueConstraint,
     Integer,
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -102,13 +102,6 @@ class AGM(FullMixin, Base):
     articles_quorum_verified_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
     articles_quorum_verified_at: Mapped[date | None] = mapped_column(Date, nullable=True)
     articles_quorum_evidence_ref: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    quorum_met: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=True)
-    members_present: Mapped[int] = mapped_column(Integer, default=0)
-    quorum_required: Mapped[int | None] = mapped_column(
-        Integer, nullable=True, default=2,
-        comment="Section 85(2)(b) statutory default; Articles may provide otherwise"
-    )
-    quorum_basis: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     # ── Auditor ───────────────────────────────────────────────────
     # AGM-006: auditor not reappointed at AGM
@@ -132,6 +125,145 @@ class AGM(FullMixin, Base):
 
 
 # ═══════════════════════════════════════════════════════════════════
+# AUDIT
+# ═══════════════════════════════════════════════════════════════════
+class Audit(FullMixin, Base):
+    __tablename__ = "audits"
+
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # ── Period ────────────────────────────────────────────────────
+    financial_year: Mapped[int] = mapped_column(Integer, nullable=False)
+    audit_type: Mapped[str] = mapped_column(
+        String(50), default="ANNUAL",
+        comment="ANNUAL | FIRST_AUDITOR"
+    )
+
+    # ── Auditor ───────────────────────────────────────────────────
+    auditor_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    auditor_firm: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    icab_number: Mapped[str | None] = mapped_column(
+        String(100), nullable=True,
+        comment="ICAB registration number of audit firm"
+    )
+    # AUD-001: tri-state appointment evidence; Section 210(6) calendar month
+    first_auditor_appointed: Mapped[bool | None] = mapped_column(
+        Boolean, nullable=True, default=None
+    )
+    first_auditor_appointment_date: Mapped[date | None] = mapped_column(
+        Date, nullable=True
+    )
+    first_auditor_delay_days: Mapped[int] = mapped_column(Integer, default=0)
+
+    # ── Completion ────────────────────────────────────────────────
+    # AUD-001: audit not complete before AGM
+    audit_complete: Mapped[bool] = mapped_column(Boolean, default=False)
+    audit_signed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # AUD-003: AGM held without completed audit — legal review required
+    agm_held_without_audit: Mapped[bool] = mapped_column(
+        Boolean, default=False, index=True,
+        comment="AUD-003: recorded AGM held without completed audit; lawyer review required"
+    )
+    is_missing: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    delay_days: Mapped[int] = mapped_column(Integer, default=0)
+
+    # ── Report ────────────────────────────────────────────────────
+    report_qualified: Mapped[bool] = mapped_column(Boolean, default=False)
+    qualification_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    document_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
+
+    # ── Relationships ─────────────────────────────────────────────
+    company: Mapped[Company] = relationship("Company", back_populates="audits")
+
+    def __repr__(self) -> str:
+        return f"<Audit company={self.company_id} FY={self.financial_year} complete={self.audit_complete}>"
+
+
+# ═══════════════════════════════════════════════════════════════════
+# ANNUAL RETURN
+# ═══════════════════════════════════════════════════════════════════
+class AnnualReturn(FullMixin, Base):
+    __tablename__ = "annual_returns"
+
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # ── Period ────────────────────────────────────────────────────
+    financial_year: Mapped[int] = mapped_column(Integer, nullable=False)
+    filing_deadline: Mapped[date | None] = mapped_column(
+        Date, nullable=True,
+        comment="AGM date + 30 days (Section 190 CA 1994)"
+    )
+
+    # ── Filing ────────────────────────────────────────────────────
+    # AR-001: default
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    filed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    delay_days: Mapped[int] = mapped_column(Integer, default=0)
+    rjsc_receipt_number: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # ── Completeness ──────────────────────────────────────────────
+    # AR-004: filed but incomplete
+    is_complete: Mapped[bool] = mapped_column(Boolean, default=True)
+    missing_attachments: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # ── Fee ───────────────────────────────────────────────────────
+    filing_fee_paid_bdt: Mapped[Decimal | None] = mapped_column(
+        Numeric(12, 2), nullable=True
+    )
+    late_fee_paid_bdt: Mapped[Decimal | None] = mapped_column(
+        Numeric(12, 2), nullable=True
+    )
+
+    # ── Relationships ─────────────────────────────────────────────
+    company: Mapped[Company] = relationship(
+        "Company", back_populates="annual_returns"
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<AnnualReturn company={self.company_id} "
+            f"FY={self.financial_year} default={self.is_default}>"
+        )
+
+# RJSC-005: Filing lifecycle state transition validation.
+# Every PATCH handler must validate `next_status` against this map.
+VALID_TRANSITIONS: dict[str, set[str]] = {
+    "PENDING":       {"FILED", "CANCELLED"},
+    "FILED":         {"REJECTED", "SUPERSEDED"},
+    "REJECTED":      {"PENDING"},
+    "SUPERSEDED":    set(),
+    "CANCELLED":     set(),
+    "OVERDUE":       {"FILED", "CANCELLED"},
+    "HELD":          {"MINUTES_FILED", "CANCELLED"},
+    "MINUTES_FILED": set(),
+    "COMPLETED":     set(),
+    "IN_PROGRESS":   {"COMPLETED", "CANCELLED"},
+}
+
+def validate_filing_transition(current_status: str, next_status: str) -> bool:
+    """Return True if the transition is allowed, False otherwise."""
+    return next_status in VALID_TRANSITIONS.get(current_status, set())
+
+
+class InvalidFilingTransitionError(ValueError):
+    """Raised when a filing lifecycle transition is not allowed."""
+    def __init__(self, current: str, next_: str):
+        super().__init__(
+            f"Invalid filing transition: {current} -> {next_}. "
+            f"Allowed from {current}: {VALID_TRANSITIONS.get(current, set())}"
+        )
 
 # AGM SOURCE EVIDENCE — VERSION-PINNED REVIEW
 # ═══════════════════════════════════════════════════════════════════
@@ -213,4 +345,3 @@ class AGMEvidenceVerificationEvent(AuditMixin, Base):
     new_status: Mapped[str] = mapped_column(String(20), nullable=False)
     source_checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
-
