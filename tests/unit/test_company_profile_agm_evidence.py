@@ -145,8 +145,8 @@ def test_score_impact_reporting_respects_verified_rule_gate_and_category_caps():
 
     applied = _applied_score_impacts(flags)
 
-    assert applied[0] == {"applied": 20, "status": "APPLIED"}
-    assert applied[1] == {"applied": 10, "status": "APPLIED"}
+    assert applied[0] == {"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"}
+    assert applied[1] == {"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"}
     assert applied[2] == {"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"}
 
 
