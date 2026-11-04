@@ -22,6 +22,12 @@ def get_engine_rules():
             value = node.value.value
             if isinstance(value, str) and re.match(r"^[A-Z]{2,12}-\d{3}$", value):
                 ids.add(value)
+        # Some conditionally evaluated rules are declared as the first field
+        # of a tuple (e.g. BSEC candidates), not as rule_id= keyword arguments.
+        if isinstance(node, ast.Tuple) and node.elts and isinstance(node.elts[0], ast.Constant):
+            value = node.elts[0].value
+            if isinstance(value, str) and re.match(r"^[A-Z]{2,12}-\d{3}$", value):
+                ids.add(value)
         if isinstance(node, ast.Assign):
             for target in node.targets:
                 if isinstance(target, ast.Name) and target.id == "rule_id" and isinstance(node.value, ast.Constant):
