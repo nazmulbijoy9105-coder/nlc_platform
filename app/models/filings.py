@@ -19,6 +19,8 @@ from sqlalchemy import (
     DateTime,
     Index,
     ForeignKey,
+    ForeignKeyConstraint,
+    UniqueConstraint,
     Integer,
     Numeric,
     String,
@@ -44,6 +46,9 @@ if TYPE_CHECKING:
 # ═══════════════════════════════════════════════════════════════════
 class AGM(FullMixin, Base):
     __tablename__ = "agms"
+    __table_args__ = (
+        UniqueConstraint("company_id", "id", name="uq_agms_company_id_id"),
+    )
 
     company_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -136,6 +141,15 @@ class AGMEvidenceVerification(FullMixin, Base):
         CheckConstraint("verified_count IS NULL OR verified_count >= 0", name="ck_agm_evidence_count"),
         CheckConstraint("status <> 'VERIFIED' OR evidence_kind <> 'MEMBERS_REGISTER' OR verified_count >= 1", name="ck_agm_evidence_member_count_positive"),
         CheckConstraint("status <> 'VERIFIED' OR reviewed_by IS DISTINCT FROM submitted_by", name="ck_agm_evidence_four_eyes"),
+        UniqueConstraint("company_id", "id", name="uq_agm_evidence_company_id"),
+        ForeignKeyConstraint(
+            ["company_id", "agm_id"], ["agms.company_id", "agms.id"],
+            ondelete="CASCADE", name="fk_agm_evidence_company_agm",
+        ),
+        ForeignKeyConstraint(
+            ["company_id", "document_id"], ["documents.company_id", "documents.id"],
+            ondelete="RESTRICT", name="fk_agm_evidence_company_document",
+        ),
         CheckConstraint("(status = 'REVOKED' AND revoked_by IS NOT NULL AND revoked_by IS DISTINCT FROM reviewed_by AND revoked_at IS NOT NULL AND revocation_reason IS NOT NULL) OR (status <> 'REVOKED' AND revoked_by IS NULL AND revoked_at IS NULL AND revocation_reason IS NULL)", name="ck_agm_evidence_revocation_metadata"),
         CheckConstraint(
             "(status = 'PENDING' AND reviewed_by IS NULL AND reviewed_at IS NULL AND verified_count IS NULL) OR "
@@ -152,13 +166,13 @@ class AGMEvidenceVerification(FullMixin, Base):
         nullable=False, index=True,
     )
     agm_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("agms.id", ondelete="CASCADE"),
+        UUID(as_uuid=True),
         nullable=False, index=True,
     )
     meeting_date: Mapped[date] = mapped_column(Date, nullable=False)
     evidence_kind: Mapped[str] = mapped_column(String(32), nullable=False)
     document_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("documents.id", ondelete="RESTRICT"),
+        UUID(as_uuid=True),
         nullable=False, index=True,
     )
     source_checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -190,6 +204,11 @@ class AGMEvidenceVerificationEvent(AuditMixin, Base):
             "action IN ('SUBMITTED', 'VERIFIED', 'REJECTED', 'REVOKED', 'SUPERSEDED')",
             name="ck_agm_evidence_event_action",
         ),
+        ForeignKeyConstraint(
+            ["company_id", "verification_id"],
+            ["agm_evidence_verifications.company_id", "agm_evidence_verifications.id"],
+            ondelete="RESTRICT", name="fk_agm_evidence_events_company_parent",
+        ),
     )
 
     company_id: Mapped[uuid.UUID] = mapped_column(
@@ -197,7 +216,7 @@ class AGMEvidenceVerificationEvent(AuditMixin, Base):
         nullable=False, index=True,
     )
     verification_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("agm_evidence_verifications.id", ondelete="RESTRICT"),
+        UUID(as_uuid=True),
         nullable=False, index=True,
     )
     actor_id: Mapped[uuid.UUID] = mapped_column(
