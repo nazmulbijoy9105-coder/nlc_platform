@@ -848,7 +848,9 @@ class TestEscalationRules:
         # require legal review and cannot be inferred from an unverified flag.
         profile = build_profile(
             current_director_count=0,   # INC-003: verified critical condition
-            on_rjsc_strike_off_list=True,  # ESC-002: verified Registrar notice
+            paid_up_ge_authorized=True,
+            paid_up_capital_bdt=2000000,
+            authorized_capital_bdt=1000000,  # INC-004: second capital-control BLACK condition
         )
         output = rule_engine.evaluate(profile)
 
@@ -1095,7 +1097,9 @@ class TestEngineIntegrity:
         """BLACK band company is correctly identified with score <= 29."""
         profile = build_profile(
             current_director_count=0,
-            on_rjsc_strike_off_list=True,
+            paid_up_ge_authorized=True,
+            paid_up_capital_bdt=2000000,
+            authorized_capital_bdt=1000000,
         )
         output = rule_engine.evaluate(profile)
         assert output.score_breakdown.risk_band == "BLACK"
