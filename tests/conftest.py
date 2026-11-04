@@ -256,6 +256,12 @@ async def api_client(db) -> AsyncGenerator[AsyncClient, None]:
     from app.models.database import get_db as auth_get_db
     from app.models.enums import UserRole
     from app.models.user import User
+    from app.models.database import set_admin_context
+
+    # Restore the trusted fixture principal after any upstream fixture work.
+    await set_admin_context(db)
+    staff_context = await db.execute(text("SELECT public.nlc_current_user_is_staff()"))
+    assert staff_context.scalar_one() is True
 
     # Seed one DB user per role so role tokens resolve in get_current_user.
     for _role in UserRole:
