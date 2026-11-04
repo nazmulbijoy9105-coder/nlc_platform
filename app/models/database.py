@@ -119,7 +119,10 @@ async def get_db_for_user(request: Request) -> AsyncGenerator[AsyncSession, None
 
     async with AsyncSessionLocal() as session:
         try:
-            await set_rls_context(session, user_id)
+            if user_id == "ANONYMOUS":
+                await _set_signed_rls_principal(session, "ANONYMOUS")
+            else:
+                await set_rls_context(session, user_id)
             yield session
             await session.commit()
         except Exception:
