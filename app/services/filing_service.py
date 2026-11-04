@@ -16,7 +16,12 @@ from typing import TYPE_CHECKING
 from sqlalchemy import select
 
 from app.models.company import Company
-from app.models.filings import AGM, AnnualReturn, Audit
+from app.models.filings import (
+    AGM,
+    AGMEvidenceVerification,
+    AnnualReturn,
+    Audit,
+)
 from app.models.documents import ArticlesVerification, Document
 from app.models.infrastructure import StatutoryRegister
 from app.services.base import BaseService
@@ -93,7 +98,7 @@ class AGMService(BaseService[AGM]):
             notice_days_before=(agm_date - notice_sent_date).days if (agm_date and notice_sent_date) else None,
             notice_defective=notice_defective,
             notice_missing=notice_missing,
-            members_present=members_present,
+            members_present=verified_members_present if membership_evidence_verified else 0,
             quorum_required=quorum_required,
             quorum_met=quorum_met,
             quorum_basis=None,
@@ -218,20 +223,57 @@ class AGMService(BaseService[AGM]):
                     if verified_articles.quorum_variation_exists
                     else None
                 )
-        # These API fields are caller-supplied counts and free-text references,
-        # not independently reviewed evidence. Until member-register and
-        # attendance-register documents have their own version-pinned review
-        # workflow, they must never support a legal quorum conclusion.
-        membership_evidence_verified = False
+        # Resolve both evidence types for this exact AGM and meeting date.
+        # Request counts and free-text references are deliberately ignored.
+        evidence_rows = (await self.db.scalars(
+            select(AGMEvidenceVerification).where(
+                AGMEvidenceVerification.company_id == agm.company_id,
+                AGMEvidenceVerification.agm_id == agm.id,
+                AGMEvidenceVerification.meeting_date == agm_date,
+                AGMEvidenceVerification.status == "VERIFIED",
+            )
+        )).all()
+        verified_counts: dict[str, int] = {}
+        verified_evidence_refs: dict[str, str] = {}
+        for evidence in evidence_rows:
+            if evidence.reviewed_by is None or evidence.reviewed_by == evidence.submitted_by:
+                continue
+            source = await self.db.scalar(
+                select(Document).where(
+                    Document.id == evidence.document_id,
+                    Document.company_id == agm.company_id,
+                    Document.is_active.is_(True),
+                    Document.version == evidence.source_document_version,
+                )
+            )
+            if (
+                source is None
+                or not isinstance(source.checksum_sha256, str)
+                or source.checksum_sha256.lower() != evidence.source_checksum_sha256.lower()
+            ):
+                continue
+            verified_counts[evidence.evidence_kind] = evidence.verified_count
+            verified_evidence_refs[evidence.evidence_kind] = (
+                f"document:{evidence.document_id}:sha256:{evidence.source_checksum_sha256}"
+            )
+
+        verified_members_total = verified_counts.get("MEMBERS_REGISTER")
+        verified_members_present = verified_counts.get("ATTENDANCE_REGISTER")
+        membership_evidence_verified = (
+            verified_members_total is not None
+            and verified_members_total >= 1
+            and verified_members_present is not None
+            and verified_members_present <= verified_members_total
+        )
         if (
             company_type == "PRIVATE_LIMITED"
             and membership_evidence_verified
             and articles_verified
             and (articles_quorum_required is None or articles_quorum_required >= 1)
         ):
-            statutory_default = 2 if members_total_at_agm <= 6 else 3
+            statutory_default = 2 if verified_members_total <= 6 else 3
             quorum_required = articles_quorum_required or statutory_default
-            quorum_met: bool | None = members_present >= quorum_required
+            quorum_met: bool | None = verified_members_present >= quorum_required
             quorum_basis = (
                 "ARTICLES_VERIFIED"
                 if articles_quorum_required is not None
@@ -260,9 +302,9 @@ class AGMService(BaseService[AGM]):
             accounts_adopted=accounts_adopted,
             agm_held_without_audit=agm_held_without_audit,
             minutes_document_id=minutes_document_id,
-            members_total_at_agm=members_total_at_agm,
-            members_total_evidence_ref=members_total_evidence_ref,
-            members_present_evidence_ref=members_present_evidence_ref,
+            members_total_at_agm=verified_members_total if membership_evidence_verified else None,
+            members_total_evidence_ref=verified_evidence_refs.get('MEMBERS_REGISTER'),
+            members_present_evidence_ref=verified_evidence_refs.get('ATTENDANCE_REGISTER'),
             articles_quorum_verified=articles_verified,
             articles_quorum_required=articles_quorum_required if articles_verified else None,
             articles_quorum_verified_by=articles_reviewer if articles_verified else None,
