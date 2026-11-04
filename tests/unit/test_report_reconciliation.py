@@ -25,7 +25,7 @@ FLAGS = [
     _flag("REG-001", "RED", 12),
     _flag("INC-001", "RED", 0),
     _flag("AGM-001", "YELLOW", 0),
-    _flag("AGM-001", "YELLOW", 15),
+    _flag("AGM-001", "YELLOW", 10),
     _flag("OFF-001", "YELLOW", 5),
 ]
 
