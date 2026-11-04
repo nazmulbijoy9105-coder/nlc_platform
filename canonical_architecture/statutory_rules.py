@@ -438,8 +438,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "DIR-003": {
         "rule_id": "DIR-003",
         "legal_domain": "Corporate",
-        "law": "Section 92, Companies Act 1994 (Bangladesh)",
-        "requirement": "Major Director Filing Irregularity — Over 1 Year - Director change unfiled for over 1 year. Continuing offence under Section 92. Prolonged non-filing creates compounding personal liability. Each day of default adds to statutory fine. Board resolutions may be challenged.",
+        "law": "Section 115, Companies Act 1994 (Bangladesh)",
+        "requirement": "Director particulars or changes not filed using Form XII within 14 days under Section 115. A prolonged filing default is distinct from whether the appointment or cessation itself is valid; calculate consequences only from the applicable statutory text.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -678,8 +678,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "CAP-002": {
         "rule_id": "CAP-002",
         "legal_domain": "Corporate",
-        "law": "Section 87, Companies Act 1994 (Bangladesh)",
-        "requirement": "Charge Not Registered With RJSC Within 30 Days - Charge created but not registered via Form VIII within 30 days. Section 87: unregistered charge is void against liquidator and creditors. Lender loses security interest, becomes unsecured creditor. Officers personally liable.",
+        "law": "Section 159, Companies Act 1994 (Bangladesh)",
+        "requirement": "Charge creation must be registered within 21 days using Form XVIII under Section 159. Verify that the instrument is registrable, the creation date and RJSC registration evidence before concluding default.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
