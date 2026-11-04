@@ -487,6 +487,9 @@ CATEGORY_CAPS: dict[str, tuple[int, tuple[str, ...]]] = {
 # BLACK-severity rules (DEF-001) are ALWAYS enforced regardless of
 # verification status — critical safety overrides cannot be gated.
 VERIFIED_RULE_IDS: frozenset[str] = frozenset()
+# Release remains disabled until the complete applicable rule corpus has named, independent current-law approval.
+# A partial/empty allowlist must never make an unreviewed company appear GREEN.
+LEGAL_SCORE_RELEASED: bool = False
 # Fail-closed legal release gate: no rule may affect a legal score or BLACK
 # override until its exact current-law source, applicability, exceptions,
 # evidence standard and effective date have named independent legal approval.
@@ -2549,11 +2552,16 @@ class NLCRuleEngine:
             final = 0
 
         coverage = _input_coverage(company)
-        score_band = Severity(self._score_to_band(final, force_black=bool(critical), coverage=coverage))
+        # A 100-point arithmetic placeholder is not a compliance certification.
+        # Keep the band NOT_EVALUATED until the full legal corpus is independently approved.
+        score_band = (
+            Severity(self._score_to_band(final, force_black=bool(critical), coverage=coverage))
+            if LEGAL_SCORE_RELEASED else Severity.NOT_EVALUATED
+        )
 
         # Band = worst of (score-based band, highest active flag severity)
         # Prevents false GREEN when a RED-severity rule fires (BLACK handled above)'t override
-        if not critical:
+        if LEGAL_SCORE_RELEASED and not critical:
             severity_rank = {Severity.GREEN: 0, Severity.YELLOW: 1, Severity.RED: 2, Severity.BLACK: 3}
             max_flag_severity = Severity.GREEN
             for f in active:
@@ -2587,6 +2595,7 @@ class NLCRuleEngine:
             "engine_version": RULE_ENGINE_VERSION,
             "ilrmf_version": ILRMF_VERSION,
             "verified_rule_ids": sorted(VERIFIED_RULE_IDS),
+            "legal_score_released": LEGAL_SCORE_RELEASED,
             "flags": flag_signatures,
             "final_score": final,
         }
