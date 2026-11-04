@@ -1039,9 +1039,10 @@ This docket expands the source triage into a separate signed-review record for e
 ### LBR-003 — Labour Court Order Pending
 
 - **Catalogue anchor:** Labour Act 2006 (Bangladesh), Section 209
-- **Existing engine severity / deduction / override:** RED / 15 / false
+- **Existing engine severity / deduction / override:** NOT_EVALUATED / 0 / false
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
+- **Fail-closed control:** A profile boolean is not the order. Require certified order, party identity, service, operative terms, current status, appeal/revision and stay evidence before any adverse finding. Keep NOT_EVALUATED.
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
 - **Source/effective date:** exact Gazette/Act/SRO/Rule, section/subsection, publication and commencement dates, transitional/repeal effect and review-date consolidation required.
 - **Applicability:** determine company type, listed/subsidiary status, sector, employee/factory status, tax/VAT registration, transaction facts, constitutional documents and territorial authority as applicable. Unknown scope = NOT_EVALUATED.
@@ -1240,12 +1241,13 @@ This docket expands the source triage into a separate signed-review record for e
 - **Minimum negative tests:** wrong company class; unknown fact; missing document only; valid extension/condonation; timely filing; appeal/stay/order; inapplicable sector/listing; contradictory evidence.
 - **Counsel decision:** PENDING — reviewer, enrolment/chamber, signed date, exact scope and next review required.
 
-### TAX-001 — Tax Identification Number (TIN) Not Obtained
+### TAX-001 — TIN Status Requires Verification
 
 - **Catalogue anchor:** Income Tax Act 2023 (Bangladesh)
-- **Existing engine severity / deduction / override:** RED / 10 / false
+- **Existing engine severity / deduction / override:** NOT_EVALUATED / 0 / false
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
+- **Fail-closed control:** A profile boolean is not authenticated proof of TIN absence or the company's exact duty. Verify legal entity/taxpayer identity, s.166 return duty, s.261 registration trigger, s.264 proof-of-return requirement, exceptions and operative period. Keep NOT_EVALUATED until independently evidenced.
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
 - **Source/effective date:** exact Gazette/Act/SRO/Rule, section/subsection, publication and commencement dates, transitional/repeal effect and review-date consolidation required.
 - **Applicability:** determine company type, listed/subsidiary status, sector, employee/factory status, tax/VAT registration, transaction facts, constitutional documents and territorial authority as applicable. Unknown scope = NOT_EVALUATED.
@@ -1293,10 +1295,11 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### TAX-004 — Advance Tax Missed
 
-- **Catalogue anchor:** Income Tax Act 2023, Section 74
-- **Existing engine severity / deduction / override:** YELLOW / 3 / false
+- **Catalogue anchor:** Income Tax Act 2023, sections 154–157, as amended by Finance Act 2026 (Act 96/2026), sections 87–88
+- **Existing engine severity / deduction / override:** NOT_EVALUATED / 0 / false
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
+- **Current-law correction:** Finance Act 2026 s.87 raises s.154(1) threshold to BDT 10 lakh; s.88 amends s.155(2) and (5). s.156 retains a separately stated BDT 6 lakh new-assessee threshold in the current Act text. Verify A-B computation, source deductions, exclusions, estimates, four instalments and holiday roll-forward. Keep NOT_EVALUATED.
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
 - **Source/effective date:** exact Gazette/Act/SRO/Rule, section/subsection, publication and commencement dates, transitional/repeal effect and review-date consolidation required.
 - **Applicability:** determine company type, listed/subsidiary status, sector, employee/factory status, tax/VAT registration, transaction facts, constitutional documents and territorial authority as applicable. Unknown scope = NOT_EVALUATED.
