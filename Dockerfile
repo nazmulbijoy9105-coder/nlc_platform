@@ -21,7 +21,8 @@ RUN pip install --upgrade "pip==24.0" setuptools wheel && \
 FROM python:3.11-slim-bookworm AS runtime-base
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 TZ=UTC \
     PATH="/opt/venv/bin:$PATH" \
-    PYTHONPATH="/app"
+    PYTHONPATH="/app" \
+    XDG_CACHE_HOME="/tmp/nlc_cache"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 libmagic1 libpango-1.0-0 libpangoft2-1.0-0 \
@@ -36,8 +37,9 @@ RUN groupadd --gid 1001 nlc && \
     useradd --uid 1001 --gid 1001 --no-create-home --shell /bin/sh nlc
 
 WORKDIR /app
-RUN mkdir -p /app/static/fonts /app/templates/pdf /tmp/nlc_pdfs && \
-    chown -R nlc:nlc /app /tmp/nlc_pdfs
+RUN mkdir -p /app/static/fonts /app/templates/pdf /tmp/nlc_pdfs /tmp/nlc_cache/fontconfig && \
+    chown -R nlc:nlc /app /tmp/nlc_pdfs /tmp/nlc_cache && \
+    chmod 700 /tmp/nlc_cache /tmp/nlc_cache/fontconfig
 
 COPY --chown=nlc:nlc . /app/
 USER nlc
