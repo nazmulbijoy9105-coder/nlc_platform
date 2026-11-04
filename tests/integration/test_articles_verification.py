@@ -19,7 +19,29 @@ def _role_id(role: str) -> uuid.UUID:
 
 
 async def _grant_staff_memberships(db, company_id):
-    for role in ("ADMIN_STAFF", "LEGAL_STAFF", "SUPER_ADMIN"):
+    from app.models.database import set_admin_context
+    from app.models.enums import UserRole
+    from app.models.user import User
+
+    # This helper is used by DB-only tests that do not request api_client,
+    # so it must provision the referenced identities itself.
+    await set_admin_context(db)
+    roles = ("ADMIN_STAFF", "LEGAL_STAFF", "SUPER_ADMIN")
+    for role in roles:
+        user_id = _role_id(role)
+        if await db.get(User, user_id) is None:
+            db.add(User(
+                id=user_id,
+                email=f"seed_{role.lower()}@nlctest.com",
+                full_name=f"Seed {role}",
+                password_hash="!seeded-no-login",
+                role=UserRole(role),
+                is_active=True,
+                totp_enabled=False,
+            ))
+    await db.flush()
+
+    for role in roles:
         db.add(CompanyUserAccess(
             user_id=_role_id(role),
             company_id=company_id,
