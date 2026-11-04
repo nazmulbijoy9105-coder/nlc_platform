@@ -36,6 +36,10 @@ override until approved.
    - Labour licensing: s.326 of the Labour Act, as amended in 2026, not s.35; licensing is conditional on Government directions / establishment class. Five-year licence renewal and one-year contractor-agency licence need class-aware handling.
    - BSEC references identify the 2018 Corporate Governance Code as amended in 2023 and 2024; Condition 1 is board composition and Condition 5 is audit committee. Listed-company applicability and each amendment's effective date still need rule-level logic.
 
+## Rule inventory discrepancy
+
+The current `scripts/seed_rules.py` contains **85 unique active rule IDs** (90 textual occurrences including duplicates). Earlier audit notes expected 86 active engine rules. This is an unresolved one-rule inventory/parity discrepancy. Do not silently invent or reactivate a ghost rule to make the count match. Reconcile engine, seed, DB rows, migrations and API output by exact rule ID before claiming parity.
+
 ## Rule-by-rule legal review still required
 
 All 85 IDs in `legal_approval_register.yaml` remain unapproved. Review each against the
