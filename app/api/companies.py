@@ -101,6 +101,8 @@ class CompanyResponse(BaseModel):
     registration_number: str
     incorporation_date: str
     compliance_score: int | None
+    score_status: str = "NOT_EVALUATED"
+    provisional_flags: int = 0
     band: str | None
     last_evaluated_at: str | None
     director_count: int = 0
@@ -192,13 +194,17 @@ def _company_to_response(company) -> CompanyResponse:
             return None
         return str(val.value if hasattr(val, "value") else val)
 
+    from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+
     return CompanyResponse(
         id=str(company.id),
         name=company.company_name,
         registration_number=company.registration_number,
         incorporation_date=company.incorporation_date.isoformat() if company.incorporation_date else None,  # type: ignore
-        compliance_score=company.current_compliance_score,
-        band=_s(company.current_risk_band),
+        compliance_score=company.current_compliance_score if LEGAL_SCORE_RELEASED else None,
+        score_status="RELEASED" if LEGAL_SCORE_RELEASED else "NOT_RELEASED_PENDING_INDEPENDENT_LEGAL_APPROVAL",
+        provisional_flags=violation_count if not LEGAL_SCORE_RELEASED else 0,
+        band=_s(company.current_risk_band) if LEGAL_SCORE_RELEASED else "NOT_EVALUATED",
         last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
         director_count=director_count,
         violation_count=violation_count,
@@ -211,9 +217,9 @@ def _company_to_response(company) -> CompanyResponse:
         is_dormant=getattr(company, "is_dormant", None),
         created_at=company.created_at.isoformat() if getattr(company, "created_at", None) else None,
         active_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE")]),
-        black_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("BLACK", "Severity.BLACK")]),
-        red_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("RED", "Severity.RED")]),
-        yellow_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("YELLOW", "Severity.YELLOW")]),
+        black_flags=len([f for f in getattr(company, "compliance_flags", []) if LEGAL_SCORE_RELEASED and str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("BLACK", "Severity.BLACK")]),
+        red_flags=len([f for f in getattr(company, "compliance_flags", []) if LEGAL_SCORE_RELEASED and str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("RED", "Severity.RED")]),
+        yellow_flags=len([f for f in getattr(company, "compliance_flags", []) if LEGAL_SCORE_RELEASED and str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("YELLOW", "Severity.YELLOW")]),
         is_manufacturing=getattr(company, "is_manufacturing", None),
     )
 
