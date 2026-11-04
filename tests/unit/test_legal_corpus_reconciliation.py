@@ -43,7 +43,12 @@ def test_aud001_has_one_authoritative_requirement_key():
     for node in ast.walk(tree):
         if isinstance(node, ast.Dict):
             keys = [key.value for key in node.keys if isinstance(key, ast.Constant) and isinstance(key.value, str)]
-            if "AUD-001" in keys:
+            pairs = [
+                (key.value, value.value)
+                for key, value in zip(node.keys, node.values)
+                if isinstance(key, ast.Constant) and isinstance(value, ast.Constant)
+            ]
+            if ("rule_id", "AUD-001") in pairs:
                 target = node
                 break
     assert target is not None
