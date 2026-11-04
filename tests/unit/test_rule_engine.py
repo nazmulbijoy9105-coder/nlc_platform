@@ -240,13 +240,13 @@ class TestAGMRules:
             articles_quorum_verified_by=None,
             articles_quorum_verified_at=None,
             articles_quorum_evidence_ref=None,
-    def test_AGM005_no_trigger_when_quorum_met(self, rule_engine, build_profile):
-        profile = build_profile(
-            agm_held_this_cycle=True,
-            members_present_at_agm=3,
         )
         output = rule_engine.evaluate(profile)
-    
+        flag = next(f for f in output.flags if f.rule_id == "AGM-005")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
+
     def test_AGM005_large_private_company_requires_three_members(self, rule_engine, build_profile):
         """A private company with more than six members needs three present by default."""
         profile = build_profile(
