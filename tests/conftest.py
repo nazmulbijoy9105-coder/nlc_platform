@@ -271,14 +271,6 @@ async def api_client(db) -> AsyncGenerator[AsyncClient, None]:
     assert raw_principal == "ADMIN", raw_principal
     assert verified_principal == "ADMIN", verified_principal
     assert is_staff is True, is_staff
-    policy_state = await db.execute(
-        text(
-            "SELECT policyname, permissive, cmd, with_check "
-            "FROM pg_policies WHERE schemaname = 'public' AND tablename = 'users'"
-        )
-    )
-    print("RLS_TEST_USERS_POLICIES", policy_state.all())
-
     # Seed one DB user per role so role tokens resolve in get_current_user.
     for _role in UserRole:
         _uid = _role_user_id(_role.value)
@@ -797,14 +789,9 @@ async def db_for_user(test_engine, request):
     async with test_engine.connect() as conn:
         await conn.begin()
         session = AsyncSession(bind=conn, expire_on_commit=False)
-        try:
-            from app.core.dependencies import set_rls_context
-            await set_rls_context(session, str(user_id))
-        except Exception:
-            await session.execute(
-                text("SELECT set_config('app.current_user_id', :uid, true)"),
-                {"uid": str(user_id)},
-            )
+        from app.core.dependencies import set_rls_context
+        await set_rls_context(session, str(user_id))
+        session.info["rls_test_user_id"] = str(user_id)
         yield session
         await session.close()
         await conn.rollback()
@@ -823,6 +810,13 @@ async def api_client_as_user(db_for_user):
     from app.models.database import get_db as auth_get_db
     from app.models.enums import UserRole
     from app.models.user import User
+    from app.models.database import set_admin_context
+    from app.core.dependencies import set_rls_context
+
+    # Seed shared role identities under a signed staff principal, then restore
+    # the test client's real tenant identity before issuing requests.
+    test_user_id = db_for_user.info["rls_test_user_id"]
+    await set_admin_context(db_for_user)
 
     for _role in UserRole:
         _uid = _role_user_id(_role.value)
@@ -837,6 +831,7 @@ async def api_client_as_user(db_for_user):
                 totp_enabled=False,
             ))
     await db_for_user.flush()
+    await set_rls_context(db_for_user, test_user_id)
 
     app = create_app()
 
