@@ -565,13 +565,14 @@ class NLCRuleEngine:
     _ESC_RULE_IDS: frozenset = frozenset({"ESC-001", "ESC-002", "ESC-003"})
 
     def __init__(self, today: date | None = None):
+        self._default_today = today
         self.today = today or date.today()
         self._flags: List[ComplianceFlag] = []
 
     def evaluate(self, company: CompanyProfile, today: date | None = None) -> EngineOutput:
         """Evaluate a company profile. Thread-safety: create a fresh NLCRuleEngine() per call — self._flags is instance state."""
         self._flags = []
-        self.today = today or date.today()
+        self.today = today or self._default_today or date.today()
 
         self._run_incorporation_rules(company)
         self._run_auditor_rules(company)
@@ -1250,7 +1251,7 @@ class NLCRuleEngine:
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=f"Recorded attendance ({c.members_present_at_agm}) is below verified quorum ({c.agm_quorum_required}).",
                 statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh), read with the Articles",
-                detail={"present": c.members_present_at_agm, "required": c.agm_quorum_required},
+                detail={"present": c.members_present_at_agm, "required": c.agm_quorum_required, "member_count": c.member_count},
             ))
         if c.agm_held_this_cycle and c.agm_minutes_prepared is False:
             self._add_flag(ComplianceFlag(
