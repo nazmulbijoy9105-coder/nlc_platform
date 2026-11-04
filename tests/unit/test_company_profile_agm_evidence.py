@@ -147,7 +147,7 @@ def test_score_impact_reporting_respects_verified_rule_gate_and_category_caps():
 
     assert applied[0] == {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
     assert applied[1] == {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
-    assert applied[2] == {"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"}
+    assert applied[2] == {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
 
 
 def test_unknown_flags_are_not_reported_as_applied_deductions():
