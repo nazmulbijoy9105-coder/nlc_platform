@@ -1738,16 +1738,21 @@ class NLCRuleEngine:
         if c.tin_obtained and c.tax_return_filed_for_current_fy is False and c.financial_year_end:
             # VERIFY against ITA 2023: company return due 15th day of 7th month after FY end (30 Jun -> 15 Jan)
             fy_end = c.financial_year_end
-            due_month = fy_end.month + 7
-            due_year = fy_end.year
-            if due_month > 12:
-                due_month -= 12
-                due_year += 1
-            deadline = date(due_year, due_month, 15)
-            # A boolean "extended" flag is not a statutory extension order.
-            # Do not add an arbitrary 30 days. Until Tax Day and any actual
-            # written extension are verified for this taxpayer, this is only
-            # a review prompt and cannot be a confirmed legal violation.
+            # Finance Act 2026 (Act 96/2026) substituted Income Tax Act
+            # s.170. For non-individuals, use the 15th day of the ninth
+            # month after income-year end, but not earlier than the following
+            # 15 September. Section 171 now cross-refers to s.170.
+            ninth_month = fy_end.month + 9
+            ninth_year = fy_end.year
+            if ninth_month > 12:
+                ninth_month -= 12
+                ninth_year += 1
+            ninth_month_date = date(ninth_year, ninth_month, 15)
+            september_floor = date(fy_end.year + 1, 9, 15)
+            deadline = max(ninth_month_date, september_floor)
+            # Public-holiday roll-forward, taxpayer-specific extension,
+            # applicable income-year classification and later notices are
+            # not yet verified; keep this as a non-scoring review prompt.
             if self.today > deadline:
                 delay = (self.today - deadline).days
                 if delay <= 90:
@@ -1760,9 +1765,9 @@ class NLCRuleEngine:
                     rule_id="TAX-003",
                     flag_code="ANNUAL_TAX_RETURN_OVERDUE",
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Potential company return delay of {delay} days using a provisional date only. Verify current Tax Day under Sections 2 and 171, assessment-year amendments, taxpayer category and any written extension before determining default.",
-                    statutory_basis="Income Tax Act 2023, Sections 166 and 171 (taxpayer-specific Tax Day requires verification)",
-                    detail={"delay_days": delay, "fy_year": fy_end.year},
+                    description=f"Potential company return delay of {delay} days using the provisional section 170(2) formula. Verify the applicable income year, taxpayer category, holiday roll-forward, written extension and subsequent amendments before determining default.",
+                    statutory_basis="Income Tax Act 2023, Sections 170(2) and 171, as amended by Finance Act 2026 (Act No. 96 of 2026); taxpayer-specific and holiday verification required",
+                    detail={"delay_days": delay, "fy_year": fy_end.year, "ninth_month_date": ninth_month_date.isoformat(), "september_15_floor": september_floor.isoformat(), "provisional_deadline": deadline.isoformat(), "holiday_adjustment_verified": False, "extension_verified": False},
                     state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                     eval_state="UNKNOWN",
                     score_impact=0,
