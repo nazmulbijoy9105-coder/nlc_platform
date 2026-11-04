@@ -753,8 +753,6 @@ async def review_agm_evidence(
         )
         if current_verified is not None:
             current_verified.status = "SUPERSEDED"
-            current_verified.reviewed_by = current_user.id
-            current_verified.reviewed_at = datetime.now(UTC)
             db.add(AGMEvidenceVerificationEvent(
                 company_id=company_id,
                 verification_id=current_verified.id,
