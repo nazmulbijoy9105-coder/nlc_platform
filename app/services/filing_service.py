@@ -328,6 +328,19 @@ class AGMService(BaseService[AGM]):
         updated.quorum_required = quorum_required
         updated.quorum_met = quorum_met
         updated.quorum_basis = quorum_basis
+        updated.members_present = verified_members_present if membership_evidence_verified else 0
+        updated.members_total_at_agm = verified_members_total if membership_evidence_verified else None
+        updated.members_total_evidence_ref = verified_evidence_refs.get("MEMBERS_REGISTER")
+        updated.members_present_evidence_ref = verified_evidence_refs.get("ATTENDANCE_REGISTER")
+        updated.articles_quorum_verified = articles_verified
+        updated.articles_quorum_required = articles_quorum_required if articles_verified else None
+        updated.articles_quorum_verified_by = articles_reviewer if articles_verified else None
+        updated.articles_quorum_verified_at = (
+            verified_articles.reviewed_at.date()
+            if articles_verified and verified_articles and verified_articles.reviewed_at
+            else None
+        )
+        updated.articles_quorum_evidence_ref = articles_evidence_ref if articles_verified else None
         self.db.add(updated)
         await self.db.flush()
         await self.db.refresh(updated)
