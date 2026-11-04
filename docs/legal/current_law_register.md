@@ -1,3 +1,5 @@
+> **2026-11-04 reconciliation warning:** This file contains historical work-log statements, including a prior 43-ID `VERIFIED_RULE_IDS` count and claims of “VERIFIED” status. Those statements are historical snapshots, not the current branch state. On `fix/legal-corpus-current-law-reconciliation`, the engine currently declares `VERIFIED_RULE_IDS = frozenset()`, while `legal_approval_register.yaml` has `approved_rule_ids: []` and 85 `REVIEW_REQUIRED` entries. The empty allowlist is authoritative for this branch. Do not rely on older promotion logs as current legal approval. A full reconciliation of the historical log against commit history remains open.
+
 # Current-Law Correctness Register (P1) — Companies Act 1994 (Bangladesh)
 
 Maintained by the deep tech+legal audit. Sources: bdlaws.minlaw.gov.bd (act-788),
