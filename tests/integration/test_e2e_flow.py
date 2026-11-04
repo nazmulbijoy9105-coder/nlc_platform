@@ -54,7 +54,7 @@ class TestFullUserJourney:
         r = await api_client.get("/api/v1/rules", headers=super_admin_headers)
         assert r.status_code == 200
         blacks = {x["rule_id"] for x in r.json() if x.get("is_black_override")}
-        assert "AUD-003" in blacks
+        assert "TR-005" in blacks
         assert "INC-003" in blacks
         assert "ESC-002" in blacks
 

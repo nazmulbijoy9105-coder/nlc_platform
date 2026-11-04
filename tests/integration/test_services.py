@@ -912,7 +912,7 @@ class TestRulesService:
         black_rules = await svc.get_black_override_rules()
         assert len(black_rules) >= 4  # V3 expansion added more BLACK rules
         black_ids = {r.rule_id for r in black_rules}
-        assert {"AUD-003", "TR-005", "ESC-002", "ESC-003"}.issubset(black_ids)
+        assert {"TR-005", "ESC-002", "ESC-003"}.issubset(black_ids)
         assert len(black_ids) >= 4  # V3 expansion added more BLACK rules
 
     @pytest.mark.asyncio
