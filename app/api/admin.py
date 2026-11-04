@@ -350,7 +350,7 @@ async def cron_health():
 # ───────────────────────────────────────────────────────────────────
 
 @router.get("/users/{user_id}")
-async def get_user_by_id(user_id: str, admin=Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def get_user_by_id(user_id: str, admin=Depends(require_admin), db: AsyncSession = Depends(get_db_for_user)):
     """Get a single user by ID."""
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
@@ -365,7 +365,7 @@ async def get_user_by_id(user_id: str, admin=Depends(require_admin), db: AsyncSe
 
 
 @router.get("/logs/recent")
-async def get_recent_logs(limit: int = 50, admin=Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def get_recent_logs(limit: int = 50, admin=Depends(require_admin), db: AsyncSession = Depends(get_db_for_user)):
     """Return recent activity logs."""
     result = await db.execute(
         select(UserActivityLog).order_by(UserActivityLog.logged_at.desc()).limit(limit)
@@ -385,7 +385,7 @@ async def get_recent_logs(limit: int = 50, admin=Depends(require_admin), db: Asy
 
 
 @router.get("/logs/company/{company_id}")
-async def get_company_logs(company_id: str, limit: int = 50, admin=Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def get_company_logs(company_id: str, limit: int = 50, admin=Depends(require_admin), db: AsyncSession = Depends(get_db_for_user)):
     """Return activity logs for a specific company."""
     result = await db.execute(
         select(UserActivityLog)
