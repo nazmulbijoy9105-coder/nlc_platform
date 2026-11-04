@@ -484,8 +484,9 @@ CATEGORY_CAPS: dict[str, tuple[int, tuple[str, ...]]] = {
 # (AUD-*, SH-*, TR-002~006, ESC-003~005, TAX-*, LBR-*, BNK-*, FX-*,
 # BSEC-*) require lawyer review before they can influence the score.
 #
-# BLACK-severity rules (DEF-001) are ALWAYS enforced regardless of
-# verification status — critical safety overrides cannot be gated.
+# No BLACK override is exempt from independent legal approval. A critical
+# severity label cannot bypass the global release gate or the exact rule-ID
+# allowlist.
 VERIFIED_RULE_IDS: frozenset[str] = frozenset()
 # Release remains disabled until the complete applicable rule corpus has named, independent current-law approval.
 # A partial/empty allowlist must never make an unreviewed company appear GREEN.
