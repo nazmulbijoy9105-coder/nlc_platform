@@ -224,7 +224,6 @@ class TestAGMRules:
         profile = self._verified_agm_quorum_profile(
             build_profile,
             articles_quorum_required=4,
-            members_present_at_agm=3,
         )
         output = rule_engine.evaluate(profile)
         flag = next(f for f in output.flags if f.rule_id == "AGM-005")

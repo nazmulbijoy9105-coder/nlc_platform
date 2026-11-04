@@ -55,6 +55,7 @@ class TestFullUserJourney:
         assert r.status_code == 200
         blacks = {x["rule_id"] for x in r.json() if x.get("is_black_override")}
         assert "AUD-003" not in blacks
+        assert "TR-005" in blacks
         assert "INC-003" in blacks
         assert "ESC-002" in blacks
 

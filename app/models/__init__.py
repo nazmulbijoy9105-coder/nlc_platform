@@ -66,7 +66,13 @@ from .enums import (
 )
 
 # ── Filings (AGM, Audit, Annual Return) ──────────────────────────────
-from .filings import AGM, AnnualReturn, Audit
+from .filings import (
+    AGM,
+    AGMEvidenceVerification,
+    AGMEvidenceVerificationEvent,
+    AnnualReturn,
+    Audit,
+)
 
 # ── Infrastructure (Notifications, SRO, Registers, Activity Log) ─────
 from .infrastructure import (
@@ -94,6 +100,8 @@ from .user import User
 # ── All models (28 tables) for reference ─────────────────────────────
 __all__ = [
     "AGM",
+    "AGMEvidenceVerification",
+    "AGMEvidenceVerificationEvent",
     "AIOutputLog",
     "AIPromptTemplate",
     "ArticlesVerification",

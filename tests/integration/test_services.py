@@ -17,7 +17,7 @@ Coverage:
 from __future__ import annotations
 
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -25,6 +25,48 @@ import pytest
 from app.models.enums import UserRole
 
 pytestmark = [pytest.mark.integration]
+
+
+async def _seed_verified_articles(db, company, submitter_id, reviewer_id, quorum_required=None):
+    """Create checksum/version-bound Articles evidence for AGM service tests."""
+    from app.models.documents import ArticlesVerification, Document
+    from app.models.enums import DocumentType
+
+    checksum = uuid.uuid4().hex + uuid.uuid4().hex
+    document = Document(
+        id=uuid.uuid4(),
+        company_id=company.id,
+        document_type=DocumentType.ARTICLES_OF_ASSOCIATION,
+        title="Test Articles of Association",
+        version=1,
+        checksum_sha256=checksum,
+        is_active=True,
+    )
+    db.add(document)
+    now = datetime.now(timezone.utc)
+    verification = ArticlesVerification(
+        id=uuid.uuid4(),
+        company_id=company.id,
+        document_id=document.id,
+        source_checksum_sha256=checksum,
+        source_document_version=1,
+        status="VERIFIED",
+        submitted_by=submitter_id,
+        submitted_at=now,
+        reviewed_by=reviewer_id,
+        reviewed_at=now,
+        effective_from=date(2020, 1, 1),
+        quorum_variation_exists=quorum_required is not None,
+        quorum_required=quorum_required,
+        clause_reference="Article 45",
+        quorum_clause_text=(
+            f"Quorum shall be {quorum_required} members."
+            if quorum_required is not None else None
+        ),
+    )
+    db.add(verification)
+    await db.flush()
+    return verification
 
 
 # =============================================================================
@@ -535,6 +577,29 @@ class TestFilingService:
         assert agm.id is not None
         assert agm.company_id == db_company.id
         assert agm.financial_year == 2023
+        assert agm.agm_deadline == date(2024, 6, 30)
+        assert agm.agm_held is False
+        assert agm.members_present == 0
+        assert agm.quorum_required is None
+        assert agm.quorum_met is None
+
+    @pytest.mark.asyncio
+    async def test_create_agm_rejects_direct_held_status_without_verified_evidence(
+        self, db, db_company
+    ):
+        from app.services.filing_service import AGMService
+
+        svc = AGMService(db)
+        with pytest.raises(ValueError, match=r"mark_held\(\)"):
+            await svc.create_agm(
+                company_id=db_company.id,
+                financial_year=2024,
+                agm_held=True,
+                agm_date=date(2025, 5, 15),
+                members_present=999,
+                quorum_required=1,
+                quorum_met=True,
+            )
 
     @pytest.mark.asyncio
     async def test_create_agm_duplicate_year_raises(self, db, db_company):
@@ -591,18 +656,15 @@ class TestFilingService:
         assert updated.quorum_basis == "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
 
     @pytest.mark.asyncio
-    async def test_mark_agm_held_large_private_company_uses_statutory_default_after_articles_review(
-        self, db, db_company
+    async def test_mark_agm_held_does_not_trust_unreviewed_membership_references(
+        self, db, db_company, db_user, db_super_admin
     ):
         from app.services.filing_service import AGMService
 
         db_company.member_count = 7
-        db_company.articles_quorum_verified = True
-        db_company.articles_quorum_required = None
-        db_company.articles_quorum_verified_by = "test-counsel"
-        db_company.articles_quorum_verified_at = date(2023, 4, 1)
-        db_company.articles_quorum_evidence_ref = "test-evidence://current-articles"
-        await db.flush()
+        await _seed_verified_articles(
+            db, db_company, db_user.id, db_super_admin.id
+        )
 
         svc = AGMService(db)
         agm = await svc.create_agm(company_id=db_company.id, financial_year=2022)
@@ -616,21 +678,20 @@ class TestFilingService:
             members_present_evidence_ref="test-evidence://agm-attendance-register",
         )
         assert updated is not None
-        assert updated.quorum_required == 3
-        assert updated.quorum_met is False
-        assert updated.quorum_basis == "SECTION_85_2_B_DEFAULT_ARTICLES_VERIFIED_NO_VARIATION"
+        assert updated.quorum_required is None
+        assert updated.quorum_met is None
+        assert updated.quorum_basis == "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
 
     @pytest.mark.asyncio
-    async def test_mark_agm_held_uses_articles_specific_quorum_override(self, db, db_company):
+    async def test_mark_agm_held_does_not_apply_articles_override_without_membership_review(
+        self, db, db_company, db_user, db_super_admin
+    ):
         from app.services.filing_service import AGMService
 
         db_company.member_count = 7
-        db_company.articles_quorum_verified = True
-        db_company.articles_quorum_required = 4
-        db_company.articles_quorum_verified_by = "test-counsel"
-        db_company.articles_quorum_verified_at = date(2023, 4, 1)
-        db_company.articles_quorum_evidence_ref = "test-evidence://current-articles"
-        await db.flush()
+        await _seed_verified_articles(
+            db, db_company, db_user.id, db_super_admin.id, quorum_required=4
+        )
 
         svc = AGMService(db)
         agm = await svc.create_agm(company_id=db_company.id, financial_year=2022)
@@ -644,9 +705,9 @@ class TestFilingService:
             members_present_evidence_ref="test-evidence://agm-attendance-register",
         )
         assert updated is not None
-        assert updated.quorum_required == 4
-        assert updated.quorum_met is False
-        assert updated.quorum_basis == "ARTICLES_VERIFIED"
+        assert updated.quorum_required is None
+        assert updated.quorum_met is None
+        assert updated.quorum_basis == "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
 
     @pytest.mark.asyncio
     async def test_mark_agm_held_missing_membership_evidence_is_not_evaluated(self, db, db_company):

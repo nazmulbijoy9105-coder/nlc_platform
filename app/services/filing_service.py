@@ -16,7 +16,14 @@ from typing import TYPE_CHECKING
 from sqlalchemy import select
 
 from app.models.company import Company
-from app.models.filings import AGM, AnnualReturn, Audit
+from app.models.enums import DocumentType
+from app.models.filings import (
+    AGM,
+    AGMEvidenceVerification,
+    AnnualReturn,
+    Audit,
+)
+from app.models.documents import ArticlesVerification, Document
 from app.models.infrastructure import StatutoryRegister
 from app.services.base import BaseService
 
@@ -62,6 +69,8 @@ class AGMService(BaseService[AGM]):
         """
         # Backward-compatible service alias; the ORM column is agm_deadline.
         if agm_deadline is None:
+        # Backward-compatible alias used by older service callers.
+        if agm_deadline is None and agm_due_date is not None:
             agm_deadline = agm_due_date
 
         # Auto-calculate default status
@@ -87,6 +96,12 @@ class AGMService(BaseService[AGM]):
             quorum_required = None
             quorum_met = None
             quorum_basis = "NOT_EVALUATED"
+        # AGM creation only creates a planned record. A held AGM must be
+        # recorded through mark_held(), which derives quorum exclusively from
+        # reviewed, version-pinned Articles, members-register and attendance
+        # evidence. Never accept caller-supplied quorum counts or booleans here.
+        if agm_held:
+            raise ValueError("Use mark_held() to record an AGM as held with verified evidence.")
 
         return await self.create(
             company_id=company_id,
@@ -94,16 +109,16 @@ class AGMService(BaseService[AGM]):
             agm_type=agm_type,
             agm_deadline=agm_deadline,
             scheduled_date=scheduled_date,
-            agm_held=agm_held,
-            agm_date=agm_date,
+            agm_held=False,
+            agm_date=None,
             notice_sent_date=notice_sent_date,
-            notice_days_before=(agm_date - notice_sent_date).days if (agm_date and notice_sent_date) else None,
-            notice_defective=notice_defective,
-            notice_missing=notice_missing,
-            members_present=members_present,
-            quorum_required=quorum_required,
-            quorum_met=quorum_met,
-            quorum_basis=quorum_basis,
+            notice_days_before=None,
+            notice_defective=False,
+            notice_missing=False,
+            members_present=0,
+            quorum_required=None,
+            quorum_met=None,
+            quorum_basis=None,
             auditor_reappointed=auditor_reappointed,
             minutes_prepared=minutes_prepared,
             minutes_filed_rjsc=minutes_filed_rjsc,
@@ -173,25 +188,105 @@ class AGMService(BaseService[AGM]):
         company_type = getattr(company, "company_type", None) if company else None
         company_type = getattr(company_type, "value", company_type)
 
-        articles_reviewer = getattr(company, "articles_quorum_verified_by", None)
-        articles_evidence_ref = getattr(company, "articles_quorum_evidence_ref", None)
-        articles_verified = (
-            getattr(company, "articles_quorum_verified", None) is True
-            and isinstance(articles_reviewer, str)
-            and bool(articles_reviewer.strip())
-            and getattr(company, "articles_quorum_verified_at", None) is not None
-            and isinstance(articles_evidence_ref, str)
-            and bool(articles_evidence_ref.strip())
+        # Resolve the Articles version that was effective on the actual AGM
+        # date. Never trust mutable Company booleans as legal verification.
+        verified_articles = await self.db.scalar(
+            select(ArticlesVerification)
+            .where(
+                ArticlesVerification.company_id == agm.company_id,
+                ArticlesVerification.status.in_(("VERIFIED", "SUPERSEDED", "REVOKED")),
+                ArticlesVerification.effective_from <= agm_date,
+            )
+            .order_by(
+                ArticlesVerification.effective_from.desc(),
+                ArticlesVerification.reviewed_at.desc(),
+            )
+            .limit(1)
         )
-        articles_quorum_required = getattr(company, "articles_quorum_required", None)
+        articles_reviewer = None
+        articles_evidence_ref = None
+        articles_quorum_required = None
+        articles_verified = False
+        if verified_articles is not None:
+            source_document = await self.db.scalar(
+                select(Document).where(
+                    Document.id == verified_articles.document_id,
+                    Document.company_id == agm.company_id,
+                    Document.is_active.is_(True),
+                    Document.document_type == DocumentType.ARTICLES_OF_ASSOCIATION,
+                    Document.version == verified_articles.source_document_version,
+                )
+            )
+            source_matches = (
+                source_document is not None
+                and verified_articles.reviewed_by is not None
+                and verified_articles.reviewed_by != verified_articles.submitted_by
+                and source_document.ai_generated is False
+                and isinstance(source_document.checksum_sha256, str)
+                and source_document.checksum_sha256.lower()
+                    == verified_articles.source_checksum_sha256.lower()
+            )
+            revoked_before_meeting = (
+                verified_articles.status == "REVOKED"
+                and verified_articles.revoked_at is not None
+                and verified_articles.revoked_at.date() <= agm_date
+            )
+            articles_verified = source_matches and not revoked_before_meeting
+            if articles_verified:
+                articles_reviewer = str(verified_articles.reviewed_by)
+                articles_evidence_ref = (
+                    f"document:{verified_articles.document_id}:"
+                    f"sha256:{verified_articles.source_checksum_sha256}"
+                )
+                articles_quorum_required = (
+                    verified_articles.quorum_required
+                    if verified_articles.quorum_variation_exists
+                    else None
+                )
+        # Resolve both evidence types for this exact AGM and meeting date.
+        # Request counts and free-text references are deliberately ignored.
+        evidence_rows = (await self.db.scalars(
+            select(AGMEvidenceVerification).where(
+                AGMEvidenceVerification.company_id == agm.company_id,
+                AGMEvidenceVerification.agm_id == agm.id,
+                AGMEvidenceVerification.meeting_date == agm_date,
+                AGMEvidenceVerification.status == "VERIFIED",
+            )
+        )).all()
+        verified_counts: dict[str, int] = {}
+        verified_evidence_refs: dict[str, str] = {}
+        for evidence in evidence_rows:
+            if evidence.reviewed_by is None or evidence.reviewed_by == evidence.submitted_by:
+                continue
+            source = await self.db.scalar(
+                select(Document).where(
+                    Document.id == evidence.document_id,
+                    Document.company_id == agm.company_id,
+                    Document.is_active.is_(True),
+                    Document.version == evidence.source_document_version,
+                    Document.document_type == DocumentType.OTHER,
+                    Document.title == f"AGM_EVIDENCE:{evidence.evidence_kind}",
+                    Document.ai_generated.is_(False),
+                )
+            )
+            if (
+                source is None
+                or not isinstance(source.checksum_sha256, str)
+                or source.checksum_sha256.lower() != evidence.source_checksum_sha256.lower()
+            ):
+                continue
+            verified_counts[evidence.evidence_kind] = evidence.verified_count
+            verified_evidence_refs[evidence.evidence_kind] = (
+                f"document:{evidence.document_id}:sha256:{evidence.source_checksum_sha256}"
+            )
+
+        verified_members_total = verified_counts.get("MEMBERS_REGISTER")
+        verified_members_present = verified_counts.get("ATTENDANCE_REGISTER")
         membership_evidence_verified = (
-            isinstance(members_total_at_agm, int)
-            and members_total_at_agm > 0
-            and isinstance(members_total_evidence_ref, str)
-            and bool(members_total_evidence_ref.strip())
-            and isinstance(members_present_evidence_ref, str)
-            and bool(members_present_evidence_ref.strip())
-            and members_present <= members_total_at_agm
+            verified_members_total is not None
+            and verified_members_total >= 1
+            and verified_members_present is not None
+            and verified_members_present <= verified_members_total
         )
         if (
             company_type == "PRIVATE_LIMITED"
@@ -199,9 +294,9 @@ class AGMService(BaseService[AGM]):
             and articles_verified
             and (articles_quorum_required is None or articles_quorum_required >= 1)
         ):
-            statutory_default = 2 if members_total_at_agm <= 6 else 3
+            statutory_default = 2 if verified_members_total <= 6 else 3
             quorum_required = articles_quorum_required or statutory_default
-            quorum_met: bool | None = members_present >= quorum_required
+            quorum_met: bool | None = verified_members_present >= quorum_required
             quorum_basis = (
                 "ARTICLES_VERIFIED"
                 if articles_quorum_required is not None
@@ -223,21 +318,23 @@ class AGMService(BaseService[AGM]):
             agm_held=True,
             agm_date=agm_date,
             venue=venue,
-            members_present=members_present,
+            members_present=verified_members_present if membership_evidence_verified else 0,
             quorum_required=quorum_required,
             quorum_met=quorum_met,
             auditor_reappointed=auditor_reappointed,
             accounts_adopted=accounts_adopted,
             agm_held_without_audit=agm_held_without_audit,
             minutes_document_id=minutes_document_id,
-            members_total_at_agm=members_total_at_agm,
-            members_total_evidence_ref=members_total_evidence_ref,
-            members_present_evidence_ref=members_present_evidence_ref,
+            members_total_at_agm=verified_members_total if membership_evidence_verified else None,
+            members_total_evidence_ref=verified_evidence_refs.get('MEMBERS_REGISTER'),
+            members_present_evidence_ref=verified_evidence_refs.get('ATTENDANCE_REGISTER'),
             articles_quorum_verified=articles_verified,
             articles_quorum_required=articles_quorum_required if articles_verified else None,
             articles_quorum_verified_by=articles_reviewer if articles_verified else None,
             articles_quorum_verified_at=(
-                getattr(company, "articles_quorum_verified_at", None) if articles_verified else None
+                verified_articles.reviewed_at.date()
+                if articles_verified and verified_articles and verified_articles.reviewed_at
+                else None
             ),
             articles_quorum_evidence_ref=articles_evidence_ref if articles_verified else None,
             is_default=is_default,
@@ -250,6 +347,19 @@ class AGMService(BaseService[AGM]):
         updated.quorum_required = quorum_required
         updated.quorum_met = quorum_met
         updated.quorum_basis = quorum_basis
+        updated.members_present = verified_members_present if membership_evidence_verified else 0
+        updated.members_total_at_agm = verified_members_total if membership_evidence_verified else None
+        updated.members_total_evidence_ref = verified_evidence_refs.get("MEMBERS_REGISTER")
+        updated.members_present_evidence_ref = verified_evidence_refs.get("ATTENDANCE_REGISTER")
+        updated.articles_quorum_verified = articles_verified
+        updated.articles_quorum_required = articles_quorum_required if articles_verified else None
+        updated.articles_quorum_verified_by = articles_reviewer if articles_verified else None
+        updated.articles_quorum_verified_at = (
+            verified_articles.reviewed_at.date()
+            if articles_verified and verified_articles and verified_articles.reviewed_at
+            else None
+        )
+        updated.articles_quorum_evidence_ref = articles_evidence_ref if articles_verified else None
         self.db.add(updated)
         await self.db.flush()
         await self.db.refresh(updated)
