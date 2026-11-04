@@ -439,4 +439,4 @@ def test_unapproved_black_override_cannot_force_zero_score():
     )
     score = NLCRuleEngine()._calculate_score([unapproved_black], profile)
     assert score.final_score == 100
-    assert score.black_override_applied is False
+    assert score.override_applied is False
