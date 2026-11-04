@@ -13,8 +13,13 @@ def test_missing_agm_record_keeps_attendance_and_auditor_status_unknown():
     assert evidence == {
         "members_present_at_agm": None,
         "auditor_reappointed_at_agm": None,
+        "auditor_reappointment_verified": False,
+        "auditor_reappointment_evidence_ref": None,
         "agm_minutes_prepared": None,
         "notice_sent_date": None,
+        "short_notice_consent_obtained": None,
+        "short_notice_consent_verified": False,
+        "short_notice_consent_evidence_ref": None,
     }
 
 
@@ -24,6 +29,14 @@ def test_agm_profile_evidence_comes_from_the_latest_agm_record():
         auditor_reappointed=False,
         minutes_prepared=True,
         notice_sent_date=date(2026, 1, 1),
+        members_present_verified=True,
+        members_present_evidence_ref="AGM-MINUTES-001",
+        members_present_verified_at=date(2026, 1, 2),
+        members_present_verified_by="reviewer-001",
+        auditor_reappointment_verified=True,
+        auditor_reappointment_evidence_ref="AGM-MINUTES-001",
+        auditor_reappointment_verified_at=date(2026, 1, 2),
+        auditor_reappointment_verified_by="reviewer-001",
     )
 
     evidence = _agm_profile_evidence(meeting)
@@ -45,7 +58,7 @@ def test_default_zero_attendance_is_not_treated_as_verified_quorum_breach():
     evidence = _agm_profile_evidence(meeting)
 
     assert evidence["members_present_at_agm"] is None
-    assert evidence["auditor_reappointed_at_agm"] is True
+    assert evidence["auditor_reappointed_at_agm"] is None
     assert evidence["agm_minutes_prepared"] is None
 
 
@@ -101,6 +114,9 @@ def test_verified_zero_directors_triggers_minimum_director_rule():
         incorporation_date=date(today.year - 2, 1, 1),
         current_director_count=0,
         directors_verified=True,
+        directors_verification_evidence_ref="RJSC-DIRECTORS-001",
+        directors_verified_at=today,
+        directors_verified_by="reviewer-001",
         agm_count=1,
         annual_return_filed=True,
         first_auditor_appointed=True,

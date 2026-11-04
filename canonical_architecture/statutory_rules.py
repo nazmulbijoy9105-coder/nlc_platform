@@ -17,6 +17,8 @@ class RuleState(str, Enum):
     VERIFIED_ABSENT = "VERIFIED_ABSENT"  # confirmed absence via verified external source
     UNKNOWN = "UNKNOWN"
     NOT_APPLICABLE = "NOT_APPLICABLE"
+    DISPUTED = "DISPUTED"
+    REQUIRES_LAWYER_JUDGMENT = "REQUIRES_LAWYER_JUDGMENT"
     CONDITIONAL = "CONDITIONAL"      # defined; no evaluator emits it yet
     CONTRADICTORY = "CONTRADICTORY"
 
@@ -135,8 +137,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "INC-003": {
         "rule_id": "INC-003",
         "legal_domain": "Corporate",
-        "law": "Section 90(2), Companies Act 1994 (Bangladesh)",
-        "requirement": "Minimum Directors Not Appointed - Private company has fewer than 2 directors. Section 90(2): minimum 2 required. Cannot validly hold board meetings or pass resolutions.",
+        "law": "Sections 90(1) and 90(2), Companies Act 1994 (Bangladesh)",
+        "requirement": "Minimum directors: three for a public company and a private subsidiary of a public company under Section 90(1); two for other private companies under Section 90(2). Determine company classification and verify director count before finding a breach.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -196,6 +198,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "AUD-001",
         "legal_domain": "Corporate",
         "law": "Section 210(6), Companies Act 1994 (Bangladesh)",
+        "requirement": "First auditor not appointed by the Board within one calendar month of registration. Distinguish the Board's first-auditor appointment duty under Section 210(6) from the auditor's separate notice to the Registrar under Section 210(2).",
         "requirement": "First auditor not appointed by the Board within one month of registration. The engine calculates the one-month period using calendar-month semantics, not a fixed 30-day interval.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
@@ -210,8 +213,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AUD-002": {
         "rule_id": "AUD-002",
         "legal_domain": "Corporate",
-        "law": "Section 151, Companies Act 1994 (Bangladesh)",
-        "requirement": "Audit Not Completed Before AGM - Annual audit not completed before AGM. Section 151: directors must lay audited accounts at AGM. Presenting unaudited accounts renders adoption invalid and exposes directors to liability.",
+        "law": "Section 183, Companies Act 1994 (Bangladesh)",
+        "requirement": "Accounts and audit status for AGM: Section 183 governs the balance sheet and profit-and-loss or income-and-expenditure account to be laid before the AGM. Do not infer that every resolution is void merely because audit evidence is absent.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -225,23 +228,23 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AUD-003": {
         "rule_id": "AUD-003",
         "legal_domain": "Corporate",
-        "law": "Sections 151, 210, Companies Act 1994 (Bangladesh)",
-        "requirement": "AGM Held Without Completed Audit — BLACK OVERRIDE - AGM held but no audit completed. Fundamental statutory breach invalidating AGM, accounts, and all resolutions. Company may be liable for fraudulent AGM. BLACK OVERRIDE: forces score to BLACK band. Corporate Rescue mandatory.",
+        "law": "Sections 183 and 210, Companies Act 1994 (Bangladesh)",
+        "requirement": "AGM held without completed audit: this is a serious compliance finding requiring legal review of the accounts, auditor appointment and AGM consequences. It is not, by itself, a statutory BLACK classification or automatic finding of fraud; BLACK is an NLC escalation policy.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "BLACK",
-        "score_impact": 25,
+        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "RED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "AUD-004": {
         "rule_id": "AUD-004",
         "legal_domain": "Corporate",
-        "law": "Section 210(2), Companies Act 1994 (Bangladesh)",
-        "requirement": "Auditor Not Reappointed at AGM - Auditor not reappointed at AGM. Section 210(2): mandatory at every AGM where accounts presented. Company without appointed auditor cannot file valid annual return.",
+        "law": "Section 210(3), Companies Act 1994 (Bangladesh)",
+        "requirement": "Auditor appointment or reappointment at an AGM is assessed under Section 210(3), using verified AGM minutes and appointment records.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -255,7 +258,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AGM-001": {
         "rule_id": "AGM-001",
         "legal_domain": "Corporate",
-        "law": "Section 81, Companies Act 1994 (Bangladesh)",
+        "law": "Section 81(1), Companies Act 1994 (Bangladesh)",
         "requirement": "First AGM Default - First AGM not held within 18 months (548 days) of incorporation. Section 81 is mandatory; no waiver for private companies. Default counts from day after deadline.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
@@ -270,14 +273,14 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AGM-002": {
         "rule_id": "AGM-002",
         "legal_domain": "Corporate",
-        "law": "Section 81, Companies Act 1994 (Bangladesh)",
+        "law": "Section 81(1), Companies Act 1994 (Bangladesh)",
         "requirement": "Subsequent AGM Default - Subsequent AGM not held within 15 months of preceding AGM, or 6 months of FY end — whichever earlier. Section 81 makes no exception for size or dormancy.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
+        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
         "severity": "RED",
         "score_impact": 20,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
@@ -285,8 +288,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AGM-003": {
         "rule_id": "AGM-003",
         "legal_domain": "Corporate",
-        "law": "Section 85, Companies Act 1994 (Bangladesh)",
-        "requirement": "AGM Notice Defective — Insufficient Days - AGM notice sent with fewer than 21 clear days before meeting. Section 85 requires 21 clear days. 'Clear days' excludes day of service and day of meeting. Resolutions at improperly noticed AGM may be void.",
+        "law": "Section 85(1)(a), Companies Act 1994 (Bangladesh)",
+        "requirement": "AGM short notice may be valid with written consent of all members entitled to attend and vote. Do not classify as defective unless absence of the required consent is verified.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -300,8 +303,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AGM-004": {
         "rule_id": "AGM-004",
         "legal_domain": "Corporate",
-        "law": "Section 85, Companies Act 1994 (Bangladesh)",
-        "requirement": "AGM Notice Missing - No written AGM notice sent to members. Section 85 requires notice specifying date, time, place, and business. AGM without proper notice is a nullity — all resolutions void.",
+        "law": "Section 85(1)(a), Companies Act 1994 (Bangladesh)",
+        "requirement": "No notice date is recorded before the AGM. A defect is confirmed only where written short-notice consent from all members entitled to attend and vote is verified absent; otherwise legal status remains unknown.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -315,8 +318,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AGM-005": {
         "rule_id": "AGM-005",
         "legal_domain": "Corporate",
-        "law": "Section 85, Companies Act 1994 (Bangladesh)",
-        "requirement": "AGM Quorum Not Met - AGM held but quorum not satisfied. Section 85(2)(b): private companies need minimum 2 members present in person. Resolutions without quorum have no legal effect.",
+        "law": "Section 85(2)(b), Companies Act 1994 (Bangladesh)",
+        "requirement": "AGM quorum is subject to the Articles: under the statutory default, a private company with no more than six members requires two members present; one with more than six requires three. Require verified attendance and a verified Articles/statutory quorum basis.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -405,8 +408,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "DIR-001": {
         "rule_id": "DIR-001",
         "legal_domain": "Corporate",
-        "law": "Section 92, Companies Act 1994 (Bangladesh)",
-        "requirement": "Director Appointment Not Filed Within 14 Days - Director appointment not filed via Form XII within 14 days. Section 92 requires 14-day filing (NOT 30 days). Until filed, third parties cannot verify director authority, invalidating contracts and resolutions.",
+        "law": "Section 115, Companies Act 1994 (Bangladesh)",
+        "requirement": "Director appointment particulars not filed via Form XII within 14 days under Section 115. Filing default is distinct from the validity of the appointment itself.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -420,8 +423,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "DIR-002": {
         "rule_id": "DIR-002",
         "legal_domain": "Corporate",
-        "law": "Section 92, Companies Act 1994 (Bangladesh)",
-        "requirement": "Director Departure Not Filed Within 14 Days - Director resignation/removal/death not filed via Form XII within 14 days. Section 92 requires 14-day filing. Until filed, departed director remains on public record as active, creating liability for post-departure obligations.",
+        "law": "Section 115, Companies Act 1994 (Bangladesh)",
+        "requirement": "Director cessation particulars not filed via Form XII within 14 days under Section 115. Filing default is distinct from the effective date and legal consequences of cessation.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -450,16 +453,16 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "DIR-004": {
         "rule_id": "DIR-004",
         "legal_domain": "Corporate",
-        "law": "Section 92, Companies Act 1994 (Bangladesh)",
-        "requirement": "Departed Director Still Active on RJSC Register - Departed director still recorded as active on RJSC register because Form XII not filed. Departed director continues to bear personal liability for obligations while on record. Enables fraudulent authority claims.",
+        "law": "Section 115, Companies Act 1994 (Bangladesh)",
+        "requirement": "Late or missing Form XII cessation particulars require case-specific review of the filing default, actual cessation date and third-party reliance. Non-filing alone does not automatically establish continuing director liability.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 10,
+        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "YELLOW",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "SH-001": {
@@ -780,8 +783,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "ESC-003": {
         "rule_id": "ESC-003",
         "legal_domain": "Corporate",
-        "law": "Section 304, Companies Act 1994 (Bangladesh)",
-        "requirement": "Corporate Rescue Mandatory — Systemic Failure - Score below BLACK threshold (<=29) due to systemic multi-module failures: BLACK overrides from AUD-003, TR-005, ESC-002, or RED/YELLOW across 4+ modules. Legal status, contractual capacity, and director exposure all critical. 10-step Corporate Rescue mandatory within 30 days. BLACK OVERRIDE: maintains BLACK until rescue verified.",
+        "law": "NLC internal risk policy (not a statutory Companies Act classification)",
+        "requirement": "Internal BLACK escalation and rescue workflow. A BLACK classification, score threshold and rescue deadline are NLC policy decisions, not statutory consequences. Policy-owner approval is required.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -946,15 +949,15 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "DEF-001",
         "legal_domain": "Corporate",
         "law": "Section 94, Companies Act 1994 (Bangladesh)",
-        "requirement": "Director Disqualified - One or more directors disqualified under Section 94. Cannot act as director for 5 years.",
+        "requirement": "Director disqualification under Section 94: assess only a specified statutory or Articles ground, director identity, authoritative evidence, effective date and continuing status. The unpaid-call threshold remains disputed across Bengali/English materials (180 days versus six months) and requires lawyer review. Section 94 does not impose a universal five-year disqualification period.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "BLACK",
-        "score_impact": 20,
+        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN, RuleState.DISPUTED],
+        "severity": "RED",
+        "score_impact": 10,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "DEF-002": {
