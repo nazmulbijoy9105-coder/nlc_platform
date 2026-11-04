@@ -1256,12 +1256,14 @@ class NLCRuleEngine:
         if c.agm_held_this_cycle and c.agm_minutes_prepared is False:
             self._add_flag(ComplianceFlag(
                 rule_id="AGM-006",
-                flag_code="AGM_MINUTES_NOT_PREPARED",
-                severity=Severity.YELLOW,
-                score_impact=5,
+                flag_code="AGM_MINUTES_STATUS_UNVERIFIED",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="AGM held but minutes not prepared. Section 89: minutes are prima facie evidence.",
+                description="The record indicates minutes may be absent, but the minute book and contemporaneous records have not been independently verified.",
                 statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
             ))
 
     # ───────────────────────────────────────────────────────────────────
