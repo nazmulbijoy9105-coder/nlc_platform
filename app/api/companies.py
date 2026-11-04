@@ -160,8 +160,10 @@ class FlagResponse(BaseModel):
 
 class ScoreHistoryEntry(BaseModel):
     snapshot_month: str
-    score: int
+    score: int | None
     risk_band: str
+    evaluation_status: str = "COMPLETED"
+    engine_version: str | None = None
     active_flags: int
     black_flags: int
     red_flags: int
@@ -358,7 +360,7 @@ async def download_compliance_pdf(company_id: uuid.UUID, db: AsyncSession = Depe
 async def get_score_history(company_id: uuid.UUID, months: int = Query(default=12, ge=1, le=60), db: AsyncSession = Depends(get_db_for_user)):
     svc = ComplianceService(db)
     history = await svc.get_score_history(company_id=company_id, months=months)
-    return [ScoreHistoryEntry(snapshot_month=h["month"], score=h["score"], risk_band=h["risk_band"], active_flags=h["active_flags"], black_flags=h["black_flags"], red_flags=h.get('red_flags', 0), yellow_flags=h.get('yellow_flags', 0), snapshot_date=h["calculated_at"]) for h in history]
+    return [ScoreHistoryEntry(snapshot_month=h["month"], score=h["score"], risk_band=h["risk_band"], evaluation_status=h.get("evaluation_status", "COMPLETED"), engine_version=h.get("engine_version"), active_flags=h["active_flags"], black_flags=h["black_flags"], red_flags=h.get('red_flags', 0), yellow_flags=h.get('yellow_flags', 0), snapshot_date=h["calculated_at"]) for h in history]
 
 
 @router.get("/dashboard/kpis", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Portfolio KPIs")

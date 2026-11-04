@@ -207,7 +207,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 }
                 for index, f in enumerate(output.flags)
             ],
-            "score_breakdown": {
+            "score_breakdown": ({
                 "agm_score":         output.score_breakdown.agm_score,
                 "audit_score":       output.score_breakdown.audit_score,
                 "return_score":      output.score_breakdown.return_score,
@@ -231,7 +231,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "yellow_flag_count": output.score_breakdown.yellow_flag_count,
                 "override_applied": output.score_breakdown.override_applied,
                 "override_reason": output.score_breakdown.override_reason,
-            },
+            } if LEGAL_SCORE_RELEASED else None),
             "rescue_required": _is_rescue_required(output),
             "rescue_sequence": output.rescue_sequence,
             "engine_version":  output.engine_version,
@@ -538,19 +538,22 @@ class ComplianceService(BaseService[ComplianceFlag]):
             .limit(months)
         )
         rows = result.scalars().all()
+        from app.rule_engine.engine import LEGAL_SCORE_RELEASED
         return [
             {
                 "month":          row.snapshot_month.isoformat(),
-                "score":          row.score,
-                "risk_band":      row.risk_band,
-                "agm_score":      row.agm_score,
-                "audit_score":    row.audit_score,
-                "return_score":   row.return_score,
-                "director_score": row.director_score,
-                "shareholding_score": row.shareholding_score,
+                "score":          row.score if LEGAL_SCORE_RELEASED and row.evaluation_status == "COMPLETED" else None,
+                "risk_band":      row.risk_band if LEGAL_SCORE_RELEASED and row.evaluation_status == "COMPLETED" else "NOT_EVALUATED",
+                "agm_score":      row.agm_score if LEGAL_SCORE_RELEASED and row.evaluation_status == "COMPLETED" else None,
+                "audit_score":    row.audit_score if LEGAL_SCORE_RELEASED and row.evaluation_status == "COMPLETED" else None,
+                "return_score":   row.return_score if LEGAL_SCORE_RELEASED and row.evaluation_status == "COMPLETED" else None,
+                "director_score": row.director_score if LEGAL_SCORE_RELEASED and row.evaluation_status == "COMPLETED" else None,
+                "shareholding_score": row.shareholding_score if LEGAL_SCORE_RELEASED and row.evaluation_status == "COMPLETED" else None,
                 "active_flags":   row.active_flags_count,
-                "black_flags":    row.black_flags_count,
-                "override":       row.override_applied,
+                "black_flags":    row.black_flags_count if LEGAL_SCORE_RELEASED else 0,
+                "override":       row.override_applied if LEGAL_SCORE_RELEASED else False,
+                "evaluation_status": row.evaluation_status if LEGAL_SCORE_RELEASED else "NOT_RELEASED_PENDING_INDEPENDENT_LEGAL_APPROVAL",
+                "engine_version": row.engine_version,
                 "calculated_at":  row.calculated_at.isoformat(),
             }
             for row in rows
@@ -599,4 +602,19 @@ class ComplianceService(BaseService[ComplianceFlag]):
             """)
             result = await self.db.execute(query)
         row = result.mappings().one_or_none()
-        return dict(row) if row else {}
+        data = dict(row) if row else {}
+        from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+        if not LEGAL_SCORE_RELEASED:
+            # Historical stored bands are not current legal assessments while
+            # the independent approval gate is closed.
+            data.update({
+                "green_count": 0,
+                "yellow_count": 0,
+                "red_black_count": 0,
+                "average_score": None,
+                "avg_score": None,
+                "score_status": "NOT_RELEASED_PENDING_INDEPENDENT_LEGAL_APPROVAL",
+            })
+        else:
+            data["score_status"] = "RELEASED"
+        return data
