@@ -2114,6 +2114,11 @@ class NLCRuleEngine:
             )
             for rule_id, flag_code, supplied_status, description in candidates:
                 if supplied_status is False:
+                    basis = (
+                        "Applicable BSEC financial-reporting instrument; exact notification, issuer class, reporting period and due date require verification"
+                        if rule_id == "BSEC-001"
+                        else "BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification"
+                    )
                     self._add_flag(ComplianceFlag(
                         rule_id=rule_id,
                         flag_code=flag_code,
@@ -2121,7 +2126,7 @@ class NLCRuleEngine:
                         score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=description,
-                        statutory_basis="BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification",
+                        statutory_basis=basis,
                         state=RuleState.UNKNOWN,
                         eval_state="UNKNOWN",
                     ))
