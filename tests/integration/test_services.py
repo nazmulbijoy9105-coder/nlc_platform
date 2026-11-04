@@ -633,7 +633,7 @@ class TestFilingService:
         assert updated.quorum_basis == "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
 
     @pytest.mark.asyncio
-    async def test_mark_agm_held_large_private_company_uses_statutory_default_after_articles_review(
+    async def test_mark_agm_held_does_not_trust_unreviewed_membership_references(
         self, db, db_company, db_user, db_super_admin
     ):
         from app.services.filing_service import AGMService
@@ -660,7 +660,7 @@ class TestFilingService:
         assert updated.quorum_basis == "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
 
     @pytest.mark.asyncio
-    async def test_mark_agm_held_uses_articles_specific_quorum_override(
+    async def test_mark_agm_held_does_not_apply_articles_override_without_membership_review(
         self, db, db_company, db_user, db_super_admin
     ):
         from app.services.filing_service import AGMService
