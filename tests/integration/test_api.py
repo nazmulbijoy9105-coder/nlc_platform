@@ -373,7 +373,7 @@ class TestFilings:
         assert result["agm_held_without_audit"] is False
 
     @pytest.mark.asyncio
-    async def test_mark_agm_held_uses_verified_articles_statutory_default(
+    async def test_mark_agm_held_ignores_legacy_company_articles_boolean_for_quorum(
         self, api_client, staff_token, db_company, db
     ):
         from app.services.filing_service import AGMService
@@ -404,12 +404,12 @@ class TestFilings:
         )
         assert response.status_code == 200, response.text
         result = response.json()
-        assert result["quorum_met"] is False
-        assert result["quorum_required"] == 3
-        assert result["quorum_basis"] == "SECTION_85_2_B_DEFAULT_ARTICLES_VERIFIED_NO_VARIATION"
+        assert result["quorum_met"] is None
+        assert result["quorum_required"] is None
+        assert result["quorum_basis"] == "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
 
     @pytest.mark.asyncio
-    async def test_mark_agm_held_uses_verified_articles_specific_quorum(
+    async def test_mark_agm_held_ignores_legacy_company_articles_quorum_override(
         self, api_client, staff_token, db_company, db
     ):
         from app.services.filing_service import AGMService
@@ -440,9 +440,9 @@ class TestFilings:
         )
         assert response.status_code == 200, response.text
         result = response.json()
-        assert result["quorum_met"] is False
-        assert result["quorum_required"] == 4
-        assert result["quorum_basis"] == "ARTICLES_VERIFIED"
+        assert result["quorum_met"] is None
+        assert result["quorum_required"] is None
+        assert result["quorum_basis"] == "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
 
     @pytest.mark.asyncio
     async def test_list_agms_for_company(self, api_client, staff_token, db_company):
