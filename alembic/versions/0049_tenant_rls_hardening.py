@@ -230,7 +230,7 @@ def upgrade() -> None:
                 ),
                 FALSE
             )
-        $;
+        $$;
     """)
 
     _execute_sql_script("""
