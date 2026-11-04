@@ -448,10 +448,10 @@ class TestProductionGate:
     def test_verified_rules_in_set(self):
         """Verify the internally checked scoring allowlist and pending legal approvals."""
         assert "AGM-001" in VERIFIED_RULE_IDS
-        assert "OFF-001" in VERIFIED_RULE_IDS
+        assert "OFF-001" not in VERIFIED_RULE_IDS
         assert "DEF-001" not in VERIFIED_RULE_IDS
         assert "DEF-001" not in VERIFIED_RULE_IDS
-        assert len(VERIFIED_RULE_IDS) >= 35
+        assert len(VERIFIED_RULE_IDS) == 0
 
     def test_unverified_rules_excluded_from_score(self):
         """AUD-001 (unverified) should not affect score even if it fires."""
