@@ -20,13 +20,13 @@ def get_engine_rules():
     for node in ast.walk(tree):
         if isinstance(node, ast.keyword) and node.arg == "rule_id" and isinstance(node.value, ast.Constant):
             value = node.value.value
-            if isinstance(value, str) and re.match(r"^[A-Z]{2,12}-\\d{3}$", value):
+            if isinstance(value, str) and re.match(r"^[A-Z]{2,12}-\d{3}$", value):
                 ids.add(value)
         if isinstance(node, ast.Assign):
             for target in node.targets:
                 if isinstance(target, ast.Name) and target.id == "rule_id" and isinstance(node.value, ast.Constant):
                     value = node.value.value
-                    if isinstance(value, str) and re.match(r"^[A-Z]{2,12}-\\d{3}$", value):
+                    if isinstance(value, str) and re.match(r"^[A-Z]{2,12}-\d{3}$", value):
                         ids.add(value)
     return ids
 
