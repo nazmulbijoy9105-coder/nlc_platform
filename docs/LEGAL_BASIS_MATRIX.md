@@ -48,21 +48,21 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | BSEC-001 | BSEC Quarterly Report Not Filed | BSEC Corporate Governance Code 2018, as amended in 2023 and 2024, Para 8 | RED | 10 | no | Engine-aligned 2026-11-02 |
 | BSEC-002 | CG Certificate Not Obtained | BSEC Corporate Governance Code 2018, as amended in 2023 and 2024, Para 5 | RED | 10 | no | Engine-aligned 2026-11-02 |
 | BSEC-003 | Board Composition Non-Compliant | BSEC Corporate Governance Code 2018, as amended in 2023 and 2024, Para 5 | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
-| BSEC-004 | Audit Committee Not Established | Foreign Exchange Regulation Act 1947 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
+| BSEC-004 | Audit Committee Not Established | BSEC Corporate Governance Code 2018, as amended in 2023 and 2024, Condition 5 | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | CAP-001 | Capital Alteration Without Proper Resolution | Section 53, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | CAP-002 | Charge Not Registered With RJSC Within 21 Days | Section 159(1), Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | CAP-003 | Capital Reduction Without Court Order | Sections 59-60, Companies Act 1994 (Bangladesh) | BLACK | 15 | YES | Engine-aligned 2026-11-02 |
-| CAP-004 | Special Resolution Not Filed With RJSC | Section 88, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
+| CAP-004 | Special Resolution Not Filed With RJSC within 15 days | Section 88(1), Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
 | CHG-001 | Charge Satisfaction Not Filed | Section 172, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
 | DEF-001 | Director Disqualified | Section 94, Companies Act 1994 (Bangladesh) | BLACK | 20 | YES | Engine-aligned 2026-11-02 |
-| DEF-002 | Unresolved Penalty Notices | Section 397, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| DIR-001 | Director Appointment Not Filed Within 14 Days | Section 90, Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
-| DIR-002 | Director Departure Not Filed Within 14 Days | Section 93, Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
+| DEF-002 | Unresolved Penalty Notices | Case-specific enabling provision; no universal section | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
+| DIR-001 | Director Appointment Particulars Not Filed Within 14 Days | Section 115, Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
+| DIR-002 | Director Cessation Particulars Not Filed Within 14 Days | Section 115, Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
 | DIR-003 | Major Director Filing Irregularity — Over 1 Year | Section 115, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
 | DIR-004 | Departed Director Still Active on RJSC Register | Section 109, Companies Act 1994 (Bangladesh) | RED | 10 | no | Engine-aligned 2026-11-02 |
 | DIR-005 | Register of Directors Interests Missing | Section 130, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | DIR-006 | Register of Contracts Missing | Section 130, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| DIR-007 | Director Consent Not Filed Within 30 Days | Section 93, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
+| DIR-007 | Director Consent Not Filed Within 30 Days | Section 92, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | DIR-008 | Director Holding Office of Profit Without Consent | Section 104, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
 | DIR-010 | Managing Director Appointed for More Than 5 Years | Section 110, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | ESC-001 | Strike-Off Risk Elevated | Section 346, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
@@ -144,7 +144,7 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | 2026-11-02 | AUD-001: Section 210(6), one calendar month (was 210(1) / 30 days) |
 | 2026-11-02 | DEF-001: Section 94 evidence-required (was Section 297) |
 | 2026-11-02 | REG-002: Sec 34/89/174 internal vs Sec 115 RJSC filing |
-| 2026-11-02 | AGM-005/006: Section 89; CHG-001: Section 159; TR-*: Section 38; etc. |
+| 2026-11-02 | Historical reconciliation notes; not a current legal approval record. See legal_approval_register.yaml. |
 
 ## Explicit non-claims
 
