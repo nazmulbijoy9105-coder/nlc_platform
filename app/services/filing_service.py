@@ -218,15 +218,11 @@ class AGMService(BaseService[AGM]):
                     if verified_articles.quorum_variation_exists
                     else None
                 )
-        membership_evidence_verified = (
-            isinstance(members_total_at_agm, int)
-            and members_total_at_agm > 0
-            and isinstance(members_total_evidence_ref, str)
-            and bool(members_total_evidence_ref.strip())
-            and isinstance(members_present_evidence_ref, str)
-            and bool(members_present_evidence_ref.strip())
-            and members_present <= members_total_at_agm
-        )
+        # These API fields are caller-supplied counts and free-text references,
+        # not independently reviewed evidence. Until member-register and
+        # attendance-register documents have their own version-pinned review
+        # workflow, they must never support a legal quorum conclusion.
+        membership_evidence_verified = False
         if (
             company_type == "PRIVATE_LIMITED"
             and membership_evidence_verified
