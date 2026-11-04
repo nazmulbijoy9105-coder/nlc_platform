@@ -832,12 +832,6 @@ class NLCRuleEngine:
         # "within one month" of registration. "One month" = CALENDAR MONTH,
         # not 30 days. Using 30 days is legally incorrect for months with
         # 28/29/31 days.
-        if c.first_auditor_appointed is False and not (
-            c.first_auditor_appointment_verified is True
-            and bool(c.first_auditor_appointment_evidence_ref)
-            and c.first_auditor_appointment_verified_at is not None
-            and bool(c.first_auditor_appointment_verified_by)
-        ):
         reg_date = c.incorporation_date or self.today
         deadline = self._add_one_month(reg_date)
 
