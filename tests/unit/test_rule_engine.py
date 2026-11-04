@@ -1092,12 +1092,13 @@ class TestEngineIntegrity:
         assert output.score_breakdown.final_score == 100
         assert output.score_breakdown.override_applied is False
 
-    def test_score_never_exceeds_100_with_no_flags(self, rule_engine, build_profile):
-        """Fully compliant company scores exactly 100 with GREEN band."""
+    def test_unapproved_rule_corpus_is_not_evaluated_even_without_findings(self, rule_engine, build_profile):
+        """No triggered flags cannot imply legal compliance while rules remain unapproved."""
         profile = build_profile()
         output = rule_engine.evaluate(profile)
         assert output.score_breakdown.final_score == 100
-        assert output.score_breakdown.risk_band == "GREEN"
+        assert output.score_breakdown.risk_band == "NOT_EVALUATED"
+        assert output.score_breakdown.override_applied is False
 
     def test_rescue_plan_generated_for_black_company(self, rule_engine, build_profile):
         """BLACK band company is correctly identified with score <= 29."""
