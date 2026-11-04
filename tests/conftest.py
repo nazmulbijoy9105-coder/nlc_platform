@@ -197,7 +197,8 @@ def legal_token() -> str:
     return _make_token("LEGAL_STAFF")
 
 
-@pytest.fixture(scope="session")def client_token(sample_company_id) -> str:
+@pytest.fixture(scope="session")
+def client_token(sample_company_id) -> str:
     return _make_token("CLIENT_DIRECTOR", company_ids=[sample_company_id])
 
 
