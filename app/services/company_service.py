@@ -380,6 +380,7 @@ class CompanyService(BaseService[Company]):
                       FROM company_user_access cua
                       WHERE cua.company_id = d.company_id
                         AND cua.user_id = :user_id
+                        AND cua.is_active = TRUE
                   )
                 ORDER BY d.days_remaining
                 """
