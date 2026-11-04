@@ -56,7 +56,7 @@ BCIC vs Registrar of Joint Stock Companies (High Court Division).
 | F-21 | engine.py 1884 and 1950 | Corrupted merge-artifact comments: "(BLACK handled above)'t override" and duplicated rescue comment text | Clean text during the F-10/F-20 fix commit; no behavior change. LOW |
 | F-22 | engine.py 373-377 | CORE_REGISTERS lacks statutory pins. Official TOC pins: members = s.34 (Register of members), directors = s.115 (Register of directors, managers and managing agents), charges = s.174 company register (RJSC filing s.159 Form XVIII), minutes_agm = s.89 (minutes of general and Board meetings) | Add pin comments and unify registry citations. MEDIUM |
 | F-23 | statutory_rules.py REG-001/REG-002 | Registry bundle "Sections 34, 83, 87, 90" legally wrong: s.83 = statutory meeting and statutory report; s.87 = extraordinary and special resolutions; s.90 = minimum number of directors; register of directors = s.115 | Re-anchor registry to s.34, s.115, s.174, s.89 aligned with engine. HIGH |
-| F-24 | statutory_rules.py AUD-003 | Bundle "Sections 151, 210" wrong: s.151 = Return as to allotment (Form XV), unrelated to auditors. s.210 full text pinned from bdlaws section-33854: 210(1) appoint at each AGM plus 7-day notice to auditor; 210(2) auditor informs Registrar within 30 days (duty-holder is the auditor, not the company); 210(3) retiring-auditor re-appointment with NO 120-day rule; 210(6) first auditors by Board within 1 month of incorporation | Engine and registry cite "Section 210" only; FIRST_AUDITOR_DEADLINE_DAYS=30 comment VERIFIED; AUD-005 anchor stays open under F-15. MEDIUM |
+| F-24 | statutory_rules.py AUD-003 / AUD-004 / AUD-005 | Section 151 is unrelated to auditors. Section 183 governs audited financial statements laid before AGM; Section 210(3) governs retiring-auditor reappointment subject to statutory exceptions; Section 210(6) first auditor within one month. No separate 120-day appointment deadline. | 2026-11-04 correction: AUD-003 is Section 183 legal-review only (no automatic BLACK); AUD-004 is Section 210(3) lawyer-judgment only; AUD-005 is an evidence-status rule with no 120-day deadline. Preserve evidence and do not score unresolved exceptions. MEDIUM |
 | F-13 CLOSED | engine.py SH-002 and constants | s.158 verified: official TOC title "Time limit for issuing certificate"; published legal commentary quotes 90 days from allotment or registration of transfer | SHARE_CERTIFICATE_DEADLINE_DAYS=90 and the s.158 citation are CORRECT; SH-002 severity dead branch stays open under its round-2 row |
 
 Sources this round: bdlaws.minlaw.gov.bd act-788 TOC (sections 23, 34, 36, 52, 56, 77, 81-89, 90-93, 115, 151, 158-175, 181-190, 210); bdlaws act-788/section-33854 (s.210 full text); roc.gov.bd Form XXVIII page (s.172, from round 2).
@@ -214,3 +214,88 @@ The following confirmed implementation defects have been corrected in this branc
 7. Run full unit/integration CI, rule-parity audit and the full legal corpus after this branch is opened as a PR.
 
 **Official starting source:** Bangladesh Laws (Ministry of Law), Companies Act 1994: https://bdlaws.minlaw.gov.bd/act-788.html. Verify amendments and the applicable official RJSC form for each filing before approving a rule.
+## 2026-11-03 - Legal evidence and scoring gate hardening
+
+This section records code-level safeguards added on branch `fix/legal-rule-scoring-validation`.
+It does NOT certify every rule as legally validated. Existing `RECONCILE` entries remain
+excluded from production scoring unless independently approved.
+
+### Corrections and controls implemented
+
+| Area | Change | Production effect |
+| --- | --- | --- |
+| AGM timing (s.81) | First AGM uses 18 calendar months; subsequent AGM deadline uses the earlier of the next 31 December and 15 calendar months after the previous AGM. | Removes fixed 548/456-day approximations from the engine's primary and escalation calculations. Registrar extensions and court orders still need explicit data handling. |
+| AGM quorum (s.85(2)(b)) | Quorum is taken from a verified AGM record and verified Articles/statutory basis. The model records verified attendance, quorum requirement and evidence reference. | Missing or default-valued attendance/quorum cannot create a scored breach. AGM-005 is excluded from the verified scoring allowlist pending independent legal approval of the Articles-specific application. |
+| Director minimum (s.90) | Distinguishes a public company/private subsidiary of a public company (three directors) from other private companies (two). | No BLACK finding from unverified local director rows; subsidiary classification is required where two directors are recorded. |
+| Director particulars (s.115) | Engine and seed references for Form XII appointment/cessation particulars use s.115, not s.90/s.93. | Citation correction; filing default is not represented as automatically invalidating the appointment or cessation. |
+| First auditor (s.210(6)) | Retains calendar-month arithmetic, separate from the auditor's own Registrar notification duty under s.210(2). | Avoids treating one calendar month as 30 fixed days. |
+| INC-001 (s.23) | A legacy `moa_aoa_filed` boolean cannot create a confirmed breach without explicit verification provenance. | Unverified values remain UNKNOWN and score impact is zero. |
+| DEF-001 (s.94) | Canonical legal description removes the unsupported universal five-year disqualification claim. Engine requires structured grounds and authoritative evidence for BLACK. | Unverified allegations remain UNKNOWN. |
+
+### New evidence provenance fields
+
+Migration `0045_legal_evidence_provenance` adds explicit verification metadata for:
+- RJSC-verified director counts and public-subsidiary classification;
+- MoA/AoA verification, reviewer, timestamp and evidence reference;
+- AGM attendance verification and verified quorum basis/evidence reference.
+
+Legacy database values are deliberately not backfilled as verified. Defaults are unverified.
+
+### Scoring integrity
+
+- UNKNOWN, DISPUTED, REQUIRES_LAWYER_JUDGMENT and other non-confirmed states are excluded from deductions.
+- VERIFIED_ABSENT is accepted only as an explicit confirmed state.
+- BLACK override and severity escalation require a confirmed violation state.
+- Score hash now includes the complete profile input, evaluation date, engine/ILRMF versions, verified-rule allowlist and evaluated flag signatures.
+- ESC-003's policy threshold and override design remain unchanged pending the documented F-33 owner decision.
+
+### Legal review still required before calling the corpus legally validated
+
+1. Independent Bangladesh company-law review of every active rule and all amendments effective on the assessment date.
+2. Confirm Section 85 quorum application against each company's Articles and the precise member-count bracket; do not assume a universal two-member threshold.
+3. Confirm statutory extensions, court orders and other exceptions for AGM timing.
+4. Review AUD-001 through AUD-004, director filing consequences, DEF-001 evidence sufficiency, strike-off rules and all non-Companies-Act regimes.
+5. Approve the production allowlist by named reviewer and date. A software test or internal citation check is not independent legal approval.
+
+### Primary source references used for this round
+
+- Bangladesh Companies Act 1994, official Laws of Bangladesh portal: https://bdlaws.minlaw.gov.bd/act-788.html
+- Section 90 official text (minimum director numbers): https://bdlaws.minlaw.gov.bd/act-788/section-32914.html
+- Section 85 text (meeting and quorum provisions): https://www.bdlawportal.com/acts/কোম্পানী-আইন-১৯৯৪/section-85-সভা-ও-ভোট-সম্পর্কিত-বিধান
+- Section 81 first/subsequent AGM timing, Companies Act 1994 text: https://www.icnl.org/research/library/bangladesh_comp/
+- ICAB Corporate Laws Manual: https://www.icab.org.bd/icabadmin/uploads/ckeditor/6665Corporate%20Laws%20Manual%20Final%202021.pdf
+
+Source review status: official BDLaws text checked for this targeted round. Section 94 unpaid-call threshold remains disputed across Bengali/English materials; full amendment-by-amendment legal review and independent sign-off remain OPEN.
+
+### Official source links for this review round
+
+- Companies Act 1994, current consolidated text: https://bdlaws.minlaw.gov.bd/act-print-788.html
+- Section 81 AGM timing and extension: https://bdlaws.minlaw.gov.bd/act-print-788/section-print-32905.html
+- Section 85 meeting notice and quorum: https://bdlaws.minlaw.gov.bd/act-print-788/section-print-32909.html
+- Section 90 minimum directors: https://bdlaws.minlaw.gov.bd/act-788/section-32914.html
+- Section 115 director particulars: https://bdlaws.minlaw.gov.bd/act-788/act-part-print-355.html
+- Section 210 auditor appointment: https://bdlaws.minlaw.gov.bd/act-788/section-33854.html
+- RJSC/eBRS Form XII and Form 23B filing FAQ: https://ebrs.roc.gov.bd/public/faqs
+- Bangladesh Supreme Court Company Matter judgment: https://www.supremecourt.gov.bd/resources/documents/1548640_CompanyMatter90of2017.pdf
+
+The consolidated BDLaws text includes the Companies (Amendment) Act 2020 and Companies (Second Amendment) Act 2020. This does not replace a complete gazette/amendment-history review through the assessment date.
+
+
+### Follow-up hardening in this branch
+
+- Section 81 Registrar extension handling now requires the application date to fall within 30 days after the base deadline, a verified grant date, evidence reference, reviewer and timestamp. The granted date is capped at the earlier of 90 days after the base deadline or 31 December of the relevant calendar year. An unverified or out-of-limit extension becomes a lawyer-review state and suppresses automatic default/escalation.
+- AGM escalation-year calculation now uses the same calendar-month/Section 81 deadline as the primary AGM rule. It no longer uses a separate 456-day/FY+6-month approximation.
+- First auditor appointment status, audit completion and auditor reappointment are now separately evidence-gated. Legacy false defaults do not become confirmed violations.
+- DEF-001 now requires director identity, a specified statutory/Articles ground, authority, evidence reference, effective date and continuing status. Unpaid-call disqualification remains DISPUTED because official Bengali text states 180 days while English/case materials state six months; an Articles ground must identify the relevant Articles provision. DEF-001 no longer forces BLACK and is excluded from the scoring allowlist pending independent legal approval.
+- AUD-003 is a lawyer-judgment state, has zero score impact and cannot force BLACK.
+- The pre-escalation score and authoritative raw score now use the same verified-rule gate and category caps.
+
+These controls are implemented in code and covered by new regression tests; their CI status must be checked on the resulting pull request. The database migration adds the provenance fields with unverified defaults. No legacy company/AGM/audit booleans are backfilled as verified.
+
+Still open: a secure reviewer-facing workflow for setting these verification fields; explicit support for court directions and other statutory exceptions; complete independent review of all active rules; and signed legal approval of the production scoring allowlist.
+
+
+- Section 81(1) first-AGM proviso is now represented: where the first AGM is held within 18 months of incorporation, no AGM is required in the incorporation year or the following year. The next required AGM is due by 31 December of the second following year; ordinary 15-month/calendar-year rules then resume.
+- AGM deadline scoring now requires company-level verified AGM history (evidence reference, reviewer and timestamp). Missing or unverified history cannot create an automatic Section 81 default.
+- Section 85(1)(a) short-notice exception is now evidence-gated. A shorter AGM notice is not automatically defective where written consent from all members entitled to attend and vote is verified. Missing consent evidence produces UNKNOWN, not a confirmed breach.
+- Section 85 quorum findings also require verified attendance and the applicable quorum from the Articles/statutory default.

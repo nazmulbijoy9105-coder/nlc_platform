@@ -90,13 +90,15 @@ class TestDirectorDisqualification:
                 "evidence_ref": "Insolvency Certificate #12345",
                 "authority": "Bankruptcy Court, Dhaka",
                 "effective_date": "2025-01-15",
+                "continuing_status": True,
             }],
         )
         result = NLCRuleEngine().evaluate(c)
         flag = _flag_by_id(result, "DEF-001")
         assert flag is not None, "DEF-001 should fire with verified ground"
-        assert flag.severity == Severity.BLACK
-        assert flag.is_black_override == True
+        assert flag.severity == Severity.RED
+        assert flag.is_black_override is False
+        assert flag.score_impact == 10
         # P0 FIX: No "5 years" claim
         assert "5 years" not in (flag.description or "").lower()
         assert "Section 94" in (flag.statutory_basis or "")
@@ -440,6 +442,10 @@ class TestEvidenceSemantics:
         """MoA/AoA confirmed missing (False, old company) → RED."""
         c = _base_profile(
             moa_aoa_filed=False,
+            moa_aoa_verified=True,
+            moa_aoa_evidence_ref="RJSC-MOA-001",
+            moa_aoa_verified_at=date(2026, 11, 1),
+            moa_aoa_verified_by="reviewer-001",
             incorporation_date=date(2020, 1, 1),  # old enough to assess
         )
         result = NLCRuleEngine().evaluate(c)

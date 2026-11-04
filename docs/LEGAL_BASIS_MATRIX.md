@@ -39,6 +39,7 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | AUD-003 | AGM Audit Status Requires Legal Review | Section 183, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | Audit/account evidence and legal consequences require case-specific review; no automatic BLACK override |
 | AUD-004 | Auditor Reappointment Requires Legal Review | Section 210(3), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | Verify statutory exceptions and notice requirements before determining non-compliance |
 | AUD-005 | Subsequent Auditor Appointment Evidence Unknown | Section 210(3), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | Corrected 2026-11-03; no separate 120-day statutory deadline asserted |
+| AUD-005 | Subsequent Auditor Reappointment Status Unknown | Section 210(3), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | Evidence-status only; no 120-day deadline; exceptions require legal review |
 | BNK-001 | Winding Up Petition Filed | Bankruptcy Act 1997 (Bangladesh), Section 12 | BLACK | 10 | YES | Engine-aligned 2026-11-02 |
 | BNK-002 | Liquidator Appointed | Bankruptcy Act 1997 (Bangladesh), Section 14 | BLACK | 10 | YES | Engine-aligned 2026-11-02 |
 | BNK-003 | Court-Ordered Winding Up | Bankruptcy Act 1997 (Bangladesh), Section 18 | BLACK | 35 | YES | Engine-aligned 2026-11-02 |

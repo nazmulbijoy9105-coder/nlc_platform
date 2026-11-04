@@ -14,6 +14,10 @@ AUD-002|Audit Not Completed Before AGM|Companies Act 1994, Section 183|YELLOW|15
 AUD-003|AGM Audit Status Requires Legal Review|Section 183, Companies Act 1994 (Bangladesh)|NOT_EVALUATED|0|f|t
 AUD-004|Auditor Reappointment Requires Legal Review|Companies Act 1994, Section 210(3)|NOT_EVALUATED|0|f|t
 AUD-005|No Auditor Appointed for Current FY|Companies Act 1994, Section 210(2)|YELLOW|10|f|t
+AUD-002|Audit Not Completed Before AGM|Companies Act 1994, Section 151|YELLOW|15|f|t
+AUD-003|AGM Audit Status Requires Legal Review|Section 183, Companies Act 1994 (Bangladesh)|NOT_EVALUATED|0|f|t
+AUD-004|Auditor Reappointment Requires Legal Review|Companies Act 1994, Section 210(3)|NOT_EVALUATED|0|f|t
+AUD-005|Subsequent Auditor Reappointment Status Unknown|Companies Act 1994, Section 210(3)|NOT_EVALUATED|0|f|t
 BNK-001|Winding Up Petition Filed|Bankruptcy Act 1997 (Bangladesh), Section 12|BLACK|25|t|t
 BNK-002|Liquidator Appointed|Bankruptcy Act 1997 (Bangladesh), Section 14|BLACK|25|t|t
 BNK-003|Court-Ordered Winding Up|Bankruptcy Act 1997 (Bangladesh), Section 18|BLACK|35|t|t

@@ -81,6 +81,7 @@ class RuleState(str, Enum):
     NOT_APPLICABLE = "NOT_APPLICABLE"
     CONDITIONAL = "CONDITIONAL"
     CONTRADICTORY = "CONTRADICTORY"
+    DISPUTED = "DISPUTED"
     REQUIRES_LAWYER_JUDGMENT = "REQUIRES_LAWYER_JUDGMENT"
 
 class ApplicabilityState(str, Enum):
@@ -115,7 +116,7 @@ class ComplianceFlag:
 
     def __post_init__(self):
         # F3 UNKNOWN policy: unknown facts are indeterminate, not violations
-        if self.eval_state == "UNKNOWN":
+        if self.state not in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) or self.eval_state != "VIOLATION":
             self.score_impact = 0
 
 @dataclass
@@ -163,22 +164,52 @@ class CompanyProfile:
     incorporation_date: date | None = None
     financial_year_end: Optional[date] = field(default=None)
     agm_count: int | None = None
+    agm_history_verified: bool = False
+    agm_history_evidence_ref: str | None = None
+    agm_history_verified_at: date | None = None
+    agm_history_verified_by: str | None = None
     last_agm_date: Optional[date] = None
+    agm_extension_granted_until: date | None = None
+    agm_extension_application_date: date | None = None
+    agm_extension_verified: bool = False
+    agm_extension_evidence_ref: str | None = None
+    agm_extension_verified_at: date | None = None
+    agm_extension_verified_by: str | None = None
     agm_held_this_cycle: bool = False
     agm_held_without_audit: bool | None = None
     agm_scheduled_date: Optional[date] = None
     notice_sent_date: Optional[date] = None
     agm_notice_verified_absent: bool | None = None
+    short_notice_consent_obtained: bool | None = None
+    short_notice_consent_verified: bool = False
+    short_notice_consent_evidence_ref: str | None = None
     members_present_at_agm: int | None = None
+    # Section 85(2)(b) is only the default where the Articles do not provide otherwise.
+    agm_quorum_required: int | None = None
+    agm_quorum_basis_verified: bool = False
+    agm_attendance_verified: bool = False
+    agm_attendance_evidence_ref: str | None = None
+    agm_quorum_evidence_ref: str | None = None
     auditor_reappointed_at_agm: bool | None = None
     accounts_adopted_at_agm: bool | None = None
+    auditor_reappointment_verified: bool = False
+    auditor_reappointment_evidence_ref: str | None = None
+    accounts_adopted_at_agm: bool = False
     agm_minutes_prepared: bool | None = None
     # Explicit quorum determination recorded for the AGM after checking the Articles and Act.
     agm_quorum_met: bool | None = None
     agm_quorum_required: int | None = None
     first_auditor_appointed: bool | None = None
     first_auditor_appointment_date: Optional[date] = None
-    audit_complete: bool = False
+    first_auditor_appointment_verified: bool = False
+    first_auditor_appointment_evidence_ref: str | None = None
+    first_auditor_appointment_verified_at: date | None = None
+    first_auditor_appointment_verified_by: str | None = None
+    audit_complete: bool | None = None
+    audit_completion_verified: bool = False
+    audit_completion_evidence_ref: str | None = None
+    audit_completion_verified_at: date | None = None
+    audit_completion_verified_by: str | None = None
     last_audit_signed_date: Optional[date] = None
     audit_in_progress: bool = False
     auditor_name: Optional[str] = None
@@ -195,7 +226,15 @@ class CompanyProfile:
     shareholders_list_attached: bool = False
     director_changes: List[DirectorChange] = field(default_factory=list)
     current_director_count: int | None = None
-    directors_verified: bool = False  # RULE-001: True only when director count verified against RJSC registry
+    directors_verified: bool = False
+    directors_verification_evidence_ref: str | None = None
+    directors_verified_at: date | None = None
+    directors_verified_by: str | None = None
+    is_private_subsidiary_of_public_company: bool | None = None
+    subsidiary_status_verified: bool = False
+    subsidiary_status_evidence_ref: str | None = None
+    subsidiary_status_verified_at: date | None = None
+    subsidiary_status_verified_by: str | None = None
     minimum_directors_met: bool | None = None
     shareholder_change_date: Optional[date] = None
     form_xv_filed: bool = False
@@ -291,6 +330,11 @@ class CompanyProfile:
     penalty_notices_received: int | None = 0
     penalty_notices_resolved: int | None = 0
     moa_aoa_filed: bool | None = None
+    # Stored legacy booleans are not proof of registry verification.
+    moa_aoa_verified: bool = False
+    moa_aoa_evidence_ref: str | None = None
+    moa_aoa_verified_at: date | None = None
+    moa_aoa_verified_by: str | None = None
     annual_turnover_bdt: float = 0.0
     name_change_pending: bool = False
     name_change_date: Optional[date] = None
@@ -441,8 +485,10 @@ CATEGORY_CAPS: dict[str, tuple[int, tuple[str, ...]]] = {
 # Unverified rules still generate flags (for visibility) but their
 # score_impact is excluded from _calculate_score() and _calculate_raw_score().
 #
-# Rationale: statutory citations for these 41 rules have been audited
-# against the Companies Act 1994 (Bangladesh) PDF. Rules not yet verified
+# Rationale: statutory citations for these 38 rules have undergone an
+# internal source check against the Companies Act 1994 (Bangladesh) text.
+# This is not independent legal approval or a complete amendment review.
+# Rules not yet internally verified
 # (AUD-*, SH-*, TR-002~006, ESC-003~005, TAX-*, LBR-*, BNK-*, FX-*,
 # BSEC-*) require lawyer review before they can influence the score.
 #
@@ -451,13 +497,14 @@ CATEGORY_CAPS: dict[str, tuple[int, tuple[str, ...]]] = {
 VERIFIED_RULE_IDS: frozenset[str] = frozenset({
     # AGM module (7 rules)
     "AGM-001", "AGM-002", "AGM-003", "AGM-004",
-    "AGM-005", "AGM-006", "AGM-007",
+    # AGM-005 remains excluded until the AOA-specific quorum basis is verified.
+    "AGM-006", "AGM-007",
     # Registers module (3 rules)
     "REG-001", "REG-002", "REG-003",
     # Registered Office (1 rule)
     "OFF-001",
-    # Directors module (7 rules)
-    "DIR-001", "DIR-002", "DIR-003", "DIR-004",
+    # Directors module (6 rules)
+    "DIR-001", "DIR-002", "DIR-003",
     "DIR-007", "DIR-008", "DIR-010",
     # Capital module (3 rules)
     "CAP-001", "CAP-002", "CAP-003",
@@ -477,8 +524,8 @@ VERIFIED_RULE_IDS: frozenset[str] = frozenset({
     "TR-001",
     # Escalation (2 rules)
     "ESC-001", "ESC-002",
-    # Director disqualification (2 rules — BLACK override always enforced)
-    "DEF-001", "DEF-002",
+    # Director disqualification rules remain outside scoring pending independent legal review.
+    "DEF-002",
 })
 
 REVENUE_TIER_MAP = {
@@ -526,14 +573,15 @@ def _input_coverage(company) -> float:
 class NLCRuleEngine:
     _ESC_RULE_IDS: frozenset = frozenset({"ESC-001", "ESC-002", "ESC-003"})
 
-    def __init__(self):
-        self.today = date.today()
+    def __init__(self, today: date | None = None):
+        self._default_today = today
+        self.today = today or date.today()
         self._flags: List[ComplianceFlag] = []
 
     def evaluate(self, company: CompanyProfile, today: date | None = None) -> EngineOutput:
         """Evaluate a company profile. Thread-safety: create a fresh NLCRuleEngine() per call — self._flags is instance state."""
         self._flags = []
-        self.today = today or date.today()
+        self.today = today or self._default_today or date.today()
 
         self._run_incorporation_rules(company)
         self._run_auditor_rules(company)
@@ -596,41 +644,87 @@ class NLCRuleEngine:
         # MoA/AoA (Section 23), so absence in NLC's database means the
         # documents haven't been uploaded/verified — not that they don't exist.
         # The correct state is NOT_EVALUATED, not RED.
-        if c.moa_aoa_filed is None:
-            # Unknown — no data in NLC system
+        if not (
+            c.moa_aoa_verified is True
+            and bool(c.moa_aoa_evidence_ref)
+            and c.moa_aoa_verified_at is not None
+            and bool(c.moa_aoa_verified_by)
+        ) and c.moa_aoa_filed is not True:
             self._add_flag(ComplianceFlag(
                 rule_id="INC-001",
                 flag_code="MOA_AOA_NOT_VERIFIED",
                 severity=Severity.NOT_EVALUATED,
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=(
-                    "Memorandum and Articles of Association not verified in NLC records. "
-                    "Section 23 requires MoA/AoA for registration — absence in NLC "
-                    "database is a data gap, not a confirmed legal breach. "
-                    "Verify with RJSC registry."
-                ),
+                description="MoA/AoA status has not been explicitly verified against RJSC or authenticated company records. Stored values alone are not proof.",
                 statutory_basis="Section 23, Companies Act 1994 (Bangladesh)",
                 state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"verification_status": "not_verified"},
+            ))
+        elif c.moa_aoa_filed is None:
+            self._add_flag(ComplianceFlag(
+                rule_id="INC-001",
+                flag_code="MOA_AOA_VERIFIED_STATUS_MISSING",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="A reviewer recorded a verification event but did not record whether the MoA/AoA was filed.",
+                statutory_basis="Section 23, Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"verification_status": "incomplete"},
             ))
         elif c.moa_aoa_filed is False and self._is_old_enough_to_assess(c):
-            # Confirmed missing after verification — only then is it a breach
             self._add_flag(ComplianceFlag(
                 rule_id="INC-001",
                 flag_code="MOA_AOA_CONFIRMED_MISSING",
                 severity=Severity.RED,
                 score_impact=15,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=(
-                    "Memorandum and Articles of Association confirmed missing after "
-                    "verification with RJSC. Section 23: every company must have a "
-                    "registered MoA/AoA."
-                ),
+                description="MoA/AoA absence was explicitly verified against RJSC or authenticated company records. Confirm the underlying registry record and history.",
                 statutory_basis="Section 23, Companies Act 1994 (Bangladesh)",
                 detail={"verification_status": "confirmed_missing"},
             ))
 
 
+        if c.company_type in ("PRIVATE_LIMITED", "PUBLIC_LIMITED") and c.directors_verified is True and bool(c.directors_verification_evidence_ref) and c.directors_verified_at is not None and bool(c.directors_verified_by) and c.current_director_count is not None:
+            count = c.current_director_count
+            if (c.company_type == "PRIVATE_LIMITED" and count == 2
+                    and (c.subsidiary_status_verified is not True
+                         or not c.subsidiary_status_evidence_ref
+                         or c.subsidiary_status_verified_at is None
+                         or not c.subsidiary_status_verified_by)):
+                self._add_flag(ComplianceFlag(
+                    rule_id="INC-003",
+                    flag_code="DIRECTOR_MINIMUM_APPLICABILITY_UNKNOWN",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="Two directors are verified, but private-subsidiary status is unknown; Section 90(1) may require three.",
+                    statutory_basis="Sections 90(1) and 90(2), Companies Act 1994 (Bangladesh)",
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                    detail={"current_count": count, "subsidiary_status": "UNKNOWN"},
+                ))
+            else:
+                required = 3 if (
+                    c.company_type == "PUBLIC_LIMITED"
+                    or (c.company_type == "PRIVATE_LIMITED" and c.is_private_subsidiary_of_public_company is True)
+                ) else 2
+                if count < required:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="INC-003",
+                        flag_code="MINIMUM_DIRECTORS_NOT_MET",
+                        severity=Severity.BLACK,
+                        score_impact=15,
+                        is_black_override=True,
+                        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                        description=f"RJSC-verified {c.company_type.lower().replace('_', ' ')} has {count} director(s); Section 90 requires at least {required}.",
+                        statutory_basis="Sections 90(1) and 90(2), Companies Act 1994 (Bangladesh)",
+                        detail={"current_count": count, "required": required,
+                                "private_subsidiary_of_public_company": c.is_private_subsidiary_of_public_company},
+                    ))
         if (c.company_type == "PRIVATE_LIMITED" and c.directors_verified
                 and c.current_director_count is not None
                 and c.current_director_count < 2):  # RULE-001: only fire when verified against RJSC
@@ -775,6 +869,18 @@ class NLCRuleEngine:
         interval_deadline = NLCRuleEngine._add_months(last_agm_date, 15)
         calendar_year_deadline = date(last_agm_date.year + 1, 12, 31)
         return min(interval_deadline, calendar_year_deadline)
+        """Add calendar months, clamping to the last valid day of the target month."""
+        import calendar as _cal
+        month_index = d.year * 12 + d.month - 1 + months
+        target_year, zero_month = divmod(month_index, 12)
+        target_month = zero_month + 1
+        last_day = _cal.monthrange(target_year, target_month)[1]
+        return date(target_year, target_month, min(d.day, last_day))
+
+    @staticmethod
+    def _add_one_month(d: date) -> date:
+        """Section 210(6): one calendar month, not a fixed 30-day period."""
+        return NLCRuleEngine._add_months(d, 1)
 
     def _run_auditor_rules(self, c: CompanyProfile) -> None:
         # P0 LEGAL FIX: Section 210(6) requires first auditor appointment
@@ -823,62 +929,59 @@ class NLCRuleEngine:
                 eval_state="UNKNOWN",
             ))
         elif c.first_auditor_appointed is None:
+        appointment_verified = (
+            c.first_auditor_appointment_verified is True
+            and bool(c.first_auditor_appointment_evidence_ref)
+            and c.first_auditor_appointment_verified_at is not None
+            and bool(c.first_auditor_appointment_verified_by)
+        )
+
+        def add_aud001_unknown(code: str, description: str) -> None:
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-001",
-                flag_code="FIRST_AUDITOR_STATUS_UNKNOWN",
+                flag_code=code,
                 severity=Severity.NOT_EVALUATED,
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=(
-                    "First auditor appointment status unknown (data missing). "
-                    "Section 210(6) requires appointment within one month of registration."
-                ),
+                description=description,
                 statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
                 state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
             ))
-        elif c.first_auditor_appointment_date is not None:
-            if c.first_auditor_appointed is False:
+
+        if not appointment_verified or reg_date is None:
+            add_aud001_unknown(
+                "FIRST_AUDITOR_EVIDENCE_UNVERIFIED",
+                "First-auditor appointment status or incorporation date lacks verified source evidence; no statutory default is inferred.",
+            )
+        else:
+            deadline = self._add_one_month(reg_date)
+
+            def add_aud001_flag(flag_code: str, delay: int, appointment_date: date | None = None) -> None:
                 self._add_flag(ComplianceFlag(
                     rule_id="AUD-001",
-                    flag_code="FIRST_AUDITOR_EVIDENCE_CONTRADICTORY",
-                    severity=Severity.NOT_EVALUATED,
-                    score_impact=0,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    flag_code=flag_code,
+                    severity=Severity.YELLOW,
+                    score_impact=10,
+                    revenue_tier=(
+                        RevenueTier.COMPLIANCE_PACKAGE
+                        if delay <= 365
+                        else RevenueTier.STRUCTURED_REGULARIZATION
+                    ),
                     description=(
-                        "First auditor status is contradictory: an appointment date is recorded "
-                        "but the appointment status is marked false. Verify source evidence."
+                        f"First auditor was not appointed within one calendar month "
+                        f"of registration (Section 210(6)). Deadline: {deadline.isoformat()}. "
+                        f"Overdue by {delay} days."
                     ),
                     statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
-                    state=RuleState.CONTRADICTORY,
                     detail={
-                        "appointment_date": str(c.first_auditor_appointment_date),
+                        "delay_days": delay,
                         "registration_date": str(reg_date),
+                        "deadline": str(deadline),
+                        "appointment_date": str(appointment_date) if appointment_date else None,
+                        "calculation_method": "calendar_month",
                     },
                 ))
-            elif c.first_auditor_appointment_date > deadline:
-                delay = (c.first_auditor_appointment_date - deadline).days
-                add_aud001_flag(
-                    "FIRST_AUDITOR_APPOINTED_LATE",
-                    delay,
-                    c.first_auditor_appointment_date,
-                )
-        elif c.first_auditor_appointed is False and self.today > deadline:
-            delay = (self.today - deadline).days
-            add_aud001_flag("FIRST_AUDITOR_NOT_APPOINTED", delay)
-        elif c.first_auditor_appointed is True:
-            self._add_flag(ComplianceFlag(
-                rule_id="AUD-001",
-                flag_code="FIRST_AUDITOR_APPOINTMENT_DATE_UNKNOWN",
-                severity=Severity.NOT_EVALUATED,
-                score_impact=0,
-                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=(
-                    "First auditor is recorded as appointed, but the appointment date is missing; "
-                    "timeliness under Section 210(6) cannot be verified."
-                ),
-                statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
-                state=RuleState.UNKNOWN,
-            ))
 
         # AUD-005 is an evidence-status rule, not a separate 120-day statutory
         # deadline. Section 210(3) reappointment is assessed at the AGM by AUD-004.
@@ -894,24 +997,107 @@ class NLCRuleEngine:
                 statutory_basis="Section 210(3), Companies Act 1994 (Bangladesh)",
                 state=RuleState.UNKNOWN,
             ))
+            if c.first_auditor_appointed is None:
+                add_aud001_unknown("FIRST_AUDITOR_STATUS_UNKNOWN", "First auditor appointment status is missing.")
+            elif c.first_auditor_appointment_date is not None:
+                if c.first_auditor_appointed is False:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AUD-001",
+                        flag_code="FIRST_AUDITOR_EVIDENCE_CONTRADICTORY",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="A first-auditor appointment date is recorded but appointment status is marked false. Reconcile the source evidence.",
+                        statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
+                        state=RuleState.CONTRADICTORY,
+                        eval_state="UNKNOWN",
+                        detail={"appointment_date": str(c.first_auditor_appointment_date), "registration_date": str(reg_date)},
+                    ))
+                elif c.first_auditor_appointment_date > deadline:
+                    delay = (c.first_auditor_appointment_date - deadline).days
+                    add_aud001_flag("FIRST_AUDITOR_APPOINTED_LATE", delay, c.first_auditor_appointment_date)
+            elif c.first_auditor_appointed is False and self.today > deadline:
+                delay = (self.today - deadline).days
+                add_aud001_flag("FIRST_AUDITOR_NOT_APPOINTED", delay)
+            elif c.first_auditor_appointed is True:
+                add_aud001_unknown(
+                    "FIRST_AUDITOR_APPOINTMENT_DATE_UNKNOWN",
+                    "First auditor is recorded as appointed, but the appointment date is missing; timeliness cannot be verified.",
+                )
 
         if c.agm_scheduled_date and c.audit_complete is False:
+            audit_status_verified = (
+                c.audit_completion_verified is True
+                and bool(c.audit_completion_evidence_ref)
+                and c.audit_completion_verified_at is not None
+                and bool(c.audit_completion_verified_by)
+            )
             warning = c.agm_scheduled_date - timedelta(days=AGM_NOTICE_MINIMUM_DAYS)
             if self.today >= warning:
                 days_to = (c.agm_scheduled_date - self.today).days
-                severity = Severity.RED if days_to < 14 else Severity.YELLOW
-                self._add_flag(ComplianceFlag(
-                    rule_id="AUD-002",
-                    flag_code="AUDIT_MISSING_PRE_AGM",
-                    severity=severity,
-                    score_impact=12,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Audit not complete. AGM in {days_to} days. Section 183 requires audited accounts to be laid before the AGM.",
-                    statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
-                    detail={"days_to_agm": days_to}
-                ))
+                if not audit_status_verified:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AUD-002",
+                        flag_code="AUDIT_COMPLETION_STATUS_UNVERIFIED",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="Audit completion is recorded as false but lacks reviewer, timestamp and evidence provenance.",
+                        statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                    ))
+                else:
+                    severity = Severity.RED if days_to < 14 else Severity.YELLOW
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AUD-002",
+                        flag_code="AUDIT_MISSING_PRE_AGM",
+                        severity=severity,
+                        score_impact=12,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=f"Verified audit completion is absent. AGM in {days_to} days. Section 183 requires accounts to be laid before the AGM.",
+                        statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
+                        detail={"days_to_agm": days_to}
+                    ))
 
         if c.agm_held_this_cycle and c.audit_complete is False:
+            audit_status_verified = (
+                c.audit_completion_verified is True
+                and bool(c.audit_completion_evidence_ref)
+                and c.audit_completion_verified_at is not None
+                and bool(c.audit_completion_verified_by)
+            )
+            if not audit_status_verified:
+                self._add_flag(ComplianceFlag(
+                    rule_id="AUD-003",
+                    flag_code="AUDIT_COMPLETION_STATUS_UNVERIFIED",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="AGM record indicates an incomplete audit, but the audit status lacks reviewer, timestamp and evidence provenance.",
+                    statutory_basis="Sections 183 and 210, Companies Act 1994 (Bangladesh)",
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                ))
+            else:
+                self._add_flag(ComplianceFlag(
+                    rule_id="AUD-003",
+                    flag_code="AGM_HELD_WITHOUT_COMPLETED_AUDIT",
+                    severity=Severity.RED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                    description=(
+                        "Verified audit completion is absent for an AGM. Section 183 governs "
+                        "accounts laid before the AGM; a lawyer must assess the actual accounts, "
+                        "auditor appointment and applicable exceptions before determining consequences."
+                    ),
+                    statutory_basis="Sections 183 and 210, Companies Act 1994 (Bangladesh)",
+                    detail={"legal_review_required": True, "override_to_black": False},
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                ))
+
+        if c.agm_held_this_cycle and c.auditor_reappointed_at_agm is None:
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-003",
                 flag_code="AGM_AUDIT_STATUS_REQUIRES_REVIEW",
@@ -928,12 +1114,24 @@ class NLCRuleEngine:
                 eval_state="UNKNOWN",
                 detail={"override_to_black": False},
                 is_black_override=False,
+                rule_id="AUD-005",
+                flag_code="SUBSEQUENT_AUDITOR_STATUS_UNKNOWN",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="No verified record establishes whether the retiring auditor was reappointed or a statutory exception applied. This is an evidence-status finding, not a 120-day statutory deadline.",
+                statutory_basis="Section 210(3), Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
             ))
 
-        if c.agm_held_this_cycle and c.auditor_reappointed_at_agm is False:
+        if (c.agm_held_this_cycle and c.auditor_reappointed_at_agm is False
+                and c.auditor_reappointment_verified is True
+                and bool(c.auditor_reappointment_evidence_ref)):
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-004",
                 flag_code="AUDITOR_REAPPOINTMENT_REQUIRES_REVIEW",
+                flag_code="AUDITOR_NOT_REAPPOINTED",
                 severity=Severity.NOT_EVALUATED,
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
@@ -1015,10 +1213,64 @@ class NLCRuleEngine:
                         "calculation_method": "calendar_months_and_calendar_year",
                     }
                 ))
+    def _agm_history_is_verified(self, c: CompanyProfile) -> bool:
+        return (
+            c.agm_history_verified is True
+            and bool(c.agm_history_evidence_ref)
+            and c.agm_history_verified_at is not None
+            and bool(c.agm_history_verified_by)
+        )
 
-        if c.agm_scheduled_date and c.notice_sent_date:
-            clear_days = (c.agm_scheduled_date - c.notice_sent_date).days - 1
-            if clear_days < AGM_NOTICE_MINIMUM_DAYS:
+    def _subsequent_agm_deadline(self, c: CompanyProfile) -> date | None:
+        if not self._agm_history_is_verified(c):
+            return None
+        if c.last_agm_date is None:
+            return None
+        # Section 81(1) proviso: if the first AGM is held within 18 months
+        # of incorporation, no AGM is required in the incorporation year or
+        # the following year. The first subsequent AGM is therefore due by
+        # 31 December of the second following year; the ordinary 15-month
+        # interval resumes after that AGM.
+        if c.agm_count == 1 and c.incorporation_date is not None:
+            first_agm_deadline = self._add_months(c.incorporation_date, 18)
+            if c.last_agm_date <= first_agm_deadline:
+                calendar_year_deadline = date(c.incorporation_date.year + 2, 12, 31)
+                base_deadline = calendar_year_deadline
+            else:
+                fifteen_month_deadline = self._add_months(c.last_agm_date, 15)
+                calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
+                base_deadline = min(fifteen_month_deadline, calendar_year_deadline)
+        else:
+            fifteen_month_deadline = self._add_months(c.last_agm_date, 15)
+            calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
+            base_deadline = min(fifteen_month_deadline, calendar_year_deadline)
+        if c.agm_extension_granted_until is None:
+            return base_deadline
+        extension_verified = (
+            c.agm_extension_verified is True
+            and bool(c.agm_extension_evidence_ref)
+            and c.agm_extension_verified_at is not None
+            and bool(c.agm_extension_verified_by)
+        )
+        if not extension_verified or c.agm_extension_application_date is None:
+            return None
+        application_days_after_deadline = (c.agm_extension_application_date - base_deadline).days
+        if application_days_after_deadline < 0 or application_days_after_deadline > 30:
+            return None
+        statutory_limit = min(
+            base_deadline + timedelta(days=90),
+            calendar_year_deadline,
+        )
+        if c.agm_extension_granted_until < base_deadline:
+            return base_deadline
+        if c.agm_extension_granted_until > statutory_limit:
+            return None
+        return c.agm_extension_granted_until
+
+    def _run_agm_rules(self, c: CompanyProfile) -> None:
+        # Section 81 deadlines depend on a complete, verified AGM history.
+        if self._agm_history_is_verified(c):
+            if c.agm_count is None:
                 self._add_flag(ComplianceFlag(
                     rule_id="AGM-003",
                     flag_code="AGM_SHORT_NOTICE_REQUIRES_REVIEW",
@@ -1030,7 +1282,106 @@ class NLCRuleEngine:
                     state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                     eval_state="UNKNOWN",
                     detail={"clear_days": clear_days}
+                    rule_id="AGM-001", flag_code="AGM_COUNT_UNKNOWN",
+                    severity=Severity.NOT_EVALUATED, score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="AGM history is marked verified but the AGM count is missing.",
+                    statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                    state=RuleState.UNKNOWN, eval_state="UNKNOWN",
                 ))
+            elif c.agm_count == 0:
+                if c.incorporation_date is None:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-001", flag_code="INCORPORATION_DATE_UNKNOWN",
+                        severity=Severity.NOT_EVALUATED, score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="First-AGM deadline cannot be calculated without a verified incorporation date.",
+                        statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                        state=RuleState.UNKNOWN, eval_state="UNKNOWN",
+                    ))
+                else:
+                    deadline = self._add_months(c.incorporation_date, 18)
+                    if self.today > deadline:
+                        delay = (self.today - deadline).days
+                        severity = Severity.BLACK if delay > 365 else Severity.RED
+                        self._add_flag(ComplianceFlag(
+                            rule_id="AGM-001", flag_code="FIRST_AGM_DEFAULT",
+                            severity=severity,
+                            score_impact=self._graduated_agm_deduction(delay),
+                            revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                            description=f"First AGM not held within 18 calendar months. Section 81(1): overdue by {delay} days.",
+                            statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                            detail={"delay_days": delay, "deadline": str(deadline)},
+                        ))
+            elif c.agm_count > 0:
+                if c.last_agm_date is None:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-002", flag_code="LAST_AGM_DATE_UNVERIFIED",
+                        severity=Severity.NOT_EVALUATED, score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="AGM history is marked verified but the last AGM date is missing.",
+                        statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                        state=RuleState.UNKNOWN, eval_state="UNKNOWN",
+                    ))
+                elif c.agm_held_this_cycle is False:
+                    agm_deadline = self._subsequent_agm_deadline(c)
+                    if agm_deadline is None:
+                        self._add_flag(ComplianceFlag(
+                            rule_id="AGM-002", flag_code="AGM_EXTENSION_REQUIRES_REVIEW",
+                            severity=Severity.NOT_EVALUATED, score_impact=0,
+                            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                            description="A recorded AGM extension is not supported by verified, timely application and grant evidence. No automatic default determination is made.",
+                            statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                            state=RuleState.REQUIRES_LAWYER_JUDGMENT, eval_state="UNKNOWN",
+                            detail={"extension_until": str(c.agm_extension_granted_until)},
+                        ))
+                    elif self.today > agm_deadline:
+                        delay = (self.today - agm_deadline).days
+                        severity = Severity.BLACK if delay > 365 else Severity.RED
+                        basis = "VALIDATED_EXTENSION" if c.agm_extension_granted_until else "SECTION_81(1)"
+                        self._add_flag(ComplianceFlag(
+                            rule_id="AGM-002", flag_code="SUBSEQUENT_AGM_DEFAULT",
+                            severity=severity,
+                            score_impact=self._graduated_agm_deduction(delay),
+                            revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                            description=f"AGM overdue by {delay} days. Section 81(1): deadline determined by {basis}.",
+                            statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                            detail={"delay_days": delay, "deadline": str(agm_deadline), "basis": basis},
+                        ))
+        # Unverified AGM history is not converted into a deadline breach.
+        # Notice, quorum and minutes checks below use their own evidence requirements.
+
+        consent_verified = (
+            c.short_notice_consent_verified is True
+            and bool(c.short_notice_consent_evidence_ref)
+        )
+        if c.agm_scheduled_date and c.notice_sent_date:
+            notice_days = (c.agm_scheduled_date - c.notice_sent_date).days
+            if notice_days < AGM_NOTICE_MINIMUM_DAYS:
+                if not consent_verified:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-003",
+                        flag_code="AGM_SHORT_NOTICE_CONSENT_UNVERIFIED",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="AGM notice was shorter than 21 days, but written consent from all members entitled to attend and vote has not been verified.",
+                        statutory_basis="Section 85(1)(a), Companies Act 1994 (Bangladesh)",
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                        detail={"notice_days": notice_days},
+                    ))
+                elif c.short_notice_consent_obtained is False:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-003",
+                        flag_code="AGM_NOTICE_DEFECTIVE",
+                        severity=Severity.YELLOW,
+                        score_impact=5,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=f"AGM notice issued with {notice_days} days and verified absence of written short-notice consent.",
+                        statutory_basis="Section 85(1)(a), Companies Act 1994 (Bangladesh)",
+                        detail={"notice_days": notice_days, "short_notice_consent": False},
+                    ))
 
         if c.agm_scheduled_date and c.notice_sent_date is None:
             warn = c.agm_scheduled_date - timedelta(days=AGM_NOTICE_MINIMUM_DAYS)
@@ -1129,7 +1480,69 @@ class NLCRuleEngine:
                     "quorum_met_recorded": False,
                 },
             ))
+                if not consent_verified:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-004",
+                        flag_code="AGM_NOTICE_OR_CONSENT_UNVERIFIED",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="No notice date is recorded and any written short-notice consent has not been verified.",
+                        statutory_basis="Section 85(1)(a), Companies Act 1994 (Bangladesh)",
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                        detail={"days_to_agm": days_rem},
+                    ))
+                elif c.short_notice_consent_obtained is False:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-004",
+                        flag_code="AGM_NOTICE_NOT_ISSUED",
+                        severity=Severity.RED,
+                        score_impact=15,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=f"AGM notice not issued and written short-notice consent is verified absent. {days_rem} days to AGM.",
+                        statutory_basis="Section 85(1)(a), Companies Act 1994 (Bangladesh)",
+                        detail={"days_to_agm": days_rem, "short_notice_consent": False},
+                    ))
 
+        attendance_verified = (
+            c.agm_attendance_verified is True
+            and bool(c.agm_attendance_evidence_ref)
+        )
+        quorum_basis_verified = (
+            c.agm_quorum_basis_verified is True
+            and bool(c.agm_quorum_evidence_ref)
+            and c.agm_quorum_required is not None
+        )
+        if c.agm_held_this_cycle and attendance_verified and not quorum_basis_verified:
+            self._add_flag(ComplianceFlag(
+                rule_id="AGM-005",
+                flag_code="AGM_QUORUM_BASIS_UNKNOWN",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Attendance is verified, but the applicable quorum has not been verified against the Articles and Section 85(2)(b).",
+                statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+            ))
+        if (
+            c.agm_held_this_cycle
+            and c.members_present_at_agm is not None
+            and attendance_verified
+            and quorum_basis_verified
+            and c.members_present_at_agm < c.agm_quorum_required
+        ):
+            self._add_flag(ComplianceFlag(
+                rule_id="AGM-005",
+                flag_code="AGM_QUORUM_DEFECTIVE",
+                severity=Severity.RED,
+                score_impact=15,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                description=f"Recorded attendance ({c.members_present_at_agm}) is below verified quorum ({c.agm_quorum_required}).",
+                statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh), read with the Articles",
+                detail={"present": c.members_present_at_agm, "required": c.agm_quorum_required, "member_count": c.member_count},
+            ))
         if c.agm_held_this_cycle and c.agm_minutes_prepared is False:
             self._add_flag(ComplianceFlag(
                 rule_id="AGM-006",
@@ -1138,6 +1551,11 @@ class NLCRuleEngine:
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="The record says AGM minutes were not prepared. Verify the minute book and contemporaneous records before determining non-compliance under Section 89.",
+                flag_code="AGM_MINUTES_STATUS_UNVERIFIED",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="The record indicates minutes may be absent, but the minute book and contemporaneous records have not been independently verified.",
                 statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
                 state=RuleState.UNKNOWN,
                 eval_state="UNKNOWN",
@@ -1251,13 +1669,15 @@ class NLCRuleEngine:
                     ))
                     self._add_flag(ComplianceFlag(
                         rule_id="DIR-004",
-                        flag_code="DEPARTED_DIRECTOR_STILL_LIABLE",
-                        severity=Severity.RED,
-                        score_impact=10,
-                        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                        description="Departed director still liable until Form XII filed. Section 115: filing required to release liability.",
-                        statutory_basis="Section 109, Companies Act 1994 (Bangladesh)",
-                        detail={"director_id": change.director_id}
+                        flag_code="LATE_CESSATION_FILING_LEGAL_EFFECT_REVIEW",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="Cessation particulars were filed late or remain unfiled. The legal effect on third-party reliance and any continuing liability requires case-specific legal review; non-filing alone does not automatically establish continuing director liability.",
+                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
+                        detail={"director_id": change.director_id, "legal_review_required": True},
+                        state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                        eval_state="UNKNOWN",
                     ))
 
                 if delay > 365:
@@ -2072,6 +2492,7 @@ class NLCRuleEngine:
         # ACC-002: Section 190 allows 30 days after the AGM, or if no AGM
         # was held, 30 days after the latest date on which it should have been held.
         if c.financial_statements_filed is False:
+        if c.financial_statements_filed is False and self._agm_history_is_verified(c):
             filing_deadline = None
             deadline_basis = None
             if c.agm_held_this_cycle is True and c.last_agm_date is not None:
@@ -2084,6 +2505,7 @@ class NLCRuleEngine:
                     interval_deadline = self._add_months(c.last_agm_date, SUBSEQUENT_AGM_DEADLINE_MONTHS)
                     calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
                     agm_due = min(interval_deadline, calendar_year_deadline)
+                    agm_due = self._subsequent_agm_deadline(c)
                 else:
                     agm_due = None
                 if agm_due is not None:
@@ -2134,11 +2556,11 @@ class NLCRuleEngine:
         # period. The previous description claiming "Cannot act as director
         # for 5 years" was legally unsupported and has been removed.
         #
-        # Evidence gating: BLACK override fires ONLY when structured
-        # disqualification_grounds contain verified entries with:
-        #   - ground_type (one of the S94 grounds above)
-        #   - evidence_ref (court order / insolvency certificate / etc.)
-        # Without verified evidence, emit as NOT_EVALUATED, not BLACK.
+        # Evidence gating: Section 94 findings require structured grounds,
+        # director identity, authoritative evidence, effective date and current
+        # status. DEF-001 is not a BLACK override and is excluded from scoring
+        # pending independent legal approval. Unpaid-call threshold is DISPUTED
+        # across official Bengali and English/case materials.
         # ═════════════════════════════════════════════════════════════════
 
         VALID_GROUNDS = {
@@ -2149,13 +2571,36 @@ class NLCRuleEngine:
         # Check for verified, structured disqualification grounds
         verified_grounds = []
         unverified_allegations = []
+        disputed_grounds = []
 
         if c.disqualification_grounds:
             for g in c.disqualification_grounds:
                 ground_type = g.get("ground_type", "")
                 evidence_ref = g.get("evidence_ref")
                 authority = g.get("authority")
-                if ground_type in VALID_GROUNDS and evidence_ref and authority:
+                director_name = g.get("director_name")
+                effective_date = g.get("effective_date")
+                continuing = g.get("continuing_status")
+                base_evidence_complete = (
+                    isinstance(director_name, str) and director_name.strip()
+                    and isinstance(evidence_ref, str) and evidence_ref.strip()
+                    and isinstance(authority, str) and authority.strip()
+                    and bool(effective_date)
+                    and continuing is True
+                )
+                if ground_type == "UNPAID_CALL" and base_evidence_complete:
+                    # BDLaws Bengali text states 180 days; English materials and
+                    # some case materials describe six months. Keep this disputed
+                    # until a Bangladesh company-law reviewer resolves the text.
+                    disputed_grounds.append(g)
+                elif (
+                    ground_type in VALID_GROUNDS
+                    and base_evidence_complete
+                    and (
+                        ground_type != "AOA_PRESCRIBED"
+                        or bool(g.get("aoa_provision_ref"))
+                    )
+                ):
                     verified_grounds.append(g)
                 else:
                     unverified_allegations.append(g)
@@ -2165,14 +2610,25 @@ class NLCRuleEngine:
         if not c.disqualification_grounds and c.disqualification_details:
             unverified_allegations = c.disqualification_details
 
+        if disputed_grounds:
+            self._add_flag(ComplianceFlag(
+                rule_id="DEF-001",
+                flag_code="DIRECTOR_DISQUALIFICATION_GROUND_DISPUTED",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Unpaid-call disqualification evidence is recorded, but statutory materials differ on the threshold (180 days versus six months). Legal review is required before classifying this as a confirmed disqualification.",
+                statutory_basis="Section 94(1)(d), Companies Act 1994 (Bangladesh)",
+                state=RuleState.DISPUTED,
+                eval_state="UNKNOWN",
+                detail={"disputed_grounds": disputed_grounds, "legal_review_required": True},
+            ))
+
         if verified_grounds:
             disq_count = len(verified_grounds)
-            impact = 20 if disq_count == 1 else 25
-            is_override = (
-                c.current_director_count is not None
-                and c.current_director_count > 0
-                and disq_count >= (c.current_director_count - 1)
-            )
+            # Disqualification is a statutory finding; automatic BLACK is an
+            # NLC risk-policy choice, not a consequence prescribed by Section 94.
+            impact = 10
             ground_summary = "; ".join(
                 f"{g.get('director_name', 'Director')}: {g.get('ground_type', 'unknown')}"
                 for g in verified_grounds
@@ -2180,9 +2636,9 @@ class NLCRuleEngine:
             self._add_flag(ComplianceFlag(
                 rule_id="DEF-001",
                 flag_code="DIRECTOR_DISQUALIFIED",
-                severity=Severity.BLACK,
+                severity=Severity.RED,
                 score_impact=impact,
-                revenue_tier=RevenueTier.CORPORATE_RESCUE,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=(
                     f"{disq_count} director(s) disqualified under Section 94 "
                     f"({ground_summary}). Verified evidence on file. "
@@ -2194,7 +2650,7 @@ class NLCRuleEngine:
                     "count": disq_count,
                     "evidence_verified": True,
                 },
-                is_black_override=is_override,
+                is_black_override=False,
             ))
         elif unverified_allegations:
             # P0 EVIDENCE SEMANTICS: Unverified disqualification allegations
@@ -2253,12 +2709,12 @@ class NLCRuleEngine:
 
         pre_score = self._calculate_raw_score(self._flags)
         has_black_override = any(
-            f.is_black_override and f.state == RuleState.NON_COMPLIANT and f.eval_state != "UNKNOWN"
+            f.is_black_override and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"
             for f in self._flags if not f.resolved and f.conditional_applies
         )
         
         if pre_score <= 29 or has_black_override:
-            black_count = len([f for f in self._flags if f.severity == Severity.BLACK and f.state == RuleState.NON_COMPLIANT and f.eval_state != "UNKNOWN" and not f.resolved and f.conditional_applies and f.rule_id not in self._ESC_RULE_IDS])
+            black_count = len([f for f in self._flags if f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION" and not f.resolved and f.conditional_applies and f.rule_id not in self._ESC_RULE_IDS])
             esc003_impact = 10 if black_count <= 2 else (25 if black_count == 3 else 35)
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-003",
@@ -2267,7 +2723,7 @@ class NLCRuleEngine:
                 score_impact=esc003_impact,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description="NLC risk policy: rescue workflow recommended. Systemic failure detected.",
-                statutory_basis="Sections 81, 115, 36, 346 (aggregate), Companies Act 1994 (Bangladesh)",
+                statutory_basis="NLC internal risk policy; not a statutory risk band under the Companies Act 1994.",
                 detail={"black_count": black_count, "pre_score": pre_score},
                 is_black_override=True,
                 state=RuleState.NON_COMPLIANT
@@ -2297,44 +2753,50 @@ class NLCRuleEngine:
 
 
     def _calculate_raw_score(self, flags: List[ComplianceFlag]) -> int:
-        active = [f for f in flags if not f.resolved and f.conditional_applies]
-        # FIX: Only deduct points for NON_COMPLIANT findings
-        violations = [f for f in active if f.state == RuleState.NON_COMPLIANT]
+        """Return the same capped 100-point raw score used by _calculate_score.
 
-        # P0 GATE: Only verified rules contribute to the authoritative score.
-        # Unverified rules still generate flags for visibility but do not
-        # reduce the score. BLACK overrides are handled separately in
-        # _calculate_score() and are always enforced.
+        Escalation rules call this before generating ESC flags, so it must use
+        the exact same verified-rule gate, category buckets and caps as the
+        authoritative scorer. A separate 125-point scaling formula caused
+        different pre-score and final-score results for identical findings.
+        """
+        active = [f for f in flags if not f.resolved and f.conditional_applies]
+        violations = [
+            f for f in active
+            if f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+            and f.eval_state == "VIOLATION"
+        ]
         scored = [f for f in violations if f.rule_id in VERIFIED_RULE_IDS]
 
-        tax_ded = sum(f.score_impact for f in scored if f.rule_id.startswith(("TAX-", "VAT-")))
-        agm_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("AGM-"))
-        aud_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("AUD-"))
-        ret_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("AR-"))
-        dir_ded = sum(f.score_impact for f in scored if f.rule_id.startswith(("DIR-", "INC-", "DEF-", "TL-", "BOD-", "MEM-")))
-        shr_ded = sum(f.score_impact for f in scored if f.rule_id.startswith(("SH-", "TR-")))
-        cap_ded = sum(f.score_impact for f in scored if f.rule_id.startswith(("CAP-", "STR-", "CHG-", "ACC-")))
-        off_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("OFF-"))
-        reg_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("REG-"))
-        bnk_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("BNK-"))
-        lbr_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("LBR-"))
-        bsec_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("BSEC-"))
-        fx_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("FX-"))
-        esc_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("ESC-"))
-
-        module_sum = (
-            max(0, 20 - agm_ded) + max(0, 20 - aud_ded) + max(0, 20 - ret_ded) +
-            max(0, 10 - dir_ded) + max(0, 10 - shr_ded) + max(0, 5 - cap_ded) +
-            max(0, 5 - off_ded) + max(0, 5 - reg_ded) + max(0, 5 - tax_ded) +
-            max(0, 5 - bnk_ded) + max(0, 5 - lbr_ded) + max(0, 5 - bsec_ded) +
-            max(0, 5 - fx_ded) + max(0, 5 - esc_ded)
-        )
-        # FIX: Scale 125 max points to 100
-        return int((module_sum / 125.0) * 100)
+        deductions = {
+            "TAX": sum(f.score_impact for f in scored if f.rule_id.startswith(("TAX-", "VAT-"))),
+            "AGM": sum(f.score_impact for f in scored if f.rule_id.startswith("AGM-")),
+            "AUD": sum(f.score_impact for f in scored if f.rule_id.startswith("AUD-")),
+            "RET": sum(f.score_impact for f in scored if f.rule_id.startswith("AR-")),
+            "DIR": sum(f.score_impact for f in scored if f.rule_id.startswith(("DIR-", "INC-", "DEF-", "TL-", "BOD-", "MEM-"))),
+            "SHR": sum(f.score_impact for f in scored if f.rule_id.startswith(("SH-", "TR-"))),
+            "CAP": sum(f.score_impact for f in scored if f.rule_id.startswith(("CAP-", "STR-", "CHG-", "ACC-"))),
+            "OFF": sum(f.score_impact for f in scored if f.rule_id.startswith("OFF-")),
+            "REG": sum(f.score_impact for f in scored if f.rule_id.startswith("REG-")),
+            "BNK": sum(f.score_impact for f in scored if f.rule_id.startswith("BNK-")),
+            "LBR": sum(f.score_impact for f in scored if f.rule_id.startswith("LBR-")),
+            "BSEC": sum(f.score_impact for f in scored if f.rule_id.startswith("BSEC-")),
+            "FX": sum(f.score_impact for f in scored if f.rule_id.startswith("FX-")),
+            "ESC": sum(f.score_impact for f in scored if f.rule_id.startswith("ESC-")),
+        }
+        capped = {
+            key: min(value, CATEGORY_CAPS[key][0])
+            for key, value in deductions.items()
+        }
+        return max(0, min(100, 100 - sum(capped.values())))
 
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
         active = [f for f in flags if not f.resolved and f.conditional_applies]
-        violations = [f for f in active if f.state == RuleState.NON_COMPLIANT]
+        violations = [
+            f for f in active
+            if f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+            and f.eval_state == "VIOLATION"
+        ]
 
         # P0 GATE: Only verified rules contribute to the authoritative score.
         # Unverified rules still generate flags for visibility but their
@@ -2381,12 +2843,17 @@ class NLCRuleEngine:
         final = raw
         critical = [
             f for f in active
-            if f.is_black_override and f.state == RuleState.NON_COMPLIANT and f.eval_state != "UNKNOWN"
+            if f.is_black_override
+            and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+            and f.eval_state == "VIOLATION"
         ]
         if not critical:
             critical = [
                 f for f in active
-                if f.severity == Severity.BLACK and f.state == RuleState.NON_COMPLIANT and f.eval_state != "UNKNOWN"
+                if f.rule_id in VERIFIED_RULE_IDS
+                and f.severity == Severity.BLACK
+                and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+                and f.eval_state == "VIOLATION"
             ]
         if critical:
             override = True
@@ -2402,7 +2869,11 @@ class NLCRuleEngine:
             severity_rank = {Severity.GREEN: 0, Severity.YELLOW: 1, Severity.RED: 2, Severity.BLACK: 3}
             max_flag_severity = Severity.GREEN
             for f in active:
-                if f.severity in severity_rank and (f.severity in (Severity.RED, Severity.BLACK)) and f.state == RuleState.NON_COMPLIANT and f.eval_state != "UNKNOWN":
+                if (f.rule_id in VERIFIED_RULE_IDS
+                        and f.severity in severity_rank
+                        and f.severity in (Severity.RED, Severity.BLACK)
+                        and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+                        and f.eval_state == "VIOLATION"):
                     if severity_rank[f.severity] > severity_rank.get(max_flag_severity, 0):
                         max_flag_severity = f.severity
             band_rank = severity_rank.get(score_band, 0)
@@ -2432,6 +2903,24 @@ class NLCRuleEngine:
         }
         hash_str = json.dumps(hash_payload, sort_keys=True, separators=(",", ":"), default=str)
         score_hash = hashlib.sha256(hash_str.encode()).hexdigest()[:16]
+        flag_signatures = sorted(
+            f"{f.rule_id}:{f.state!s}:{f.eval_state}:{f.severity!s}:{f.score_impact}:{f.rule_version}"
+            for f in active
+        )
+        hash_payload = {
+            "company_profile": asdict(company),
+            "evaluation_date": self.today.isoformat(),
+            "engine_version": RULE_ENGINE_VERSION,
+            "ilrmf_version": ILRMF_VERSION,
+            "verified_rule_ids": sorted(VERIFIED_RULE_IDS),
+            "flags": flag_signatures,
+            "final_score": final,
+        }
+        hash_str = json.dumps(
+            hash_payload, sort_keys=True, separators=(",", ":"),
+            default=lambda value: value.value if isinstance(value, Enum) else value.isoformat() if isinstance(value, date) else str(value),
+        )
+        score_hash = hashlib.sha256(hash_str.encode("utf-8")).hexdigest()
 
         return ScoreBreakdown(
             agm_score=max(0, 20 - agm_ded),
@@ -2452,10 +2941,10 @@ class NLCRuleEngine:
             revenue_tier=REVENUE_TIER_MAP[band],
             active_flag_count=len(active),
             coverage=coverage,
-            black_flag_count=len([f for f in active if f.severity == Severity.BLACK and f.state == RuleState.NON_COMPLIANT]),
-            red_flag_count=len([f for f in active if f.severity == Severity.RED and f.state == RuleState.NON_COMPLIANT]),
-            yellow_flag_count=len([f for f in active if f.severity == Severity.YELLOW and f.state == RuleState.NON_COMPLIANT]),
-            green_flag_count=len([f for f in active if f.severity == Severity.GREEN and f.state == RuleState.NON_COMPLIANT]),
+            black_flag_count=len([f for f in active if (f.rule_id in VERIFIED_RULE_IDS or f.is_black_override) and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            red_flag_count=len([f for f in active if f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.RED and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            yellow_flag_count=len([f for f in active if f.severity == Severity.YELLOW and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            green_flag_count=len([f for f in active if f.severity == Severity.GREEN and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             bankruptcy_score=max(0, 5 - bnk_ded),
             labour_score=max(0, 5 - lbr_ded),
             bsec_score=max(0, 5 - bsec_ded),
@@ -2667,6 +3156,18 @@ class NLCRuleEngine:
             return 0
 
         deadline = self._subsequent_agm_deadline(c.last_agm_date)
+        if not self._agm_history_is_verified(c) or c.agm_count is None:
+            return 0
+        if c.agm_count == 0:
+            if c.incorporation_date is None:
+                return 0
+            deadline = self._add_months(c.incorporation_date, 18)
+        else:
+            if c.last_agm_date is None:
+                return 0
+            deadline = self._subsequent_agm_deadline(c)
+            if deadline is None:
+                return 0
         if self.today > deadline:
             return (self.today - deadline).days // 365
         return 0

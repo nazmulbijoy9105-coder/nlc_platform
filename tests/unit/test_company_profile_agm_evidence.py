@@ -13,6 +13,8 @@ def test_missing_agm_record_keeps_attendance_and_auditor_status_unknown():
     assert evidence == {
         "members_present_at_agm": None,
         "auditor_reappointed_at_agm": None,
+        "auditor_reappointment_verified": False,
+        "auditor_reappointment_evidence_ref": None,
         "agm_minutes_prepared": None,
         "agm_quorum_met": None,
         "agm_quorum_required": None,
@@ -20,6 +22,9 @@ def test_missing_agm_record_keeps_attendance_and_auditor_status_unknown():
         "agm_notice_verified_absent": None,
         "agm_held_without_audit": None,
         "accounts_adopted_at_agm": None,
+        "short_notice_consent_obtained": None,
+        "short_notice_consent_verified": False,
+        "short_notice_consent_evidence_ref": None,
     }
 
 
@@ -34,6 +39,14 @@ def test_agm_profile_evidence_comes_from_the_latest_agm_record():
         notice_missing=False,
         agm_held_without_audit=True,
         accounts_adopted=True,
+        members_present_verified=True,
+        members_present_evidence_ref="AGM-MINUTES-001",
+        members_present_verified_at=date(2026, 1, 2),
+        members_present_verified_by="reviewer-001",
+        auditor_reappointment_verified=True,
+        auditor_reappointment_evidence_ref="AGM-MINUTES-001",
+        auditor_reappointment_verified_at=date(2026, 1, 2),
+        auditor_reappointment_verified_by="reviewer-001",
     )
 
     evidence = _agm_profile_evidence(meeting)
@@ -280,6 +293,9 @@ def test_verified_zero_directors_triggers_minimum_director_rule():
         incorporation_date=date(today.year - 2, 1, 1),
         current_director_count=0,
         directors_verified=True,
+        directors_verification_evidence_ref="RJSC-DIRECTORS-001",
+        directors_verified_at=today,
+        directors_verified_by="reviewer-001",
         agm_count=1,
         annual_return_filed=True,
         first_auditor_appointed=True,
