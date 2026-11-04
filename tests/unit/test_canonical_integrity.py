@@ -76,8 +76,9 @@ def _engine_rule_data():
 
         result.setdefault(rule_id, set()).add(basis)
 
-    # Resolve the four BSEC rule IDs declared as the first field of
-    # candidate tuples and passed through the shared ComplianceFlag loop.
+    # Resolve BSEC candidate IDs and the conditional statutory-basis
+    # assignment from the function AST. Each branch must remain a literal;
+    # map the exact basis to the candidate it governs.
     bsec_function = next(
         (node for node in ast.walk(tree)
          if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
@@ -85,24 +86,53 @@ def _engine_rule_data():
         None,
     )
     if bsec_function is not None:
-        shared_basis = None
+        basis_by_rule = {}
         for child in ast.walk(bsec_function):
-            if isinstance(child, ast.Call) and _call_name(child.func) == "ComplianceFlag":
-                for kw in child.keywords:
-                    if kw.arg == "statutory_basis" and isinstance(kw.value, ast.Constant):
-                        if isinstance(kw.value.value, str):
-                            shared_basis = kw.value.value.strip()
-                            break
-            if shared_basis:
-                break
-        if not shared_basis:
-            errors.append("_run_bsec_rules: shared BSEC statutory_basis must be a string literal")
-        else:
-            for child in ast.walk(bsec_function):
-                if isinstance(child, ast.Tuple) and child.elts and isinstance(child.elts[0], ast.Constant):
-                    rule_id = child.elts[0].value
-                    if isinstance(rule_id, str) and _is_rule_id(rule_id):
-                        result.setdefault(rule_id, set()).add(shared_basis)
+            if not isinstance(child, ast.Assign):
+                continue
+            if not any(isinstance(target, ast.Name) and target.id == "basis"
+                       for target in child.targets):
+                continue
+            value = child.value
+            if not isinstance(value, ast.IfExp):
+                errors.append("_run_bsec_rules: basis assignment must be a literal conditional")
+                continue
+            test_node = value.test
+            if not (isinstance(test_node, ast.Compare)
+                    and isinstance(test_node.left, ast.Name)
+                    and test_node.left.id == "rule_id"
+                    and len(test_node.comparators) == 1
+                    and isinstance(test_node.comparators[0], ast.Constant)
+                    and isinstance(test_node.comparators[0].value, str)):
+                errors.append("_run_bsec_rules: basis condition must identify a literal rule_id")
+                continue
+            selected_id = test_node.comparators[0].value
+            for rule_id, basis_node in (
+                (selected_id, value.body),
+                ("BSEC-OTHER", value.orelse),
+            ):
+                if not isinstance(basis_node, ast.Constant) or not isinstance(basis_node.value, str) or not basis_node.value.strip():
+                    errors.append(f"_run_bsec_rules: {rule_id} statutory_basis must be a non-empty string literal")
+                elif rule_id != "BSEC-OTHER":
+                    basis_by_rule[rule_id] = basis_node.value.strip()
+                else:
+                    basis_by_rule["BSEC-002"] = basis_node.value.strip()
+                    basis_by_rule["BSEC-003"] = basis_node.value.strip()
+                    basis_by_rule["BSEC-004"] = basis_node.value.strip()
+
+        candidate_ids = set()
+        for child in ast.walk(bsec_function):
+            if (isinstance(child, ast.Tuple) and child.elts
+                    and isinstance(child.elts[0], ast.Constant)
+                    and isinstance(child.elts[0].value, str)
+                    and _is_rule_id(child.elts[0].value)):
+                candidate_ids.add(child.elts[0].value)
+        for rule_id in candidate_ids:
+            basis = basis_by_rule.get(rule_id)
+            if not basis:
+                errors.append(f"_run_bsec_rules: missing literal statutory_basis for {rule_id}")
+            else:
+                result.setdefault(rule_id, set()).add(basis)
 
     return result, errors
 
