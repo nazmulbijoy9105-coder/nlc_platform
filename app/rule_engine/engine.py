@@ -1252,16 +1252,6 @@ class NLCRuleEngine:
                         statutory_basis="Section 85(1)(a), Companies Act 1994 (Bangladesh)",
                         detail={"days_to_agm": days_rem, "short_notice_consent": False},
                     ))
-                self._add_flag(ComplianceFlag(
-                    rule_id="AGM-004",
-                    flag_code="AGM_NOTICE_NOT_ISSUED",
-                    severity=Severity.RED,
-                    score_impact=15,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"AGM notice not issued. {days_rem} days to AGM. Section 85 requires 21 clear days notice. NOTE: Section 85 provides exceptions for accidental omission and permits shorter notice with consent.",
-                    statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
-                    detail={"days_to_agm": days_rem}
-                ))
 
         if (
             c.agm_held_this_cycle
@@ -1283,50 +1273,6 @@ class NLCRuleEngine:
                 statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh), read with the Articles",
                 detail={"present": c.members_present_at_agm, "required": c.agm_quorum_required},
             ))
-        if c.agm_held_this_cycle and c.members_present_at_agm is not None:
-            # Section 85(2)(b): the default private-company quorum depends on
-            # total membership. The Articles may override this statutory default;
-            # no Articles-specific override is currently represented in CompanyProfile.
-            if c.member_count is None or c.member_count <= 0:
-                self._add_flag(ComplianceFlag(
-                    rule_id="AGM-005",
-                    flag_code="AGM_QUORUM_STATUS_UNKNOWN",
-                    severity=Severity.NOT_EVALUATED,
-                    score_impact=0,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="AGM quorum cannot be evaluated because the verified member count is missing.",
-                    statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
-                    state=RuleState.UNKNOWN,
-                    detail={"present": c.members_present_at_agm, "member_count": c.member_count}
-                ))
-            else:
-                required_quorum = (
-                    (PRIVATE_COMPANY_QUORUM_SMALL if c.member_count <= 6 else PRIVATE_COMPANY_QUORUM_LARGE)
-                    if c.company_type == "PRIVATE_LIMITED"
-                    else 5
-                )
-                if c.members_present_at_agm < required_quorum:
-                    self._add_flag(ComplianceFlag(
-                        rule_id="AGM-005",
-                        flag_code="AGM_QUORUM_DEFECTIVE",
-                        severity=Severity.RED,
-                        score_impact=15,
-                        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                        description=(
-                            f"AGM quorum not met. {c.members_present_at_agm} present; "
-                            f"statutory default requires {required_quorum} for "
-                            f"{c.member_count} members. Section 85(2)(b); "
-                            "check the Articles for any different quorum provision."
-                        ),
-                        statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
-                        detail={
-                            "present": c.members_present_at_agm,
-                            "member_count": c.member_count,
-                            "required": required_quorum,
-                            "basis": "section_85_2_b_default",
-                        }
-                    ))
-
         if c.agm_held_this_cycle and c.agm_minutes_prepared is False:
             self._add_flag(ComplianceFlag(
                 rule_id="AGM-006",
