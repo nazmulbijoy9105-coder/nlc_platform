@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import get_current_user
 from app.core.dependencies import get_db, get_db_for_user
+from app.models.database import set_admin_context
 from app.models.infrastructure import UserActivityLog
 from app.models.user import User
 
@@ -294,7 +295,12 @@ async def cron_evaluate_all(
         provided = request.headers.get("X-Cron-Secret", "")
         if provided != cron_secret:
             raise HTTPException(status_code=403, detail="Invalid cron secret")
-    
+
+    # The cron secret is checked before granting the transaction a signed
+    # service principal. Never run portfolio-wide evaluation as an anonymous
+    # restricted-role session.
+    await set_admin_context(db)
+
     try:
         from sqlalchemy import text
         result = await db.execute(text("SELECT id FROM companies WHERE is_active = true"))
