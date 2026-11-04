@@ -596,7 +596,8 @@ async def db_client_user(db: AsyncSession, db_company: Company) -> User:
         role=UserRole.CLIENT_DIRECTOR,
         is_active=True,
         totp_enabled=False,
-    )    db.add(user)
+    )
+    db.add(user)
     await db.flush()
     db.add(CompanyUserAccess(
         user_id=user.id,
