@@ -12,7 +12,7 @@ AR-004|Annual Return Filed But Incomplete|Companies Act 1994, Section 119|YELLOW
 AUD-001|First Auditor Not Appointed Within 30 Days|Companies Act 1994, Section 210(1)|RED|20|f|t
 AUD-002|Audit Not Completed Before AGM|Companies Act 1994, Section 183|YELLOW|15|f|t
 AUD-003|AGM Audit Status Requires Legal Review|Section 183, Companies Act 1994 (Bangladesh)|NOT_EVALUATED|0|f|t
-AUD-004|Auditor Not Reappointed at AGM|Companies Act 1994, Section 210(2)|YELLOW|5|f|t
+AUD-004|Auditor Reappointment Requires Legal Review|Companies Act 1994, Section 210(3)|NOT_EVALUATED|0|f|t
 AUD-005|No Auditor Appointed for Current FY|Companies Act 1994, Section 210(2)|YELLOW|10|f|t
 BNK-001|Winding Up Petition Filed|Bankruptcy Act 1997 (Bangladesh), Section 12|BLACK|25|t|t
 BNK-002|Liquidator Appointed|Bankruptcy Act 1997 (Bangladesh), Section 14|BLACK|25|t|t
