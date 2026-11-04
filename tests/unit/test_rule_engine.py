@@ -156,6 +156,7 @@ class TestAGMRules:
     def test_AGM003_no_trigger_with_proper_notice(self, rule_engine, build_profile):
         """A valid 21-clear-day notice must not produce a notice-defect finding."""
         today = date.today()
+        """AGM-003 should not fire as violation when notice is proper."""
         profile = build_profile(
             agm_scheduled_date=today + timedelta(days=25),
             notice_sent_date=today - timedelta(days=5),
@@ -223,6 +224,9 @@ class TestAGMRules:
         profile = self._verified_agm_quorum_profile(
             build_profile,
             articles_quorum_required=4,
+    def test_AGM005_no_trigger_when_quorum_met(self, rule_engine, build_profile):
+        profile = build_profile(
+            agm_held_this_cycle=True,
             members_present_at_agm=3,
         )
         output = rule_engine.evaluate(profile)
