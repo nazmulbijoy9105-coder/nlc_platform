@@ -194,3 +194,15 @@ async def test_deactivated_user_loses_database_tenant_access(db, db_client_user,
         {"company_id": db_company.id},
     )
     assert result.scalar_one() is False
+
+
+@pytest.mark.asyncio
+async def test_activity_log_has_exactly_one_actor_and_tenant_policy(db):
+    result = await db.execute(text(
+        "SELECT count(*), bool_or(policyname = 'user_activity_logs_actor_tenant') "
+        "FROM pg_policies "
+        "WHERE schemaname = 'public' AND tablename = 'user_activity_logs'"
+    ))
+    policy_count, has_strict_policy = result.one()
+    assert policy_count == 1
+    assert has_strict_policy is True
