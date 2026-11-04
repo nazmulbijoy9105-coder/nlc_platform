@@ -20,7 +20,7 @@ async def test_rule_registry_matches_engine_seed_database_and_super_admin_api(
     )
     database_ids = set(db_result.scalars().all())
 
-    response = await api_client.get("/api/v1/rules", headers=super_admin_headers)
+    response = await api_client.get("/api/v1/rules?is_active=true", headers=super_admin_headers)
     assert response.status_code == 200, response.text
     api_ids = {item["rule_id"] for item in response.json()}
 
