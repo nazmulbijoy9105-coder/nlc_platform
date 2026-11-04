@@ -113,6 +113,7 @@ class AGM(FullMixin, Base):
         return f"<AGM company={self.company_id} FY={self.financial_year} held={self.agm_held}>"
 
 
+
 # ═══════════════════════════════════════════════════════════════════
 # AGM SOURCE EVIDENCE — VERSION-PINNED REVIEW
 # ═══════════════════════════════════════════════════════════════════
@@ -124,8 +125,7 @@ class AGMEvidenceVerification(FullMixin, Base):
         CheckConstraint("evidence_kind IN ('MEMBERS_REGISTER', 'ATTENDANCE_REGISTER')", name="ck_agm_evidence_kind"),
         CheckConstraint("status IN ('PENDING', 'VERIFIED', 'REJECTED', 'REVOKED', 'SUPERSEDED')", name="ck_agm_evidence_status"),
         CheckConstraint("source_document_version >= 1", name="ck_agm_evidence_version"),
-        CheckConstraint("source_checksum_sha256 ~ '^[0-9a-f]{64}
-# ═══════════════════════════════════════════════════════════════════
+        CheckConstraint("source_checksum_sha256 ~ '^[0-9a-f]{64}# ═══════════════════════════════════════════════════════════════════
 class Audit(FullMixin, Base):
     __tablename__ = "audits"
 
@@ -265,6 +265,13 @@ class InvalidFilingTransitionError(ValueError):
         CheckConstraint("verified_count IS NULL OR verified_count >= 0", name="ck_agm_evidence_count"),
         CheckConstraint("status <> 'VERIFIED' OR evidence_kind <> 'MEMBERS_REGISTER' OR verified_count >= 1", name="ck_agm_evidence_member_count_positive"),
         CheckConstraint("status <> 'VERIFIED' OR reviewed_by IS DISTINCT FROM submitted_by", name="ck_agm_evidence_four_eyes"),
+        CheckConstraint("(status = 'REVOKED' AND revoked_by IS NOT NULL AND revoked_by IS DISTINCT FROM reviewed_by AND revoked_at IS NOT NULL AND revocation_reason IS NOT NULL) OR (status <> 'REVOKED' AND revoked_by IS NULL AND revoked_at IS NULL AND revocation_reason IS NULL)", name="ck_agm_evidence_revocation_metadata"),
+        CheckConstraint(
+            "(status = 'PENDING' AND reviewed_by IS NULL AND reviewed_at IS NULL AND verified_count IS NULL) OR "
+            "(status = 'VERIFIED' AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL AND verified_count IS NOT NULL) OR "
+            "(status IN ('REJECTED', 'REVOKED', 'SUPERSEDED') AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)",
+            name="ck_agm_evidence_review_metadata",
+        ),
         UniqueConstraint("company_id", "id", name="uq_agm_evidence_company_id"),
         ForeignKeyConstraint(
             ["company_id", "agm_id"], ["agms.company_id", "agms.id"],
@@ -274,13 +281,6 @@ class InvalidFilingTransitionError(ValueError):
             ["company_id", "document_id"], ["documents.company_id", "documents.id"],
             ondelete="RESTRICT", name="fk_agm_evidence_company_document",
         ),
-        CheckConstraint("(status = 'REVOKED' AND revoked_by IS NOT NULL AND revoked_by IS DISTINCT FROM reviewed_by AND revoked_at IS NOT NULL AND revocation_reason IS NOT NULL) OR (status <> 'REVOKED' AND revoked_by IS NULL AND revoked_at IS NULL AND revocation_reason IS NULL)", name="ck_agm_evidence_revocation_metadata"),
-        CheckConstraint(
-            "(status = 'PENDING' AND reviewed_by IS NULL AND reviewed_at IS NULL AND verified_count IS NULL) OR "
-            "(status = 'VERIFIED' AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL AND verified_count IS NOT NULL) OR "
-            "(status IN ('REJECTED', 'REVOKED', 'SUPERSEDED') AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)",
-            name="ck_agm_evidence_review_metadata",
-        ),
         Index("uq_agm_evidence_pending_kind", "agm_id", "evidence_kind", unique=True, postgresql_where=text("status = 'PENDING'")),
         Index("uq_agm_evidence_verified_kind", "agm_id", "evidence_kind", unique=True, postgresql_where=text("status = 'VERIFIED'")),
     )
@@ -289,28 +289,16 @@ class InvalidFilingTransitionError(ValueError):
         UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
-    agm_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        nullable=False, index=True,
-    )
+    agm_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     meeting_date: Mapped[date] = mapped_column(Date, nullable=False)
     evidence_kind: Mapped[str] = mapped_column(String(32), nullable=False)
-    document_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        nullable=False, index=True,
-    )
+    document_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     source_checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     source_document_version: Mapped[int] = mapped_column(Integer, nullable=False)
-    status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="PENDING", server_default="PENDING",
-    )
-    submitted_by: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False,
-    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING", server_default="PENDING")
+    submitted_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True,
-    )
+    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     verified_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     reviewer_note: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -324,10 +312,7 @@ class AGMEvidenceVerificationEvent(AuditMixin, Base):
 
     __tablename__ = "agm_evidence_verification_events"
     __table_args__ = (
-        CheckConstraint(
-            "action IN ('SUBMITTED', 'VERIFIED', 'REJECTED', 'REVOKED', 'SUPERSEDED')",
-            name="ck_agm_evidence_event_action",
-        ),
+        CheckConstraint("action IN ('SUBMITTED', 'VERIFIED', 'REJECTED', 'REVOKED', 'SUPERSEDED')", name="ck_agm_evidence_event_action"),
         ForeignKeyConstraint(
             ["company_id", "verification_id"],
             ["agm_evidence_verifications.company_id", "agm_evidence_verifications.id"],
@@ -339,19 +324,13 @@ class AGMEvidenceVerificationEvent(AuditMixin, Base):
         UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
-    verification_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        nullable=False, index=True,
-    )
-    actor_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False,
-    )
+    verification_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    actor_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     action: Mapped[str] = mapped_column(String(20), nullable=False)
     previous_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     new_status: Mapped[str] = mapped_column(String(20), nullable=False)
     source_checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
-
 
 
 # ═══════════════════════════════════════════════════════════════════
