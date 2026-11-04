@@ -122,10 +122,10 @@ def upgrade() -> None:
             is_black_override, rule_version, is_active, verification_status,
             verification_notes, created_at, updated_at
         ) VALUES (
-            :rule_id, :rule_name, CAST(:rule_type AS rule_type), :statutory_basis,
+            :rule_id, :rule_name, :rule_type, :statutory_basis,
             :description, CAST(:rule_condition AS jsonb),
-            CAST(:default_severity AS severity_level), :score_impact,
-            CAST(:revenue_tier AS revenue_tier), false, '1.0', true, 'PENDING',
+            :default_severity, :score_impact,
+            :revenue_tier, false, '1.0', true, 'PENDING',
             'Restored from canonical seed during schema reconciliation; independent legal approval pending.',
             NOW(), NOW()
         ) ON CONFLICT (rule_id) DO NOTHING
