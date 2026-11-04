@@ -25,7 +25,8 @@
 8. BSEC-001–004 produce review prompts only, correct the known condition mapping (Condition 1 board composition; Condition 5 audit committee; Condition 9 compliance certificate; Condition 8 website), and do not assume listed-company rules apply to all private companies.
 9. LBR-001/002 produce review prompts only unless the applicable section 326 Government direction, establishment class, licence record and renewal terms are verified. The current statute is Bangladesh Labour Act 2006 s.326 as amended by Act 43/2026.
 10. Corrected SH-002 to the 90-day certificate deadline in Companies Act s.158; the engine still needs a transfer-registration event path, because s.158 covers both allotment and transfer.
-11. Canonical parity audit now recognises tuple-declared BSEC IDs. Canonical integrity tests are being restored rather than silently skipped.
+11. Removed a duplicate OFF-001 key from the statutory rescue dictionary; the stale duplicate incorrectly pointed to an INC rescue objective. Added a source-AST regression test requiring exactly 85 unique rescue keys.
+12. Canonical parity audit now recognises tuple-declared BSEC IDs. Canonical integrity tests have been re-enabled, with latest run pending.
 
 ## Statutory anchors identified for counsel confirmation
 
