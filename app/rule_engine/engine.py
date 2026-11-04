@@ -634,10 +634,10 @@ class NLCRuleEngine:
                 rule_id="INC-003",
                 flag_code="MINIMUM_DIRECTORS_NOT_MET",
                 severity=Severity.BLACK,
-                score_impact=inc003_impact,
+                score_impact=15,
                 is_black_override=True,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=inc003_desc,
+                description="Private company has insufficient directors. Section 90(2) requires minimum 2 directors.",
                 statutory_basis="Section 90(2), Companies Act 1994 (Bangladesh)",
                 detail={"current_count": c.current_director_count, "required": 2}
             ))
@@ -918,6 +918,8 @@ class NLCRuleEngine:
             ))
             return
         if c.agm_count == 0:
+            if c.incorporation_date is None:
+                return 0
             deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
             if self.today > deadline:  # type: ignore
                 delay = (self.today - deadline).days  # type: ignore
@@ -2511,7 +2513,9 @@ class NLCRuleEngine:
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:
         if c.last_agm_date is None:
             if c.agm_count == 0:
-                deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
+                if c.incorporation_date is None:
+                return 0
+            deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
                 if self.today > deadline:  # type: ignore
                     return (self.today - deadline).days // 365  # type: ignore
             return 0
