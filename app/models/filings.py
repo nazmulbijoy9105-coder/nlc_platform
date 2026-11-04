@@ -8,13 +8,14 @@ all read from these tables.
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
     Date,
+    DateTime,
     ForeignKey,
     Integer,
     Numeric,
@@ -29,7 +30,7 @@ from .mixins import FullMixin
 
 if TYPE_CHECKING:
     import uuid
-    from datetime import date
+    from datetime import date, datetime
     from decimal import Decimal
 
     from .company import Company
@@ -61,6 +62,11 @@ class AGM(FullMixin, Base):
         comment="Calculated: incorporation+548d (first) or FY end+182d (subsequent)"
     )
     notice_sent_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    short_notice_consent_obtained: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    short_notice_consent_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    short_notice_consent_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    short_notice_consent_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    short_notice_consent_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     notice_days_before: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # AGM-003: notice defective (< 21 days)
     notice_defective: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -70,21 +76,41 @@ class AGM(FullMixin, Base):
     # ── Held ──────────────────────────────────────────────────────
     agm_held: Mapped[bool] = mapped_column(Boolean, default=False)
     agm_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    venue: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    accounts_adopted: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    agm_held_without_audit: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     # AGM-001 / AGM-002: default flags
     is_default: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     delay_days: Mapped[int] = mapped_column(Integer, default=0)
 
     # ── Quorum ────────────────────────────────────────────────────
     # AGM-005: quorum not met
-    quorum_met: Mapped[bool] = mapped_column(Boolean, default=True)
+    quorum_met: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=True)
     members_present: Mapped[int] = mapped_column(Integer, default=0)
+    members_present_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    members_present_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    members_present_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    members_present_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     quorum_required: Mapped[int] = mapped_column(
-        Integer, default=2, comment="Section 83 CA 1994 — 2 members for private"
+        Integer, default=2, comment="Section 85(2)(b) CA 1994 — subject to Articles and member count"
     )
+    quorum_required_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    quorum_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    quorum_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    quorum_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    quorum_required: Mapped[int | None] = mapped_column(
+        Integer, nullable=True, default=2,
+        comment="Section 85(2)(b) statutory default; Articles may provide otherwise"
+    )
+    quorum_basis: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     # ── Auditor ───────────────────────────────────────────────────
     # AGM-006: auditor not reappointed at AGM
     auditor_reappointed: Mapped[bool] = mapped_column(Boolean, default=True)
+    auditor_reappointment_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    auditor_reappointment_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    auditor_reappointment_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    auditor_reappointment_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     # ── Minutes ───────────────────────────────────────────────────
     minutes_prepared: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -140,6 +166,10 @@ class Audit(FullMixin, Base):
     # ── Completion ────────────────────────────────────────────────
     # AUD-001: audit not complete before AGM
     audit_complete: Mapped[bool] = mapped_column(Boolean, default=False)
+    audit_completion_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    audit_completion_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    audit_completion_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    audit_completion_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     audit_signed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     # AUD-003: BLACK OVERRIDE — AGM held without audit
     agm_held_without_audit: Mapped[bool] = mapped_column(

@@ -116,10 +116,24 @@ class Company(FullMixin, Base):
     # ── AGM State ─────────────────────────────────────────────────
     first_agm_held: Mapped[bool] = mapped_column(Boolean, default=False)
     last_agm_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    agm_history_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    agm_history_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    agm_history_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    agm_history_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    agm_extension_granted_until: Mapped[date | None] = mapped_column(Date, nullable=True)
+    agm_extension_application_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    agm_extension_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    agm_extension_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    agm_extension_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    agm_extension_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     agm_default_count: Mapped[int] = mapped_column(Integer, default=0)
 
     # ── Audit State ───────────────────────────────────────────────
     first_auditor_appointed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    first_auditor_appointment_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    first_auditor_appointment_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    first_auditor_appointment_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    first_auditor_appointment_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     last_audit_signed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # ── Returns State ─────────────────────────────────────────────
@@ -275,6 +289,21 @@ class Company(FullMixin, Base):
     )
     minutes_book_agm_maintained: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     minutes_book_board_maintained: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+
+    # ── Legal verification provenance ────────────────────────────────
+    directors_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    directors_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    directors_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    directors_verification_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_private_subsidiary_of_public_company: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    subsidiary_status_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    subsidiary_status_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    subsidiary_status_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    subsidiary_status_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    moa_aoa_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    moa_aoa_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    moa_aoa_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    moa_aoa_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # ── AGM Details ────────────────────────────────────────────────────
     agm_scheduled_date: Mapped[date | None] = mapped_column(Date, nullable=True)

@@ -47,6 +47,10 @@ def _base_profile(**overrides) -> CompanyProfile:
         incorporation_date=date(2024, 1, 1),
         last_agm_date=date(2024, 6, 15),
         agm_count=1,
+        agm_history_verified=True,
+        agm_history_evidence_ref="AGM-HISTORY-TEST",
+        agm_history_verified_at=date(2026, 11, 1),
+        agm_history_verified_by="reviewer-001",
         agm_held_this_cycle=True,
         registered_office_address="123 Dhaka",
         registered_office_change_date=None,
@@ -128,21 +132,22 @@ class TestAGM001Variations:
         if flag:
             assert flag.rule_id == "AGM-001"
 
-    def test_5_exception_changes_result(self):
-        """Registrar extension granted → should not trigger."""
+    def test_5_verified_registrar_extension_changes_subsequent_agm_deadline(self):
+        """A timely, evidenced Section 81 extension is honoured for a subsequent AGM."""
         c = _base_profile(
-            incorporation_date=date(2024, 1, 1),
-            last_agm_date=None,
-            agm_count=0,
+            incorporation_date=date(2020, 1, 1),
+            last_agm_date=date(2024, 1, 1),
+            agm_count=1,
+            agm_held_this_cycle=False,
+            agm_extension_granted_until=date(2025, 6, 30),
+            agm_extension_application_date=date(2025, 4, 15),
+            agm_extension_verified=True,
+            agm_extension_evidence_ref="RJSC-EXTENSION-TEST",
+            agm_extension_verified_at=date(2025, 4, 16),
+            agm_extension_verified_by="reviewer-001",
         )
-        # Note: The engine doesn't yet model Registrar extensions
-        # This test documents the gap — when extension modeling is added,
-        # this should assert no AGM-001 flag
-        result = _engine().evaluate(c)
-        flag = _flag_by_id(result, "AGM-001")
-        # Currently fires because no extension field exists
-        if flag:
-            assert flag.state == RuleState.NON_COMPLIANT
+        result = NLCRuleEngine(today=date(2025, 6, 15)).evaluate(c)
+        assert "AGM-002" not in {flag.rule_id for flag in result.flags}
 
     def test_6_applicable_amendment(self):
         """Pre-2020 vs post-2020 — One Person Company amendment."""
@@ -334,6 +339,8 @@ class TestDEF001Variations:
                 "director_name": "Dir A",
                 "evidence_ref": "Insolvency Certificate 2023",
                 "authority": "Bankruptcy Court, Dhaka",
+                "effective_date": "2023-01-01",
+                "continuing_status": True,
             }],
             current_director_count=3,
             directors_verified=True,
@@ -343,7 +350,8 @@ class TestDEF001Variations:
         # Should fire — disqualified director is still on board
         if flag:
             assert flag.state == RuleState.NON_COMPLIANT
-            assert flag.severity == Severity.BLACK
+            assert flag.severity == Severity.RED
+            assert flag.is_black_override is False
 
     def test_4_company_outside_scope_not_applicable(self):
         """No directors → rule not applicable."""
@@ -372,6 +380,8 @@ class TestDEF001Variations:
                 "director_name": "Dir B",
                 "evidence_ref": "Court Order #456",
                 "authority": "Competent Court",
+                "effective_date": "2024-01-01",
+                "continuing_status": True,
             }],
         )
         result = _engine().evaluate(c)
@@ -382,13 +392,15 @@ class TestDEF001Variations:
                 f"Expected Section 94, got {flag.statutory_basis}"
 
     def test_7_cross_reference_changes_consequence(self):
-        """DEF-001 (BLACK) triggers corporate rescue mandatory."""
+        """DEF-001 is a legal finding, not an automatic BLACK override."""
         c = _base_profile(
             disqualification_grounds=[{
                 "ground_type": "UNDISCHARGED_INSOLVENT",
                 "director_name": "Dir C",
                 "evidence_ref": "Insolvency Certificate #789",
                 "authority": "Bankruptcy Court",
+                "effective_date": "2025-01-01",
+                "continuing_status": True,
             }],
             current_director_count=2,  # 1 disqualified leaves only 1 → below minimum → override
             incorporation_date=date(2020, 1, 1),
@@ -398,23 +410,21 @@ class TestDEF001Variations:
         result = _engine().evaluate(c)
         flag = _flag_by_id(result, "DEF-001")
         if flag:
-            assert flag.is_black_override == True, "DEF-001 must be BLACK override"
-            # BLACK override forces score to 0 and triggers rescue
-            assert result.score_breakdown.risk_band in (Severity.BLACK, Severity.RED)
+            assert flag.is_black_override is False
+            assert flag.severity == Severity.RED
+            # DEF-001 is visible but excluded from scoring pending independent legal approval.
+            assert "DEF-001" not in VERIFIED_RULE_IDS
 
     def test_8_legal_question_requires_judgment(self):
-        """Director with pending insolvency application — is S94(c) met?
-
-        P0 FIX: Pending insolvency (PENDING_INSOLVENCY ground) with
-        verified court evidence fires BLACK. Without evidence, it's
-        NOT_EVALUATED — a lawyer must verify the pending application.
-        """
+        """Pending insolvency application requires authoritative status evidence."""
         c = _base_profile(
             disqualification_grounds=[{
                 "ground_type": "PENDING_INSOLVENCY",
                 "director_name": "Dir D",
                 "evidence_ref": "Court Application Receipt",
                 "authority": "Insolvency Court",
+                "effective_date": "2026-01-01",
+                "continuing_status": True,
             }],
         )
         result = _engine().evaluate(c)
@@ -423,7 +433,9 @@ class TestDEF001Variations:
         # With verified evidence, this fires NON_COMPLIANT
         if flag:
             assert flag.state == RuleState.NON_COMPLIANT
-            # The engine makes a binary decision, but a lawyer should verify
+            assert flag.severity == Severity.RED
+            assert flag.is_black_override is False
+            # The engine makes a finding only from structured evidence.
             # whether "pending application" meets the S94(1)(c) threshold
 
 
@@ -434,10 +446,11 @@ class TestDEF001Variations:
 class TestProductionGate:
 
     def test_verified_rules_in_set(self):
-        """Verify the 35 verified rules are in VERIFIED_RULE_IDS."""
+        """Verify the internally checked scoring allowlist and pending legal approvals."""
         assert "AGM-001" in VERIFIED_RULE_IDS
         assert "OFF-001" in VERIFIED_RULE_IDS
-        assert "DEF-001" in VERIFIED_RULE_IDS
+        assert "DEF-001" not in VERIFIED_RULE_IDS
+        assert "DEF-001" not in VERIFIED_RULE_IDS
         assert len(VERIFIED_RULE_IDS) >= 35
 
     def test_unverified_rules_excluded_from_score(self):

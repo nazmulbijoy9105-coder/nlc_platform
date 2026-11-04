@@ -333,12 +333,23 @@ def build_profile():
             "financial_year_end": date(today.year - 1, 12, 31),
             # AGM — fully compliant
             "agm_count": 3,
+            "agm_history_verified": True,
+            "agm_history_evidence_ref": "AGM-HISTORY-TEST",
+            "agm_history_verified_at": today,
+            "agm_history_verified_by": "reviewer-001",
             "last_agm_date": today - timedelta(days=60),
             "agm_held_this_cycle": True,
+            "agm_attendance_verified": True,
+            "agm_attendance_evidence_ref": "AGM-MINUTES-TEST",
+            "agm_quorum_required": 2,
+            "agm_quorum_basis_verified": True,
+            "agm_quorum_evidence_ref": "AOA-QUORUM-TEST",
             "agm_scheduled_date": None,
             "notice_sent_date": today - timedelta(days=84),  # 21+ days before AGM
             "members_present_at_agm": 3,
             "auditor_reappointed_at_agm": True,
+            "auditor_reappointment_verified": True,
+            "auditor_reappointment_evidence_ref": "AGM-AUDITOR-TEST",
             "accounts_adopted_at_agm": True,
             # Audit — fully compliant
             "audit_complete": True,
@@ -382,6 +393,11 @@ def build_profile():
             "capital_increase_date": None,
             "capital_increase_resolution": True,
             "first_auditor_appointed": True,
+            "first_auditor_appointment_date": today - timedelta(days=365 * 3) + timedelta(days=15),
+            "first_auditor_appointment_verified": True,
+            "first_auditor_appointment_evidence_ref": "FIRST-AUDITOR-APPOINTMENT-TEST",
+            "first_auditor_appointment_verified_at": today,
+            "first_auditor_appointment_verified_by": "reviewer-001",
             "tin_obtained": True,
             "vat_registered": True,
             "trade_license_obtained": True,
@@ -413,6 +429,15 @@ def build_profile():
             "business_commencement_declaration_filed": True,
         }
         defaults.update(overrides)
+        # Keep fixture appointment evidence consistent with any overridden
+        # registration date unless a test explicitly supplies its own date.
+        if "first_auditor_appointment_date" not in overrides:
+            if defaults.get("first_auditor_appointed") is True and defaults.get("incorporation_date"):
+                defaults["first_auditor_appointment_date"] = (
+                    defaults["incorporation_date"] + timedelta(days=15)
+                )
+            else:
+                defaults["first_auditor_appointment_date"] = None
         return CompanyProfile(**defaults)
 
     return _build
@@ -435,6 +460,7 @@ def black_band_profile(build_profile):
         last_agm_date=None,
         audit_complete=False,
         first_auditor_appointed=False,
+        first_auditor_appointment_date=None,
         unfiled_returns_count=3,
         annual_return_filed=False,
         agm_held_without_audit=True,
@@ -525,6 +551,7 @@ async def db_company(db: AsyncSession) -> Company:
         incorporation_date=today - timedelta(days=365 * 2),
         registered_address="123 Test Street, Dhaka, Bangladesh",
         company_type="PRIVATE_LIMITED",
+        member_count=5,
         financial_year_end=date(2025, 12, 31),
         current_compliance_score=85,
         current_risk_band=RiskBand.GREEN,

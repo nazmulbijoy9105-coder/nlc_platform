@@ -406,10 +406,15 @@ async def get_document(
     # Explicit company-access check (IDOR defence — path has no company_id)
     await _assert_document_company_access(doc, current_user, db)
 
-    # Clients may only view released documents
+    # SEC-010: Verify company ownership
     if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):
         if not doc.is_client_visible:
             raise HTTPException(status_code=403, detail="This document is not yet available.")
+        from sqlalchemy import select as _sel
+        from app.models.company import CompanyUserAccess as _CMA
+        _access = await db.execute(_sel(_CMA).where(_CMA.user_id == current_user.id, _CMA.company_id == doc.company_id))
+        if not _access.scalar_one_or_none():
+            raise HTTPException(status_code=403, detail="Access denied: document does not belong to your company.")
 
     # Log access
     await svc.log_access(
@@ -545,13 +550,15 @@ async def get_pdf_url(
     # Explicit company-access check (IDOR defence — path has no company_id)
     await _assert_document_company_access(doc, current_user, db)
 
-    # Clients may only download approved, released documents
+    # SEC-010: Clients may only download approved documents from their company
     if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):
         if not doc.is_client_visible or not doc.human_approved:
-            raise HTTPException(
-                status_code=403,
-                detail="This document is not available for download.",
-            )
+            raise HTTPException(status_code=403, detail="This document is not available for download.")
+        from sqlalchemy import select as _sel
+        from app.models.company import CompanyUserAccess as _CMA
+        _access = await db.execute(_sel(_CMA).where(_CMA.user_id == current_user.id, _CMA.company_id == doc.company_id))
+        if not _access.scalar_one_or_none():
+            raise HTTPException(status_code=403, detail="Access denied: document does not belong to your company.")
 
     if not doc.s3_key:
         # Trigger PDF generation if not yet done
