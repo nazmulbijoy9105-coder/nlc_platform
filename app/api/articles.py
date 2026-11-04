@@ -853,6 +853,8 @@ async def revoke_agm_evidence(
         raise HTTPException(status_code=404, detail="AGM evidence submission not found.")
     if item.status != "VERIFIED":
         raise HTTPException(status_code=409, detail="Only verified AGM evidence can be revoked.")
+    if not body.reason.strip():
+        raise HTTPException(status_code=422, detail="A non-empty revocation reason is required.")
     if item.reviewed_by == current_user.id:
         raise HTTPException(status_code=403, detail="A different legal reviewer must revoke this evidence.")
     now = datetime.now(UTC)
