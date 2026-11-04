@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     aws_s3_bucket: str = ""
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
-    aws_region: str = os.getenv("AWS_REGION", "ap-south-1")
+    aws_region: str = os.getenv("AWS_REGION", "ap-southeast-1")
     s3_bucket_name: str = os.getenv("S3_BUCKET_NAME", os.getenv("AWS_S3_BUCKET", ""))
     s3_document_prefix: str = os.getenv("S3_DOCUMENT_PREFIX", "documents/")
     # FIX 2: Read from 'CELERY_BROKER_URL' to match Render Dashboard
