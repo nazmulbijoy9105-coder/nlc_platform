@@ -66,7 +66,7 @@ def upgrade() -> None:
         WITH CHECK (FALSE)
     """)
     op.execute("""
-        DO $
+        DO $priv$
         BEGIN
             IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
                 REVOKE ALL PRIVILEGES ON webhook_endpoints FROM nlc_app_role;
@@ -75,7 +75,7 @@ def upgrade() -> None:
                 GRANT SELECT, INSERT, UPDATE, DELETE ON webhook_deliveries TO nlc_app_role;
             END IF;
         END
-        $$
+        $priv$;
     """)
 
 
