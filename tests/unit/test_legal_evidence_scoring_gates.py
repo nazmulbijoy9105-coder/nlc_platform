@@ -476,8 +476,8 @@ def test_company_tax_return_deadline_uses_finance_act_2026_section_170():
     assert flag.eval_state == "UNKNOWN"
     assert flag.score_impact == 0
     assert flag.detail["ninth_month_date"] == "2026-03-15"
-    assert flag.detail["september_15_floor"] == "2026-09-15"
-    assert flag.detail["provisional_deadline"] == "2026-09-15"
+    assert flag.detail["september_15_floor"] == "2025-09-15"
+    assert flag.detail["provisional_deadline"] == "2026-03-15"
 
 
 def test_company_tax_return_deadline_keeps_later_ninth_month_date():
@@ -491,6 +491,7 @@ def test_company_tax_return_deadline_keeps_later_ninth_month_date():
     )
     flag = _flag(result, "TAX-003")
     assert flag.detail["ninth_month_date"] == "2025-12-15"
+    assert flag.detail["september_15_floor"] == "2025-09-15"
     assert flag.detail["provisional_deadline"] == "2025-12-15"
 
 
