@@ -5,7 +5,8 @@
 | Instrument / source | Publication / date evidence | Required work | Affected rules | Status |
 |---|---|---|---|---|
 | Companies Act 1994 (Act XVIII of 1994) | BDLaws act-print-788; baseline commencement to confirm from SRO | Verify consolidated Bangla text and authentic English; map all subsequent amendments and savings | ACC, AGM, AR, AUD, BOD, CAP, CHG, DIR, INC, OFF, REG, SH, STR, TR, MEM, ESC | OPEN — NOT EXHAUSTIVE |
-| Companies (Amendment) Act 2005 (Act VII of 2005) | Gazette source and exact dates not yet captured | Retrieve Gazette; section-by-section substitution and commencement table | TBD; Companies Act rules | OPEN |
+| Companies (Amendment) Act 2020, Act No. 7 of 2020 | Gazette 25 February 2020; immediately effective | Map removal of common-seal requirements and substitutions to ss.2, 24, 31, 46, 78, 79, 85, 128, 129, 208, 225, 262, 347 and 363 | ACC, INC, STR, TR, corporate execution and records | SOURCE IDENTIFIED; RULE-LEVEL MAPPING OPEN |
+| Companies (Second Amendment) Act 2020, Act No. 24 of 2020 | Gazette 26 November 2020; immediately effective | Map OPC provisions, new s.11A company-name suffix rules, s.38(3A) share-transfer identity verification, and new Part X-A ss.392A onward; confirm OPC exclusions for private-limited product | STR-001, TR-001, TR-003, TR-004, TR-005; company-scope gates | SOURCE IDENTIFIED; RULE-LEVEL MAPPING OPEN |
 | Financial Reporting Act 2015 (Act XVI of 2015) | BDLaws / Gazette source required | Map audit oversight, auditor eligibility, reporting and interaction with Companies Act | ACC, AUD | OPEN |
 | BSEC Corporate Governance Code 2018 | Official BSEC Code, 3 June 2018 | Preserve original Code text, scope, definitions, all conditions and applicability | BSEC-001–004; potentially listed issuer disclosure rules | SOURCE IDENTIFIED; COUNSEL REVIEW OPEN |
 | BSEC amendment notification 2023 | BSEC listing dated 20 November 2023; Gazette date and exact text to pin | Compare each changed clause; commencement and transition | BSEC-001–004 | SOURCE IDENTIFIED; CLAUSE MAPPING OPEN |
@@ -27,6 +28,8 @@
 ## Official discovery locations
 
 - Companies Act: https://bdlaws.minlaw.gov.bd/act-print-788.html
+- Companies (Amendment) Act 2020, Act No. 7: https://bdlaws.minlaw.gov.bd/act-print-1308.html
+- Companies (Second Amendment) Act 2020, Act No. 24: https://bdlaws.minlaw.gov.bd/act-print-1353.html
 - BSEC instruments: https://www.sec.gov.bd/act-rules-and-regulations
 - NBR Finance Acts: https://nbr.gov.bd/regulations/acts/finance-acts/eng
 - NBR Income Tax Acts: https://nbr.gov.bd/regulations/acts/income-tax-acts/eng/eng
