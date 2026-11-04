@@ -1813,10 +1813,24 @@ class NLCRuleEngine:
                     statutory_basis="Value Added Tax Act 2012 (Bangladesh)",
                 ))
 
-        # VAT-003 deliberately does not auto-fire: the current legal corpus
-        # has not established a universal annual VAT return due date applicable
-        # to every registered company. Evaluate only after the taxpayer's
-        # applicable return type, tax period and effective NBR instrument are known.
+        # VAT-003 remains a non-scoring evidence/review state. The current
+        # corpus has not established one universal annual VAT return due date
+        # for every registered company. Do not infer a breach from a False or
+        # missing profile field without the taxpayer's return type, tax period,
+        # applicable NBR instrument and effective date.
+        if c.vat_registered is True and c.vat_annual_return_filed_for_fy is not True:
+            self._add_flag(ComplianceFlag(
+                rule_id="VAT-003",
+                flag_code="ANNUAL_VAT_RETURN_STATUS_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Annual VAT return status is incomplete or recorded as not filed. Confirm the taxpayer's applicable return type, tax period, filing obligation and effective NBR instrument before determining any default.",
+                statutory_basis="Value Added Tax Act 2012 (Bangladesh); specific annual-return obligation and due date require current-law verification",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"annual_return_filed_for_fy": c.vat_annual_return_filed_for_fy},
+            ))
 
         unresolved = (c.penalty_notices_received or 0) - (c.penalty_notices_resolved or 0)  # type: ignore
         if unresolved > 0:
