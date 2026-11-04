@@ -400,3 +400,94 @@ async def test_agm_evidence_submitter_cannot_review_and_invalid_counts_are_rejec
         json={"decision": "VERIFIED", "verified_count": 5, "reviewer_note": "Self-review must be prohibited."},
     )
     assert self_review.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_agm_evidence_pdf_upload_is_private_and_checksum_pinned(
+    api_client, db, db_company, admin_headers, monkeypatch
+):
+    await _grant_staff_memberships(db, db_company.id)
+    calls = {}
+
+    class FakeS3:
+        def put_object(self, **kwargs):
+            calls.update(kwargs)
+
+    import boto3
+    monkeypatch.setattr(boto3, "client", lambda *args, **kwargs: FakeS3())
+    payload = b"%PDF-1.7\\nAGM evidence source\\n%%EOF"
+    response = await api_client.post(
+        f"/api/v1/companies/{db_company.id}/agm-evidence-document",
+        headers=admin_headers,
+        data={"evidence_kind": "MEMBERS_REGISTER"},
+        files={"file": ("members-register.pdf", payload, "application/pdf")},
+    )
+    assert response.status_code == 201, response.text
+    import hashlib
+    document = await db.get(Document, uuid.UUID(response.json()["document_id"]))
+    assert document is not None
+    assert document.checksum_sha256 == hashlib.sha256(payload).hexdigest()
+    assert document.title == "AGM_EVIDENCE:MEMBERS_REGISTER"
+    assert document.is_client_visible is False
+    assert calls["ServerSideEncryption"] == "AES256"
+    assert calls["Metadata"]["sha256"] == document.checksum_sha256
+
+
+@pytest.mark.asyncio
+async def test_agm_attendance_count_cannot_exceed_reviewed_members_count(
+    api_client, db, db_company, admin_headers, legal_headers
+):
+    await _grant_staff_memberships(db, db_company.id)
+    agm = AGM(company_id=db_company.id, financial_year=2025)
+    member_doc = Document(
+        company_id=db_company.id,
+        document_type=DocumentType.OTHER,
+        title="AGM_EVIDENCE:MEMBERS_REGISTER",
+        s3_key=f"companies/{db_company.id}/members-count.pdf",
+        checksum_sha256="f" * 64,
+        version=1,
+        ai_generated=False,
+        is_active=True,
+    )
+    attendance_doc = Document(
+        company_id=db_company.id,
+        document_type=DocumentType.OTHER,
+        title="AGM_EVIDENCE:ATTENDANCE_REGISTER",
+        s3_key=f"companies/{db_company.id}/attendance-count.pdf",
+        checksum_sha256="a" * 64,
+        version=1,
+        ai_generated=False,
+        is_active=True,
+    )
+    db.add_all([agm, member_doc, attendance_doc])
+    await db.flush()
+
+    async def submit(document, kind):
+        return await api_client.post(
+            f"/api/v1/companies/{db_company.id}/agm-evidence",
+            headers=admin_headers,
+            json={
+                "agm_id": str(agm.id),
+                "document_id": str(document.id),
+                "meeting_date": "2025-07-01",
+                "evidence_kind": kind,
+            },
+        )
+
+    member_submission = await submit(member_doc, "MEMBERS_REGISTER")
+    attendance_submission = await submit(attendance_doc, "ATTENDANCE_REGISTER")
+    assert member_submission.status_code == 201, member_submission.text
+    assert attendance_submission.status_code == 201, attendance_submission.text
+
+    member_review = await api_client.post(
+        f"/api/v1/companies/{db_company.id}/agm-evidence/{member_submission.json()['id']}/review",
+        headers=legal_headers,
+        json={"decision": "VERIFIED", "verified_count": 1, "reviewer_note": "One member is recorded."},
+    )
+    assert member_review.status_code == 200, member_review.text
+    attendance_review = await api_client.post(
+        f"/api/v1/companies/{db_company.id}/agm-evidence/{attendance_submission.json()['id']}/review",
+        headers=legal_headers,
+        json={"decision": "VERIFIED", "verified_count": 2, "reviewer_note": "Two persons signed the attendance register."},
+    )
+    assert attendance_review.status_code == 422
