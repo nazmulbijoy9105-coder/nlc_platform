@@ -2536,20 +2536,17 @@ class NLCRuleEngine:
         override = False
         reason = None
         final = raw
+        # A BLACK label is not itself legal approval. Both ordinary deductions
+        # and BLACK overrides require the exact rule ID to be in the independently
+        # reviewed allowlist. This prevents unreviewed rules from bypassing the
+        # score gate merely by setting is_black_override=True.
         critical = [
             f for f in active
-            if f.is_black_override
+            if f.rule_id in VERIFIED_RULE_IDS
+            and (f.is_black_override or f.severity == Severity.BLACK)
             and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and f.eval_state == "VIOLATION"
         ]
-        if not critical:
-            critical = [
-                f for f in active
-                if f.rule_id in VERIFIED_RULE_IDS
-                and f.severity == Severity.BLACK
-                and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
-                and f.eval_state == "VIOLATION"
-            ]
         if critical:
             override = True
             reason = f"BLACK: {', '.join(f.rule_id for f in critical)}"

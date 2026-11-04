@@ -89,14 +89,15 @@ def _applied_score_impacts(flags) -> list[dict]:
         if state != RuleState.NON_COMPLIANT or getattr(flag, "eval_state", "VIOLATION") == "UNKNOWN":
             results.append({"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"})
             continue
-        severity_value = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
-        if getattr(flag, "is_black_override", False) or severity_value == "BLACK":
-            # The engine applies its separate BLACK risk-policy override path;
-            # this is not an ordinary category deduction.
-            results.append({"applied": 0, "status": "BLACK_OVERRIDE_POLICY"})
-            continue
+        # Check legal approval before either ordinary deductions or BLACK
+        # override handling. An unverified BLACK flag remains visible but cannot
+        # influence an authoritative score.
         if flag.rule_id not in VERIFIED_RULE_IDS:
             results.append({"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"})
+            continue
+        severity_value = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
+        if getattr(flag, "is_black_override", False) or severity_value == "BLACK":
+            results.append({"applied": 0, "status": "BLACK_OVERRIDE_POLICY"})
             continue
 
         category = next(
@@ -243,8 +244,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
         Persist all evaluation results to DB atomically.
         Order: resolve old flags → insert new flags → score snapshot → update company.
         """
-        from app.core.config import get_settings
-        settings = get_settings()
+        engine_version = str(getattr(output, "engine_version", "") or "").strip()
+        if not engine_version or engine_version.lower() == "unknown":
+            raise ValueError("Evaluation cannot be persisted without a concrete engine version.")
 
         now = datetime.now(UTC)
         today = date.today()
@@ -305,7 +307,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     id=uuid.uuid4(),
                     company_id=company_id,
                     rule_id=flag.rule_id,
-                    rule_version=settings.rule_engine_version,
+                    rule_version=str(getattr(flag, "rule_version", None) or engine_version),
                     flag_code=flag.rule_id,
                     statutory_basis=flag.statutory_basis,
                     severity=SeverityLevel(flag.severity),
@@ -324,7 +326,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # ── Score snapshot (monthly, append-only, tamper-evident) ──
         snapshot_month = today.replace(day=1)
         score_hash = hashlib.sha256(
-            f"{company_id}{score}{risk_band}{snapshot_month}{settings.rule_engine_version}".encode()
+            f"{company_id}{score}{risk_band}{snapshot_month}{engine_version}".encode()
         ).hexdigest()
 
         # Only one snapshot per company per month
@@ -354,7 +356,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 black_flags_count=black_flags,
                 override_applied=sb.override_applied,
                 score_hash=score_hash,
-                engine_version=settings.rule_engine_version,
+                engine_version=engine_version,
                 trigger_source=trigger_source,
                 evaluation_status="COMPLETED",  # OPS-004
             )
