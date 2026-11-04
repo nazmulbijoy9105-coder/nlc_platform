@@ -165,21 +165,32 @@ def test_seed_matches_engine_and_has_no_duplicates():
 
 
 
-def test_rescue_registry_has_no_duplicate_literal_keys():
+def test_rescue_registry_has_no_duplicate_trigger_ids():
     import ast
 
     path = ROOT / "canonical_architecture" / "statutory_rescue.py"
     tree = ast.parse(path.read_text(encoding="utf-8"))
-    registry = next(
+    source = next(
         node.value for node in ast.walk(tree)
         if isinstance(node, ast.Assign)
-        and any(isinstance(target, ast.Name) and target.id == "STATUTORY_RESCUE_REGISTRY"
+        and any(isinstance(target, ast.Name) and target.id == "_RESCUES"
                 for target in node.targets)
-        and isinstance(node.value, ast.Dict)
+        and isinstance(node.value, (ast.Tuple, ast.List))
     )
-    keys = [key.value for key in registry.keys if isinstance(key, ast.Constant)]
-    assert len(keys) == EXPECTED
-    assert len(keys) == len(set(keys)), "duplicate rescue rule IDs in source literal"
+    trigger_ids = [
+        call.args[1].value
+        for call in source.elts
+        if isinstance(call, ast.Call)
+        and isinstance(call.func, ast.Name)
+        and call.func.id == "RescueDef"
+        and len(call.args) > 1
+        and isinstance(call.args[1], ast.Constant)
+        and isinstance(call.args[1].value, str)
+    ]
+    assert trigger_ids, "no literal RescueDef trigger IDs found"
+    assert len(trigger_ids) == len(set(trigger_ids)), (
+        "duplicate triggered_by IDs in _RESCUES source tuple"
+    )
 
 
 def test_inner_ids_match_registry_keys():
