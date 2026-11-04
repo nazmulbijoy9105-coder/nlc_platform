@@ -195,6 +195,11 @@ def test_seed_matches_engine_and_has_no_duplicates():
 
 
 def _engine_ids():
+    data, errors = _engine_rule_data()
+    assert not errors, errors
+    return set(data)
+
+
 def test_inner_ids_match_registry_keys():
     bad_rules = [
         key for key, value in STATUTORY_RULE_REGISTRY.items()
