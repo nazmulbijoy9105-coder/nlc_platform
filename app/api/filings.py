@@ -67,6 +67,7 @@ class AGMMarkHeldRequest(BaseModel):
     held_date: date
     venue: str | None = None
     members_present: int | None = Field(default=None, ge=0)
+    # The service derives quorum; client-provided conclusions are not authoritative.
     quorum_required: int | None = Field(default=None, ge=1)
     quorum_met: bool | None = None
     auditor_reappointed: bool | None = None
@@ -74,13 +75,6 @@ class AGMMarkHeldRequest(BaseModel):
     agm_held_without_audit: bool | None = None
     minutes_prepared: bool | None = None
     notice_missing: bool | None = None
-    members_present: int = Field(ge=0)
-    # Deprecated compatibility input. The server derives quorum from company
-    # membership and does not trust a client-provided compliance conclusion.
-    quorum_met: bool | None = None
-    auditor_reappointed: bool
-    accounts_adopted: bool | None = None
-    agm_held_without_audit: bool | None = None
     minutes_document_id: uuid.UUID | None = None
 
 
@@ -107,10 +101,6 @@ class AGMResponse(BaseModel):
     members_present: int | None
     quorum_required: int | None = None
     quorum_basis: str | None = None
-    venue: str | None = None
-    auditor_reappointed: bool | None
-    accounts_adopted: bool | None
-    agm_held_without_audit: bool | None
     is_default: bool
     created_at: str
 
@@ -713,10 +703,6 @@ def _agm_to_response(agm) -> AGMResponse:
         venue=agm.venue,
         members_present=agm.members_present,
         quorum_basis=agm.quorum_basis,
-        venue=getattr(agm, "venue", None),
-        auditor_reappointed=agm.auditor_reappointed,
-        accounts_adopted=getattr(agm, "accounts_adopted", None),
-        agm_held_without_audit=getattr(agm, "agm_held_without_audit", None),
         is_default=agm.is_default,
         created_at=agm.created_at.isoformat() if hasattr(agm, 'created_at') and agm.created_at else '',
     )
