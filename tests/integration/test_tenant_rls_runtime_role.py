@@ -61,6 +61,15 @@ async def test_app_role_has_no_schema_creation_or_truncate_privilege(db):
     assert can_create.scalar_one() is False
     assert can_truncate.scalar_one() is False
 
+    secret_schema = await db.execute(
+        text("SELECT has_schema_privilege('nlc_app_role', 'nlc_private', 'USAGE')")
+    )
+    secret_table = await db.execute(
+        text("SELECT has_table_privilege('nlc_app_role', 'nlc_private.rls_signing_key', 'SELECT')")
+    )
+    assert secret_schema.scalar_one() is False
+    assert secret_table.scalar_one() is False
+
 
 @pytest.mark.asyncio
 async def test_valid_signed_admin_principal_is_recognized_as_staff(db):
