@@ -72,7 +72,14 @@ def get_api_rules():
     try:
         import json
         import urllib.request
-        with urllib.request.urlopen(f"{base}/api/v1/rules?is_active=true", timeout=15) as response:
+        token = os.environ.get("API_TOKEN", "").strip()
+        if not token:
+            raise RuntimeError("API_TOKEN is required because the rules endpoint requires SUPER_ADMIN authentication.")
+        request = urllib.request.Request(
+            f"{base}/api/v1/rules?is_active=true",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        with urllib.request.urlopen(request, timeout=15) as response:
             payload = json.loads(response.read())
         return {row["rule_id"] for row in payload}
     except Exception as exc:
