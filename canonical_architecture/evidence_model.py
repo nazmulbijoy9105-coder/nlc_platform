@@ -49,7 +49,7 @@ INSOLVENCY_ORDER = "INSOLVENCY_COURT_ORDER"
 PENALTY_NOTICE = "PENALTY_NOTICE_FROM_REGISTRAR"
 
 # ═════════════════════════════════════════════════════════════════════
-# EVIDENCE MAPPINGS — 35 verified rules
+# EVIDENCE MAPPINGS — historical rule evidence map; all rules require current independent approval
 # ═════════════════════════════════════════════════════════════════════
 
 EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
@@ -111,7 +111,7 @@ EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
     "DIR-003": EvidenceMapping("DIR-003",
         (FORM_XII, RJSC_FILING_ACK),
         ("FILING_OVERDUE_1_YEAR",),
-        "documentary", "S92"),
+        "documentary", "S115"),
     "DIR-004": EvidenceMapping("DIR-004",
         (FORM_XII, REGISTER_ENTRY),
         ("DEPARTED_DIRECTOR_STILL_ACTIVE",),
