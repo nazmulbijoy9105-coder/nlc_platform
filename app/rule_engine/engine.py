@@ -1721,18 +1721,18 @@ class NLCRuleEngine:
                 statutory_basis="Income Tax Act 2023 (Bangladesh)",
             ))
 
-        if c.vat_registered is False and c.annual_turnover_bdt > _VAT_REGISTRATION_THRESHOLD_BDT:
+        if c.vat_registered is False and c.annual_turnover_bdt > _VAT_TURNOVER_TAX_ENLISTMENT_THRESHOLD_BDT:
             self._add_flag(ComplianceFlag(
                 rule_id="TAX-002",
-                flag_code="VAT_REGISTRATION_STATUS_REQUIRES_VERIFICATION",
+                flag_code="VAT_REGISTRATION_OR_ENLISTMENT_STATUS_REQUIRES_VERIFICATION",
                 severity=Severity.NOT_EVALUATED,
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="Turnover input exceeds the BDT 50 lakh VAT-registration threshold, but this is only a review prompt. Verify the statutory 12-month turnover measure, mandatory-registration categories, taxpayer activity, effective-date version and registration status before finding a breach. Turnover-tax enlistment at BDT 30 lakh is a separate regime and is not evaluated by this rule.",
+                description="Reported turnover exceeds the BDT 30 lakh turnover-tax enlistment threshold. This is only a review prompt: determine whether the verified rolling 12-month taxable turnover exceeds BDT 30 lakh but does not exceed the BDT 50 lakh registration threshold (enlistment), or exceeds BDT 50 lakh (registration), and check mandatory-registration categories under section 4(2), taxpayer activity, effective date and current status before finding a breach.",
                 statutory_basis="Value Added Tax and Supplementary Duty Act 2012, as amended by Act No. 77 of 2026; exact current section and taxpayer-specific instruments require counsel verification",
                 state=RuleState.UNKNOWN,
                 eval_state="UNKNOWN",
-                detail={"reported_annual_turnover_bdt": c.annual_turnover_bdt, "registration_threshold_bdt": _VAT_REGISTRATION_THRESHOLD_BDT, "turnover_tax_enlistment_threshold_bdt": _VAT_TURNOVER_TAX_ENLISTMENT_THRESHOLD_BDT, "rolling_12_month_turnover_verified": False, "mandatory_category_verified": False}
+                detail={"reported_annual_turnover_bdt": c.annual_turnover_bdt, "registration_threshold_bdt": _VAT_REGISTRATION_THRESHOLD_BDT, "turnover_tax_enlistment_threshold_bdt": _VAT_TURNOVER_TAX_ENLISTMENT_THRESHOLD_BDT, "rolling_12_month_turnover_verified": False, "mandatory_category_verified": False, "turnover_tax_enlistment_application_window_days": 30}
             ))
 
         if c.tin_obtained and c.tax_return_filed_for_current_fy is False and c.financial_year_end:
