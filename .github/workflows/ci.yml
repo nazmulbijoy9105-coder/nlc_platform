@@ -93,6 +93,8 @@ jobs:
           test "$(alembic heads | wc -l)" -eq 1
           alembic upgrade head
           alembic upgrade head
+          python scripts/seed_rules.py
+          python tools/audit_rule_parity.py --no-api
 
       - name: Compile check
         run: python -m compileall app/
