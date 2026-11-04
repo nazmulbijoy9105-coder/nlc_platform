@@ -425,6 +425,40 @@ def test_verified_absence_is_a_scoring_state_but_unknown_is_not():
 
 
 
+
+def test_labour_section_326_missing_direction_evidence_is_not_a_breach():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            is_manufacturing=True,
+            factory_license_required_by_direction=True,
+            factory_license_obtained=False,
+        ),
+        today=date(2026, 11, 4),
+    )
+    flag = _flag(result, "LBR-001")
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.score_impact == 0
+
+
+def test_labour_section_326_expiry_requires_verified_licence_class_and_direction():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            is_manufacturing=True,
+            factory_license_required_by_direction=True,
+            factory_license_obtained=True,
+            factory_license_expiry=date(2026, 1, 1),
+        ),
+        today=date(2026, 11, 4),
+    )
+    flag = _flag(result, "LBR-002")
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.score_impact == 0
+
+
 def test_vat_registration_threshold_uses_current_50_lakh_value_and_fails_closed():
     below = NLCRuleEngine().evaluate(
         _profile(vat_registered=False, annual_turnover_bdt=4_999_999),
