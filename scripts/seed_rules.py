@@ -190,7 +190,7 @@ async def seed_rules(dry_run: bool = False, verbose: bool = False) -> int:
 
     valid_types = {"AGM", "AUDIT", "RETURN", "DIRECTOR", "TRANSFER", "REGISTER",
                    "ESCALATION", "CASCADE", "DEADLINE", "DEPENDENCY", "THRESHOLD", "CONDITIONAL"}
-    valid_sev = {"GREEN", "YELLOW", "RED", "BLACK"}
+    valid_sev = {"GREEN", "YELLOW", "RED", "BLACK", "NOT_EVALUATED"}
     valid_tier = {"COMPLIANCE_PACKAGE", "STRUCTURED_REGULARIZATION", "CORPORATE_RESCUE"}
 
     print("Validating...")
