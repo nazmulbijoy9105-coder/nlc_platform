@@ -1,3 +1,9 @@
+envVarGroups:
+  - name: nlc-rls-signing-secret-20261104
+    envVars:
+      - key: NLC_RLS_HMAC_SECRET
+        generateValue: true
+
 services:
   - type: web
     name: nlc-platform
@@ -15,8 +21,7 @@ services:
         sync: false
       - key: JWT_SECRET_KEY
         sync: false
-      - key: NLC_RLS_HMAC_SECRET
-        sync: false
+      - fromGroup: nlc-rls-signing-secret-20261104
       - key: SENTRY_DSN
         sync: false
       - key: ALLOWED_ORIGINS
@@ -36,8 +41,7 @@ services:
         sync: false
       - key: CELERY_BROKER_URL
         sync: false
-      - key: NLC_RLS_HMAC_SECRET
-        sync: false
+      - fromGroup: nlc-rls-signing-secret-20261104
       - key: ENVIRONMENT
         value: production
 
@@ -55,7 +59,6 @@ services:
         sync: false
       - key: CELERY_BROKER_URL
         sync: false
-      - key: NLC_RLS_HMAC_SECRET
-        sync: false
+      - fromGroup: nlc-rls-signing-secret-20261104
       - key: ENVIRONMENT
         value: production
