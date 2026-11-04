@@ -130,27 +130,42 @@ async def get_db_for_user(request: Request) -> AsyncGenerator[AsyncSession, None
 
 
 # ── ROW-LEVEL SECURITY ────────────────────────────────────────────────
-async def set_rls_context(session: AsyncSession, user_id: str) -> None:
-    """
-    Set PostgreSQL session variable for Row-Level Security.
-    Called after JWT validation, before any company data query.
-    RLS policies in schema check: current_setting('app.current_user_id').
-    """
+def _rls_signature(principal: str) -> str:
+    """Return an HMAC proof for a transaction-local RLS principal."""
+    import hashlib
+    import hmac
+
+    secret = os.environ.get("JWT_SECRET_KEY", "")
+    if len(secret) < 32:
+        raise RuntimeError("JWT_SECRET_KEY must contain at least 32 characters for RLS signing")
+    return hmac.new(secret.encode("utf-8"), principal.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+async def _set_signed_rls_principal(session: AsyncSession, principal: str) -> None:
+    signature = _rls_signature(principal)
     await session.execute(
-        text("SELECT set_config('app.current_user_id', :uid, true)"),
-        {"uid": str(user_id)},
+        text(
+            "SELECT set_config('app.current_user_id', :uid, true), "
+            "set_config('app.current_user_signature', :signature, true)"
+        ),
+        {"uid": principal, "signature": signature},
     )
+
+
+async def set_rls_context(session: AsyncSession, user_id: str) -> None:
+    """Set a signed, transaction-local identity. Invalid identities fail closed."""
+    import uuid
+
+    try:
+        principal = str(uuid.UUID(str(user_id)))
+    except (TypeError, ValueError, AttributeError) as exc:
+        raise ValueError("RLS user identity must be a valid UUID") from exc
+    await _set_signed_rls_principal(session, principal)
 
 
 async def set_admin_context(session: AsyncSession) -> None:
-    """
-    Bypass RLS for Super Admin and background jobs.
-    Only used for: cron jobs, rule engine evaluation, seeder scripts.
-    AI Constitution Article 2: Admin context is audited separately.
-    """
-    await session.execute(
-        text("SELECT set_config('app.current_user_id', 'ADMIN', true)")
-    )
+    """Set the signed service principal for trusted, audited background work."""
+    await _set_signed_rls_principal(session, "ADMIN")
 
 
 # ── STARTUP / SHUTDOWN ────────────────────────────────────────────────
