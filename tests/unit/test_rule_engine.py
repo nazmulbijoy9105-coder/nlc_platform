@@ -290,6 +290,9 @@ class TestAGMRules:
             build_profile,
             members_total_at_agm=None,
             members_total_evidence_ref=None,
+    def test_AGM005_missing_members_total_at_agm_is_not_evaluated(self, rule_engine, build_profile):
+        profile = build_profile(
+            members_total_at_agm=None,
             members_present_at_agm=1,
         )
         output = rule_engine.evaluate(profile)
