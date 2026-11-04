@@ -247,18 +247,18 @@ class TestAGMRules:
         assert flag.severity == Severity.NOT_EVALUATED
         assert flag.score_impact == 0
 
-    def test_AGM005_large_private_company_requires_three_members(self, rule_engine, build_profile):
-        """A private company with more than six members needs three present by default."""
-        profile = build_profile(
-            member_count=7,
+    def test_AGM005_large_private_company_below_verified_default_quorum_is_flagged(
+        self, rule_engine, build_profile
+    ):
+        profile = self._verified_agm_quorum_profile(
+            build_profile,
             members_present_at_agm=2,
-            agm_held_this_cycle=True,
         )
         output = rule_engine.evaluate(profile)
         flag = next(f for f in output.flags if f.rule_id == "AGM-005")
-        assert flag.state == RuleState.UNKNOWN
-        assert flag.severity == Severity.NOT_EVALUATED
-        assert flag.score_impact == 0
+        assert flag.detail["required"] == 3
+        assert flag.state == RuleState.NON_COMPLIANT
+        assert flag.severity == Severity.RED
 
     def test_AGM005_missing_member_or_attendance_evidence_is_not_evaluated(
         self, rule_engine, build_profile
@@ -283,15 +283,19 @@ class TestAGMRules:
         output = rule_engine.evaluate(profile)
         assert_flag_not_triggered(output, "AGM-005")
     
-    def test_AGM005_missing_member_count_is_not_evaluated(self, rule_engine, build_profile):
-        profile = build_profile(
-            member_count=None,
+    def test_AGM005_missing_verified_member_count_is_not_evaluated(
+        self, rule_engine, build_profile
+    ):
+        profile = self._verified_agm_quorum_profile(
+            build_profile,
+            members_total_at_agm=None,
+            members_total_evidence_ref=None,
             members_present_at_agm=1,
-            agm_held_this_cycle=True,
         )
         output = rule_engine.evaluate(profile)
         flag = next(f for f in output.flags if f.rule_id == "AGM-005")
         assert flag.state == RuleState.UNKNOWN
+        assert flag.severity == Severity.NOT_EVALUATED
         assert flag.score_impact == 0
 
     # ── AGM-006: Auditor Not Reappointed ─────────────────────────────────────
