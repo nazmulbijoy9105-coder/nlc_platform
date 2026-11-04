@@ -516,36 +516,38 @@ def get_rule_engine():
     return _rule_engine_instance
 
 
-async def get_db_for_user(request: Request) -> AsyncSession:  # type: ignore
+async def get_db_for_user(
+    token: TokenData = Depends(verify_access_token),
+) -> AsyncSession:  # type: ignore
     """
-    Yield a DB session with user RLS context set.
-    Extracts user_id from JWT Bearer token in request headers.
-    Raises 401 if the token is missing or invalid.
-    Use for: ALL authenticated API routes.
+    Yield a session under the restricted role and a database-verified user
+    principal. JWT claims alone never establish account activation or role.
     """
-    from fastapi import HTTPException
+    from sqlalchemy import select
 
-    from app.core.security import decode_token
-
-    auth_header = request.headers.get("authorization", "")
-    if not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
-
-    try:
-        payload = decode_token(auth_header[7:])
-        if not payload or payload.get("type") != "access":
-            raise HTTPException(status_code=401, detail="Invalid or expired access token")
-        user_id = payload.get("user_id") or payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Token missing user identity")
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired access token")
+    from app.models.user import User as UserModel
 
     async with AsyncSessionLocal() as session:
         try:
-            await set_rls_context(session, str(user_id))
+            await set_rls_context(session, token.user_id)
+            result = await session.execute(
+                select(UserModel).where(
+                    UserModel.id == uuid.UUID(token.user_id),
+                    UserModel.is_active.is_(True),
+                )
+            )
+            user = result.scalar_one_or_none()
+            if user is None:
+                raise HTTPException(
+                    status_code=401,
+                    detail="User account is inactive or unavailable.",
+                )
+            db_role = user.role.value if hasattr(user.role, "value") else str(user.role)
+            if db_role != token.role:
+                raise HTTPException(
+                    status_code=401,
+                    detail="Account permissions changed. Please sign in again.",
+                )
             yield session
             await session.commit()
         except Exception:
