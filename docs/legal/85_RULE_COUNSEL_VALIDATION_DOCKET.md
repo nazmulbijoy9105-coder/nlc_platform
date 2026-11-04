@@ -1498,9 +1498,13 @@ This docket expands the source triage into a separate signed-review record for e
 
 - BDLaws Companies Act 1994: https://bdlaws.minlaw.gov.bd/act-print-788.html
 - BSEC Acts, Rules and Regulations / Corporate Governance Code and notices: https://www.sec.gov.bd/act-rules-and-regulations
-- NBR Finance Acts: https://nbr.gov.bd/regulations/acts/finance-acts/eng
-- NBR Income Tax Acts: https://nbr.gov.bd/regulations/acts/income-tax-acts/eng/eng
-- NBR VAT Acts, Rules, SROs and GOs: https://nbr.gov.bd/regulations/acts/vat-acts/eng
+- NBR Finance Acts (Finance Act 2026 listed 6 July 2026): https://nbr.gov.bd/regulations/acts/finance-acts/eng
+- NBR Income Tax Acts (authentic English Income Tax Act 2023 listed 20 November 2025): https://nbr.gov.bd/regulations/acts/income-tax-acts/eng/eng
+- NBR Income Tax Rules (includes Withholding Tax Rules 2026 and 6 July 2026 amendment): https://nbr.gov.bd/regulations/rules/income-tax-rules/eng
+- NBR Income Tax SROs (2026 notices listed): https://nbr.gov.bd/regulations/sros/income-tax-sros/eng
+- NBR VAT Acts: https://nbr.gov.bd/regulations/acts/vat-acts/eng
+- NBR VAT Rules (authentic English 2016 Rules listed 20 November 2025): https://nbr.gov.bd/regulations/rules/vat-rules/eng
+- NBR VAT SROs (2026 notices listed, including rule amendments): https://nbr.gov.bd/regulations/sros/vat-sros/eng
 - Ministry of Labour legislative register: https://mole.gov.bd/pages/legislative-informations
 - BDLaws Bangladesh Labour Act: https://bdlaws.minlaw.gov.bd/act-details-952.html?lang=en
 - Bangladesh Government Press extraordinary gazettes: https://dpp.gov.bd/bgpress/index.php/document/extraordinary_gazettes_monthly/2026-04-14
