@@ -345,6 +345,7 @@ class CompanyService(BaseService[Company]):
                       FROM company_user_access cua
                       WHERE cua.company_id = c.id
                         AND cua.user_id = :user_id
+                        AND cua.is_active = TRUE
                   )
                 GROUP BY c.current_risk_band
                 ORDER BY CASE c.current_risk_band
