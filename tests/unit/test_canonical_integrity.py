@@ -169,6 +169,24 @@ def test_seed_matches_engine_and_has_no_duplicates():
     return set(data)
 
 
+
+def test_rescue_registry_has_no_duplicate_literal_keys():
+    import ast
+
+    path = ROOT / "canonical_architecture" / "statutory_rescue.py"
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    registry = next(
+        node.value for node in ast.walk(tree)
+        if isinstance(node, ast.Assign)
+        and any(isinstance(target, ast.Name) and target.id == "STATUTORY_RESCUE_REGISTRY"
+                for target in node.targets)
+        and isinstance(node.value, ast.Dict)
+    )
+    keys = [key.value for key in registry.keys if isinstance(key, ast.Constant)]
+    assert len(keys) == EXPECTED
+    assert len(keys) == len(set(keys)), "duplicate rescue rule IDs in source literal"
+
+
 def test_inner_ids_match_registry_keys():
     bad_rules = [
         key for key, value in STATUTORY_RULE_REGISTRY.items()
