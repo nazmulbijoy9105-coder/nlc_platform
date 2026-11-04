@@ -40,8 +40,8 @@ class AGMService(BaseService[AGM]):
         agm_held: bool = False,
         agm_date: date | None = None,
         notice_sent_date: date | None = None,
-        members_present: int = 0,
-        quorum_required: int = 2,
+        members_present: int | None = None,
+        quorum_required: int | None = None,
         auditor_reappointed: bool = True,
         minutes_prepared: bool = False,
         minutes_filed_rjsc: bool = False,
@@ -50,7 +50,8 @@ class AGMService(BaseService[AGM]):
         delay_days: int = 0,
         notice_defective: bool = False,
         notice_missing: bool = False,
-        quorum_met: bool = True,
+        quorum_met: bool | None = None,
+        quorum_basis: str | None = None,
         created_by: uuid.UUID | None = None,
         agm_due_date=None
     ) -> AGM:
@@ -75,9 +76,16 @@ class AGMService(BaseService[AGM]):
             if days_notice < 0:
                 notice_missing = True
 
-        # Quorum check
-        if agm_held and members_present < quorum_required:
-            quorum_met = False
+        # Quorum is UNKNOWN unless both attendance and the applicable
+        # Articles/statutory basis have been established. Never infer a
+        # failure from an unverified zero attendance or a guessed default.
+        if (
+            agm_held
+            and members_present is not None
+            and quorum_required is not None
+            and quorum_met is None
+        ):
+            quorum_met = members_present >= quorum_required
 
         return await self.create(
             company_id=company_id,
@@ -90,7 +98,9 @@ class AGMService(BaseService[AGM]):
             notice_days_before=(agm_date - notice_sent_date).days if (agm_date and notice_sent_date) else None,
             notice_defective=notice_defective,
             notice_missing=notice_missing,
-            members_present=members_present,
+            # The legacy column is NOT NULL; zero is treated as
+            # unverified by _agm_profile_evidence unless provenance exists.
+            members_present=members_present if members_present is not None else 0,
             quorum_required=quorum_required,
             quorum_met=quorum_met,
             quorum_basis=quorum_basis,
