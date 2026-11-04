@@ -58,13 +58,15 @@ def upgrade() -> None:
         CREATE POLICY webhook_endpoints_owner_scope ON webhook_endpoints
         USING (FALSE)
         WITH CHECK (FALSE)
-    """)    op.execute("DROP POLICY IF EXISTS webhook_deliveries_owner_scope ON webhook_deliveries")
+    """)
+    op.execute("DROP POLICY IF EXISTS webhook_deliveries_owner_scope ON webhook_deliveries")
     op.execute("""
         CREATE POLICY webhook_deliveries_owner_scope ON webhook_deliveries
         USING (FALSE)
         WITH CHECK (FALSE)
-    """)    op.execute("""
-        DO $$
+    """)
+    op.execute("""
+        DO $
         BEGIN
             IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
                 REVOKE ALL PRIVILEGES ON webhook_endpoints FROM nlc_app_role;
