@@ -301,15 +301,15 @@ class CompanyProfile:
     trade_license_obtained: bool | None = None
     trade_license_expiry: Optional[date] = None
     last_tax_return_filed_year: Optional[int] = None
-    tax_return_filed_for_current_fy: bool = False
-    advance_tax_q1_paid: bool = False
-    advance_tax_q2_paid: bool = False
-    advance_tax_q3_paid: bool = False
-    advance_tax_q4_paid: bool = False
+    tax_return_filed_for_current_fy: bool | None = None
+    advance_tax_q1_paid: bool | None = None
+    advance_tax_q2_paid: bool | None = None
+    advance_tax_q3_paid: bool | None = None
+    advance_tax_q4_paid: bool | None = None
     tds_deposited_up_to_date: bool = True
     last_tds_deposit_date: Optional[date] = None
     last_vat_return_filed: Optional[date] = None
-    vat_annual_return_filed_for_fy: bool = False
+    vat_annual_return_filed_for_fy: bool | None = None
     minimum_tax_paid: bool = True
     tax_clearance_obtained: bool = False
     tax_return_deadline_extended: bool = False
@@ -349,6 +349,7 @@ class CompanyProfile:
     # ── Labour (Labour Act 2006) ──
     # Tri-state applicability (R-003/R-008): None = unknown, False = not a factory, True = manufacturing.
     is_manufacturing: bool | None = None
+    factory_license_required_by_direction: bool | None = None
     factory_license_obtained: bool | None = None
     factory_license_expiry: Optional[date] = None
     worker_compensation_filed: bool | None = None
@@ -1735,8 +1736,10 @@ class NLCRuleEngine:
                 due_month -= 12
                 due_year += 1
             deadline = date(due_year, due_month, 15)
-            if c.tax_return_deadline_extended:
-                deadline = deadline + timedelta(days=30)
+            # A boolean "extended" flag is not a statutory extension order.
+            # Do not add an arbitrary 30 days. Until Tax Day and any actual
+            # written extension are verified for this taxpayer, this is only
+            # a review prompt and cannot be a confirmed legal violation.
             if self.today > deadline:
                 delay = (self.today - deadline).days
                 if delay <= 90:
@@ -1751,9 +1754,13 @@ class NLCRuleEngine:
                     severity=t3_sev,
                     score_impact=t3_imp,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE if delay <= 90 else RevenueTier.STRUCTURED_REGULARIZATION,
-                    description=f"Annual tax return may be overdue by {delay} days. Income Tax Act 2023 Sections 166 and 171 and the applicable Tax Day definition must be verified for this taxpayer and assessment year.",
+                    description=f"Potential company return delay of {delay} days using a provisional date only. Verify current Tax Day under Sections 2 and 171, assessment-year amendments, taxpayer category and any written extension before determining default.",
                     statutory_basis="Income Tax Act 2023, Sections 166 and 171 (taxpayer-specific Tax Day requires verification)",
-                    detail={"delay_days": delay, "fy_year": fy_end.year}
+                    detail={"delay_days": delay, "fy_year": fy_end.year},
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                    score_impact=0,
+                    severity=Severity.NOT_EVALUATED,
                 ))
 
         if c.tin_obtained:
@@ -1806,16 +1813,10 @@ class NLCRuleEngine:
                     statutory_basis="Value Added Tax Act 2012 (Bangladesh)",
                 ))
 
-        if c.vat_registered and c.vat_annual_return_filed_for_fy is False and self.today.month > 9:
-            self._add_flag(ComplianceFlag(
-                rule_id="VAT-003",
-                flag_code="VAT_ANNUAL_RETURN_OVERDUE",
-                severity=Severity.YELLOW,
-                score_impact=5,
-                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="VAT Annual Return overdue for current FY. VAT Act 2012.",
-                statutory_basis="Value Added Tax Act 2012 (Bangladesh)",
-            ))
+        # VAT-003 deliberately does not auto-fire: the current legal corpus
+        # has not established a universal annual VAT return due date applicable
+        # to every registered company. Evaluate only after the taxpayer's
+        # applicable return type, tax period and effective NBR instrument are known.
 
         unresolved = (c.penalty_notices_received or 0) - (c.penalty_notices_resolved or 0)  # type: ignore
         if unresolved > 0:
@@ -1943,7 +1944,7 @@ class NLCRuleEngine:
         # Factory-license obligations are evaluated only for established
         # manufacturing entities. UNKNOWN and NOT_APPLICABLE never create
         # a statutory breach or score deduction.
-        if applicability.state is ApplicabilityState.APPLICABLE:
+        if applicability.state is ApplicabilityState.APPLICABLE and c.factory_license_required_by_direction is True:
             if c.factory_license_obtained is False:
                 self._add_flag(ComplianceFlag(
                     rule_id="LBR-001",
