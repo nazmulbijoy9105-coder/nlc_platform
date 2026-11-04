@@ -129,74 +129,6 @@ def upgrade() -> None:
     # SECURITY DEFINER helpers read membership and role records without
     # recursively invoking RLS on those same tables. search_path is pinned to
     # prevent object-shadowing attacks. The migration owner owns these helpers.
-    # App-side HMAC is verified in PostgreSQL. The runtime role cannot read
-    # the signing key or invoke any function that signs an arbitrary principal.
-    signing_key = os.environ.get("JWT_SECRET_KEY", "")
-    if len(signing_key) < 32:
-        raise RuntimeError("JWT_SECRET_KEY (minimum 32 characters) is required for signed RLS context")
-    op.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public")
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS public.nlc_rls_security_config (
-            singleton boolean PRIMARY KEY DEFAULT TRUE CHECK (singleton),
-            signing_key bytea NOT NULL,
-            updated_at timestamptz NOT NULL DEFAULT now()
-        )
-    """)
-    op.get_bind().execute(
-        sa.text("""
-            INSERT INTO public.nlc_rls_security_config(singleton, signing_key)
-            VALUES (TRUE, :signing_key)
-            ON CONFLICT (singleton) DO UPDATE
-            SET signing_key = EXCLUDED.signing_key, updated_at = now()
-        """),
-        {"signing_key": signing_key.encode("utf-8")},
-    )
-    _execute_sql_script("""
-        REVOKE ALL ON TABLE public.nlc_rls_security_config FROM PUBLIC;
-        DO $secret_privileges$
-        BEGIN
-            IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
-                REVOKE ALL ON TABLE public.nlc_rls_security_config FROM nlc_app_role;
-            END IF;
-        END
-        $secret_privileges$;
-    """)
-    _execute_sql_script("""
-        CREATE OR REPLACE FUNCTION public.nlc_current_user_context_valid()
-        RETURNS boolean
-        LANGUAGE plpgsql
-        STABLE
-        SECURITY DEFINER
-        SET search_path = pg_catalog, public
-        AS $$
-        DECLARE
-            principal text;
-            supplied_signature text;
-            key_bytes bytea;
-            expected_signature text;
-        BEGIN
-            principal := current_setting('app.current_user_id', true);
-            supplied_signature := current_setting('app.current_user_signature', true);
-            IF principal IS NULL OR supplied_signature IS NULL
-               OR principal = '' OR supplied_signature !~ '^[0-9a-f]{64}$' THEN
-                RETURN FALSE;
-            END IF;
-            SELECT cfg.signing_key INTO key_bytes
-            FROM public.nlc_rls_security_config AS cfg
-            WHERE cfg.singleton IS TRUE;
-            IF key_bytes IS NULL THEN
-                RETURN FALSE;
-            END IF;
-            expected_signature := encode(
-                public.hmac(convert_to(principal, 'UTF8'), key_bytes, 'sha256'),
-                'hex'
-            );
-            RETURN expected_signature = lower(supplied_signature);
-        EXCEPTION WHEN OTHERS THEN
-            RETURN FALSE;
-        END;
-        $$
-    """)
     _execute_sql_script("""
         CREATE OR REPLACE FUNCTION public.nlc_current_user_principal()
         RETURNS text
@@ -206,16 +138,6 @@ def upgrade() -> None:
         SET search_path = pg_catalog, public, nlc_private
         AS $$
         DECLARE
-            principal text;
-        BEGIN
-            IF NOT public.nlc_current_user_context_valid() THEN
-                RETURN NULL;
-            END IF;
-            principal := current_setting('app.current_user_id', true);
-            IF principal !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
-                RETURN NULL;
-            END IF;
-            RETURN principal::uuid;
             v text;
             supplied_signature text;
             stored_secret text;
@@ -247,7 +169,7 @@ def upgrade() -> None:
             END IF;
             RETURN lower(v);
         END;
-        $$
+        $$;
     """)
     _execute_sql_script("""
         CREATE OR REPLACE FUNCTION public.nlc_current_user_id()
@@ -296,20 +218,8 @@ def upgrade() -> None:
         STABLE
         SECURITY DEFINER
         SET search_path = pg_catalog, public
-        AS $staff$
-            SELECT (
-                public.nlc_current_user_context_valid()
-                AND current_setting('app.current_user_id', true) = 'ADMIN'
-            ) OR EXISTS (
-                SELECT 1
-                FROM public.users u
-                WHERE u.id = public.nlc_current_user_id()
-                  AND u.is_active IS TRUE
-                  AND u.role::text IN ('SUPER_ADMIN', 'ADMIN_STAFF', 'LEGAL_STAFF')
-            )
-        $staff$;
         AS $$
-            SELECT
+            SELECT COALESCE(
                 public.nlc_current_user_principal() = 'ADMIN'
                 OR EXISTS (
                     SELECT 1
@@ -317,7 +227,9 @@ def upgrade() -> None:
                     WHERE u.id = public.nlc_current_user_id()
                       AND u.is_active IS TRUE
                       AND u.role::text IN ('SUPER_ADMIN', 'ADMIN_STAFF', 'LEGAL_STAFF')
-                )
+                ),
+                FALSE
+            )
         $$;
     """)
 
@@ -333,12 +245,6 @@ def upgrade() -> None:
                 public.nlc_current_user_is_staff()
                 OR (
                     public.nlc_current_user_id() IS NOT NULL
-                    AND EXISTS (
-                        SELECT 1
-                        FROM public.users active_user
-                        WHERE active_user.id = public.nlc_current_user_id()
-                          AND active_user.is_active IS TRUE
-                    )
                     AND EXISTS (
                         SELECT 1
                         FROM public.company_user_access cua
@@ -370,7 +276,6 @@ def upgrade() -> None:
     # Remove default PUBLIC execution on privileged helpers. Grant only to the
     # dedicated application role when it exists (CI databases may not create it).
     _execute_sql_script("""
-        REVOKE ALL ON FUNCTION public.nlc_current_user_context_valid() FROM PUBLIC;
         REVOKE ALL ON FUNCTION public.nlc_current_user_principal() FROM PUBLIC;
         REVOKE ALL ON FUNCTION public.nlc_current_user_id() FROM PUBLIC;
         REVOKE ALL ON FUNCTION public.nlc_current_user_is_staff() FROM PUBLIC;
@@ -379,7 +284,6 @@ def upgrade() -> None:
         DO $grant$
         BEGIN
             IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
-                GRANT EXECUTE ON FUNCTION public.nlc_current_user_context_valid() TO nlc_app_role;
                 GRANT EXECUTE ON FUNCTION public.nlc_current_user_principal() TO nlc_app_role;
                 GRANT EXECUTE ON FUNCTION public.nlc_current_user_id() TO nlc_app_role;
                 GRANT EXECUTE ON FUNCTION public.nlc_current_user_is_staff() TO nlc_app_role;
@@ -465,6 +369,7 @@ def upgrade() -> None:
     # only current staff may grant, change, or revoke memberships.
     _execute_sql_script("""
         ALTER TABLE public.company_user_access ENABLE ROW LEVEL SECURITY;
+        DROP POLICY IF EXISTS company_user_access_policy ON public.company_user_access;
         DROP POLICY IF EXISTS company_user_access_self_read ON public.company_user_access;
         DROP POLICY IF EXISTS company_user_access_staff_write ON public.company_user_access;
         CREATE POLICY company_user_access_self_read ON public.company_user_access
@@ -519,6 +424,47 @@ def upgrade() -> None:
             WITH CHECK (
                 id = public.nlc_current_user_id()
                 OR public.nlc_current_user_is_staff()
+            );
+    """)
+
+    # Replace legacy webhook policies that cast the raw identity GUC to UUID.
+    # The signed ADMIN service principal is not a UUID; all policies must use
+    # the verified identity helper and explicitly allow trusted staff work.
+    _execute_sql_script("""
+        ALTER TABLE public.webhook_endpoints ENABLE ROW LEVEL SECURITY;
+        DROP POLICY IF EXISTS webhook_endpoints_owner_scope ON public.webhook_endpoints;
+        CREATE POLICY webhook_endpoints_owner_scope ON public.webhook_endpoints
+            FOR ALL
+            USING (
+                public.nlc_current_user_is_staff()
+                OR user_id = public.nlc_current_user_id()
+            )
+            WITH CHECK (
+                public.nlc_current_user_is_staff()
+                OR user_id = public.nlc_current_user_id()
+            );
+
+        ALTER TABLE public.webhook_deliveries ENABLE ROW LEVEL SECURITY;
+        DROP POLICY IF EXISTS webhook_deliveries_owner_scope ON public.webhook_deliveries;
+        CREATE POLICY webhook_deliveries_owner_scope ON public.webhook_deliveries
+            FOR ALL
+            USING (
+                public.nlc_current_user_is_staff()
+                OR EXISTS (
+                    SELECT 1
+                    FROM public.webhook_endpoints e
+                    WHERE e.id = webhook_deliveries.endpoint_id
+                      AND e.user_id = public.nlc_current_user_id()
+                )
+            )
+            WITH CHECK (
+                public.nlc_current_user_is_staff()
+                OR EXISTS (
+                    SELECT 1
+                    FROM public.webhook_endpoints e
+                    WHERE e.id = webhook_deliveries.endpoint_id
+                      AND e.user_id = public.nlc_current_user_id()
+                )
             );
     """)
 
