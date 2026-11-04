@@ -53,7 +53,7 @@ def upgrade() -> None:
             name="ck_agm_evidence_member_count_positive",
         ),
         sa.CheckConstraint("status <> 'VERIFIED' OR reviewed_by IS DISTINCT FROM submitted_by", name="ck_agm_evidence_four_eyes"),
-        sa.CheckConstraint("(status = 'REVOKED' AND revoked_by IS NOT NULL AND revoked_at IS NOT NULL AND revocation_reason IS NOT NULL) OR (status <> 'REVOKED' AND revoked_by IS NULL AND revoked_at IS NULL AND revocation_reason IS NULL)", name="ck_agm_evidence_revocation_metadata"),
+        sa.CheckConstraint("(status = 'REVOKED' AND revoked_by IS NOT NULL AND revoked_by IS DISTINCT FROM reviewed_by AND revoked_at IS NOT NULL AND revocation_reason IS NOT NULL) OR (status <> 'REVOKED' AND revoked_by IS NULL AND revoked_at IS NULL AND revocation_reason IS NULL)", name="ck_agm_evidence_revocation_metadata"),
     )
     for name, column in (
         ("ix_agm_evidence_verifications_company_id", "company_id"),
