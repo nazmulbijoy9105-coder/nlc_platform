@@ -424,6 +424,39 @@ def test_verified_absence_is_a_scoring_state_but_unknown_is_not():
     assert score.final_score == 100
 
 
+
+def test_vat_registration_threshold_uses_current_50_lakh_value_and_fails_closed():
+    below = NLCRuleEngine().evaluate(
+        _profile(vat_registered=False, annual_turnover_bdt=4_999_999),
+        today=date(2026, 11, 4),
+    )
+    assert not any(flag.rule_id == "TAX-002" for flag in below.flags)
+
+    above = NLCRuleEngine().evaluate(
+        _profile(vat_registered=False, annual_turnover_bdt=5_000_001),
+        today=date(2026, 11, 4),
+    )
+    flag = _flag(above, "TAX-002")
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.score_impact == 0
+    assert flag.detail["registration_threshold_bdt"] == 5_000_000
+    assert flag.detail["turnover_tax_enlistment_threshold_bdt"] == 3_000_000
+
+
+def test_vat_return_age_without_verified_tax_period_is_not_a_default():
+    result = NLCRuleEngine().evaluate(
+        _profile(vat_registered=True, last_vat_return_filed=date(2026, 8, 1)),
+        today=date(2026, 11, 4),
+    )
+    flag = _flag(result, "VAT-002")
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.score_impact == 0
+
+
 def test_unreleased_legal_corpus_never_reports_green_even_with_full_input_coverage():
     from app.rule_engine.engine import LEGAL_SCORE_RELEASED
 
