@@ -824,11 +824,10 @@ class TestEscalationRules:
 
     @pytest.mark.black
     def test_ESC003_is_black_override(self, rule_engine, black_band_profile):
-        """ESC-003 must have is_black_override=True."""
+        """No unapproved ESC-003 flag is generated."""
         output = rule_engine.evaluate(black_band_profile)
         esc003_flags = [f for f in output.flags if f.rule_id == "ESC-003"]
-        if esc003_flags:
-            assert esc003_flags[0].is_black_override is True
+        assert esc003_flags == []
 
 
 # =============================================================================
@@ -858,12 +857,11 @@ class TestEscalationRules:
         )
         output = rule_engine.evaluate(profile)
 
-        # ESC-003 should fire (2+ active BLACK flags)
+        # Unapproved legal rules cannot trigger automatic rescue escalation.
         esc003_fired = any(f.rule_id == "ESC-003" for f in output.flags)
-        assert esc003_fired, "ESC-003 should fire with 2+ active BLACK flags"
-
-        # Score should be BLACK (both paths agree)
-        assert output.score_breakdown.risk_band == "BLACK"
+        assert esc003_fired is False
+        assert output.score_breakdown.override_applied is False
+        assert output.score_breakdown.final_score == 100
 
 class TestScoreBanding:
     """Verify score → band mapping is correct and non-overlapping."""
