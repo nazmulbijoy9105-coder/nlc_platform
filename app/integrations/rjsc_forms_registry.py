@@ -47,7 +47,7 @@ RJSC_FORMS_REGISTRY: dict[str, RJSCForm] = {
         form_code="FORM_23B",
         form_name="Auditor Notice of Appointment",
         purpose="Auditor notice to Registrar under Section 210(2), within 30 days.",
-        related_rules=["AUD-001"],
+        related_rules=[],
         download_url=""
     ),
     "FORM_VIII": RJSCForm(
