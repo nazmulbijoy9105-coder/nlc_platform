@@ -577,6 +577,28 @@ class TestFilingService:
         assert agm.id is not None
         assert agm.company_id == db_company.id
         assert agm.financial_year == 2023
+        assert agm.agm_held is False
+        assert agm.members_present == 0
+        assert agm.quorum_required is None
+        assert agm.quorum_met is None
+
+    @pytest.mark.asyncio
+    async def test_create_agm_rejects_direct_held_status_without_verified_evidence(
+        self, db, db_company
+    ):
+        from app.services.filing_service import AGMService
+
+        svc = AGMService(db)
+        with pytest.raises(ValueError, match=r"mark_held\(\)"):
+            await svc.create_agm(
+                company_id=db_company.id,
+                financial_year=2024,
+                agm_held=True,
+                agm_date=date(2025, 5, 15),
+                members_present=999,
+                quorum_required=1,
+                quorum_met=True,
+            )
 
     @pytest.mark.asyncio
     async def test_create_agm_duplicate_year_raises(self, db, db_company):
