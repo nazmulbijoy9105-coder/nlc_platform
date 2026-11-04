@@ -92,6 +92,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     async with AsyncSessionLocal() as session:
         try:
+            await set_app_role(session)
             yield session
             await session.commit()
         except Exception:
