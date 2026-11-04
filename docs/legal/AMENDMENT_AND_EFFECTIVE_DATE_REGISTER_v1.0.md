@@ -1,12 +1,36 @@
-# Amendment and Effective-Date Register
+# Amendment and effective-date register — research update 2026-11-04
 
-Status: OPEN — must be completed by local senior counsel before any rule is production-validated.
+**Status: PARTIALLY POPULATED; NOT EXHAUSTIVE; COUNSEL VALIDATION REQUIRED.** A listed source page is an index, not proof that all amendments/SROs were reviewed. Do not treat any affected rule as validated until instrument text, commencement, transition and rule mapping are recorded.
 
-| Instrument | Provision(s) affected | Gazette / SRO / Act no. | Publication date | Commencement date | Transitional rule | Repeal / substitution | Rules affected | Official source | Reviewer | Status |
-|---|---|---|---|---|---|---|---|---|---|---|
-| Companies Act 1994 (Act XVIII of 1994) | All applicable provisions | Baseline Act | 1994-09-12 | 1994-12-01 (SRO 321-Law/1994) | Counsel to confirm | Counsel to confirm | All company-law rules | https://bdlaws.minlaw.gov.bd/act-print-788.html | Pending | BASELINE ONLY |
-| Companies (Amendment) Act 2005 (Act VII of 2005) | Counsel to map section-by-section | Act VII of 2005 | Pending | Pending | Pending | Pending | Affected rules TBD | Official Gazette / BDLaws | Pending | OPEN |
-| Financial Reporting Act 2015 (Act XVI of 2015) | Counsel to map all consequential amendments | Act XVI of 2015 | Pending | Pending | Pending | Pending | ACC/AUD rules TBD | Official Gazette / BDLaws | Pending | OPEN |
-| Subsequent amending Acts, Ordinances, SROs, rules and Gazette instruments | All affected | Must be exhaustively researched | Pending | Pending | Pending | Pending | All affected rules | Official Gazette / BDLaws | Pending | OPEN |
+| Instrument / source | Publication / date evidence | Required work | Affected rules | Status |
+|---|---|---|---|---|
+| Companies Act 1994 (Act XVIII of 1994) | BDLaws act-print-788; baseline commencement to confirm from SRO | Verify consolidated Bangla text and authentic English; map all subsequent amendments and savings | ACC, AGM, AR, AUD, BOD, CAP, CHG, DIR, INC, OFF, REG, SH, STR, TR, MEM, ESC | OPEN — NOT EXHAUSTIVE |
+| Companies (Amendment) Act 2005 (Act VII of 2005) | Gazette source and exact dates not yet captured | Retrieve Gazette; section-by-section substitution and commencement table | TBD; Companies Act rules | OPEN |
+| Financial Reporting Act 2015 (Act XVI of 2015) | BDLaws / Gazette source required | Map audit oversight, auditor eligibility, reporting and interaction with Companies Act | ACC, AUD | OPEN |
+| BSEC Corporate Governance Code 2018 | Official BSEC Code, 3 June 2018 | Preserve original Code text, scope, definitions, all conditions and applicability | BSEC-001–004; potentially listed issuer disclosure rules | SOURCE IDENTIFIED; COUNSEL REVIEW OPEN |
+| BSEC amendment notification 2023 | BSEC listing dated 20 November 2023; Gazette date and exact text to pin | Compare each changed clause; commencement and transition | BSEC-001–004 | SOURCE IDENTIFIED; CLAUSE MAPPING OPEN |
+| BSEC female independent director amendment 2024 | BSEC listing dated 29 April 2024 | Pin Condition 1(2)(a), applicability and effective transition | BSEC-003 | SOURCE IDENTIFIED; CLAUSE MAPPING OPEN |
+| Income Tax Act 2023 | NBR authentic English text dated 20 November 2025; Bangla Act/Gazette controls | Build chronological amendment table through Finance Act 2026, all ordinances, SROs, Rules, GOs, Tax Day extensions | TAX-001–004 | OPEN — FULL RECONCILIATION |
+| Finance Act 2026 | NBR listing dated 6 July 2026 | Download official Act and map every Income Tax Act change, effective date and transitional rule | TAX-001–004 | SOURCE INDEX VERIFIED; SECTION MAPPING OPEN |
+| VAT and Supplementary Duty Act 2012 | NBR VAT Acts index / BDLaws authentic text | Reconcile consolidated Act and all amendments through 4 Nov 2026 | VAT-002/003; TAX-002 | OPEN — FULL RECONCILIATION |
+| VAT and Supplementary Duty (Amendment) Act 2026, Act No. 77 of 2026 | BDLaws Act 1706; exact Gazette and commencement language to capture | Validate 50-lakh registration and 30-lakh enlistment definitions, deemed effective date, savings and mandatory categories | TAX-002, VAT-002, VAT-003 | SOURCE IDENTIFIED; COUNSEL CONFIRMATION OPEN |
+| VAT Rules, SROs and GOs | NBR maintains separate current directories | Enumerate every relevant current SRO by taxpayer/activity, tax period, effective date, repeal and transitional provisions | TAX-002, VAT-002, VAT-003 | NOT YET EXHAUSTIVELY REVIEWED |
+| Bangladesh Labour Act 2006 | BDLaws Act 42 of 2006 / Ministry register | Reconcile consolidated Bangla Act, all 2013/2018/2025/2026 amendments, rules and exemptions | LBR-001–003 | OPEN — FULL RECONCILIATION |
+| Bangladesh Labour (Amendment) Act 2026, Act No. 43 of 2026 | Government Press extraordinary Gazette listing: 10 April 2026; Ministry register dated 16 April 2026 | Pin Gazette pages, commencement, transitional clauses and s.326 changes | LBR-001/002; other labour rules if relevant | SOURCE IDENTIFIED; FULL MAPPING OPEN |
+| Bangladesh Labour Rules 2015 and amendments | Ministry / Gazette official text required | Check all rule amendments, factory/establishment classes, licence forms, renewal and Government directions | LBR-001/002 | NOT YET EXHAUSTIVELY REVIEWED |
+| Other sector-specific instruments (BIDA, Bangladesh Bank, local authorities, RJSC) | Must be identified per factual trigger | Identify transaction-specific circular, local by-law, licence direction, RJSC form and effective date; no blanket source | INC, FX, TL, TR, BSEC, LBR | OPEN — RULE-SPECIFIC |
 
-Do not infer that this table is an exhaustive list of amendments. Counsel must build an authoritative chronological amendment history from Gazette and official legislative sources, then map each amendment to its affected section, commencement and transitional provisions. An undated or unverified amendment must block the affected rule from VALIDATED status.
+## Official discovery locations
+
+- Companies Act: https://bdlaws.minlaw.gov.bd/act-print-788.html
+- BSEC instruments: https://www.sec.gov.bd/act-rules-and-regulations
+- NBR Finance Acts: https://nbr.gov.bd/regulations/acts/finance-acts/eng
+- NBR Income Tax Acts: https://nbr.gov.bd/regulations/acts/income-tax-acts/eng/eng
+- NBR VAT Acts, Rules, SROs and GOs: https://nbr.gov.bd/regulations/acts/vat-acts/eng
+- Ministry of Labour legislative register: https://mole.gov.bd/pages/legislative-informations
+- Labour Act: https://bdlaws.minlaw.gov.bd/act-details-952.html?lang=en
+- Government Press Gazette: https://dpp.gov.bd/bgpress/index.php/document/extraordinary_gazettes_monthly/2026-04-14
+
+## Mandatory completion fields per instrument
+
+Exact Gazette/Act/SRO number; Bangla title; publication date; commencement date; retrospective date if any; transitional/savings; amended provision and old/new wording; repeals/corrigenda; affected rule IDs; official file URL and SHA-256; reviewer; review date; legal interpretation; unresolved question; counsel signature. A missing field means OPEN.
