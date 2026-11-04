@@ -750,7 +750,7 @@ class TestCapitalRules:
             charge_type="MORTGAGE",
             amount_bdt=500000.0,
             charge_holder="Test Bank Ltd",
-            form_viii_filed=False,
+            form_xviii_filed=False,
         )
         profile = build_profile(charges=[charge])
         output = rule_engine.evaluate(profile)
@@ -763,7 +763,7 @@ class TestCapitalRules:
             charge_type="MORTGAGE",
             amount_bdt=500000.0,
             charge_holder="Test Bank Ltd",
-            form_viii_filed=True,
+            form_xviii_filed=True,
         )
         profile = build_profile(charges=[charge])
         output = rule_engine.evaluate(profile)
