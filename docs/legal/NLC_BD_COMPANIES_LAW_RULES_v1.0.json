@@ -1,0 +1,1627 @@
+{
+  "schema_version": "1.0.0",
+  "jurisdiction": "Bangladesh",
+  "instrument": "Companies Act 1994 and associated instruments",
+  "generated_on": "2026-11-04",
+  "status": "DRAFT_FOR_INDEPENDENT_LOCAL_SENIOR_COUNSEL_VALIDATION",
+  "not_legal_opinion": true,
+  "rule_count": 85,
+  "rule_source": "docs/LEGAL_BASIS_MATRIX.md on main; catalogue metadata only",
+  "rules": [
+    {
+      "rule_id": "ACC-001",
+      "rule_name": "Financial Statements Not Presented at AGM",
+      "statutory_basis": "Section 183, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 15,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "ACC-002",
+      "rule_name": "Financial Statements Not Filed with Registrar",
+      "statutory_basis": "Section 190, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 15,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "ACC-003",
+      "rule_name": "Books of Account Not Kept",
+      "statutory_basis": "Section 181, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 15,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "AGM-001",
+      "rule_name": "First AGM Default",
+      "statutory_basis": "Section 81, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 20,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "AGM-002",
+      "rule_name": "Subsequent AGM Default",
+      "statutory_basis": "Section 81, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 20,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "AGM-003",
+      "rule_name": "AGM Notice Defective — Insufficient Days",
+      "statutory_basis": "Section 85, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "AGM-004",
+      "rule_name": "AGM Notice Missing",
+      "statutory_basis": "Section 85, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 15,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "AGM-005",
+      "rule_name": "AGM Quorum Not Met",
+      "statutory_basis": "Section 89, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 15,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "AGM-006",
+      "rule_name": "AGM Minutes Not Prepared",
+      "statutory_basis": "Section 89, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "AGM-007",
+      "rule_name": "AGM Adjourned Without Proper Notice",
+      "statutory_basis": "Section 130, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "AR-001",
+      "rule_name": "Annual Return Default — Single Year",
+      "statutory_basis": "Section 36 (Schedule X), Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 10,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "AR-002",
+      "rule_name": "Annual Return 2-Year Backlog",
+      "statutory_basis": "Sections 36 and 304, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 20,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "AR-003",
+      "rule_name": "Annual Return 3-Year Backlog — Strike-Off Risk",
+      "statutory_basis": "Sections 36 and 304, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "BLACK",
+      "engine_score_impact": 20,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "AR-004",
+      "rule_name": "Annual Return Filed But Incomplete",
+      "statutory_basis": "Section 36, Schedule X, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 8,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "AUD-001",
+      "rule_name": "First Auditor Not Appointed Within One Calendar Month",
+      "statutory_basis": "Section 210(6), Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 10,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "AUD-002",
+      "rule_name": "Audit Not Completed Before AGM",
+      "statutory_basis": "Section 183, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 12,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "AUD-003",
+      "rule_name": "AGM Held Without Completed Audit — BLACK OVERRIDE",
+      "statutory_basis": "Sections 151, 210, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "BLACK",
+      "engine_score_impact": 10,
+      "engine_black_override": true,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "AUD-004",
+      "rule_name": "Auditor Not Reappointed at AGM",
+      "statutory_basis": "Section 210(2), Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "AUD-005",
+      "rule_name": "Subsequent Auditor Not Appointed",
+      "statutory_basis": "Section 210(3), Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 10,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "BNK-001",
+      "rule_name": "Winding Up Petition Filed",
+      "statutory_basis": "Bankruptcy Act 1997 (Bangladesh), Section 12",
+      "engine_severity": "BLACK",
+      "engine_score_impact": 10,
+      "engine_black_override": true,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "BNK-002",
+      "rule_name": "Liquidator Appointed",
+      "statutory_basis": "Bankruptcy Act 1997 (Bangladesh), Section 14",
+      "engine_severity": "BLACK",
+      "engine_score_impact": 10,
+      "engine_black_override": true,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "BNK-003",
+      "rule_name": "Court-Ordered Winding Up",
+      "statutory_basis": "Bankruptcy Act 1997 (Bangladesh), Section 18",
+      "engine_severity": "BLACK",
+      "engine_score_impact": 35,
+      "engine_black_override": true,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "BOD-001",
+      "rule_name": "Board Meeting Not Held Within Quarter",
+      "statutory_basis": "Section 96, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "BOD-002",
+      "rule_name": "Board Meeting Notice Not Given",
+      "statutory_basis": "Section 95, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 3,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "BOD-003",
+      "rule_name": "Board Meeting Minutes Not Prepared",
+      "statutory_basis": "Section 89, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "BSEC-001",
+      "rule_name": "BSEC Quarterly Report Not Filed",
+      "statutory_basis": "BSEC Corporate Governance Code 2023, Para 8",
+      "engine_severity": "RED",
+      "engine_score_impact": 10,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "BSEC-002",
+      "rule_name": "CG Certificate Not Obtained",
+      "statutory_basis": "BSEC Corporate Governance Code 2023, Para 5",
+      "engine_severity": "RED",
+      "engine_score_impact": 10,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "BSEC-003",
+      "rule_name": "Board Composition Non-Compliant",
+      "statutory_basis": "BSEC Corporate Governance Code 2023, Para 5",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 8,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "BSEC-004",
+      "rule_name": "Audit Committee Not Established",
+      "statutory_basis": "Foreign Exchange Regulation Act 1947 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "CAP-001",
+      "rule_name": "Capital Alteration Without Proper Resolution",
+      "statutory_basis": "Section 53, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "CAP-002",
+      "rule_name": "Charge Not Registered With RJSC Within 21 Days",
+      "statutory_basis": "Section 159(1), Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "CAP-003",
+      "rule_name": "Capital Reduction Without Court Order",
+      "statutory_basis": "Section 150, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "BLACK",
+      "engine_score_impact": 15,
+      "engine_black_override": true,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "CAP-004",
+      "rule_name": "Special Resolution Not Filed With RJSC",
+      "statutory_basis": "Section 88, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 8,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "CHG-001",
+      "rule_name": "Charge Satisfaction Not Filed",
+      "statutory_basis": "Section 159, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 3,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "DEF-001",
+      "rule_name": "Director Disqualified",
+      "statutory_basis": "Section 94, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "BLACK",
+      "engine_score_impact": 20,
+      "engine_black_override": true,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "DEF-002",
+      "rule_name": "Unresolved Penalty Notices",
+      "statutory_basis": "Section 397, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "DIR-001",
+      "rule_name": "Director Appointment Not Filed Within 14 Days",
+      "statutory_basis": "Section 90, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 10,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "DIR-002",
+      "rule_name": "Director Departure Not Filed Within 14 Days",
+      "statutory_basis": "Section 93, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 10,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "DIR-003",
+      "rule_name": "Major Director Filing Irregularity — Over 1 Year",
+      "statutory_basis": "Section 115, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 15,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "DIR-004",
+      "rule_name": "Departed Director Still Active on RJSC Register",
+      "statutory_basis": "Section 109, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 10,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "DIR-005",
+      "rule_name": "Register of Directors Interests Missing",
+      "statutory_basis": "Section 130, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "DIR-006",
+      "rule_name": "Register of Contracts Missing",
+      "statutory_basis": "Section 130, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "DIR-007",
+      "rule_name": "Director Consent Not Filed Within 30 Days",
+      "statutory_basis": "Section 93, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "DIR-008",
+      "rule_name": "Director Holding Office of Profit Without Consent",
+      "statutory_basis": "Section 104, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 8,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "DIR-010",
+      "rule_name": "Managing Director Appointed for More Than 5 Years",
+      "statutory_basis": "Section 110, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "ESC-001",
+      "rule_name": "Strike-Off Risk Elevated",
+      "statutory_basis": "Section 346, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 15,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "ESC-002",
+      "rule_name": "Strike-Off Imminent — BLACK OVERRIDE",
+      "statutory_basis": "Section 346, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "BLACK",
+      "engine_score_impact": 10,
+      "engine_black_override": true,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "ESC-003",
+      "rule_name": "Corporate Rescue Mandatory — Systemic Failure",
+      "statutory_basis": "Sections 81, 115, 36, 346 (aggregate), Companies Act 1994 (Bangladesh)",
+      "engine_severity": "BLACK",
+      "engine_score_impact": 10,
+      "engine_black_override": true,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "ESC-004",
+      "rule_name": "Voluntary Winding Up",
+      "statutory_basis": "Section 130, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "BLACK",
+      "engine_score_impact": 30,
+      "engine_black_override": true,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "ESC-005",
+      "rule_name": "Investigation Order Pending",
+      "statutory_basis": "Section 104, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 20,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "FX-001",
+      "rule_name": "Foreign Exchange Violation",
+      "statutory_basis": "Foreign Exchange Regulation Act 1947 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 15,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "INC-001",
+      "rule_name": "Memorandum and Articles Not Filed",
+      "statutory_basis": "Section 23, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 15,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "INC-003",
+      "rule_name": "Minimum Directors Not Appointed",
+      "statutory_basis": "Section 90(2), Companies Act 1994 (Bangladesh)",
+      "engine_severity": "BLACK",
+      "engine_score_impact": 15,
+      "engine_black_override": true,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "INC-004",
+      "rule_name": "Paid-Up Capital Exceeds Authorized Capital",
+      "statutory_basis": "Section 53, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "BLACK",
+      "engine_score_impact": 20,
+      "engine_black_override": true,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "INC-005",
+      "rule_name": "Encashment Certificate Missing — Foreign Shareholding",
+      "statutory_basis": "BIDA Foreign Investment Act 1980; Bangladesh Bank FDI Circular",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 8,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "INC-006",
+      "rule_name": "Remittance Below Work Permit Threshold",
+      "statutory_basis": "BIDA Foreign Investment Act 1980",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "INC-007",
+      "rule_name": "Business Commenced Without Section 150 Declaration",
+      "statutory_basis": "Section 150, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 10,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "LBR-001",
+      "rule_name": "Factory License Missing",
+      "statutory_basis": "Labour Act 2006 (Bangladesh), Section 35",
+      "engine_severity": "RED",
+      "engine_score_impact": 10,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "LBR-002",
+      "rule_name": "Factory License Expired",
+      "statutory_basis": "Labour Act 2006 (Bangladesh), Section 35",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "LBR-003",
+      "rule_name": "Labour Court Order Pending",
+      "statutory_basis": "Labour Act 2006 (Bangladesh), Section 209",
+      "engine_severity": "RED",
+      "engine_score_impact": 15,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "MEM-001",
+      "rule_name": "Company Operating with Fewer than Minimum Members",
+      "statutory_basis": "Section 222, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 10,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "OFF-001",
+      "rule_name": "Change of Registered Office Not Filed Within 28 Days",
+      "statutory_basis": "Section 77, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 3,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "REG-001",
+      "rule_name": "Statutory Registers Incomplete",
+      "statutory_basis": "Section 34, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "REG-002",
+      "rule_name": "Core Statutory Registers Missing",
+      "statutory_basis": "Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 10,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "REG-003",
+      "rule_name": "Registers Not Kept at Registered Office",
+      "statutory_basis": "Section 34(2), Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 3,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "SH-001",
+      "rule_name": "Share Allotment Not Filed — Form XV",
+      "statutory_basis": "Section 151, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 8,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "SH-002",
+      "rule_name": "Share Certificates Not Issued Within 60 Days",
+      "statutory_basis": "Section 158, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "SH-003",
+      "rule_name": "Capital Increase Not Filed — Form IV",
+      "statutory_basis": "Section 56, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 8,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "STR-001",
+      "rule_name": "Name Change Not Filed",
+      "statutory_basis": "Section 20, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 3,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "STR-002",
+      "rule_name": "Object Clause Change Not Filed",
+      "statutory_basis": "Section 17, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 3,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "STR-003",
+      "rule_name": "AoA Alteration Not Filed",
+      "statutory_basis": "Section 18, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 3,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "TAX-001",
+      "rule_name": "Tax Identification Number (TIN) Not Obtained",
+      "statutory_basis": "Income Tax Act 2023 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 10,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "TAX-002",
+      "rule_name": "VAT Registration Required But Not Obtained",
+      "statutory_basis": "Value Added Tax Act 2012 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "TAX-003",
+      "rule_name": "Annual Tax Return Overdue",
+      "statutory_basis": "Income Tax Act 2023, Section 75",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "TAX-004",
+      "rule_name": "Advance Tax Missed",
+      "statutory_basis": "Income Tax Act 2023, Section 74",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 3,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "TL-001",
+      "rule_name": "Trade License Not Obtained",
+      "statutory_basis": "Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "TL-002",
+      "rule_name": "Trade License Expired",
+      "statutory_basis": "Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "TR-001",
+      "rule_name": "No Share Transfer Instrument — Form 117",
+      "statutory_basis": "Section 38, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "TR-002",
+      "rule_name": "Stamp Duty Not Paid on Share Transfer",
+      "statutory_basis": "Stamp Act 1899, Schedule I, Item 62",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "TR-003",
+      "rule_name": "No Board Approval for Share Transfer",
+      "statutory_basis": "Section 38; AoA, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 8,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "TR-004",
+      "rule_name": "Register of Members Not Updated After Transfer",
+      "statutory_basis": "Section 34, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "TR-005",
+      "rule_name": "Share Transfer Violates AoA Restriction — BLACK OVERRIDE",
+      "statutory_basis": "Section 38; AoA, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "BLACK",
+      "engine_score_impact": 15,
+      "engine_black_override": true,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "TR-006",
+      "rule_name": "Composite Irregular Transfer",
+      "statutory_basis": "Sections 34, 47, 108, Companies Act 1994 (Bangladesh)",
+      "engine_severity": "RED",
+      "engine_score_impact": 10,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "VAT-002",
+      "rule_name": "Monthly VAT Return Overdue",
+      "statutory_basis": "Value Added Tax Act 2012 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 8,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    },
+    {
+      "rule_id": "VAT-003",
+      "rule_name": "VAT Annual Return Overdue",
+      "statutory_basis": "Value Added Tax Act 2012 (Bangladesh)",
+      "engine_severity": "YELLOW",
+      "engine_score_impact": 5,
+      "engine_black_override": false,
+      "source_status": "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED",
+      "legal_validation": "PENDING",
+      "effective_from": null,
+      "effective_to": null,
+      "company_types": [
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
+      ],
+      "applicability_conditions": "Extract from engine and validate against statute, amendments, Articles and company facts.",
+      "evidence_requirements": "To be specified and validated by local senior counsel.",
+      "reviewer": null,
+      "review_date": null
+    }
+  ]
+}
