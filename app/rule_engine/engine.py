@@ -1105,9 +1105,6 @@ class NLCRuleEngine:
                     "quorum_met_recorded": False,
                     "quorum_basis": "company Articles; statutory default under Section 85(2)(b) where applicable",
                 },
-                description=f"AGM quorum not met. {c.members_present_at_agm} present, need {PRIVATE_COMPANY_QUORUM}. Section 85(2)(b).",
-                statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
-                detail={"present": c.members_present_at_agm, "required": PRIVATE_COMPANY_QUORUM}
             ))
         if c.agm_held_this_cycle and c.members_present_at_agm is not None:
             # Section 85(2)(b): the default private-company quorum depends on
