@@ -11,10 +11,12 @@
 | BSEC amendment notification 2023 | BSEC listing dated 20 November 2023; Gazette date and exact text to pin | Compare each changed clause; commencement and transition | BSEC-001–004 | SOURCE IDENTIFIED; CLAUSE MAPPING OPEN |
 | BSEC female independent director amendment 2024 | BSEC listing dated 29 April 2024 | Pin Condition 1(2)(a), applicability and effective transition | BSEC-003 | SOURCE IDENTIFIED; CLAUSE MAPPING OPEN |
 | Income Tax Act 2023 | NBR authentic English text dated 20 November 2025; Bangla Act/Gazette controls | Build chronological amendment table through Finance Act 2026, all ordinances, SROs, Rules, GOs, Tax Day extensions | TAX-001–004 | OPEN — FULL RECONCILIATION |
+| Income Tax Rules / Withholding Tax Rules 2026 | NBR lists Withholding Tax Rules 2026 dated 12 June 2026 and amendment dated 6 July 2026 | Determine relevance to company tax rules, withholding obligations, forms and due dates; map SRO changes | TAX-001–004 where relevant | INDEX VERIFIED; RULE-LEVEL REVIEW OPEN |
+| Income Tax SROs 2026 | NBR SRO index lists 2026 instruments including SRO 213, 212 and 211 dated 11 June 2026 | Screen all current SROs for taxpayer-specific exemptions, rebates and changes; do not treat examples as exhaustive | TAX-001–004 | INDEX VERIFIED; FULL SCREENING OPEN |
 | Finance Act 2026 | NBR listing dated 6 July 2026 | Download official Act and map every Income Tax Act change, effective date and transitional rule | TAX-001–004 | SOURCE INDEX VERIFIED; SECTION MAPPING OPEN |
 | VAT and Supplementary Duty Act 2012 | NBR VAT Acts index / BDLaws authentic text | Reconcile consolidated Act and all amendments through 4 Nov 2026 | VAT-002/003; TAX-002 | OPEN — FULL RECONCILIATION |
 | VAT and Supplementary Duty (Amendment) Act 2026, Act No. 77 of 2026 | BDLaws Act 1706; exact Gazette and commencement language to capture | Validate 50-lakh registration and 30-lakh enlistment definitions, deemed effective date, savings and mandatory categories | TAX-002, VAT-002, VAT-003 | SOURCE IDENTIFIED; COUNSEL CONFIRMATION OPEN |
-| VAT Rules, SROs and GOs | NBR maintains separate current directories | Enumerate every relevant current SRO by taxpayer/activity, tax period, effective date, repeal and transitional provisions | TAX-002, VAT-002, VAT-003 | NOT YET EXHAUSTIVELY REVIEWED |
+| VAT Rules, SROs and GOs | NBR lists authentic English VAT and Supplementary Duty Rules 2016 dated 20 November 2025; VAT SRO index lists multiple 2026 instruments including amendments to VAT Rules and VAT Deduction and Collection Rules | Enumerate all potentially relevant SROs by taxpayer/activity, tax period, effective date, repeal and transitional provisions; screen sector exemptions/mandatory categories | TAX-002, VAT-002, VAT-003 | INDEX VERIFIED; NOT EXHAUSTIVELY REVIEWED |
 | Bangladesh Labour Act 2006 | BDLaws Act 42 of 2006 / Ministry register | Reconcile consolidated Bangla Act, all 2013/2018/2025/2026 amendments, rules and exemptions | LBR-001–003 | OPEN — FULL RECONCILIATION |
 | Bangladesh Labour (Amendment) Act 2026, Act No. 43 of 2026 | Government Press extraordinary Gazette listing: 10 April 2026; Ministry register dated 16 April 2026 | Pin Gazette pages, commencement, transitional clauses and s.326 changes | LBR-001/002; other labour rules if relevant | SOURCE IDENTIFIED; FULL MAPPING OPEN |
 | Bangladesh Labour Rules 2015 and amendments | Ministry / Gazette official text required | Check all rule amendments, factory/establishment classes, licence forms, renewal and Government directions | LBR-001/002 | NOT YET EXHAUSTIVELY REVIEWED |
@@ -26,7 +28,11 @@
 - BSEC instruments: https://www.sec.gov.bd/act-rules-and-regulations
 - NBR Finance Acts: https://nbr.gov.bd/regulations/acts/finance-acts/eng
 - NBR Income Tax Acts: https://nbr.gov.bd/regulations/acts/income-tax-acts/eng/eng
-- NBR VAT Acts, Rules, SROs and GOs: https://nbr.gov.bd/regulations/acts/vat-acts/eng
+- NBR Income Tax Rules: https://nbr.gov.bd/regulations/rules/income-tax-rules/eng
+- NBR Income Tax SROs: https://nbr.gov.bd/regulations/sros/income-tax-sros/eng
+- NBR VAT Acts: https://nbr.gov.bd/regulations/acts/vat-acts/eng
+- NBR VAT Rules: https://nbr.gov.bd/regulations/rules/vat-rules/eng
+- NBR VAT SROs: https://nbr.gov.bd/regulations/sros/vat-sros/eng
 - Ministry of Labour legislative register: https://mole.gov.bd/pages/legislative-informations
 - Labour Act: https://bdlaws.minlaw.gov.bd/act-details-952.html?lang=en
 - Government Press Gazette: https://dpp.gov.bd/bgpress/index.php/document/extraordinary_gazettes_monthly/2026-04-14
