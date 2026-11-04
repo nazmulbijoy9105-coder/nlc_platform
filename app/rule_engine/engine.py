@@ -564,8 +564,8 @@ def _input_coverage(company) -> float:
 class NLCRuleEngine:
     _ESC_RULE_IDS: frozenset = frozenset({"ESC-001", "ESC-002", "ESC-003"})
 
-    def __init__(self):
-        self.today = date.today()
+    def __init__(self, today: date | None = None):
+        self.today = today or date.today()
         self._flags: List[ComplianceFlag] = []
 
     def evaluate(self, company: CompanyProfile, today: date | None = None) -> EngineOutput:
@@ -852,92 +852,88 @@ class NLCRuleEngine:
         # "within one month" of registration. "One month" = CALENDAR MONTH,
         # not 30 days. Using 30 days is legally incorrect for months with
         # 28/29/31 days.
-        reg_date = c.incorporation_date or self.today
-        deadline = self._add_one_month(reg_date)
+        reg_date = c.incorporation_date
+        appointment_verified = (
+            c.first_auditor_appointment_verified is True
+            and bool(c.first_auditor_appointment_evidence_ref)
+            and c.first_auditor_appointment_verified_at is not None
+            and bool(c.first_auditor_appointment_verified_by)
+        )
 
-        def add_aud001_flag(flag_code: str, delay: int, appointment_date: date | None = None) -> None:
+        def add_aud001_unknown(code: str, description: str) -> None:
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-001",
-                flag_code=flag_code,
-                severity=Severity.YELLOW,
-                score_impact=10,
-                revenue_tier=(
-                    RevenueTier.COMPLIANCE_PACKAGE
-                    if delay <= 365
-                    else RevenueTier.STRUCTURED_REGULARIZATION
-                ),
-                description=(
-                    f"First auditor was not appointed within one calendar month "
-                    f"of registration (Section 210(6)). Deadline: {deadline.isoformat()}. "
-                    f"Overdue by {delay} days."
-                ),
-                statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
-                detail={
-                    "delay_days": delay,
-                    "registration_date": str(reg_date),
-                    "deadline": str(deadline),
-                    "appointment_date": str(appointment_date) if appointment_date else None,
-                    "calculation_method": "calendar_month",
-                },
-            ))
-
-        if c.first_auditor_appointed is None:
-            self._add_flag(ComplianceFlag(
-                rule_id="AUD-001",
-                flag_code="FIRST_AUDITOR_STATUS_UNKNOWN",
+                flag_code=code,
                 severity=Severity.NOT_EVALUATED,
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=(
-                    "First auditor appointment status unknown (data missing). "
-                    "Section 210(6) requires appointment within one month of registration."
-                ),
+                description=description,
                 statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
                 state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
             ))
-        elif c.first_auditor_appointment_date is not None:
-            if c.first_auditor_appointed is False:
+
+        if not appointment_verified or reg_date is None:
+            add_aud001_unknown(
+                "FIRST_AUDITOR_EVIDENCE_UNVERIFIED",
+                "First-auditor appointment status or incorporation date lacks verified source evidence; no statutory default is inferred.",
+            )
+        else:
+            deadline = self._add_one_month(reg_date)
+
+            def add_aud001_flag(flag_code: str, delay: int, appointment_date: date | None = None) -> None:
                 self._add_flag(ComplianceFlag(
                     rule_id="AUD-001",
-                    flag_code="FIRST_AUDITOR_EVIDENCE_CONTRADICTORY",
-                    severity=Severity.NOT_EVALUATED,
-                    score_impact=0,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    flag_code=flag_code,
+                    severity=Severity.YELLOW,
+                    score_impact=10,
+                    revenue_tier=(
+                        RevenueTier.COMPLIANCE_PACKAGE
+                        if delay <= 365
+                        else RevenueTier.STRUCTURED_REGULARIZATION
+                    ),
                     description=(
-                        "First auditor status is contradictory: an appointment date is recorded "
-                        "but the appointment status is marked false. Verify source evidence."
+                        f"First auditor was not appointed within one calendar month "
+                        f"of registration (Section 210(6)). Deadline: {deadline.isoformat()}. "
+                        f"Overdue by {delay} days."
                     ),
                     statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
-                    state=RuleState.CONTRADICTORY,
                     detail={
-                        "appointment_date": str(c.first_auditor_appointment_date),
+                        "delay_days": delay,
                         "registration_date": str(reg_date),
+                        "deadline": str(deadline),
+                        "appointment_date": str(appointment_date) if appointment_date else None,
+                        "calculation_method": "calendar_month",
                     },
                 ))
-            elif c.first_auditor_appointment_date > deadline:
-                delay = (c.first_auditor_appointment_date - deadline).days
-                add_aud001_flag(
-                    "FIRST_AUDITOR_APPOINTED_LATE",
-                    delay,
-                    c.first_auditor_appointment_date,
+
+            if c.first_auditor_appointed is None:
+                add_aud001_unknown("FIRST_AUDITOR_STATUS_UNKNOWN", "First auditor appointment status is missing.")
+            elif c.first_auditor_appointment_date is not None:
+                if c.first_auditor_appointed is False:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AUD-001",
+                        flag_code="FIRST_AUDITOR_EVIDENCE_CONTRADICTORY",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="A first-auditor appointment date is recorded but appointment status is marked false. Reconcile the source evidence.",
+                        statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
+                        state=RuleState.CONTRADICTORY,
+                        eval_state="UNKNOWN",
+                        detail={"appointment_date": str(c.first_auditor_appointment_date), "registration_date": str(reg_date)},
+                    ))
+                elif c.first_auditor_appointment_date > deadline:
+                    delay = (c.first_auditor_appointment_date - deadline).days
+                    add_aud001_flag("FIRST_AUDITOR_APPOINTED_LATE", delay, c.first_auditor_appointment_date)
+            elif c.first_auditor_appointed is False and self.today > deadline:
+                delay = (self.today - deadline).days
+                add_aud001_flag("FIRST_AUDITOR_NOT_APPOINTED", delay)
+            elif c.first_auditor_appointed is True:
+                add_aud001_unknown(
+                    "FIRST_AUDITOR_APPOINTMENT_DATE_UNKNOWN",
+                    "First auditor is recorded as appointed, but the appointment date is missing; timeliness cannot be verified.",
                 )
-        elif c.first_auditor_appointed is False and self.today > deadline:
-            delay = (self.today - deadline).days
-            add_aud001_flag("FIRST_AUDITOR_NOT_APPOINTED", delay)
-        elif c.first_auditor_appointed is True:
-            self._add_flag(ComplianceFlag(
-                rule_id="AUD-001",
-                flag_code="FIRST_AUDITOR_APPOINTMENT_DATE_UNKNOWN",
-                severity=Severity.NOT_EVALUATED,
-                score_impact=0,
-                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=(
-                    "First auditor is recorded as appointed, but the appointment date is missing; "
-                    "timeliness under Section 210(6) cannot be verified."
-                ),
-                statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
-                state=RuleState.UNKNOWN,
-            ))
 
         if c.first_auditor_appointed and c.agm_count is not None and c.agm_count > 0 and c.auditor_reappointed_at_agm is False and c.audit_in_progress is False and c.last_agm_date is not None:  # type: ignore
             fy_end = c.financial_year_end
@@ -1095,90 +1091,78 @@ class NLCRuleEngine:
         return c.agm_extension_granted_until
 
     def _run_agm_rules(self, c: CompanyProfile) -> None:
-        if c.agm_count is None or c.incorporation_date is None:
-            self._add_flag(ComplianceFlag(
-                rule_id="AGM-001",
-                flag_code="AGM_STATUS_UNKNOWN",
-                severity=Severity.YELLOW,
-                score_impact=0,
-                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="AGM history unknown (data missing).",
-                statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
-                state=RuleState.UNKNOWN
-            ))
-            return
-        if c.agm_count == 0:
-            deadline = self._add_months(c.incorporation_date, 18)
-            if self.today > deadline:  # type: ignore
-                delay = (self.today - deadline).days  # type: ignore
-                severity = Severity.BLACK if delay > 365 else Severity.RED
+        # Section 81 deadlines depend on a complete, verified AGM history.
+        if self._agm_history_is_verified(c):
+            if c.agm_count is None:
                 self._add_flag(ComplianceFlag(
-                    rule_id="AGM-001",
-                    flag_code="AGM_STATUS_UNKNOWN",
-                    severity=Severity.NOT_EVALUATED,
-                    score_impact=0,
+                    rule_id="AGM-001", flag_code="AGM_COUNT_UNKNOWN",
+                    severity=Severity.NOT_EVALUATED, score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="AGM history is marked verified but the required count or incorporation date is missing.",
+                    description="AGM history is marked verified but the AGM count is missing.",
                     statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
-                    state=RuleState.UNKNOWN,
-                    eval_state="UNKNOWN",
+                    state=RuleState.UNKNOWN, eval_state="UNKNOWN",
                 ))
             elif c.agm_count == 0:
-                deadline = self._add_months(c.incorporation_date, 18)
-                if self.today > deadline:
-                    delay = (self.today - deadline).days
-                    severity = Severity.BLACK if delay > 365 else Severity.RED
+                if c.incorporation_date is None:
                     self._add_flag(ComplianceFlag(
-                        rule_id="AGM-001",
-                        flag_code="FIRST_AGM_DEFAULT",
-                        severity=severity,
-                        score_impact=self._graduated_agm_deduction(delay),
-                        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                        description=f"First AGM not held within 18 months. Section 81: overdue by {delay} days.",
-                        statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
-                        detail={"delay_days": delay, "deadline": str(deadline)}
-                    ))
-            elif c.agm_count > 0 and c.last_agm_date and c.agm_held_this_cycle is False:
-                agm_deadline = self._subsequent_agm_deadline(c)
-                if agm_deadline is None:
-                    self._add_flag(ComplianceFlag(
-                        rule_id="AGM-002",
-                        flag_code="AGM_EXTENSION_REQUIRES_REVIEW",
-                        severity=Severity.NOT_EVALUATED,
-                        score_impact=0,
+                        rule_id="AGM-001", flag_code="INCORPORATION_DATE_UNKNOWN",
+                        severity=Severity.NOT_EVALUATED, score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description="A recorded AGM extension is not supported by verified application and grant evidence. No automatic default determination is made.",
+                        description="First-AGM deadline cannot be calculated without a verified incorporation date.",
                         statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
-                        state=RuleState.REQUIRES_LAWYER_JUDGMENT,
-                        eval_state="UNKNOWN",
-                        detail={"extension_until": str(c.agm_extension_granted_until)},
+                        state=RuleState.UNKNOWN, eval_state="UNKNOWN",
                     ))
-                elif self.today > agm_deadline:
-                    delay = (self.today - agm_deadline).days
-                    severity = Severity.BLACK if delay > 365 else Severity.RED
-                    basis = "VALIDATED_EXTENSION" if c.agm_extension_granted_until else "SECTION_81(1)"
+                else:
+                    deadline = self._add_months(c.incorporation_date, 18)
+                    if self.today > deadline:
+                        delay = (self.today - deadline).days
+                        severity = Severity.BLACK if delay > 365 else Severity.RED
+                        self._add_flag(ComplianceFlag(
+                            rule_id="AGM-001", flag_code="FIRST_AGM_DEFAULT",
+                            severity=severity,
+                            score_impact=self._graduated_agm_deduction(delay),
+                            revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                            description=f"First AGM not held within 18 calendar months. Section 81(1): overdue by {delay} days.",
+                            statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                            detail={"delay_days": delay, "deadline": str(deadline)},
+                        ))
+            elif c.agm_count > 0:
+                if c.last_agm_date is None:
                     self._add_flag(ComplianceFlag(
-                        rule_id="AGM-002",
-                        flag_code="SUBSEQUENT_AGM_DEFAULT",
-                        severity=severity,
-                        score_impact=self._graduated_agm_deduction(delay),
-                        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                        description=f"AGM overdue by {delay} days. Section 81: deadline by {basis} rule.",
+                        rule_id="AGM-002", flag_code="LAST_AGM_DATE_UNVERIFIED",
+                        severity=Severity.NOT_EVALUATED, score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="AGM history is marked verified but the last AGM date is missing.",
                         statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
-                        detail={"delay_days": delay, "basis": basis}
+                        state=RuleState.UNKNOWN, eval_state="UNKNOWN",
                     ))
-            elif c.agm_count > 0 and c.last_agm_date is None:
-                self._add_flag(ComplianceFlag(
-                    rule_id="AGM-002",
-                    flag_code="LAST_AGM_DATE_UNVERIFIED",
-                    severity=Severity.NOT_EVALUATED,
-                    score_impact=0,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="AGM history is marked verified but the last AGM date is missing.",
-                    statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
-                    state=RuleState.UNKNOWN,
-                    eval_state="UNKNOWN",
-                ))
+                elif c.agm_held_this_cycle is False:
+                    agm_deadline = self._subsequent_agm_deadline(c)
+                    if agm_deadline is None:
+                        self._add_flag(ComplianceFlag(
+                            rule_id="AGM-002", flag_code="AGM_EXTENSION_REQUIRES_REVIEW",
+                            severity=Severity.NOT_EVALUATED, score_impact=0,
+                            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                            description="A recorded AGM extension is not supported by verified, timely application and grant evidence. No automatic default determination is made.",
+                            statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                            state=RuleState.REQUIRES_LAWYER_JUDGMENT, eval_state="UNKNOWN",
+                            detail={"extension_until": str(c.agm_extension_granted_until)},
+                        ))
+                    elif self.today > agm_deadline:
+                        delay = (self.today - agm_deadline).days
+                        severity = Severity.BLACK if delay > 365 else Severity.RED
+                        basis = "VALIDATED_EXTENSION" if c.agm_extension_granted_until else "SECTION_81(1)"
+                        self._add_flag(ComplianceFlag(
+                            rule_id="AGM-002", flag_code="SUBSEQUENT_AGM_DEFAULT",
+                            severity=severity,
+                            score_impact=self._graduated_agm_deduction(delay),
+                            revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                            description=f"AGM overdue by {delay} days. Section 81(1): deadline determined by {basis}.",
+                            statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                            detail={"delay_days": delay, "deadline": str(agm_deadline), "basis": basis},
+                        ))
+        # Unverified AGM history is not converted into a deadline breach.
+        # Notice, quorum and minutes checks below use their own evidence requirements.
 
         consent_verified = (
             c.short_notice_consent_verified is True
@@ -2809,24 +2793,18 @@ class NLCRuleEngine:
         return fy_end + timedelta(days=FY_END_AGM_DEADLINE_DAYS)
 
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:
-        if not self._agm_history_is_verified(c):
+        if not self._agm_history_is_verified(c) or c.agm_count is None:
             return 0
-        if c.last_agm_date is None:
-            if c.agm_count == 0:
-                if c.incorporation_date is not None:
-                    deadline = self._add_months(c.incorporation_date, 18)
-                    if self.today > deadline:
-                        return (self.today - deadline).days // 365
-                deadline = self._add_months(c.incorporation_date, 18)
-                if self.today > deadline:  # type: ignore
-                    return (self.today - deadline).days // 365  # type: ignore
-            return 0
-            
-        # Match Section 81(1): no more than 15 months between AGMs and
-        # an AGM in each Gregorian calendar year. Do not use an assumed FY+6m rule.
-        deadline = self._subsequent_agm_deadline(c)
-        if deadline is None:
-            return 0
+        if c.agm_count == 0:
+            if c.incorporation_date is None:
+                return 0
+            deadline = self._add_months(c.incorporation_date, 18)
+        else:
+            if c.last_agm_date is None:
+                return 0
+            deadline = self._subsequent_agm_deadline(c)
+            if deadline is None:
+                return 0
         if self.today > deadline:
             return (self.today - deadline).days // 365
         return 0
