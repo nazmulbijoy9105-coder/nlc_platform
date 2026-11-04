@@ -2375,12 +2375,15 @@ class NLCRuleEngine:
 
         pre_score = self._calculate_raw_score(self._flags)
         has_black_override = any(
-            f.is_black_override and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"
+            f.rule_id in VERIFIED_RULE_IDS
+            and f.is_black_override
+            and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+            and f.eval_state == "VIOLATION"
             for f in self._flags if not f.resolved and f.conditional_applies
         )
         
         if pre_score <= 29 or has_black_override:
-            black_count = len([f for f in self._flags if f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION" and not f.resolved and f.conditional_applies and f.rule_id not in self._ESC_RULE_IDS])
+            black_count = len([f for f in self._flags if f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION" and not f.resolved and f.conditional_applies and f.rule_id not in self._ESC_RULE_IDS])
             esc003_impact = 10 if black_count <= 2 else (25 if black_count == 3 else 35)
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-003",
