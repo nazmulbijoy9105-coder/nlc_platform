@@ -1214,14 +1214,32 @@ class NLCRuleEngine:
                         detail={"days_to_agm": days_rem, "short_notice_consent": False},
                     ))
 
+        attendance_verified = (
+            c.agm_attendance_verified is True
+            and bool(c.agm_attendance_evidence_ref)
+        )
+        quorum_basis_verified = (
+            c.agm_quorum_basis_verified is True
+            and bool(c.agm_quorum_evidence_ref)
+            and c.agm_quorum_required is not None
+        )
+        if c.agm_held_this_cycle and attendance_verified and not quorum_basis_verified:
+            self._add_flag(ComplianceFlag(
+                rule_id="AGM-005",
+                flag_code="AGM_QUORUM_BASIS_UNKNOWN",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Attendance is verified, but the applicable quorum has not been verified against the Articles and Section 85(2)(b).",
+                statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+            ))
         if (
             c.agm_held_this_cycle
             and c.members_present_at_agm is not None
-            and c.agm_attendance_verified is True
-            and bool(c.agm_attendance_evidence_ref)
-            and c.agm_quorum_basis_verified is True
-            and bool(c.agm_quorum_evidence_ref)
-            and c.agm_quorum_required is not None
+            and attendance_verified
+            and quorum_basis_verified
             and c.members_present_at_agm < c.agm_quorum_required
         ):
             self._add_flag(ComplianceFlag(
