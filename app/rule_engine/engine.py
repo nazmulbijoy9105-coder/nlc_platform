@@ -1806,24 +1806,22 @@ class NLCRuleEngine:
                     eval_state="UNKNOWN",
                 ))
 
-        if c.vat_registered is True and c.last_vat_return_filed is not None:
-            # Do not infer a monthly filing default without the taxpayer's
-            # verified tax-period classification, applicable Rule/SRO and
-            # period-specific due date.
-            last_day_prev = self.today.replace(day=1) - timedelta(days=1)
-            if self.today.day > 15 and c.last_vat_return_filed < last_day_prev:
-                self._add_flag(ComplianceFlag(
-                    rule_id="VAT-002",
-                    flag_code="VAT_RETURN_PERIOD_REQUIRES_VERIFICATION",
-                    severity=Severity.NOT_EVALUATED,
-                    score_impact=0,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="The last recorded VAT return date is older than the previous calendar month. This is not a finding of default: verify the taxpayer's applicable tax period, filing obligation, statutory due date, permitted extension and current Rule/SRO before determining lateness.",
-                    statutory_basis="Value Added Tax and Supplementary Duty Act 2012 and applicable VAT Rules/SROs; period-specific provision requires verification",
-                    state=RuleState.UNKNOWN,
-                    eval_state="UNKNOWN",
-                    detail={"last_vat_return_filed": c.last_vat_return_filed.isoformat(), "tax_period_verified": False, "applicable_due_date_verified": False},
-                ))
+        if c.vat_registered is True:
+            # Registration alone does not establish the taxpayer's filing
+            # cadence, special 20-day category, current s.64 period, holiday,
+            # extension or actual filing evidence. This is a review prompt only.
+            self._add_flag(ComplianceFlag(
+                rule_id="VAT-002",
+                flag_code="VAT_RETURN_OBLIGATION_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="VAT return obligation and filing status require verification. Determine the applicable version of section 64, tax period, taxpayer category, holiday rule, extension/order and return evidence. This is not a finding of default.",
+                statutory_basis="Value Added Tax and Supplementary Duty Act 2012, section 64 as amended by Finance Act 2026 and VAT Amendment Ordinance 2026, with applicable VAT Rules/SROs",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"last_vat_return_filed": c.last_vat_return_filed.isoformat() if c.last_vat_return_filed else None, "tax_period_verified": False, "applicable_due_date_verified": False, "extension_status_verified": False},
+            ))
 
         # VAT-003 remains a non-scoring evidence/review state. The current
         # corpus has not established one universal annual VAT return due date
