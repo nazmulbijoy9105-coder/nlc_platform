@@ -1970,27 +1970,34 @@ class NLCRuleEngine:
         # manufacturing entities. UNKNOWN and NOT_APPLICABLE never create
         # a statutory breach or score deduction.
         if applicability.state is ApplicabilityState.APPLICABLE and c.factory_license_required_by_direction is True:
+            # The profile does not yet bind a Government direction, class,
+            # licence record and renewal terms to verified source evidence.
+            # Never turn a user-entered boolean or expiry date into a breach.
             if c.factory_license_obtained is False:
                 self._add_flag(ComplianceFlag(
                     rule_id="LBR-001",
-                    flag_code="FACTORY_LICENSE_MISSING",
-                    severity=Severity.RED,
-                    score_impact=10,
-                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description="Factory/establishment licence not evidenced under Section 326. A licence is required only where Government directions prescribe it for the relevant factory or establishment class; verify applicability and the 2026 amendments.",
-                    statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended in 2026"
+                    flag_code="FACTORY_LICENSE_STATUS_REQUIRES_VERIFICATION",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="A factory/establishment licence may be required under section 326 only if the applicable Government direction covers this establishment/class. Verify the direction, class, commencement, exemption and authentic licence search before finding a default.",
+                    statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
                 ))
 
             if c.factory_license_expiry and self.today > c.factory_license_expiry:
                 delay = (self.today - c.factory_license_expiry).days
                 self._add_flag(ComplianceFlag(
                     rule_id="LBR-002",
-                    flag_code="FACTORY_LICENSE_EXPIRED",
-                    severity=Severity.YELLOW,
-                    score_impact=5,
+                    flag_code="FACTORY_LICENSE_EXPIRY_REQUIRES_VERIFICATION",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Factory/establishment licence expired by {delay} days. Section 326 provides a five-year renewal cycle where a licence is required; contractor-agency licences are one year. Verify licence class and actual expiry.",
-                    statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026"
+                    description=f"Recorded licence expiry is {delay} days in the past. Verify the licence class, section 326 Government direction, five-year/contractor one-year term, renewal application, extension and operative status before finding a breach.",
+                    statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
                 ))
 
         # LBR-003 is not gated by manufacturing status: applicability of an
