@@ -709,7 +709,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "CAP-004",
         "legal_domain": "Corporate",
         "law": "Section 88(1), Companies Act 1994 (Bangladesh)",
-        "requirement": "Special or extraordinary resolution copy must be filed with RJSC within 15 days under Section 88(1). The underlying transaction may have additional requirements." Unfiled resolution not binding on company or enforceable against third parties. Includes capital increase, MoA/AoA alteration, voluntary winding up.",
+        "requirement": "A copy of every special and extraordinary resolution must be filed with the Registrar within 15 days under Section 88(1). This filing requirement does not itself establish that the underlying transaction is complete or valid; assess any additional statutory steps.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -1144,7 +1144,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "TAX-003",
         "legal_domain": "Tax",
         "law": "Income Tax Act 2023, Sections 166 and 171; Tax Day under Section 2 must be taxpayer-specific",
-        "requirement": "Annual Tax Return Overdue - Annual income tax return overdue. ITA 2023 Section 75.",
+        "requirement": "Company return deadline must be derived from current Section 171 and the taxpayer-specific Tax Day definition in Section 2, including applicable amendments, exclusions and extensions."
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -1159,7 +1159,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "TAX-004",
         "legal_domain": "Tax",
         "law": "Income Tax Act 2023, Sections 154-157, including Section 155 instalment dates",
-        "requirement": "Advance Tax Missed - One or more advance tax quarterly instalments missed. ITA 2023 Section 74.",
+        "requirement": "Advance tax liability and instalments must be evaluated under Sections 154-157, including Section 155 dates, public-holiday adjustment, new-assessee treatment and taxpayer-specific eligibility."
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
