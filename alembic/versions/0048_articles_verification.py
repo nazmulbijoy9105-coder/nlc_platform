@@ -53,6 +53,10 @@ def upgrade():
             name="ck_articles_verifications_review_metadata",
         ),
         sa.CheckConstraint(
+            "status <> 'VERIFIED' OR reviewed_by IS DISTINCT FROM submitted_by",
+            name="ck_articles_verifications_four_eyes",
+        ),
+        sa.CheckConstraint(
             "(status = 'REVOKED' AND revoked_by IS NOT NULL AND revoked_at IS NOT NULL AND revocation_reason IS NOT NULL) OR "
             "(status <> 'REVOKED' AND revoked_by IS NULL AND revoked_at IS NULL AND revocation_reason IS NULL)",
             name="ck_articles_verifications_revocation_metadata",
