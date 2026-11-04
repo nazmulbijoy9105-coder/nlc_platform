@@ -138,9 +138,11 @@ def _rls_signature(principal: str) -> str:
     import hashlib
     import hmac
 
-    secret = os.environ.get("JWT_SECRET_KEY", "")
+    secret = os.environ.get("NLC_RLS_HMAC_SECRET", "")
     if len(secret) < 32:
-        raise RuntimeError("JWT_SECRET_KEY must contain at least 32 characters for RLS signing")
+        raise RuntimeError(
+            "NLC_RLS_HMAC_SECRET must contain at least 32 characters for RLS signing"
+        )
     return hmac.new(secret.encode("utf-8"), principal.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
