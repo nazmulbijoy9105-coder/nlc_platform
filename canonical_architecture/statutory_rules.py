@@ -152,16 +152,16 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "INC-004": {
         "rule_id": "INC-004",
         "legal_domain": "Corporate",
-        "law": "Section 59, Companies Act 1994 (Bangladesh)",
-        "requirement": "Paid-Up Capital Exceeds Authorized Capital - Paid-up capital exceeds authorized capital. Section 150: company cannot issue shares beyond authorized capital. All excess allotments void.",
+        "law": "Section 56, Companies Act 1994 (Bangladesh) — review required",
+        "requirement": "Paid-up capital exceeds recorded authorised capital. Treat as a legal/data discrepancy requiring verification of resolutions, Form IV, the register and RJSC record; do not automatically conclude excess allotments are void.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
         "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "BLACK",
-        "score_impact": 20,
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "INC-005": {
@@ -701,8 +701,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
         "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 3,
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "CAP-004": {
