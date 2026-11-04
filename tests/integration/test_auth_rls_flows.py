@@ -14,7 +14,7 @@ pytestmark = [pytest.mark.integration]
 
 @pytest.mark.asyncio
 async def test_signup_login_me_and_password_change_work_with_user_rls(api_client):
-    email = f"rls-{uuid.uuid4().hex}@example.test"
+    email = f"rls-{uuid.uuid4().hex}@example.com"
     original_password = "Nlc!StrongPassword2026"
     replacement_password = "Nlc!DifferentPassword2026"
 
