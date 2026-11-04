@@ -180,6 +180,37 @@ async def test_articles_submitter_cannot_self_review(api_client, db, db_company,
 
 
 @pytest.mark.asyncio
+async def test_articles_verified_row_rejects_submitter_as_reviewer_at_database_layer(
+    db, db_company
+):
+    from sqlalchemy.exc import IntegrityError
+
+    await _grant_staff_memberships(db, db_company.id)
+    document = await _articles_document(db, db_company.id)
+    actor_id = _role_id("ADMIN_STAFF")
+    now = datetime.now(UTC)
+    verification = ArticlesVerification(
+        company_id=db_company.id,
+        document_id=document.id,
+        source_checksum_sha256=document.checksum_sha256,
+        source_document_version=document.version,
+        status="VERIFIED",
+        submitted_by=actor_id,
+        submitted_at=now,
+        reviewed_by=actor_id,
+        reviewed_at=now,
+        effective_from=date(2020, 1, 1),
+        quorum_variation_exists=False,
+        quorum_required=None,
+        clause_reference="Articles clause 18",
+    )
+    async with db.begin_nested():
+        db.add(verification)
+        with pytest.raises(IntegrityError):
+            await db.flush()
+
+
+@pytest.mark.asyncio
 async def test_articles_submission_can_be_rejected_without_verified_only_fields(
     api_client, db, db_company, admin_headers, legal_headers
 ):
