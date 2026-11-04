@@ -163,11 +163,6 @@ def test_seed_matches_engine_and_has_no_duplicates():
     }
 
 
-    def _engine_ids():
-    data, errors = _engine_rule_data()
-    assert not errors, errors
-    return set(data)
-
 
 
 def test_rescue_registry_has_no_duplicate_literal_keys():
