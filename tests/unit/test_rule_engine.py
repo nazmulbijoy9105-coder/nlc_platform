@@ -188,7 +188,9 @@ class TestAGMRules:
     def test_AGM005_triggers_when_quorum_not_met(self, rule_engine, build_profile):
         profile = build_profile(
             agm_held_this_cycle=True,
-            members_present_at_agm=1,  # Below quorum of 2
+            members_present_at_agm=1,  # Below the explicitly reviewed quorum of 2
+            agm_quorum_required=2,
+            agm_quorum_met=False
         )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "AGM-005")
@@ -197,34 +199,44 @@ class TestAGMRules:
         profile = build_profile(
             agm_held_this_cycle=True,
             members_present_at_agm=3,
+            agm_quorum_required=2,
+            agm_quorum_met=True,
         )
         output = rule_engine.evaluate(profile)
+        assert_flag_not_triggered(output, "AGM-005")
     
     def test_AGM005_large_private_company_requires_three_members(self, rule_engine, build_profile):
         """A private company with more than six members needs three present by default."""
         profile = build_profile(
             member_count=7,
             members_present_at_agm=2,
+            agm_quorum_required=3,
+            agm_quorum_met=False,
             agm_held_this_cycle=True,
         )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "AGM-005")
         flag = next(f for f in output.flags if f.rule_id == "AGM-005")
-        assert flag.detail["required"] == 3
+        assert flag.detail["quorum_required_recorded"] == 3
         assert flag.detail["member_count"] == 7
 
     def test_AGM005_large_private_company_no_trigger_with_three_members(self, rule_engine, build_profile):
         profile = build_profile(
             member_count=7,
             members_present_at_agm=3,
+            agm_quorum_required=3,
+            agm_quorum_met=True,
             agm_held_this_cycle=True,
         )
         output = rule_engine.evaluate(profile)
+        assert_flag_not_triggered(output, "AGM-005")
     
     def test_AGM005_small_private_company_default_quorum_is_two(self, rule_engine, build_profile):
         profile = build_profile(
             member_count=6,
             members_present_at_agm=2,
+            agm_quorum_required=2,
+            agm_quorum_met=True,
             agm_held_this_cycle=True,
         )
         output = rule_engine.evaluate(profile)
@@ -236,9 +248,8 @@ class TestAGMRules:
             agm_held_this_cycle=True,
         )
         output = rule_engine.evaluate(profile)
-        flag = next(f for f in output.flags if f.rule_id == "AGM-005")
-        assert flag.state == RuleState.UNKNOWN
-        assert flag.score_impact == 0
+        # Attendance alone cannot establish a quorum breach or threshold.
+        assert_flag_not_triggered(output, "AGM-005")
 
     # ── AGM-006: Auditor Not Reappointed ─────────────────────────────────────
 
@@ -252,7 +263,9 @@ class TestAGMRules:
             auditor_reappointed_at_agm=False,
         )
         output = rule_engine.evaluate(profile)
-        assert_flag_triggered(output, "AUD-004")
+        flag = next(f for f in output.flags if f.rule_id == "AUD-004")
+        assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+        assert flag.score_impact == 0
 
 
     def test_AGM006_no_trigger_when_auditor_reappointed(self, rule_engine, build_profile):
