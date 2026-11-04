@@ -14,6 +14,25 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Preserve legacy values before removing unsafe defaults. The _legacy
+    # columns are audit-retention fields and are never used as verified facts.
+    op.execute("""
+        ALTER TABLE agms
+        ADD COLUMN IF NOT EXISTS members_present_legacy INTEGER NULL,
+        ADD COLUMN IF NOT EXISTS quorum_required_legacy INTEGER NULL,
+        ADD COLUMN IF NOT EXISTS quorum_met_legacy BOOLEAN NULL,
+        ADD COLUMN IF NOT EXISTS auditor_reappointed_legacy BOOLEAN NULL,
+        ADD COLUMN IF NOT EXISTS minutes_prepared_legacy BOOLEAN NULL
+    """)
+    op.execute("""
+        UPDATE agms SET
+            members_present_legacy = COALESCE(members_present_legacy, members_present),
+            quorum_required_legacy = COALESCE(quorum_required_legacy, quorum_required),
+            quorum_met_legacy = COALESCE(quorum_met_legacy, quorum_met),
+            auditor_reappointed_legacy = COALESCE(auditor_reappointed_legacy, auditor_reappointed),
+            minutes_prepared_legacy = COALESCE(minutes_prepared_legacy, minutes_prepared)
+    """)
+
     op.add_column("agms", sa.Column("venue", sa.String(length=255), nullable=True))
     op.add_column("agms", sa.Column("accounts_adopted", sa.Boolean(), nullable=True))
     op.add_column("agms", sa.Column("agm_held_without_audit", sa.Boolean(), nullable=True))
@@ -53,13 +72,24 @@ def downgrade() -> None:
     op.drop_column("agms", "accounts_adopted")
     op.drop_column("agms", "venue")
 
-    # Downgrade necessarily restores legacy defaults and cannot preserve the
-    # distinction between UNKNOWN and an explicitly reviewed positive result.
-    op.execute("UPDATE agms SET members_present = 0 WHERE members_present IS NULL")
-    op.execute("UPDATE agms SET quorum_required = 2 WHERE quorum_required IS NULL")
-    op.execute("UPDATE agms SET quorum_met = TRUE WHERE quorum_met IS NULL")
-    op.execute("UPDATE agms SET auditor_reappointed = TRUE WHERE auditor_reappointed IS NULL")
-    op.execute("UPDATE agms SET minutes_prepared = FALSE WHERE minutes_prepared IS NULL")
+    # Restore the exact pre-migration values where retained, then remove
+    # the backup columns. Only rows without a legacy value receive old defaults.
+    op.execute("""
+        UPDATE agms SET
+            members_present = COALESCE(members_present_legacy, members_present, 0),
+            quorum_required = COALESCE(quorum_required_legacy, quorum_required, 2),
+            quorum_met = COALESCE(quorum_met_legacy, quorum_met, TRUE),
+            auditor_reappointed = COALESCE(auditor_reappointed_legacy, auditor_reappointed, TRUE),
+            minutes_prepared = COALESCE(minutes_prepared_legacy, minutes_prepared, FALSE)
+    """)
+    op.execute("""
+        ALTER TABLE agms
+        DROP COLUMN IF EXISTS members_present_legacy,
+        DROP COLUMN IF EXISTS quorum_required_legacy,
+        DROP COLUMN IF EXISTS quorum_met_legacy,
+        DROP COLUMN IF EXISTS auditor_reappointed_legacy,
+        DROP COLUMN IF EXISTS minutes_prepared_legacy
+    """)
 
     op.alter_column(
         "agms", "members_present",
