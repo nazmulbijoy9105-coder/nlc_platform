@@ -753,6 +753,8 @@ async def review_agm_evidence(
         )
         if current_verified is not None:
             current_verified.status = "SUPERSEDED"
+            # Release the partial unique VERIFIED slot before promoting the replacement.
+            await db.flush()
             db.add(AGMEvidenceVerificationEvent(
                 company_id=company_id,
                 verification_id=current_verified.id,
