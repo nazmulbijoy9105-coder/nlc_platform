@@ -37,6 +37,7 @@ class AGMService(BaseService[AGM]):
         *,
         agm_type: str = "ANNUAL",
         agm_deadline: date | None = None,
+        agm_due_date: date | None = None,
         scheduled_date: date | None = None,
         agm_held: bool = False,
         agm_date: date | None = None,
@@ -60,6 +61,10 @@ class AGMService(BaseService[AGM]):
         Create an AGM record. Calculates is_default and delay_days automatically
         if agm_deadline is provided.
         """
+        # Backward-compatible service alias; the ORM column is agm_deadline.
+        if agm_deadline is None:
+            agm_deadline = agm_due_date
+
         # Auto-calculate default status
         if agm_held and agm_date and agm_deadline:
             if agm_date > agm_deadline:
