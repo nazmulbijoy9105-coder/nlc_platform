@@ -255,8 +255,8 @@ class TestVerifiedRulesViolation:
 class TestProductionGateComprehensive:
 
     def test_all_verified_rules_in_set(self):
-        """Verify VERIFIED_RULE_IDS has at least 35 rules."""
-        assert len(VERIFIED_RULE_IDS) >= 35
+        """No rules are score-eligible until independent current-law approval."""
+        assert len(VERIFIED_RULE_IDS) == 0
 
     def test_no_unverified_rule_in_set(self):
         """AUD, SH, TR-002~006, ESC-003~005 should NOT be verified."""
