@@ -778,7 +778,8 @@ async def db_for_user(test_engine, request):
                 {"uid": str(user_id)},
             )
         yield session
-        await session.close()        await conn.rollback()
+        await session.close()
+        await conn.rollback()
 
 
 @pytest_asyncio.fixture
