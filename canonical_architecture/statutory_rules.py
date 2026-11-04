@@ -693,8 +693,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "CAP-003": {
         "rule_id": "CAP-003",
         "legal_domain": "Corporate",
-        "law": "Section 87(2), Companies Act 1994 (Bangladesh)",
-        "requirement": "Charge Satisfaction Not Filed - Charge paid off but Form XXVIII (Satisfaction) not filed. Section 87(2): file within 30 days of payoff. Until filed, charge remains on register, obstructing future borrowing and creating false security interests.",
+        "law": "Sections 59-60, Companies Act 1994 (Bangladesh)",
+        "requirement": "Capital reduction requires compliance with Sections 59-60, including court confirmation and registration. Assess the court order, creditor protection and registration evidence; do not infer a breach from a pending workflow flag alone.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -708,8 +708,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "CAP-004": {
         "rule_id": "CAP-004",
         "legal_domain": "Corporate",
-        "law": "Section 87, Companies Act 1994 (Bangladesh)",
-        "requirement": "Special Resolution Not Filed With RJSC - Special resolution passed but not filed within 30 days. Section 87: every special resolution must be filed. Unfiled resolution not binding on company or enforceable against third parties. Includes capital increase, MoA/AoA alteration, voluntary winding up.",
+        "law": "Section 88(1), Companies Act 1994 (Bangladesh)",
+        "requirement": "Special or extraordinary resolution copy must be filed with RJSC within 15 days under Section 88(1). The underlying transaction may have additional requirements." Unfiled resolution not binding on company or enforceable against third parties. Includes capital increase, MoA/AoA alteration, voluntary winding up.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -918,7 +918,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "BSEC-004": {
         "rule_id": "BSEC-004",
         "legal_domain": "Corporate",
-        "law": "BSEC Corporate Governance Code 2023, Para 6",
+        "law": "BSEC Corporate Governance Code 2018, as amended in 2023 and 2024, Condition 5",
         "requirement": "Audit Committee Not Established - Audit committee not established (listed companies).",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
@@ -933,8 +933,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "CHG-001": {
         "rule_id": "CHG-001",
         "legal_domain": "Corporate",
-        "law": "Section 87, Companies Act 1994 (Bangladesh)",
-        "requirement": "Charge Satisfaction Not Filed - Charge satisfaction not filed via Form XIX. Section 87.",
+        "law": "Section 172, Companies Act 1994 (Bangladesh)",
+        "requirement": "Charge satisfaction must be notified using Form XXVIII within 21 days per RJSC process guidance; confirm satisfaction date and filing receipt. Section 172 is the Act provision for registration of payment or satisfaction of mortgage/charge.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -1113,7 +1113,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "STR-002": {
         "rule_id": "STR-002",
         "legal_domain": "Corporate",
-        "law": "Section 17, Companies Act 1994 (Bangladesh)",
+        "law": "Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh)",
         "requirement": "Object Clause Change Not Filed - MoA object clause change not filed with RJSC.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
@@ -1128,7 +1128,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "STR-003": {
         "rule_id": "STR-003",
         "legal_domain": "Corporate",
-        "law": "Section 18, Companies Act 1994 (Bangladesh)",
+        "law": "Sections 20 and 88(1), Companies Act 1994 (Bangladesh)",
         "requirement": "AoA Alteration Not Filed - Articles of Association alteration not filed with RJSC.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
@@ -1143,7 +1143,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "TAX-003": {
         "rule_id": "TAX-003",
         "legal_domain": "Tax",
-        "law": "Income Tax Act 2023, Section 75",
+        "law": "Income Tax Act 2023, Sections 166 and 171; Tax Day under Section 2 must be taxpayer-specific",
         "requirement": "Annual Tax Return Overdue - Annual income tax return overdue. ITA 2023 Section 75.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
@@ -1158,7 +1158,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "TAX-004": {
         "rule_id": "TAX-004",
         "legal_domain": "Tax",
-        "law": "Income Tax Act 2023, Section 74",
+        "law": "Income Tax Act 2023, Sections 154-157, including Section 155 instalment dates",
         "requirement": "Advance Tax Missed - One or more advance tax quarterly instalments missed. ITA 2023 Section 74.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
@@ -1237,7 +1237,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "ACC-001": {"rule_id": "ACC-001", "legal_domain": "Corporate", "law": "Section 183, Companies Act 1994 (Bangladesh)", "requirement": "AGM held but balance sheet and P&L not presented. Section 183.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "RED", "score_impact": 15, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "ACC-002": {"rule_id": "ACC-002", "legal_domain": "Corporate", "law": "Section 190, Companies Act 1994 (Bangladesh)", "requirement": "Balance sheet not filed within 30 days of AGM. Section 190.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "RED", "score_impact": 15, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "ACC-003": {"rule_id": "ACC-003", "legal_domain": "Corporate", "law": "Section 181, Companies Act 1994 (Bangladesh)", "requirement": "Proper books of account not maintained. Section 181.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "RED", "score_impact": 15, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
-    "DIR-007": {"rule_id": "DIR-007", "legal_domain": "Corporate", "law": "Section 93, Companies Act 1994 (Bangladesh)", "requirement": "Director consent not filed within 30 days. Section 93(2).", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "YELLOW", "score_impact": 5, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
+    "DIR-007": {"rule_id": "DIR-007", "legal_domain": "Corporate", "law": "Section 92, Companies Act 1994 (Bangladesh)", "requirement": "Director consent to act filed using Form IX within 30 days of appointment under Section 92; distinguish this from Form XII particulars under Section 115.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "YELLOW", "score_impact": 5, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "DIR-008": {"rule_id": "DIR-008", "legal_domain": "Corporate", "law": "Section 104, Companies Act 1994 (Bangladesh)", "requirement": "Director holding office of profit without consent. Section 104.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "YELLOW", "score_impact": 8, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "DIR-010": {"rule_id": "DIR-010", "legal_domain": "Corporate", "law": "Section 110, Companies Act 1994 (Bangladesh)", "requirement": "MD term exceeds 5 years. Section 110: max 5 years at a time.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "YELLOW", "score_impact": 5, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "MEM-001": {"rule_id": "MEM-001", "legal_domain": "Corporate", "law": "Section 222, Companies Act 1994 (Bangladesh)", "requirement": "Company below minimum members. Section 222: private < 2, public < 7.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "RED", "score_impact": 10, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
