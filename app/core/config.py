@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     whatsapp_enabled: bool = False
     whatsapp_api_token: str | None = None
     s3_backup_bucket: str | None = None
+    s3_bucket_name: str = os.getenv(
+        "S3_BUCKET_NAME",
+        os.getenv("AWS_S3_BUCKET", os.getenv("S3_BACKUP_BUCKET", "")),
+    )
+    s3_document_prefix: str = os.getenv("S3_DOCUMENT_PREFIX", "nlc/documents/")
     PROJECT_NAME: str = "NLC Platform"
     app_version: str = "2.2.0"
     is_production: bool = True
