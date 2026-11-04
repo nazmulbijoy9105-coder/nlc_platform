@@ -95,13 +95,6 @@ class AGM(FullMixin, Base):
     articles_quorum_verified_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
     articles_quorum_verified_at: Mapped[date | None] = mapped_column(Date, nullable=True)
     articles_quorum_evidence_ref: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    quorum_met: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=True)
-    members_present: Mapped[int] = mapped_column(Integer, default=0)
-    quorum_required: Mapped[int | None] = mapped_column(
-        Integer, nullable=True, default=2,
-        comment="Section 85(2)(b) statutory default; Articles may provide otherwise"
-    )
-    quorum_basis: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     # ── Auditor ───────────────────────────────────────────────────
     # AGM-006: auditor not reappointed at AGM
