@@ -1690,7 +1690,7 @@ class NLCRuleEngine:
                 score_impact=15,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
                 description="Capital reduction without the required court confirmation. Sections 59-60 govern reduction and confirmation; assess the court order and registration evidence.",
-                statutory_basis="Section 150, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Sections 59-60, Companies Act 1994 (Bangladesh)",
                 is_black_override=True,
             ))
 
@@ -1704,7 +1704,7 @@ class NLCRuleEngine:
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Special resolution filing not evidenced within 15 days. Section 88(1); determine the resolution date and filing receipt.",
-                    statutory_basis="Section 88, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 88(1), Companies Act 1994 (Bangladesh) — 15 days",
                     detail={"delay": delay}
                 ))
 
