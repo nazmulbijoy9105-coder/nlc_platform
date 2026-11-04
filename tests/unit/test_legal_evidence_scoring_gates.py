@@ -420,3 +420,21 @@ def test_verified_absence_is_a_scoring_state_but_unknown_is_not():
     score = NLCRuleEngine()._calculate_score([verified_absent], profile)
     assert score.agm_score == 0
     assert score.final_score == 80
+
+
+def test_verified_late_first_auditor_finding_remains_unscored_before_approval():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            first_auditor_appointed=True,
+            first_auditor_appointment_date=date(2020, 3, 10),
+            first_auditor_appointment_verified=True,
+            first_auditor_appointment_evidence_ref="AUDIT-APPOINTMENT-001",
+            first_auditor_appointment_verified_at=date(2026, 11, 3),
+            first_auditor_appointment_verified_by="reviewer-001",
+        ),
+        today=date(2026, 11, 3),
+    )
+    finding = _flag(result, "AUD-001")
+    assert finding.state == RuleState.NON_COMPLIANT
+    assert "AUD-001" not in VERIFIED_RULE_IDS
+    assert result.score_breakdown.final_score == 100
