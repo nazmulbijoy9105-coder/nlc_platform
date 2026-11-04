@@ -63,6 +63,33 @@ async def test_app_role_has_no_schema_creation_or_truncate_privilege(db):
 
 
 @pytest.mark.asyncio
+async def test_valid_signed_admin_principal_is_recognized_as_staff(db):
+    from app.models.database import set_admin_context
+
+    await set_admin_context(db)
+    await db.execute(text("SET LOCAL ROLE nlc_app_role"))
+    result = await db.execute(
+        text("SELECT public.nlc_current_user_is_staff()")
+    )
+    assert result.scalar_one() is True
+
+
+@pytest.mark.asyncio
+async def test_forged_admin_principal_without_matching_signature_is_rejected(
+    db, db_client_user
+):
+    await set_rls_context(db, str(db_client_user.id))
+    await db.execute(text("SET LOCAL ROLE nlc_app_role"))
+    await db.execute(
+        text("SELECT set_config('app.current_user_id', 'ADMIN', true)")
+    )
+    result = await db.execute(
+        text("SELECT public.nlc_current_user_is_staff()")
+    )
+    assert result.scalar_one() is False
+
+
+@pytest.mark.asyncio
 async def test_admin_sentinel_cannot_grant_staff_access(db, db_client_user):
     """A caller-controlled GUC value must never grant privileged staff access."""
     await set_rls_context(db, str(db_client_user.id))
