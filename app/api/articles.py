@@ -733,16 +733,23 @@ async def review_agm_evidence(
             raise HTTPException(status_code=422, detail="A reviewer-certified count is required.")
         if item.evidence_kind == "MEMBERS_REGISTER" and body.verified_count < 1:
             raise HTTPException(status_code=422, detail="The members register must establish at least one member.")
-        if item.evidence_kind == "ATTENDANCE_REGISTER":
-            members_item = await db.scalar(
-                select(AGMEvidenceVerification).where(
-                    AGMEvidenceVerification.agm_id == item.agm_id,
-                    AGMEvidenceVerification.evidence_kind == "MEMBERS_REGISTER",
-                    AGMEvidenceVerification.status == "VERIFIED",
-                ).with_for_update().limit(1)
-            )
-            if members_item is not None and body.verified_count > (members_item.verified_count or 0):
+        counterpart_kind = (
+            "ATTENDANCE_REGISTER"
+            if item.evidence_kind == "MEMBERS_REGISTER"
+            else "MEMBERS_REGISTER"
+        )
+        counterpart = await db.scalar(
+            select(AGMEvidenceVerification).where(
+                AGMEvidenceVerification.agm_id == item.agm_id,
+                AGMEvidenceVerification.evidence_kind == counterpart_kind,
+                AGMEvidenceVerification.status == "VERIFIED",
+            ).with_for_update().limit(1)
+        )
+        if counterpart is not None and counterpart.verified_count is not None:
+            if item.evidence_kind == "ATTENDANCE_REGISTER" and body.verified_count > counterpart.verified_count:
                 raise HTTPException(status_code=422, detail="Attendance count cannot exceed the reviewed membership count.")
+            if item.evidence_kind == "MEMBERS_REGISTER" and counterpart.verified_count > body.verified_count:
+                raise HTTPException(status_code=422, detail="Reviewed attendance count cannot exceed the membership count.")
         current_verified = await db.scalar(
             select(AGMEvidenceVerification).where(
                 AGMEvidenceVerification.agm_id == item.agm_id,
