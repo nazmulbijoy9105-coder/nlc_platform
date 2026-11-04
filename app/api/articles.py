@@ -503,6 +503,10 @@ class AGMEvidenceReviewRequest(BaseModel):
     reviewer_note: str = Field(min_length=10, max_length=4000)
 
 
+class AGMEvidenceRevokeRequest(BaseModel):
+    reason: str = Field(min_length=10, max_length=4000)
+
+
 def _agm_evidence_payload(item: AGMEvidenceVerification) -> dict:
     return {
         "id": str(item.id),
@@ -520,6 +524,9 @@ def _agm_evidence_payload(item: AGMEvidenceVerification) -> dict:
         "reviewed_at": item.reviewed_at.isoformat() if item.reviewed_at else None,
         "verified_count": item.verified_count,
         "reviewer_note": item.reviewer_note,
+        "revoked_by": str(item.revoked_by) if item.revoked_by else None,
+        "revoked_at": item.revoked_at.isoformat() if item.revoked_at else None,
+        "revocation_reason": item.revocation_reason,
     }
 
 
@@ -822,3 +829,86 @@ async def list_agm_evidence(
         .order_by(AGMEvidenceVerification.submitted_at.asc())
     )).all()
     return [_agm_evidence_payload(item) for item in rows]
+
+
+@router.post(
+    "/companies/{company_id}/agm-evidence/{verification_id}/revoke",
+    dependencies=[Depends(require_roles("LEGAL_STAFF", "SUPER_ADMIN"))],
+)
+async def revoke_agm_evidence(
+    company_id: uuid.UUID,
+    verification_id: uuid.UUID,
+    body: AGMEvidenceRevokeRequest,
+    _: uuid.UUID = Depends(require_company_access()),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    item = await db.scalar(
+        select(AGMEvidenceVerification).where(
+            AGMEvidenceVerification.id == verification_id,
+            AGMEvidenceVerification.company_id == company_id,
+        ).with_for_update()
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="AGM evidence submission not found.")
+    if item.status != "VERIFIED":
+        raise HTTPException(status_code=409, detail="Only verified AGM evidence can be revoked.")
+    if item.reviewed_by == current_user.id:
+        raise HTTPException(status_code=403, detail="A different legal reviewer must revoke this evidence.")
+    now = datetime.now(UTC)
+    item.status = "REVOKED"
+    item.revoked_by = current_user.id
+    item.revoked_at = now
+    item.revocation_reason = body.reason.strip()
+    await db.flush()
+    db.add(AGMEvidenceVerificationEvent(
+        company_id=company_id,
+        verification_id=item.id,
+        actor_id=current_user.id,
+        action="REVOKED",
+        previous_status="VERIFIED",
+        new_status="REVOKED",
+        source_checksum_sha256=item.source_checksum_sha256,
+        note=item.revocation_reason,
+    ))
+    await db.flush()
+    return _agm_evidence_payload(item)
+
+
+@router.get("/companies/{company_id}/agm-evidence/{verification_id}/events")
+async def list_agm_evidence_events(
+    company_id: uuid.UUID,
+    verification_id: uuid.UUID,
+    _: uuid.UUID = Depends(require_company_access()),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    item = await db.scalar(
+        select(AGMEvidenceVerification.id).where(
+            AGMEvidenceVerification.id == verification_id,
+            AGMEvidenceVerification.company_id == company_id,
+        )
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="AGM evidence submission not found.")
+    events = (await db.scalars(
+        select(AGMEvidenceVerificationEvent)
+        .where(
+            AGMEvidenceVerificationEvent.company_id == company_id,
+            AGMEvidenceVerificationEvent.verification_id == verification_id,
+        )
+        .order_by(AGMEvidenceVerificationEvent.created_at.asc())
+    )).all()
+    return [
+        {
+            "id": str(event.id),
+            "verification_id": str(event.verification_id),
+            "actor_id": str(event.actor_id),
+            "action": event.action,
+            "previous_status": event.previous_status,
+            "new_status": event.new_status,
+            "source_checksum_sha256": event.source_checksum_sha256,
+            "note": event.note,
+            "created_at": event.created_at.isoformat(),
+        }
+        for event in events
+    ]
