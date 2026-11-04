@@ -2514,8 +2514,8 @@ class NLCRuleEngine:
         if c.last_agm_date is None:
             if c.agm_count == 0:
                 if c.incorporation_date is None:
-                return 0
-            deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
+                    return 0
+                deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
                 if self.today > deadline:  # type: ignore
                     return (self.today - deadline).days // 365  # type: ignore
             return 0
