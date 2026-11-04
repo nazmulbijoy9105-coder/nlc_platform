@@ -916,19 +916,6 @@ class NLCRuleEngine:
                 },
             ))
 
-        if reg_date is None:
-            self._add_flag(ComplianceFlag(
-                rule_id="AUD-001",
-                flag_code="INCORPORATION_DATE_UNKNOWN",
-                severity=Severity.NOT_EVALUATED,
-                score_impact=0,
-                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="First-auditor deadline cannot be calculated without the incorporation date.",
-                statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
-                state=RuleState.UNKNOWN,
-                eval_state="UNKNOWN",
-            ))
-        elif c.first_auditor_appointed is None:
         appointment_verified = (
             c.first_auditor_appointment_verified is True
             and bool(c.first_auditor_appointment_evidence_ref)
@@ -949,39 +936,46 @@ class NLCRuleEngine:
                 eval_state="UNKNOWN",
             ))
 
-        if not appointment_verified or reg_date is None:
+        if reg_date is None:
+            add_aud001_unknown(
+                "INCORPORATION_DATE_UNKNOWN",
+                "First-auditor deadline cannot be calculated without the incorporation date.",
+            )
+        elif not appointment_verified:
             add_aud001_unknown(
                 "FIRST_AUDITOR_EVIDENCE_UNVERIFIED",
                 "First-auditor appointment status or incorporation date lacks verified source evidence; no statutory default is inferred.",
             )
-        else:
-            deadline = self._add_one_month(reg_date)
-
-            def add_aud001_flag(flag_code: str, delay: int, appointment_date: date | None = None) -> None:
+        elif c.first_auditor_appointed is None:
+            add_aud001_unknown(
+                "FIRST_AUDITOR_STATUS_UNKNOWN",
+                "First auditor appointment status is missing.",
+            )
+        elif c.first_auditor_appointment_date is not None:
+            if c.first_auditor_appointed is False:
                 self._add_flag(ComplianceFlag(
                     rule_id="AUD-001",
-                    flag_code=flag_code,
-                    severity=Severity.YELLOW,
-                    score_impact=10,
-                    revenue_tier=(
-                        RevenueTier.COMPLIANCE_PACKAGE
-                        if delay <= 365
-                        else RevenueTier.STRUCTURED_REGULARIZATION
-                    ),
-                    description=(
-                        f"First auditor was not appointed within one calendar month "
-                        f"of registration (Section 210(6)). Deadline: {deadline.isoformat()}. "
-                        f"Overdue by {delay} days."
-                    ),
+                    flag_code="FIRST_AUDITOR_EVIDENCE_CONTRADICTORY",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="A first-auditor appointment date is recorded but appointment status is marked false. Reconcile the source evidence.",
                     statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
-                    detail={
-                        "delay_days": delay,
-                        "registration_date": str(reg_date),
-                        "deadline": str(deadline),
-                        "appointment_date": str(appointment_date) if appointment_date else None,
-                        "calculation_method": "calendar_month",
-                    },
+                    state=RuleState.CONTRADICTORY,
+                    eval_state="UNKNOWN",
+                    detail={"appointment_date": str(c.first_auditor_appointment_date), "registration_date": str(reg_date)},
                 ))
+            elif c.first_auditor_appointment_date > deadline:
+                delay = (c.first_auditor_appointment_date - deadline).days
+                add_aud001_flag("FIRST_AUDITOR_APPOINTED_LATE", delay, c.first_auditor_appointment_date)
+        elif c.first_auditor_appointed is False and self.today > deadline:
+            delay = (self.today - deadline).days
+            add_aud001_flag("FIRST_AUDITOR_NOT_APPOINTED", delay)
+        elif c.first_auditor_appointed is True:
+            add_aud001_unknown(
+                "FIRST_AUDITOR_APPOINTMENT_DATE_UNKNOWN",
+                "First auditor is recorded as appointed, but the appointment date is missing; timeliness cannot be verified.",
+            )
 
         # AUD-005 is an evidence-status rule, not a separate 120-day statutory
         # deadline. Section 210(3) reappointment is assessed at the AGM by AUD-004.
