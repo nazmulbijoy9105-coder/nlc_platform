@@ -365,33 +365,6 @@ def upgrade() -> None:
     ):
         op.execute(sa.text(f"ALTER VIEW public.{view} SET (security_invoker = true)"))
 
-    # Nullable-company activity logs were covered by migration 0024's
-    # raw-GUC UUID cast. Replace that legacy policy with verified principals;
-    # users may read/write their own rows or rows for a company they can access.
-    _execute_sql_script("""
-        ALTER TABLE public.user_activity_logs ENABLE ROW LEVEL SECURITY;
-        DROP POLICY IF EXISTS user_activity_logs_company_policy ON public.user_activity_logs;
-        DROP POLICY IF EXISTS user_activity_logs_tenant_access ON public.user_activity_logs;
-        CREATE POLICY user_activity_logs_tenant_access ON public.user_activity_logs
-            FOR ALL
-            USING (
-                public.nlc_current_user_is_staff()
-                OR user_id = public.nlc_current_user_id()
-                OR (
-                    company_id IS NOT NULL
-                    AND public.nlc_can_access_company(company_id)
-                )
-            )
-            WITH CHECK (
-                public.nlc_current_user_is_staff()
-                OR user_id = public.nlc_current_user_id()
-                OR (
-                    company_id IS NOT NULL
-                    AND public.nlc_can_access_company(company_id)
-                )
-            );
-    """)
-
     # Membership rows: users may inspect their own active/inactive grants;
     # only current staff may grant, change, or revoke memberships.
     _execute_sql_script("""
