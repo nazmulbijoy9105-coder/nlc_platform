@@ -161,11 +161,17 @@ def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue
 
     parts = [urgency]
     score_label = "NOT RELEASED" if not LEGAL_SCORE_RELEASED or band == "NOT_EVALUATED" else f"{score}/100"
-    parts.append(
-        f"Active flags: <strong>{flag_count}</strong> "
-        f"({black_count} BLACK, {red_count} RED, {yellow_count} YELLOW). "
-        f"Compliance score: <strong>{score_label}</strong>."
-    )
+    if not LEGAL_SCORE_RELEASED or band == "NOT_EVALUATED":
+        parts.append(
+            f"Provisional findings: <strong>{flag_count}</strong>. "
+            "No findings are applied to an authoritative compliance score."
+        )
+    else:
+        parts.append(
+            f"Active flags: <strong>{flag_count}</strong> "
+            f"({black_count} BLACK, {red_count} RED, {yellow_count} YELLOW). "
+            f"Compliance score: <strong>{score_label}</strong>."
+        )
 
     if rescue_plan is not None:
         completed = int(getattr(rescue_plan, "completed_steps", 0) or 0)

@@ -150,7 +150,7 @@ def test_html_builder_handles_empty_flags_and_missing_values():
     assert "NOT RELEASED" in page
     assert "NOT_EVALUATED" in page
     assert "20 October 2026" in page
-    assert "score-bad" in page
+    assert "score-warn" in page
     assert "<img" not in page  # no logo_uri given -> no logo markup
 
 
