@@ -210,10 +210,6 @@ class AGMService(BaseService[AGM]):
         if meeting_date is None:
             raise ValueError("held_date is required to mark an AGM as held")
 
-        # Only calculate quorum when the applicable threshold has been reviewed.
-        if quorum_met is None and members_present is not None and quorum_required is not None:
-            quorum_met = members_present >= quorum_required
-
         is_default = False
         delay_days = 0
         if agm.agm_deadline and meeting_date > agm.agm_deadline:
@@ -225,24 +221,23 @@ class AGMService(BaseService[AGM]):
         company_type = getattr(company_type, "value", company_type)
 
         if company_type == "PRIVATE_LIMITED" and member_count is not None and member_count > 0:
+            # This is only the statutory default threshold. Until the Articles
+            # are reviewed, do not convert attendance into a legal quorum result.
             quorum_required = 2 if member_count <= 6 else 3
-            quorum_met: bool | None = members_present >= quorum_required
-            quorum_basis = "SECTION_85_2_B_DEFAULT_ARTICLES_NOT_REVIEWED"
+            quorum_met = None
+            quorum_basis = "SECTION_85_2_B_DEFAULT_PENDING_ARTICLES_REVIEW"
         else:
-            # Do not invent a quorum where company type or verified membership
+            # Do not infer a quorum where company type or verified membership
             # is unavailable, or where a different company category applies.
             quorum_required = None
             quorum_met = None
             quorum_basis = "NOT_EVALUATED"
 
-        is_default = bool(agm.agm_deadline and agm_date > agm.agm_deadline)
-        delay_days = (agm_date - agm.agm_deadline).days if is_default and agm.agm_deadline else 0
 
         return await self.update_instance(
             agm,
             agm_held=True,
             agm_date=meeting_date,
-            agm_date=agm_date,
             venue=venue,
             members_present=members_present,
             quorum_required=quorum_required,
@@ -253,7 +248,6 @@ class AGMService(BaseService[AGM]):
             minutes_prepared=True if minutes_document_id else minutes_prepared,
             minutes_document_id=minutes_document_id,
             notice_missing=notice_missing if notice_missing is not None else agm.notice_missing,
-            minutes_document_id=minutes_document_id,
             is_default=is_default,
             delay_days=delay_days,
         )
