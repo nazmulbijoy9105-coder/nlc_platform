@@ -2081,7 +2081,9 @@ class NLCRuleEngine:
                 if c.agm_count == 0 and c.incorporation_date is not None:
                     agm_due = self._add_months(c.incorporation_date, 18)
                 elif c.agm_count is not None and c.agm_count > 0 and c.last_agm_date is not None:
-                    agm_due = self._subsequent_agm_deadline(c)
+                    interval_deadline = self._add_months(c.last_agm_date, SUBSEQUENT_AGM_DEADLINE_MONTHS)
+                    calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
+                    agm_due = min(interval_deadline, calendar_year_deadline)
                 else:
                     agm_due = None
                 if agm_due is not None:
