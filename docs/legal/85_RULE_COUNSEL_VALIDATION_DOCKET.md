@@ -1155,7 +1155,7 @@ This docket expands the source triage into a separate signed-review record for e
 - **Minimum negative tests:** wrong company class; unknown fact; missing document only; valid extension/condonation; timely filing; appeal/stay/order; inapplicable sector/listing; contradictory evidence.
 - **Counsel decision:** PENDING — reviewer, enrolment/chamber, signed date, exact scope and next review required.
 
-### SH-002 — Share Certificates Not Issued Within 60 Days
+### SH-002 — Share Certificates Not Issued Within 90 Days
 
 - **Catalogue anchor:** Section 158, Companies Act 1994 (Bangladesh)
 - **Existing engine severity / deduction / override:** YELLOW / 5 / false
