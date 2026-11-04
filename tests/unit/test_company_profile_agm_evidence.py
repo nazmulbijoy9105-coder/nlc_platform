@@ -226,6 +226,8 @@ def test_recorded_failed_agm_quorum_triggers_section_85_2_b_finding():
     result = NLCRuleEngine().evaluate(profile)
     flag = next(flag for flag in result.flags if flag.rule_id == "AGM-005")
     assert flag.statutory_basis == "Section 85(2)(b), Companies Act 1994 (Bangladesh)"
+    assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+    assert flag.score_impact == 0
     assert flag.detail["quorum_met_recorded"] is False
     assert flag.detail["member_count"] == 8
     assert flag.detail["quorum_required_recorded"] == 3
