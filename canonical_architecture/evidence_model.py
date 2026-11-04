@@ -37,7 +37,11 @@ REGISTER_ENTRY = "STATUTORY_REGISTER_ENTRY"
 SHARE_CERTIFICATE = "SHARE_CERTIFICATE_UNDER_SEAL"
 FORM_XII = "FORM_XII_DIRECTOR_CHANGE"
 FORM_VI = "FORM_VI_OFFICE_CHANGE"
-FORM_VIII = "FORM_VIII_CHARGE_REGISTRATION"
+FORM_VIII = "FORM_VIII_SPECIAL_RESOLUTION"
+FORM_XVIII = "FORM_XVIII_CHARGE_REGISTRATION"
+FORM_XIX = "FORM_XIX_CHARGE_MODIFICATION"
+FORM_XXVIII = "FORM_XXVIII_CHARGE_SATISFACTION"
+FORM_IV = "FORM_IV_CAPITAL_INCREASE_NOTICE"
 FORM_XV = "FORM_XV_ALLOTMENT_RETURN"
 FORM_XVII = "FORM_XVII_TRANSFER_INSTRUMENT"
 RJSC_CERTIFICATE = "RJSC_CERTIFICATE_OF_INCORPORATION"
@@ -46,7 +50,7 @@ INSOLVENCY_ORDER = "INSOLVENCY_COURT_ORDER"
 PENALTY_NOTICE = "PENALTY_NOTICE_FROM_REGISTRAR"
 
 # ═════════════════════════════════════════════════════════════════════
-# EVIDENCE MAPPINGS — 35 verified rules
+# EVIDENCE MAPPINGS — historical rule evidence map; all rules require current independent approval
 # ═════════════════════════════════════════════════════════════════════
 
 EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
@@ -100,15 +104,15 @@ EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
     "DIR-001": EvidenceMapping("DIR-001",
         (FORM_XII, RJSC_FILING_ACK),
         ("APPOINTMENT_NOT_FILED",),
-        "documentary", "S92"),
+        "documentary", "S115"),
     "DIR-002": EvidenceMapping("DIR-002",
         (FORM_XII, RJSC_FILING_ACK),
         ("DEPARTURE_NOT_FILED",),
-        "documentary", "S92"),
+        "documentary", "S115"),
     "DIR-003": EvidenceMapping("DIR-003",
         (FORM_XII, RJSC_FILING_ACK),
         ("FILING_OVERDUE_1_YEAR",),
-        "documentary", "S92"),
+        "documentary", "S115"),
     "DIR-004": EvidenceMapping("DIR-004",
         (FORM_XII, REGISTER_ENTRY),
         ("DEPARTED_DIRECTOR_STILL_ACTIVE",),
@@ -116,7 +120,7 @@ EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
     "DIR-007": EvidenceMapping("DIR-007",
         (DIRECTOR_CONSENT, RJSC_FILING_ACK),
         ("CONSENT_NOT_FILED",),
-        "documentary", "S93(2)"),
+        "documentary", "S92"),
     "DIR-008": EvidenceMapping("DIR-008",
         (BOARD_RESOLUTION,),
         ("OFFICE_OF_PROFIT_WITHOUT_CONSENT",),
@@ -131,7 +135,7 @@ EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
         ("CAPITAL_CHANGE_WITHOUT_RESOLUTION",),
         "documentary", "S53"),
     "CAP-002": EvidenceMapping("CAP-002",
-        (FORM_VIII, RJSC_FILING_ACK),
+        (FORM_XVIII, RJSC_FILING_ACK),
         ("CHARGE_NOT_REGISTERED",),
         "conclusive", "S159"),
     "CAP-003": EvidenceMapping("CAP-003",
@@ -139,9 +143,13 @@ EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
         ("CAPITAL_REDUCTION_WITHOUT_COURT",),
         "conclusive", "S59"),
     "CHG-001": EvidenceMapping("CHG-001",
+        (FORM_XXVIII, RJSC_FILING_ACK),
+        ("CHARGE_SATISFACTION_NOT_FILED",),
+        "documentary", "S172"),
+    "CAP-004": EvidenceMapping("CAP-004",
         (FORM_VIII, RJSC_FILING_ACK),
-        ("CHARGE_NOT_REGISTERED",),
-        "conclusive", "S159"),
+        ("SPECIAL_RESOLUTION_NOT_FILED",),
+        "documentary", "S88(1)"),
 
     "STR-001": EvidenceMapping("STR-001",
         (BOARD_RESOLUTION, RJSC_FILING_ACK, RJSC_CERTIFICATE),
@@ -150,11 +158,11 @@ EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
     "STR-002": EvidenceMapping("STR-002",
         (BOARD_RESOLUTION, COURT_ORDER, RJSC_FILING_ACK),
         ("OBJECT_CHANGE_NOT_FILED",),
-        "documentary", "S17"),
+        "documentary", "S12"),
     "STR-003": EvidenceMapping("STR-003",
         (BOARD_RESOLUTION, RJSC_FILING_ACK),
         ("AOA_ALTERATION_NOT_FILED",),
-        "documentary", "S18"),
+        "documentary", "S20"),
 
     "ACC-001": EvidenceMapping("ACC-001",
         (AUDITED_ACCOUNTS, AGM_MINUTES),
@@ -191,9 +199,9 @@ EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
         ("MINIMUM_DIRECTORS_NOT_MET",),
         "documentary", "S90(2)"),
     "INC-004": EvidenceMapping("INC-004",
-        (REGISTER_ENTRY, FORM_XV),
-        ("PAID_UP_EXCEEDS_AUTHORIZED",),
-        "conclusive", "S53"),
+        (REGISTER_ENTRY, FORM_IV),
+        ("PAID_UP_AUTHORIZED_CAPITAL_MISMATCH",),
+        "documentary", "S56"),
     "INC-007": EvidenceMapping("INC-007",
         (RJSC_FILING_ACK, "COMMENCEMENT_DECLARATION"),
         ("BUSINESS_STARTED_WITHOUT_DECLARATION",),
@@ -207,12 +215,12 @@ EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
     "TR-001": EvidenceMapping("TR-001",
         (FORM_XVII, "STAMP_DUTY_CERTIFICATE"),
         ("NO_TRANSFER_INSTRUMENT",),
-        "documentary", "S38"),
+        "documentary", "S108"),
 
     "ESC-001": EvidenceMapping("ESC-001",
         (RJSC_FILING_ACK, "FILING_HISTORY"),
         ("STRIKE_OFF_RISK_ELEVATED",),
-        "documentary", "S346"),
+        "documentary", "S304"),
     "ESC-002": EvidenceMapping("ESC-002",
         ("STRIKE_OFF_NOTICE", "FILING_HISTORY"),
         ("STRIKE_OFF_IMMINENT",),
