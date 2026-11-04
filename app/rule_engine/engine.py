@@ -1211,18 +1211,6 @@ class NLCRuleEngine:
                         statutory_basis="Section 85(1)(a), Companies Act 1994 (Bangladesh)",
                         detail={"notice_days": notice_days, "short_notice_consent": False},
                     ))
-            clear_days = (c.agm_scheduled_date - c.notice_sent_date).days - 1
-            if clear_days < AGM_NOTICE_MINIMUM_DAYS:
-                self._add_flag(ComplianceFlag(
-                    rule_id="AGM-003",
-                    flag_code="AGM_NOTICE_DEFECTIVE",
-                    severity=Severity.YELLOW,
-                    score_impact=5,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"AGM notice issued with {clear_days} clear days. Section 85 requires 21 clear days. NOTE: Section 85 permits shorter notice with member consent, and accidental omission/non-receipt does not invalidate proceedings.",
-                    statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
-                    detail={"clear_days": clear_days}
-                ))
 
         if c.agm_scheduled_date and c.notice_sent_date is None:
             warn = c.agm_scheduled_date - timedelta(days=AGM_NOTICE_MINIMUM_DAYS)
