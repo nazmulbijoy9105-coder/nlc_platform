@@ -843,11 +843,12 @@ class TestEscalationRules:
         matching _calculate_score's active flag filter. This prevents ESC-003
         from counting flags that would be filtered out in score calculation.
         """
-        # Create 2 genuine BLACK override conditions
+        # Create two independently supported BLACK override conditions.
+        # AUD-003 is deliberately not a BLACK override: Section 183 consequences
+        # require legal review and cannot be inferred from an unverified flag.
         profile = build_profile(
-            agm_held_this_cycle=True,
-            audit_complete=False,       # AUD-003: BLACK override
-            current_director_count=0,   # INC-003: BLACK override
+            current_director_count=0,   # INC-003: verified critical condition
+            rjsc_strike_off_notice=True,  # ESC-002: verified Registrar notice
         )
         output = rule_engine.evaluate(profile)
 
@@ -1093,9 +1094,8 @@ class TestEngineIntegrity:
     def test_rescue_plan_generated_for_black_company(self, rule_engine, build_profile):
         """BLACK band company is correctly identified with score <= 29."""
         profile = build_profile(
-            agm_held_this_cycle=True,
-            audit_complete=False,
             current_director_count=0,
+            rjsc_strike_off_notice=True,
         )
         output = rule_engine.evaluate(profile)
         assert output.score_breakdown.risk_band == "BLACK"
