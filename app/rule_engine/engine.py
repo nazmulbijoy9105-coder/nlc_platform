@@ -1711,14 +1711,22 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     def _run_tax_rules(self, c: CompanyProfile) -> None:
         if c.tin_obtained is False:
+            # A profile boolean is not authenticated evidence of TIN absence or
+            # proof that the company falls within a specific return/proof duty.
+            # Keep this as a non-scoring review prompt until identity, s.166
+            # filing duty, s.261 registration and s.264 proof requirements are
+            # independently verified for this company and assessment period.
             self._add_flag(ComplianceFlag(
                 rule_id="TAX-001",
-                flag_code="TIN_NOT_OBTAINED",
-                severity=Severity.RED,
-                score_impact=10,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="No TIN from NBR. Income Tax Act 2023: TIN mandatory. Cannot file returns, open accounts, or obtain licenses.",
-                statutory_basis="Income Tax Act 2023 (Bangladesh)",
+                flag_code="TIN_STATUS_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="The company profile records no TIN. Verify the legal entity and taxpayer identity, return-filing duty under section 166, registration under section 261, and any proof-of-return requirement under section 264. A profile entry alone is not a finding of breach.",
+                statutory_basis="Income Tax Act 2023, sections 166, 261 and 264; company-specific duty and evidence require verification",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"profile_tin_status": "reported_absent", "identity_verified": False, "statutory_duty_verified": False},
             ))
 
         if c.vat_registered is False and c.annual_turnover_bdt > _VAT_TURNOVER_TAX_ENLISTMENT_THRESHOLD_BDT:
@@ -1804,8 +1812,8 @@ class NLCRuleEngine:
                     severity=Severity.NOT_EVALUATED,
                     score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Potential advance-tax instalment delay requiring review: {', '.join(missed)}. Income Tax Act 2023 Sections 154-157; due dates and liability require taxpayer-specific verification.",
-                    statutory_basis="Income Tax Act 2023, Sections 154-157 (s.155(2)-(3)); holiday and taxpayer applicability verification required",
+                    description=f"Potential advance-tax instalment delay requiring review: {', '.join(missed)}. Finance Act 2026 (Act 96/2026), sections 87-88, raises the section 154(1) threshold to BDT 10 lakh and amends section 155(2) and (5). Verify section 156 new-assessee treatment (separate BDT 6 lakh threshold), A-B liability after source deductions, estimate, exclusions, holiday roll-forward and payment evidence.",
+                    statutory_basis="Income Tax Act 2023, sections 154-157, as amended by Finance Act 2026 (Act 96/2026), sections 87-88; NOT_EVALUATED pending taxpayer-specific verification",
                     detail={"quarters": missed},
                     state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                     eval_state="UNKNOWN",
@@ -2008,14 +2016,20 @@ class NLCRuleEngine:
         # LBR-003 is not gated by manufacturing status: applicability of an
         # existing labour-court order depends on the order's parties and scope.
         if c.labour_court_order_pending:
+            # The current profile stores only a boolean, not the order,
+            # parties, service, operative status, appeal or stay. Do not infer
+            # a statutory breach or adverse score from that boolean.
             self._add_flag(ComplianceFlag(
                 rule_id="LBR-003",
-                flag_code="LABOUR_COURT_ORDER_PENDING",
-                severity=Severity.RED,
-                score_impact=15,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="Labour court order pending against company. Labour Act 2006: compliance with court orders mandatory.",
-                statutory_basis="Labour Act 2006 (Bangladesh), Section 209"
+                flag_code="LABOUR_COURT_ORDER_STATUS_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="The profile reports a pending Labour Court order. Verify the certified order, parties and company identity, service, operative directions, appeal/revision and any stay before determining applicability or non-compliance.",
+                statutory_basis="Bangladesh Labour Act 2006 and the specific Labour Court order; enabling provision and operative status require case-specific verification",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"profile_order_status": "reported_pending", "order_evidence_verified": False, "stay_or_appeal_checked": False},
             ))
 
     # MODULE 14: ADDITIONAL COMPANIES ACT 1994
