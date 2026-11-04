@@ -63,7 +63,42 @@ def main() -> int:
         return 1
 
     print(f"PASS: exact engine/seed inventory parity ({len(engine)}/{len(seed)})")
-    print("NOT CHECKED: VERIFIED-to-PENDING regression comparison has no trusted prior-state baseline")
+
+    # The approval register is a release control, not merely documentation.
+    approval_path = Path("docs/legal/legal_approval_register.yaml")
+    if not approval_path.exists():
+        print("FAIL: legal approval register missing")
+        return 1
+    approval = approval_path.read_text(encoding="utf-8")
+    approval_ids = set(re.findall(
+        r"^\\s*- rule_id:\\s*([A-Z]{2,12}-\\d{3})\\s*$", approval, re.MULTILINE
+    ))
+    review_required = len(re.findall(
+        r"^\\s+status:\\s*REVIEW_REQUIRED\\s*$", approval, re.MULTILINE
+    ))
+    score_ineligible = len(re.findall(
+        r"^\\s+score_eligible:\\s*false\\s*$", approval, re.MULTILINE
+    ))
+    if "approval_policy: fail_closed" not in approval or "approved_rule_ids: []" not in approval:
+        print("FAIL: approval register is not explicitly fail-closed with zero approved IDs")
+        return 1
+    if approval_ids != seed:
+        print(f"FAIL: approval register inventory mismatch; missing={sorted(seed - approval_ids)} extra={sorted(approval_ids - seed)}")
+        return 1
+    if review_required != len(seed) or score_ineligible != len(seed):
+        print(f"FAIL: expected every rule REVIEW_REQUIRED and score_eligible=false; got {review_required}/{len(seed)} and {score_ineligible}/{len(seed)}")
+        return 1
+
+    engine_source = engine_path.read_text(encoding="utf-8")
+    if not re.search(r"^LEGAL_SCORE_RELEASED:\\s*bool\\s*=\\s*False\\s*$", engine_source, re.MULTILINE):
+        print("FAIL: legal score release flag is not explicitly disabled")
+        return 1
+    if not re.search(r"^VERIFIED_RULE_IDS:\\s*frozenset\\[str\\]\\s*=\\s*frozenset\\(\\)\\s*$", engine_source, re.MULTILINE):
+        print("FAIL: verified rule allowlist must remain empty until counsel approval")
+        return 1
+
+    print(f"PASS: all {len(seed)} rules remain REVIEW_REQUIRED and score-ineligible")
+    print("PASS: statutory scoring release flag is disabled and verified allowlist is empty")
     return 0
 
 
