@@ -96,6 +96,14 @@ def upgrade() -> None:
             created_at timestamptz NOT NULL DEFAULT now()
         );
         REVOKE ALL ON TABLE nlc_private.rls_signing_key FROM PUBLIC;
+        DO $private_grant$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
+                REVOKE ALL ON SCHEMA nlc_private FROM nlc_app_role;
+                REVOKE ALL ON TABLE nlc_private.rls_signing_key FROM nlc_app_role;
+            END IF;
+        END
+        $private_grant$;
     """)
     bind = op.get_bind()
     existing_key = bind.execute(
