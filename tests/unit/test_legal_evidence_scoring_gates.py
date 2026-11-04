@@ -459,6 +459,42 @@ def test_labour_section_326_expiry_requires_verified_licence_class_and_direction
     assert flag.score_impact == 0
 
 
+def test_company_tax_return_deadline_uses_finance_act_2026_section_170():
+    # 30 June income-year end: ninth-month date is 15 March, so the
+    # statutory floor moves the provisional deadline to 15 September.
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            tin_obtained=True,
+            tax_return_filed_for_current_fy=False,
+            financial_year_end=date(2025, 6, 30),
+        ),
+        today=date(2026, 11, 4),
+    )
+    flag = _flag(result, "TAX-003")
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.score_impact == 0
+    assert flag.detail["ninth_month_date"] == "2026-03-15"
+    assert flag.detail["september_15_floor"] == "2026-09-15"
+    assert flag.detail["provisional_deadline"] == "2026-09-15"
+
+
+def test_company_tax_return_deadline_keeps_later_ninth_month_date():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            tin_obtained=True,
+            tax_return_filed_for_current_fy=False,
+            financial_year_end=date(2025, 3, 31),
+        ),
+        today=date(2026, 11, 4),
+    )
+    flag = _flag(result, "TAX-003")
+    assert flag.detail["ninth_month_date"] == "2025-12-15"
+    assert flag.detail["provisional_deadline"] == "2025-12-15"
+
+
+
 def test_vat_registration_threshold_uses_current_50_lakh_value_and_fails_closed():
     below = NLCRuleEngine().evaluate(
         _profile(vat_registered=False, annual_turnover_bdt=2_999_999),
