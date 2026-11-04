@@ -715,6 +715,26 @@ class NLCRuleEngine:
                         detail={"current_count": count, "required": required,
                                 "private_subsidiary_of_public_company": c.is_private_subsidiary_of_public_company},
                     ))
+        if (c.company_type == "PRIVATE_LIMITED" and c.directors_verified
+                and c.current_director_count is not None
+                and c.current_director_count < 2):  # RULE-001: only fire when verified against RJSC
+            inc003_impact = 15
+            inc003_desc = (
+                "Private company has NO directors. Section 90(2) requires minimum 2. Director records require verification - absence in NLC database does not confirm actual absence."
+                if c.current_director_count == 0
+                else "Private company has only 1 director. Section 90(2) requires minimum 2."
+            )
+            self._add_flag(ComplianceFlag(
+                rule_id="INC-003",
+                flag_code="MINIMUM_DIRECTORS_NOT_MET",
+                severity=Severity.BLACK,
+                score_impact=15,
+                is_black_override=True,
+                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                description="Private company has insufficient directors. Section 90(2) requires minimum 2 directors.",
+                statutory_basis="Section 90(2), Companies Act 1994 (Bangladesh)",
+                detail={"current_count": c.current_director_count, "required": 2}
+            ))
 
         if c.paid_up_capital_bdt > c.authorized_capital_bdt:
             self._add_flag(ComplianceFlag(
@@ -1077,6 +1097,25 @@ class NLCRuleEngine:
     def _run_agm_rules(self, c: CompanyProfile) -> None:
         if self._agm_history_is_verified(c):
             if c.agm_count is None or c.incorporation_date is None:
+        if c.agm_count is None or c.incorporation_date is None:
+            self._add_flag(ComplianceFlag(
+                rule_id="AGM-001",
+                flag_code="AGM_STATUS_UNKNOWN",
+                severity=Severity.YELLOW,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="AGM history unknown (data missing).",
+                statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN
+            ))
+            return
+        if c.agm_count == 0:
+            if c.incorporation_date is None:
+                return 0
+            deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
+            if self.today > deadline:  # type: ignore
+                delay = (self.today - deadline).days  # type: ignore
+                severity = Severity.BLACK if delay > 365 else Severity.RED
                 self._add_flag(ComplianceFlag(
                     rule_id="AGM-001",
                     flag_code="AGM_STATUS_UNKNOWN",
@@ -2848,6 +2887,11 @@ class NLCRuleEngine:
                     deadline = self._add_months(c.incorporation_date, 18)
                     if self.today > deadline:
                         return (self.today - deadline).days // 365
+                if c.incorporation_date is None:
+                    return 0
+                deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
+                if self.today > deadline:  # type: ignore
+                    return (self.today - deadline).days // 365  # type: ignore
             return 0
             
         # Match Section 81(1): no more than 15 months between AGMs and
