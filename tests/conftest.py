@@ -72,6 +72,7 @@ assert _make_url(TEST_DATABASE_URL).host in ("localhost", "127.0.0.1"), \
     "tests must run against a local database"
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ.setdefault("JWT_SECRET_KEY", "ci-only-" + "x" * 40)
+os.environ.setdefault("NLC_RLS_HMAC_SECRET", "ci-rls-only-" + "y" * 48)
 
 
 # ---------------------------------------------------------------------------

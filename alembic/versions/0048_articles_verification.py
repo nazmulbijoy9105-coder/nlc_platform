@@ -17,11 +17,17 @@ def upgrade():
     with op.get_context().autocommit_block():
         op.execute("ALTER TYPE document_type ADD VALUE IF NOT EXISTS 'ARTICLES_OF_ASSOCIATION'")
 
+    # Composite parent keys let PostgreSQL prove that evidence and its
+    # source document belong to the same company, not merely that both IDs exist.
+    op.create_unique_constraint(
+        "uq_documents_company_id_id", "documents", ["company_id", "id"]
+    )
+
     op.create_table(
         "articles_verifications",
         sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("uuid_generate_v4()")),
         sa.Column("company_id", UUID(as_uuid=True), sa.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("document_id", UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="RESTRICT"), nullable=False),
+        sa.Column("document_id", UUID(as_uuid=True), nullable=False),
         sa.Column("source_checksum_sha256", sa.String(64), nullable=False),
         sa.Column("source_document_version", sa.Integer(), nullable=False),
         sa.Column("status", sa.String(20), nullable=False, server_default="PENDING"),
@@ -53,9 +59,20 @@ def upgrade():
             name="ck_articles_verifications_review_metadata",
         ),
         sa.CheckConstraint(
+            "status <> 'VERIFIED' OR reviewed_by IS DISTINCT FROM submitted_by",
+            name="ck_articles_verifications_four_eyes",
+        ),
+        sa.CheckConstraint(
             "(status = 'REVOKED' AND revoked_by IS NOT NULL AND revoked_at IS NOT NULL AND revocation_reason IS NOT NULL) OR "
             "(status <> 'REVOKED' AND revoked_by IS NULL AND revoked_at IS NULL AND revocation_reason IS NULL)",
             name="ck_articles_verifications_revocation_metadata",
+        ),
+        sa.UniqueConstraint("company_id", "id", name="uq_articles_verifications_company_id"),
+        sa.ForeignKeyConstraint(
+            ["company_id", "document_id"],
+            ["documents.company_id", "documents.id"],
+            ondelete="RESTRICT",
+            name="fk_articles_verifications_company_document",
         ),
     )
 
@@ -75,7 +92,7 @@ def upgrade():
         "articles_verification_events",
         sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("uuid_generate_v4()")),
         sa.Column("company_id", UUID(as_uuid=True), sa.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("verification_id", UUID(as_uuid=True), sa.ForeignKey("articles_verifications.id", ondelete="RESTRICT"), nullable=False),
+        sa.Column("verification_id", UUID(as_uuid=True), nullable=False),
         sa.Column("actor_id", UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("action", sa.String(20), nullable=False),
         sa.Column("previous_status", sa.String(20), nullable=True),
@@ -85,6 +102,12 @@ def upgrade():
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.CheckConstraint("action IN ('SUBMITTED', 'VERIFIED', 'REJECTED', 'REVOKED', 'SUPERSEDED')", name="ck_articles_verification_events_action"),
+        sa.ForeignKeyConstraint(
+            ["company_id", "verification_id"],
+            ["articles_verifications.company_id", "articles_verifications.id"],
+            ondelete="RESTRICT",
+            name="fk_articles_verification_events_company_parent",
+        ),
     )
     op.create_index("ix_articles_verification_events_company_id", "articles_verification_events", ["company_id"])
     op.create_index("ix_articles_verification_events_verification_id", "articles_verification_events", ["verification_id"])

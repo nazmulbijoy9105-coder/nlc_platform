@@ -1083,10 +1083,11 @@ def database_health_check(self: Task) -> dict[str, Any]:
     async def _check():
         import sqlalchemy as sa
 
-        from app.models.database import AsyncSessionLocal
+        from app.models.database import AsyncSessionLocal, set_app_role
 
         start = datetime.now(UTC)
         async with AsyncSessionLocal() as db:
+            await set_app_role(db)
             await db.execute(sa.text("SELECT 1"))
         elapsed_ms = (datetime.now(UTC) - start).total_seconds() * 1000
         return elapsed_ms

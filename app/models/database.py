@@ -92,6 +92,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     async with AsyncSessionLocal() as session:
         try:
+            await set_app_role(session)
             yield session
             await session.commit()
         except Exception:
@@ -138,13 +139,21 @@ def _rls_signature(principal: str) -> str:
     import hashlib
     import hmac
 
-    secret = os.environ.get("JWT_SECRET_KEY", "")
+    secret = os.environ.get("NLC_RLS_HMAC_SECRET", "")
     if len(secret) < 32:
-        raise RuntimeError("JWT_SECRET_KEY must contain at least 32 characters for RLS signing")
+        raise RuntimeError(
+            "NLC_RLS_HMAC_SECRET must contain at least 32 characters for RLS signing"
+        )
     return hmac.new(secret.encode("utf-8"), principal.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
+async def set_app_role(session: AsyncSession) -> None:
+    """Switch this transaction to the non-owner, non-BYPASSRLS application role."""
+    await session.execute(text("SET LOCAL ROLE nlc_app_role"))
+
+
 async def _set_signed_rls_principal(session: AsyncSession, principal: str) -> None:
+    await set_app_role(session)
     signature = _rls_signature(principal)
     await session.execute(
         text(

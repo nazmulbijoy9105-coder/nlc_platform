@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import get_current_user
 from app.core.dependencies import get_db, get_db_for_user
+from app.models.database import set_admin_context
 from app.models.infrastructure import UserActivityLog
 from app.models.user import User
 
@@ -294,7 +295,12 @@ async def cron_evaluate_all(
         provided = request.headers.get("X-Cron-Secret", "")
         if provided != cron_secret:
             raise HTTPException(status_code=403, detail="Invalid cron secret")
-    
+
+    # The cron secret is checked before granting the transaction a signed
+    # service principal. Never run portfolio-wide evaluation as an anonymous
+    # restricted-role session.
+    await set_admin_context(db)
+
     try:
         from sqlalchemy import text
         result = await db.execute(text("SELECT id FROM companies WHERE is_active = true"))
@@ -344,7 +350,7 @@ async def cron_health():
 # ───────────────────────────────────────────────────────────────────
 
 @router.get("/users/{user_id}")
-async def get_user_by_id(user_id: str, admin=Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def get_user_by_id(user_id: str, admin=Depends(require_admin), db: AsyncSession = Depends(get_db_for_user)):
     """Get a single user by ID."""
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
@@ -359,7 +365,7 @@ async def get_user_by_id(user_id: str, admin=Depends(require_admin), db: AsyncSe
 
 
 @router.get("/logs/recent")
-async def get_recent_logs(limit: int = 50, admin=Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def get_recent_logs(limit: int = 50, admin=Depends(require_admin), db: AsyncSession = Depends(get_db_for_user)):
     """Return recent activity logs."""
     result = await db.execute(
         select(UserActivityLog).order_by(UserActivityLog.logged_at.desc()).limit(limit)
@@ -379,7 +385,7 @@ async def get_recent_logs(limit: int = 50, admin=Depends(require_admin), db: Asy
 
 
 @router.get("/logs/company/{company_id}")
-async def get_company_logs(company_id: str, limit: int = 50, admin=Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def get_company_logs(company_id: str, limit: int = 50, admin=Depends(require_admin), db: AsyncSession = Depends(get_db_for_user)):
     """Return activity logs for a specific company."""
     result = await db.execute(
         select(UserActivityLog)

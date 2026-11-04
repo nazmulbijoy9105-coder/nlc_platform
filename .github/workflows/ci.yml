@@ -71,6 +71,7 @@ jobs:
       DATABASE_URL_TEST: postgresql+asyncpg://nlc_test:nlc_test@localhost:5432/nlc_test
       REDIS_URL: redis://localhost:6379/0
       JWT_SECRET_KEY: test-secret-key-not-for-production
+      NLC_RLS_HMAC_SECRET: ci-rls-only-secret-not-for-production-0123456789abcdef
       ENVIRONMENT: test
 
     steps:

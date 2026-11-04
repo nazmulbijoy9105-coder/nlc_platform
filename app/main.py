@@ -85,151 +85,8 @@ async def lifespan(app: FastAPI):
         raise RuntimeError(f"Cannot connect to database on startup: {e}")
 
 
-    # ------------------------------------------------------------------
-    # DEFENSIVE SCHEMA SAFETY-NET (idempotent)
-    # Alembic (43 migrations) is the source of truth. These ADD VALUE /
-    # ADD COLUMN IF NOT EXISTS statements exist only as a last-resort
-    # guard for environments where a migration may have been skipped.
-    # Do not add new columns here — put them in a new Alembic revision.
-    # Production gate 2026-11-02: retain until a full column audit confirms
-    # zero drift, then remove this block.
-    # ------------------------------------------------------------------
-    try:
-        import sqlalchemy as _sa
-
-        from app.models.database import engine
-        async with engine.connect() as _conn:
-            for ev in ['DEADLINE', 'DEPENDENCY', 'THRESHOLD', 'CONDITIONAL', 'ESCALATION']:
-                with suppress(Exception):
-                    await _conn.execute(_sa.text(f"ALTER TYPE rule_type ADD VALUE IF NOT EXISTS '{ev}'"))
-            v2c = [("has_foreign_shareholder", "BOOLEAN NOT NULL DEFAULT false"), ("foreign_shareholding_pct", "FLOAT"), ("bida_registered", "BOOLEAN NOT NULL DEFAULT false"), ("remittance_amount_usd", "FLOAT"), ("encashment_certificate_uploaded", "BOOLEAN NOT NULL DEFAULT false"), ("tin_obtained", "BOOLEAN NOT NULL DEFAULT false"), ("vat_registered", "BOOLEAN NOT NULL DEFAULT false"), ("form_xv_filed", "BOOLEAN NOT NULL DEFAULT false"), ("form_iv_filed", "BOOLEAN NOT NULL DEFAULT false"), ("special_resolution_date", "DATE"), ("maintained_registers", "TEXT[]"), ("register_location", "VARCHAR NOT NULL DEFAULT 'registered_office'")]
-            for cn, ct in v2c:
-                with suppress(Exception):
-                    await _conn.execute(_sa.text(f"ALTER TABLE companies ADD COLUMN IF NOT EXISTS {cn} {ct}"))
-            # v3 columns - tax scoring, director disqualification, penalty tracking
-            v3c = [
-                ("trade_license_obtained", "BOOLEAN NOT NULL DEFAULT false"),
-                ("trade_license_expiry", "DATE"),
-                ("tax_return_filed_for_current_fy", "BOOLEAN NOT NULL DEFAULT false"),
-                ("last_tax_return_filed", "DATE"),
-                ("advance_tax_q1_paid", "BOOLEAN NOT NULL DEFAULT false"),
-                ("advance_tax_q2_paid", "BOOLEAN NOT NULL DEFAULT false"),
-                ("advance_tax_q3_paid", "BOOLEAN NOT NULL DEFAULT false"),
-                ("advance_tax_q4_paid", "BOOLEAN NOT NULL DEFAULT false"),
-                ("tds_deposited_up_to_date", "BOOLEAN NOT NULL DEFAULT true"),
-                ("last_tds_deposit_date", "DATE"),
-                ("last_vat_return_filed", "DATE"),
-                ("vat_annual_return_filed_for_fy", "BOOLEAN NOT NULL DEFAULT false"),
-                ("minimum_tax_paid", "BOOLEAN NOT NULL DEFAULT true"),
-                ("tax_clearance_obtained", "BOOLEAN NOT NULL DEFAULT false"),
-                ("tax_return_deadline_extended", "BOOLEAN NOT NULL DEFAULT false"),
-                ("any_director_disqualified", "BOOLEAN NOT NULL DEFAULT false"),
-                ("disqualification_details", "TEXT[]"),
-                ("penalty_notices_received", "INTEGER NOT NULL DEFAULT 0"),
-                ("penalty_notices_resolved", "INTEGER NOT NULL DEFAULT 0"),
-            ]
-            for cn, ct in v3c:
-                with suppress(Exception):
-                    await _conn.execute(_sa.text(f"ALTER TABLE companies ADD COLUMN IF NOT EXISTS {cn} {ct}"))
-            await _conn.commit()
-            # v4 columns — activate dead rules
-            v4c = [
-                ("bsec_listed", "BOOLEAN NOT NULL DEFAULT false"),
-                ("bsec_quarterly_report_filed", "BOOLEAN NOT NULL DEFAULT false"),
-                ("cg_certificate_obtained", "BOOLEAN NOT NULL DEFAULT false"),
-                ("board_independent_director", "BOOLEAN NOT NULL DEFAULT false"),
-                ("audit_committee_established", "BOOLEAN NOT NULL DEFAULT false"),
-                ("factory_license_obtained", "BOOLEAN NOT NULL DEFAULT false"),
-                ("factory_license_expiry", "DATE"),
-                ("labour_court_order_pending", "BOOLEAN NOT NULL DEFAULT false"),
-                ("worker_compensation_filed", "BOOLEAN NOT NULL DEFAULT false"),
-                ("winding_up_petition_filed", "BOOLEAN NOT NULL DEFAULT false"),
-                ("winding_up_petition_date", "DATE"),
-                ("liquidator_appointed", "BOOLEAN NOT NULL DEFAULT false"),
-                ("court_ordered_winding_up", "BOOLEAN NOT NULL DEFAULT false"),
-                ("voluntary_winding_up", "BOOLEAN NOT NULL DEFAULT false"),
-                ("on_rjsc_strike_off_list", "BOOLEAN NOT NULL DEFAULT false"),
-                ("rjsc_strike_off_notice_date", "DATE"),
-                ("rjsc_status", "VARCHAR(100)"),
-                ("last_rjsc_compliance_date", "DATE"),
-                ("investigation_order", "BOOLEAN NOT NULL DEFAULT false"),
-                ("foreign_exchange_violation", "BOOLEAN NOT NULL DEFAULT false"),
-                ("encashment_certificate_uploaded", "BOOLEAN NOT NULL DEFAULT false"),
-                ("encashment_certificate_date", "DATE"),
-                ("bida_registered", "BOOLEAN NOT NULL DEFAULT false"),
-                ("fdi_registration_date", "DATE"),
-                ("remittance_amount_usd", "NUMERIC(15,2)"),
-                ("foreign_shareholding_pct", "NUMERIC(5,2)"),
-                ("form_iii_filed", "BOOLEAN NOT NULL DEFAULT false"),
-                ("form_iii_filed_date", "DATE"),
-                ("form_iv_filed", "BOOLEAN NOT NULL DEFAULT false"),
-                ("form_iv_filed_date", "DATE"),
-                ("form_vi_filed", "BOOLEAN NOT NULL DEFAULT false"),
-                ("form_vi_filed_date", "DATE"),
-                ("form_xv_filed", "BOOLEAN NOT NULL DEFAULT false"),
-                ("form_xv_filed_date", "DATE"),
-                ("balance_sheet_attached", "BOOLEAN NOT NULL DEFAULT false"),
-                ("schedule_x_attached", "BOOLEAN NOT NULL DEFAULT false"),
-                ("directors_list_attached", "BOOLEAN NOT NULL DEFAULT false"),
-                ("shareholders_list_attached", "BOOLEAN NOT NULL DEFAULT false"),
-                ("profit_loss_attached", "BOOLEAN NOT NULL DEFAULT false"),
-                ("special_resolution_filed", "BOOLEAN NOT NULL DEFAULT false"),
-                ("special_resolution_date", "DATE"),
-                ("special_resolution_filed_date", "DATE"),
-                ("capital_reduction_pending", "BOOLEAN NOT NULL DEFAULT false"),
-                ("capital_reduction_date", "DATE"),
-                ("capital_reduction_court_order_obtained", "BOOLEAN NOT NULL DEFAULT false"),
-                ("paid_up_ge_authorized", "BOOLEAN NOT NULL DEFAULT false"),
-                ("moa_aoa_filed", "BOOLEAN NOT NULL DEFAULT false"),
-                ("name_change_pending", "BOOLEAN NOT NULL DEFAULT false"),
-                ("name_change_date", "DATE"),
-                ("name_change_sr_passed", "BOOLEAN NOT NULL DEFAULT false"),
-                ("object_clause_change_pending", "BOOLEAN NOT NULL DEFAULT false"),
-                ("object_clause_change_date", "DATE"),
-                ("aoa_alteration_pending", "BOOLEAN NOT NULL DEFAULT false"),
-                ("aoa_alteration_date", "DATE"),
-                ("register_of_members_maintained", "BOOLEAN NOT NULL DEFAULT true"),
-                ("register_of_directors_maintained", "BOOLEAN NOT NULL DEFAULT true"),
-                ("register_of_charges_maintained", "BOOLEAN NOT NULL DEFAULT true"),
-                ("register_of_contracts", "BOOLEAN NOT NULL DEFAULT true"),
-                ("register_of_directors_interests", "BOOLEAN NOT NULL DEFAULT true"),
-                ("register_location", "VARCHAR(500)"),
-                ("minutes_book_agm_maintained", "BOOLEAN NOT NULL DEFAULT true"),
-                ("minutes_book_board_maintained", "BOOLEAN NOT NULL DEFAULT true"),
-                ("agm_adjourned_without_notice", "BOOLEAN NOT NULL DEFAULT false"),
-                ("agm_scheduled_date", "DATE"),
-                ("notice_sent_date", "DATE"),
-                ("members_present_at_agm", "INTEGER NOT NULL DEFAULT 0"),
-                ("auditor_reappointed_at_agm", "BOOLEAN NOT NULL DEFAULT false"),
-                ("accounts_adopted_at_agm", "BOOLEAN NOT NULL DEFAULT false"),
-                ("audit_in_progress", "BOOLEAN NOT NULL DEFAULT false"),
-                ("first_auditor_appointment_date", "DATE"),
-                ("auditor_name", "VARCHAR(255)"),
-                ("auditor_firm_reg_no", "VARCHAR(100)"),
-                ("registered_office_address", "TEXT"),
-                ("registered_office_change_date", "DATE"),
-                ("annual_turnover_bdt", "NUMERIC(15,2)"),
-                ("last_tax_return_filed_year", "INTEGER"),
-                ("share_certificates_issued", "BOOLEAN NOT NULL DEFAULT false"),
-                ("share_certificates_issued_date", "DATE"),
-                ("last_allotment_date", "DATE"),
-                ("shareholder_change_date", "DATE"),
-                ("is_dormant", "BOOLEAN NOT NULL DEFAULT false"),
-                ("has_foreign_shareholder", "BOOLEAN NOT NULL DEFAULT false"),
-                ("is_fdi_registered", "BOOLEAN NOT NULL DEFAULT false"),
-                ("aoa_transfer_restriction", "BOOLEAN NOT NULL DEFAULT false"),
-                ("capital_increase_date", "DATE"),
-                ("capital_increase_special_resolution", "BOOLEAN NOT NULL DEFAULT false"),
-                ("minimum_directors_met", "BOOLEAN NOT NULL DEFAULT false"),
-            ]
-            for cn, ct in v4c:
-                with suppress(Exception):
-                    await _conn.execute(_sa.text(f"ALTER TABLE companies ADD COLUMN IF NOT EXISTS {cn} {ct}"))
-            await _conn.commit()
-            logger.info("v4_migrations_applied")
-            logger.info("migrations_applied")
-    except Exception as _e:
-        logger.warning("migration_failed", error=str(_e))
+    # Schema changes are applied only through reviewed Alembic migrations.
+    # The API process must never perform ad-hoc DDL at startup.
 
     # Auto-create or sync admin password from env vars
     try:
@@ -241,9 +98,10 @@ async def lifespan(app: FastAPI):
             from sqlalchemy import select as _sel
 
             from app.core.security import hash_password as _hp, verify_password as _vp
-            from app.models.database import AsyncSessionLocal as _ASL
+            from app.models.database import AsyncSessionLocal as _ASL, set_admin_context
             from app.models.user import User as _User
             async with _ASL() as _db:
+                await set_admin_context(_db)
                 _ex = await _db.execute(_sel(_User).where(_User.email == _ae))
                 _user = _ex.scalar_one_or_none()
                 _new_hash = _hp(_ap)
@@ -268,10 +126,11 @@ async def lifespan(app: FastAPI):
 
         import sqlalchemy as _sa
 
-        from app.models.database import AsyncSessionLocal
+        from app.models.database import AsyncSessionLocal, set_admin_context
         from scripts.seed_rules import EXPECTED_RULE_COUNT, ILRMF_RULES
 
         async with AsyncSessionLocal() as _sdb:
+            await set_admin_context(_sdb)
             # SEED-01: never gate on count < N. Upsert is idempotent (ON CONFLICT).
             # Count is logged for observability only — it does not control generation.
             _cnt = await _sdb.execute(_sa.text("SELECT COUNT(*) FROM legal_rules WHERE is_active = TRUE"))

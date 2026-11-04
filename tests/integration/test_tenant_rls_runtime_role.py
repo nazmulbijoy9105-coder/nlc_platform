@@ -17,7 +17,8 @@ async def test_non_bypass_app_role_sees_only_active_member_companies(
     db_other_company,
 ):
     await set_rls_context(db, str(db_client_user.id))
-    await db.execute(text("SET LOCAL ROLE nlc_app_role"))
+    active_role = await db.execute(text("SELECT current_user"))
+    assert active_role.scalar_one() == "nlc_app_role"
 
     visible = await db.execute(
         text("SELECT id FROM companies ORDER BY id")
@@ -60,6 +61,42 @@ async def test_app_role_has_no_schema_creation_or_truncate_privilege(db):
     )
     assert can_create.scalar_one() is False
     assert can_truncate.scalar_one() is False
+
+    secret_schema = await db.execute(
+        text("SELECT has_schema_privilege('nlc_app_role', 'nlc_private', 'USAGE')")
+    )
+    secret_table = await db.execute(
+        text("SELECT has_table_privilege('nlc_app_role', 'nlc_private.rls_signing_key', 'SELECT')")
+    )
+    assert secret_schema.scalar_one() is False
+    assert secret_table.scalar_one() is False
+
+
+@pytest.mark.asyncio
+async def test_valid_signed_admin_principal_is_recognized_as_staff(db):
+    from app.models.database import set_admin_context
+
+    await set_admin_context(db)
+    active_role = await db.execute(text("SELECT current_user"))
+    assert active_role.scalar_one() == "nlc_app_role"
+    result = await db.execute(
+        text("SELECT public.nlc_current_user_is_staff()")
+    )
+    assert result.scalar_one() is True
+
+
+@pytest.mark.asyncio
+async def test_forged_admin_principal_without_matching_signature_is_rejected(
+    db, db_client_user
+):
+    await set_rls_context(db, str(db_client_user.id))
+    await db.execute(
+        text("SELECT set_config('app.current_user_id', 'ADMIN', true)")
+    )
+    result = await db.execute(
+        text("SELECT public.nlc_current_user_is_staff()")
+    )
+    assert result.scalar_one() is False
 
 
 @pytest.mark.asyncio
