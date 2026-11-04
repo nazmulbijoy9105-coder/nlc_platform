@@ -293,7 +293,9 @@ def test_pre_score_and_authoritative_raw_score_use_identical_category_caps():
     engine = NLCRuleEngine()
     breakdown = engine._calculate_score(flags, profile)
     assert engine._calculate_raw_score(flags) == breakdown.raw_total
-    assert breakdown.raw_total == 55
+    # Legal approval register is fail-closed: unapproved findings remain visible
+    # but none may affect the authoritative compliance score.
+    assert breakdown.raw_total == 100
 
 
 
@@ -418,5 +420,164 @@ def test_verified_absence_is_a_scoring_state_but_unknown_is_not():
         state=RuleState.VERIFIED_ABSENT,
     )
     score = NLCRuleEngine()._calculate_score([verified_absent], profile)
-    assert score.agm_score == 0
-    assert score.final_score == 80
+    assert score.agm_score == 20
+    assert score.final_score == 100
+
+
+
+
+def test_labour_section_326_missing_direction_evidence_is_not_a_breach():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            is_manufacturing=True,
+            factory_license_required_by_direction=True,
+            factory_license_obtained=False,
+        ),
+        today=date(2026, 11, 4),
+    )
+    flag = _flag(result, "LBR-001")
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.score_impact == 0
+
+
+def test_labour_section_326_expiry_requires_verified_licence_class_and_direction():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            is_manufacturing=True,
+            factory_license_required_by_direction=True,
+            factory_license_obtained=True,
+            factory_license_expiry=date(2026, 1, 1),
+        ),
+        today=date(2026, 11, 4),
+    )
+    flag = _flag(result, "LBR-002")
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.score_impact == 0
+
+
+def test_company_tax_return_deadline_uses_finance_act_2026_section_170():
+    # 30 June income-year end: ninth-month date is 15 March, so the
+    # statutory floor moves the provisional deadline to 15 September.
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            tin_obtained=True,
+            tax_return_filed_for_current_fy=False,
+            financial_year_end=date(2025, 6, 30),
+        ),
+        today=date(2026, 11, 4),
+    )
+    flag = _flag(result, "TAX-003")
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.score_impact == 0
+    assert flag.detail["ninth_month_date"] == "2026-03-15"
+    assert flag.detail["september_15_floor"] == "2025-09-15"
+    assert flag.detail["provisional_deadline"] == "2026-03-15"
+
+
+def test_company_tax_return_deadline_keeps_later_ninth_month_date():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            tin_obtained=True,
+            tax_return_filed_for_current_fy=False,
+            financial_year_end=date(2025, 3, 31),
+        ),
+        today=date(2026, 11, 4),
+    )
+    flag = _flag(result, "TAX-003")
+    assert flag.detail["ninth_month_date"] == "2025-12-15"
+    assert flag.detail["september_15_floor"] == "2025-09-15"
+    assert flag.detail["provisional_deadline"] == "2025-12-15"
+
+
+
+def test_vat_registration_threshold_uses_current_50_lakh_value_and_fails_closed():
+    below = NLCRuleEngine().evaluate(
+        _profile(vat_registered=False, annual_turnover_bdt=2_999_999),
+        today=date(2026, 11, 4),
+    )
+    assert not any(flag.rule_id == "TAX-002" for flag in below.flags)
+
+    above = NLCRuleEngine().evaluate(
+        _profile(vat_registered=False, annual_turnover_bdt=5_000_001),
+        today=date(2026, 11, 4),
+    )
+    flag = _flag(above, "TAX-002")
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.score_impact == 0
+    assert flag.detail["registration_threshold_bdt"] == 5_000_000
+    assert flag.detail["turnover_tax_enlistment_threshold_bdt"] == 3_000_000
+
+
+def test_vat_turnover_tax_enlistment_band_is_review_only():
+    result = NLCRuleEngine().evaluate(
+        _profile(vat_registered=False, annual_turnover_bdt=4_000_000),
+        today=date(2026, 11, 4),
+    )
+    flag = _flag(result, "TAX-002")
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.score_impact == 0
+    assert flag.detail["turnover_tax_enlistment_threshold_bdt"] == 3_000_000
+    assert flag.detail["registration_threshold_bdt"] == 5_000_000
+    assert flag.detail["turnover_tax_enlistment_application_window_days"] == 30
+
+
+
+def test_vat_return_status_without_verified_tax_period_is_not_a_default():
+    result = NLCRuleEngine().evaluate(
+        _profile(vat_registered=True, last_vat_return_filed=date(2026, 8, 1)),
+        today=date(2026, 11, 4),
+    )
+    flag = _flag(result, "VAT-002")
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.score_impact == 0
+
+
+def test_unreleased_legal_corpus_never_reports_green_even_with_full_input_coverage():
+    from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+
+    assert LEGAL_SCORE_RELEASED is False
+    profile = _profile(
+        last_agm_date=date(2025, 6, 1),
+        last_audit_signed_date=date(2025, 5, 1),
+        last_return_filed_year=2025,
+        first_auditor_appointed=True,
+        tin_obtained=True,
+        current_director_count=2,
+        directors_verified=True,
+        member_count=2,
+    )
+    score = NLCRuleEngine()._calculate_score([], profile)
+    assert score.final_score == 100  # arithmetic placeholder only
+    assert score.risk_band == Severity.NOT_EVALUATED
+    assert score.override_applied is False
+
+
+def test_unapproved_black_override_cannot_force_zero_score():
+    profile = _profile()
+    unapproved_black = ComplianceFlag(
+        rule_id="INC-003",
+        flag_code="UNAPPROVED_BLACK_TEST",
+        severity=Severity.BLACK,
+        score_impact=15,
+        revenue_tier=RevenueTier.CORPORATE_RESCUE,
+        description="Unapproved legal mapping must not force BLACK.",
+        statutory_basis="Section 90, Companies Act 1994 (Bangladesh)",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+        is_black_override=True,
+    )
+    score = NLCRuleEngine()._calculate_score([unapproved_black], profile)
+    assert score.final_score == 100
+    assert score.override_applied is False
