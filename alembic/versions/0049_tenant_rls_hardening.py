@@ -201,7 +201,7 @@ def upgrade() -> None:
         STABLE
         SECURITY DEFINER
         SET search_path = pg_catalog, public
-        AS $
+        AS $staff$
             SELECT (
                 public.nlc_current_user_context_valid()
                 AND current_setting('app.current_user_id', true) = 'ADMIN'
@@ -212,7 +212,7 @@ def upgrade() -> None:
                   AND u.is_active IS TRUE
                   AND u.role::text IN ('SUPER_ADMIN', 'ADMIN_STAFF', 'LEGAL_STAFF')
             )
-        $;
+        $staff$;
     """)
 
     _execute_sql_script("""
