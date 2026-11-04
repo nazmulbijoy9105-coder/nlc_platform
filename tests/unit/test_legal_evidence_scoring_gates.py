@@ -445,7 +445,7 @@ def test_vat_registration_threshold_uses_current_50_lakh_value_and_fails_closed(
     assert flag.detail["turnover_tax_enlistment_threshold_bdt"] == 3_000_000
 
 
-def test_vat_return_age_without_verified_tax_period_is_not_a_default():
+def test_vat_return_status_without_verified_tax_period_is_not_a_default():
     result = NLCRuleEngine().evaluate(
         _profile(vat_registered=True, last_vat_return_filed=date(2026, 8, 1)),
         today=date(2026, 11, 4),
