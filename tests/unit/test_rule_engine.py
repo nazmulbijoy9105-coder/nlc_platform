@@ -1324,7 +1324,7 @@ class TestVerdictRegression:
         assert output.score_breakdown.risk_band.value not in ("RED", "BLACK")
 
     def test_tax003_fires_when_latest_due_return_unfiled(self, rule_engine, build_profile):
-        profile = build_profile(tin_obtained=True, tax_return_filed_for_current_fy=False)
+        profile = build_profile(tin_obtained=True, tax_return_filed_for_current_fy=False, financial_year_end=date(2025, 6, 30))
         output = rule_engine.evaluate(profile, today=date(2026, 10, 1))
         assert_flag_triggered(output, "TAX-003")
 
