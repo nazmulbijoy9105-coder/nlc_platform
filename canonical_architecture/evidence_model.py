@@ -41,6 +41,7 @@ FORM_VIII = "FORM_VIII_SPECIAL_RESOLUTION"
 FORM_XVIII = "FORM_XVIII_CHARGE_REGISTRATION"
 FORM_XIX = "FORM_XIX_CHARGE_MODIFICATION"
 FORM_XXVIII = "FORM_XXVIII_CHARGE_SATISFACTION"
+FORM_IV = "FORM_IV_CAPITAL_INCREASE_NOTICE"
 FORM_XV = "FORM_XV_ALLOTMENT_RETURN"
 FORM_XVII = "FORM_XVII_TRANSFER_INSTRUMENT"
 RJSC_CERTIFICATE = "RJSC_CERTIFICATE_OF_INCORPORATION"
@@ -198,9 +199,9 @@ EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
         ("MINIMUM_DIRECTORS_NOT_MET",),
         "documentary", "S90(2)"),
     "INC-004": EvidenceMapping("INC-004",
-        (REGISTER_ENTRY, FORM_XV),
-        ("PAID_UP_EXCEEDS_AUTHORIZED",),
-        "conclusive", "S53"),
+        (REGISTER_ENTRY, FORM_IV),
+        ("PAID_UP_AUTHORIZED_CAPITAL_MISMATCH",),
+        "documentary", "S56"),
     "INC-007": EvidenceMapping("INC-007",
         (RJSC_FILING_ACK, "COMMENCEMENT_DECLARATION"),
         ("BUSINESS_STARTED_WITHOUT_DECLARATION",),
@@ -214,12 +215,12 @@ EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
     "TR-001": EvidenceMapping("TR-001",
         (FORM_XVII, "STAMP_DUTY_CERTIFICATE"),
         ("NO_TRANSFER_INSTRUMENT",),
-        "documentary", "S38"),
+        "documentary", "S108"),
 
     "ESC-001": EvidenceMapping("ESC-001",
         (RJSC_FILING_ACK, "FILING_HISTORY"),
         ("STRIKE_OFF_RISK_ELEVATED",),
-        "documentary", "S346"),
+        "documentary", "S304"),
     "ESC-002": EvidenceMapping("ESC-002",
         ("STRIKE_OFF_NOTICE", "FILING_HISTORY"),
         ("STRIKE_OFF_IMMINENT",),
