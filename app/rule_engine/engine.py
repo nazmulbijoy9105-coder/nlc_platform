@@ -1008,6 +1008,19 @@ class NLCRuleEngine:
                     eval_state="UNKNOWN",
                 ))
 
+        if c.agm_held_this_cycle and c.auditor_reappointed_at_agm is None:
+            self._add_flag(ComplianceFlag(
+                rule_id="AUD-005",
+                flag_code="SUBSEQUENT_AUDITOR_STATUS_UNKNOWN",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="No verified record establishes whether the retiring auditor was reappointed or a statutory exception applied. This is an evidence-status finding, not a 120-day statutory deadline.",
+                statutory_basis="Section 210(3), Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+            ))
+
         if (c.agm_held_this_cycle and c.auditor_reappointed_at_agm is False
                 and c.auditor_reappointment_verified is True
                 and bool(c.auditor_reappointment_evidence_ref)):
