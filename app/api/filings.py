@@ -66,10 +66,12 @@ class AGMCreateRequest(BaseModel):
 class AGMMarkHeldRequest(BaseModel):
     held_date: date
     venue: str | None = None
-    members_present: int = Field(ge=0)
+    # Deprecated compatibility input; quorum uses only reviewer-certified attendance evidence.
+    members_present: int = Field(default=0, ge=0)
     # Deprecated compatibility input. The server derives quorum from verified
     # membership and Articles evidence; this value is ignored.
     quorum_met: bool | None = None
+    # Deprecated caller-supplied evidence hints; ignored by the service.
     members_total_at_agm: int | None = Field(default=None, ge=1)
     members_total_evidence_ref: str | None = None
     members_present_evidence_ref: str | None = None
