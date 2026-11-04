@@ -48,3 +48,15 @@
 ## Mandatory completion fields per instrument
 
 Exact Gazette/Act/SRO number; Bangla title; publication date; commencement date; retrospective date if any; transitional/savings; amended provision and old/new wording; repeals/corrigenda; affected rule IDs; official file URL and SHA-256; reviewer; review date; legal interpretation; unresolved question; counsel signature. A missing field means OPEN.
+
+
+### BSEC Corporate Governance Code — official amendment chronology
+
+| Instrument | Publication / effective detail | Rule impact | Status |
+|---|---|---|---|
+| Corporate Governance Code 2018, Notification BSEC/CMRRCD/2006-158/207/Admin/80 | Gazette 10 June 2018; listed-company scope under section 2CC | Conditions 1, 5, 8 and 9; Condition 2 subsidiary board governance | Primary text identified; scope and all amendments require counsel review |
+| Amendment Notification BSEC/CMRRCD/2009-193/66/PRD/148 | Dated 16 October 2023; Gazette 20 November 2023 | Amendments to Code; obtain complete Gazette text and map every changed clause | Official Gazette index identified; clause mapping open |
+| Amendment Notification BSEC/CMRRCD/2009-193/76/PRD/151 | Dated 4 April 2024; Gazette 29 April 2024 | Inserts at least one female independent director under Condition 1(2)(a), initially within one year | Primary Gazette text verified |
+| BSEC extension notice | Official BSEC register lists 26 July 2026; published reports state 31 December 2026 | Condition 1(2)(a) female independent director appointment deadline | Original notice text must be obtained before deadline automation |
+
+Official sources: https://sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf ; https://www.dpp.gov.bd/upload_file/gazettes/53776_78027.pdf ; https://www.dpp.gov.bd/bgpress/bangla/index.php/document/get_extraordinary/51180 ; https://www.sec.gov.bd/act-rules-and-regulations
