@@ -1184,13 +1184,13 @@ class TestUntestedRules:
     def test_TAX001_triggers(self, rule_engine, build_profile):
         assert_flag_triggered(rule_engine.evaluate(build_profile(tin_obtained=False)), "TAX-001")
 
-    def test_TAX002_registration_not_triggered_below_registration_threshold(self, rule_engine, build_profile):
+    def test_TAX002_not_triggered_below_turnover_tax_enlistment_threshold(self, rule_engine, build_profile):
         assert_flag_not_triggered(
-            rule_engine.evaluate(build_profile(vat_registered=False, annual_turnover_bdt=5000000)),
+            rule_engine.evaluate(build_profile(vat_registered=False, annual_turnover_bdt=2999999)),
             "TAX-002",
         )
 
-    def test_TAX002_registration_triggers_above_registration_threshold(self, rule_engine, build_profile):
+    def test_TAX002_review_triggers_above_enlistment_threshold(self, rule_engine, build_profile):
         assert_flag_triggered(
             rule_engine.evaluate(build_profile(vat_registered=False, annual_turnover_bdt=9000000)),
             "TAX-002",
