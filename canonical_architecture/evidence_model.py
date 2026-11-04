@@ -37,7 +37,10 @@ REGISTER_ENTRY = "STATUTORY_REGISTER_ENTRY"
 SHARE_CERTIFICATE = "SHARE_CERTIFICATE_UNDER_SEAL"
 FORM_XII = "FORM_XII_DIRECTOR_CHANGE"
 FORM_VI = "FORM_VI_OFFICE_CHANGE"
-FORM_VIII = "FORM_VIII_CHARGE_REGISTRATION"
+FORM_VIII = "FORM_VIII_SPECIAL_RESOLUTION"
+FORM_XVIII = "FORM_XVIII_CHARGE_REGISTRATION"
+FORM_XIX = "FORM_XIX_CHARGE_MODIFICATION"
+FORM_XXVIII = "FORM_XXVIII_CHARGE_SATISFACTION"
 FORM_XV = "FORM_XV_ALLOTMENT_RETURN"
 FORM_XVII = "FORM_XVII_TRANSFER_INSTRUMENT"
 RJSC_CERTIFICATE = "RJSC_CERTIFICATE_OF_INCORPORATION"
@@ -100,11 +103,11 @@ EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
     "DIR-001": EvidenceMapping("DIR-001",
         (FORM_XII, RJSC_FILING_ACK),
         ("APPOINTMENT_NOT_FILED",),
-        "documentary", "S92"),
+        "documentary", "S115"),
     "DIR-002": EvidenceMapping("DIR-002",
         (FORM_XII, RJSC_FILING_ACK),
         ("DEPARTURE_NOT_FILED",),
-        "documentary", "S92"),
+        "documentary", "S115"),
     "DIR-003": EvidenceMapping("DIR-003",
         (FORM_XII, RJSC_FILING_ACK),
         ("FILING_OVERDUE_1_YEAR",),
@@ -116,7 +119,7 @@ EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
     "DIR-007": EvidenceMapping("DIR-007",
         (DIRECTOR_CONSENT, RJSC_FILING_ACK),
         ("CONSENT_NOT_FILED",),
-        "documentary", "S93(2)"),
+        "documentary", "S92"),
     "DIR-008": EvidenceMapping("DIR-008",
         (BOARD_RESOLUTION,),
         ("OFFICE_OF_PROFIT_WITHOUT_CONSENT",),
@@ -131,7 +134,7 @@ EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
         ("CAPITAL_CHANGE_WITHOUT_RESOLUTION",),
         "documentary", "S53"),
     "CAP-002": EvidenceMapping("CAP-002",
-        (FORM_VIII, RJSC_FILING_ACK),
+        (FORM_XVIII, RJSC_FILING_ACK),
         ("CHARGE_NOT_REGISTERED",),
         "conclusive", "S159"),
     "CAP-003": EvidenceMapping("CAP-003",
@@ -150,11 +153,11 @@ EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
     "STR-002": EvidenceMapping("STR-002",
         (BOARD_RESOLUTION, COURT_ORDER, RJSC_FILING_ACK),
         ("OBJECT_CHANGE_NOT_FILED",),
-        "documentary", "S17"),
+        "documentary", "S12"),
     "STR-003": EvidenceMapping("STR-003",
         (BOARD_RESOLUTION, RJSC_FILING_ACK),
         ("AOA_ALTERATION_NOT_FILED",),
-        "documentary", "S18"),
+        "documentary", "S20"),
 
     "ACC-001": EvidenceMapping("ACC-001",
         (AUDITED_ACCOUNTS, AGM_MINUTES),
