@@ -781,8 +781,8 @@ class NLCRuleEngine:
         # "within one month" of registration. "One month" = CALENDAR MONTH,
         # not 30 days. Using 30 days is legally incorrect for months with
         # 28/29/31 days.
-        reg_date = c.incorporation_date or self.today
-        deadline = self._add_one_month(reg_date)
+        reg_date = c.incorporation_date
+        deadline = self._add_one_month(reg_date) if reg_date is not None else None
 
         def add_aud001_flag(flag_code: str, delay: int, appointment_date: date | None = None) -> None:
             self._add_flag(ComplianceFlag(
@@ -810,7 +810,19 @@ class NLCRuleEngine:
                 },
             ))
 
-        if c.first_auditor_appointed is None:
+        if reg_date is None:
+            self._add_flag(ComplianceFlag(
+                rule_id="AUD-001",
+                flag_code="INCORPORATION_DATE_UNKNOWN",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="First-auditor deadline cannot be calculated without the incorporation date.",
+                statutory_basis="Section 210(6), Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+            ))
+        elif c.first_auditor_appointed is None:
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-001",
                 flag_code="FIRST_AUDITOR_STATUS_UNKNOWN",
