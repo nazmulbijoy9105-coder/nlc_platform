@@ -8,26 +8,30 @@ all read from these tables.
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
+    DateTime,
     Date,
     ForeignKey,
     ForeignKeyConstraint,
+    Index,
     UniqueConstraint,
     Integer,
     Numeric,
     String,
     Text,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
-from .mixins import FullMixin
+from .mixins import AuditMixin, FullMixin
 
 if TYPE_CHECKING:
     import uuid
