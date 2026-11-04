@@ -260,8 +260,24 @@ async def api_client(db) -> AsyncGenerator[AsyncClient, None]:
 
     # Restore the trusted fixture principal after any upstream fixture work.
     await set_admin_context(db)
-    staff_context = await db.execute(text("SELECT public.nlc_current_user_is_staff()"))
-    assert staff_context.scalar_one() is True
+    staff_context = await db.execute(
+        text(
+            "SELECT current_user, current_setting('app.current_user_id', true), "
+            "public.nlc_current_user_principal(), public.nlc_current_user_is_staff()"
+        )
+    )
+    active_role, raw_principal, verified_principal, is_staff = staff_context.one()
+    assert active_role == "nlc_app_role", active_role
+    assert raw_principal == "ADMIN", raw_principal
+    assert verified_principal == "ADMIN", verified_principal
+    assert is_staff is True, is_staff
+    policy_state = await db.execute(
+        text(
+            "SELECT policyname, permissive, cmd, with_check "
+            "FROM pg_policies WHERE schemaname = 'public' AND tablename = 'users'"
+        )
+    )
+    print("RLS_TEST_USERS_POLICIES", policy_state.all())
 
     # Seed one DB user per role so role tokens resolve in get_current_user.
     for _role in UserRole:
