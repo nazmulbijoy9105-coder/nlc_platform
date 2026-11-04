@@ -9,7 +9,7 @@ import asyncio
 import hashlib
 import re
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -53,7 +53,7 @@ class ArticlesSubmitRequest(BaseModel):
 
 class ArticlesReviewRequest(BaseModel):
     decision: Literal["VERIFIED", "REJECTED"]
-    effective_from: datetime | None = None
+    effective_from: date | None = None
     quorum_variation_exists: bool | None = None
     quorum_required: int | None = Field(default=None, ge=1, le=100)
     clause_reference: str | None = Field(default=None, min_length=1, max_length=255)
@@ -350,7 +350,10 @@ async def review_articles_verification(
             .limit(1)
         )
         if current_verified is not None:
-            if current_verified.effective_from >= body.effective_from:
+            current_effective_from = current_verified.effective_from
+            if isinstance(current_effective_from, datetime):
+                current_effective_from = current_effective_from.date()
+            if current_effective_from >= body.effective_from:
                 raise HTTPException(
                     status_code=409,
                     detail="A replacement Articles verification must have a later effective date. Revoke the current verification before correcting historical dates.",
