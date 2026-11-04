@@ -504,7 +504,10 @@ REVENUE_TIER_MAP = {
 
 FOREIGN_WORK_PERMIT_THRESHOLD_USD = 50000
 BIDA_ADVANTAGE_THRESHOLD_USD = 100000
-_VAT_TURNOVER_THRESHOLD_BDT = 3000000
+# VAT registration and turnover-tax enlistment are separate regimes.
+# NBR FAQ: registration > BDT 8m; enlistment > BDT 3m; apply within 15 days.
+_VAT_REGISTRATION_THRESHOLD_BDT = 8000000
+_VAT_TURNOVER_TAX_ENLISTMENT_THRESHOLD_BDT = 3000000
 
 
 _COVERAGE_FIELDS: dict[str, float] = {
@@ -1720,16 +1723,16 @@ class NLCRuleEngine:
                 statutory_basis="Income Tax Act 2023 (Bangladesh)",
             ))
 
-        if not c.vat_registered and c.annual_turnover_bdt > _VAT_TURNOVER_THRESHOLD_BDT:
+        if not c.vat_registered and c.annual_turnover_bdt > _VAT_REGISTRATION_THRESHOLD_BDT:
             self._add_flag(ComplianceFlag(
                 rule_id="TAX-002",
                 flag_code="VAT_REGISTRATION_REQUIRED",
                 severity=Severity.YELLOW,
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="VAT threshold exceeded but not registered. VAT Act 2012: registration required above threshold.",
+                description="VAT registration threshold exceeded (BDT 8 million over a 12-month period) but registration is not evidenced. This rule does not assess turnover-tax enlistment for the BDT 3–8 million band.",
                 statutory_basis="Value Added Tax Act 2012 (Bangladesh)",
-                detail={"turnover_bdt": c.annual_turnover_bdt}
+                detail={"turnover_bdt": c.annual_turnover_bdt, "registration_threshold_bdt": _VAT_REGISTRATION_THRESHOLD_BDT, "turnover_tax_enlistment_threshold_bdt": _VAT_TURNOVER_TAX_ENLISTMENT_THRESHOLD_BDT, "application_period_days": 15}
             ))
 
         if c.tin_obtained and c.tax_return_filed_for_current_fy is False and c.financial_year_end:
@@ -1765,17 +1768,20 @@ class NLCRuleEngine:
         if c.tin_obtained:
             missed = []
             t = self.today
-            # FIX Defect 12: Only flag quarter if deadline has passed
+            # Income Tax Act 2023 s.155(2): four 25% instalments on
+            # 15 September, 15 December, 15 March and 15 June. If a date is
+            # a public holiday, payment is due on the next working day under
+            # s.155(3); holiday adjustment must be confirmed before a breach.
             if t.month >= 7:
-                q1_deadline = date(t.year, 10, 15)
-                q2_deadline = date(t.year + 1, 1, 15)
-                q3_deadline = date(t.year + 1, 4, 15)
-                q4_deadline = date(t.year + 1, 7, 15)
+                q1_deadline = date(t.year, 9, 15)
+                q2_deadline = date(t.year, 12, 15)
+                q3_deadline = date(t.year + 1, 3, 15)
+                q4_deadline = date(t.year + 1, 6, 15)
             else:
-                q1_deadline = date(t.year - 1, 10, 15)
-                q2_deadline = date(t.year, 1, 15)
-                q3_deadline = date(t.year, 4, 15)
-                q4_deadline = date(t.year, 7, 15)
+                q1_deadline = date(t.year - 1, 9, 15)
+                q2_deadline = date(t.year - 1, 12, 15)
+                q3_deadline = date(t.year, 3, 15)
+                q4_deadline = date(t.year, 6, 15)
                 
             if t > q1_deadline and c.advance_tax_q1_paid is False: missed.append("Q1")
             if t > q2_deadline and c.advance_tax_q2_paid is False: missed.append("Q2")
@@ -1790,7 +1796,7 @@ class NLCRuleEngine:
                     score_impact=min(len(missed) * 2, 5),
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Advance tax instalment status requires review: {', '.join(missed)}. Income Tax Act 2023 Sections 154-157; due dates and liability require taxpayer-specific verification.",
-                    statutory_basis="Income Tax Act 2023, Sections 154-157",
+                    statutory_basis="Income Tax Act 2023, Sections 154-157 (s.155(2)-(3)); holiday and taxpayer applicability verification required",
                     detail={"quarters": missed}
                 ))
 
