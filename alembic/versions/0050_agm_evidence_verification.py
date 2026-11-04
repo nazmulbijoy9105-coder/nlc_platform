@@ -134,6 +134,13 @@ def upgrade() -> None:
             ) THEN
                 RAISE EXCEPTION 'AGM evidence review decision is immutable';
             END IF;
+            IF OLD.status <> 'VERIFIED' AND (
+                NEW.revoked_by IS DISTINCT FROM OLD.revoked_by
+                OR NEW.revoked_at IS DISTINCT FROM OLD.revoked_at
+                OR NEW.revocation_reason IS DISTINCT FROM OLD.revocation_reason
+            ) THEN
+                RAISE EXCEPTION 'AGM evidence revocation metadata is immutable';
+            END IF;
             IF OLD.status = 'PENDING' AND NEW.status NOT IN ('PENDING', 'VERIFIED', 'REJECTED') THEN
                 RAISE EXCEPTION 'Invalid AGM evidence transition';
             ELSIF OLD.status = 'VERIFIED' AND NEW.status NOT IN ('VERIFIED', 'REVOKED', 'SUPERSEDED') THEN
