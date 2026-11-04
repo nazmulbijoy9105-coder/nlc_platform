@@ -7,6 +7,8 @@ This migration is deliberately additive and does not change the Render database
 connection role. Runtime-role cutover is a separate release gate because login,
 worker, and administrative paths must first be proven to use the correct role.
 """
+import os
+
 from alembic import op
 import sqlalchemy as sa
 
@@ -76,26 +78,102 @@ def upgrade() -> None:
         END
         $role$
     """)
+    # Database-verifiable identity proof. The signing key is provisioned
+    # out-of-band and remains inaccessible to the runtime role.
+    rls_secret = os.environ.get("NLC_RLS_HMAC_SECRET", "")
+    if len(rls_secret) < 32:
+        raise RuntimeError(
+            "NLC_RLS_HMAC_SECRET must be configured (minimum 32 characters) "
+            "before applying tenant RLS hardening"
+        )
+    op.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
+    _execute_sql_script("""
+        CREATE SCHEMA IF NOT EXISTS nlc_private;
+        REVOKE ALL ON SCHEMA nlc_private FROM PUBLIC;
+        CREATE TABLE IF NOT EXISTS nlc_private.rls_signing_key (
+            singleton boolean PRIMARY KEY DEFAULT TRUE CHECK (singleton),
+            secret text NOT NULL,
+            created_at timestamptz NOT NULL DEFAULT now()
+        );
+        REVOKE ALL ON TABLE nlc_private.rls_signing_key FROM PUBLIC;
+    """)
+    bind = op.get_bind()
+    existing_key = bind.execute(
+        sa.text("SELECT secret FROM nlc_private.rls_signing_key WHERE singleton = true")
+    ).scalar_one_or_none()
+    if existing_key is not None and existing_key != rls_secret:
+        raise RuntimeError(
+            "Configured NLC_RLS_HMAC_SECRET differs from the provisioned database key; "
+            "perform an approved key-rotation migration"
+        )
+    if existing_key is None:
+        bind.execute(
+            sa.text(
+                "INSERT INTO nlc_private.rls_signing_key (singleton, secret) "
+                "VALUES (true, :secret)"
+            ),
+            {"secret": rls_secret},
+        )
+
     # SECURITY DEFINER helpers read membership and role records without
     # recursively invoking RLS on those same tables. search_path is pinned to
     # prevent object-shadowing attacks. The migration owner owns these helpers.
     _execute_sql_script("""
+        CREATE OR REPLACE FUNCTION public.nlc_current_user_principal()
+        RETURNS text
+        LANGUAGE plpgsql
+        STABLE
+        SECURITY DEFINER
+        SET search_path = pg_catalog, public, nlc_private
+        AS $$
+        DECLARE
+            v text;
+            supplied_signature text;
+            stored_secret text;
+            expected_signature text;
+        BEGIN
+            v := current_setting('app.current_user_id', true);
+            supplied_signature := current_setting('app.current_user_signature', true);
+            IF v IS NULL OR supplied_signature IS NULL THEN
+                RETURN NULL;
+            END IF;
+            SELECT secret INTO stored_secret
+            FROM nlc_private.rls_signing_key
+            WHERE singleton = true;
+            IF stored_secret IS NULL THEN
+                RETURN NULL;
+            END IF;
+            expected_signature := encode(
+                public.hmac(convert_to(v, 'UTF8'), convert_to(stored_secret, 'UTF8'), 'sha256'),
+                'hex'
+            );
+            IF supplied_signature <> expected_signature THEN
+                RETURN NULL;
+            END IF;
+            IF v = 'ADMIN' THEN
+                RETURN v;
+            END IF;
+            IF v !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
+                RETURN NULL;
+            END IF;
+            RETURN lower(v);
+        END;
+        $$;
+    """)
+    _execute_sql_script("""
         CREATE OR REPLACE FUNCTION public.nlc_current_user_id()
         RETURNS uuid
-        LANGUAGE plpgsql
+        LANGUAGE sql
         STABLE
         SECURITY DEFINER
         SET search_path = pg_catalog, public
         AS $$
-        DECLARE
-            v text;
-        BEGIN
-            v := current_setting('app.current_user_id', true);
-            IF v IS NULL OR v !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
-                RETURN NULL;
-            END IF;
-            RETURN v::uuid;
-        END;
+            SELECT CASE
+                WHEN public.nlc_current_user_principal() ~*
+                    '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                THEN public.nlc_current_user_principal()::uuid
+                ELSE NULL
+            END
         $$;
     """)
 
@@ -130,7 +208,9 @@ def upgrade() -> None:
         SECURITY DEFINER
         SET search_path = pg_catalog, public
         AS $$
-            SELECT EXISTS (
+            SELECT
+                public.nlc_current_user_principal() = 'ADMIN'
+                OR EXISTS (
                     SELECT 1
                     FROM public.users u
                     WHERE u.id = public.nlc_current_user_id()
@@ -183,6 +263,7 @@ def upgrade() -> None:
     # Remove default PUBLIC execution on privileged helpers. Grant only to the
     # dedicated application role when it exists (CI databases may not create it).
     _execute_sql_script("""
+        REVOKE ALL ON FUNCTION public.nlc_current_user_principal() FROM PUBLIC;
         REVOKE ALL ON FUNCTION public.nlc_current_user_id() FROM PUBLIC;
         REVOKE ALL ON FUNCTION public.nlc_current_user_is_staff() FROM PUBLIC;
         REVOKE ALL ON FUNCTION public.nlc_can_access_company(uuid) FROM PUBLIC;
@@ -190,6 +271,7 @@ def upgrade() -> None:
         DO $grant$
         BEGIN
             IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
+                GRANT EXECUTE ON FUNCTION public.nlc_current_user_principal() TO nlc_app_role;
                 GRANT EXECUTE ON FUNCTION public.nlc_current_user_id() TO nlc_app_role;
                 GRANT EXECUTE ON FUNCTION public.nlc_current_user_is_staff() TO nlc_app_role;
                 GRANT EXECUTE ON FUNCTION public.nlc_can_access_company(uuid) TO nlc_app_role;
