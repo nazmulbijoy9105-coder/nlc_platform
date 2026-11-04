@@ -1,6 +1,7 @@
 """Regression tests for strict canonical rule parity auditing."""
 import importlib.util
 import sys
+import pytest
 from pathlib import Path
 
 
@@ -8,6 +9,23 @@ SCRIPT = Path(__file__).resolve().parents[2] / "tools" / "audit_rule_parity.py"
 SPEC = importlib.util.spec_from_file_location("nlc_rule_parity_audit", SCRIPT)
 AUDIT = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(AUDIT)
+
+
+
+def test_engine_parser_includes_tuple_declared_rule_ids():
+    monkeypatch = pytest.MonkeyPatch()
+    try:
+        monkeypatch.setattr(AUDIT.Path, "read_text", lambda self, **kwargs: """
+def rules():
+    candidates = (
+        ("BSEC-001", "FLAG", None, "description"),
+        ("BSEC-002", "FLAG2", None, "description"),
+    )
+    return candidates
+""")
+        assert AUDIT.get_engine_rules() == {"BSEC-001", "BSEC-002"}
+    finally:
+        monkeypatch.undo()
 
 
 def test_static_mode_compares_engine_and_seed_without_live_sources(monkeypatch):
