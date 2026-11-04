@@ -42,7 +42,7 @@ class AGMService(BaseService[AGM]):
         notice_sent_date: date | None = None,
         members_present: int | None = None,
         quorum_required: int | None = None,
-        auditor_reappointed: bool = True,
+        auditor_reappointed: bool | None = None,
         minutes_prepared: bool = False,
         minutes_filed_rjsc: bool = False,
         rjsc_filing_date: date | None = None,
@@ -53,12 +53,16 @@ class AGMService(BaseService[AGM]):
         quorum_met: bool | None = None,
         quorum_basis: str | None = None,
         created_by: uuid.UUID | None = None,
-        agm_due_date=None
+        agm_due_date: date | None = None,
     ) -> AGM:
         """
         Create an AGM record. Calculates is_default and delay_days automatically
-        if agm_deadline is provided.
+        if a deadline is provided. agm_due_date is retained as a compatibility
+        alias; the canonical field is agm_deadline.
         """
+        if agm_deadline is None:
+            agm_deadline = agm_due_date
+
         # Auto-calculate default status
         if agm_held and agm_date and agm_deadline:
             if agm_date > agm_deadline:
