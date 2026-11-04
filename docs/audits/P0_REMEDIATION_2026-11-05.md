@@ -57,6 +57,34 @@ Production branch marker: `0042_dedup_key`. Read-only catalog checks found:
 This is a genuine schema/catalog mismatch. Do not infer schema state from
 `alembic_version` alone.
 
+## Expanded production schema and rule-catalog drift
+
+A second catalog comparison against migrations 0031–0036 found ten absent company fields:
+`last_board_meeting_date`, `board_meeting_notice_given`,
+`board_minutes_prepared`, `financial_statements_presented`,
+`financial_statements_filed`, `books_of_account_kept`,
+`director_consent_filed`, `director_office_of_profit`,
+`managing_director_appointment_date`, and
+`business_commencement_declaration_filed`. Migration 0049 adds these as
+nullable fields with no TRUE defaults, so missing source evidence remains
+unknown rather than being treated as compliance.
+
+The production `legal_rules` table also lacks the 0035 verification metadata
+(`verification_status`, `verified_by`, `verified_at`,
+`verification_notes`). Migration 0049 restores these with existing/new rules
+pending by default.
+
+Canonical rule registry comparison:
+- Seed registry: 85 IDs
+- Production DB registry: 75 IDs
+- Missing from DB: BOD-001, BOD-002, BOD-003, ACC-001, ACC-002, ACC-003,
+  DIR-007, DIR-008, DIR-010, MEM-001, INC-007
+- Extra legacy DB ID: INC-002
+
+Migration 0049 restores the 11 missing canonical rows as PENDING and preserves
+INC-002 but deactivates it pending counsel review. The API parity audit now
+queries only active rules, so it compares the same active registry set.
+
 ## Alembic graph defect
 
 Current source has two migration heads:
