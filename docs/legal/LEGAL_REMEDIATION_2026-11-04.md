@@ -54,3 +54,7 @@ Every signed rule record must contain: exact official Act/Gazette/SRO/Rule and s
 ## Release criteria
 
 No rule enters approved_rule_ids unless its own complete evidence record is signed by independent Bangladesh-qualified counsel, its negative tests pass, its canonical representations match, and its version is active for the relevant assessment date. Do not enable scoring or BLACK overrides by changing one global flag or by bulk approval.
+
+11. TAX-001 is now NOT_EVALUATED / zero score: the profile's TIN boolean is not authenticated proof of absence or the exact company duty; verify Income Tax Act ss.166, 261 and 264.
+12. LBR-003 is now NOT_EVALUATED / zero score: a profile boolean does not establish a certified, operative Labour Court order, service, parties, appeal or stay.
+13. TAX-004's engine description now reflects Finance Act 2026 ss.87–88: s.154(1) BDT 10 lakh threshold, separate s.156 BDT 6 lakh new-assessee threshold, and s.155 amendments. It remains review-only.
