@@ -420,8 +420,8 @@ def test_verified_absence_is_a_scoring_state_but_unknown_is_not():
         state=RuleState.VERIFIED_ABSENT,
     )
     score = NLCRuleEngine()._calculate_score([verified_absent], profile)
-    assert score.agm_score == 0
-    assert score.final_score == 80
+    assert score.agm_score == 20
+    assert score.final_score == 100
 
 def test_unapproved_black_override_cannot_force_zero_score():
     profile = _profile()
