@@ -55,7 +55,6 @@ class AGMService(BaseService[AGM]):
         notice_missing: bool = False,
         quorum_met: bool | None = None,
         created_by: uuid.UUID | None = None,
-        agm_due_date=None
     ) -> AGM:
         """
         Create an AGM record. Calculates is_default and delay_days automatically
