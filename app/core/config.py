@@ -5,8 +5,9 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    aws_key_id: str | None = None
-    aws_secret: str | None = None
+    # Canonical AWS names match .env.example and the Render environment.
+    aws_key_id: str | None = os.getenv("AWS_ACCESS_KEY_ID") or os.getenv("AWS_KEY_ID")
+    aws_secret: str | None = os.getenv("AWS_SECRET_ACCESS_KEY") or os.getenv("AWS_SECRET")
     ses_region: str | None = None
     email_from: str | None = None
     whatsapp_enabled: bool = False
@@ -63,7 +64,9 @@ class Settings(BaseSettings):
     aws_s3_bucket: str = ""
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
-    aws_region: str = "ap-southeast-1"
+    aws_region: str = os.getenv("AWS_REGION", "ap-south-1")
+    s3_bucket_name: str = os.getenv("S3_BUCKET_NAME", os.getenv("AWS_S3_BUCKET", ""))
+    s3_document_prefix: str = os.getenv("S3_DOCUMENT_PREFIX", "documents/")
     # FIX 2: Read from 'CELERY_BROKER_URL' to match Render Dashboard
     redis_url: str = (
         os.getenv("CELERY_BROKER_URL")
