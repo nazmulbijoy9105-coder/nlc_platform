@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import select
 
 from app.models.company import Company
+from app.models.enums import DocumentType
 from app.models.filings import (
     AGM,
     AGMEvidenceVerification,
@@ -244,6 +245,9 @@ class AGMService(BaseService[AGM]):
                     Document.company_id == agm.company_id,
                     Document.is_active.is_(True),
                     Document.version == evidence.source_document_version,
+                    Document.document_type == DocumentType.OTHER,
+                    Document.title == f"AGM_EVIDENCE:{evidence.evidence_kind}",
+                    Document.ai_generated.is_(False),
                 )
             )
             if (
