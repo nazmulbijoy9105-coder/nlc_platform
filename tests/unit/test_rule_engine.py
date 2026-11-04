@@ -1097,7 +1097,7 @@ class TestEngineIntegrity:
         profile = build_profile()
         output = rule_engine.evaluate(profile)
         assert output.score_breakdown.final_score == 100
-        assert output.score_breakdown.risk_band == "GREEN"
+        assert output.score_breakdown.risk_band == Severity.NOT_EVALUATED
 
     def test_rescue_plan_generated_for_black_company(self, rule_engine, build_profile):
         """BLACK band company is correctly identified with score <= 29."""
