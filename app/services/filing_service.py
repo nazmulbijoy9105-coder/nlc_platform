@@ -299,7 +299,7 @@ class AGMService(BaseService[AGM]):
             agm_held=True,
             agm_date=agm_date,
             venue=venue,
-            members_present=members_present,
+            members_present=verified_members_present if membership_evidence_verified else 0,
             quorum_required=quorum_required,
             quorum_met=quorum_met,
             auditor_reappointed=auditor_reappointed,
