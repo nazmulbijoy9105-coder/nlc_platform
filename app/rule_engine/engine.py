@@ -935,19 +935,6 @@ class NLCRuleEngine:
                     "First auditor is recorded as appointed, but the appointment date is missing; timeliness cannot be verified.",
                 )
 
-        if c.first_auditor_appointed and c.agm_count is not None and c.agm_count > 0 and c.auditor_reappointed_at_agm is False and c.audit_in_progress is False and c.last_agm_date is not None:  # type: ignore
-            fy_end = c.financial_year_end
-            if self.today > fy_end + timedelta(days=120):
-                 self._add_flag(ComplianceFlag(
-                    rule_id="AUD-005",
-                    flag_code="SUBSEQUENT_AUDITOR_NOT_APPOINTED",
-                    severity=Severity.RED,
-                    score_impact=10,
-                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description="No auditor appointed for current FY. Section 210(3): mandatory at every AGM.",
-                    statutory_basis="Section 210(3), Companies Act 1994 (Bangladesh)",
-                ))
-
         if c.agm_scheduled_date and c.audit_complete is False:
             audit_status_verified = (
                 c.audit_completion_verified is True
@@ -1026,11 +1013,13 @@ class NLCRuleEngine:
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-004",
                 flag_code="AUDITOR_NOT_REAPPOINTED",
-                severity=Severity.YELLOW,
-                score_impact=5,
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="Auditor not reappointed at AGM. Section 210(3): mandatory at every AGM.",
+                description="Auditor reappointment is recorded as declined. Check the statutory exceptions and notice requirements under Section 210(3) before determining non-compliance.",
                 statutory_basis="Section 210(3), Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
             ))
 
     # ───────────────────────────────────────────────────────────────────
