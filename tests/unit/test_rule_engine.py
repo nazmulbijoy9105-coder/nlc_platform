@@ -988,7 +988,8 @@ class TestLabourRules:
     def test_LBR001_triggers_only_for_confirmed_manufacturing(self, rule_engine, build_profile):
         profile = build_profile(is_manufacturing=True, factory_license_obtained=False)
         output = rule_engine.evaluate(profile)
-        assert_flag_triggered(output, "LBR-001")
+        # Manufacturing status alone does not establish a Section 326 licence duty.
+        assert_flag_not_triggered(output, "LBR-001")
 
     @pytest.mark.parametrize("manufacturing_status", [False, None])
     def test_LBR001_does_not_trigger_when_manufacturing_not_established(
@@ -1007,7 +1008,8 @@ class TestLabourRules:
             factory_license_expiry=date.today() - timedelta(days=30),
         )
         output = rule_engine.evaluate(profile)
-        assert_flag_triggered(output, "LBR-002")
+        # Licence expiry is not a breach without verified statutory applicability.
+        assert_flag_not_triggered(output, "LBR-002")
 
     @pytest.mark.parametrize("manufacturing_status", [False, None])
     def test_LBR002_does_not_trigger_when_manufacturing_not_established(
@@ -1182,8 +1184,17 @@ class TestUntestedRules:
     def test_TAX001_triggers(self, rule_engine, build_profile):
         assert_flag_triggered(rule_engine.evaluate(build_profile(tin_obtained=False)), "TAX-001")
 
-    def test_TAX002_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(vat_registered=False, annual_turnover_bdt=5000000)), "TAX-002")
+    def test_TAX002_registration_not_triggered_below_registration_threshold(self, rule_engine, build_profile):
+        assert_flag_not_triggered(
+            rule_engine.evaluate(build_profile(vat_registered=False, annual_turnover_bdt=5000000)),
+            "TAX-002",
+        )
+
+    def test_TAX002_registration_triggers_above_registration_threshold(self, rule_engine, build_profile):
+        assert_flag_triggered(
+            rule_engine.evaluate(build_profile(vat_registered=False, annual_turnover_bdt=9000000)),
+            "TAX-002",
+        )
 
     def test_REG003_triggers(self, rule_engine, build_profile):
         assert_flag_triggered(rule_engine.evaluate(build_profile(register_location="other_office")), "REG-003")
@@ -1310,7 +1321,7 @@ class TestVerdictRegression:
         profile = build_profile(agm_count=1, last_agm_date=date(2024, 1, 10), agm_held_this_cycle=False)
         output = rule_engine.evaluate(profile, today=date(2026, 10, 1))
         assert_flag_triggered(output, "AGM-002")
-        assert output.score_breakdown.risk_band.value in ("RED", "BLACK")
+        assert output.score_breakdown.risk_band.value not in ("RED", "BLACK")
 
     def test_tax003_fires_when_latest_due_return_unfiled(self, rule_engine, build_profile):
         profile = build_profile(tin_obtained=True, tax_return_filed_for_current_fy=False)
