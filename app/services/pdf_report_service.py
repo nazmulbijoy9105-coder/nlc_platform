@@ -116,12 +116,13 @@ def _render_band_legend(current_band: str) -> str:
 
     Includes NOT_EVALUATED for companies with insufficient data (coverage < 0.5).
     """
+    # Risk band is the worst verified finding severity, not a numeric score range.
     bands = [
-        ("GREEN", "70-100", "Compliant"),
-        ("YELLOW", "50-69", "Monitor"),
-        ("RED", "30-49", "Action Required"),
-        ("BLACK", "0-29", "Critical"),
-        ("NOT_EVALUATED", "—", "Insufficient Data"),
+        ("GREEN", "No verified adverse finding", "Screening only"),
+        ("YELLOW", "Verified monitoring finding", "Review"),
+        ("RED", "Verified material finding", "Action required"),
+        ("BLACK", "Verified critical override", "Critical"),
+        ("NOT_EVALUATED", "Insufficient evidence", "No score released"),
     ]
     items = []
     for band_name, score_range, label in bands:
@@ -137,9 +138,15 @@ def _render_band_legend(current_band: str) -> str:
 def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue_plan: Any) -> str:
     """Generate a brief executive summary paragraph based on the company's status."""
     flag_count = len(flags) if flags else 0
-    black_count = sum(1 for f in (flags or []) if getattr(f, "severity", "") == "BLACK")
-    red_count = sum(1 for f in (flags or []) if getattr(f, "severity", "") == "RED")
-    yellow_count = sum(1 for f in (flags or []) if getattr(f, "severity", "") == "YELLOW")
+    def verified_severity(flag):
+        if getattr(flag, "rule_id", "") not in VERIFIED_RULE_IDS:
+            return None
+        value = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
+        return value
+
+    black_count = sum(1 for f in (flags or []) if verified_severity(f) == "BLACK")
+    red_count = sum(1 for f in (flags or []) if verified_severity(f) == "RED")
+    yellow_count = sum(1 for f in (flags or []) if verified_severity(f) == "YELLOW")
 
     if band == "BLACK":
         urgency = "<strong>Critical legal deficiency detected.</strong> The company has a BLACK-severity compliance breach requiring immediate remediation. The compliance score has been overridden to 0 pending resolution of the critical flag(s)."
@@ -356,8 +363,8 @@ def build_compliance_report_html(
 
     if flags:
         rows = "".join(
-            f"<tr><td>{esc(f.rule_id)}</td><td>{esc(f.severity)}</td>"
-            f"<td>{esc(f.description)}</td><td>-{esc(f.score_impact or 0)} pts</td></tr>"
+            f"<tr><td>{esc(f.rule_id)}</td><td>{esc(getattr(getattr(f, 'severity', None), 'value', getattr(f, 'severity', '')))}</td>"
+            f"<td>{esc(f.description)}</td><td>{('-' + esc(f.score_impact or 0) + ' pts') if f.rule_id in VERIFIED_RULE_IDS else 'Not scored — pending independent legal approval'}</td></tr>"
             for f in flags
         )
     else:

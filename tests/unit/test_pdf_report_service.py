@@ -29,8 +29,8 @@ COMPANY = SimpleNamespace(
     id="test-company-id",
     company_name=MALICIOUS_NAME,
     registration_number="C-1\r\nX-Evil: 1/2020",
-    current_compliance_score=62,
-    current_risk_band="AMBER",
+    current_compliance_score=85,
+    current_risk_band="RED",
 )
 FLAGS = [
     SimpleNamespace(
