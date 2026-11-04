@@ -157,10 +157,11 @@ def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue
         urgency = "<strong>Company is in good compliance standing.</strong> No critical issues detected. Continue regular monitoring."
 
     parts = [urgency]
+    score_summary = "NOT EVALUATED" if band == "NOT_EVALUATED" else f"{score}/100"
     parts.append(
         f"Active flags: <strong>{flag_count}</strong> "
         f"({black_count} BLACK, {red_count} RED, {yellow_count} YELLOW). "
-        f"Compliance score: <strong>{score}/100</strong>."
+        f"Compliance score: <strong>{esc(score_summary)}</strong>."
     )
 
     if rescue_plan is not None:
