@@ -58,7 +58,7 @@ class ArticlesSubmitRequest(BaseModel):
 
 class ArticlesReviewRequest(BaseModel):
     decision: Literal["VERIFIED", "REJECTED"]
-    effective_from: datetime | None = None
+    effective_from: date | None = None
     quorum_variation_exists: bool | None = None
     quorum_required: int | None = Field(default=None, ge=1, le=100)
     clause_reference: str | None = Field(default=None, min_length=1, max_length=255)
