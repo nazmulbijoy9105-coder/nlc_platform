@@ -72,7 +72,7 @@ def get_api_rules():
     try:
         import json
         import urllib.request
-        with urllib.request.urlopen(f"{base}/api/v1/rules", timeout=15) as response:
+        with urllib.request.urlopen(f"{base}/api/v1/rules?is_active=true", timeout=15) as response:
             payload = json.loads(response.read())
         return {row["rule_id"] for row in payload}
     except Exception as exc:
