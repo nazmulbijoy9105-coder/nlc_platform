@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""NLC Canonical Rule Parity Audit — reads from actual sources, not grep."""
+"""Canonical rule parity audit.
+
+Static CI mode compares the engine and seed registry only. Live DB/API sources
+are included when requested and are mandatory if selected: an unavailable
+source is an audit failure, never silently removed from the comparison.
+"""
+import argparse
 import ast
 import os
 import re
@@ -8,39 +14,34 @@ from pathlib import Path
 
 
 def get_engine_rules():
-    """AST-parse engine.py for rule_id= keyword arguments."""
     source = Path("app/rule_engine/engine.py").read_text(encoding="utf-8", errors="ignore")
     tree = ast.parse(source)
     ids = set()
     for node in ast.walk(tree):
-        if isinstance(node, ast.keyword):
-            if node.arg == "rule_id" and isinstance(node.value, ast.Constant):
-                v = node.value.value
-                if isinstance(v, str) and re.match(r'^[A-Z]{2,12}-\d{3}$', v):
-                    ids.add(v)
+        if isinstance(node, ast.keyword) and node.arg == "rule_id" and isinstance(node.value, ast.Constant):
+            value = node.value.value
+            if isinstance(value, str) and re.match(r"^[A-Z]{2,12}-\\d{3}$", value):
+                ids.add(value)
         if isinstance(node, ast.Assign):
-            for t in node.targets:
-                if isinstance(t, ast.Name) and t.id == "rule_id":
-                    if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
-                        v = node.value.value
-                        if re.match(r'^[A-Z]{2,12}-\d{3}$', v):
-                            ids.add(v)
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == "rule_id" and isinstance(node.value, ast.Constant):
+                    value = node.value.value
+                    if isinstance(value, str) and re.match(r"^[A-Z]{2,12}-\\d{3}$", value):
+                        ids.add(value)
     return ids
 
 
 def get_seed_rules():
-    """AST-parse seed_rules.py for rule_id in dict literals."""
-    p = Path("scripts/seed_rules.py")
-    if not p.exists():
+    path = Path("scripts/seed_rules.py")
+    if not path.exists():
         return set()
-    tree = ast.parse(p.read_text(encoding="utf-8", errors="ignore"))
+    tree = ast.parse(path.read_text(encoding="utf-8", errors="ignore"))
     ids = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Dict):
-            for k, v in zip(node.keys, node.values, strict=False):
-                if isinstance(k, ast.Constant) and k.value == "rule_id":
-                    if isinstance(v, ast.Constant) and isinstance(v.value, str):
-                        ids.add(v.value)
+            for key, value in zip(node.keys, node.values):
+                if isinstance(key, ast.Constant) and key.value == "rule_id" and isinstance(value, ast.Constant):
+                    ids.add(value.value)
     return ids
 
 
@@ -50,18 +51,19 @@ def get_db_rules():
         return None
     try:
         import asyncio
-
         import asyncpg
         if "+asyncpg" in db_url:
             db_url = db_url.replace("+asyncpg", "")
-        async def q():
-            conn = await asyncpg.connect(db_url)
-            rows = await conn.fetch("SELECT rule_id FROM legal_rules WHERE is_active = true")
-            await conn.close()
-            return {r["rule_id"] for r in rows}
-        return asyncio.run(q())
-    except Exception as e:
-        print(f"  DB: {e}")
+        async def query():
+            connection = await asyncpg.connect(db_url)
+            try:
+                rows = await connection.fetch("SELECT rule_id FROM legal_rules WHERE is_active = true")
+                return {row["rule_id"] for row in rows}
+            finally:
+                await connection.close()
+        return asyncio.run(query())
+    except Exception as exc:
+        print(f"  DB ERROR: {exc}")
         return None
 
 
@@ -70,80 +72,63 @@ def get_api_rules():
     try:
         import json
         import urllib.request
-        resp = urllib.request.urlopen(f"{base}/api/v1/rules")
-        return {r["rule_id"] for r in json.loads(resp.read())}
-    except Exception as e:
-        print(f"  API: {e}")
+        with urllib.request.urlopen(f"{base}/api/v1/rules", timeout=15) as response:
+            payload = json.loads(response.read())
+        return {row["rule_id"] for row in payload}
+    except Exception as exc:
+        print(f"  API ERROR: {exc}")
         return None
 
 
 def main():
-    use_db = "--no-db" not in sys.argv
-    print(f"\n{'='*70}")
-    print(f"  NLC — Canonical Rule Parity Audit")
-    print(f"{'='*70}")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--no-db", action="store_true", help="exclude live database; static audit only")
+    parser.add_argument("--no-api", action="store_true", help="exclude live API; static audit only")
+    args = parser.parse_args()
 
     engine = get_engine_rules()
     seed = get_seed_rules()
-    print(f"\n  [1] ENGINE (AST parse): {len(engine)} rules")
-    print(f"  [2] SEED   (AST parse): {len(seed)} rules")
-
-    db = get_db_rules() if use_db else None
-    if db is not None:
-        print(f"  [3] DB     (SELECT):    {len(db)} active rules")
-    api = get_api_rules()
-    if api is not None:
-        print(f"  [4] API    (HTTP GET):  {len(api)} rules")
+    print(f"ENGINE (AST): {len(engine)} rules")
+    print(f"SEED   (AST): {len(seed)} rules")
 
     sources = {"ENGINE": engine, "SEED": seed}
-    if db is not None:
-        sources["DB"] = db
-    if api is not None:
-        sources["API"] = api
+    unavailable = []
 
-    all_rules = set()
-    for rs in sources.values():
-        all_rules |= rs
+    if not args.no_db:
+        db = get_db_rules()
+        if db is None:
+            unavailable.append("DB")
+        else:
+            sources["DB"] = db
+            print(f"DB     (live): {len(db)} rules")
 
-    common = all_rules.copy()
-    for rs in sources.values():
-        common &= rs
+    if not args.no_api:
+        api = get_api_rules()
+        if api is None:
+            unavailable.append("API")
+        else:
+            sources["API"] = api
+            print(f"API    (live): {len(api)} rules")
 
-    print(f"\n{'='*70}")
-    print(f"  PARITY: {len(common)}/{len(all_rules)} rules in all sources")
-    print(f"{'='*70}")
+    all_rules = set().union(*sources.values())
+    common = set.intersection(*(set(rule_ids) for rule_ids in sources.values()))
+    print(f"PARITY: {len(common)}/{len(all_rules)} rules shared by {', '.join(sources)}")
 
-    if len(common) == len(all_rules):
-        print(f"\n  ✓ ALL SOURCES AGREE\n")
-    else:
-        print(f"\n  ✗ PARITY GAPS:\n")
-        for name, rs in sources.items():
-            missing = all_rules - rs
-            extra = rs - common
-            if missing:
-                print(f"  {name} MISSING: {sorted(missing)}")
-            if extra:
-                print(f"  {name} EXTRA:  {sorted(extra)}")
-        print()
+    for name, rule_ids in sources.items():
+        missing = all_rules - rule_ids
+        if missing:
+            print(f"{name} MISSING: {sorted(missing)}")
 
-    print(f"  {'Rule ID':<12} |", end="")
-    for n in sources:
-        print(f" {n:<8}|", end="")
-    print()
-    print(f"  {'-'*12}|" + "|".join(["-"*9+"|" for _ in sources]))
-    for r in sorted(all_rules):
-        print(f"  {r:<12} |", end="")
-        for _n, rs in sources.items():
-            print(f"  {'Y' if r in rs else '-':<7}|", end="")
-        print()
+    if unavailable:
+        print(f"AUDIT INCOMPLETE: required source(s) unavailable: {', '.join(unavailable)}")
+        return 2
+    if len(common) != len(all_rules):
+        print("PARITY FAILED")
+        return 1
 
-    print(f"\n  Engine={len(engine)}  Seed={len(seed)}", end="")
-    if db is not None:
-        print(f"  DB={len(db)}", end="")
-    if api is not None:
-        print(f"  API={len(api)}", end="")
-    print()
-    return 0 if len(common) == len(all_rules) else 1
+    audit_kind = "STATIC ENGINE/SEED" if args.no_db and args.no_api else "MULTI-SOURCE"
+    print(f"{audit_kind} PARITY PASSED")
+    return 0
 
 
 if __name__ == "__main__":
