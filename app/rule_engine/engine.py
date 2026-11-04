@@ -509,8 +509,11 @@ REVENUE_TIER_MAP = {
 FOREIGN_WORK_PERMIT_THRESHOLD_USD = 50000
 BIDA_ADVANTAGE_THRESHOLD_USD = 100000
 # VAT registration and turnover-tax enlistment are separate regimes.
-# NBR FAQ: registration > BDT 8m; enlistment > BDT 3m; apply within 15 days.
-_VAT_REGISTRATION_THRESHOLD_BDT = 8000000
+# Operative VAT Act as amended by VAT Amendment Act 2026 (Act 77/2026):
+# registration threshold BDT 50 lakh; turnover-tax enlistment threshold BDT 30 lakh.
+# Annual turnover alone does not establish the taxpayer's rolling 12-month turnover,
+# mandatory-registration category, tax period or a breach. Findings stay NOT_EVALUATED.
+_VAT_REGISTRATION_THRESHOLD_BDT = 5000000
 _VAT_TURNOVER_TAX_ENLISTMENT_THRESHOLD_BDT = 3000000
 
 
@@ -1718,16 +1721,18 @@ class NLCRuleEngine:
                 statutory_basis="Income Tax Act 2023 (Bangladesh)",
             ))
 
-        if not c.vat_registered and c.annual_turnover_bdt > _VAT_REGISTRATION_THRESHOLD_BDT:
+        if c.vat_registered is False and c.annual_turnover_bdt > _VAT_REGISTRATION_THRESHOLD_BDT:
             self._add_flag(ComplianceFlag(
                 rule_id="TAX-002",
-                flag_code="VAT_REGISTRATION_REQUIRED",
-                severity=Severity.YELLOW,
-                score_impact=5,
+                flag_code="VAT_REGISTRATION_STATUS_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="VAT registration threshold exceeded (BDT 8 million over a 12-month period) but registration is not evidenced. This rule does not assess turnover-tax enlistment for the BDT 3–8 million band.",
-                statutory_basis="Value Added Tax Act 2012 (Bangladesh)",
-                detail={"turnover_bdt": c.annual_turnover_bdt, "registration_threshold_bdt": _VAT_REGISTRATION_THRESHOLD_BDT, "turnover_tax_enlistment_threshold_bdt": _VAT_TURNOVER_TAX_ENLISTMENT_THRESHOLD_BDT, "application_period_days": 15}
+                description="Turnover input exceeds the BDT 50 lakh VAT-registration threshold, but this is only a review prompt. Verify the statutory 12-month turnover measure, mandatory-registration categories, taxpayer activity, effective-date version and registration status before finding a breach. Turnover-tax enlistment at BDT 30 lakh is a separate regime and is not evaluated by this rule.",
+                statutory_basis="Value Added Tax and Supplementary Duty Act 2012, as amended by Act No. 77 of 2026; exact current section and taxpayer-specific instruments require counsel verification",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"reported_annual_turnover_bdt": c.annual_turnover_bdt, "registration_threshold_bdt": _VAT_REGISTRATION_THRESHOLD_BDT, "turnover_tax_enlistment_threshold_bdt": _VAT_TURNOVER_TAX_ENLISTMENT_THRESHOLD_BDT, "rolling_12_month_turnover_verified": False, "mandatory_category_verified": False}
             ))
 
         if c.tin_obtained and c.tax_return_filed_for_current_fy is False and c.financial_year_end:
@@ -1801,19 +1806,23 @@ class NLCRuleEngine:
                     eval_state="UNKNOWN",
                 ))
 
-        if c.vat_registered:
-            fifteenth = self.today.replace(day=15)
-            if self.today > fifteenth:
-                last_day_prev = self.today.replace(day=1) - timedelta(days=1)
-                if c.last_vat_return_filed is not None and c.last_vat_return_filed < last_day_prev:
-                 self._add_flag(ComplianceFlag(
+        if c.vat_registered is True and c.last_vat_return_filed is not None:
+            # Do not infer a monthly filing default without the taxpayer's
+            # verified tax-period classification, applicable Rule/SRO and
+            # period-specific due date.
+            last_day_prev = self.today.replace(day=1) - timedelta(days=1)
+            if self.today.day > 15 and c.last_vat_return_filed < last_day_prev:
+                self._add_flag(ComplianceFlag(
                     rule_id="VAT-002",
-                    flag_code="MONTHLY_VAT_RETURN_OVERDUE",
-                    severity=Severity.YELLOW,
-                    score_impact=8,
+                    flag_code="VAT_RETURN_PERIOD_REQUIRES_VERIFICATION",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Monthly/Bi-monthly VAT return overdue. VAT Act 2012.",
-                    statutory_basis="Value Added Tax Act 2012 (Bangladesh)",
+                    description="The last recorded VAT return date is older than the previous calendar month. This is not a finding of default: verify the taxpayer's applicable tax period, filing obligation, statutory due date, permitted extension and current Rule/SRO before determining lateness.",
+                    statutory_basis="Value Added Tax and Supplementary Duty Act 2012 and applicable VAT Rules/SROs; period-specific provision requires verification",
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                    detail={"last_vat_return_filed": c.last_vat_return_filed.isoformat(), "tax_period_verified": False, "applicable_due_date_verified": False},
                 ))
 
         # VAT-003 remains a non-scoring evidence/review state. The current
@@ -1983,7 +1992,7 @@ class NLCRuleEngine:
                     score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Factory/establishment licence expired by {delay} days. Section 326 provides a five-year renewal cycle where a licence is required; contractor-agency licences are one year. Verify licence class and actual expiry.",
-                    statutory_basis="Labour Act 2006 (Bangladesh), Section 35"
+                    statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026"
                 ))
 
         # LBR-003 is not gated by manufacturing status: applicability of an
@@ -2058,37 +2067,40 @@ class NLCRuleEngine:
                     statutory_basis="Section 110, Companies Act 1994 (Bangladesh)",
                     detail={"years": md_years}))
 
-    # MODULE 15: BSEC CG CODE 2023
+    # MODULE 15: BSEC Corporate Governance Code 2018, as amended
     def _run_bsec_rules(self, c: CompanyProfile) -> None:
+        # The Code is not a universal private-company obligation. Even where
+        # listed status is asserted, each condition requires verified scope,
+        # current instrument version and condition-specific evidence. Until
+        # those facts are verified, emit review prompts only.
         if c.bsec_listed:
-            if c.bsec_quarterly_report_filed is False:
-                self._add_flag(ComplianceFlag(
-                    rule_id="BSEC-001", flag_code="QUARTERLY_REPORT_NOT_FILED",
-                    severity=Severity.RED, score_impact=10,
-                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description="BSEC quarterly report not filed.",
-                    statutory_basis="Applicable BSEC listing/securities reporting instrument — exact rule and reporting period require verification"))
-            if c.cg_certificate_obtained is False:
-                self._add_flag(ComplianceFlag(
-                    rule_id="BSEC-002", flag_code="CG_CERTIFICATE_NOT_OBTAINED",
-                    severity=Severity.RED, score_impact=10,
-                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description="CG certificate not obtained.",
-                    statutory_basis="BSEC Corporate Governance Code 2018, as amended in 2023 and 2024 — certification condition requires verification"))
-            if c.board_independent_director is False:
-                self._add_flag(ComplianceFlag(
-                    rule_id="BSEC-003", flag_code="BOARD_COMPOSITION_NON_COMPLIANT",
-                    severity=Severity.YELLOW, score_impact=8,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Board composition non-compliant.",
-                    statutory_basis="BSEC Corporate Governance Code 2018, as amended in 2023 and 2024, Condition 1 — board composition"))
-            if c.audit_committee_established is False:
-                self._add_flag(ComplianceFlag(
-                    rule_id="BSEC-004", flag_code="AUDIT_COMMITTEE_NOT_ESTABLISHED",
-                    severity=Severity.YELLOW, score_impact=5,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Audit committee not established.",
-                    statutory_basis="BSEC Corporate Governance Code 2018, as amended in 2023 and 2024, Condition 5 — audit committee"))
+            candidates = (
+                ("BSEC-001", "QUARTERLY_REPORT_STATUS_REQUIRES_SOURCE_VERIFICATION",
+                 c.bsec_quarterly_report_filed,
+                 "Quarterly-report status requires the exact applicable BSEC reporting instrument, reporting period, issuer category and due date; it is not Condition 8 of the Corporate Governance Code."),
+                ("BSEC-002", "CG_CERTIFICATE_STATUS_REQUIRES_VERIFICATION",
+                 c.cg_certificate_obtained,
+                 "Corporate-governance compliance certification is associated with Condition 9; verify listed-issuer scope, auditor/certifier, reporting year and filing evidence."),
+                ("BSEC-003", "BOARD_COMPOSITION_STATUS_REQUIRES_VERIFICATION",
+                 c.board_independent_director,
+                 "Board composition is governed by Condition 1 as amended; verify board size, independent-director ratio, female independent-director requirement, eligibility and effective date."),
+                ("BSEC-004", "AUDIT_COMMITTEE_STATUS_REQUIRES_VERIFICATION",
+                 c.audit_committee_established,
+                 "Audit Committee is addressed by Condition 5; verify committee composition, terms, meetings, independence and issuer applicability."),
+            )
+            for rule_id, flag_code, supplied_status, description in candidates:
+                if supplied_status is False:
+                    self._add_flag(ComplianceFlag(
+                        rule_id=rule_id,
+                        flag_code=flag_code,
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=description,
+                        statutory_basis="BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification",
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                    ))
 
     # MODULE 16: FOREIGN EXCHANGE
     def _run_fx_rules(self, c: CompanyProfile) -> None:
