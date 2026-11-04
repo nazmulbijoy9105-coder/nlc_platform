@@ -197,8 +197,7 @@ def legal_token() -> str:
     return _make_token("LEGAL_STAFF")
 
 
-@pytest.fixture(scope="session")
-def client_token(sample_company_id) -> str:
+@pytest.fixture(scope="session")def client_token(sample_company_id) -> str:
     return _make_token("CLIENT_DIRECTOR", company_ids=[sample_company_id])
 
 
@@ -397,8 +396,7 @@ def build_profile():
             "register_of_directors_interests": True,
             "register_of_contracts": True,
             "worker_compensation_filed": True,
-            "bsec_quarterly_report_filed": True,
-            "cg_certificate_obtained": True,
+            "bsec_quarterly_report_filed": True,            "cg_certificate_obtained": True,
             "board_independent_director": True,
             "audit_committee_established": True,
             "current_director_count": 3,
@@ -597,8 +595,7 @@ async def db_client_user(db: AsyncSession, db_company: Company) -> User:
         role=UserRole.CLIENT_DIRECTOR,
         is_active=True,
         totp_enabled=False,
-    )
-    db.add(user)
+    )    db.add(user)
     await db.flush()
     db.add(CompanyUserAccess(
         user_id=user.id,
@@ -754,22 +751,6 @@ def assert_helpers():
 
 
 # ---------------------------------------------------------------------------
-# Skip integration tests in CI environment (requires PostgreSQL)
-# ---------------------------------------------------------------------------
-
-import os
-
-
-def pytest_collection_modifyitems(config, items):
-    """Skip integration tests in CI environment."""
-    if os.getenv("CI"):
-        skip_integration = pytest.mark.skip(reason="Requires database in CI")
-        for item in items:
-            if "integration" in str(item.fspath):
-                item.add_marker(skip_integration)
-
-
-# ---------------------------------------------------------------------------
 # RLS-aware fixtures (tenant isolation)
 # ---------------------------------------------------------------------------
 
@@ -797,8 +778,7 @@ async def db_for_user(test_engine, request):
                 {"uid": str(user_id)},
             )
         yield session
-        await session.close()
-        await conn.rollback()
+        await session.close()        await conn.rollback()
 
 
 @pytest_asyncio.fixture
@@ -845,4 +825,3 @@ async def api_client_as_user(db_for_user):
             yield client
 
     app.dependency_overrides.clear()
-
