@@ -655,9 +655,9 @@ class TestFilingService:
             members_present_evidence_ref="test-evidence://agm-attendance-register",
         )
         assert updated is not None
-        assert updated.quorum_required == 3
-        assert updated.quorum_met is False
-        assert updated.quorum_basis == "SECTION_85_2_B_DEFAULT_ARTICLES_VERIFIED_NO_VARIATION"
+        assert updated.quorum_required is None
+        assert updated.quorum_met is None
+        assert updated.quorum_basis == "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
 
     @pytest.mark.asyncio
     async def test_mark_agm_held_uses_articles_specific_quorum_override(
@@ -682,9 +682,9 @@ class TestFilingService:
             members_present_evidence_ref="test-evidence://agm-attendance-register",
         )
         assert updated is not None
-        assert updated.quorum_required == 4
-        assert updated.quorum_met is False
-        assert updated.quorum_basis == "ARTICLES_VERIFIED"
+        assert updated.quorum_required is None
+        assert updated.quorum_met is None
+        assert updated.quorum_basis == "ARTICLES_OR_MEETING_MEMBERSHIP_EVIDENCE_NOT_VERIFIED"
 
     @pytest.mark.asyncio
     async def test_mark_agm_held_missing_membership_evidence_is_not_evaluated(self, db, db_company):
