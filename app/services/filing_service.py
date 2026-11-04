@@ -96,7 +96,7 @@ class AGMService(BaseService[AGM]):
             members_present=members_present,
             quorum_required=quorum_required,
             quorum_met=quorum_met,
-            quorum_basis=quorum_basis,
+            quorum_basis=None,
             auditor_reappointed=auditor_reappointed,
             minutes_prepared=minutes_prepared,
             minutes_filed_rjsc=minutes_filed_rjsc,
