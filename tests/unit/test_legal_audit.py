@@ -215,8 +215,8 @@ class TestCalendarMonthDeadlines:
         from app.services.filing_service import AGMService
         assert AGMService.calculate_first_agm_deadline(date(2024, 1, 31)) == date(2025, 7, 31)
         assert AGMService.calculate_subsequent_agm_deadline(
-            date(2024, 12, 31), date(2024, 12, 31)
-        ) == date(2025, 12, 31)
+            date(2024, 1, 31), date(2024, 12, 31)
+        ) == date(2025, 4, 30)
 
     def test_DATE_004_subsequent_agm_uses_15_calendar_months(self):
         """Section 81: 15 calendar months, including month-end clamping."""
