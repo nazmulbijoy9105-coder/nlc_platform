@@ -185,17 +185,8 @@ class AGMService(BaseService[AGM]):
 
         quorum_met must be explicitly determined from the company's Articles
         and, where applicable, the Section 85(2)(b) statutory default.
-        agm_date: date,
-        members_present: int,
-        auditor_reappointed: bool,
-        *,
-        venue: str | None = None,
-        accounts_adopted: bool | None = None,
-        agm_held_without_audit: bool | None = None,
-        minutes_document_id: uuid.UUID | None = None,
-    ) -> AGM | None:
-        """
-        Record an AGM using server-derived quorum, not a client-supplied boolean.
+
+        Record an AGM using server-derived facts, not a client-supplied quorum conclusion.
 
         Section 85(2)(b) private-company default:
         2 members where total membership is not more than 6; 3 where it is
