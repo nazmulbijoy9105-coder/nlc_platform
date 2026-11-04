@@ -1748,7 +1748,7 @@ class NLCRuleEngine:
                 ninth_month -= 12
                 ninth_year += 1
             ninth_month_date = date(ninth_year, ninth_month, 15)
-            september_floor = date(fy_end.year + 1, 9, 15)
+            september_floor = date(fy_end.year + (1 if fy_end.month >= 9 else 0), 9, 15)
             deadline = max(ninth_month_date, september_floor)
             # Public-holiday roll-forward, taxpayer-specific extension,
             # applicable income-year classification and later notices are
