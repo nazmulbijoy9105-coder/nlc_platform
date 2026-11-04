@@ -67,8 +67,6 @@ class AGMService(BaseService[AGM]):
         Create an AGM record. Calculates is_default and delay_days automatically
         if agm_deadline is provided.
         """
-        # Backward-compatible service alias; the ORM column is agm_deadline.
-        if agm_deadline is None:
         # Backward-compatible alias used by older service callers.
         if agm_deadline is None and agm_due_date is not None:
             agm_deadline = agm_due_date
