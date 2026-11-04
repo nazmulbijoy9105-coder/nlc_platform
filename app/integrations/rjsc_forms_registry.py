@@ -22,10 +22,10 @@ RJSC_FORMS_REGISTRY: dict[str, RJSCForm] = {
         related_rules=["DIR-001", "DIR-002", "DIR-003"],
         download_url="https://app.roc.gov.bd/Guidlines/Download/Form-XII.doc"
     ),
-    "FORM_X": RJSCForm(
-        form_code="FORM_X",
-        form_name="Annual Return",
-        purpose="Statutory annual return filing (Schedule X).",
+    "SCHEDULE_X": RJSCForm(
+        form_code="SCHEDULE_X",
+        form_name="Annual Return (Schedule X)",
+        purpose="Statutory annual return under Section 36, filed within 21 days of the AGM.",
         related_rules=["AR-001", "AR-002"],
         download_url="https://app.roc.gov.bd/Guidlines/Download/Form-X.pdf"
     ),
@@ -35,6 +35,20 @@ RJSC_FORMS_REGISTRY: dict[str, RJSCForm] = {
         purpose="Notify change of registered office address.",
         related_rules=["OFF-001"],
         download_url="https://app.roc.gov.bd/Guidlines/Download/Form-VI.doc"
+    ),
+    "FORM_IX": RJSCForm(
+        form_code="FORM_IX",
+        form_name="Consent of Director to Act",
+        purpose="Director consent to act; Section 92, file within 30 days of appointment.",
+        related_rules=["DIR-007"],
+        download_url=""
+    ),
+    "FORM_23B": RJSCForm(
+        form_code="FORM_23B",
+        form_name="Auditor Notice of Appointment",
+        purpose="Auditor notice to Registrar under Section 210(2), within 30 days.",
+        related_rules=["AUD-001"],
+        download_url=""
     ),
     "FORM_VIII": RJSCForm(
         form_code="FORM_VIII",
