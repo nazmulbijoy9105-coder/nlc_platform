@@ -17,6 +17,7 @@ from sqlalchemy import select
 
 from app.models.company import Company
 from app.models.filings import AGM, AnnualReturn, Audit
+from app.models.documents import ArticlesVerification, Document
 from app.models.infrastructure import StatutoryRegister
 from app.services.base import BaseService
 
@@ -165,17 +166,58 @@ class AGMService(BaseService[AGM]):
         company_type = getattr(company, "company_type", None) if company else None
         company_type = getattr(company_type, "value", company_type)
 
-        articles_reviewer = getattr(company, "articles_quorum_verified_by", None)
-        articles_evidence_ref = getattr(company, "articles_quorum_evidence_ref", None)
-        articles_verified = (
-            getattr(company, "articles_quorum_verified", None) is True
-            and isinstance(articles_reviewer, str)
-            and bool(articles_reviewer.strip())
-            and getattr(company, "articles_quorum_verified_at", None) is not None
-            and isinstance(articles_evidence_ref, str)
-            and bool(articles_evidence_ref.strip())
+        # Resolve the Articles version that was effective on the actual AGM
+        # date. Never trust mutable Company booleans as legal verification.
+        verified_articles = await self.db.scalar(
+            select(ArticlesVerification)
+            .where(
+                ArticlesVerification.company_id == agm.company_id,
+                ArticlesVerification.status.in_(("VERIFIED", "SUPERSEDED", "REVOKED")),
+                ArticlesVerification.effective_from <= agm_date,
+            )
+            .order_by(
+                ArticlesVerification.effective_from.desc(),
+                ArticlesVerification.reviewed_at.desc(),
+            )
+            .limit(1)
         )
-        articles_quorum_required = getattr(company, "articles_quorum_required", None)
+        articles_reviewer = None
+        articles_evidence_ref = None
+        articles_quorum_required = None
+        articles_verified = False
+        if verified_articles is not None:
+            source_document = await self.db.scalar(
+                select(Document).where(
+                    Document.id == verified_articles.document_id,
+                    Document.company_id == agm.company_id,
+                    Document.is_active.is_(True),
+                    Document.document_type == "ARTICLES_OF_ASSOCIATION",
+                    Document.version == verified_articles.source_document_version,
+                )
+            )
+            source_matches = (
+                source_document is not None
+                and isinstance(source_document.checksum_sha256, str)
+                and source_document.checksum_sha256.lower()
+                    == verified_articles.source_checksum_sha256.lower()
+            )
+            revoked_before_meeting = (
+                verified_articles.status == "REVOKED"
+                and verified_articles.revoked_at is not None
+                and verified_articles.revoked_at.date() <= agm_date
+            )
+            articles_verified = source_matches and not revoked_before_meeting
+            if articles_verified:
+                articles_reviewer = str(verified_articles.reviewed_by)
+                articles_evidence_ref = (
+                    f"document:{verified_articles.document_id}:"
+                    f"sha256:{verified_articles.source_checksum_sha256}"
+                )
+                articles_quorum_required = (
+                    verified_articles.quorum_required
+                    if verified_articles.quorum_variation_exists
+                    else None
+                )
         membership_evidence_verified = (
             isinstance(members_total_at_agm, int)
             and members_total_at_agm > 0
@@ -229,7 +271,9 @@ class AGMService(BaseService[AGM]):
             articles_quorum_required=articles_quorum_required if articles_verified else None,
             articles_quorum_verified_by=articles_reviewer if articles_verified else None,
             articles_quorum_verified_at=(
-                getattr(company, "articles_quorum_verified_at", None) if articles_verified else None
+                verified_articles.reviewed_at.date()
+                if articles_verified and verified_articles and verified_articles.reviewed_at
+                else None
             ),
             articles_quorum_evidence_ref=articles_evidence_ref if articles_verified else None,
             is_default=is_default,
