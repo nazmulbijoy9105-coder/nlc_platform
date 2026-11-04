@@ -130,9 +130,7 @@ def upgrade() -> None:
         SECURITY DEFINER
         SET search_path = pg_catalog, public
         AS $$
-            SELECT
-                current_setting('app.current_user_id', true) = 'ADMIN'
-                OR EXISTS (
+            SELECT EXISTS (
                     SELECT 1
                     FROM public.users u
                     WHERE u.id = public.nlc_current_user_id()
