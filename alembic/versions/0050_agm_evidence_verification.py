@@ -31,18 +31,21 @@ def upgrade() -> None:
         sa.Column("reviewed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("verified_count", sa.Integer(), nullable=True),
         sa.Column("reviewer_note", sa.Text(), nullable=True),
+        sa.Column("revoked_by", UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=True),
+        sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("revocation_reason", sa.Text(), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.CheckConstraint("evidence_kind IN ('MEMBERS_REGISTER', 'ATTENDANCE_REGISTER')", name="ck_agm_evidence_kind"),
-        sa.CheckConstraint("status IN ('PENDING', 'VERIFIED', 'REJECTED', 'SUPERSEDED')", name="ck_agm_evidence_status"),
+        sa.CheckConstraint("status IN ('PENDING', 'VERIFIED', 'REJECTED', 'REVOKED', 'SUPERSEDED')", name="ck_agm_evidence_status"),
         sa.CheckConstraint("source_checksum_sha256 ~ '^[0-9a-f]{64}$'", name="ck_agm_evidence_checksum"),
         sa.CheckConstraint("source_document_version >= 1", name="ck_agm_evidence_version"),
         sa.CheckConstraint("verified_count IS NULL OR verified_count >= 0", name="ck_agm_evidence_count"),
         sa.CheckConstraint(
             "(status = 'PENDING' AND reviewed_by IS NULL AND reviewed_at IS NULL AND verified_count IS NULL) OR "
             "(status = 'VERIFIED' AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL AND verified_count IS NOT NULL) OR "
-            "(status IN ('REJECTED', 'SUPERSEDED') AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)",
+            "(status IN ('REJECTED', 'REVOKED', 'SUPERSEDED') AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)",
             name="ck_agm_evidence_review_metadata",
         ),
         sa.CheckConstraint(
@@ -50,6 +53,7 @@ def upgrade() -> None:
             name="ck_agm_evidence_member_count_positive",
         ),
         sa.CheckConstraint("status <> 'VERIFIED' OR reviewed_by IS DISTINCT FROM submitted_by", name="ck_agm_evidence_four_eyes"),
+        sa.CheckConstraint("(status = 'REVOKED' AND revoked_by IS NOT NULL AND revoked_at IS NOT NULL AND revocation_reason IS NOT NULL) OR (status <> 'REVOKED' AND revoked_by IS NULL AND revoked_at IS NULL AND revocation_reason IS NULL)", name="ck_agm_evidence_revocation_metadata"),
     )
     for name, column in (
         ("ix_agm_evidence_verifications_company_id", "company_id"),
@@ -81,7 +85,7 @@ def upgrade() -> None:
         sa.Column("note", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.CheckConstraint("action IN ('SUBMITTED', 'VERIFIED', 'REJECTED', 'SUPERSEDED')", name="ck_agm_evidence_event_action"),
+        sa.CheckConstraint("action IN ('SUBMITTED', 'VERIFIED', 'REJECTED', 'REVOKED', 'SUPERSEDED')", name="ck_agm_evidence_event_action"),
     )
     op.create_index("ix_agm_evidence_events_company_id", "agm_evidence_verification_events", ["company_id"])
     op.create_index("ix_agm_evidence_events_verification_id", "agm_evidence_verification_events", ["verification_id"])
@@ -132,9 +136,9 @@ def upgrade() -> None:
             END IF;
             IF OLD.status = 'PENDING' AND NEW.status NOT IN ('PENDING', 'VERIFIED', 'REJECTED') THEN
                 RAISE EXCEPTION 'Invalid AGM evidence transition';
-            ELSIF OLD.status = 'VERIFIED' AND NEW.status NOT IN ('VERIFIED', 'SUPERSEDED') THEN
+            ELSIF OLD.status = 'VERIFIED' AND NEW.status NOT IN ('VERIFIED', 'REVOKED', 'SUPERSEDED') THEN
                 RAISE EXCEPTION 'Invalid AGM evidence transition';
-            ELSIF OLD.status IN ('REJECTED', 'SUPERSEDED') AND NEW.status <> OLD.status THEN
+            ELSIF OLD.status IN ('REJECTED', 'REVOKED', 'SUPERSEDED') AND NEW.status <> OLD.status THEN
                 RAISE EXCEPTION 'Terminal AGM evidence state cannot be reopened';
             END IF;
             RETURN NEW;
