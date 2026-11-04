@@ -36,7 +36,7 @@ def upgrade() -> None:
             IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
                 GRANT EXECUTE ON FUNCTION public.nlc_current_user_context_valid() TO nlc_app_role;
             END IF;
-        END
+        END;
         $grant$
     """)
 
@@ -90,7 +90,7 @@ def upgrade() -> None:
                     p.policyname
                 );
             END LOOP;
-        END
+        END;
         $policies$
     """)
     op.execute("""
