@@ -942,10 +942,7 @@ class NLCRuleEngine:
             ))
             return
         if c.agm_count == 0:
-            deadline = self._add_months(c.incorporation_date or self.today, FIRST_AGM_DEADLINE_MONTHS)
-            if c.incorporation_date is None:
-                return 0
-            deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
+            deadline = self._add_months(c.incorporation_date, FIRST_AGM_DEADLINE_MONTHS)
             if self.today > deadline:  # type: ignore
                 delay = (self.today - deadline).days  # type: ignore
                 severity = Severity.BLACK if delay > 365 else Severity.RED
