@@ -130,16 +130,17 @@ class AGMEvidenceVerification(FullMixin, Base):
     __tablename__ = "agm_evidence_verifications"
     __table_args__ = (
         CheckConstraint("evidence_kind IN ('MEMBERS_REGISTER', 'ATTENDANCE_REGISTER')", name="ck_agm_evidence_kind"),
-        CheckConstraint("status IN ('PENDING', 'VERIFIED', 'REJECTED', 'SUPERSEDED')", name="ck_agm_evidence_status"),
+        CheckConstraint("status IN ('PENDING', 'VERIFIED', 'REJECTED', 'REVOKED', 'SUPERSEDED')", name="ck_agm_evidence_status"),
         CheckConstraint("source_document_version >= 1", name="ck_agm_evidence_version"),
         CheckConstraint("source_checksum_sha256 ~ '^[0-9a-f]{64}$'", name="ck_agm_evidence_checksum"),
         CheckConstraint("verified_count IS NULL OR verified_count >= 0", name="ck_agm_evidence_count"),
         CheckConstraint("status <> 'VERIFIED' OR evidence_kind <> 'MEMBERS_REGISTER' OR verified_count >= 1", name="ck_agm_evidence_member_count_positive"),
         CheckConstraint("status <> 'VERIFIED' OR reviewed_by IS DISTINCT FROM submitted_by", name="ck_agm_evidence_four_eyes"),
+        CheckConstraint("(status = 'REVOKED' AND revoked_by IS NOT NULL AND revoked_at IS NOT NULL AND revocation_reason IS NOT NULL) OR (status <> 'REVOKED' AND revoked_by IS NULL AND revoked_at IS NULL AND revocation_reason IS NULL)", name="ck_agm_evidence_revocation_metadata"),
         CheckConstraint(
             "(status = 'PENDING' AND reviewed_by IS NULL AND reviewed_at IS NULL AND verified_count IS NULL) OR "
             "(status = 'VERIFIED' AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL AND verified_count IS NOT NULL) OR "
-            "(status IN ('REJECTED', 'SUPERSEDED') AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)",
+            "(status IN ('REJECTED', 'REVOKED', 'SUPERSEDED') AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)",
             name="ck_agm_evidence_review_metadata",
         ),
         Index("uq_agm_evidence_pending_kind", "agm_id", "evidence_kind", unique=True, postgresql_where=text("status = 'PENDING'")),
@@ -175,6 +176,9 @@ class AGMEvidenceVerification(FullMixin, Base):
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     verified_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     reviewer_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    revoked_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revocation_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class AGMEvidenceVerificationEvent(AuditMixin, Base):
@@ -183,7 +187,7 @@ class AGMEvidenceVerificationEvent(AuditMixin, Base):
     __tablename__ = "agm_evidence_verification_events"
     __table_args__ = (
         CheckConstraint(
-            "action IN ('SUBMITTED', 'VERIFIED', 'REJECTED', 'SUPERSEDED')",
+            "action IN ('SUBMITTED', 'VERIFIED', 'REJECTED', 'REVOKED', 'SUPERSEDED')",
             name="ck_agm_evidence_event_action",
         ),
     )
