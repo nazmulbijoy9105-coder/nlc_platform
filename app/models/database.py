@@ -146,7 +146,13 @@ def _rls_signature(principal: str) -> str:
     return hmac.new(secret.encode("utf-8"), principal.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
+async def set_app_role(session: AsyncSession) -> None:
+    """Switch this transaction to the non-owner, non-BYPASSRLS application role."""
+    await session.execute(text("SET LOCAL ROLE nlc_app_role"))
+
+
 async def _set_signed_rls_principal(session: AsyncSession, principal: str) -> None:
+    await set_app_role(session)
     signature = _rls_signature(principal)
     await session.execute(
         text(
