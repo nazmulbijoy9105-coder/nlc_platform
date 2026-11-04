@@ -423,6 +423,27 @@ def test_verified_absence_is_a_scoring_state_but_unknown_is_not():
     assert score.agm_score == 20
     assert score.final_score == 100
 
+
+def test_unreleased_legal_corpus_never_reports_green_even_with_full_input_coverage():
+    from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+
+    assert LEGAL_SCORE_RELEASED is False
+    profile = _profile(
+        last_agm_date=date(2025, 6, 1),
+        last_audit_signed_date=date(2025, 5, 1),
+        last_return_filed_year=2025,
+        first_auditor_appointed=True,
+        tin_obtained=True,
+        current_director_count=2,
+        directors_verified=True,
+        member_count=2,
+    )
+    score = NLCRuleEngine()._calculate_score([], profile)
+    assert score.final_score == 100  # arithmetic placeholder only
+    assert score.risk_band == Severity.NOT_EVALUATED
+    assert score.override_applied is False
+
+
 def test_unapproved_black_override_cannot_force_zero_score():
     profile = _profile()
     unapproved_black = ComplianceFlag(
