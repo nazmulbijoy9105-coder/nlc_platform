@@ -76,7 +76,10 @@ def _applied_score_impacts(flags) -> list[dict]:
     The returned value is aligned by index with the original flags list so
     repeated rule IDs cannot overwrite one another.
     """
-    from app.rule_engine.engine import CATEGORY_CAPS, VERIFIED_RULE_IDS, RuleState
+    from app.rule_engine.engine import CATEGORY_CAPS, LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS, RuleState
+
+    if not LEGAL_SCORE_RELEASED:
+        return [{"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"} for _ in flags]
 
     remaining = {name: cap[0] for name, cap in CATEGORY_CAPS.items()}
     results = []

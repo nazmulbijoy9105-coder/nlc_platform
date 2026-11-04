@@ -17,7 +17,7 @@ from sqlalchemy import select
 from app.models.compliance import ComplianceScoreHistory
 
 # Import CATEGORY_CAPS for score reconciliation (cap adjustment display)
-from app.rule_engine.engine import CATEGORY_CAPS, VERIFIED_RULE_IDS
+from app.rule_engine.engine import CATEGORY_CAPS, LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
 from app.services.pdf_render import (
@@ -139,7 +139,7 @@ def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue
     """Generate a brief executive summary paragraph based on the company's status."""
     flag_count = len(flags) if flags else 0
     def verified_severity(flag):
-        if getattr(flag, "rule_id", "") not in VERIFIED_RULE_IDS:
+        if not LEGAL_SCORE_RELEASED or getattr(flag, "rule_id", "") not in VERIFIED_RULE_IDS:
             return None
         value = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
         return value
@@ -160,10 +160,11 @@ def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue
         urgency = "<strong>Company is in good compliance standing.</strong> No critical issues detected. Continue regular monitoring."
 
     parts = [urgency]
+    score_label = "NOT RELEASED" if not LEGAL_SCORE_RELEASED or band == "NOT_EVALUATED" else f"{score}/100"
     parts.append(
         f"Active flags: <strong>{flag_count}</strong> "
         f"({black_count} BLACK, {red_count} RED, {yellow_count} YELLOW). "
-        f"Compliance score: <strong>{score}/100</strong>."
+        f"Compliance score: <strong>{score_label}</strong>."
     )
 
     if rescue_plan is not None:
@@ -294,6 +295,8 @@ def _verified_flag_score(flags: Any) -> tuple[int, bool]:
     """
     category_deductions: dict[str, int] = {name: 0 for name in CATEGORY_CAPS}
     verified_black_override = False
+    if not LEGAL_SCORE_RELEASED:
+        return 0, False
     for flag in (flags or []):
         rule_id = getattr(flag, "rule_id", "") or ""
         if rule_id not in VERIFIED_RULE_IDS:
@@ -318,7 +321,7 @@ def _verified_flag_score(flags: Any) -> tuple[int, bool]:
 
 def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
     """Render reconciliation using only rules approved for authoritative scoring."""
-    if band in ("BLACK", "NOT_EVALUATED"):
+    if not LEGAL_SCORE_RELEASED or band in ("BLACK", "NOT_EVALUATED"):
         return ""
 
     indicated_score, _ = _verified_flag_score(flags)
@@ -359,13 +362,14 @@ def build_compliance_report_html(
     """
     score = company.current_compliance_score or 0
     band = getattr(company.current_risk_band, "value", company.current_risk_band) or "NOT_EVALUATED"
-    score_display = "NOT RELEASED" if band == "NOT_EVALUATED" else f"{score} / 100"
+    score_display = "NOT RELEASED" if not LEGAL_SCORE_RELEASED or band == "NOT_EVALUATED" else f"{score} / 100"
+    score_class = "score-warn" if not LEGAL_SCORE_RELEASED or band == "NOT_EVALUATED" else _score_class(score)
     company_name = company.company_name or "[COMPANY NAME NOT ON FILE]"
 
     if flags:
         rows = "".join(
             f"<tr><td>{esc(f.rule_id)}</td><td>{esc(getattr(getattr(f, 'severity', None), 'value', getattr(f, 'severity', '')))}</td>"
-            f"<td>{esc(f.description)}</td><td>{('-' + esc(f.score_impact or 0) + ' pts') if f.rule_id in VERIFIED_RULE_IDS else 'Not scored — pending independent legal approval'}</td></tr>"
+            f"<td>{esc(f.description)}</td><td>{('-' + esc(f.score_impact or 0) + ' pts') if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS else 'Not scored — pending independent legal approval'}</td></tr>"
             for f in flags
         )
     else:
@@ -413,7 +417,7 @@ def build_compliance_report_html(
     </table>
 
         <div class="score-box">
-        <div class="score-number {_score_class(score)}">{esc(score_display)}</div>
+        <div class="score-number {score_class}">{esc(score_display)}</div>
         <div class="band">Risk Band: {esc(band)}</div>
         {('<div style="font-size:11px;color:#B91C1C;margin-top:8px;"><strong>Score Override:</strong> A BLACK-severity rule has been triggered. The compliance score is set to 0 regardless of accumulated deductions, as the company has a critical legal deficiency requiring immediate remediation.</div>') if band == 'BLACK' else ''}
     </div>
