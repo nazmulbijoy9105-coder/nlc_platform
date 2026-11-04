@@ -590,15 +590,15 @@ class TestTransferRules:
 
     @pytest.mark.black
     def test_TR005_forces_black_band(self, rule_engine, build_profile, make_share_transfer):
-        """TR-005 AoA violation must force BLACK band regardless of score."""
+        """Unapproved TR-005 remains visible but cannot force BLACK before legal approval."""
         transfer = make_share_transfer(
             aoa_restriction_apply=True,
             board_approval_obtained=False,
         )
         profile = build_profile(share_transfers=[transfer], aoa_transfer_restriction=True)
         output = rule_engine.evaluate(profile)
-        assert output.score_breakdown.override_applied is True
-        assert output.score_breakdown.final_score <= 29
+        assert output.score_breakdown.override_applied is False
+        assert output.score_breakdown.final_score == 100
 
     def test_TR006_triggers_composite_irregular(self, rule_engine, build_profile, make_share_transfer):
         """Multiple irregularities in one transfer → TR-006 RED."""
