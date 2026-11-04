@@ -85,6 +85,17 @@ Migration 0049 restores the 11 missing canonical rows as PENDING and preserves
 INC-002 but deactivates it pending counsel review. The API parity audit now
 queries only active rules, so it compares the same active registry set.
 
+## Engine/database severity enum parity
+
+CI exposed a further cross-layer enum mismatch: the rule engine emits
+`Severity.NOT_EVALUATED` for evidence-only findings (including AUD-005),
+but the persisted PostgreSQL `severity_level` enum and SQLAlchemy
+`SeverityLevel` initially allowed only GREEN/YELLOW/RED/BLACK. Coercing this
+state to GREEN would misrepresent unknown evidence as a positive compliance
+state. Migration `0050_add_not_evaluated_severity` adds the explicit enum
+value, the ORM enum now includes it, and the seed validator accepts it. The
+AUD-005 seed retains `NOT_EVALUATED` with zero score impact.
+
 ## Alembic graph defect
 
 Current source has two migration heads:
@@ -103,12 +114,12 @@ non-idempotent migrations to fail. In particular, `b10c91ac6860` adds
 
 ## Remaining release gates
 
-- CI for PR #116 must pass, including unit, integration, canonical integrity,
-  migration and rule-verification checks.
+- CI for backend PR #117 must pass on its latest head, including unit, integration,
+  canonical integrity, migration, and rule-verification checks.
 - Verify production schema preconditions against the exact DB URL used by Render.
 - Execute the migration chain only on the disposable Neon branch first.
 - Run authenticated DB/API parity and RLS cross-tenant negative tests.
-- Consolidate PRs #114/#115 with the P0 fix; do not merge overlapping heads
-  independently.
+- Review backend PR #117 and frontend PR #28 as a coordinated API/UI change;
+  do not merge overlapping backend heads independently.
 - Deploy only an approved commit; verify Render SHA and live health afterward.
 - Obtain independent legal approval for every rule that is to influence scores.
