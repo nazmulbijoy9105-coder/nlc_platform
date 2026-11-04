@@ -73,7 +73,7 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | FX-001 | Foreign Exchange Violation | Foreign Exchange Regulation Act 1947 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
 | INC-001 | Memorandum and Articles Not Filed | Section 23, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
 | INC-003 | Minimum Directors Not Appointed | Section 90(2), Companies Act 1994 (Bangladesh) | BLACK | 15 | YES | Engine-aligned 2026-11-02 |
-| INC-004 | Paid-Up Capital Exceeds Authorized Capital | Section 53, Companies Act 1994 (Bangladesh) | BLACK | 20 | YES | Engine-aligned 2026-11-02 |
+| INC-004 | Paid-Up / Authorised Capital Mismatch — Legal Review | Section 56, Companies Act 1994 (Bangladesh), subject to review | YELLOW | 0 | no | REVIEW_REQUIRED — not a void-allotment conclusion |
 | INC-005 | Encashment Certificate Missing — Foreign Shareholding | BIDA Foreign Investment Act 1980; Bangladesh Bank FDI Circular | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
 | INC-006 | Remittance Below Work Permit Threshold | BIDA Foreign Investment Act 1980 | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | INC-007 | Business Commenced Without Section 150 Declaration | Sections 59-60, Companies Act 1994 (Bangladesh) | RED | 10 | no | Engine-aligned 2026-11-02 |
