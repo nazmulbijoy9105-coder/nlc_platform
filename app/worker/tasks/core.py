@@ -523,7 +523,7 @@ def queue_deadline_warning_notifications(
 
             # Get all upcoming deadlines within max warning window
             max_days = max(warning_days)
-            deadlines = await company_svc.get_upcoming_deadlines(
+            deadlines = await company_svc.get_upcoming_deadlines_for_system(
                 days_ahead=max_days
             )
 
