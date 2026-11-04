@@ -1751,9 +1751,7 @@ class NLCRuleEngine:
                 self._add_flag(ComplianceFlag(
                     rule_id="TAX-003",
                     flag_code="ANNUAL_TAX_RETURN_OVERDUE",
-                    severity=t3_sev,
-                    score_impact=t3_imp,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE if delay <= 90 else RevenueTier.STRUCTURED_REGULARIZATION,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Potential company return delay of {delay} days using a provisional date only. Verify current Tax Day under Sections 2 and 171, assessment-year amendments, taxpayer category and any written extension before determining default.",
                     statutory_basis="Income Tax Act 2023, Sections 166 and 171 (taxpayer-specific Tax Day requires verification)",
                     detail={"delay_days": delay, "fy_year": fy_end.year},
@@ -1790,12 +1788,14 @@ class NLCRuleEngine:
                 self._add_flag(ComplianceFlag(
                     rule_id="TAX-004",
                     flag_code="ADVANCE_TAX_MISSED",
-                    severity=Severity.YELLOW,
-                    score_impact=min(len(missed) * 2, 5),
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Advance tax instalment status requires review: {', '.join(missed)}. Income Tax Act 2023 Sections 154-157; due dates and liability require taxpayer-specific verification.",
+                    description=f"Potential advance-tax instalment delay requiring review: {', '.join(missed)}. Income Tax Act 2023 Sections 154-157; due dates and liability require taxpayer-specific verification.",
                     statutory_basis="Income Tax Act 2023, Sections 154-157 (s.155(2)-(3)); holiday and taxpayer applicability verification required",
-                    detail={"quarters": missed}
+                    detail={"quarters": missed},
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
                 ))
 
         if c.vat_registered:
