@@ -29,6 +29,12 @@ jobs:
       - name: Compile check
         run: python -m compileall app/
 
+      - name: Verify single Alembic head
+        run: |
+          alembic heads
+          HEAD_COUNT="$(alembic heads | grep -c '(head)')"
+          test "$HEAD_COUNT" -eq 1
+
       - name: Run unit tests
         run: python -m pytest tests/unit -q --tb=short
 
