@@ -1093,7 +1093,7 @@ class TestEngineIntegrity:
         assert output.score_breakdown.override_applied is False
 
     def test_score_never_exceeds_100_with_no_flags(self, rule_engine, build_profile):
-        """Fully compliant company scores exactly 100 with GREEN band."""
+        """Arithmetic placeholder may be 100, but legal band remains NOT_EVALUATED."""
         profile = build_profile()
         output = rule_engine.evaluate(profile)
         assert output.score_breakdown.final_score == 100
