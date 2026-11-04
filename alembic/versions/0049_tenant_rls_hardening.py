@@ -229,6 +229,12 @@ def upgrade() -> None:
                     public.nlc_current_user_id() IS NOT NULL
                     AND EXISTS (
                         SELECT 1
+                        FROM public.users active_user
+                        WHERE active_user.id = public.nlc_current_user_id()
+                          AND active_user.is_active IS TRUE
+                    )
+                    AND EXISTS (
+                        SELECT 1
                         FROM public.company_user_access cua
                         WHERE cua.company_id = p_company_id
                           AND cua.user_id = public.nlc_current_user_id()
