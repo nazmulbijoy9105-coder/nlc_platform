@@ -75,17 +75,12 @@ class AGMService(BaseService[AGM]):
             is_default = True
             delay_days = (date.today() - agm_deadline).days
 
-        # Notice check
-        if agm_held and notice_sent_date and agm_date:
-            days_notice = (agm_date - notice_sent_date).days
-            if days_notice < 21:
-                notice_defective = True
-            if days_notice < 0:
-                notice_missing = True
-
-        # Quorum check
-        if agm_held and quorum_required is not None:
-            quorum_met = members_present >= quorum_required
+        # AGM creation only creates a planned record. A held AGM must be
+        # recorded through mark_held(), which derives quorum exclusively from
+        # reviewed, version-pinned Articles, members-register and attendance
+        # evidence. Never accept caller-supplied quorum counts or booleans here.
+        if agm_held:
+            raise ValueError("Use mark_held() to record an AGM as held with verified evidence.")
 
         return await self.create(
             company_id=company_id,
@@ -93,15 +88,15 @@ class AGMService(BaseService[AGM]):
             agm_type=agm_type,
             agm_deadline=agm_deadline,
             scheduled_date=scheduled_date,
-            agm_held=agm_held,
-            agm_date=agm_date,
+            agm_held=False,
+            agm_date=None,
             notice_sent_date=notice_sent_date,
-            notice_days_before=(agm_date - notice_sent_date).days if (agm_date and notice_sent_date) else None,
-            notice_defective=notice_defective,
-            notice_missing=notice_missing,
-            members_present=verified_members_present if membership_evidence_verified else 0,
-            quorum_required=quorum_required,
-            quorum_met=quorum_met,
+            notice_days_before=None,
+            notice_defective=False,
+            notice_missing=False,
+            members_present=0,
+            quorum_required=None,
+            quorum_met=None,
             quorum_basis=None,
             auditor_reappointed=auditor_reappointed,
             minutes_prepared=minutes_prepared,
