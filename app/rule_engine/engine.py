@@ -1696,7 +1696,7 @@ class NLCRuleEngine:
 
         if c.special_resolution_date and c.special_resolution_filed is False:
             delay = (self.today - c.special_resolution_date).days
-            if delay > SPECIAL_RESOLUTION_DEADLINE_DAYS:
+            if delay > 15:
                 self._add_flag(ComplianceFlag(
                     rule_id="CAP-004",
                     flag_code="SPECIAL_RESOLUTION_NOT_FILED",
@@ -1960,8 +1960,8 @@ class NLCRuleEngine:
                     severity=Severity.RED,
                     score_impact=10,
                     revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description="Factory license not obtained. Labour Act 2006: factory license mandatory for manufacturing entities.",
-                    statutory_basis="Labour Act 2006 (Bangladesh), Section 35"
+                    description="Factory/establishment licence not evidenced under Section 326. A licence is required only where Government directions prescribe it for the relevant factory or establishment class; verify applicability and the 2026 amendments.",
+                    statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended in 2026"
                 ))
 
             if c.factory_license_expiry and self.today > c.factory_license_expiry:
@@ -1972,7 +1972,7 @@ class NLCRuleEngine:
                     severity=Severity.YELLOW,
                     score_impact=5,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Factory license expired. Overdue by {delay} days. Labour Act 2006: renewal required.",
+                    description=f"Factory/establishment licence expired by {delay} days. Section 326 provides a five-year renewal cycle where a licence is required; contractor-agency licences are one year. Verify licence class and actual expiry.",
                     statutory_basis="Labour Act 2006 (Bangladesh), Section 35"
                 ))
 
@@ -1996,7 +1996,7 @@ class NLCRuleEngine:
                 rule_id="AGM-007", flag_code="AGM_ADJOURNED_WITHOUT_NOTICE",
                 severity=Severity.YELLOW, score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="AGM adjourned without proper notice. Section 84.",
+                description="AGM adjournment notice issue requires review of Section 85, the applicable meeting provisions and the company Articles; Section 84 concerns an extraordinary general meeting requisition process.",
                 statutory_basis="Section 85, Companies Act 1994 (Bangladesh)"))
         if c.register_of_directors_interests is False:
             self._add_flag(ComplianceFlag(
