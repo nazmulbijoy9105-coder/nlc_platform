@@ -369,6 +369,7 @@ def upgrade() -> None:
     # only current staff may grant, change, or revoke memberships.
     _execute_sql_script("""
         ALTER TABLE public.company_user_access ENABLE ROW LEVEL SECURITY;
+        DROP POLICY IF EXISTS company_user_access_policy ON public.company_user_access;
         DROP POLICY IF EXISTS company_user_access_self_read ON public.company_user_access;
         DROP POLICY IF EXISTS company_user_access_staff_write ON public.company_user_access;
         CREATE POLICY company_user_access_self_read ON public.company_user_access
@@ -423,6 +424,47 @@ def upgrade() -> None:
             WITH CHECK (
                 id = public.nlc_current_user_id()
                 OR public.nlc_current_user_is_staff()
+            );
+    """)
+
+    # Replace legacy webhook policies that cast the raw identity GUC to UUID.
+    # The signed ADMIN service principal is not a UUID; all policies must use
+    # the verified identity helper and explicitly allow trusted staff work.
+    _execute_sql_script("""
+        ALTER TABLE public.webhook_endpoints ENABLE ROW LEVEL SECURITY;
+        DROP POLICY IF EXISTS webhook_endpoints_owner_scope ON public.webhook_endpoints;
+        CREATE POLICY webhook_endpoints_owner_scope ON public.webhook_endpoints
+            FOR ALL
+            USING (
+                public.nlc_current_user_is_staff()
+                OR user_id = public.nlc_current_user_id()
+            )
+            WITH CHECK (
+                public.nlc_current_user_is_staff()
+                OR user_id = public.nlc_current_user_id()
+            );
+
+        ALTER TABLE public.webhook_deliveries ENABLE ROW LEVEL SECURITY;
+        DROP POLICY IF EXISTS webhook_deliveries_owner_scope ON public.webhook_deliveries;
+        CREATE POLICY webhook_deliveries_owner_scope ON public.webhook_deliveries
+            FOR ALL
+            USING (
+                public.nlc_current_user_is_staff()
+                OR EXISTS (
+                    SELECT 1
+                    FROM public.webhook_endpoints e
+                    WHERE e.id = webhook_deliveries.endpoint_id
+                      AND e.user_id = public.nlc_current_user_id()
+                )
+            )
+            WITH CHECK (
+                public.nlc_current_user_is_staff()
+                OR EXISTS (
+                    SELECT 1
+                    FROM public.webhook_endpoints e
+                    WHERE e.id = webhook_deliveries.endpoint_id
+                      AND e.user_id = public.nlc_current_user_id()
+                )
             );
     """)
 
