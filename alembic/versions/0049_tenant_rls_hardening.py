@@ -78,6 +78,9 @@ def upgrade() -> None:
         END
         $role$
     """)
+    # Permit the migration/test login to exercise the restricted role.
+    # This does not make the login inherit privileges; tests use SET LOCAL ROLE.
+    op.execute("GRANT nlc_app_role TO CURRENT_USER")
     # Database-verifiable identity proof. The signing key is provisioned
     # out-of-band and remains inaccessible to the runtime role.
     rls_secret = os.environ.get("NLC_RLS_HMAC_SECRET", "")
