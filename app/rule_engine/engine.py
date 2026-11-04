@@ -2456,7 +2456,7 @@ class NLCRuleEngine:
             if f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and f.eval_state == "VIOLATION"
         ]
-        scored = [f for f in violations if f.rule_id in VERIFIED_RULE_IDS]
+        scored = [f for f in violations if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS]
 
         deductions = {
             "TAX": sum(f.score_impact for f in scored if f.rule_id.startswith(("TAX-", "VAT-"))),
@@ -2531,18 +2531,12 @@ class NLCRuleEngine:
         override = False
         reason = None
         final = raw
-        critical = [
-            f for f in active
-            if f.rule_id in VERIFIED_RULE_IDS
-            and f.is_black_override
-            and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
-            and f.eval_state == "VIOLATION"
-        ]
-        if not critical:
+        critical = []
+        if LEGAL_SCORE_RELEASED:
             critical = [
                 f for f in active
                 if f.rule_id in VERIFIED_RULE_IDS
-                and f.severity == Severity.BLACK
+                and (f.is_black_override or f.severity == Severity.BLACK)
                 and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
                 and f.eval_state == "VIOLATION"
             ]
@@ -2624,8 +2618,8 @@ class NLCRuleEngine:
             revenue_tier=REVENUE_TIER_MAP[band],
             active_flag_count=len(active),
             coverage=coverage,
-            black_flag_count=len([f for f in active if (f.rule_id in VERIFIED_RULE_IDS or f.is_black_override) and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
-            red_flag_count=len([f for f in active if f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.RED and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            black_flag_count=len([f for f in active if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS and (f.is_black_override or f.severity == Severity.BLACK) and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            red_flag_count=len([f for f in active if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.RED and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             yellow_flag_count=len([f for f in active if f.severity == Severity.YELLOW and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             green_flag_count=len([f for f in active if f.severity == Severity.GREEN and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             bankruptcy_score=max(0, 5 - bnk_ded),

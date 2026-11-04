@@ -17,7 +17,7 @@ from sqlalchemy import select
 from app.models.compliance import ComplianceScoreHistory
 
 # Import CATEGORY_CAPS for score reconciliation (cap adjustment display)
-from app.rule_engine.engine import CATEGORY_CAPS
+from app.rule_engine.engine import CATEGORY_CAPS, VERIFIED_RULE_IDS
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
 from app.services.pdf_render import (
@@ -116,12 +116,13 @@ def _render_band_legend(current_band: str) -> str:
 
     Includes NOT_EVALUATED for companies with insufficient data (coverage < 0.5).
     """
+    # Risk band is the worst verified finding severity, not a numeric score range.
     bands = [
-        ("GREEN", "70-100", "Compliant"),
-        ("YELLOW", "50-69", "Monitor"),
-        ("RED", "30-49", "Action Required"),
-        ("BLACK", "0-29", "Critical"),
-        ("NOT_EVALUATED", "—", "Insufficient Data"),
+        ("GREEN", "No verified adverse finding", "Screening only"),
+        ("YELLOW", "Verified monitoring finding", "Review"),
+        ("RED", "Verified material finding", "Action required"),
+        ("BLACK", "Verified critical override", "Critical"),
+        ("NOT_EVALUATED", "Pending legal approval", "No score released"),
     ]
     items = []
     for band_name, score_range, label in bands:
@@ -137,9 +138,15 @@ def _render_band_legend(current_band: str) -> str:
 def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue_plan: Any) -> str:
     """Generate a brief executive summary paragraph based on the company's status."""
     flag_count = len(flags) if flags else 0
-    black_count = sum(1 for f in (flags or []) if getattr(f, "severity", "") == "BLACK")
-    red_count = sum(1 for f in (flags or []) if getattr(f, "severity", "") == "RED")
-    yellow_count = sum(1 for f in (flags or []) if getattr(f, "severity", "") == "YELLOW")
+    def verified_severity(flag):
+        if getattr(flag, "rule_id", "") not in VERIFIED_RULE_IDS:
+            return None
+        value = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
+        return value
+
+    black_count = sum(1 for f in (flags or []) if verified_severity(f) == "BLACK")
+    red_count = sum(1 for f in (flags or []) if verified_severity(f) == "RED")
+    yellow_count = sum(1 for f in (flags or []) if verified_severity(f) == "YELLOW")
 
     if band == "BLACK":
         urgency = "<strong>Critical legal deficiency detected.</strong> The company has a BLACK-severity compliance breach requiring immediate remediation. The compliance score has been overridden to 0 pending resolution of the critical flag(s)."
@@ -148,7 +155,7 @@ def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue
     elif band == "YELLOW":
         urgency = "<strong>Compliance monitoring recommended.</strong> The company has minor deficiencies that should be addressed to maintain good standing."
     elif band == "NOT_EVALUATED":
-        urgency = "<strong>Insufficient data for compliance evaluation.</strong> Less than 50% of required compliance data points are available. The company's compliance status cannot be determined. Please complete the company profile and trigger re-evaluation."
+        urgency = "<strong>No authoritative compliance score is released.</strong> The applicable legal-rule corpus remains pending independent legal approval. Findings are provisional and require counsel review; this report does not certify compliance."
     else:
         urgency = "<strong>Company is in good compliance standing.</strong> No critical issues detected. Continue regular monitoring."
 
@@ -279,58 +286,58 @@ def _render_rescue_section(rescue_plan: Any) -> str:
     """
 
 
-def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
-    """Render score reconciliation: category caps, effective deductions, indicated score.
+def _verified_flag_score(flags: Any) -> tuple[int, bool]:
+    """Return the score implied by active, independently approved flags.
 
-    Suppressed when band is BLACK (score is overridden to 0, reconciliation meaningless).
-    Shows 'Category cap applied (XXX)' rows when a category's raw deduction exceeds its cap.
+    The risk band is not derived from score alone: verified RED findings may
+    elevate the band while the numeric score remains above the RED threshold.
     """
-    if band == "BLACK":
-        return ""
-
-    # Group flags by category and sum raw deductions
-    cat_deductions: dict[str, dict] = {}
-    for f in (flags or []):
-        impact = getattr(f, "score_impact", 0) or 0
-        if impact == 0:
+    category_deductions: dict[str, int] = {name: 0 for name in CATEGORY_CAPS}
+    verified_black_override = False
+    for flag in (flags or []):
+        rule_id = getattr(flag, "rule_id", "") or ""
+        if rule_id not in VERIFIED_RULE_IDS:
             continue
-        rule_id = getattr(f, "rule_id", "") or ""
-        for cat_name, (cap, prefixes) in CATEGORY_CAPS.items():
-            if any(rule_id.startswith(p) for p in prefixes):
-                if cat_name not in cat_deductions:
-                    cat_deductions[cat_name] = {"raw": 0, "cap": cap}
-                cat_deductions[cat_name]["raw"] += impact
+        severity = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
+        if severity == "BLACK":
+            verified_black_override = True
+            continue
+        impact = max(0, int(getattr(flag, "score_impact", 0) or 0))
+        for category, (_, prefixes) in CATEGORY_CAPS.items():
+            if rule_id.startswith(prefixes):
+                category_deductions[category] += impact
                 break
+    if verified_black_override:
+        return 0, True
+    effective_total = sum(
+        min(value, CATEGORY_CAPS[category][0])
+        for category, value in category_deductions.items()
+    )
+    return max(0, 100 - effective_total), False
 
-    if not cat_deductions:
+
+def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
+    """Render reconciliation using only rules approved for authoritative scoring."""
+    if band in ("BLACK", "NOT_EVALUATED"):
         return ""
 
-    cap_rows = []
-    effective_total = 0
-    for cat_name, data in sorted(cat_deductions.items()):
-        raw = data["raw"]
-        cap = data["cap"]
-        effective = min(raw, cap)
-        effective_total += effective
-        if raw > cap:
-            cap_rows.append(
-                f'<div style="font-size:10px;color:#555;padding:2px 0;">'
-                f'Category cap applied ({esc(cat_name)}): '
-                f'raw deduction {raw} pts capped to {effective} pts'
-                f'</div>'
-            )
+    indicated_score, _ = _verified_flag_score(flags)
+    if indicated_score == score:
+        return (
+            '<div class="score-reconciliation" style="margin:8px 0;padding:8px;'
+            'background:#F8F9FA;border:1px solid #E0E0E0;border-radius:4px;">'
+            '<div style="font-size:11px;font-weight:bold;">Score reconciliation</div>'
+            f'<div style="font-size:10px;color:#555;margin-top:4px;">'
+            f'Approved-rule deductions reconcile to {indicated_score}/100.</div></div>'
+        )
 
-    indicated_score = max(0, 100 - effective_total)
-
-    return f"""
-    <div class="score-reconciliation" style="margin:8px 0;padding:8px;background:#F8F9FA;border:1px solid #E0E0E0;border-radius:4px;">
-        <div style="font-size:11px;font-weight:bold;margin-bottom:4px;">Score reconciliation</div>
-        {"".join(cap_rows)}
-        <div style="font-size:10px;color:#555;margin-top:4px;">
-            effective deductions -{effective_total} pts · indicated score {indicated_score}/100
-        </div>
-    </div>
-    """
+    return (
+        '<div class="score-reconciliation" style="margin:8px 0;padding:8px;'
+        'background:#FEE2E2;border:1px solid #B91C1C;border-radius:4px;">'
+        '<strong>REPORT VALIDATION FAILURE</strong>'
+        f'<div>Stored score: {esc(score)}/100; approved-rule calculation: '
+        f'{esc(indicated_score)}/100. This assessment must not be issued.</div></div>'
+    )
 
 
 def build_compliance_report_html(
@@ -351,13 +358,14 @@ def build_compliance_report_html(
     engine_version and snapshot_hash are included in the footer for audit trail.
     """
     score = company.current_compliance_score or 0
-    band = company.current_risk_band or "NOT_EVALUATED"
+    band = getattr(company.current_risk_band, "value", company.current_risk_band) or "NOT_EVALUATED"
+    score_display = "NOT RELEASED" if band == "NOT_EVALUATED" else f"{score} / 100"
     company_name = company.company_name or "[COMPANY NAME NOT ON FILE]"
 
     if flags:
         rows = "".join(
-            f"<tr><td>{esc(f.rule_id)}</td><td>{esc(f.severity)}</td>"
-            f"<td>{esc(f.description)}</td><td>-{esc(f.score_impact or 0)} pts</td></tr>"
+            f"<tr><td>{esc(f.rule_id)}</td><td>{esc(getattr(getattr(f, 'severity', None), 'value', getattr(f, 'severity', '')))}</td>"
+            f"<td>{esc(f.description)}</td><td>{('-' + esc(f.score_impact or 0) + ' pts') if f.rule_id in VERIFIED_RULE_IDS else 'Not scored — pending independent legal approval'}</td></tr>"
             for f in flags
         )
     else:
@@ -405,7 +413,7 @@ def build_compliance_report_html(
     </table>
 
         <div class="score-box">
-        <div class="score-number {_score_class(score)}">{esc(score)} / 100</div>
+        <div class="score-number {_score_class(score)}">{esc(score_display)}</div>
         <div class="band">Risk Band: {esc(band)}</div>
         {('<div style="font-size:11px;color:#B91C1C;margin-top:8px;"><strong>Score Override:</strong> A BLACK-severity rule has been triggered. The compliance score is set to 0 regardless of accumulated deductions, as the company has a critical legal deficiency requiring immediate remediation.</div>') if band == 'BLACK' else ''}
     </div>
@@ -425,7 +433,7 @@ def build_compliance_report_html(
     <div class="footer">
         <p>This compliance intelligence output is subject to professional review under the Companies Act 1994 (Bangladesh).</p>
         <p>Automated compliance screening. Not legal advice. Consult your legal counsel.</p>
-        <div class="audit-meta">Engine: {esc(engine_version)} | Snapshot: {esc(snapshot_hash[:16]) if snapshot_hash else 'unknown'} | Generated: {esc(generated_at.isoformat())}</div>
+        <div class="audit-meta">Monthly history engine: {esc(engine_version)} | Monthly history hash: {esc(snapshot_hash[:16]) if snapshot_hash else 'unknown'} | Generated: {esc(generated_at.isoformat())}</div>
     </div>
 </body>
 </html>"""
@@ -450,7 +458,9 @@ class PDFReportService:
         except Exception:
             rescue_plan = None
 
-        # COM-007: bind report to evidence snapshot + engine version
+        # Monthly history is immutable and may predate a later evaluation in
+        # the same month. Use it as historical metadata, not as the source of
+        # the current company score.
         score_snapshot = await self.db.execute(
             select(ComplianceScoreHistory)
             .where(ComplianceScoreHistory.company_id == company.id)
@@ -460,6 +470,28 @@ class PDFReportService:
         snapshot = score_snapshot.scalar_one_or_none()
         snapshot_hash = snapshot.score_hash if snapshot else "unknown"
         engine_version = snapshot.engine_version if snapshot else "unknown"
+
+        current_score = int(company.current_compliance_score or 0)
+        current_band = getattr(company.current_risk_band, "value", company.current_risk_band) or "NOT_EVALUATED"
+        if current_band not in ("BLACK", "NOT_EVALUATED"):
+            indicated_score, _ = _verified_flag_score(flags)
+            if indicated_score != current_score:
+                from fastapi import HTTPException
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "code": "COMPLIANCE_REPORT_SCORE_MISMATCH",
+                        "stored_score": current_score,
+                        "approved_rule_score": indicated_score,
+                        "message": "Report withheld: current score does not reconcile with approved active rules.",
+                    },
+                )
+        elif current_band == "BLACK" and current_score != 0:
+            from fastapi import HTTPException
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "COMPLIANCE_REPORT_BLACK_OVERRIDE_MISMATCH"},
+            )
 
         html_content = build_compliance_report_html(
             company,
