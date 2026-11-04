@@ -9,10 +9,10 @@ import asyncio
 import hashlib
 import re
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Literal
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -25,6 +25,11 @@ from app.core.dependencies import (
     get_db_for_user,
     require_company_access,
     require_roles,
+)
+from app.models.filings import (
+    AGM,
+    AGMEvidenceVerification,
+    AGMEvidenceVerificationEvent,
 )
 from app.models.documents import (
     ArticlesVerification,
@@ -479,3 +484,329 @@ async def list_articles_verification_events(
         .order_by(ArticlesVerificationEvent.created_at.asc())
     )).all()
     return [_event_payload(event) for event in events]
+
+
+# ---------------------------------------------------------------------------
+# AGM member-register and attendance-register evidence workflow
+# ---------------------------------------------------------------------------
+
+class AGMEvidenceSubmitRequest(BaseModel):
+    agm_id: uuid.UUID
+    document_id: uuid.UUID
+    meeting_date: date
+    evidence_kind: Literal["MEMBERS_REGISTER", "ATTENDANCE_REGISTER"]
+
+
+class AGMEvidenceReviewRequest(BaseModel):
+    decision: Literal["VERIFIED", "REJECTED"]
+    verified_count: int | None = Field(default=None, ge=0)
+    reviewer_note: str = Field(min_length=10, max_length=4000)
+
+
+def _agm_evidence_payload(item: AGMEvidenceVerification) -> dict:
+    return {
+        "id": str(item.id),
+        "company_id": str(item.company_id),
+        "agm_id": str(item.agm_id),
+        "meeting_date": item.meeting_date.isoformat(),
+        "evidence_kind": item.evidence_kind,
+        "document_id": str(item.document_id),
+        "source_checksum_sha256": item.source_checksum_sha256,
+        "source_document_version": item.source_document_version,
+        "status": item.status,
+        "submitted_by": str(item.submitted_by),
+        "submitted_at": item.submitted_at.isoformat(),
+        "reviewed_by": str(item.reviewed_by) if item.reviewed_by else None,
+        "reviewed_at": item.reviewed_at.isoformat() if item.reviewed_at else None,
+        "verified_count": item.verified_count,
+        "reviewer_note": item.reviewer_note,
+    }
+
+
+@router.post(
+    "/companies/{company_id}/agm-evidence-document",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "LEGAL_STAFF", "SUPER_ADMIN"))],
+)
+async def upload_agm_evidence_document(
+    company_id: uuid.UUID,
+    evidence_kind: Literal["MEMBERS_REGISTER", "ATTENDANCE_REGISTER"] = Form(...),
+    file: UploadFile = File(...),
+    _: uuid.UUID = Depends(require_company_access()),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Store a private source PDF; the reviewer, not the uploader, certifies its count."""
+    if file.content_type != "application/pdf":
+        raise HTTPException(status_code=415, detail="Only PDF register evidence is accepted.")
+    payload = await file.read(20 * 1024 * 1024 + 1)
+    if not payload or len(payload) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Register evidence PDF must be between 1 byte and 20 MB.")
+    if not payload.startswith(b"%PDF-"):
+        raise HTTPException(status_code=422, detail="Uploaded file does not have a valid PDF signature.")
+
+    checksum = hashlib.sha256(payload).hexdigest()
+    document_id = uuid.uuid4()
+    settings = get_settings()
+    s3_key = (
+        f"{settings.s3_document_prefix}AGM_EVIDENCE/{evidence_kind}/"
+        f"{company_id}/{document_id}.pdf"
+    )
+    document = Document(
+        id=document_id,
+        company_id=company_id,
+        document_type=DocumentType.OTHER,
+        title=f"AGM_EVIDENCE:{evidence_kind}",
+        version=1,
+        s3_key=s3_key,
+        file_size_bytes=len(payload),
+        mime_type="application/pdf",
+        checksum_sha256=checksum,
+        ai_generated=False,
+        in_review_queue=True,
+        human_approved=False,
+        auto_sent_blocked=True,
+        is_client_visible=False,
+        created_by=current_user.id,
+        is_active=True,
+    )
+    db.add(document)
+    await db.flush()
+
+    def _put_source_pdf():
+        import boto3
+        client = boto3.client(
+            "s3",
+            region_name=settings.aws_region,
+            aws_access_key_id=settings.aws_key_id,
+            aws_secret_access_key=settings.aws_secret,
+        )
+        client.put_object(
+            Bucket=settings.s3_bucket_name,
+            Key=s3_key,
+            Body=payload,
+            ContentType="application/pdf",
+            ServerSideEncryption="AES256",
+            Metadata={
+                "document_id": str(document_id),
+                "company_id": str(company_id),
+                "evidence_kind": evidence_kind,
+                "sha256": checksum,
+            },
+        )
+
+    try:
+        await asyncio.to_thread(_put_source_pdf)
+    except Exception:
+        await db.rollback()
+        logger.exception("AGM evidence PDF upload failed", company_id=str(company_id))
+        raise HTTPException(status_code=503, detail="AGM evidence storage is temporarily unavailable.")
+
+    return {
+        "document_id": str(document_id),
+        "company_id": str(company_id),
+        "evidence_kind": evidence_kind,
+        "checksum_sha256": checksum,
+        "file_size_bytes": len(payload),
+        "status": "UPLOADED_PENDING_REVIEW",
+    }
+
+
+@router.post(
+    "/companies/{company_id}/agm-evidence",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "LEGAL_STAFF", "SUPER_ADMIN"))],
+)
+async def submit_agm_evidence(
+    company_id: uuid.UUID,
+    body: AGMEvidenceSubmitRequest,
+    _: uuid.UUID = Depends(require_company_access()),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    agm = await db.scalar(
+        select(AGM).where(AGM.id == body.agm_id, AGM.company_id == company_id)
+    )
+    if agm is None:
+        raise HTTPException(status_code=404, detail="AGM record not found for this company.")
+    document = await db.scalar(
+        select(Document).where(
+            Document.id == body.document_id,
+            Document.company_id == company_id,
+            Document.is_active.is_(True),
+            Document.document_type == DocumentType.OTHER,
+            Document.title == f"AGM_EVIDENCE:{body.evidence_kind}",
+            Document.ai_generated.is_(False),
+        )
+    )
+    if (
+        document is None
+        or not document.s3_key
+        or not document.checksum_sha256
+        or re.fullmatch(r"[0-9a-fA-F]{64}", document.checksum_sha256) is None
+    ):
+        raise HTTPException(status_code=422, detail="A matching uploaded register PDF with SHA-256 checksum is required.")
+
+    pending = await db.scalar(
+        select(AGMEvidenceVerification.id).where(
+            AGMEvidenceVerification.agm_id == agm.id,
+            AGMEvidenceVerification.evidence_kind == body.evidence_kind,
+            AGMEvidenceVerification.status == "PENDING",
+        ).with_for_update().limit(1)
+    )
+    if pending:
+        raise HTTPException(status_code=409, detail="A submission of this evidence type is already pending review.")
+
+    now = datetime.now(UTC)
+    item = AGMEvidenceVerification(
+        company_id=company_id,
+        agm_id=agm.id,
+        meeting_date=body.meeting_date,
+        evidence_kind=body.evidence_kind,
+        document_id=document.id,
+        source_checksum_sha256=document.checksum_sha256.lower(),
+        source_document_version=document.version,
+        status="PENDING",
+        submitted_by=current_user.id,
+        submitted_at=now,
+    )
+    try:
+        db.add(item)
+        await db.flush()
+        db.add(AGMEvidenceVerificationEvent(
+            company_id=company_id,
+            verification_id=item.id,
+            actor_id=current_user.id,
+            action="SUBMITTED",
+            previous_status=None,
+            new_status="PENDING",
+            source_checksum_sha256=item.source_checksum_sha256,
+            note=f"{body.evidence_kind} submitted for AGM date {body.meeting_date.isoformat()}.",
+        ))
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Evidence submission already exists.")
+    return _agm_evidence_payload(item)
+
+
+@router.post(
+    "/companies/{company_id}/agm-evidence/{verification_id}/review",
+    dependencies=[Depends(require_roles("LEGAL_STAFF"))],
+)
+async def review_agm_evidence(
+    company_id: uuid.UUID,
+    verification_id: uuid.UUID,
+    body: AGMEvidenceReviewRequest,
+    _: uuid.UUID = Depends(require_company_access()),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    item = await db.scalar(
+        select(AGMEvidenceVerification).where(
+            AGMEvidenceVerification.id == verification_id,
+            AGMEvidenceVerification.company_id == company_id,
+        ).with_for_update()
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="AGM evidence submission not found.")
+    if item.status != "PENDING":
+        raise HTTPException(status_code=409, detail="Only pending AGM evidence can be reviewed.")
+    if item.submitted_by == current_user.id:
+        raise HTTPException(status_code=403, detail="The submitter cannot review their own evidence.")
+
+    source = await db.scalar(
+        select(Document).where(
+            Document.id == item.document_id,
+            Document.company_id == company_id,
+            Document.is_active.is_(True),
+            Document.version == item.source_document_version,
+            Document.checksum_sha256 == item.source_checksum_sha256,
+            Document.title == f"AGM_EVIDENCE:{item.evidence_kind}",
+        )
+    )
+    if source is None:
+        raise HTTPException(status_code=409, detail="Evidence source changed or is unavailable; resubmit the current source.")
+
+    if body.decision == "VERIFIED":
+        if body.verified_count is None:
+            raise HTTPException(status_code=422, detail="A reviewer-certified count is required.")
+        if item.evidence_kind == "MEMBERS_REGISTER" and body.verified_count < 1:
+            raise HTTPException(status_code=422, detail="The members register must establish at least one member.")
+        if item.evidence_kind == "ATTENDANCE_REGISTER":
+            members_item = await db.scalar(
+                select(AGMEvidenceVerification).where(
+                    AGMEvidenceVerification.agm_id == item.agm_id,
+                    AGMEvidenceVerification.evidence_kind == "MEMBERS_REGISTER",
+                    AGMEvidenceVerification.status == "VERIFIED",
+                ).with_for_update().limit(1)
+            )
+            if members_item is not None and body.verified_count > (members_item.verified_count or 0):
+                raise HTTPException(status_code=422, detail="Attendance count cannot exceed the reviewed membership count.")
+        current_verified = await db.scalar(
+            select(AGMEvidenceVerification).where(
+                AGMEvidenceVerification.agm_id == item.agm_id,
+                AGMEvidenceVerification.evidence_kind == item.evidence_kind,
+                AGMEvidenceVerification.status == "VERIFIED",
+                AGMEvidenceVerification.id != item.id,
+            ).with_for_update().limit(1)
+        )
+        if current_verified is not None:
+            current_verified.status = "SUPERSEDED"
+            current_verified.reviewed_by = current_user.id
+            current_verified.reviewed_at = datetime.now(UTC)
+            db.add(AGMEvidenceVerificationEvent(
+                company_id=company_id,
+                verification_id=current_verified.id,
+                actor_id=current_user.id,
+                action="SUPERSEDED",
+                previous_status="VERIFIED",
+                new_status="SUPERSEDED",
+                source_checksum_sha256=current_verified.source_checksum_sha256,
+                note=f"Superseded by evidence submission {item.id}.",
+            ))
+        item.status = "VERIFIED"
+        item.verified_count = body.verified_count
+        action = "VERIFIED"
+    else:
+        item.status = "REJECTED"
+        action = "REJECTED"
+
+    now = datetime.now(UTC)
+    item.reviewed_by = current_user.id
+    item.reviewed_at = now
+    item.reviewer_note = body.reviewer_note.strip()
+    await db.flush()
+    db.add(AGMEvidenceVerificationEvent(
+        company_id=company_id,
+        verification_id=item.id,
+        actor_id=current_user.id,
+        action=action,
+        previous_status="PENDING",
+        new_status=item.status,
+        source_checksum_sha256=item.source_checksum_sha256,
+        note=item.reviewer_note,
+    ))
+    await db.flush()
+    return _agm_evidence_payload(item)
+
+
+@router.get("/companies/{company_id}/agms/{agm_id}/evidence")
+async def list_agm_evidence(
+    company_id: uuid.UUID,
+    agm_id: uuid.UUID,
+    _: uuid.UUID = Depends(require_company_access()),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    agm = await db.scalar(select(AGM.id).where(AGM.id == agm_id, AGM.company_id == company_id))
+    if agm is None:
+        raise HTTPException(status_code=404, detail="AGM record not found.")
+    rows = (await db.scalars(
+        select(AGMEvidenceVerification)
+        .where(
+            AGMEvidenceVerification.agm_id == agm_id,
+            AGMEvidenceVerification.company_id == company_id,
+        )
+        .order_by(AGMEvidenceVerification.submitted_at.asc())
+    )).all()
+    return [_agm_evidence_payload(item) for item in rows]
