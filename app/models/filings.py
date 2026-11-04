@@ -129,31 +129,20 @@ class AGMEvidenceVerification(FullMixin, Base):
 
     __tablename__ = "agm_evidence_verifications"
     __table_args__ = (
-        CheckConstraint(
-            "evidence_kind IN ('MEMBERS_REGISTER', 'ATTENDANCE_REGISTER')",
-            name="ck_agm_evidence_kind",
-        ),
-        CheckConstraint(
-            "status IN ('PENDING', 'VERIFIED', 'REJECTED', 'SUPERSEDED')",
-            name="ck_agm_evidence_status",
-        ),
+        CheckConstraint("evidence_kind IN ('MEMBERS_REGISTER', 'ATTENDANCE_REGISTER')", name="ck_agm_evidence_kind"),
+        CheckConstraint("status IN ('PENDING', 'VERIFIED', 'REJECTED', 'SUPERSEDED')", name="ck_agm_evidence_status"),
         CheckConstraint("source_document_version >= 1", name="ck_agm_evidence_version"),
+        CheckConstraint("source_checksum_sha256 ~ '^[0-9a-f]{64}$'", name="ck_agm_evidence_checksum"),
+        CheckConstraint("verified_count IS NULL OR verified_count >= 0", name="ck_agm_evidence_count"),
+        CheckConstraint("status <> 'VERIFIED' OR evidence_kind <> 'MEMBERS_REGISTER' OR verified_count >= 1", name="ck_agm_evidence_member_count_positive"),
         CheckConstraint(
-            "source_checksum_sha256 ~ '^[0-9a-f]{64} AND reviewed_by IS NULL AND reviewed_at IS NULL AND verified_count IS NULL) OR "
+            "(status = 'PENDING' AND reviewed_by IS NULL AND reviewed_at IS NULL AND verified_count IS NULL) OR "
             "(status = 'VERIFIED' AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL AND verified_count IS NOT NULL) OR "
             "(status IN ('REJECTED', 'SUPERSEDED') AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)",
             name="ck_agm_evidence_review_metadata",
         ),
-        Index(
-            "uq_agm_evidence_pending_kind",
-            "agm_id", "evidence_kind", unique=True,
-            postgresql_where=text("status = 'PENDING'"),
-        ),
-        Index(
-            "uq_agm_evidence_verified_kind",
-            "agm_id", "evidence_kind", unique=True,
-            postgresql_where=text("status = 'VERIFIED'"),
-        ),
+        Index("uq_agm_evidence_pending_kind", "agm_id", "evidence_kind", unique=True, postgresql_where=text("status = 'PENDING'")),
+        Index("uq_agm_evidence_verified_kind", "agm_id", "evidence_kind", unique=True, postgresql_where=text("status = 'VERIFIED'")),
     )
 
     company_id: Mapped[uuid.UUID] = mapped_column(
