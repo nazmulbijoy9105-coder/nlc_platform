@@ -8,7 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy import inspect
 
 revision = "0047_agm_unknown_defaults"
-down_revision = "0046_legal_evidence_provenance"
+down_revision = "0045_agm_held_fields"
 branch_labels = None
 depends_on = None
 
