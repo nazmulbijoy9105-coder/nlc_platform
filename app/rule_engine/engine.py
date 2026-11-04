@@ -717,13 +717,14 @@ class NLCRuleEngine:
         if c.paid_up_capital_bdt > c.authorized_capital_bdt:
             self._add_flag(ComplianceFlag(
                 rule_id="INC-004",
-                flag_code="PAID_UP_EXCEEDS_AUTHORIZED",
-                severity=Severity.BLACK,
-                score_impact=20,
-                revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Paid-up capital exceeds authorized capital. Section 150: all excess allotments void.",
-                statutory_basis="Section 53, Companies Act 1994 (Bangladesh)",
-                is_black_override=True,
+                flag_code="PAID_UP_AUTHORIZED_CAPITAL_MISMATCH",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Paid-up capital exceeds the recorded authorised capital. This is a data/legal review trigger, not an automatic finding that excess allotments are void. Verify the current capital register, special/ordinary resolutions, Form IV filing and RJSC record under Section 56.",
+                statutory_basis="Section 56, Companies Act 1994 (Bangladesh) — applicability and consequences require lawyer review",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
                 detail={"paid_up": c.paid_up_capital_bdt, "authorized": c.authorized_capital_bdt}
             ))
 
@@ -1674,13 +1675,14 @@ class NLCRuleEngine:
         if c.capital_reduction_pending and c.capital_reduction_court_order_obtained is False:
             self._add_flag(ComplianceFlag(
                 rule_id="CAP-003",
-                flag_code="CAPITAL_REDUCTION_WITHOUT_COURT",
-                severity=Severity.BLACK,
-                score_impact=15,
-                revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Capital reduction without the required court confirmation. Sections 59-60 govern reduction and confirmation; assess the court order and registration evidence.",
+                flag_code="CAPITAL_REDUCTION_REQUIRES_LEGAL_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="A capital-reduction workflow is marked pending without a verified court-confirmation and registration record. A pending workflow alone does not prove an unlawful completed reduction; review the resolution, court process, creditor notices and registration evidence under Sections 59-60.",
                 statutory_basis="Sections 59-60, Companies Act 1994 (Bangladesh)",
-                is_black_override=True,
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
             ))
 
         if c.special_resolution_date and c.special_resolution_filed is False:
