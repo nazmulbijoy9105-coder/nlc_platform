@@ -205,6 +205,7 @@ class TestAGMRules:
         profile = build_profile(
             member_count=7,
             members_present_at_agm=2,
+            agm_quorum_required=3,
             agm_held_this_cycle=True,
         )
         output = rule_engine.evaluate(profile)
@@ -217,6 +218,7 @@ class TestAGMRules:
         profile = build_profile(
             member_count=7,
             members_present_at_agm=3,
+            agm_quorum_required=3,
             agm_held_this_cycle=True,
         )
         output = rule_engine.evaluate(profile)
@@ -233,6 +235,9 @@ class TestAGMRules:
         profile = build_profile(
             member_count=None,
             members_present_at_agm=1,
+            agm_quorum_required=None,
+            agm_quorum_basis_verified=False,
+            agm_quorum_evidence_ref=None,
             agm_held_this_cycle=True,
         )
         output = rule_engine.evaluate(profile)
@@ -254,7 +259,9 @@ class TestAGMRules:
             auditor_reappointment_evidence_ref="AGM-MINUTES-TEST",
         )
         output = rule_engine.evaluate(profile)
-        assert_flag_triggered(output, "AUD-004")
+        flag = next(f for f in output.flags if f.rule_id == "AUD-004")
+        assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+        assert flag.score_impact == 0
 
 
     def test_AGM006_no_trigger_when_auditor_reappointed(self, rule_engine, build_profile):
