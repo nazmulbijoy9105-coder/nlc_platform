@@ -1065,6 +1065,10 @@ class NLCRuleEngine:
                 statutory_basis="Section 85, Companies Act 1994 (Bangladesh)",
                 detail={"notice_absence_verified": True}
             ))
+        if c.agm_scheduled_date and c.notice_sent_date is None and not c.agm_held_this_cycle:
+            warn = c.agm_scheduled_date - timedelta(days=AGM_NOTICE_MINIMUM_DAYS)
+            if self.today >= warn:
+                days_rem = (c.agm_scheduled_date - self.today).days
                 self._add_flag(ComplianceFlag(
                     rule_id="AGM-004",
                     flag_code="AGM_NOTICE_NOT_ISSUED",
