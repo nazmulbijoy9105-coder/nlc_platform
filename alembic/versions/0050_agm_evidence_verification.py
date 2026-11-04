@@ -169,7 +169,7 @@ def upgrade() -> None:
             END IF;
             RETURN NEW;
         END;
-        $;
+        $$;
     """)
     op.execute("""
         CREATE TRIGGER agm_evidence_source_immutable
