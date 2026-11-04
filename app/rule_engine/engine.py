@@ -1095,8 +1095,6 @@ class NLCRuleEngine:
         return c.agm_extension_granted_until
 
     def _run_agm_rules(self, c: CompanyProfile) -> None:
-        if self._agm_history_is_verified(c):
-            if c.agm_count is None or c.incorporation_date is None:
         if c.agm_count is None or c.incorporation_date is None:
             self._add_flag(ComplianceFlag(
                 rule_id="AGM-001",
@@ -1110,9 +1108,7 @@ class NLCRuleEngine:
             ))
             return
         if c.agm_count == 0:
-            if c.incorporation_date is None:
-                return 0
-            deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
+            deadline = self._add_months(c.incorporation_date, 18)
             if self.today > deadline:  # type: ignore
                 delay = (self.today - deadline).days  # type: ignore
                 severity = Severity.BLACK if delay > 365 else Severity.RED
@@ -2887,9 +2883,7 @@ class NLCRuleEngine:
                     deadline = self._add_months(c.incorporation_date, 18)
                     if self.today > deadline:
                         return (self.today - deadline).days // 365
-                if c.incorporation_date is None:
-                    return 0
-                deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
+                deadline = self._add_months(c.incorporation_date, 18)
                 if self.today > deadline:  # type: ignore
                     return (self.today - deadline).days // 365  # type: ignore
             return 0
