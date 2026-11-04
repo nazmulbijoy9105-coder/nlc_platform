@@ -20,6 +20,8 @@ from sqlalchemy import (
     Index,
     text,
     ForeignKey,
+    ForeignKeyConstraint,
+    UniqueConstraint,
     Integer,
     String,
     Text,
@@ -49,6 +51,9 @@ class Document(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     auto_sent_blocked = TRUE always — never auto-send to client.
     """
     __tablename__ = "documents"
+    __table_args__ = (
+        UniqueConstraint("company_id", "id", name="uq_documents_company_id_id"),
+    )
 
     company_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -174,6 +179,13 @@ class ArticlesVerification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "status <> 'VERIFIED' OR reviewed_by IS DISTINCT FROM submitted_by",
             name="ck_articles_verifications_four_eyes",
         ),
+        UniqueConstraint("company_id", "id", name="uq_articles_verifications_company_id"),
+        ForeignKeyConstraint(
+            ["company_id", "document_id"],
+            ["documents.company_id", "documents.id"],
+            ondelete="RESTRICT",
+            name="fk_articles_verifications_company_document",
+        ),
         CheckConstraint(
             "(status = 'REVOKED' AND revoked_by IS NOT NULL AND revoked_at IS NOT NULL AND revocation_reason IS NOT NULL) OR "
             "(status <> 'REVOKED' AND revoked_by IS NULL AND revoked_at IS NULL AND revocation_reason IS NULL)",
@@ -198,8 +210,7 @@ class ArticlesVerification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False, index=True,
     )
     document_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("documents.id", ondelete="RESTRICT"),
-        nullable=False, index=True,
+        UUID(as_uuid=True), nullable=False, index=True,
     )
     source_checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     source_document_version: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -234,6 +245,12 @@ class ArticlesVerificationEvent(AuditMixin, Base):
             "action IN ('SUBMITTED', 'VERIFIED', 'REJECTED', 'REVOKED', 'SUPERSEDED')",
             name="ck_articles_verification_events_action",
         ),
+        ForeignKeyConstraint(
+            ["company_id", "verification_id"],
+            ["articles_verifications.company_id", "articles_verifications.id"],
+            ondelete="RESTRICT",
+            name="fk_articles_verification_events_company_parent",
+        ),
     )
 
 
@@ -242,8 +259,7 @@ class ArticlesVerificationEvent(AuditMixin, Base):
         nullable=False, index=True,
     )
     verification_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("articles_verifications.id", ondelete="RESTRICT"),
-        nullable=False, index=True,
+        UUID(as_uuid=True), nullable=False, index=True,
     )
     actor_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False,
