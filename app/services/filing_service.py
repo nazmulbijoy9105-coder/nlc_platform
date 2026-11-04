@@ -194,24 +194,32 @@ class AGMService(BaseService[AGM]):
         )
 
     @staticmethod
-    def calculate_first_agm_deadline(incorporation_date: date) -> date:
-        """
-        Section 81 CA 1994: First AGM within 18 months (548 days) of incorporation.
-        """
-        return incorporation_date + timedelta(days=548)
+    def _add_calendar_months(source: date, months: int) -> date:
+        month_index = source.month - 1 + months
+        year = source.year + month_index // 12
+        month = month_index % 12 + 1
+        day = min(source.day, calendar.monthrange(year, month)[1])
+        return date(year, month, day)
 
-    @staticmethod
+    @classmethod
+    def calculate_first_agm_deadline(cls, incorporation_date: date) -> date:
+        """Companies Act 1994 s.81: 18 calendar months after registration."""
+        return cls._add_calendar_months(incorporation_date, 18)
+
+    @classmethod
     def calculate_subsequent_agm_deadline(
+        cls,
         last_agm_date: date,
-        financial_year_end: date,
+        financial_year_end: date | None = None,
     ) -> date:
+        """Section 81: each subsequent AGM within 15 calendar months and in each calendar year.
+
+        financial_year_end is retained for API compatibility only. Section 81
+        does not impose a universal six-month-after-FY-end test.
         """
-        Section 81: Subsequent AGM within 15 months of previous (456 days)
-        OR within 6 months (182 days) of FY end — whichever is earlier.
-        """
-        by_last_agm = last_agm_date + timedelta(days=456)
-        by_fy_end = financial_year_end + timedelta(days=182)
-        return min(by_last_agm, by_fy_end)
+        by_interval = cls._add_calendar_months(last_agm_date, 15)
+        by_calendar_year = date(last_agm_date.year + 1, 12, 31)
+        return min(by_interval, by_calendar_year)
 
 
 # ═══════════════════════════════════════════════════════════════════════
