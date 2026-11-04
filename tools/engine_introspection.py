@@ -224,7 +224,8 @@ profiles = {
     "aud005": make_base(
         company_id="O",
         first_auditor_appointed=True,
-        auditor_reappointed_at_agm=False,
+        auditor_reappointed_at_agm=None,
+        agm_held_this_cycle=True,
         audit_in_progress=False,
         agm_count=3, last_agm_date=today - timedelta(days=200),
         financial_year_end=date(2025, 6, 30),
