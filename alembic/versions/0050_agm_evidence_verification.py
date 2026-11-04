@@ -95,14 +95,16 @@ def upgrade() -> None:
 
     op.execute("""
         CREATE OR REPLACE FUNCTION public.nlc_prevent_agm_evidence_event_mutation()
-        RETURNS trigger LANGUAGE plpgsql AS $$
+        RETURNS trigger LANGUAGE plpgsql AS $
         BEGIN
             RAISE EXCEPTION 'AGM evidence verification events are append-only';
         END;
-        $$;
+        $;
+    """)
+    op.execute("""
         CREATE TRIGGER agm_evidence_events_append_only
         BEFORE UPDATE OR DELETE ON public.agm_evidence_verification_events
-        FOR EACH ROW EXECUTE FUNCTION public.nlc_prevent_agm_evidence_event_mutation();
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_prevent_agm_evidence_event_mutation()
     """)
     op.execute("""
         CREATE OR REPLACE FUNCTION public.nlc_protect_agm_evidence_verification()
@@ -143,14 +145,16 @@ def upgrade() -> None:
     """)
     op.execute("""
         CREATE OR REPLACE FUNCTION public.nlc_prevent_agm_evidence_delete()
-        RETURNS trigger LANGUAGE plpgsql AS $$
+        RETURNS trigger LANGUAGE plpgsql AS $
         BEGIN
             RAISE EXCEPTION 'AGM evidence verification records are retained as legal evidence';
         END;
-        $$;
+        $;
+    """)
+    op.execute("""
         CREATE TRIGGER agm_evidence_no_delete
         BEFORE DELETE ON public.agm_evidence_verifications
-        FOR EACH ROW EXECUTE FUNCTION public.nlc_prevent_agm_evidence_delete();
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_prevent_agm_evidence_delete()
     """)
     op.execute("""
         DO $grant$
