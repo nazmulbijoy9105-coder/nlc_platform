@@ -115,3 +115,20 @@ async def test_admin_sentinel_cannot_grant_staff_access(db, db_client_user):
         text("SELECT public.nlc_current_user_is_staff()")
     )
     assert result.scalar_one() is False
+
+@pytest.mark.asyncio
+async def test_activity_log_has_one_strict_actor_and_company_policy(db):
+    """A second permissive RLS policy would OR-broaden the intended boundary."""
+    result = await db.execute(
+        text(
+            "SELECT count(*), "
+            "bool_or(policyname = 'user_activity_logs_actor_tenant'), "
+            "bool_or(qual ILIKE '%user_id%' AND qual ILIKE '%nlc_can_access_company%') "
+            "FROM pg_policies "
+            "WHERE schemaname = 'public' AND tablename = 'user_activity_logs'"
+        )
+    )
+    policy_count, has_strict_policy, has_actor_and_tenant_predicate = result.one()
+    assert policy_count == 1
+    assert has_strict_policy is True
+    assert has_actor_and_tenant_predicate is True
