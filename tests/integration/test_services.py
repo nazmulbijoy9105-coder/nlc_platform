@@ -577,6 +577,7 @@ class TestFilingService:
         assert agm.id is not None
         assert agm.company_id == db_company.id
         assert agm.financial_year == 2023
+        assert agm.agm_deadline == date(2024, 6, 30)
         assert agm.agm_held is False
         assert agm.members_present == 0
         assert agm.quorum_required is None
