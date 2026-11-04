@@ -45,15 +45,15 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | BOD-001 | Board Meeting Not Held Within Quarter | Section 96, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | BOD-002 | Board Meeting Notice Not Given | Section 95, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
 | BOD-003 | Board Meeting Minutes Not Prepared | Section 89, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| BSEC-001 | BSEC Quarterly Report Not Filed | BSEC Corporate Governance Code 2023, Para 8 | RED | 10 | no | Engine-aligned 2026-11-02 |
-| BSEC-002 | CG Certificate Not Obtained | BSEC Corporate Governance Code 2023, Para 5 | RED | 10 | no | Engine-aligned 2026-11-02 |
-| BSEC-003 | Board Composition Non-Compliant | BSEC Corporate Governance Code 2023, Para 5 | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
+| BSEC-001 | BSEC Quarterly Report Not Filed | BSEC Corporate Governance Code 2018, as amended in 2023 and 2024, Para 8 | RED | 10 | no | Engine-aligned 2026-11-02 |
+| BSEC-002 | CG Certificate Not Obtained | BSEC Corporate Governance Code 2018, as amended in 2023 and 2024, Para 5 | RED | 10 | no | Engine-aligned 2026-11-02 |
+| BSEC-003 | Board Composition Non-Compliant | BSEC Corporate Governance Code 2018, as amended in 2023 and 2024, Para 5 | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
 | BSEC-004 | Audit Committee Not Established | Foreign Exchange Regulation Act 1947 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | CAP-001 | Capital Alteration Without Proper Resolution | Section 53, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | CAP-002 | Charge Not Registered With RJSC Within 21 Days | Section 159(1), Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| CAP-003 | Capital Reduction Without Court Order | Section 150, Companies Act 1994 (Bangladesh) | BLACK | 15 | YES | Engine-aligned 2026-11-02 |
+| CAP-003 | Capital Reduction Without Court Order | Sections 59-60, Companies Act 1994 (Bangladesh) | BLACK | 15 | YES | Engine-aligned 2026-11-02 |
 | CAP-004 | Special Resolution Not Filed With RJSC | Section 88, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
-| CHG-001 | Charge Satisfaction Not Filed | Section 159, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
+| CHG-001 | Charge Satisfaction Not Filed | Section 172, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
 | DEF-001 | Director Disqualified | Section 94, Companies Act 1994 (Bangladesh) | BLACK | 20 | YES | Engine-aligned 2026-11-02 |
 | DEF-002 | Unresolved Penalty Notices | Section 397, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | DIR-001 | Director Appointment Not Filed Within 14 Days | Section 90, Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
@@ -76,9 +76,9 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | INC-004 | Paid-Up Capital Exceeds Authorized Capital | Section 53, Companies Act 1994 (Bangladesh) | BLACK | 20 | YES | Engine-aligned 2026-11-02 |
 | INC-005 | Encashment Certificate Missing — Foreign Shareholding | BIDA Foreign Investment Act 1980; Bangladesh Bank FDI Circular | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
 | INC-006 | Remittance Below Work Permit Threshold | BIDA Foreign Investment Act 1980 | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| INC-007 | Business Commenced Without Section 150 Declaration | Section 150, Companies Act 1994 (Bangladesh) | RED | 10 | no | Engine-aligned 2026-11-02 |
-| LBR-001 | Factory License Missing | Labour Act 2006 (Bangladesh), Section 35 | RED | 10 | no | Engine-aligned 2026-11-02 |
-| LBR-002 | Factory License Expired | Labour Act 2006 (Bangladesh), Section 35 | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
+| INC-007 | Business Commenced Without Section 150 Declaration | Sections 59-60, Companies Act 1994 (Bangladesh) | RED | 10 | no | Engine-aligned 2026-11-02 |
+| LBR-001 | Factory License Missing | Labour Act 2006 (Bangladesh), Section 326 (2026 amendment; applicability conditional) | RED | 10 | no | Engine-aligned 2026-11-02 |
+| LBR-002 | Factory License Expired | Labour Act 2006 (Bangladesh), Section 326 (2026 amendment; applicability conditional) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | LBR-003 | Labour Court Order Pending | Labour Act 2006 (Bangladesh), Section 209 | RED | 15 | no | Engine-aligned 2026-11-02 |
 | MEM-001 | Company Operating with Fewer than Minimum Members | Section 222, Companies Act 1994 (Bangladesh) | RED | 10 | no | Engine-aligned 2026-11-02 |
 | OFF-001 | Change of Registered Office Not Filed Within 28 Days | Section 77, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
@@ -88,13 +88,13 @@ This matrix maps every active `rule_id` to its `statutory_basis` as implemented 
 | SH-001 | Share Allotment Not Filed — Form XV | Section 151, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
 | SH-002 | Share Certificates Not Issued Within 60 Days | Section 158, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | SH-003 | Capital Increase Not Filed — Form IV | Section 56, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
-| STR-001 | Name Change Not Filed | Section 20, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
-| STR-002 | Object Clause Change Not Filed | Section 17, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
-| STR-003 | AoA Alteration Not Filed | Section 18, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
+| STR-001 | Name Change Not Filed | Sections 11 and 88(1), Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
+| STR-002 | Object Clause Change Not Filed | Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
+| STR-003 | AoA Alteration Not Filed | Sections 20 and 88(1), Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
 | TAX-001 | Tax Identification Number (TIN) Not Obtained | Income Tax Act 2023 (Bangladesh) | RED | 10 | no | Engine-aligned 2026-11-02 |
 | TAX-002 | VAT Registration Required But Not Obtained | Value Added Tax Act 2012 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| TAX-003 | Annual Tax Return Overdue | Income Tax Act 2023, Section 75 | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| TAX-004 | Advance Tax Missed | Income Tax Act 2023, Section 74 | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
+| TAX-003 | Annual Tax Return Overdue | Income Tax Act 2023, Sections 166 and 171 (Tax Day is taxpayer-specific) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
+| TAX-004 | Advance Tax Missed | Income Tax Act 2023, Sections 154-157 | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
 | TL-001 | Trade License Not Obtained | Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009 | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | TL-002 | Trade License Expired | Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009 | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
 | TR-001 | No Share Transfer Instrument — Form 117 | Section 38, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
