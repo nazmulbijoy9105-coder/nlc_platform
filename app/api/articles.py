@@ -629,6 +629,8 @@ async def submit_agm_evidence(
     )
     if agm is None:
         raise HTTPException(status_code=404, detail="AGM record not found for this company.")
+    if agm.agm_date is not None and agm.agm_date != body.meeting_date:
+        raise HTTPException(status_code=422, detail="Evidence meeting date must match the AGM's recorded held date.")
     document = await db.scalar(
         select(Document).where(
             Document.id == body.document_id,
@@ -723,6 +725,9 @@ async def review_agm_evidence(
             Document.version == item.source_document_version,
             Document.checksum_sha256 == item.source_checksum_sha256,
             Document.title == f"AGM_EVIDENCE:{item.evidence_kind}",
+            Document.document_type == DocumentType.OTHER,
+            Document.ai_generated.is_(False),
+            Document.s3_key.is_not(None),
         )
     )
     if source is None:
