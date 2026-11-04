@@ -23,11 +23,12 @@
 7. TAX-003 now uses the provisional non-individual filing deadline under Income Tax Act 2023 s.170(2), as substituted by Finance Act 2026 (Act 96/2026), with s.171 cross-reference. It is not the former Tax Day formula. Holiday roll-forward, extension and taxpayer-class verification remain open.
 8. BSEC-001–004 produce review prompts only, correct the known condition mapping (Condition 1 board composition; Condition 5 audit committee; Condition 9 compliance certificate; Condition 8 website), and do not assume listed-company rules apply to all private companies.
 9. LBR-001/002 produce review prompts only unless the applicable section 326 Government direction, establishment class, licence record and renewal terms are verified. The current statute is Bangladesh Labour Act 2006 s.326 as amended by Act 43/2026.
-10. Canonical parity audit now recognises tuple-declared BSEC IDs. Canonical integrity tests are being restored rather than silently skipped.
+10. Corrected SH-002 to the 90-day certificate deadline in Companies Act s.158; the engine still needs a transfer-registration event path, because s.158 covers both allotment and transfer.
+11. Canonical parity audit now recognises tuple-declared BSEC IDs. Canonical integrity tests are being restored rather than silently skipped.
 
 ## Statutory anchors identified for counsel confirmation
 
-- Companies Act / RJSC: rule-by-rule source triage identifies material candidate citation defects, including AUD-003 (s.151), CAP-003 (ss.59–60), CHG-001 (s.172), DIR-007 (s.92/Form IX), and STR-001/002/003 (ss.11/12/15–16/20). These are not signed legal conclusions.
+- Companies Act / RJSC: rule-by-rule source triage identifies material candidate citation defects, including AUD-003 (s.151), CAP-003 (ss.59–60), CHG-001 (s.172), DIR-007 (s.92/Form IX), and STR-001/002/003 (ss.11/12/15–16/20). The 2020 amendments also add OPC provisions, s.11A name suffixes and s.38(3A) share-transfer identity verification. These are not signed legal conclusions.
 - BSEC: Corporate Governance Code 2018, as amended by the 2023 and 2024 notifications; apply only within the instrument's listed-issuer scope.
 - VAT: VAT Act 2012 as amended by Act 77/2026 (threshold definitions), Finance Act 2026 Act 96/2026 (multiple VAT provisions, including s.64), and Ordinance 38/2026 (s.64 effective 1 October 2026). NBR Rules, SROs, GOs and taxpayer-specific orders still require exhaustive screening.
 - Income tax: Finance Act 2026 Act 96/2026 amended Income Tax Act 2023 s.170 and s.171. Company deadline formula must be verified against s.170(2), not old Tax Day descriptions.
