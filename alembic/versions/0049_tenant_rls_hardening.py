@@ -219,7 +219,7 @@ def upgrade() -> None:
         SECURITY DEFINER
         SET search_path = pg_catalog, public
         AS $$
-            SELECT
+            SELECT COALESCE(
                 public.nlc_current_user_principal() = 'ADMIN'
                 OR EXISTS (
                     SELECT 1
@@ -227,8 +227,10 @@ def upgrade() -> None:
                     WHERE u.id = public.nlc_current_user_id()
                       AND u.is_active IS TRUE
                       AND u.role::text IN ('SUPER_ADMIN', 'ADMIN_STAFF', 'LEGAL_STAFF')
-                )
-        $$;
+                ),
+                FALSE
+            )
+        $;
     """)
 
     _execute_sql_script("""
