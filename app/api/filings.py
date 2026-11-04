@@ -67,14 +67,12 @@ class AGMMarkHeldRequest(BaseModel):
     held_date: date
     venue: str | None = None
     members_present: int = Field(ge=0)
-    # Deprecated compatibility input; quorum is derived server-side.
+    # Deprecated compatibility input. The server derives quorum from verified
+    # membership and Articles evidence; this value is ignored.
     quorum_met: bool | None = None
     members_total_at_agm: int | None = Field(default=None, ge=1)
     members_total_evidence_ref: str | None = None
     members_present_evidence_ref: str | None = None
-    # Deprecated compatibility input. The server derives quorum from company
-    # membership and does not trust a client-provided compliance conclusion.
-    quorum_met: bool | None = None
     auditor_reappointed: bool
     accounts_adopted: bool | None = None
     agm_held_without_audit: bool | None = None
