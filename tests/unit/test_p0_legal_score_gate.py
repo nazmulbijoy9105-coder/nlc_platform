@@ -2,7 +2,8 @@
 from datetime import date
 from types import SimpleNamespace
 
-from app.rule_engine import engine as engine_module
+import app.rule_engine.engine as engine_module
+import app.services.pdf_report_service as report_module
 from app.rule_engine.engine import (
     CompanyProfile,
     ComplianceFlag as EngineFlag,
@@ -64,13 +65,13 @@ def test_unapproved_black_flag_is_excluded_from_persisted_score_reconciliation(m
 
 
 def test_pdf_score_reconciliation_ignores_unapproved_black_flag(monkeypatch):
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
     flag = SimpleNamespace(rule_id="AUD-003", severity="BLACK", score_impact=25)
     assert _verified_flag_score([flag]) == (100, False)
 
 
 def test_pdf_score_reconciliation_counts_only_approved_rules(monkeypatch):
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     approved = SimpleNamespace(rule_id="AGM-001", severity="RED", score_impact=15)
     unapproved = SimpleNamespace(rule_id="AUD-003", severity="BLACK", score_impact=25)
     assert _verified_flag_score([approved, unapproved]) == (85, False)
