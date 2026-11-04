@@ -66,7 +66,11 @@ async def test_app_role_has_no_schema_creation_or_truncate_privilege(db):
         text("SELECT has_schema_privilege('nlc_app_role', 'nlc_private', 'USAGE')")
     )
     secret_table = await db.execute(
-        text("SELECT has_table_privilege('nlc_app_role', 'nlc_private.rls_signing_key', 'SELECT')")
+        text(
+            "SELECT has_table_privilege('nlc_app_role', c.oid, 'SELECT') "
+            "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+            "WHERE n.nspname = 'nlc_private' AND c.relname = 'rls_signing_key'"
+        )
     )
     assert secret_schema.scalar_one() is False
     assert secret_table.scalar_one() is False
