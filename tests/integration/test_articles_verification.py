@@ -154,6 +154,66 @@ async def test_articles_verification_submit_review_revoke_and_event_history(
 
 
 @pytest.mark.asyncio
+async def test_articles_verification_rejects_document_from_another_company(
+    db, db_company, db_other_company, db_client_user
+):
+    from sqlalchemy.exc import IntegrityError
+
+    foreign_document = await _articles_document(db, db_other_company.id)
+    now = datetime.now(UTC)
+    record = ArticlesVerification(
+        company_id=db_company.id,
+        document_id=foreign_document.id,
+        source_checksum_sha256=foreign_document.checksum_sha256,
+        source_document_version=foreign_document.version,
+        status="PENDING",
+        submitted_by=db_client_user.id,
+        submitted_at=now,
+    )
+    async with db.begin_nested():
+        db.add(record)
+        with pytest.raises(IntegrityError):
+            await db.flush()
+
+
+@pytest.mark.asyncio
+async def test_agm_evidence_rejects_foreign_company_agm_and_document(
+    db, db_company, db_other_company, db_client_user
+):
+    from sqlalchemy.exc import IntegrityError
+
+    own_agm = AGM(company_id=db_company.id, financial_year=2025)
+    foreign_document = Document(
+        company_id=db_other_company.id,
+        document_type=DocumentType.OTHER,
+        title="Foreign company members register",
+        s3_key=f"companies/{db_other_company.id}/foreign-register.pdf",
+        checksum_sha256="f" * 64,
+        version=1,
+        ai_generated=False,
+        is_active=True,
+    )
+    db.add_all([own_agm, foreign_document])
+    await db.flush()
+    record = AGMEvidenceVerification(
+        company_id=db_company.id,
+        agm_id=own_agm.id,
+        meeting_date=date(2025, 7, 1),
+        evidence_kind="MEMBERS_REGISTER",
+        document_id=foreign_document.id,
+        source_checksum_sha256=foreign_document.checksum_sha256,
+        source_document_version=foreign_document.version,
+        status="PENDING",
+        submitted_by=db_client_user.id,
+        submitted_at=datetime.now(UTC),
+    )
+    async with db.begin_nested():
+        db.add(record)
+        with pytest.raises(IntegrityError):
+            await db.flush()
+
+
+@pytest.mark.asyncio
 async def test_articles_submitter_cannot_self_review(api_client, db, db_company, legal_headers):
     await _grant_staff_memberships(db, db_company.id)
     document = await _articles_document(db, db_company.id)
