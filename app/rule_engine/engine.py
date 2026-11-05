@@ -2503,7 +2503,7 @@ class NLCRuleEngine:
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="Three or more years of apparent filing default or an RJSC strike-off-list indicator requires case-specific lawyer review. This is not a finding that strike-off is imminent or that dissolution has occurred.",
-                statutory_basis="Section 346, Companies Act 1994 (Bangladesh); current procedural status requires RJSC record verification",
+                statutory_basis="Section 304, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required",
                 detail={"agm_years": agm_years, "ar_years": ar_years, "on_list": c.on_rjsc_strike_off_list},
                 state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                 eval_state="UNKNOWN",
