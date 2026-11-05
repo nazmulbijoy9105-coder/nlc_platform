@@ -1486,16 +1486,14 @@ class NLCRuleEngine:
         if c.agm_held_this_cycle and c.agm_minutes_prepared is False:
             self._add_flag(ComplianceFlag(
                 rule_id="AGM-006",
-                flag_code="AGM_MINUTES_STATUS_REQUIRES_REVIEW",
-                severity=Severity.NOT_EVALUATED,
-                score_impact=0,
-                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="The record says AGM minutes were not prepared. Verify the minute book and contemporaneous records before determining non-compliance under Section 89.",
                 flag_code="AGM_MINUTES_STATUS_UNVERIFIED",
                 severity=Severity.NOT_EVALUATED,
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="The record indicates minutes may be absent, but the minute book and contemporaneous records have not been independently verified.",
+                description=(
+                    "The record indicates minutes may be absent, but the minute book "
+                    "and contemporaneous records have not been independently verified."
+                ),
                 statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
                 state=RuleState.UNKNOWN,
                 eval_state="UNKNOWN",
