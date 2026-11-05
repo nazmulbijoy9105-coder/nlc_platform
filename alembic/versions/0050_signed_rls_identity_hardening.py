@@ -20,10 +20,8 @@ COMPANY_TABLES = (
     "agms",
     "annual_returns",
     "audits",
-    "compliance_flags",
     "compliance_score_history",
     "directors",
-    "documents",
     "registered_office_history",
     "rescue_plans",
     "rescue_steps",
@@ -35,6 +33,9 @@ COMPANY_TABLES = (
     "compliance_calendar_events",
     "compliance_evaluation_runs",
 )
+
+FINANCIAL_TABLES = ("annual_returns", "audits", "compliance_evaluation_runs")
+SENSITIVE_DOCUMENT_TYPES = ("AUDIT_REPORT", "ANNUAL_RETURN", "DUE_DILIGENCE")
 
 RLS_TABLES = (
     "companies",
@@ -237,6 +238,60 @@ def upgrade() -> None:
         $function$
     """)
     op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_can_view_financials_company(p_company_id uuid)
+        RETURNS boolean
+        LANGUAGE sql
+        STABLE
+        SECURITY DEFINER
+        SET search_path = pg_catalog, public
+        AS $function$
+            SELECT public.nlc_current_user_is_staff()
+                OR (
+                    public.nlc_current_user_id() IS NOT NULL
+                    AND EXISTS (
+                        SELECT 1 FROM public.users u
+                        WHERE u.id = public.nlc_current_user_id()
+                          AND u.is_active IS TRUE
+                    )
+                    AND EXISTS (
+                        SELECT 1 FROM public.company_user_access cua
+                        WHERE cua.company_id = p_company_id
+                          AND cua.user_id = public.nlc_current_user_id()
+                          AND cua.is_active IS TRUE
+                          AND cua.can_view_financials IS TRUE
+                    )
+                )
+        $function$
+    """)
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_can_manage_financials_company(p_company_id uuid)
+        RETURNS boolean
+        LANGUAGE sql
+        STABLE
+        SECURITY DEFINER
+        SET search_path = pg_catalog, public
+        AS $function$
+            SELECT public.nlc_current_user_is_staff()
+                OR (
+                    public.nlc_current_user_id() IS NOT NULL
+                    AND EXISTS (
+                        SELECT 1 FROM public.users u
+                        WHERE u.id = public.nlc_current_user_id()
+                          AND u.is_active IS TRUE
+                    )
+                    AND EXISTS (
+                        SELECT 1 FROM public.company_user_access cua
+                        WHERE cua.company_id = p_company_id
+                          AND cua.user_id = public.nlc_current_user_id()
+                          AND cua.is_active IS TRUE
+                          AND cua.can_edit IS TRUE
+                          AND cua.can_view_financials IS TRUE
+                    )
+                )
+        $function$
+    """)
+
+    op.execute("""
         CREATE OR REPLACE FUNCTION public.nlc_can_edit_company(p_company_id uuid)
         RETURNS boolean
         LANGUAGE sql
@@ -275,6 +330,10 @@ def upgrade() -> None:
                 SELECT 1 FROM public.documents d
                 WHERE d.id = p_document_id
                   AND public.nlc_can_access_company(d.company_id)
+                  AND (
+                      d.document_type::text NOT IN ('AUDIT_REPORT', 'ANNUAL_RETURN', 'DUE_DILIGENCE')
+                      OR public.nlc_can_view_financials_company(d.company_id)
+                  )
             )
         $function$
     """)
@@ -285,6 +344,8 @@ def upgrade() -> None:
         "nlc_current_user_context_valid()",
         "nlc_current_user_is_staff()",
         "nlc_can_access_company(uuid)",
+        "nlc_can_view_financials_company(uuid)",
+        "nlc_can_manage_financials_company(uuid)",
         "nlc_can_edit_company(uuid)",
         "nlc_can_access_document(uuid)",
     ):
@@ -338,24 +399,91 @@ def upgrade() -> None:
     """)
 
     for table in COMPANY_TABLES:
+        read_fn = "nlc_can_view_financials_company" if table in FINANCIAL_TABLES else "nlc_can_access_company"
+        write_fn = "nlc_can_manage_financials_company" if table in FINANCIAL_TABLES else "nlc_can_edit_company"
         op.execute(f"""
             CREATE POLICY {table}_tenant_select ON public.{table}
-            FOR SELECT USING (public.nlc_can_access_company(company_id))
+            FOR SELECT USING (public.{read_fn}(company_id))
         """)
         op.execute(f"""
             CREATE POLICY {table}_tenant_insert ON public.{table}
-            FOR INSERT WITH CHECK (public.nlc_can_edit_company(company_id))
+            FOR INSERT WITH CHECK (public.{write_fn}(company_id))
         """)
         op.execute(f"""
             CREATE POLICY {table}_tenant_update ON public.{table}
             FOR UPDATE
-            USING (public.nlc_can_edit_company(company_id))
-            WITH CHECK (public.nlc_can_edit_company(company_id))
+            USING (public.{write_fn}(company_id))
+            WITH CHECK (public.{write_fn}(company_id))
         """)
         op.execute(f"""
             CREATE POLICY {table}_tenant_delete ON public.{table}
-            FOR DELETE USING (public.nlc_can_edit_company(company_id))
+            FOR DELETE USING (public.{write_fn}(company_id))
         """)
+
+    # Compliance flags may expose tax, audit, annual-return and capital data.
+    op.execute("""
+        CREATE POLICY compliance_flags_tenant_select ON public.compliance_flags
+        FOR SELECT
+        USING (
+            public.nlc_can_access_company(company_id)
+            AND (
+                NOT (
+                    rule_id LIKE 'TAX-%' OR rule_id LIKE 'VAT-%'
+                    OR rule_id LIKE 'AUD-%' OR rule_id LIKE 'ACC-%'
+                    OR rule_id LIKE 'AR-%' OR rule_id LIKE 'CAP-%'
+                )
+                OR public.nlc_can_view_financials_company(company_id)
+            )
+        )
+    """)
+    op.execute("""
+        CREATE POLICY compliance_flags_tenant_insert ON public.compliance_flags
+        FOR INSERT WITH CHECK (public.nlc_can_edit_company(company_id))
+    """)
+    op.execute("""
+        CREATE POLICY compliance_flags_tenant_update ON public.compliance_flags
+        FOR UPDATE
+        USING (public.nlc_can_edit_company(company_id))
+        WITH CHECK (public.nlc_can_edit_company(company_id))
+    """)
+    op.execute("""
+        CREATE POLICY compliance_flags_tenant_delete ON public.compliance_flags
+        FOR DELETE USING (public.nlc_can_edit_company(company_id))
+    """)
+
+    # Document visibility depends on document classification, not just tenant.
+    op.execute("""
+        CREATE POLICY documents_tenant_select ON public.documents
+        FOR SELECT USING (public.nlc_can_access_document(id))
+    """)
+    op.execute("""
+        CREATE POLICY documents_tenant_insert ON public.documents
+        FOR INSERT
+        WITH CHECK (
+            public.nlc_can_edit_company(company_id)
+            AND (
+                document_type::text NOT IN ('AUDIT_REPORT', 'ANNUAL_RETURN', 'DUE_DILIGENCE')
+                OR public.nlc_can_manage_financials_company(company_id)
+            )
+        )
+    """)
+    op.execute("""
+        CREATE POLICY documents_tenant_update ON public.documents
+        FOR UPDATE
+        USING (public.nlc_can_access_document(id) AND public.nlc_can_edit_company(company_id))
+        WITH CHECK (
+            public.nlc_can_edit_company(company_id)
+            AND (
+                document_type::text NOT IN ('AUDIT_REPORT', 'ANNUAL_RETURN', 'DUE_DILIGENCE')
+                OR public.nlc_can_manage_financials_company(company_id)
+            )
+        )
+    """)
+    op.execute("""
+        CREATE POLICY documents_tenant_delete ON public.documents
+        FOR DELETE
+        USING (public.nlc_can_access_document(id) AND public.nlc_can_edit_company(company_id))
+    """)
 
     op.execute("""
         CREATE POLICY users_self_or_staff_select ON public.users
