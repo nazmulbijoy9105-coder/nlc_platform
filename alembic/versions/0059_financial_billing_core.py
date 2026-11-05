@@ -263,7 +263,12 @@ def upgrade() -> None:
     """)
     op.execute("""
         CREATE POLICY invoices_finance_insert ON public.invoices
-        FOR INSERT WITH CHECK (public.nlc_can_manage_billing_company(company_id))
+        FOR INSERT WITH CHECK (
+            public.nlc_can_manage_billing_company(company_id)
+            AND status = 'DRAFT'
+            AND paid_bdt = 0
+            AND balance_bdt = total_bdt
+        )
     """)
     op.execute("""
         CREATE POLICY invoices_finance_update ON public.invoices
@@ -290,7 +295,15 @@ def upgrade() -> None:
     """)
     op.execute("""
         CREATE POLICY invoice_lines_finance_insert ON public.invoice_lines
-        FOR INSERT WITH CHECK (public.nlc_can_manage_billing_company(company_id))
+        FOR INSERT WITH CHECK (
+            public.nlc_can_manage_billing_company(company_id)
+            AND EXISTS (
+                SELECT 1 FROM public.invoices i
+                WHERE i.id = invoice_lines.invoice_id
+                  AND i.company_id = invoice_lines.company_id
+                  AND i.status = 'DRAFT'
+            )
+        )
     """)
     op.execute("""
         CREATE POLICY invoice_lines_finance_update ON public.invoice_lines
@@ -347,7 +360,11 @@ def upgrade() -> None:
     """)
     op.execute("""
         CREATE POLICY payments_finance_insert ON public.payments
-        FOR INSERT WITH CHECK (public.nlc_can_manage_billing_company(company_id))
+        FOR INSERT WITH CHECK (
+            public.nlc_can_manage_billing_company(company_id)
+            AND status = 'SETTLED'
+            AND verified_at IS NOT NULL
+        )
     """)
     op.execute("""
         CREATE POLICY payments_finance_update ON public.payments
@@ -362,7 +379,22 @@ def upgrade() -> None:
     """)
     op.execute("""
         CREATE POLICY payment_allocations_finance_insert ON public.payment_allocations
-        FOR INSERT WITH CHECK (public.nlc_can_manage_billing_company(company_id))
+        FOR INSERT WITH CHECK (
+            public.nlc_can_manage_billing_company(company_id)
+            AND EXISTS (
+                SELECT 1 FROM public.payments p
+                WHERE p.id = payment_allocations.payment_id
+                  AND p.company_id = payment_allocations.company_id
+                  AND p.status = 'SETTLED'
+            )
+            AND EXISTS (
+                SELECT 1 FROM public.invoices i
+                WHERE i.id = payment_allocations.invoice_id
+                  AND i.company_id = payment_allocations.company_id
+                  AND i.status IN ('ISSUED','PARTIALLY_PAID','OVERDUE')
+                  AND payment_allocations.amount_bdt <= i.balance_bdt
+            )
+        )
     """)
 
     op.execute("""
@@ -420,7 +452,10 @@ def upgrade() -> None:
     """)
     op.execute("""
         CREATE POLICY subscriptions_finance_insert ON public.client_subscriptions
-        FOR INSERT WITH CHECK (public.nlc_can_manage_billing_company(company_id))
+        FOR INSERT WITH CHECK (
+            public.nlc_can_manage_billing_company(company_id)
+            AND status = 'PENDING'
+        )
     """)
     op.execute("""
         CREATE POLICY subscriptions_finance_update ON public.client_subscriptions
