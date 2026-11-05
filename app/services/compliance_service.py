@@ -601,6 +601,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         ]
         summary.update({
             "total_active": len(rows),
+            "total_active_flags": len(rows),
             "black": verified_severities.count("BLACK"),
             "red": verified_severities.count("RED"),
             "yellow": verified_severities.count("YELLOW"),
