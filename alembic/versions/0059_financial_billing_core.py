@@ -439,10 +439,19 @@ def upgrade() -> None:
     """)
 
     # Operation privileges are narrower than table ownership. RLS controls rows;
-    # finance helpers control billing mutations. No DELETE/TRUNCATE is granted.
-    for table in TABLES:
+    # finance helpers control billing mutations. Ledger and allocation rows are
+    # append-only and receive no UPDATE or DELETE privilege.
+    mutable_tables = (
+        "invoices", "invoice_lines", "payment_submissions", "payments",
+        "payment_intents", "payment_provider_events", "client_subscriptions",
+    )
+    insert_only_tables = ("payment_allocations", "payment_ledger_events")
+    for table in mutable_tables:
         op.execute(f"GRANT SELECT, INSERT, UPDATE ON TABLE public.{table} TO nlc_app_role")
         op.execute(f"REVOKE DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE public.{table} FROM nlc_app_role")
+    for table in insert_only_tables:
+        op.execute(f"GRANT SELECT, INSERT ON TABLE public.{table} TO nlc_app_role")
+        op.execute(f"REVOKE UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE public.{table} FROM nlc_app_role")
 
 
 def downgrade() -> None:
