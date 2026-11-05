@@ -15,6 +15,23 @@ from app.models.user import User
 router = APIRouter()
 
 
+async def require_admin(current_user=Depends(get_current_user)):
+    role = current_user.role if hasattr(current_user, "role") else current_user.get("role", "")
+    if str(role) not in ("SUPER_ADMIN", "ADMIN_STAFF"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
+
+
+async def require_super_admin(current_user=Depends(get_current_user)):
+    """Require SUPER_ADMIN role only — returns 403 for ADMIN_STAFF."""
+    role = current_user.role if hasattr(current_user, "role") else current_user.get("role", "")
+    if str(role) != "SUPER_ADMIN":
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    return current_user
+
+
+
+
 @router.get("/security/rls-status")
 async def rls_runtime_status(
     admin=Depends(require_super_admin),
@@ -41,12 +58,13 @@ async def rls_runtime_status(
               ON p.schemaname = n.nspname AND p.tablename = c.relname
             WHERE n.nspname = 'public'
               AND c.relkind = 'r'
-              AND c.relname = ANY(:tables)
+              AND c.relname IN (
+                  'companies', 'company_user_access', 'compliance_evaluation_runs',
+                  'compliance_score_history', 'compliance_calendar_events', 'documents', 'users'
+              )
             GROUP BY c.relname, c.relrowsecurity, c.relforcerowsecurity
             ORDER BY c.relname
             """
-        ).bindparams(
-            sa.bindparam("tables", expanding=True)
         )
     )
     table_rows = [dict(row) for row in tables_result.mappings().all()]
@@ -67,10 +85,11 @@ async def rls_runtime_status(
         if not row["rls_enabled"] or row["policy_count"] == 0
     ]
     bypass = bool(role_row["rolbypassrls"])
+    is_superuser = bool(role_row["rolsuper"])
     return {
-        "status": "UNSAFE" if bypass or missing or unsafe_tables else "RLS_ENABLED",
+        "status": "UNSAFE" if bypass or is_superuser or missing or unsafe_tables else "RLS_ENABLED",
         "database_role": role_row["role_name"],
-        "role_is_superuser": bool(role_row["rolsuper"]),
+        "role_is_superuser": is_superuser,
         "role_bypasses_rls": bypass,
         "rls_context": await _current_rls_context(db),
         "tables": table_rows,
@@ -83,23 +102,6 @@ async def rls_runtime_status(
 async def _current_rls_context(db: AsyncSession) -> str | None:
     result = await db.execute(text("SELECT current_setting('app.current_user_id', true)"))
     return result.scalar_one_or_none()
-
-
-async def require_admin(current_user=Depends(get_current_user)):
-    role = current_user.role if hasattr(current_user, "role") else current_user.get("role", "")
-    if str(role) not in ("SUPER_ADMIN", "ADMIN_STAFF"):
-        raise HTTPException(status_code=403, detail="Admin access required")
-    return current_user
-
-
-async def require_super_admin(current_user=Depends(get_current_user)):
-    """Require SUPER_ADMIN role only — returns 403 for ADMIN_STAFF."""
-    role = current_user.role if hasattr(current_user, "role") else current_user.get("role", "")
-    if str(role) != "SUPER_ADMIN":
-        raise HTTPException(status_code=403, detail="Super admin access required")
-    return current_user
-
-
 
 
 @router.get("/dashboard")
