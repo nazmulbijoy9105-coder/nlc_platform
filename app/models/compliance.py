@@ -147,7 +147,7 @@ class ComplianceScoreHistory(UUIDPrimaryKeyMixin, Base):
     )
 
     # ── Score ─────────────────────────────────────────────────────
-    score: Mapped[int] = mapped_column(Integer, nullable=False)
+    score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     risk_band: Mapped[RiskBand] = mapped_column(
         Enum(RiskBand, name="risk_band"), nullable=False
     )
