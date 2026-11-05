@@ -515,36 +515,43 @@ def get_rule_engine():
     return _rule_engine_instance
 
 
-async def get_db_for_user(request: Request) -> AsyncSession:  # type: ignore
+async def get_db_for_user(
+    token: TokenData = Depends(verify_access_token),
+) -> AsyncSession:  # type: ignore
     """
-    Yield a DB session with user RLS context set.
-    Extracts user_id from JWT Bearer token in request headers.
-    Raises 401 if the token is missing or invalid.
-    Use for: ALL authenticated API routes.
+    Yield an authenticated database session with identity-bound RLS context.
+
+    Client roles receive their own user identity. SUPER_ADMIN, ADMIN_STAFF and
+    LEGAL_STAFF receive ADMIN context only after the signed token is validated
+    and the current database role is confirmed against the active user row.
     """
-    from fastapi import HTTPException
-
-    from app.core.security import decode_token
-
-    auth_header = request.headers.get("authorization", "")
-    if not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
-
-    try:
-        payload = decode_token(auth_header[7:])
-        if not payload or payload.get("type") != "access":
-            raise HTTPException(status_code=401, detail="Invalid or expired access token")
-        user_id = payload.get("user_id") or payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Token missing user identity")
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired access token")
-
     async with AsyncSessionLocal() as session:
         try:
-            await set_rls_context(session, str(user_id))
+            role_value = str(getattr(token.role, "value", token.role))
+            privileged_roles = {
+                str(UserRole.SUPER_ADMIN),
+                str(UserRole.ADMIN_STAFF),
+                str(UserRole.LEGAL_STAFF),
+            }
+            if role_value in privileged_roles:
+                await set_admin_context(session)
+            else:
+                await set_rls_context(session, token.user_id)
+
+            result = await session.execute(
+                select(User).where(
+                    User.id == uuid.UUID(token.user_id),
+                    User.is_active.is_(True),
+                )
+            )
+            user = result.scalar_one_or_none()
+            if user is None:
+                raise HTTPException(status_code=401, detail="User account is inactive or unavailable.")
+
+            db_role = user.role.value if hasattr(user.role, "value") else str(user.role)
+            if db_role != role_value:
+                raise HTTPException(status_code=401, detail="Account permissions changed. Please sign in again.")
+
             yield session
             await session.commit()
         except Exception:
@@ -554,7 +561,6 @@ async def get_db_for_user(request: Request) -> AsyncSession:  # type: ignore
             await session.close()
 
 
-# ═══════════════════════════════════════════════════════════════════════
 # ANNOTATED SHORTHAND TYPES
 # (Use in function signatures for cleaner code)
 # ═══════════════════════════════════════════════════════════════════════
