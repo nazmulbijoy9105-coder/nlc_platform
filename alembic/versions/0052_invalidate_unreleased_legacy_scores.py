@@ -6,6 +6,10 @@ Revises: 0051_nullable_unreleased_score_history
 Historical monthly snapshots remain immutable. Current company state is cleared
 so legacy, unapproved scores cannot be mistaken for a current legal assessment.
 The API independently applies the release gate to historical rows as well.
+
+The NOT_EVALUATED enum label is introduced by revision 0021. The Alembic
+environment commits its per-migration transaction before later revisions run,
+so this revision must not re-add the enum value or cross an autocommit boundary.
 """
 from typing import Sequence, Union
 
@@ -18,15 +22,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # PostgreSQL requires a newly-added enum label to be committed before it
-    # can appear in UPDATE/INSERT statements. Use Alembic's autocommit block
-    # so the label is durable before the data migration below references it.
-    with op.get_context().autocommit_block():
-        op.execute(
-            "ALTER TYPE public.risk_band "
-            "ADD VALUE IF NOT EXISTS 'NOT_EVALUATED'"
-        )
-
     op.execute(
         """
         UPDATE public.companies
