@@ -1,6 +1,8 @@
 from datetime import date
 from types import SimpleNamespace
 
+import app.rule_engine.engine as engine_module
+
 from app.rule_engine.engine import (
     CompanyProfile,
     ComplianceFlag,
@@ -11,6 +13,7 @@ from app.rule_engine.engine import (
     VERIFIED_RULE_IDS,
 )
 from app.services.compliance_service import _applied_score_impacts
+from app.services.pdf_report_service import _render_score_reconciliation
 
 
 def _profile(**overrides):
@@ -80,6 +83,39 @@ def test_unapproved_black_rule_cannot_force_black_score_band():
     assert result.override_applied is False
     assert result.black_flag_count == 0
     assert result.risk_band == Severity.NOT_EVALUATED
+
+
+def test_counsel_approved_black_override_is_honoured_by_engine(monkeypatch):
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AUD-003"}))
+    approved_black = ComplianceFlag(
+        rule_id="AUD-003",
+        flag_code="AUD-003",
+        severity=Severity.BLACK,
+        score_impact=25,
+        revenue_tier=RevenueTier.CORPORATE_RESCUE,
+        description="Approved test override.",
+        statutory_basis="Test only.",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+        is_black_override=True,
+    )
+
+    result = NLCRuleEngine()._calculate_score([approved_black], _profile())
+
+    assert result.override_applied is True
+    assert result.black_flag_count == 1
+    assert result.final_score == 0
+
+
+def test_pdf_reconciliation_ignores_unapproved_black_flag():
+    unapproved_black = SimpleNamespace(
+        rule_id="AUD-003",
+        severity="BLACK",
+        score_impact=25,
+        score_impact_applied=0,
+    )
+
+    assert _render_score_reconciliation([unapproved_black], 100, "GREEN") == ""
 
 
 def test_calendar_month_and_18_month_deadline_are_not_fixed_day_approximations():
