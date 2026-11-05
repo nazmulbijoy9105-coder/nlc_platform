@@ -1266,22 +1266,15 @@ class NLCRuleEngine:
         if self._agm_history_is_verified(c):
             if c.agm_count is None:
                 self._add_flag(ComplianceFlag(
-                    rule_id="AGM-003",
-                    flag_code="AGM_SHORT_NOTICE_REQUIRES_REVIEW",
+                    rule_id="AGM-001",
+                    flag_code="AGM_COUNT_UNKNOWN",
                     severity=Severity.NOT_EVALUATED,
                     score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Recorded notice was shorter than 21 days. Verify written consent of all members entitled to attend and vote, as well as service and accidental-omission facts, before determining a breach.",
-                    statutory_basis="Section 85(1)(a), Companies Act 1994 (Bangladesh)",
-                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
-                    eval_state="UNKNOWN",
-                    detail={"clear_days": clear_days}
-                    rule_id="AGM-001", flag_code="AGM_COUNT_UNKNOWN",
-                    severity=Severity.NOT_EVALUATED, score_impact=0,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description="AGM history is marked verified but the AGM count is missing.",
                     statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
-                    state=RuleState.UNKNOWN, eval_state="UNKNOWN",
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
                 ))
             elif c.agm_count == 0:
                 if c.incorporation_date is None:
