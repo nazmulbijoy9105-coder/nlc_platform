@@ -357,3 +357,46 @@ class TestChargeSatisfactionDeadline:
         )
         assert _flag_by_id(result, "CHG-001") is None
 
+
+
+class TestVerifiedAGMStatutoryDeadlines:
+    def _verified_history(self, **overrides):
+        values = {
+            "agm_history_verified": True,
+            "agm_history_evidence_ref": "AGM-REGISTER-VERIFIED-001",
+            "agm_history_verified_at": date(2026, 1, 1),
+            "agm_history_verified_by": "reviewer-001",
+        }
+        values.update(overrides)
+        return values
+
+    def test_DATE_003_first_agm_uses_18_calendar_months(self):
+        profile = _base_profile(
+            incorporation_date=date(2024, 1, 31),
+            agm_count=0,
+            last_agm_date=None,
+            agm_held_this_cycle=False,
+            **self._verified_history(),
+        )
+        on_deadline = NLCRuleEngine().evaluate(profile, today=date(2025, 7, 31))
+        after_deadline = NLCRuleEngine().evaluate(profile, today=date(2025, 8, 1))
+        assert _flag_by_id(on_deadline, "AGM-001") is None
+        assert _flag_by_id(after_deadline, "AGM-001") is not None
+
+    def test_DATE_006_subsequent_agm_enforces_calendar_year_and_15_month_cap(self):
+        profile = _base_profile(
+            incorporation_date=date(2020, 1, 1),
+            agm_count=1,
+            last_agm_date=date(2024, 12, 31),
+            agm_held_this_cycle=False,
+            **self._verified_history(),
+        )
+        on_deadline = NLCRuleEngine().evaluate(profile, today=date(2025, 12, 31))
+        after_deadline = NLCRuleEngine().evaluate(profile, today=date(2026, 1, 1))
+        assert _flag_by_id(on_deadline, "AGM-002") is None
+        flag = _flag_by_id(after_deadline, "AGM-002")
+        assert flag is not None
+        assert flag.detail["calendar_year_deadline"] == "2025-12-31"
+        assert flag.detail["interval_deadline"] == "2026-03-31"
+        assert flag.detail["basis"] == "CALENDAR_YEAR"
+
