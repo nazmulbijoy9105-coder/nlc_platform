@@ -1088,8 +1088,7 @@ class TestEngineIntegrity:
         # Must not crash, must produce valid output
         assert output is not None
         assert len(output.flags) > 0
-        assert output.score_breakdown.risk_band != "BLACK"
-        assert output.score_breakdown.final_score == 100
+        assert output.score_breakdown.risk_band == "NOT_EVALUATED"
         assert output.score_breakdown.override_applied is False
 
     def test_unapproved_rule_corpus_is_not_evaluated_even_without_findings(self, rule_engine, build_profile):
@@ -1110,8 +1109,9 @@ class TestEngineIntegrity:
             directors_verified_by="reviewer-001",
         )
         output = rule_engine.evaluate(profile)
-        assert output.score_breakdown.risk_band != "BLACK"
-        assert output.score_breakdown.final_score == 100
+        # The source-checked rules may produce diagnostic deductions, but the
+        # legal release gate prevents a BLACK classification or rescue trigger.
+        assert output.score_breakdown.risk_band == "NOT_EVALUATED"
         assert output.score_breakdown.override_applied is False
 
 
