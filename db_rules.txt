@@ -36,7 +36,7 @@ DIR-005|Register of Directors Interests Missing|Companies Act 1994, Section 97|Y
 DIR-006|Register of Contracts Missing|Companies Act 1994, Section 98|YELLOW|5|f|t
 ESC-001|Strike-Off Process Status Requires Verification|Companies Act 1994, Section 346|NOT_EVALUATED|0|f|t
 ESC-002|Strike-Off Status Requires Verification|Companies Act 1994, Section 346|NOT_EVALUATED|0|f|t
-ESC-003|Corporate Rescue Mandatory — BLACK OVERRIDE|Multiple sections, Companies Act 1994 (Bangladesh)|BLACK|30|t|t
+ESC-003|Corporate Rescue Mandatory — BLACK OVERRIDE|NLC internal risk policy; not a statutory Companies Act classification|BLACK|30|t|t
 ESC-004|Voluntary Winding Up|Companies Act 1994, Section 196|BLACK|30|t|t
 ESC-005|Investigation Order Pending|Companies Act 1994, Section 199|RED|20|f|t
 FX-001|Foreign Exchange Violation|Foreign Exchange Regulation Act 1947 (Bangladesh)|RED|15|f|t
