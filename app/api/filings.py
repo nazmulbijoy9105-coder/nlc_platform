@@ -685,15 +685,48 @@ def _agm_to_response(agm) -> AGMResponse:
         agm_due_date=agm.agm_deadline.isoformat() if agm.agm_deadline else None,
         held_date=agm.agm_date.isoformat() if agm.agm_date else None,
         filed_date=agm.rjsc_filing_date.isoformat() if agm.rjsc_filing_date else None,
-        quorum_met=agm.quorum_met,
-        quorum_required=agm.quorum_required,
+        quorum_met=(
+            agm.quorum_met
+            if (
+                getattr(agm, "members_present_verified", False) is True
+                and bool(getattr(agm, "members_present_evidence_ref", None))
+                and getattr(agm, "members_present_verified_at", None) is not None
+                and getattr(agm, "members_present_verified_by", None) is not None
+                and getattr(agm, "quorum_required_verified", False) is True
+                and bool(getattr(agm, "quorum_evidence_ref", None))
+                and getattr(agm, "quorum_verified_at", None) is not None
+                and getattr(agm, "quorum_verified_by", None) is not None
+            ) else None
+        ),
+        quorum_required=(
+            agm.quorum_required
+            if (
+                getattr(agm, "quorum_required_verified", False) is True
+                and bool(getattr(agm, "quorum_evidence_ref", None))
+                and getattr(agm, "quorum_verified_at", None) is not None
+                and getattr(agm, "quorum_verified_by", None) is not None
+            ) else None
+        ),
         quorum_basis=agm.quorum_basis,
         venue=getattr(agm, "venue", None),
         members_present=agm.members_present,
-        auditor_reappointed=agm.auditor_reappointed,
+        auditor_reappointed=(
+            agm.auditor_reappointed
+            if (
+                getattr(agm, "auditor_reappointment_verified", False) is True
+                and bool(getattr(agm, "auditor_reappointment_evidence_ref", None))
+                and getattr(agm, "auditor_reappointment_verified_at", None) is not None
+                and getattr(agm, "auditor_reappointment_verified_by", None) is not None
+            ) else None
+        ),
         accounts_adopted=getattr(agm, "accounts_adopted", None),
         agm_held_without_audit=getattr(agm, "agm_held_without_audit", None),
-        minutes_prepared=getattr(agm, "minutes_prepared", None),
+        minutes_prepared=(
+            True
+            if getattr(agm, "minutes_prepared", None) is True
+            and getattr(agm, "minutes_document_id", None) is not None
+            else None
+        ),
         is_default=agm.is_default,
         created_at=agm.created_at.isoformat() if hasattr(agm, 'created_at') and agm.created_at else '',
     )
