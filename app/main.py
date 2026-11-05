@@ -78,7 +78,9 @@ async def lifespan(app: FastAPI):
         from app.models.database import engine
         async with engine.connect() as conn:
             await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
-        logger.info("db_connectivity_ok")
+        from app.models.database import verify_runtime_database_role
+        await verify_runtime_database_role()
+        logger.info("db_connectivity_ok", runtime_role_verified=True)
     except Exception as e:
         logger.error("db_connectivity_failed", error=str(e))
         raise RuntimeError(f"Cannot connect to database on startup: {e}")
