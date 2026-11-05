@@ -1,3 +1,4 @@
+from datetime import date
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -9,7 +10,7 @@ def _company(score, band):
         id=uuid4(),
         company_name="NLC Test Company",
         registration_number="TEST-001",
-        incorporation_date=None,
+        incorporation_date=date(2020, 1, 1),
         current_compliance_score=score,
         current_risk_band=band,
         last_evaluated_at=None,
