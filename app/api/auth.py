@@ -238,7 +238,7 @@ async def confirm_2fa_setup(
     request: Request,
     body: VerifyTOTPSetupRequest,
     current_user: dict = Depends(get_current_user),
-    db=Depends(get_db),
+    db=Depends(get_db_for_user),
 ):
     """Enable TOTP only after the authenticated user proves possession."""
     user_id = current_user.get("sub") or current_user.get("user_id")
