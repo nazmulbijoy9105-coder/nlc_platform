@@ -166,7 +166,7 @@ At the time of this audit:
 Before merge/deploy, require:
 1. All CI jobs green on the exact PR head, including static engine/seed parity and the empty rule-verification check.
 2. A tested upgrade from a production-equivalent snapshot at revision 0042 through the current single Alembic head.
-3. Out-of-band correction of `nlc_ci_audit_role` to the required safe LOGIN state and correct secret provisioning.
+3. Out-of-band change of both `nlc_app_role` and `nlc_ci_audit_role` to NOINHERIT; verify LOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOREPLICATION and NOBYPASSRLS for each. Provision and retain a stable NLC_RLS_HMAC_SECRET of at least 32 characters.
 4. Actual Render environment confirmation: `APP_DATABASE_URL` must use `nlc_app_role`; `DATABASE_URL` is migration-only; `NLC_RLS_HMAC_SECRET` must match the database key and be present in runtime/migration environments.
 5. Post-upgrade forged-identity, signed-user A/B isolation, privilege and policy tests against the actual runtime role.
 6. Audited reconciliation of all 85 database rule IDs, including the extra `INC-002`, without unversioned updates.
