@@ -27,7 +27,10 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "")  # privileged migration/maintenance connection
     APP_DATABASE_URL: str = os.getenv("APP_DATABASE_URL", "")  # non-BYPASSRLS runtime connection
-    REQUIRE_RLS_APP_ROLE: bool = os.getenv("REQUIRE_RLS_APP_ROLE", "false").lower() == "true"
+    REQUIRE_RLS_APP_ROLE: bool = os.getenv(
+        "REQUIRE_RLS_APP_ROLE",
+        "true" if os.getenv("ENVIRONMENT", "production").strip().lower() in {"prod", "production"} else "false",
+    ).strip().lower() == "true"
 
     @property
     def ASYNC_DATABASE_URL(self) -> str:
