@@ -191,23 +191,6 @@ _LEGACY_RESCUE_DICTS: Dict[str, Dict[str, Any]] = {
         "estimated_days_min": 7,
         "estimated_days_max": 21
     },
-    "OFF-001": {
-        "rescue_id": "INC-RESCUE-002",
-        "triggered_by": "OFF-001",
-        "objective": "Remediate: Memorandum and Articles Not Filed",
-        "prerequisites": [],
-        "statutory_actions": [
-            "review legal requirement",
-            "prepare required documentation",
-            "submit to relevant authority"
-        ],
-        "authority": "RJSC",
-        "service_workflow": "GENERAL_LEGAL_SERVICE",
-        "deadline_basis": "STATUTORY",
-        "notification_required": True,
-        "verification": "DOCUMENTARY_EVIDENCE",
-        "closure_condition": "INC-002 == RuleState.COMPLIANT"
-    },
     "INC-003": {
         "rescue_id": "INC-RESCUE-003",
         "triggered_by": "INC-003",

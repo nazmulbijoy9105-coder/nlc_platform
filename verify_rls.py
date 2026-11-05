@@ -8,7 +8,7 @@ run against production.
 
 Usage:
     # From repo root
-    python scripts/verify_rls.py                     # uses DATABASE_URL env
+    python verify_rls.py                             # prefers APP_DATABASE_URL, falls back to DATABASE_URL
     python scripts/verify_rls.py "postgresql://..."  # explicit URL
 
 Outputs a structured report to stdout and writes a JSON result to
@@ -289,7 +289,7 @@ def verify_cross_tenant_query(conn, table: str) -> CheckResult:
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("database_url", nargs="?", help="PostgreSQL URL. Defaults to $DATABASE_URL.")
+    p.add_argument("database_url", nargs="?", help="PostgreSQL URL. Defaults to $APP_DATABASE_URL, then $DATABASE_URL.")
     p.add_argument("--app-role", help="Application DB role name (for DB-003 owner check).")
     p.add_argument("--tables", help="Comma-separated override list of tenant tables.")
     p.add_argument("--output", default="/home/z/my-project/scripts/rls_report.json",
@@ -298,7 +298,7 @@ def main() -> int:
                    help="Skip the cross-tenant runtime test (still runs policy checks).")
     args = p.parse_args()
 
-    url = args.database_url or os.environ.get("DATABASE_URL")
+    url = args.database_url or os.environ.get("APP_DATABASE_URL") or os.environ.get("DATABASE_URL")
     if not url:
         print("ERROR: No DATABASE_URL provided. Pass URL as first arg or set DATABASE_URL env.",
               file=sys.stderr)

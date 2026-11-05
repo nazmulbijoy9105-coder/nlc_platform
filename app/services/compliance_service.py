@@ -20,15 +20,17 @@ AI Constitution Article 1: Rule engine output is immutable — AI cannot alter i
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import uuid
+from fastapi.encoders import jsonable_encoder
 from dataclasses import fields as dataclass_fields
 from datetime import UTC, date, datetime
 
 from sqlalchemy import select, text, update
 
 from app.models.company import Company
-from app.models.compliance import ComplianceFlag, ComplianceScoreHistory
+from app.models.compliance import ComplianceEvaluationRun, ComplianceFlag, ComplianceScoreHistory
 from app.models.enums import (
     ExposureBand,
     FlagStatus,
@@ -89,14 +91,15 @@ def _applied_score_impacts(flags) -> list[dict]:
         if state != RuleState.NON_COMPLIANT or getattr(flag, "eval_state", "VIOLATION") == "UNKNOWN":
             results.append({"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"})
             continue
-        severity_value = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
-        if getattr(flag, "is_black_override", False) or severity_value == "BLACK":
-            # The engine applies its separate BLACK risk-policy override path;
-            # this is not an ordinary category deduction.
-            results.append({"applied": 0, "status": "BLACK_OVERRIDE_POLICY"})
-            continue
+        # Legal approval is checked before severity or override handling.
+        # An unapproved BLACK-labelled flag is visible evidence only: it must
+        # not acquire scoring or override semantics through a side path.
         if flag.rule_id not in VERIFIED_RULE_IDS:
             results.append({"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"})
+            continue
+        severity_value = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
+        if getattr(flag, "is_black_override", False) or severity_value == "BLACK":
+            results.append({"applied": 0, "status": "BLACK_OVERRIDE_POLICY"})
             continue
 
         category = next(
@@ -151,6 +154,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         """
         from app.core.dependencies import get_rule_engine
         from app.rule_engine import CompanyProfile
+        from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
         from app.services.company_service import CompanyService
 
         # ── Step 1: Build profile ──────────────────────────────────
@@ -170,14 +174,23 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # evaluation runs. Production callers retain the canonical engine.
         engine = rule_engine if rule_engine is not None else get_rule_engine()
         output = engine.evaluate(profile)
+        risk_band_value = getattr(
+            output.score_breakdown.risk_band,
+            "value",
+            output.score_breakdown.risk_band,
+        )
+        score_is_released = LEGAL_SCORE_RELEASED and risk_band_value != "NOT_EVALUATED"
+        public_risk_band = risk_band_value if score_is_released else "NOT_EVALUATED"
+        api_score = output.score_breakdown.final_score if score_is_released else None
+        api_raw_total = output.score_breakdown.raw_total if score_is_released else None
 
         # ── Step 3: Persist results ────────────────────────────────
         await self._persist_evaluation(company_id, output, trigger_source)
 
         logger.info(
             f"[Compliance] Evaluated company={company_id} | "
-            f"Score={output.score_breakdown.final_score} | "
-            f"Band={output.score_breakdown.risk_band} | "
+            f"Score={api_score if score_is_released else 'NOT_RELEASED'} | "
+            f"Band={public_risk_band} | "
             f"Flags={len(output.flags)} | Trigger={trigger_source}"
         )
 
@@ -185,16 +198,20 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
         return {
             "company_id":    str(company_id),
-            "score":         output.score_breakdown.final_score,
-            "raw_total":     output.score_breakdown.raw_total,
-            "risk_band":     output.score_breakdown.risk_band,
-            "exposure_band": output.score_breakdown.exposure_band,
+            "score":         api_score,
+            "raw_total":     api_raw_total,
+            "risk_band":     public_risk_band,
+            "exposure_band": output.score_breakdown.exposure_band if score_is_released else None,
             "flags":         [
                 {
                     "rule_id":        f.rule_id,
-                    "severity":       f.severity,
-                    "description":    f.description,
-                    "score_impact":   f.score_impact,
+                    "severity":       f.severity if score_is_released and f.rule_id in VERIFIED_RULE_IDS else "NOT_EVALUATED",
+                    "description":    (
+                        f.description
+                        if score_is_released and f.rule_id in VERIFIED_RULE_IDS
+                        else f"Pending counsel review: {f.description}"
+                    ),
+                    "score_impact":   f.score_impact if score_is_released and f.rule_id in VERIFIED_RULE_IDS else 0,
                     "score_impact_applied": applied_impacts[index]["applied"],
                     "scoring_status": applied_impacts[index]["status"],
                     "revenue_tier":   f.revenue_tier,
@@ -203,32 +220,33 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 for index, f in enumerate(output.flags)
             ],
             "score_breakdown": {
-                "agm_score":         output.score_breakdown.agm_score,
-                "audit_score":       output.score_breakdown.audit_score,
-                "return_score":      output.score_breakdown.return_score,
-                "director_score":    output.score_breakdown.director_score,
-                "shareholding_score": output.score_breakdown.shareholding_score,
-                "capital_score": output.score_breakdown.capital_score,
-                "office_score": output.score_breakdown.office_score,
-                "register_score": output.score_breakdown.register_score,
-                "tax_score": output.score_breakdown.tax_score,
-                "bankruptcy_score": output.score_breakdown.bankruptcy_score,
-                "labour_score": output.score_breakdown.labour_score,
-                "bsec_score": output.score_breakdown.bsec_score,
-                "fx_score": output.score_breakdown.fx_score,
-                "escalation_score": output.score_breakdown.escalation_score,
-                "raw_total": output.score_breakdown.raw_total,
-                "final_score": output.score_breakdown.final_score,
+                "risk_band": public_risk_band,
+                "agm_score":         output.score_breakdown.agm_score if score_is_released else None,
+                "audit_score":       output.score_breakdown.audit_score if score_is_released else None,
+                "return_score":      output.score_breakdown.return_score if score_is_released else None,
+                "director_score":    output.score_breakdown.director_score if score_is_released else None,
+                "shareholding_score": output.score_breakdown.shareholding_score if score_is_released else None,
+                "capital_score": output.score_breakdown.capital_score if score_is_released else None,
+                "office_score": output.score_breakdown.office_score if score_is_released else None,
+                "register_score": output.score_breakdown.register_score if score_is_released else None,
+                "tax_score": output.score_breakdown.tax_score if score_is_released else None,
+                "bankruptcy_score": output.score_breakdown.bankruptcy_score if score_is_released else None,
+                "labour_score": output.score_breakdown.labour_score if score_is_released else None,
+                "bsec_score": output.score_breakdown.bsec_score if score_is_released else None,
+                "fx_score": output.score_breakdown.fx_score if score_is_released else None,
+                "escalation_score": output.score_breakdown.escalation_score if score_is_released else None,
+                "raw_total": api_raw_total,
+                "final_score": api_score,
                 "coverage": output.score_breakdown.coverage,
                 "active_flag_count": output.score_breakdown.active_flag_count,
-                "black_flag_count": output.score_breakdown.black_flag_count,
-                "red_flag_count": output.score_breakdown.red_flag_count,
-                "yellow_flag_count": output.score_breakdown.yellow_flag_count,
-                "override_applied": output.score_breakdown.override_applied,
-                "override_reason": output.score_breakdown.override_reason,
+                "black_flag_count": output.score_breakdown.black_flag_count if score_is_released else 0,
+                "red_flag_count": output.score_breakdown.red_flag_count if score_is_released else 0,
+                "yellow_flag_count": output.score_breakdown.yellow_flag_count if score_is_released else 0,
+                "override_applied": output.score_breakdown.override_applied if score_is_released else False,
+                "override_reason": output.score_breakdown.override_reason if score_is_released else None,
             },
-            "rescue_required": _is_rescue_required(output),
-            "rescue_sequence": output.rescue_sequence,
+            "rescue_required": bool(score_is_released and _is_rescue_required(output)),
+            "rescue_sequence": output.rescue_sequence if score_is_released else None,
             "engine_version":  output.engine_version,
             "ilrmf_version":   output.ilrmf_version,
         }
@@ -243,9 +261,18 @@ class ComplianceService(BaseService[ComplianceFlag]):
         Persist all evaluation results to DB atomically.
         Order: resolve old flags → insert new flags → score snapshot → update company.
         """
-        from app.core.config import get_settings
-        settings = get_settings()
+        from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
 
+        engine_version = str(getattr(output, "engine_version", "") or "").strip()
+        if not engine_version or engine_version.lower() == "unknown":
+            raise ValueError("Evaluation cannot be persisted without a concrete engine version.")
+        if len(engine_version) > 20:
+            raise ValueError("Engine version exceeds the 20-character score-history storage limit.")
+
+        # Serialize evaluations per company so the immutable hash chain cannot fork.
+        await self.db.execute(
+            select(Company.id).where(Company.id == company_id).with_for_update()
+        )
         now = datetime.now(UTC)
         today = date.today()
         score = output.score_breakdown.final_score
@@ -256,7 +283,19 @@ class ComplianceService(BaseService[ComplianceFlag]):
             risk_band = RiskBand(
                 "BLACK" if score <= 29 else "RED" if score <= 49 else "YELLOW" if score <= 69 else "GREEN"
             )
-        rescue_required = _is_rescue_required(output)
+        # Defense in depth: persistence independently enforces the
+        # counsel-approved release switch; a provisional engine band cannot
+        # publish a numeric score while legal approval is disabled.
+        if not LEGAL_SCORE_RELEASED:
+            risk_band = RiskBand.NOT_EVALUATED
+        score_for_current = (
+            score
+            if LEGAL_SCORE_RELEASED and risk_band != RiskBand.NOT_EVALUATED
+            else None
+        )
+
+        # No remediation workflow may be triggered from a provisional, unreleased score.
+        rescue_required = bool(score_for_current is not None and _is_rescue_required(output))
         if rescue_required and not _has_rescue_output(output):
             logger.warning(
                 "rescue_required_but_no_sequence company=%s black=%s red=%s override=%s",
@@ -305,7 +344,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     id=uuid.uuid4(),
                     company_id=company_id,
                     rule_id=flag.rule_id,
-                    rule_version=settings.rule_engine_version,
+                    rule_version=str(getattr(flag, 'rule_version', None) or engine_version),
                     flag_code=flag.rule_id,
                     statutory_basis=flag.statutory_basis,
                     severity=SeverityLevel(flag.severity),
@@ -324,7 +363,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # ── Score snapshot (monthly, append-only, tamper-evident) ──
         snapshot_month = today.replace(day=1)
         score_hash = hashlib.sha256(
-            f"{company_id}{score}{risk_band}{snapshot_month}{settings.rule_engine_version}".encode()
+            f"{company_id}{score_for_current}{risk_band}{snapshot_month}{engine_version}".encode()
         ).hexdigest()
 
         # Only one snapshot per company per month
@@ -337,11 +376,15 @@ class ComplianceService(BaseService[ComplianceFlag]):
         existing_snapshot_row = existing_snapshot.scalar_one_or_none()
         if not existing_snapshot_row:
             sb = output.score_breakdown
-            black_flags = len([f for f in output.flags if (f.severity.value if hasattr(f.severity, 'value') else f.severity) == "BLACK"])
+            black_flags = len([
+                f for f in output.flags
+                if f.rule_id in VERIFIED_RULE_IDS
+                and (f.severity.value if hasattr(f.severity, 'value') else f.severity) == "BLACK"
+            ])
             snapshot = ComplianceScoreHistory(
                 id=uuid.uuid4(),
                 company_id=company_id,
-                score=score,
+                score=score_for_current,
                 risk_band=risk_band,
                 snapshot_month=snapshot_month,
                 calculated_at=now,
@@ -354,15 +397,103 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 black_flags_count=black_flags,
                 override_applied=sb.override_applied,
                 score_hash=score_hash,
-                engine_version=settings.rule_engine_version,
+                engine_version=engine_version,
                 trigger_source=trigger_source,
-                evaluation_status="COMPLETED",  # OPS-004
+                evaluation_status=("COMPLETED" if score_for_current is not None else "NOT_RELEASED"),
             )
             self.db.add(snapshot)
 
+        # ── Append immutable per-evaluation record ──────────────────
+        previous_result = await self.db.execute(
+            select(ComplianceEvaluationRun.score_hash)
+            .where(ComplianceEvaluationRun.company_id == company_id)
+            .order_by(ComplianceEvaluationRun.calculated_at.desc())
+            .limit(1)
+        )
+        previous_hash = previous_result.scalar_one_or_none()
+        from app.rule_engine.engine import CATEGORY_CAPS
+        applied_impacts = _applied_score_impacts(output.flags)
+        flags_snapshot = []
+        for flag, applied in zip(output.flags, applied_impacts):
+            severity_value = getattr(flag.severity, "value", flag.severity)
+            rule_category = next(
+                (
+                    name
+                    for name, (_, prefixes) in CATEGORY_CAPS.items()
+                    if flag.rule_id.startswith(prefixes)
+                ),
+                "OTHER",
+            )
+            flags_snapshot.append({
+                "rule_id": flag.rule_id,
+                "severity": severity_value,
+                "category": rule_category,
+                "score_impact": int(flag.score_impact or 0),
+                "score_impact_applied": int(applied["applied"]),
+                "scoring_status": applied["status"],
+                "description": getattr(flag, "description", None),
+                "detail": getattr(flag, "detail", None),
+                "statutory_basis": getattr(flag, "statutory_basis", None),
+                "eval_state": getattr(getattr(flag, "eval_state", None), "value", getattr(flag, "eval_state", None)),
+                "state": getattr(getattr(flag, "state", None), "value", getattr(flag, "state", None)),
+            })
+
+        flags_snapshot = jsonable_encoder(flags_snapshot)
+        sb = output.score_breakdown
+        score_breakdown_snapshot = None if score_for_current is None else {
+            "raw_total": sb.raw_total,
+            "final_score": score_for_current,
+            "agm_score": sb.agm_score,
+            "audit_score": sb.audit_score,
+            "return_score": sb.return_score,
+            "director_score": sb.director_score,
+            "shareholding_score": sb.shareholding_score,
+            "risk_band": risk_band.value,
+            "override_applied": sb.override_applied,
+        }
+        hash_material = json.dumps(
+            {
+                "previous_hash": previous_hash or "GENESIS",
+                "company_id": str(company_id),
+                "score": score_for_current,
+                "risk_band": risk_band.value,
+                "calculated_at": now.isoformat(),
+                "engine_version": engine_version,
+                "trigger_source": trigger_source,
+                "flags_snapshot": flags_snapshot,
+                "score_breakdown_snapshot": score_breakdown_snapshot,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        )
+        evaluation_hash = hashlib.sha256(hash_material.encode()).hexdigest()
+        black_flags = sum(
+            1 for f in output.flags
+            if f.rule_id in VERIFIED_RULE_IDS
+            and str(getattr(f.severity, "value", f.severity)).upper() == "BLACK"
+        )
+        evaluation_run = ComplianceEvaluationRun(
+            id=uuid.uuid4(),
+            company_id=company_id,
+            score=score_for_current,
+            risk_band=risk_band,
+            calculated_at=now,
+            engine_version=engine_version,
+            score_hash=evaluation_hash,
+            previous_hash=previous_hash,
+            evaluation_status=("COMPLETED" if score_for_current is not None else "NOT_RELEASED"),
+            trigger_source=trigger_source,
+            active_flags_count=len(output.flags),
+            black_flags_count=black_flags,
+            flags_snapshot=flags_snapshot,
+            score_breakdown_snapshot=score_breakdown_snapshot,
+        )
+        self.db.add(evaluation_run)
+
         # ── Update company compliance state ────────────────────────
         company_svc_update: dict = {
-            "current_compliance_score": score,
+            "current_compliance_score": score_for_current,
             "current_risk_band":        risk_band,
             "rescue_required":          rescue_required,
             "last_evaluated_at":        now,
@@ -422,9 +553,13 @@ class ComplianceService(BaseService[ComplianceFlag]):
         await self.db.flush()
 
         # ── Queue notifications for new RED/BLACK flags ─────────
-        if collected_new_flags:
+        notification_flags = [
+            flag for flag in collected_new_flags
+            if LEGAL_SCORE_RELEASED and flag.rule_id in VERIFIED_RULE_IDS
+        ]
+        if notification_flags:
             notif_svc = NotificationService(self.db)
-            await notif_svc.queue_for_new_flags(company_id, collected_new_flags)
+            await notif_svc.queue_for_new_flags(company_id, notification_flags)
 
     # ── Flag Management ───────────────────────────────────────────
 
@@ -458,21 +593,31 @@ class ComplianceService(BaseService[ComplianceFlag]):
         summary = dict(row) if row else {}
 
         flags_result = await self.db.execute(
-            select(ComplianceFlag.severity).where(
+            select(ComplianceFlag.rule_id, ComplianceFlag.severity).where(
                 ComplianceFlag.company_id == company_id,
                 ComplianceFlag.flag_status == FlagStatus.ACTIVE,
             )
         )
-        severities = [
-            str(getattr(value, "value", value)).upper()
-            for value in flags_result.scalars().all()
+        rows = flags_result.all()
+        from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
+        verified_severities = [
+            str(getattr(severity, "value", severity)).upper()
+            for rule_id, severity in rows
+            if LEGAL_SCORE_RELEASED and rule_id in VERIFIED_RULE_IDS
         ]
-
+        black_count = verified_severities.count("BLACK")
+        red_count = verified_severities.count("RED")
+        yellow_count = verified_severities.count("YELLOW")
         summary.update({
-            "total_active": len(severities),
-            "black": severities.count("BLACK"),
-            "red": severities.count("RED"),
-            "yellow": severities.count("YELLOW"),
+            "total_active": len(rows),
+            "total_active_flags": len(rows),
+            "black": black_count,
+            "red": red_count,
+            "yellow": yellow_count,
+            "black_flags": black_count,
+            "red_flags": red_count,
+            "yellow_flags": yellow_count,
+            "not_evaluated": len(rows) - len(verified_severities),
         })
         return summary
 
@@ -530,23 +675,26 @@ class ComplianceService(BaseService[ComplianceFlag]):
             .limit(months)
         )
         rows = result.scalars().all()
-        return [
-            {
-                "month":          row.snapshot_month.isoformat(),
-                "score":          row.score,
-                "risk_band":      row.risk_band,
-                "agm_score":      row.agm_score,
-                "audit_score":    row.audit_score,
-                "return_score":   row.return_score,
-                "director_score": row.director_score,
-                "shareholding_score": row.shareholding_score,
-                "active_flags":   row.active_flags_count,
-                "black_flags":    row.black_flags_count,
-                "override":       row.override_applied,
-                "calculated_at":  row.calculated_at.isoformat(),
-            }
-            for row in rows
-        ]
+        from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+        history = []
+        for row in rows:
+            stored_band = getattr(row.risk_band, "value", row.risk_band)
+            released = LEGAL_SCORE_RELEASED and stored_band != "NOT_EVALUATED"
+            history.append({
+                "month": row.snapshot_month.isoformat(),
+                "score": row.score if released else None,
+                "risk_band": row.risk_band if released else "NOT_EVALUATED",
+                "agm_score": row.agm_score if released else None,
+                "audit_score": row.audit_score if released else None,
+                "return_score": row.return_score if released else None,
+                "director_score": row.director_score if released else None,
+                "shareholding_score": row.shareholding_score if released else None,
+                "active_flags": row.active_flags_count,
+                "black_flags": row.black_flags_count if released else 0,
+                "override": row.override_applied if released else False,
+                "calculated_at": row.calculated_at.isoformat(),
+            })
+        return history
 
 
     async def get_compliance_calendar(
@@ -564,7 +712,27 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
 
     async def get_dashboard_kpis(self, user_id=None) -> dict:
-        """Aggregate KPIs for admin dashboard."""
+        """Aggregate KPIs; never expose legacy bands while statutory scoring is withheld."""
+        from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+        if not LEGAL_SCORE_RELEASED:
+            if user_id:
+                total_query = text(
+                    "SELECT COUNT(*) FROM companies WHERE assigned_staff_id = :uid AND is_active = true"
+                )
+                total_result = await self.db.execute(total_query, {"uid": str(user_id)})
+            else:
+                total_result = await self.db.execute(
+                    text("SELECT COUNT(*) FROM companies WHERE is_active = true")
+                )
+            total = int(total_result.scalar_one() or 0)
+            return {
+                "total_companies": total,
+                "green_count": 0,
+                "yellow_count": 0,
+                "red_black_count": 0,
+                "not_evaluated_count": total,
+                "upcoming_deadlines": 0,
+            }
         # If user_id is provided, filter by it; otherwise return global stats
         if user_id:
             query = text("""

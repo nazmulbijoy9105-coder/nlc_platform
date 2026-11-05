@@ -1,0 +1,264 @@
+# NLC legal approval gate — snapshot 2026-11-04
+# No entry is production-approved by this file. Add an approval only after
+# source-version review, applicability/exception analysis, evidence design,
+# independent Bangladesh-lawyer sign-off and regression validation.
+jurisdiction: BD
+snapshot_date: 2026-11-04
+approval_policy: fail_closed
+approved_rule_ids: []
+rules:
+  - rule_id: ACC-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: ACC-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: ACC-003
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: AGM-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: AGM-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: AGM-003
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: AGM-004
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: AGM-005
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: AGM-006
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: AGM-007
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: AR-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: AR-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: AR-003
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: AR-004
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: AUD-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: AUD-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: AUD-003
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: AUD-004
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: AUD-005
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: BNK-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: BNK-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: BNK-003
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: BOD-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: BOD-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: BOD-003
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: BSEC-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: BSEC-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: BSEC-003
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: BSEC-004
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: CAP-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: CAP-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: CAP-003
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: CAP-004
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: CHG-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: DEF-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: DEF-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: DIR-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: DIR-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: DIR-003
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: DIR-004
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: DIR-005
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: DIR-006
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: DIR-007
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: DIR-008
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: DIR-010
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: ESC-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: ESC-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: ESC-003
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: ESC-004
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: ESC-005
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: FX-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: INC-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: INC-003
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: INC-004
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: INC-005
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: INC-006
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: INC-007
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: LBR-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: LBR-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: LBR-003
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: MEM-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: OFF-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: REG-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: REG-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: REG-003
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: SH-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: SH-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: SH-003
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: STR-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: STR-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: STR-003
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: TAX-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: TAX-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: TAX-003
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: TAX-004
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: TL-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: TL-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: TR-001
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: TR-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: TR-003
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: TR-004
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: TR-005
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: TR-006
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: VAT-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
+  - rule_id: VAT-003
+    status: REVIEW_REQUIRED
+    score_eligible: false

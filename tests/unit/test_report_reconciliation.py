@@ -2,7 +2,9 @@
 from datetime import date, datetime
 from types import SimpleNamespace
 
-from app.services.pdf_report_service import build_compliance_report_html
+import pytest
+
+from app.services.pdf_report_service import ScoreReconciliationError, build_compliance_report_html
 from app.services.rescue_service import _derive_plan_target
 
 WHEN = datetime(2026, 10, 30, 12, 0, 0)
@@ -21,6 +23,18 @@ def _flag(rid, sev, imp):
     return SimpleNamespace(rule_id=rid, severity=sev, description="d", score_impact=imp)
 
 
+
+
+def _enable_authorized_score_for_report_test(monkeypatch, rule_ids):
+    # Arithmetic/report rendering tests opt into an isolated approved-rule
+    # fixture. Production defaults remain unreleased and fail closed.
+    monkeypatch.setattr("app.services.pdf_report_service.LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        "app.services.pdf_report_service.VERIFIED_RULE_IDS",
+        frozenset(rule_ids),
+    )
+
+
 FLAGS = [
     _flag("REG-002", "BLACK", 12),
     _flag("INC-001", "RED", 0),
@@ -30,19 +44,22 @@ FLAGS = [
 ]
 
 
-def test_cap_adjustment_row_rendered():
+def test_cap_adjustment_row_rendered(monkeypatch):
+    _enable_authorized_score_for_report_test(monkeypatch, {"REG-002", "AUD-001", "TL-001"})
     page = build_compliance_report_html(_company(), FLAGS, WHEN)
     assert "Category cap applied (REG)" in page
     assert "raw deduction 12 pts capped to 10 pts" in page
 
 
-def test_reconciliation_line_matches_score():
+def test_reconciliation_line_matches_score(monkeypatch):
+    _enable_authorized_score_for_report_test(monkeypatch, {"REG-002", "AUD-001", "TL-001"})
     page = build_compliance_report_html(_company(score=75), FLAGS, WHEN)
     assert "effective deductions -25 pts" in page
     assert "indicated score 75/100" in page
 
 
-def test_no_caps_no_adjustment_rows():
+def test_no_caps_no_adjustment_rows(monkeypatch):
+    _enable_authorized_score_for_report_test(monkeypatch, {"OFF-001"})
     page = build_compliance_report_html(_company(score=95), [_flag("OFF-001", "YELLOW", 5)], WHEN)
     assert "Category cap applied" not in page
     assert "effective deductions -5 pts" in page
@@ -73,3 +90,95 @@ def test_derive_plan_target_from_steps():
 
 def test_derive_plan_target_empty():
     assert _derive_plan_target(None, []) is None
+
+
+def test_reconciliation_mismatch_is_rejected(monkeypatch):
+    _enable_authorized_score_for_report_test(monkeypatch, {"REG-002", "AUD-001", "TL-001"})
+    with pytest.raises(ScoreReconciliationError):
+        build_compliance_report_html(_company(score=74), FLAGS, WHEN)
+
+
+def test_unreleased_provisional_findings_are_not_shown_as_score_deductions():
+    page = build_compliance_report_html(
+        _company(score=100, band="NOT_EVALUATED"),
+        [_flag("AGM-001", "RED", 20)],
+        WHEN,
+    )
+    assert "Not scored" in page
+    assert "pending independent legal approval" in page
+    assert "-20 pts" not in page
+    assert "Score reconciliation" not in page
+
+def test_real_evaluation_snapshot_reconciles_nominal_and_applied_impacts(monkeypatch):
+    _enable_authorized_score_for_report_test(
+        monkeypatch,
+        {"REG-002", "AUD-001", "TL-001"},
+    )
+    snapshot_flags = [
+        SimpleNamespace(
+            rule_id="REG-002",
+            severity="BLACK",
+            description="d",
+            score_impact=12,
+            score_impact_applied=10,
+            scoring_status="APPLIED",
+        ),
+        SimpleNamespace(
+            rule_id="AUD-001",
+            severity="YELLOW",
+            description="d",
+            score_impact=10,
+            score_impact_applied=10,
+            scoring_status="APPLIED",
+        ),
+        SimpleNamespace(
+            rule_id="TL-001",
+            severity="YELLOW",
+            description="d",
+            score_impact=5,
+            score_impact_applied=5,
+            scoring_status="APPLIED",
+        ),
+    ]
+
+    page = build_compliance_report_html(_company(score=75), snapshot_flags, WHEN)
+    assert "raw deduction 12 pts capped to 10 pts" in page
+    assert "effective deductions -25 pts" in page
+    assert "indicated score 75/100" in page
+
+
+def test_snapshot_applied_impact_mismatch_is_rejected(monkeypatch):
+    _enable_authorized_score_for_report_test(
+        monkeypatch,
+        {"REG-002", "AUD-001", "TL-001"},
+    )
+    snapshot_flags = [
+        SimpleNamespace(
+            rule_id="REG-002",
+            severity="BLACK",
+            description="d",
+            score_impact=12,
+            score_impact_applied=9,
+            scoring_status="APPLIED",
+        ),
+        SimpleNamespace(
+            rule_id="AUD-001",
+            severity="YELLOW",
+            description="d",
+            score_impact=10,
+            score_impact_applied=10,
+            scoring_status="APPLIED",
+        ),
+        SimpleNamespace(
+            rule_id="TL-001",
+            severity="YELLOW",
+            description="d",
+            score_impact=5,
+            score_impact_applied=5,
+            scoring_status="APPLIED",
+        ),
+    ]
+
+    with pytest.raises(ScoreReconciliationError):
+        build_compliance_report_html(_company(score=76), snapshot_flags, WHEN)
+

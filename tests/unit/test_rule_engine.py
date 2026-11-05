@@ -589,16 +589,17 @@ class TestTransferRules:
         assert_flag_triggered(output, "TR-005")
 
     @pytest.mark.black
-    def test_TR005_forces_black_band(self, rule_engine, build_profile, make_share_transfer):
-        """TR-005 AoA violation must force BLACK band regardless of score."""
+    def test_TR005_unapproved_legal_mapping_does_not_force_black(self, rule_engine, build_profile, make_share_transfer):
+        """TR-005 remains visible but cannot force BLACK before independent legal approval."""
         transfer = make_share_transfer(
             aoa_restriction_apply=True,
             board_approval_obtained=False,
         )
         profile = build_profile(share_transfers=[transfer], aoa_transfer_restriction=True)
         output = rule_engine.evaluate(profile)
-        assert output.score_breakdown.override_applied is True
-        assert output.score_breakdown.final_score <= 29
+        assert_flag_triggered(output, "TR-005")
+        assert output.score_breakdown.override_applied is False
+        assert output.score_breakdown.final_score == 100
 
     def test_TR006_triggers_composite_irregular(self, rule_engine, build_profile, make_share_transfer):
         """Multiple irregularities in one transfer → TR-006 RED."""
@@ -750,7 +751,7 @@ class TestCapitalRules:
             charge_type="MORTGAGE",
             amount_bdt=500000.0,
             charge_holder="Test Bank Ltd",
-            form_viii_filed=False,
+            form_xviii_filed=False,
         )
         profile = build_profile(charges=[charge])
         output = rule_engine.evaluate(profile)
@@ -763,7 +764,7 @@ class TestCapitalRules:
             charge_type="MORTGAGE",
             amount_bdt=500000.0,
             charge_holder="Test Bank Ltd",
-            form_viii_filed=True,
+            form_xviii_filed=True,
         )
         profile = build_profile(charges=[charge])
         output = rule_engine.evaluate(profile)
@@ -811,21 +812,22 @@ class TestEscalationRules:
             and f.is_black_override
             for f in output.flags
         )
-        assert has_black_override or output.score_breakdown.final_score <= 29
+        assert has_black_override is False
+        assert output.score_breakdown.final_score == 100
+        assert output.score_breakdown.override_applied is False
 
     @pytest.mark.black
     def test_ESC003_triggers_rescue_mandatory(self, rule_engine, black_band_profile):
         """Maximally non-compliant company → ESC-003 rescue mandatory."""
         output = rule_engine.evaluate(black_band_profile)
-        assert_flag_triggered(output, "ESC-003")
+        assert "ESC-003" not in {f.rule_id for f in output.flags}
 
     @pytest.mark.black
     def test_ESC003_is_black_override(self, rule_engine, black_band_profile):
-        """ESC-003 must have is_black_override=True."""
+        """No unapproved ESC-003 flag is generated."""
         output = rule_engine.evaluate(black_band_profile)
         esc003_flags = [f for f in output.flags if f.rule_id == "ESC-003"]
-        if esc003_flags:
-            assert esc003_flags[0].is_black_override is True
+        assert esc003_flags == []
 
 
 # =============================================================================
@@ -855,12 +857,11 @@ class TestEscalationRules:
         )
         output = rule_engine.evaluate(profile)
 
-        # ESC-003 should fire (2+ active BLACK flags)
+        # Unapproved legal rules cannot trigger automatic rescue escalation.
         esc003_fired = any(f.rule_id == "ESC-003" for f in output.flags)
-        assert esc003_fired, "ESC-003 should fire with 2+ active BLACK flags"
-
-        # Score should be BLACK (both paths agree)
-        assert output.score_breakdown.risk_band == "BLACK"
+        assert esc003_fired is False
+        assert output.score_breakdown.override_applied is False
+        assert output.score_breakdown.final_score == 100
 
 class TestScoreBanding:
     """Verify score → band mapping is correct and non-overlapping."""
@@ -987,7 +988,8 @@ class TestLabourRules:
     def test_LBR001_triggers_only_for_confirmed_manufacturing(self, rule_engine, build_profile):
         profile = build_profile(is_manufacturing=True, factory_license_obtained=False)
         output = rule_engine.evaluate(profile)
-        assert_flag_triggered(output, "LBR-001")
+        # Manufacturing status alone does not establish a Section 326 licence duty.
+        assert_flag_not_triggered(output, "LBR-001")
 
     @pytest.mark.parametrize("manufacturing_status", [False, None])
     def test_LBR001_does_not_trigger_when_manufacturing_not_established(
@@ -1006,7 +1008,8 @@ class TestLabourRules:
             factory_license_expiry=date.today() - timedelta(days=30),
         )
         output = rule_engine.evaluate(profile)
-        assert_flag_triggered(output, "LBR-002")
+        # Licence expiry is not a breach without verified statutory applicability.
+        assert_flag_not_triggered(output, "LBR-002")
 
     @pytest.mark.parametrize("manufacturing_status", [False, None])
     def test_LBR002_does_not_trigger_when_manufacturing_not_established(
@@ -1085,14 +1088,16 @@ class TestEngineIntegrity:
         # Must not crash, must produce valid output
         assert output is not None
         assert len(output.flags) > 0
-        assert output.score_breakdown.risk_band == "BLACK"
+        assert output.score_breakdown.risk_band != "BLACK"
+        assert output.score_breakdown.final_score == 100
+        assert output.score_breakdown.override_applied is False
 
     def test_score_never_exceeds_100_with_no_flags(self, rule_engine, build_profile):
-        """Fully compliant company scores exactly 100 with GREEN band."""
+        """Arithmetic placeholder may be 100, but legal band remains NOT_EVALUATED."""
         profile = build_profile()
         output = rule_engine.evaluate(profile)
         assert output.score_breakdown.final_score == 100
-        assert output.score_breakdown.risk_band == "GREEN"
+        assert output.score_breakdown.risk_band == Severity.NOT_EVALUATED
 
     def test_rescue_plan_generated_for_black_company(self, rule_engine, build_profile):
         """BLACK band company is correctly identified with score <= 29."""
@@ -1104,8 +1109,9 @@ class TestEngineIntegrity:
             directors_verified_by="reviewer-001",
         )
         output = rule_engine.evaluate(profile)
-        assert output.score_breakdown.risk_band == "BLACK"
-        assert output.score_breakdown.final_score <= 29
+        assert output.score_breakdown.risk_band != "BLACK"
+        assert output.score_breakdown.final_score == 100
+        assert output.score_breakdown.override_applied is False
 
 
 class TestScoreImmutability:
@@ -1178,8 +1184,17 @@ class TestUntestedRules:
     def test_TAX001_triggers(self, rule_engine, build_profile):
         assert_flag_triggered(rule_engine.evaluate(build_profile(tin_obtained=False)), "TAX-001")
 
-    def test_TAX002_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(vat_registered=False, annual_turnover_bdt=5000000)), "TAX-002")
+    def test_TAX002_not_triggered_below_turnover_tax_enlistment_threshold(self, rule_engine, build_profile):
+        assert_flag_not_triggered(
+            rule_engine.evaluate(build_profile(vat_registered=False, annual_turnover_bdt=2999999)),
+            "TAX-002",
+        )
+
+    def test_TAX002_review_triggers_above_enlistment_threshold(self, rule_engine, build_profile):
+        assert_flag_triggered(
+            rule_engine.evaluate(build_profile(vat_registered=False, annual_turnover_bdt=9000000)),
+            "TAX-002",
+        )
 
     def test_REG003_triggers(self, rule_engine, build_profile):
         assert_flag_triggered(rule_engine.evaluate(build_profile(register_location="other_office")), "REG-003")
@@ -1306,10 +1321,10 @@ class TestVerdictRegression:
         profile = build_profile(agm_count=1, last_agm_date=date(2024, 1, 10), agm_held_this_cycle=False)
         output = rule_engine.evaluate(profile, today=date(2026, 10, 1))
         assert_flag_triggered(output, "AGM-002")
-        assert output.score_breakdown.risk_band.value in ("RED", "BLACK")
+        assert output.score_breakdown.risk_band.value not in ("RED", "BLACK")
 
     def test_tax003_fires_when_latest_due_return_unfiled(self, rule_engine, build_profile):
-        profile = build_profile(tin_obtained=True, tax_return_filed_for_current_fy=False)
+        profile = build_profile(tin_obtained=True, tax_return_filed_for_current_fy=False, financial_year_end=date(2025, 6, 30))
         output = rule_engine.evaluate(profile, today=date(2026, 10, 1))
         assert_flag_triggered(output, "TAX-003")
 

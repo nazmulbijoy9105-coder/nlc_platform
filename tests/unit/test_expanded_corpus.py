@@ -255,8 +255,8 @@ class TestVerifiedRulesViolation:
 class TestProductionGateComprehensive:
 
     def test_all_verified_rules_in_set(self):
-        """Verify VERIFIED_RULE_IDS has at least 35 rules."""
-        assert len(VERIFIED_RULE_IDS) >= 35
+        """No rules are score-eligible until independent current-law approval."""
+        assert len(VERIFIED_RULE_IDS) == 0
 
     def test_no_unverified_rule_in_set(self):
         """AUD, SH, TR-002~006, ESC-003~005 should NOT be verified."""
@@ -274,8 +274,8 @@ class TestProductionGateComprehensive:
             f"Compliant company should score >=70, got {result.score_breakdown.final_score}"
         )
 
-    def test_violation_score_decreases(self):
-        """Multiple violations should decrease the score."""
+    def test_unapproved_violations_do_not_change_statutory_score(self):
+        """Provisional findings remain visible but cannot change the legal score."""
         profile = _compliant_profile(
             agm_held_this_cycle=False,
             last_agm_date=None,
@@ -283,18 +283,15 @@ class TestProductionGateComprehensive:
             incorporation_date=date(2020, 1, 1),
         )
         result = NLCRuleEngine().evaluate(profile)
-        assert result.score_breakdown.final_score < 70, (
-            f"Company with AGM default should score <70, got {result.score_breakdown.final_score}"
-        )
+        assert result.score_breakdown.final_score == 100
+        assert any(f.rule_id.startswith("AGM-") for f in result.flags)
 
-    def test_black_override_forces_zero(self):
-        """BLACK override (DEF-001) forces score to 0."""
+    def test_unapproved_black_rule_cannot_force_zero(self):
+        """An unapproved legal mapping cannot trigger a statutory BLACK override."""
         profile = _compliant_profile(
             any_director_disqualified=True,
             disqualification_details=["Director A: Insolvency"],
         )
         result = NLCRuleEngine().evaluate(profile)
-        if any(f.is_black_override and f.state == RuleState.NON_COMPLIANT for f in result.flags):
-            assert result.score_breakdown.final_score <= 29, (
-                f"BLACK override should force score <=29, got {result.score_breakdown.final_score}"
-            )
+        assert result.score_breakdown.override_applied is False
+        assert result.score_breakdown.final_score == 100

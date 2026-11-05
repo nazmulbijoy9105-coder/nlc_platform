@@ -21,7 +21,10 @@ RUN pip install --upgrade "pip==24.0" setuptools wheel && \
 FROM python:3.11-slim-bookworm AS runtime-base
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 TZ=UTC \
     PATH="/opt/venv/bin:$PATH" \
-    PYTHONPATH="/app"
+    PYTHONPATH="/app" \
+    HOME="/tmp" \
+    XDG_CACHE_HOME="/tmp/fontconfig-cache" \
+    FONTCONFIG_PATH="/etc/fonts"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 libmagic1 libpango-1.0-0 libpangoft2-1.0-0 \
@@ -33,7 +36,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /opt/venv /opt/venv
 
 RUN groupadd --gid 1001 nlc && \
-    useradd --uid 1001 --gid 1001 --no-create-home --shell /bin/sh nlc
+    useradd --uid 1001 --gid 1001 --no-create-home --shell /bin/sh nlc && \
+    mkdir -p /tmp/fontconfig-cache/fontconfig && \
+    chown -R nlc:nlc /tmp/fontconfig-cache && \
+    chmod 700 /tmp/fontconfig-cache /tmp/fontconfig-cache/fontconfig
 
 WORKDIR /app
 RUN mkdir -p /app/static/fonts /app/templates/pdf /tmp/nlc_pdfs && \

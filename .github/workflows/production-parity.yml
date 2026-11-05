@@ -1,0 +1,31 @@
+name: Production Rule Parity
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: Deployed NLC API base URL
+        required: true
+        default: https://nlc-platform.onrender.com
+
+jobs:
+  production-parity:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.NLC_PRODUCTION_DATABASE_URL }}
+      API_URL: ${{ inputs.api_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install read-only audit dependency
+        run: python -m pip install asyncpg
+      - name: Require least-privilege production audit credential
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Configure NLC_PRODUCTION_DATABASE_URL with the read-only audit-schema role."
+            exit 1
+          fi
+      - name: Compare production DB, API, engine and seed rule IDs
+        run: python tools/audit_rule_parity.py

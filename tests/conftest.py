@@ -143,14 +143,12 @@ async def db(test_engine) -> AsyncGenerator[AsyncSession, None]:
     """
     Async DB session wrapped in a transaction.
     Transaction is rolled back after each test — no cleanup needed.
-    Sets admin RLS context (bypasses row-level security for test isolation).
+    Ordinary service tests use the test owner; RLS-specific tests explicitly
+    switch to nlc_app_role and a signed principal.
     """
     async with test_engine.connect() as conn:
         await conn.begin()
         session = AsyncSession(bind=conn, expire_on_commit=False)
-
-        # Bypass RLS for tests (admin context)
-        await session.execute(text("SET app.rls_bypass = 'true'"))
 
         yield session
 
@@ -759,19 +757,10 @@ def assert_helpers():
 
 
 # ---------------------------------------------------------------------------
-# Skip integration tests in CI environment (requires PostgreSQL)
+# RLS-aware fixtures (tenant isolation)
 # ---------------------------------------------------------------------------
 
 import os
-
-
-def pytest_collection_modifyitems(config, items):
-    """Skip integration tests in CI environment."""
-    if os.getenv("CI"):
-        skip_integration = pytest.mark.skip(reason="Requires database in CI")
-        for item in items:
-            if "integration" in str(item.fspath):
-                item.add_marker(skip_integration)
 
 
 # ---------------------------------------------------------------------------
@@ -785,25 +774,51 @@ async def db_for_user(test_engine, request):
     Does NOT set app.rls_bypass.
     """
     from sqlalchemy.ext.asyncio import AsyncSession
-    from sqlalchemy import text
+    from app.models.database import set_admin_context, set_rls_context
+    from app.models.enums import UserRole
+    from app.models.user import User
+
     user_id = getattr(request, "param", None)
     if user_id is None:
         user_id = str(_role_user_id("CLIENT_DIRECTOR"))
+    user_uuid = uuid.UUID(str(user_id))
 
     async with test_engine.connect() as conn:
         await conn.begin()
         session = AsyncSession(bind=conn, expire_on_commit=False)
         try:
-            from app.core.dependencies import set_rls_context
-            await set_rls_context(session, str(user_id))
-        except Exception:
-            await session.execute(
-                text("SELECT set_config('app.current_user_id', :uid, true)"),
-                {"uid": str(user_id)},
-            )
-        yield session
-        await session.close()
-        await conn.rollback()
+            # Seed identities under the signed service principal, then switch
+            # to the requested tenant actor. Never fall back to unsigned GUCs.
+            await set_admin_context(session)
+            for role in UserRole:
+                role_user_id = _role_user_id(role.value)
+                existing = await session.get(User, role_user_id)
+                if existing is None:
+                    session.add(User(
+                        id=role_user_id,
+                        email=f"seed_{role.value.lower()}@nlctest.com",
+                        full_name=f"Seed {role.value}",
+                        password_hash="!seeded-no-login",
+                        role=role,
+                        is_active=True,
+                        totp_enabled=False,
+                    ))
+            if await session.get(User, user_uuid) is None:
+                session.add(User(
+                    id=user_uuid,
+                    email=f"seed_custom_{user_uuid.hex[:10]}@nlctest.com",
+                    full_name="Seed Custom Test User",
+                    password_hash="!seeded-no-login",
+                    role=UserRole.CLIENT_DIRECTOR,
+                    is_active=True,
+                    totp_enabled=False,
+                ))
+            await session.flush()
+            await set_rls_context(session, str(user_uuid))
+            yield session
+        finally:
+            await session.close()
+            await conn.rollback()
 
 
 @pytest_asyncio.fixture
@@ -817,23 +832,6 @@ async def api_client_as_user(db_for_user):
     from app.core.dependencies import get_db, get_db_for_user
     from app.main import create_app
     from app.models.database import get_db as auth_get_db
-    from app.models.enums import UserRole
-    from app.models.user import User
-
-    for _role in UserRole:
-        _uid = _role_user_id(_role.value)
-        if await db_for_user.get(User, _uid) is None:
-            db_for_user.add(User(
-                id=_uid,
-                email=f"seed_{_role.value.lower()}@nlctest.com",
-                full_name=f"Seed {_role.value}",
-                password_hash="!seeded-no-login",
-                role=_role,
-                is_active=True,
-                totp_enabled=False,
-            ))
-    await db_for_user.flush()
-
     app = create_app()
 
     async def _override_user_db():
