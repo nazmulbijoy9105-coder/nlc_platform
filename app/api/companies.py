@@ -300,7 +300,13 @@ async def list_companies(search: str | None = Query(None), risk_band: RiskBand |
         is_dormant=is_dormant,
         offset=pagination.offset,
         limit=pagination.page_size,
-        user_id=current_user.id,
+        user_id=(
+            None
+            if current_user.role in (
+                UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRole.LEGAL_STAFF
+            )
+            else current_user.id
+        ),
     )
     financial_ids = await _financial_access_ids(
         db, current_user, [company.id for company in companies]
