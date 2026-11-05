@@ -17,7 +17,7 @@ from sqlalchemy import select
 from app.models.compliance import ComplianceScoreHistory
 
 # Import CATEGORY_CAPS for score reconciliation (cap adjustment display)
-from app.rule_engine.engine import CATEGORY_CAPS, VERIFIED_RULE_IDS
+from app.rule_engine.engine import CATEGORY_CAPS, LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
 from app.services.pdf_render import (
@@ -292,6 +292,8 @@ def _verified_flag_score(flags: Any) -> tuple[int, bool]:
     The risk band is not derived from score alone: verified RED findings may
     elevate the band while the numeric score remains above the RED threshold.
     """
+    if not LEGAL_SCORE_RELEASED:
+        return 100, False
     category_deductions: dict[str, int] = {name: 0 for name in CATEGORY_CAPS}
     verified_black_override = False
     for flag in (flags or []):
@@ -323,7 +325,7 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
     Category caps are applied exactly once per category, matching the scoring
     engine's cap model. BLACK and NOT_EVALUATED reports do not claim a score.
     """
-    if band in ("BLACK", "NOT_EVALUATED"):
+    if not LEGAL_SCORE_RELEASED or band in ("BLACK", "NOT_EVALUATED"):
         return ""
 
     category_deductions: dict[str, int] = {name: 0 for name in CATEGORY_CAPS}
@@ -405,7 +407,7 @@ def build_compliance_report_html(
     if flags:
         rows = "".join(
             f"<tr><td>{esc(f.rule_id)}</td><td>{esc(getattr(getattr(f, 'severity', None), 'value', getattr(f, 'severity', '')))}</td>"
-            f"<td>{esc(f.description)}</td><td>{('-' + esc(f.score_impact or 0) + ' pts') if f.rule_id in VERIFIED_RULE_IDS else 'Not scored — pending independent legal approval'}</td></tr>"
+            f"<td>{esc(f.description)}</td><td>{('-' + esc(f.score_impact or 0) + ' pts') if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS else 'Not scored — pending independent legal approval'}</td></tr>"
             for f in flags
         )
     else:
@@ -513,6 +515,15 @@ class PDFReportService:
 
         current_score = int(company.current_compliance_score or 0)
         current_band = getattr(company.current_risk_band, "value", company.current_risk_band) or "NOT_EVALUATED"
+        if not LEGAL_SCORE_RELEASED and current_band != "NOT_EVALUATED":
+            from fastapi import HTTPException
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "LEGAL_SCORE_NOT_RELEASED",
+                    "message": "Report withheld: statutory scoring has not been independently released.",
+                },
+            )
         if current_band not in ("BLACK", "NOT_EVALUATED"):
             indicated_score, _ = _verified_flag_score(flags)
             if indicated_score != current_score:
