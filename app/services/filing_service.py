@@ -111,9 +111,6 @@ class AGMService(BaseService[AGM]):
             if days_notice < 0:
                 notice_missing = True
 
-        # Quorum can only be calculated when the applicable threshold has been
-        # verified from the Articles or the Section 85(2)(b) statutory default.
-        if agm_held and members_present is not None and quorum_required is not None:
         # Quorum is UNKNOWN unless both attendance and the applicable
         # Articles/statutory basis have been established. Never infer a
         # failure from an unverified zero attendance or a guessed default.
