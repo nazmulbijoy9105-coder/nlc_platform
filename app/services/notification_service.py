@@ -14,7 +14,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 
 from app.models.enums import NotificationChannel, NotificationStatus
 from app.models.infrastructure import Notification
@@ -144,7 +144,12 @@ class NotificationService(BaseService[Notification]):
         Get notifications for a user.
         _get_user_notifications stub implementation.
         """
-        filters = [Notification.user_id == user_id]
+        filters = [
+            or_(
+                Notification.user_id == user_id,
+                and_(Notification.user_id.is_(None), Notification.company_id.is_not(None)),
+            )
+        ]
         if company_id:
             filters.append(Notification.company_id == company_id)
         if unread_only:
@@ -184,7 +189,7 @@ class NotificationService(BaseService[Notification]):
         _acknowledge_notification stub implementation.
         """
         notif = await self.get_by_id(notification_id)
-        if not notif or notif.user_id != user_id:
+        if not notif or (notif.user_id is not None and notif.user_id != user_id):
             return None
         return await self.update_instance(
             notif,
