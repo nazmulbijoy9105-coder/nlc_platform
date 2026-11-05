@@ -2160,25 +2160,31 @@ class NLCRuleEngine:
                 description="Investigation order pending. Section 195.",
                 statutory_basis="Section 195, Companies Act 1994 (Bangladesh)"))
 
-        # DIR-008: Director holding office of profit (Section 104)
+        # DIR-008: Section 104 contains role-specific exclusions. A bare
+        # profile boolean does not establish the office category or absence of
+        # general-meeting consent, so this remains a review prompt.
         if c.director_office_of_profit:
             self._add_flag(ComplianceFlag(
-                rule_id="DIR-008", flag_code="DIRECTOR_OFFICE_OF_PROFIT",
-                severity=Severity.YELLOW, score_impact=8,
+                rule_id="DIR-008", flag_code="DIRECTOR_OFFICE_OF_PROFIT_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED, score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="Director holding office of profit without company consent. Section 104.",
-                statutory_basis="Section 104, Companies Act 1994 (Bangladesh)"))
-        # DIR-010: Managing director term exceeds 5 years (Section 110)
+                description="Verify the exact office held, whether it falls within a statutory exception, the relevant company relationship and whether general-meeting consent was obtained. A profile boolean alone cannot establish a Section 104 breach.",
+                statutory_basis="Section 104, Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT, eval_state="UNKNOWN"))
+        # DIR-010: Section 110 limits appointment for more than five years
+        # at a time; an old start date alone does not establish the current
+        # appointment term or absence of a valid subsequent appointment.
         if c.managing_director_appointment_date:
             md_years = (self.today - c.managing_director_appointment_date).days // 365
             if md_years > 5:
                 self._add_flag(ComplianceFlag(
-                    rule_id="DIR-010", flag_code="MD_TERM_EXCEEDS_5_YEARS",
-                    severity=Severity.YELLOW, score_impact=5,
+                    rule_id="DIR-010", flag_code="MD_TERM_REQUIRES_REVIEW",
+                    severity=Severity.NOT_EVALUATED, score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Managing director appointed for {md_years} years. Section 110: max 5 years at a time.",
+                    description=f"Managing director appointment record is {md_years} years old. Verify the current appointment instrument, term, reappointment, approval and continuity before assessing Section 110.",
                     statutory_basis="Section 110, Companies Act 1994 (Bangladesh)",
-                    detail={"years": md_years}))
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT, eval_state="UNKNOWN",
+                    detail={"years_since_recorded_appointment": md_years}))
 
     # MODULE 15: BSEC CG CODE 2023
     def _run_bsec_rules(self, c: CompanyProfile) -> None:
