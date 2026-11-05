@@ -85,7 +85,7 @@ class AGM(FullMixin, Base):
 
     # ── Quorum ────────────────────────────────────────────────────
     # AGM-005: quorum not met
-    quorum_met: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=True)
+    quorum_met: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     members_present: Mapped[int] = mapped_column(Integer, default=0)
     members_present_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     members_present_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
