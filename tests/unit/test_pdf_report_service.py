@@ -109,6 +109,16 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
         evaluation_status="COMPLETED",
         score_hash="test-snapshot-hash",
         engine_version="test-engine-v1",
+        flags_snapshot=[{
+            "rule_id": "AGM-001",
+            "severity": "RED",
+            "category": "AGM",
+            "score_impact": 15,
+            "score_impact_applied": 15,
+            "description": "AGM missing",
+            "detail": None,
+            "statutory_basis": "Companies Act 1994 s.81",
+        }],
     )
 
     class FakeDB:
@@ -319,6 +329,7 @@ def test_endpoint_rejects_score_snapshot_mismatch(monkeypatch):
         evaluation_status="COMPLETED",
         score_hash="hash",
         engine_version="engine-v1",
+        flags_snapshot=[],
     )
 
     class FakeDB:
