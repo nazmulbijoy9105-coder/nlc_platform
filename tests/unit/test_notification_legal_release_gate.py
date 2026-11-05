@@ -130,3 +130,42 @@ async def test_suppressed_rule_notifications_stay_hidden_after_release(monkeypat
 
     assert visible == []
 
+@pytest.mark.asyncio
+async def test_queue_notification_stores_unapproved_rule_alert_as_suppressed(monkeypatch):
+    monkeypatch.setattr(notification_module, "LEGAL_SCORE_RELEASED", False)
+    service = NotificationService(MagicMock())
+    service.create = AsyncMock(return_value=SimpleNamespace())
+
+    await service.queue_notification(
+        title="Provisional legal alert",
+        body="Pending counsel review",
+        notification_type="AGM-001",
+    )
+
+    kwargs = service.create.await_args.kwargs
+    assert kwargs["notification_status"] == NotificationStatus.SUPPRESSED
+    assert "not counsel-approved" in kwargs["failure_reason"]
+
+
+@pytest.mark.asyncio
+async def test_company_notification_list_hides_unapproved_rule_alerts(monkeypatch):
+    monkeypatch.setattr(notification_module, "LEGAL_SCORE_RELEASED", False)
+    legal_alert = SimpleNamespace(
+        notification_type="AGM-001",
+        notification_status=NotificationStatus.PENDING,
+    )
+    payment_notice = SimpleNamespace(
+        notification_type="PAYMENT_RECEIVED",
+        notification_status=NotificationStatus.PENDING,
+    )
+    result = SimpleNamespace(
+        scalars=lambda: SimpleNamespace(all=lambda: [legal_alert, payment_notice])
+    )
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=result)
+    service = NotificationService(db)
+
+    visible = await service.get_for_company(uuid4())
+
+    assert visible == [payment_notice]
+
