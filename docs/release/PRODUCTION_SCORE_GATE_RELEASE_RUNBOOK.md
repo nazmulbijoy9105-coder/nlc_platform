@@ -116,7 +116,7 @@ For a new/empty database, explicitly apply the insert-only seed:
 python scripts/seed_rules.py --apply --verbose
 ```
 
-The seeder inserts missing rows only. It refuses to update any existing row whose definition differs from the seed, and rolls back the transaction rather than bypassing the immutable `legal_rule_versions` audit trail. Existing-rule changes must use the authenticated Super Admin `RulesService.update_rule` workflow with a named actor, mandatory `change_reason`, previous-definition snapshot and version increment. Do not use direct SQL or the seeder to modify existing legal rules.
+The seeder inserts missing rows only. It never updates an existing row; if a definition differs, it reports `DRIFT` and leaves that row unchanged while allowing safe missing-row inserts to commit. Existing-rule changes must use the authenticated Super Admin `RulesService.update_rule` workflow with a named actor, mandatory `change_reason`, previous-definition snapshot and version increment. Do not use direct SQL or the seeder to modify existing legal rules.
 
 A seed row or database row is not legal approval. Keep `approved_rule_ids: []`, `LEGAL_SCORE_RELEASED = False`, and the engine allowlist empty until independent counsel approval is recorded.
 
