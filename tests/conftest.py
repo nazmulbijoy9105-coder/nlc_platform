@@ -143,7 +143,8 @@ async def db(test_engine) -> AsyncGenerator[AsyncSession, None]:
     """
     Async DB session wrapped in a transaction.
     Transaction is rolled back after each test — no cleanup needed.
-    Sets admin RLS context (bypasses row-level security for test isolation).
+    Ordinary service tests use the test owner; RLS-specific tests explicitly
+    switch to nlc_app_role and a signed principal.
     """
     async with test_engine.connect() as conn:
         await conn.begin()
@@ -756,7 +757,7 @@ def assert_helpers():
 
 
 # ---------------------------------------------------------------------------
-# Skip integration tests in CI environment (requires PostgreSQL)
+# RLS-aware fixtures (tenant isolation)
 # ---------------------------------------------------------------------------
 
 import os
@@ -831,9 +832,6 @@ async def api_client_as_user(db_for_user):
     from app.core.dependencies import get_db, get_db_for_user
     from app.main import create_app
     from app.models.database import get_db as auth_get_db
-    from app.models.enums import UserRole
-    from app.models.user import User
-
     app = create_app()
 
     async def _override_user_db():
