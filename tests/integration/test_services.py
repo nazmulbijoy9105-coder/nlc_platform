@@ -43,6 +43,10 @@ async def _seed_verified_articles(db, company, submitter_id, reviewer_id, quorum
         is_active=True,
     )
     db.add(document)
+    # The verification row has a composite (company_id, document_id) FK.
+    # Flush the document first; without an explicit flush SQLAlchemy may
+    # insert the verification row before its referenced document.
+    await db.flush()
     now = datetime.now(timezone.utc)
     verification = ArticlesVerification(
         id=uuid.uuid4(),
