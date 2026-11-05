@@ -38,7 +38,7 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
-from app.models.enums import EngagementStatus, RevenueTier
+from app.models.enums import EngagementStatus, RevenueTier, TaskPriority, TaskStatus
 from app.models.user import User
 from app.services.commercial_service import EngagementService, QuotationService, TaskService
 from app.services.notification_service import ActivityService
@@ -124,11 +124,11 @@ class TaskCreateRequest(BaseModel):
     company_id: uuid.UUID
     title: str = Field(min_length=3, max_length=255)
     description: str | None = None
-    due_date: str | None = None
+    due_date: date | None = None
     assigned_to: uuid.UUID | None = None
     linked_flag_id: uuid.UUID | None = None
     source_rescue_step_id: uuid.UUID | None = None
-    priority: str = Field(default="MEDIUM", description="LOW | MEDIUM | HIGH | CRITICAL")
+    priority: TaskPriority = TaskPriority.MEDIUM
 
 
 class TaskCompleteRequest(BaseModel):
@@ -320,6 +320,8 @@ async def advance_engagement_status(
         description=f"Engagement status → {body.new_status}",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
+        company_id=engagement.company_id,
+        company_id=engagement.company_id,
     )
     return _engagement_to_response(engagement)
 
@@ -456,12 +458,21 @@ async def create_task(
         company_id=body.company_id,
         title=body.title,
         description=body.description,
-        due_date=body.due_date,  # type: ignore
+        due_date=body.due_date,
         assigned_to=body.assigned_to,
         source_flag_id=body.linked_flag_id,
         source_rescue_step_id=body.source_rescue_step_id,
-        priority=body.priority,  # type: ignore
+        priority=body.priority,
         created_by=current_user.id,
+    )
+    await ActivityService(db).log(
+        action="TASK_CREATED",
+        resource_type="task",
+        resource_id=str(task.id),
+        description=f"Task created: {task.title}",
+        ip_address=request.client.host if request.client else None,
+        actor_user_id=current_user.id,
+        company_id=task.company_id,
     )
     return _task_to_response(task)
 
@@ -474,11 +485,11 @@ async def create_task(
 )
 async def list_tasks(
     company_id: uuid.UUID,
-    status_filter: str | None = None,
+    status_filter: TaskStatus | None = None,
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = TaskService(db)
-    tasks = await svc.get_for_company(company_id=company_id, status=status_filter)  # type: ignore
+    tasks = await svc.get_for_company(company_id=company_id, status=status_filter)
     return [_task_to_response(t) for t in tasks]
 
 
