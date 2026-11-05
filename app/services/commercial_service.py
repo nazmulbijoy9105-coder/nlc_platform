@@ -127,6 +127,16 @@ class EngagementService(BaseService[Engagement]):
         eng = await self.get_by_id(engagement_id)
         if not eng:
             return None
+        allowed_transitions = {
+            EngagementStatus.IDENTIFIED: {EngagementStatus.QUOTED, EngagementStatus.CANCELLED},
+            EngagementStatus.QUOTED: {EngagementStatus.CONFIRMED, EngagementStatus.CANCELLED},
+            EngagementStatus.CONFIRMED: {EngagementStatus.IN_PROGRESS, EngagementStatus.CANCELLED},
+            EngagementStatus.IN_PROGRESS: {EngagementStatus.COMPLETED, EngagementStatus.CANCELLED},
+        }
+        if new_status not in allowed_transitions.get(eng.engagement_status, set()):
+            raise ValueError(
+                f"Invalid engagement transition: {eng.engagement_status} -> {new_status}"
+            )
         updates: dict = {"engagement_status": new_status}
         status_date_map = {
             EngagementStatus.QUOTED:      "quoted_date",
@@ -180,7 +190,10 @@ class QuotationService(BaseService[Quotation]):
         valid_days: int = 30,
         notes: str | None = None,
     ) -> Quotation:
-        """Create a quotation for an engagement."""
+        """Create a quotation for an engagement owned by the specified company."""
+        engagement = await self.get_by_id(engagement_id)
+        if engagement is None or engagement.company_id != company_id:
+            raise ValueError("Engagement not found for the specified company")
         professional_fee_bdt = professional_fee_bdt.quantize(Decimal("0.01"))
         government_fee_bdt = government_fee_bdt.quantize(Decimal("0.01"))
         vat_bdt = vat_bdt.quantize(Decimal("0.01"))
