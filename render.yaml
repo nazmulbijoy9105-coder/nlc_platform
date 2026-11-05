@@ -3,7 +3,7 @@ services:
     name: nlc-platform
     runtime: docker
     region: singapore
-    plan: starter
+    plan: free
     healthCheckPath: /api/v1/health/live
     autoDeploy: false
     envVars:
