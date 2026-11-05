@@ -177,6 +177,10 @@ class FinanceService:
     ) -> PaymentSubmission:
         if method not in OFFLINE_METHODS:
             raise FinanceConflictError("Unsupported offline payment method")
+        if method in {"BANK_TRANSFER", "CHEQUE", "BKASH_MANUAL", "NAGAD_MANUAL"} and not (payer_reference and payer_reference.strip()):
+            raise FinanceConflictError("A transaction or instrument reference is required for this payment method")
+        if paid_at is not None and paid_at > datetime.now(UTC):
+            raise FinanceConflictError("Payment date cannot be in the future")
         invoice = await self._locked_invoice(invoice_id, company_id)
         if invoice is None:
             raise FinanceNotFoundError("Invoice not found for this company")
@@ -296,6 +300,9 @@ class FinanceService:
             created_by=reviewer_id,
         )
         self.db.add(allocation)
+        # Flush the allocation while the invoice still has its pre-payment
+        # balance; the database RLS policy verifies allocation <= current balance.
+        await self.db.flush()
 
         invoice.paid_bdt = _money(invoice.paid_bdt + amount)
         invoice.balance_bdt = _money(invoice.total_bdt - invoice.paid_bdt)
