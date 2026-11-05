@@ -1,6 +1,8 @@
 from datetime import date
 from types import SimpleNamespace
 
+import app.services.compliance_service as compliance_service
+
 from app.services.company_service import _agm_profile_evidence
 from app.services.compliance_service import _applied_score_impacts, _is_rescue_required
 from app.rule_engine.engine import RuleState, _input_coverage
@@ -186,7 +188,10 @@ def test_verified_zero_directors_triggers_minimum_director_rule():
     assert "INC-003" in {flag.rule_id for flag in result.flags}
 
 
-def test_score_impact_reporting_respects_verified_rule_gate_and_category_caps():
+def test_score_impact_reporting_respects_verified_rule_gate_and_category_caps(monkeypatch):
+    # Simulate an internally source-checked rule while the release gate is closed.
+    monkeypatch.setattr(compliance_service, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(compliance_service, "LEGAL_SCORE_RELEASED", False)
     flags = [
         SimpleNamespace(
             rule_id="AGM-001", score_impact=20, state=RuleState.NON_COMPLIANT,
