@@ -62,6 +62,10 @@ async def test_app_role_has_no_schema_creation_or_truncate_privilege(db):
     assert can_create.scalar_one() is False
     assert can_truncate.scalar_one() is False
 
+    # The app role intentionally lacks USAGE on nlc_private. Resolve the
+    # relation name from the migration-owner test session while querying the
+    # app role's privileges as data; do not grant schema visibility to test it.
+    await db.execute(text("RESET ROLE"))
     secret_schema = await db.execute(
         text("SELECT has_schema_privilege('nlc_app_role', 'nlc_private', 'USAGE')")
     )
@@ -160,6 +164,7 @@ async def test_valid_signed_identity_resolves_to_authenticated_user(db, db_clien
 @pytest.mark.asyncio
 async def test_revoked_membership_stops_company_access_immediately(db, db_client_user, db_company):
     from sqlalchemy import text
+    from app.models.database import set_admin_context, set_rls_context
 
     # Membership revocation is a privileged administrative write. Perform
     # it under the signed service principal, then re-check access as the user.
