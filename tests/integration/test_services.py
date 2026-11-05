@@ -217,6 +217,8 @@ class TestComplianceService:
         mock_engine = MagicMock()
         mock_output = MagicMock()
         mock_output.flags = []
+        mock_output.engine_version = "test-engine-v1"
+        mock_output.ilrmf_version = "test-ilrmf-v1"
         mock_output.score_breakdown.final_score = 90
         mock_output.score_breakdown.risk_band = "GREEN"
         mock_output.score_breakdown.override_applied = False
@@ -239,6 +241,9 @@ class TestComplianceService:
         )
 
         assert result is not None
+        # A mocked/provisional GREEN band cannot bypass the global legal release gate.
+        assert result["score"] is None
+        assert result["risk_band"] == "NOT_EVALUATED"
         mock_engine.evaluate.assert_called_once()
 
 
