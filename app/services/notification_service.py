@@ -10,7 +10,6 @@ AI Constitution Article 6: All notifications logged with flag reference.
 """
 from __future__ import annotations
 
-import logging
 import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -23,8 +22,6 @@ from app.services.base import BaseService
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
-
-logger = logging.getLogger("nlc.notification")
 
 
 class NotificationService(BaseService[Notification]):
@@ -158,6 +155,7 @@ class NotificationService(BaseService[Notification]):
             .where(*filters)
             .order_by(Notification.created_at.desc())
             .limit(limit)
+            .offset(offset)
         )
         return list(result.scalars().all())
 
@@ -186,7 +184,7 @@ class NotificationService(BaseService[Notification]):
         _acknowledge_notification stub implementation.
         """
         notif = await self.get_by_id(notification_id)
-        if not notif:
+        if not notif or notif.user_id != user_id:
             return None
         return await self.update_instance(
             notif,
@@ -300,11 +298,10 @@ class ActivityService:
             logged_at=datetime.now(UTC),
         )
         self.db.add(log)
-        try:
-            await self.db.flush()
-        except Exception as exc:
-            # Never let audit logging fail a request
-            logger.error(f"[ActivityService] Failed to log {action}: {exc}")
+        # Audit records are mandatory. Propagate insert/RLS failures so the
+        # caller's transaction is rolled back instead of silently losing the
+        # audit record and leaving the AsyncSession in a failed state.
+        await self.db.flush()
 
     async def get_logs(
         self,
