@@ -110,6 +110,39 @@ jobs:
           HEAD_COUNT="$(printf '%s\n' "$HEADS" | grep -c '(head)')"
           test "$HEAD_COUNT" -eq 1
 
+          # Roles are cluster-level objects: provision them before Alembic.
+          # The CI PostgreSQL service user is the isolated test-cluster administrator.
+          python - <<'PY'
+          import asyncio
+          import os
+          import asyncpg
+
+          async def main():
+              url = os.environ["DATABASE_URL"].replace(
+                  "postgresql+asyncpg://", "postgresql://", 1
+              )
+              conn = await asyncpg.connect(url)
+              try:
+                  await conn.execute("""
+                      DO $
+                      BEGIN
+                          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
+                              CREATE ROLE nlc_app_role LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
+                                  NOINHERIT NOREPLICATION NOBYPASSRLS;
+                          END IF;
+                          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_ci_audit_role') THEN
+                              CREATE ROLE nlc_ci_audit_role LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
+                                  NOINHERIT NOREPLICATION NOBYPASSRLS;
+                          END IF;
+                      END
+                      $;
+                  """)
+              finally:
+                  await conn.close()
+
+          asyncio.run(main())
+          PY
+
           # First clean PostgreSQL database: upgrade twice to prove idempotency.
           alembic upgrade head
           alembic upgrade head
