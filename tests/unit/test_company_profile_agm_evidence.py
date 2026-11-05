@@ -276,3 +276,51 @@ def test_black_override_is_reported_separately_from_category_deduction():
         "applied": 0,
         "status": "EXCLUDED_UNVERIFIED_RULE",
     }
+
+
+def test_agm_api_response_hides_unverified_raw_values():
+    from app.api.filings import _agm_to_response
+
+    meeting = SimpleNamespace(
+        id="agm-001",
+        company_id="company-001",
+        financial_year=2025,
+        agm_deadline=date(2026, 6, 30),
+        agm_date=date(2026, 5, 1),
+        rjsc_filing_date=None,
+        quorum_met=False,
+        quorum_required=2,
+        quorum_basis="SECTION_85_2_B_DEFAULT_ARTICLES_NOT_REVIEWED",
+        venue="Dhaka",
+        members_present=1,
+        auditor_reappointed=False,
+        accounts_adopted=False,
+        agm_held_without_audit=True,
+        minutes_prepared=False,
+        minutes_document_id=None,
+        is_default=False,
+        created_at=None,
+        members_present_verified=False,
+        members_present_evidence_ref=None,
+        members_present_verified_at=None,
+        members_present_verified_by=None,
+        quorum_required_verified=False,
+        quorum_evidence_ref=None,
+        quorum_verified_at=None,
+        quorum_verified_by=None,
+        auditor_reappointment_verified=False,
+        auditor_reappointment_evidence_ref=None,
+        auditor_reappointment_verified_at=None,
+        auditor_reappointment_verified_by=None,
+    )
+
+    response = _agm_to_response(meeting)
+
+    assert response.members_present is None
+    assert response.quorum_required is None
+    assert response.quorum_met is None
+    assert response.quorum_basis is None
+    assert response.auditor_reappointed is None
+    assert response.accounts_adopted is None
+    assert response.agm_held_without_audit is None
+    assert response.minutes_prepared is None
