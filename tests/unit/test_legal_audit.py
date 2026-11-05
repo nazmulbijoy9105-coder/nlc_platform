@@ -184,6 +184,10 @@ class TestCalendarMonthDeadlines:
             incorporation_date=date(2024, 1, 31),
             agm_count=0,
             last_agm_date=None,
+            agm_history_verified=True,
+            agm_history_evidence_ref="AGM-HISTORY-DATE-003",
+            agm_history_verified_at=date(2025, 1, 1),
+            agm_history_verified_by="reviewer-001",
             agm_held_this_cycle=False,
         )
         on_deadline = NLCRuleEngine().evaluate(profile, today=date(2025, 7, 31))
@@ -197,6 +201,10 @@ class TestCalendarMonthDeadlines:
             incorporation_date=date(2020, 1, 1),
             agm_count=1,
             last_agm_date=date(2024, 12, 31),
+            agm_history_verified=True,
+            agm_history_evidence_ref="AGM-HISTORY-DATE-006",
+            agm_history_verified_at=date(2025, 1, 1),
+            agm_history_verified_by="reviewer-001",
             agm_held_this_cycle=False,
         )
         on_calendar_year_deadline = NLCRuleEngine().evaluate(
@@ -226,6 +234,10 @@ class TestCalendarMonthDeadlines:
             incorporation_date=date(2020, 1, 1),
             agm_count=1,
             last_agm_date=date(2024, 1, 31),
+            agm_history_verified=True,
+            agm_history_evidence_ref="AGM-HISTORY-DATE-004",
+            agm_history_verified_at=date(2025, 1, 1),
+            agm_history_verified_by="reviewer-001",
             agm_held_this_cycle=False,
         )
         on_deadline = NLCRuleEngine().evaluate(profile, today=date(2025, 4, 30))
