@@ -1455,31 +1455,6 @@ class NLCRuleEngine:
                     "quorum_met_recorded": False,
                 },
             ))
-                if not consent_verified:
-                    self._add_flag(ComplianceFlag(
-                        rule_id="AGM-004",
-                        flag_code="AGM_NOTICE_OR_CONSENT_UNVERIFIED",
-                        severity=Severity.NOT_EVALUATED,
-                        score_impact=0,
-                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description="No notice date is recorded and any written short-notice consent has not been verified.",
-                        statutory_basis="Section 85(1)(a), Companies Act 1994 (Bangladesh)",
-                        state=RuleState.UNKNOWN,
-                        eval_state="UNKNOWN",
-                        detail={"days_to_agm": days_rem},
-                    ))
-                elif c.short_notice_consent_obtained is False:
-                    self._add_flag(ComplianceFlag(
-                        rule_id="AGM-004",
-                        flag_code="AGM_NOTICE_NOT_ISSUED",
-                        severity=Severity.RED,
-                        score_impact=15,
-                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"AGM notice not issued and written short-notice consent is verified absent. {days_rem} days to AGM.",
-                        statutory_basis="Section 85(1)(a), Companies Act 1994 (Bangladesh)",
-                        detail={"days_to_agm": days_rem, "short_notice_consent": False},
-                    ))
-
         attendance_verified = (
             c.agm_attendance_verified is True
             and bool(c.agm_attendance_evidence_ref)
