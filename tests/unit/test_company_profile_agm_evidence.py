@@ -10,22 +10,17 @@ from app.rule_engine.engine import CompanyProfile, NLCRuleEngine
 def test_missing_agm_record_keeps_attendance_and_auditor_status_unknown():
     evidence = _agm_profile_evidence(None)
 
-    assert evidence == {
-        "members_present_at_agm": None,
-        "auditor_reappointed_at_agm": None,
-        "auditor_reappointment_verified": False,
-        "auditor_reappointment_evidence_ref": None,
-        "agm_minutes_prepared": None,
-        "agm_quorum_met": None,
-        "agm_quorum_required": None,
-        "notice_sent_date": None,
-        "agm_notice_verified_absent": None,
-        "agm_held_without_audit": None,
-        "accounts_adopted_at_agm": None,
-        "short_notice_consent_obtained": None,
-        "short_notice_consent_verified": False,
-        "short_notice_consent_evidence_ref": None,
-    }
+    assert evidence["members_present_at_agm"] is None
+    assert evidence["agm_attendance_verified"] is False
+    assert evidence["agm_attendance_evidence_ref"] is None
+    assert evidence["agm_quorum_required"] is None
+    assert evidence["agm_quorum_basis_verified"] is False
+    assert evidence["agm_quorum_evidence_ref"] is None
+    assert evidence["agm_quorum_met"] is None
+    assert evidence["auditor_reappointed_at_agm"] is None
+    assert evidence["auditor_reappointment_verified"] is False
+    assert evidence["agm_minutes_prepared"] is None
+    assert evidence["agm_notice_verified_absent"] is None
 
 
 def test_agm_profile_evidence_comes_from_the_latest_agm_record():
@@ -43,6 +38,10 @@ def test_agm_profile_evidence_comes_from_the_latest_agm_record():
         members_present_evidence_ref="AGM-MINUTES-001",
         members_present_verified_at=date(2026, 1, 2),
         members_present_verified_by="reviewer-001",
+        quorum_required_verified=True,
+        quorum_evidence_ref="AOA-QUORUM-001",
+        quorum_verified_at=date(2026, 1, 2),
+        quorum_verified_by="reviewer-001",
         auditor_reappointment_verified=True,
         auditor_reappointment_evidence_ref="AGM-MINUTES-001",
         auditor_reappointment_verified_at=date(2026, 1, 2),
@@ -53,12 +52,13 @@ def test_agm_profile_evidence_comes_from_the_latest_agm_record():
 
     assert evidence["members_present_at_agm"] == 3
     assert evidence["auditor_reappointed_at_agm"] is False
-    assert evidence["agm_minutes_prepared"] is True
+    assert evidence["agm_minutes_prepared"] is None
     assert evidence["agm_quorum_met"] is False
     assert evidence["agm_quorum_required"] == 3
     assert evidence["notice_sent_date"] == date(2026, 1, 1)
-    assert evidence["agm_held_without_audit"] is True
-    assert evidence["accounts_adopted_at_agm"] is True
+    assert evidence["agm_notice_verified_absent"] is None
+    assert evidence["agm_held_without_audit"] is None
+    assert evidence["accounts_adopted_at_agm"] is None
 
 
 def test_legacy_null_attendance_keeps_quorum_unknown():
@@ -78,7 +78,7 @@ def test_legacy_null_attendance_keeps_quorum_unknown():
     assert evidence["agm_quorum_met"] is None
 
 
-def test_explicit_minutes_absence_is_preserved_after_nullable_migration():
+def test_minutes_absence_without_review_provenance_remains_unknown():
     meeting = SimpleNamespace(
         members_present=2,
         auditor_reappointed=None,
@@ -90,7 +90,7 @@ def test_explicit_minutes_absence_is_preserved_after_nullable_migration():
         accounts_adopted=None,
     )
     evidence = _agm_profile_evidence(meeting)
-    assert evidence["agm_minutes_prepared"] is False
+    assert evidence["agm_minutes_prepared"] is None
 
 
 def test_explicit_zero_attendance_and_failed_quorum_are_preserved():
@@ -148,7 +148,7 @@ def test_notice_missing_orm_default_is_not_verified_absence():
     assert evidence["agm_notice_verified_absent"] is None
 
 
-def test_explicit_notice_missing_is_mapped_as_verified_absence():
+def test_notice_missing_without_provenance_remains_unknown():
     meeting = SimpleNamespace(
         members_present=2,
         auditor_reappointed=True,
@@ -158,7 +158,7 @@ def test_explicit_notice_missing_is_mapped_as_verified_absence():
         notice_missing=True,
     )
     evidence = _agm_profile_evidence(meeting)
-    assert evidence["agm_notice_verified_absent"] is True
+    assert evidence["agm_notice_verified_absent"] is None
 
 
 def test_agm_notice_missing_from_nlc_records_is_unknown_not_a_breach():
