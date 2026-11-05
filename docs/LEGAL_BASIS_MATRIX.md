@@ -62,7 +62,7 @@ This matrix is a technical inventory of candidate legal anchors and internal rul
 | DIR-008 | Office of Profit Status Requires Verification | Section 104, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | REVIEW ONLY — statutory exclusions and general-meeting consent must be checked |
 | DIR-010 | Managing Director Term Requires Verification | Section 110, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | REVIEW ONLY — verify current appointment term, reappointment and continuity |
 | ESC-001 | Strike-Off Process Status Requires Verification | Section 304, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required | NOT_EVALUATED | 0 | no | REVIEW ONLY — backlog is not proof of Registrar strike-off action |
-| ESC-002 | Strike-Off Imminent — BLACK OVERRIDE | Section 346, Companies Act 1994 (Bangladesh) | BLACK | 10 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| ESC-002 | Strike-Off Status Requires Verification | Section 304, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required | NOT_EVALUATED | 0 | no | REVIEW ONLY — filing backlog or unverified list indicator is not proof of strike-off |
 | ESC-003 | Corporate Rescue Mandatory — Systemic Failure | Sections 81, 115, 36, 346 (aggregate), Companies Act 1994 (Bangladesh) | BLACK | 10 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | ESC-004 | Voluntary Winding Up | Section 130, Companies Act 1994 (Bangladesh) | BLACK | 30 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | ESC-005 | Investigation Order Pending | Section 104, Companies Act 1994 (Bangladesh) | RED | 20 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
