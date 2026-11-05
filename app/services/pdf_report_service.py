@@ -18,7 +18,7 @@ from sqlalchemy import select
 from app.models.compliance import ComplianceEvaluationRun
 
 # Import CATEGORY_CAPS for score reconciliation (cap adjustment display)
-from app.rule_engine.engine import CATEGORY_CAPS
+from app.rule_engine.engine import CATEGORY_CAPS, VERIFIED_RULE_IDS
 from app.services.company_service import CompanyService
 from app.services.pdf_render import (
     asset_uri,
