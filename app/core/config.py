@@ -25,11 +25,22 @@ class Settings(BaseSettings):
     BACKEND_URL: str = os.getenv("BACKEND_URL", "https://nlc-platform.onrender.com")
 
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "")  # privileged migration/maintenance connection
+    APP_DATABASE_URL: str = os.getenv("APP_DATABASE_URL", "")  # non-BYPASSRLS runtime connection
+    REQUIRE_RLS_APP_ROLE: bool = os.getenv("REQUIRE_RLS_APP_ROLE", "false").lower() == "true"
 
     @property
     def ASYNC_DATABASE_URL(self) -> str:
         url = self.DATABASE_URL
+        if url.startswith("postgres://"):
+            return url.replace("postgres://", "postgresql+asyncpg://", 1)
+        if url.startswith("postgresql://"):
+            return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
+
+    @property
+    def ASYNC_APP_DATABASE_URL(self) -> str:
+        url = self.APP_DATABASE_URL or self.DATABASE_URL
         if url.startswith("postgres://"):
             return url.replace("postgres://", "postgresql+asyncpg://", 1)
         if url.startswith("postgresql://"):
