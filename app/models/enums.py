@@ -1,7 +1,7 @@
 """
 NEUM LEX COUNSEL — ORM LAYER
-enums.py — All 22 PostgreSQL ENUM types as Python/SQLAlchemy equivalents
-Mirrors A_database_schema.sql exactly. Do NOT add or remove values.
+enums.py — PostgreSQL ENUM types as Python/SQLAlchemy equivalents
+Mirrors database migrations exactly. Add values only with a corresponding forward-only Alembic migration.
 AI Constitution Article 1: Only Super Admin may change rule/severity types.
 """
 import enum
