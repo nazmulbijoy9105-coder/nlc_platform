@@ -11,6 +11,7 @@ from app.core.dependencies import get_db, get_db_for_user
 from app.models.database import set_admin_context
 from app.models.infrastructure import UserActivityLog
 from app.models.user import User
+from app.rule_engine.engine import LEGAL_SCORE_RELEASED
 
 router = APIRouter()
 
@@ -116,8 +117,14 @@ async def admin_dashboard(
     try:
         r = await db.execute(select(Company).where(Company.last_evaluated_at.isnot(None)).order_by(Company.last_evaluated_at.desc()).limit(5))
         for co in r.scalars().all():
-            score = co.current_compliance_score if co.current_compliance_score is not None else 0
-            activities.append({"id": str(co.id), "message": f"Evaluation for {co.company_name or 'Unknown'} - Score: {score}/100", "actor": "Rule Engine", "created_at": co.last_evaluated_at.isoformat() if co.last_evaluated_at else "", "type": "EVALUATION" if score >= 50 else "VIOLATION"})
+            if LEGAL_SCORE_RELEASED and co.current_compliance_score is not None:
+                score = co.current_compliance_score
+                message = f"Evaluation for {co.company_name or 'Unknown'} - Score: {score}/100"
+                activity_type = "EVALUATION" if score >= 50 else "VIOLATION"
+            else:
+                message = f"Evaluation for {co.company_name or 'Unknown'} - statutory score withheld pending independent legal approval"
+                activity_type = "NOT_EVALUATED"
+            activities.append({"id": str(co.id), "message": message, "actor": "Rule Engine", "created_at": co.last_evaluated_at.isoformat() if co.last_evaluated_at else "", "type": activity_type})
     except Exception:
         pass
     try:
