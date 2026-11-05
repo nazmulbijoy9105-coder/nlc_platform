@@ -190,6 +190,21 @@ def upgrade() -> None:
 
     op.execute(
         """
+        CREATE POLICY compliance_events_company_insert
+        ON compliance_events FOR INSERT
+        WITH CHECK (
+            current_setting('app.current_user_id', true) = 'ADMIN'
+            OR EXISTS (
+                SELECT 1 FROM company_user_access access
+                WHERE access.company_id = compliance_events.company_id
+                  AND access.user_id::text = current_setting('app.current_user_id', true)
+                  AND access.is_active = true
+            )
+        )
+        """
+    )
+    op.execute(
+        """
         CREATE POLICY quotations_company_scope
         ON quotations FOR ALL
         USING (
@@ -357,6 +372,7 @@ def downgrade() -> None:
     op.execute("DROP POLICY IF EXISTS calendar_events_company_scope ON compliance_calendar_events")
     op.execute("ALTER TABLE compliance_calendar_events DISABLE ROW LEVEL SECURITY")
     op.execute("DROP POLICY IF EXISTS compliance_events_company_read ON compliance_events")
+    op.execute("DROP POLICY IF EXISTS compliance_events_company_insert ON compliance_events")
     op.execute("DROP POLICY IF EXISTS quotations_company_scope ON quotations")
     op.execute("DROP POLICY IF EXISTS document_access_log_company_scope ON document_access_log")
     op.execute("DROP POLICY IF EXISTS document_access_log_insert ON document_access_log")
