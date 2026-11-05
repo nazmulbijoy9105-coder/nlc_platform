@@ -237,6 +237,33 @@ def upgrade() -> None:
         $function$
     """)
     op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_can_edit_company(p_company_id uuid)
+        RETURNS boolean
+        LANGUAGE sql
+        STABLE
+        SECURITY DEFINER
+        SET search_path = pg_catalog, public
+        AS $function$
+            SELECT public.nlc_current_user_is_staff()
+                OR (
+                    public.nlc_current_user_id() IS NOT NULL
+                    AND EXISTS (
+                        SELECT 1 FROM public.users u
+                        WHERE u.id = public.nlc_current_user_id()
+                          AND u.is_active IS TRUE
+                    )
+                    AND EXISTS (
+                        SELECT 1 FROM public.company_user_access cua
+                        WHERE cua.company_id = p_company_id
+                          AND cua.user_id = public.nlc_current_user_id()
+                          AND cua.is_active IS TRUE
+                          AND cua.can_edit IS TRUE
+                    )
+                )
+        $function$
+    """)
+
+    op.execute("""
         CREATE OR REPLACE FUNCTION public.nlc_can_access_document(p_document_id uuid)
         RETURNS boolean
         LANGUAGE sql
@@ -258,6 +285,7 @@ def upgrade() -> None:
         "nlc_current_user_context_valid()",
         "nlc_current_user_is_staff()",
         "nlc_can_access_company(uuid)",
+        "nlc_can_edit_company(uuid)",
         "nlc_can_access_document(uuid)",
     ):
         op.execute(f"REVOKE ALL ON FUNCTION public.{signature} FROM PUBLIC")
@@ -291,18 +319,42 @@ def upgrade() -> None:
         op.execute(f"ALTER TABLE public.{table} FORCE ROW LEVEL SECURITY")
 
     op.execute("""
-        CREATE POLICY companies_tenant_access ON public.companies
-        FOR ALL
-        USING (public.nlc_can_access_company(id))
-        WITH CHECK (public.nlc_can_access_company(id))
+        CREATE POLICY companies_tenant_select ON public.companies
+        FOR SELECT USING (public.nlc_can_access_company(id))
+    """)
+    op.execute("""
+        CREATE POLICY companies_tenant_insert ON public.companies
+        FOR INSERT WITH CHECK (public.nlc_can_edit_company(id))
+    """)
+    op.execute("""
+        CREATE POLICY companies_tenant_update ON public.companies
+        FOR UPDATE
+        USING (public.nlc_can_edit_company(id))
+        WITH CHECK (public.nlc_can_edit_company(id))
+    """)
+    op.execute("""
+        CREATE POLICY companies_tenant_delete ON public.companies
+        FOR DELETE USING (public.nlc_can_edit_company(id))
     """)
 
     for table in COMPANY_TABLES:
         op.execute(f"""
-            CREATE POLICY {table}_tenant_access ON public.{table}
-            FOR ALL
-            USING (public.nlc_can_access_company(company_id))
-            WITH CHECK (public.nlc_can_access_company(company_id))
+            CREATE POLICY {table}_tenant_select ON public.{table}
+            FOR SELECT USING (public.nlc_can_access_company(company_id))
+        """)
+        op.execute(f"""
+            CREATE POLICY {table}_tenant_insert ON public.{table}
+            FOR INSERT WITH CHECK (public.nlc_can_edit_company(company_id))
+        """)
+        op.execute(f"""
+            CREATE POLICY {table}_tenant_update ON public.{table}
+            FOR UPDATE
+            USING (public.nlc_can_edit_company(company_id))
+            WITH CHECK (public.nlc_can_edit_company(company_id))
+        """)
+        op.execute(f"""
+            CREATE POLICY {table}_tenant_delete ON public.{table}
+            FOR DELETE USING (public.nlc_can_edit_company(company_id))
         """)
 
     op.execute("""
@@ -416,19 +468,21 @@ def upgrade() -> None:
     op.execute("""
         CREATE POLICY compliance_events_company_insert ON public.compliance_events
         FOR INSERT
-        WITH CHECK (public.nlc_can_access_company(company_id))
+        WITH CHECK (public.nlc_can_edit_company(company_id))
     """)
     op.execute("""
-        CREATE POLICY quotations_company_scope ON public.quotations
-        FOR ALL
+        CREATE POLICY quotations_company_read ON public.quotations
+        FOR SELECT
         USING (
             public.nlc_current_user_is_staff()
             OR (company_id IS NOT NULL AND public.nlc_can_access_company(company_id))
         )
-        WITH CHECK (
-            public.nlc_current_user_is_staff()
-            OR (company_id IS NOT NULL AND public.nlc_can_access_company(company_id))
-        )
+    """)
+    op.execute("""
+        CREATE POLICY quotations_staff_write ON public.quotations
+        FOR ALL
+        USING (public.nlc_current_user_is_staff())
+        WITH CHECK (public.nlc_current_user_is_staff())
     """)
     op.execute("""
         CREATE POLICY document_access_log_actor_tenant_select ON public.document_access_log
@@ -519,6 +573,7 @@ def upgrade() -> None:
 
     # Runtime privileges: RLS supplies row scope; SQL grants supply operation
     # scope. TRUNCATE, REFERENCES and TRIGGER are never granted to the app role.
+    op.execute("REVOKE CREATE ON SCHEMA public FROM PUBLIC")
     op.execute("REVOKE CREATE ON SCHEMA public FROM nlc_app_role")
     op.execute("GRANT USAGE ON SCHEMA public TO nlc_app_role")
     op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO nlc_app_role")
