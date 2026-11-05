@@ -274,8 +274,8 @@ class ActivityService:
     ) -> None:
         """
         Append a single activity log entry.
-        _log_activity stub implementation.
-        Always called in background — never blocks the response.
+        Flushes inside the caller's transaction; failures propagate so the
+        caller cannot commit a write after silently losing its audit record.
         """
         from app.models.infrastructure import UserActivityLog
         if user_id is None:
@@ -300,11 +300,9 @@ class ActivityService:
             logged_at=datetime.now(UTC),
         )
         self.db.add(log)
-        try:
-            await self.db.flush()
-        except Exception as exc:
-            # Never let audit logging fail a request
-            logger.error(f"[ActivityService] Failed to log {action}: {exc}")
+        # Audit records are mandatory. Propagate database/RLS errors so the
+        # caller's transaction rolls back rather than silently losing evidence.
+        await self.db.flush()
 
     async def get_logs(
         self,
