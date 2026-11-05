@@ -417,6 +417,191 @@ def upgrade() -> None:
         WITH CHECK (public.nlc_can_manage_billing_company(company_id))
     """)
 
+    # Once issued, invoice commercial terms and line items are immutable.
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_guard_invoice_update()
+        RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+        SET search_path = pg_catalog, public AS $function$
+        BEGIN
+            IF OLD.status <> 'DRAFT' AND (
+                NEW.company_id IS DISTINCT FROM OLD.company_id
+                OR NEW.engagement_id IS DISTINCT FROM OLD.engagement_id
+                OR NEW.invoice_number IS DISTINCT FROM OLD.invoice_number
+                OR NEW.currency IS DISTINCT FROM OLD.currency
+                OR NEW.subtotal_bdt IS DISTINCT FROM OLD.subtotal_bdt
+                OR NEW.tax_bdt IS DISTINCT FROM OLD.tax_bdt
+                OR NEW.total_bdt IS DISTINCT FROM OLD.total_bdt
+                OR NEW.due_at IS DISTINCT FROM OLD.due_at
+                OR NEW.notes IS DISTINCT FROM OLD.notes
+                OR NEW.created_by IS DISTINCT FROM OLD.created_by
+            ) THEN
+                RAISE EXCEPTION 'issued invoice terms are immutable' USING ERRCODE = '55000';
+            END IF;
+            IF NEW.status IS DISTINCT FROM OLD.status AND NOT (
+                (OLD.status = 'DRAFT' AND NEW.status IN ('ISSUED','VOID'))
+                OR (OLD.status = 'ISSUED' AND NEW.status IN ('PARTIALLY_PAID','PAID','OVERDUE','VOID'))
+                OR (OLD.status = 'OVERDUE' AND NEW.status IN ('PARTIALLY_PAID','PAID','VOID'))
+                OR (OLD.status = 'PARTIALLY_PAID' AND NEW.status IN ('PAID','OVERDUE'))
+            ) THEN
+                RAISE EXCEPTION 'invalid invoice state transition: % -> %', OLD.status, NEW.status
+                    USING ERRCODE = '55000';
+            END IF;
+            RETURN NEW;
+        END
+        $function$
+    """)
+    op.execute("REVOKE ALL ON FUNCTION public.nlc_guard_invoice_update() FROM PUBLIC")
+    op.execute("""
+        CREATE TRIGGER invoices_guard_update
+        BEFORE UPDATE ON public.invoices
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_guard_invoice_update()
+    """)
+
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_guard_invoice_line_mutation()
+        RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+        SET search_path = pg_catalog, public AS $function$
+        DECLARE invoice_state text;
+        BEGIN
+            SELECT status INTO invoice_state
+            FROM public.invoices
+            WHERE id = OLD.invoice_id AND company_id = OLD.company_id
+            FOR UPDATE;
+            IF invoice_state IS DISTINCT FROM 'DRAFT' THEN
+                RAISE EXCEPTION 'invoice lines are immutable after invoice issue'
+                    USING ERRCODE = '55000';
+            END IF;
+            RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+        END
+        $function$
+    """)
+    op.execute("REVOKE ALL ON FUNCTION public.nlc_guard_invoice_line_mutation() FROM PUBLIC")
+    op.execute("""
+        CREATE TRIGGER invoice_lines_guard_mutation
+        BEFORE UPDATE OR DELETE ON public.invoice_lines
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_guard_invoice_line_mutation()
+    """)
+
+    # A settled payment's amount, method and provider identity cannot be edited.
+    # Reversals/refunds/disputes are separate ledger events plus a terminal status.
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_guard_payment_update()
+        RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+        SET search_path = pg_catalog, public AS $function$
+        BEGIN
+            IF (
+                NEW.company_id IS DISTINCT FROM OLD.company_id
+                OR NEW.payment_number IS DISTINCT FROM OLD.payment_number
+                OR NEW.method IS DISTINCT FROM OLD.method
+                OR NEW.channel IS DISTINCT FROM OLD.channel
+                OR NEW.amount_bdt IS DISTINCT FROM OLD.amount_bdt
+                OR NEW.currency IS DISTINCT FROM OLD.currency
+                OR NEW.provider_name IS DISTINCT FROM OLD.provider_name
+                OR NEW.provider_transaction_id IS DISTINCT FROM OLD.provider_transaction_id
+                OR NEW.payer_reference IS DISTINCT FROM OLD.payer_reference
+                OR NEW.received_at IS DISTINCT FROM OLD.received_at
+                OR NEW.verified_by IS DISTINCT FROM OLD.verified_by
+                OR NEW.verified_at IS DISTINCT FROM OLD.verified_at
+                OR NEW.created_by IS DISTINCT FROM OLD.created_by
+            ) THEN
+                RAISE EXCEPTION 'payment receipt facts are immutable' USING ERRCODE = '55000';
+            END IF;
+            IF NEW.status IS DISTINCT FROM OLD.status AND NOT (
+                OLD.status = 'SETTLED' AND NEW.status IN ('REVERSED','REFUNDED','DISPUTED')
+            ) THEN
+                RAISE EXCEPTION 'invalid payment state transition: % -> %', OLD.status, NEW.status
+                    USING ERRCODE = '55000';
+            END IF;
+            RETURN NEW;
+        END
+        $function$
+    """)
+    op.execute("REVOKE ALL ON FUNCTION public.nlc_guard_payment_update() FROM PUBLIC")
+    op.execute("""
+        CREATE TRIGGER payments_guard_update
+        BEFORE UPDATE ON public.payments
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_guard_payment_update()
+    """)
+
+    # Client-submitted payment claims cannot self-approve or rewrite their facts.
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_guard_payment_submission_update()
+        RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+        SET search_path = pg_catalog, public AS $function$
+        BEGIN
+            IF (
+                NEW.company_id IS DISTINCT FROM OLD.company_id
+                OR NEW.invoice_id IS DISTINCT FROM OLD.invoice_id
+                OR NEW.submitted_by IS DISTINCT FROM OLD.submitted_by
+                OR NEW.method IS DISTINCT FROM OLD.method
+                OR NEW.amount_bdt IS DISTINCT FROM OLD.amount_bdt
+                OR NEW.currency IS DISTINCT FROM OLD.currency
+                OR NEW.payer_reference IS DISTINCT FROM OLD.payer_reference
+                OR NEW.paid_at IS DISTINCT FROM OLD.paid_at
+                OR NEW.evidence_document_id IS DISTINCT FROM OLD.evidence_document_id
+            ) THEN
+                RAISE EXCEPTION 'payment submission facts are immutable' USING ERRCODE = '55000';
+            END IF;
+            IF OLD.status <> 'PENDING_REVIEW'
+                OR NEW.status NOT IN ('APPROVED','REJECTED')
+                OR NEW.reviewed_by IS NULL
+                OR NEW.reviewed_at IS NULL THEN
+                RAISE EXCEPTION 'invalid payment submission review transition' USING ERRCODE = '55000';
+            END IF;
+            IF NEW.status = 'APPROVED' AND OLD.method = 'CHEQUE' AND NEW.cheque_cleared_at IS NULL THEN
+                RAISE EXCEPTION 'cheque must be cleared before payment approval' USING ERRCODE = '55000';
+            END IF;
+            IF NEW.status = 'REJECTED' AND COALESCE(length(trim(NEW.review_note)), 0) = 0 THEN
+                RAISE EXCEPTION 'rejection reason is required' USING ERRCODE = '55000';
+            END IF;
+            RETURN NEW;
+        END
+        $function$
+    """)
+    op.execute("REVOKE ALL ON FUNCTION public.nlc_guard_payment_submission_update() FROM PUBLIC")
+    op.execute("""
+        CREATE TRIGGER payment_submissions_guard_update
+        BEFORE UPDATE ON public.payment_submissions
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_guard_payment_submission_update()
+    """)
+
+    # Payment intents are created as CREATED by the customer and advanced only
+    # by the verified provider/service path.
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_guard_payment_intent_update()
+        RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+        SET search_path = pg_catalog, public AS $function$
+        BEGIN
+            IF (
+                NEW.company_id IS DISTINCT FROM OLD.company_id
+                OR NEW.invoice_id IS DISTINCT FROM OLD.invoice_id
+                OR NEW.provider_name IS DISTINCT FROM OLD.provider_name
+                OR NEW.idempotency_key IS DISTINCT FROM OLD.idempotency_key
+                OR NEW.provider_order_id IS DISTINCT FROM OLD.provider_order_id
+                OR NEW.amount_bdt IS DISTINCT FROM OLD.amount_bdt
+                OR NEW.currency IS DISTINCT FROM OLD.currency
+                OR NEW.created_by IS DISTINCT FROM OLD.created_by
+            ) THEN
+                RAISE EXCEPTION 'payment intent facts are immutable' USING ERRCODE = '55000';
+            END IF;
+            IF NEW.status IS DISTINCT FROM OLD.status AND NOT (
+                (OLD.status = 'CREATED' AND NEW.status IN ('PENDING','FAILED','EXPIRED','CANCELLED'))
+                OR (OLD.status = 'PENDING' AND NEW.status IN ('SUCCEEDED','FAILED','EXPIRED','CANCELLED'))
+            ) THEN
+                RAISE EXCEPTION 'invalid payment intent state transition: % -> %', OLD.status, NEW.status
+                    USING ERRCODE = '55000';
+            END IF;
+            RETURN NEW;
+        END
+        $function$
+    """)
+    op.execute("REVOKE ALL ON FUNCTION public.nlc_guard_payment_intent_update() FROM PUBLIC")
+    op.execute("""
+        CREATE TRIGGER payment_intents_guard_update
+        BEFORE UPDATE ON public.payment_intents
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_guard_payment_intent_update()
+    """)
+
     # Append-only payment history: no UPDATE or DELETE can rewrite a posted event.
     op.execute("""
         CREATE OR REPLACE FUNCTION public.nlc_reject_payment_ledger_event_mutation()
