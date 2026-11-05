@@ -153,6 +153,13 @@ async def set_admin_context(session: AsyncSession) -> None:
     )
 
 
+async def set_auth_context(session: AsyncSession) -> None:
+    """Restrict unauthenticated login/signup operations to the users table RLS policy."""
+    await session.execute(
+        text("SELECT set_config('app.current_user_id', 'AUTH', true)")
+    )
+
+
 # ── STARTUP / SHUTDOWN ────────────────────────────────────────────────
 async def create_tables() -> None:
     """Create all tables. Used in testing only. Production uses Alembic."""
