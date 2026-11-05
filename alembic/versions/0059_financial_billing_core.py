@@ -273,13 +273,13 @@ def upgrade() -> None:
         CREATE POLICY invoice_lines_billing_select ON public.invoice_lines
         FOR SELECT
         USING (
-            public.nlc_can_view_billing_company(company_id)
+            public.nlc_can_view_billing_company(invoice_lines.company_id)
             AND (
                 public.nlc_current_user_is_finance_staff()
                 OR EXISTS (
                     SELECT 1 FROM public.invoices i
-                    WHERE i.id = invoice_id
-                      AND i.company_id = company_id
+                    WHERE i.id = invoice_lines.invoice_id
+                      AND i.company_id = invoice_lines.company_id
                       AND i.status <> 'DRAFT'
                 )
             )
@@ -308,6 +308,18 @@ def upgrade() -> None:
             AND (
                 public.nlc_current_user_is_finance_staff()
                 OR submitted_by = public.nlc_current_user_id()
+            )
+            AND status = 'PENDING_REVIEW'
+            AND reviewed_by IS NULL
+            AND reviewed_at IS NULL
+            AND review_note IS NULL
+            AND cheque_cleared_at IS NULL
+            AND EXISTS (
+                SELECT 1 FROM public.invoices i
+                WHERE i.id = payment_submissions.invoice_id
+                  AND i.company_id = payment_submissions.company_id
+                  AND i.status IN ('ISSUED','PARTIALLY_PAID')
+                  AND payment_submissions.amount_bdt <= i.balance_bdt
             )
         )
     """)
@@ -363,6 +375,16 @@ def upgrade() -> None:
             AND (
                 public.nlc_current_user_is_finance_staff()
                 OR created_by = public.nlc_current_user_id()
+            )
+            AND status = 'CREATED'
+            AND provider_transaction_id IS NULL
+            AND verified_at IS NULL
+            AND EXISTS (
+                SELECT 1 FROM public.invoices i
+                WHERE i.id = payment_intents.invoice_id
+                  AND i.company_id = payment_intents.company_id
+                  AND i.status IN ('ISSUED','PARTIALLY_PAID')
+                  AND payment_intents.amount_bdt <= i.balance_bdt
             )
         )
     """)
