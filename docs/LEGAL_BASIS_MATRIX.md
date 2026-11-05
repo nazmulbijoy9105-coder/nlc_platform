@@ -27,8 +27,8 @@ This matrix is a technical inventory of candidate legal anchors and internal rul
 | AGM-006 | AGM Minutes Not Prepared | Section 89, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | AGM-007 | AGM Adjourned Without Proper Notice | Section 85 and applicable Articles; exact adjournment provision requires counsel mapping | NOT_EVALUATED | 0 | no | REVIEW ONLY — no automatic default |
 | AR-001 | Annual Return Default — Single Year | Section 36 (Schedule X), Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| AR-002 | Annual Return 2-Year Backlog | Sections 36 and 304, Companies Act 1994 (Bangladesh) | RED | 20 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| AR-003 | Annual Return 3-Year Backlog — Strike-Off Risk | Sections 36 and 304, Companies Act 1994 (Bangladesh) | BLACK | 20 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AR-002 | Annual Return Backlog — Review Required | Section 36 and Schedule X; Section 346 governs a separate Registrar strike-off process | NOT_EVALUATED | 0 | no | REVIEW ONLY — backlog alone is not proof of strike-off or director liability |
+| AR-003 | Annual Return Backlog — Extended Review Required | Section 36 and Schedule X; Section 346 requires separate Registrar grounds and notice steps | NOT_EVALUATED | 0 | no | REVIEW ONLY — no automatic strike-off, dissolution or rescue conclusion |
 | AR-004 | Annual Return Filed But Incomplete | Section 36, Schedule X, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | AUD-001 | First Auditor Not Appointed Within One Calendar Month | Section 210(6), Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | AUD-002 | Audit Not Completed Before AGM | Section 183, Companies Act 1994 (Bangladesh) | RED | 12 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
@@ -61,8 +61,8 @@ This matrix is a technical inventory of candidate legal anchors and internal rul
 | DIR-007 | Director Consent Not Filed Within 30 Days | Section 92, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | DIR-008 | Office of Profit Status Requires Verification | Section 104, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | REVIEW ONLY — statutory exclusions and general-meeting consent must be checked |
 | DIR-010 | Managing Director Term Requires Verification | Section 110, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | REVIEW ONLY — verify current appointment term, reappointment and continuity |
-| ESC-001 | Strike-Off Process Status Requires Verification | Section 304, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required | NOT_EVALUATED | 0 | no | REVIEW ONLY — backlog is not proof of Registrar strike-off action |
-| ESC-002 | Strike-Off Status Requires Verification | Section 304, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required | NOT_EVALUATED | 0 | no | REVIEW ONLY — filing backlog or unverified list indicator is not proof of strike-off |
+| ESC-001 | Strike-Off Process Status Requires Verification | Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required | NOT_EVALUATED | 0 | no | REVIEW ONLY — backlog is not proof of Registrar strike-off action |
+| ESC-002 | Strike-Off Status Requires Verification | Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required | NOT_EVALUATED | 0 | no | REVIEW ONLY — filing backlog or unverified list indicator is not proof of strike-off |
 | ESC-003 | Corporate Rescue Mandatory — Systemic Failure | Sections 81, 115, 36, 346 (aggregate), Companies Act 1994 (Bangladesh) | BLACK | 10 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | ESC-004 | Voluntary Winding Up | Section 130, Companies Act 1994 (Bangladesh) | BLACK | 30 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | ESC-005 | Investigation Order Pending | Section 104, Companies Act 1994 (Bangladesh) | RED | 20 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
