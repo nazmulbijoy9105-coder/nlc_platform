@@ -2516,7 +2516,12 @@ class NLCRuleEngine:
                 detail={"agm_years": agm_years, "ar_years": ar_years, "official_notice_required": True}
             ))
 
-        if agm_years >= 3 or ar_years >= 3 or c.on_rjsc_strike_off_list:  # type: ignore
+        if (
+            agm_years >= 3
+            or ar_years >= 3
+            or c.rjsc_strike_off_notice_date is not None
+            or c.on_rjsc_strike_off_list
+        ):
             # Suppress ESC-001 if ESC-002 is firing
             self._flags = [f for f in self._flags if f.rule_id != "ESC-001"]
             self._add_flag(ComplianceFlag(
@@ -2527,7 +2532,7 @@ class NLCRuleEngine:
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="Three or more years of apparent filing default or an RJSC strike-off-list indicator requires case-specific lawyer review. This is not a finding that strike-off is imminent or that dissolution has occurred.",
                 statutory_basis="section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required",
-                detail={"agm_years": agm_years, "ar_years": ar_years, "on_list": c.on_rjsc_strike_off_list},
+                detail={"agm_years": agm_years, "ar_years": ar_years, "notice_date": c.rjsc_strike_off_notice_date, "on_list": c.on_rjsc_strike_off_list},
                 state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                 eval_state="UNKNOWN",
                 is_black_override=False,
