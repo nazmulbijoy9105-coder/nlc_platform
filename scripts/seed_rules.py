@@ -299,14 +299,13 @@ async def seed_rules(dry_run: bool = True, verbose: bool = False) -> int:
                 print(f"  {status:8s} {rule['rule_id']:10s} {rule['default_severity']:7s} {rule['score_impact']:2d}pts")
 
         if drifted_rules:
-            # Never mutate an existing legal rule without the authenticated
-            # RulesService workflow, a change_reason, and an immutable
-            # LegalRuleVersion snapshot. Roll back this entire transaction.
-            raise RuntimeError(
-                "Existing legal_rules differ from the seed; refusing an "
-                "unversioned update. Use the Super Admin rule-change workflow: "
-                + "; ".join(drifted_rules)
-            )
+            # Existing rows are intentionally left untouched. Missing rows
+            # may still be inserted, but every drift item must be reconciled
+            # through the authenticated RulesService workflow with a
+            # change_reason and immutable LegalRuleVersion snapshot.
+            print(" WARNING: existing rule definitions differ; no existing row was updated.")
+            for item in drifted_rules:
+                print(f"   DRIFT: {item}")
 
         cnt_res = await conn.execute(sa.text("SELECT COUNT(*) FROM legal_rules WHERE is_active = TRUE"))
         db_count = cnt_res.scalar()
