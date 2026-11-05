@@ -487,15 +487,53 @@ CATEGORY_CAPS: dict[str, tuple[int, tuple[str, ...]]] = {
 # No BLACK override is exempt from independent legal approval. A critical
 # severity label cannot bypass the global release gate or the exact rule-ID
 # allowlist.
-VERIFIED_RULE_IDS: frozenset[str] = frozenset()
-# Release remains disabled until the complete applicable rule corpus has named, independent current-law approval.
-# A partial/empty allowlist must never make an unreviewed company appear GREEN.
+# Candidate scoring allowlist copied from the main-branch internal source-check register.
+# These 38 IDs have an internal statutory-source check only. This is NOT
+# independent legal approval and must never be represented as such.
+# The set allows deterministic scoring mechanics to be exercised in tests and
+# diagnostic calculations, but no score, risk band, BLACK override, or rescue
+# classification is released to users while LEGAL_SCORE_RELEASED is False.
+# Exclusions (including AGM-005, AUD-*, TAX-*, LBR-*, BNK-*, FX-*, BSEC-*,
+# disputed DEF-001 and unreviewed share-transfer/filing rules) remain provisional.
+VERIFIED_RULE_IDS: frozenset[str] = frozenset({
+    # AGM module (7 rules)
+    "AGM-001", "AGM-002", "AGM-003", "AGM-004",
+    # AGM-005 remains excluded until the AOA-specific quorum basis is verified.
+    "AGM-006", "AGM-007",
+    # Registers module (3 rules)
+    "REG-001", "REG-002", "REG-003",
+    # Registered Office (1 rule)
+    "OFF-001",
+    # Directors module (6 rules)
+    "DIR-001", "DIR-002", "DIR-003",
+    "DIR-007", "DIR-008", "DIR-010",
+    # Capital module (3 rules)
+    "CAP-001", "CAP-002", "CAP-003",
+    # Charges (1 rule)
+    "CHG-001",
+    # Structural changes (3 rules)
+    "STR-001", "STR-002", "STR-003",
+    # Accounts (3 rules)
+    "ACC-001", "ACC-002", "ACC-003",
+    # Board meetings (3 rules)
+    "BOD-001", "BOD-002", "BOD-003",
+    # Incorporation (4 rules)
+    "INC-001", "INC-003", "INC-004", "INC-007",
+    # Members (1 rule)
+    "MEM-001",
+    # Share transfers (1 rule)
+    "TR-001",
+    # Escalation (2 rules)
+    "ESC-001", "ESC-002",
+    # Director disqualification rules remain outside scoring pending independent legal review.
+    "DEF-002",
+})
+# Release remains disabled until the applicable corpus has named, independent
+# current-law approval recorded in the signed, versioned legal approval register.
 LEGAL_SCORE_RELEASED: bool = False
-# Fail-closed legal release gate: no rule may affect a legal score or BLACK
-# override until its exact current-law source, applicability, exceptions,
-# evidence standard and effective date have named independent legal approval.
-# Keep rules visible as provisional findings; populate this allowlist only
-# from a signed, versioned legal approval register.
+# Fail-closed release gate: internal source checking is not legal approval.
+# Only after counsel approves current law, applicability, exceptions, evidence
+# standards and effective dates may this flag be changed to True.
 
 
 REVENUE_TIER_MAP = {
