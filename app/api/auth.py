@@ -94,7 +94,11 @@ async def login(request: Request,body: LoginBody, db=Depends(get_auth_db)):
     if not user:
         # Don't reveal whether email exists — return generic error
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
+
+    # The AUTH context is only for email lookup. Bind all subsequent reads,
+    # lockout updates and login-attempt writes to this verified user identity.
+    await set_rls_context(db, str(user.id))
+
     # Check account lockout
     if await svc.check_lockout(user):
         raise HTTPException(status_code=423, detail="Account temporarily locked due to too many failed attempts. Try again later.")
@@ -109,6 +113,7 @@ async def login(request: Request,body: LoginBody, db=Depends(get_auth_db)):
                 action="LOGIN_FAILED",
                 resource_type="user",
                 description=f"Failed login attempt for {body.email}",
+                actor_user_id=user.id,
             )
         except Exception:
             pass
