@@ -7,7 +7,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy import select
 
-from app.core.dependencies import get_admin_db, get_db_for_user
+from app.core.dependencies import get_auth_db, get_db_for_user
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -85,7 +85,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 @router.post("/login", response_model=LoginResponse)
 @_limiter.limit("10/minute")
-async def login(request: Request,body: LoginBody, db=Depends(get_admin_db)):
+async def login(request: Request,body: LoginBody, db=Depends(get_auth_db)):
     """Login with lockout protection, failed attempt tracking, and 2FA support."""
     from app.services.user_service import UserService
     svc = UserService(db)
