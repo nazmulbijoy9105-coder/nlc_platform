@@ -137,18 +137,9 @@ def upgrade() -> None:
 
     op.execute(
         """
-        CREATE POLICY compliance_events_company_scope
-        ON compliance_events FOR ALL
+        CREATE POLICY compliance_events_company_read
+        ON compliance_events FOR SELECT
         USING (
-            current_setting('app.current_user_id', true) = 'ADMIN'
-            OR EXISTS (
-                SELECT 1 FROM company_user_access access
-                WHERE access.company_id = compliance_events.company_id
-                  AND access.user_id::text = current_setting('app.current_user_id', true)
-                  AND access.is_active = true
-            )
-        )
-        WITH CHECK (
             current_setting('app.current_user_id', true) = 'ADMIN'
             OR EXISTS (
                 SELECT 1 FROM company_user_access access
@@ -255,7 +246,18 @@ def upgrade() -> None:
         ON user_activity_logs FOR INSERT
         WITH CHECK (
             current_setting('app.current_user_id', true) = 'ADMIN'
-            OR user_id::text = current_setting('app.current_user_id', true)
+            OR (
+                user_id::text = current_setting('app.current_user_id', true)
+                AND (
+                    company_id IS NULL
+                    OR EXISTS (
+                        SELECT 1 FROM company_user_access access
+                        WHERE access.company_id = user_activity_logs.company_id
+                          AND access.user_id::text = current_setting('app.current_user_id', true)
+                          AND access.is_active = true
+                    )
+                )
+            )
         )
         """
     )
