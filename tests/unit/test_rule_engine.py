@@ -857,7 +857,6 @@ class TestEscalationRules:
         # AUD-003 is deliberately not a BLACK override: Section 183 consequences
         # require legal review and cannot be inferred from an unverified flag.
         profile = build_profile(
-            current_director_count=0,   # INC-003: verified critical condition
             paid_up_ge_authorized=True,
             paid_up_capital_bdt=2000000,
             authorized_capital_bdt=1000000,  # INC-004: second capital-control BLACK condition
