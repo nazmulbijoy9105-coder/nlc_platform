@@ -87,17 +87,11 @@ class AGM(FullMixin, Base):
     # AGM-005: quorum not met
     quorum_met: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     members_present: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
-    quorum_met: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=True)
-    members_present: Mapped[int] = mapped_column(Integer, default=0)
     members_present_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     members_present_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     members_present_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     members_present_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    quorum_required: Mapped[int | None] = mapped_column(
-        Integer, nullable=True,
-        comment="Applicable quorum; UNKNOWN until member count and Articles are verified"
-    )
-    quorum_required_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+     quorum_required_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     quorum_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     quorum_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     quorum_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
@@ -112,7 +106,6 @@ class AGM(FullMixin, Base):
     # ── Auditor ───────────────────────────────────────────────────
     # AGM-006: auditor not reappointed at AGM
     auditor_reappointed: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
-    auditor_reappointed: Mapped[bool] = mapped_column(Boolean, default=True)
     auditor_reappointment_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     auditor_reappointment_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     auditor_reappointment_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
