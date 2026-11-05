@@ -137,10 +137,10 @@ async def test_engagement_status_transition_accepts_note(
     response = await api_client.patch(
         f"/api/v1/commercial/engagements/{engagement['engagement_id']}/status",
         headers=_auth(commercial_admin_token),
-        json={"new_status": "QUOTED", "note": "Quotation prepared"},
+        json={"new_status": "CANCELLED", "note": "Engagement cancelled"},
     )
     assert response.status_code == 200, response.text
-    assert response.json()["status"] == "QUOTED"
+    assert response.json()["status"] == "CANCELLED"
 
 
 @pytest.mark.asyncio
