@@ -418,6 +418,7 @@ def test_verified_absence_is_a_scoring_state_but_unknown_is_not():
         description="Verified statutory absence.",
         statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
         state=RuleState.VERIFIED_ABSENT,
+        eval_state="VIOLATION",
     )
     score = NLCRuleEngine()._calculate_score([verified_absent], profile)
     assert score.agm_score == 20

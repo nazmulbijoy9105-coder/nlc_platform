@@ -2442,7 +2442,7 @@ class NLCRuleEngine:
             for f in self._flags if not f.resolved and f.conditional_applies
         )
         
-        if pre_score <= 29 or has_black_override:
+        if LEGAL_SCORE_RELEASED and (pre_score <= 29 or has_black_override):
             black_count = len([f for f in self._flags if f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION" and not f.resolved and f.conditional_applies and f.rule_id not in self._ESC_RULE_IDS])
             esc003_impact = 10 if black_count <= 2 else (25 if black_count == 3 else 35)
             self._add_flag(ComplianceFlag(
@@ -2495,7 +2495,7 @@ class NLCRuleEngine:
             if f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and f.eval_state == "VIOLATION"
         ]
-        scored = [f for f in violations if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS]
+        scored = [f for f in violations if f.rule_id in VERIFIED_RULE_IDS]
 
         deductions = {
             "TAX": sum(f.score_impact for f in scored if f.rule_id.startswith(("TAX-", "VAT-"))),
@@ -2569,7 +2569,7 @@ class NLCRuleEngine:
         
         override = False
         reason = None
-        final = raw
+        final = raw if LEGAL_SCORE_RELEASED else 100
         critical = []
         if LEGAL_SCORE_RELEASED:
             critical = [
