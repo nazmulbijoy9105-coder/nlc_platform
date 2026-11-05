@@ -20,6 +20,7 @@ AI Constitution Article 1: Rule engine output is immutable — AI cannot alter i
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import uuid
 from dataclasses import fields as dataclass_fields
@@ -422,12 +423,23 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "risk_band": risk_band.value,
             "override_applied": sb.override_applied,
         }
-        evaluation_hash = hashlib.sha256(
-            (
-                f"{previous_hash or 'GENESIS'}|{company_id}|{score_for_current}|"
-                f"{risk_band.value}|{now.isoformat()}|{settings.rule_engine_version}|{trigger_source}"
-            ).encode()
-        ).hexdigest()
+        hash_material = json.dumps(
+            {
+                "previous_hash": previous_hash or "GENESIS",
+                "company_id": str(company_id),
+                "score": score_for_current,
+                "risk_band": risk_band.value,
+                "calculated_at": now.isoformat(),
+                "engine_version": settings.rule_engine_version,
+                "trigger_source": trigger_source,
+                "flags_snapshot": flags_snapshot,
+                "score_breakdown_snapshot": score_breakdown_snapshot,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        )
+        evaluation_hash = hashlib.sha256(hash_material.encode()).hexdigest()
         black_flags = sum(1 for f in output.flags if getattr(getattr(f.severity, "value", f.severity), "upper", lambda: "")() == "BLACK")
         evaluation_run = ComplianceEvaluationRun(
             id=uuid.uuid4(),
