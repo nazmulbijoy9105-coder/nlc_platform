@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
+    get_catalog_db,
     require_roles,
 )
 from app.models.enums import SeverityLevel
@@ -137,16 +138,14 @@ def _rule_to_response(rule) -> RuleResponse:
     "",
     response_model=list[RuleResponse],
     summary="List all ILRMF legal rules",
-    description="Returns all 86 rules. No auth restriction — clients may see rule metadata.",
-    dependencies=[Depends(require_roles("SUPER_ADMIN"))],
+    description="Returns public legal-rule metadata; tenant and user data are not exposed.",
 )
 async def list_rules(
     rule_type: str | None = None,
     severity: SeverityLevel | None = None,
     is_active: bool | None = None,
     is_black_override: bool | None = None,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_for_user),
+    db: AsyncSession = Depends(get_catalog_db),
 ):
     svc = RulesService(db)
     rules = await svc.get_all(
