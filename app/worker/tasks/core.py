@@ -346,9 +346,12 @@ def send_pending_notifications(
     async def _process():
 
         from app.models.database import AsyncSessionLocal, set_admin_context
-        from app.services.notification_service import NotificationService
+        from app.services.notification_service import (
+            NotificationService,
+            is_notification_eligible,
+        )
 
-        sent = failed = skipped = 0
+        sent = failed = skipped = suppressed = 0
 
         async with AsyncSessionLocal() as db, db.begin():
             await set_admin_context(db)
@@ -358,6 +361,16 @@ def send_pending_notifications(
             pending = await svc.get_pending(limit=batch_size)
 
             for notif in pending:
+                if not is_notification_eligible(notif.notification_type):
+                    await svc.mark_suppressed(
+                        notif.id,
+                        reason=(
+                            "Suppressed: rule alert is not independently approved "
+                            "and statutory score release is disabled."
+                        ),
+                    )
+                    suppressed += 1
+                    continue
                 try:
                     success = await _deliver_notification(notif, db)
                     if success:
@@ -381,7 +394,7 @@ def send_pending_notifications(
                     )
                     failed += 1
 
-        return {"sent": sent, "failed": failed, "skipped": skipped}
+        return {"sent": sent, "failed": failed, "skipped": skipped, "suppressed": suppressed}
 
     async def _deliver_notification(notif, db) -> bool:
         """Attempt to deliver a single notification. Returns True on success."""
