@@ -109,8 +109,14 @@ async def test_quotation_accept_and_reject_routes_match_service_contract(
     assert start_response.status_code == 200, start_response.text
     assert start_response.json()["status"] == "IN_PROGRESS"
 
+    rejection_engagement = await _create_engagement(
+        api_client, commercial_admin_token, db_company.id
+    )
     rejected = await _create_quotation(
-        api_client, commercial_admin_token, db_company.id, engagement["engagement_id"]
+        api_client,
+        commercial_admin_token,
+        db_company.id,
+        rejection_engagement["engagement_id"],
     )
     reject_response = await api_client.patch(
         f"/api/v1/commercial/quotations/{rejected['quotation_id']}/reject",
