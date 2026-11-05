@@ -38,15 +38,15 @@ jobs:
       - name: Run unit tests
         run: python -m pytest tests/unit -q --tb=short
 
-      - name: Live DB/API rule parity audit
+      - name: Live DB/engine rule parity audit (API verification is post-deploy)
         env:
           DATABASE_URL: ${{ secrets.NLC_PRODUCTION_DATABASE_URL }}
         run: |
           if [ -z "$DATABASE_URL" ]; then
-            echo "::error::Configure NLC_PRODUCTION_DATABASE_URL in repository Actions secrets."
+            echo "::error::Configure NLC_PRODUCTION_DATABASE_URL with the read-only Neon audit-role URI (audit schema only)."
             exit 1
           fi
-          python tools/audit_rule_parity.py
+          python tools/audit_rule_parity.py --no-api
 
       - name: Rule verification status check
         run: python scripts/check_rule_verification.py
