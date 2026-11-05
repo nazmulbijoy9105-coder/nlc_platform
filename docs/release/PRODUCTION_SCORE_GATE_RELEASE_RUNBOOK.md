@@ -71,10 +71,18 @@ The following observations were obtained from the live Neon production branch us
 
 - A direct SQL test as `nlc_app_role` proved that setting only `app.current_user_id = 'ADMIN'` exposes 23 companies, 434 compliance flags and 51 score-history rows. This is a confirmed identity-forgery/tenant-isolation bypass in the current production policies.
 - The current RLS policies trust the raw caller-settable identity GUC. Migration 0050 replaces this with an HMAC-verified principal, recreates tenant policies, and enables `FORCE ROW LEVEL SECURITY`. The exploit test must be repeated after migration and must return zero rows for an unsigned `ADMIN` GUC.
-- `nlc_app_role` has safe role attributes but currently holds broad table grants including `TRUNCATE`, `REFERENCES` and `TRIGGER`. Migration 0050 revokes those privileges and applies narrower runtime grants.
+- Both `nlc_app_role` and `nlc_ci_audit_role` currently have `INHERIT=true`; migration 0050 requires `NOINHERIT`. Both roles are LOGIN and otherwise non-superuser, non-createdb, non-createrole, non-replication and NOBYPASSRLS. An authorised Neon administrator must set `NOINHERIT` before migration.
+- `nlc_app_role` has grants across 37 tables, including `DELETE`, `TRUNCATE`, `REFERENCES` and `TRIGGER`. Migration 0050 revokes `TRUNCATE`, `REFERENCES`, `TRIGGER` and selected `DELETE` privileges; verify effective grants after upgrade.
+- The read-only inspection session was `neondb_owner` with `BYPASSRLS=true`; no separate Render application session appeared in `pg_stat_activity` at inspection time. This does not prove Render's runtime role. The app must start only with `APP_DATABASE_URL` using `nlc_app_role`, and its startup role check must pass.
 - Multiple RLS-enabled tables currently have no policies, including `company_user_access`, `legal_rules`, `legal_rule_versions`, `users`, `quotations`, `compliance_events` and activity/audit tables. No table in the inspected inventory had `FORCE ROW LEVEL SECURITY` enabled. Verify the post-migration policy inventory and negative cross-tenant tests.
 - `compliance_calendar_events` currently has `company_id` but RLS is disabled. Migration 0050 includes it in the tenant-scoped table set; verify it is enabled, forced and covered by the correct company policy after upgrade.
-- The live `nlc_ci_audit_role` is currently `NOLOGIN`, while migration 0050 preflight requires it to be `LOGIN`. An authorised Neon administrator must provision/alter this role out-of-band and store its credential in the approved secret manager before migration. Do not weaken the preflight to hide this mismatch.
+- The live `nlc_ci_audit_role` is already `LOGIN` but currently `INHERIT`; change it to `NOINHERIT` through the authorised Neon role-management path. Do not weaken the preflight to hide this mismatch.
+
+### Render deployment identity and migration error
+
+- Render service `nlc_platform` is configured for branch `main` with automatic deployment disabled. Latest successful deployment observed was commit `9e4f99d`; later attempts for `51c7e6c` failed.
+- Render logs recorded `permission denied to alter role` and later `Can't locate revision identified by '0049_evaluation_runs_and_identity_rls'`. The referenced migration file exists in the GitHub tree at `51c7e6c`; PR #125 CI subsequently passed the single-head and fresh-PostgreSQL upgrade jobs. The runtime artifact/database target mismatch remains unresolved. Confirm the exact deployed image and actual Render database URL before deployment; do not assume the inspected Neon branch is the same database.
+- At inspection time no separate Render application session was visible in `pg_stat_activity`. The Render runtime identity must be verified after configuring `APP_DATABASE_URL`, before any migration or deployment.
 
 ### Required post-upgrade production proof
 
