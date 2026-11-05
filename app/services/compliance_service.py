@@ -262,6 +262,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
         engine_version = str(getattr(output, "engine_version", "") or "").strip()
         if not engine_version or engine_version.lower() == "unknown":
             raise ValueError("Evaluation cannot be persisted without a concrete engine version.")
+        if len(engine_version) > 20:
+            raise ValueError("Engine version exceeds the 20-character score-history storage limit.")
 
         # Serialize evaluations per company so the immutable hash chain cannot fork.
         await self.db.execute(
