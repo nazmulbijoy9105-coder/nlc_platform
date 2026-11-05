@@ -50,6 +50,40 @@ Create:
 
 Do not reuse passwords, put credentials in migrations, or grant either role elevated membership. Migration 0050 performs a read-only attribute preflight and aborts with a specific error if either role is absent or unsafe. If a role already exists with incorrect attributes, correct it through the authorized Neon role-management path before deploying; do not broaden the migration credential or application role to bypass this check.
 
+## Live production snapshot — 6 November 2026 (read-only audit)
+
+The following observations were obtained from the live Neon production branch using read-only queries. They are release blockers until independently rechecked immediately before deployment.
+
+### Database and rule-corpus drift
+
+- `alembic_version` is `0042_dedup_key`; the current repository migration chain advances through `0057_merge_final_heads`. Production must be backed up and upgraded through the exact tested chain; do not skip revisions or stamp the version manually.
+- The live `legal_rules` table has 75 active rule IDs, while the repository seed defines 85. Missing active IDs: `BOD-001`, `BOD-002`, `BOD-003`, `ACC-001`, `ACC-002`, `ACC-003`, `DIR-007`, `DIR-008`, `DIR-010`, `MEM-001`, `INC-007`. Extra active ID: `INC-002`. Do not delete or overwrite the extra row automatically; reconcile it through the audited rule workflow.
+- All 75 active database rules currently have non-zero score impact; 13 are marked BLACK. The legal approval register still has zero approved rule IDs. This database state must not be represented as counsel-approved scoring.
+- The production `legal_rules` schema does not yet contain the model's verification-status/evidence columns. Confirm the exact post-migration schema against the ORM before starting the API.
+- `legal_rule_versions` currently has zero rows; `last_modified_by` and `last_modified_at` are unset on the live rule rows. Do not use an unversioned SQL or seed-script update to reconcile existing definitions.
+
+### RLS and role findings
+
+- A direct SQL test as `nlc_app_role` proved that setting only `app.current_user_id = 'ADMIN'` exposes 23 companies, 434 compliance flags and 51 score-history rows. This is a confirmed identity-forgery/tenant-isolation bypass in the current production policies.
+- The current RLS policies trust the raw caller-settable identity GUC. Migration 0050 replaces this with an HMAC-verified principal, recreates tenant policies, and enables `FORCE ROW LEVEL SECURITY`. The exploit test must be repeated after migration and must return zero rows for an unsigned `ADMIN` GUC.
+- `nlc_app_role` has safe role attributes but currently holds broad table grants including `TRUNCATE`, `REFERENCES` and `TRIGGER`. Migration 0050 revokes those privileges and applies narrower runtime grants.
+- Multiple RLS-enabled tables currently have no policies, including `company_user_access`, `legal_rules`, `legal_rule_versions`, `users`, `quotations`, `compliance_events` and activity/audit tables. No table in the inspected inventory had `FORCE ROW LEVEL SECURITY` enabled. Verify the post-migration policy inventory and negative cross-tenant tests.
+- `compliance_calendar_events` currently has `company_id` but RLS is disabled. Migration 0050 includes it in the tenant-scoped table set; verify it is enabled, forced and covered by the correct company policy after upgrade.
+- The live `nlc_ci_audit_role` is currently `NOLOGIN`, while migration 0050 preflight requires it to be `LOGIN`. An authorised Neon administrator must provision/alter this role out-of-band and store its credential in the approved secret manager before migration. Do not weaken the preflight to hide this mismatch.
+
+### Required post-upgrade production proof
+
+1. Query `alembic_version` and confirm the exact expected single head.
+2. Connect as `nlc_app_role`; verify `rolsuper=false`, `rolbypassrls=false`, `rolcreatedb=false`, `rolcreaterole=false`, `rolreplication=false`, and `rolinherit=false`.
+3. Verify the application cannot `TRUNCATE`, create triggers, or create references on tenant tables.
+4. As `nlc_app_role`, set only `app.current_user_id='ADMIN'` with no signature and confirm zero rows are visible in companies, flags, score history, users and access mappings.
+5. Verify signed user A can access only company A; signed user B can access only company B; forged UUIDs, stale signatures, raw ADMIN/AUTH/CATALOG sentinels and cross-tenant writes all fail.
+6. Verify `compliance_calendar_events`, `company_user_access`, `users`, `legal_rules`, `legal_rule_versions`, `quotations` and every company table has the intended policy and `FORCE ROW LEVEL SECURITY`.
+7. Reconcile all 85 rule IDs against the database using the audited Super Admin workflow. Preserve an immutable version row, actor, change reason and prior definition for each existing-rule change. Retire `INC-002` only after its origin and usage are established.
+8. Confirm all 85 remain non-scoring / not legally approved until independent counsel approval is recorded; do not enable the release switch.
+
+**No production migration, role alteration, grant change or rule-row update has been performed by this audit.**
+
 ## 4. Apply database migrations
 
 Using a secure release runner with the privileged migration URL and the same `NLC_RLS_HMAC_SECRET`:
