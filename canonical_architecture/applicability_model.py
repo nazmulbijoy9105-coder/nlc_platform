@@ -243,13 +243,10 @@ APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {
         "ESC-002",
         ("ALL",),
         (
-            "registrar_first_inquiry_evidence_ref",
-            "registered_follow_up_evidence_ref",
-            "gazette_notice_evidence_ref",
-            "gazette_notice_date",
-            "show_cause_period_expired",
-            "current_register_status",
-            "appeal_or_restoration_status",
+            "rjsc_strike_off_notice_date",
+            "on_rjsc_strike_off_list",
+            "rjsc_status",
+            "last_rjsc_compliance_date",
         ),
         (),
         "Companies Act 1994, s.346: review the Registrar's actual notice sequence "
