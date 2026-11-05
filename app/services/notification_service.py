@@ -11,17 +11,33 @@ AI Constitution Article 6: All notifications logged with flag reference.
 from __future__ import annotations
 
 import uuid
+import re
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import and_, or_, select
 
 from app.models.enums import NotificationChannel, NotificationStatus
+from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
 from app.models.infrastructure import Notification
 from app.services.base import BaseService
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
+
+
+_RULE_NOTIFICATION_TYPE = re.compile(r"^[A-Z]{2,5}-[0-9]{3}$")
+
+
+def is_rule_notification_type(notification_type: str | None) -> bool:
+    return bool(notification_type and _RULE_NOTIFICATION_TYPE.fullmatch(notification_type))
+
+
+def is_notification_eligible(notification_type: str | None) -> bool:
+    """Only independently approved rule alerts may be delivered or exposed."""
+    if not is_rule_notification_type(notification_type):
+        return True
+    return LEGAL_SCORE_RELEASED and notification_type in VERIFIED_RULE_IDS
 
 
 class NotificationService(BaseService[Notification]):
@@ -176,7 +192,7 @@ class NotificationService(BaseService[Notification]):
             .limit(limit)
             .offset(offset)
         )
-        return list(result.scalars().all())
+        return [n for n in result.scalars().all() if is_notification_eligible(n.notification_type)]
 
     async def get_for_company(
         self,
@@ -239,6 +255,21 @@ class NotificationService(BaseService[Notification]):
             notification_status=NotificationStatus.FAILED,
             failure_reason=reason,
             retry_count=notif.retry_count + 1,
+        )
+
+    async def mark_suppressed(
+        self,
+        notification_id: uuid.UUID,
+        reason: str,
+    ) -> Notification | None:
+        """Stop an unapproved legal-rule alert from entering delivery queues."""
+        notif = await self.get_by_id(notification_id)
+        if not notif:
+            return None
+        return await self.update_instance(
+            notif,
+            notification_status=NotificationStatus.SUPPRESSED,
+            failure_reason=reason,
         )
 
     async def get_pending(
