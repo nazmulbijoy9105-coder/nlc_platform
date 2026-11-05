@@ -99,7 +99,7 @@ PDF generation must remain withheld when there is no completed, reconciled, rele
 
 ## 7. Configure read-only production parity
 
-Migration 0050 creates `nlc_ci_audit_role` with read-only access to `audit.active_legal_rule_ids`. After the migration:
+Migration 0050 grants `nlc_ci_audit_role` read-only access to `audit.active_legal_rule_ids`; the role itself must already have been provisioned out-of-band. After the migration:
 
 1. Generate a separate password (for example, `openssl rand -hex 32`).
 2. Set it for `nlc_ci_audit_role` in the Neon SQL console using the privileged owner session.
