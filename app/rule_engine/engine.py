@@ -551,8 +551,11 @@ REVENUE_TIER_MAP = {
 FOREIGN_WORK_PERMIT_THRESHOLD_USD = 50000
 BIDA_ADVANTAGE_THRESHOLD_USD = 100000
 # VAT registration and turnover-tax enlistment are separate regimes.
-# NBR FAQ: registration > BDT 8m; enlistment > BDT 3m; apply within 15 days.
-_VAT_REGISTRATION_THRESHOLD_BDT = 8000000
+# Operative VAT Act as amended by VAT Amendment Act 2026 (Act 77/2026):
+# registration threshold BDT 50 lakh; turnover-tax enlistment threshold BDT 30 lakh.
+# Annual turnover alone does not establish rolling 12-month turnover, mandatory
+# registration category, tax period or breach. Findings remain NOT_EVALUATED.
+_VAT_REGISTRATION_THRESHOLD_BDT = 5000000
 _VAT_TURNOVER_TAX_ENLISTMENT_THRESHOLD_BDT = 3000000
 
 
@@ -1154,6 +1157,21 @@ class NLCRuleEngine:
                     ))
                 elif c.agm_held_this_cycle is False:
                     agm_deadline = self._subsequent_agm_deadline(c)
+                    interval_deadline = (
+                        self._add_months(c.last_agm_date, 15)
+                        if c.last_agm_date is not None else None
+                    )
+                    calendar_year_deadline = (
+                        date(c.last_agm_date.year + 1, 12, 31)
+                        if c.last_agm_date is not None else None
+                    )
+                    deadline_basis = (
+                        "15_MONTH_INTERVAL"
+                        if interval_deadline is not None
+                        and calendar_year_deadline is not None
+                        and interval_deadline <= calendar_year_deadline
+                        else "CALENDAR_YEAR"
+                    )
                     if agm_deadline is None:
                         self._add_flag(ComplianceFlag(
                             rule_id="AGM-002", flag_code="AGM_EXTENSION_REQUIRES_REVIEW",
@@ -1167,7 +1185,7 @@ class NLCRuleEngine:
                     elif self.today > agm_deadline:
                         delay = (self.today - agm_deadline).days
                         severity = Severity.BLACK if delay > 365 else Severity.RED
-                        basis = "VALIDATED_EXTENSION" if c.agm_extension_granted_until else "SECTION_81(1)"
+                        basis = "VALIDATED_EXTENSION" if c.agm_extension_granted_until else deadline_basis
                         self._add_flag(ComplianceFlag(
                             rule_id="AGM-002", flag_code="SUBSEQUENT_AGM_DEFAULT",
                             severity=severity,
@@ -1175,7 +1193,15 @@ class NLCRuleEngine:
                             revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                             description=f"AGM overdue by {delay} days. Section 81(1): deadline determined by {basis}.",
                             statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
-                            detail={"delay_days": delay, "deadline": str(agm_deadline), "basis": basis},
+                            detail={
+                                "delay_days": delay,
+                                "deadline": str(agm_deadline),
+                                "basis": basis,
+                                "interval_deadline": str(interval_deadline) if interval_deadline else None,
+                                "calendar_year_deadline": (
+                                    str(calendar_year_deadline) if calendar_year_deadline else None
+                                ),
+                            },
                         ))
         # Unverified AGM history is not converted into a deadline breach.
         # Notice, quorum and minutes checks below use their own evidence requirements.
@@ -1707,16 +1733,36 @@ class NLCRuleEngine:
                     ))
 
             if charge.satisfied and not charge.satisfaction_filed:
-                self._add_flag(ComplianceFlag(
-                    rule_id="CHG-001",
-                    flag_code="CHARGE_SATISFACTION_NOT_FILED",
-                    severity=Severity.YELLOW,
-                    score_impact=3,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Charge satisfaction not filed via Form XXVIII. Section 172; RJSC process guidance states 21 days. Verify charge satisfaction date and receipt before concluding default.",
-                    statutory_basis="Section 172, Companies Act 1994 (Bangladesh)",
-                    detail={"charge_id": charge.charge_id, "charge_type": charge.charge_type}
-                ))
+                if charge.satisfaction_date is None:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="CHG-001",
+                        flag_code="CHARGE_SATISFACTION_DATE_UNKNOWN",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="Charge satisfaction is recorded, but its effective date is missing. Verify the satisfaction date and RJSC Form XXVIII filing before determining a deadline breach.",
+                        statutory_basis="Section 172, Companies Act 1994 (Bangladesh)",
+                        detail={"charge_id": charge.charge_id, "legal_status": "DATE_EVIDENCE_UNKNOWN"},
+                        state=RuleState.UNKNOWN,
+                    ))
+                else:
+                    satisfaction_delay = (self.today - charge.satisfaction_date).days
+                    if satisfaction_delay > 21:
+                        self._add_flag(ComplianceFlag(
+                            rule_id="CHG-001",
+                            flag_code="CHARGE_SATISFACTION_NOT_FILED",
+                            severity=Severity.YELLOW,
+                            score_impact=3,
+                            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                            description=f"Charge satisfaction not filed via Form XXVIII within 21 days. Section 172. Overdue by {satisfaction_delay} days.",
+                            statutory_basis="Section 172, Companies Act 1994 (Bangladesh)",
+                            detail={
+                                "charge_id": charge.charge_id,
+                                "charge_type": charge.charge_type,
+                                "delay_days": satisfaction_delay,
+                                "form": "Form XXVIII",
+                            },
+                        ))
 
         if c.capital_reduction_pending and c.capital_reduction_court_order_obtained is False:
             self._add_flag(ComplianceFlag(
@@ -1750,41 +1796,56 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     def _run_tax_rules(self, c: CompanyProfile) -> None:
         if c.tin_obtained is False:
+            # A profile boolean is not authenticated evidence of TIN absence or
+            # proof that the company falls within a specific return/proof duty.
+            # Keep this as a non-scoring review prompt until identity, s.166
+            # filing duty, s.261 registration and s.264 proof requirements are
+            # independently verified for this company and assessment period.
             self._add_flag(ComplianceFlag(
                 rule_id="TAX-001",
-                flag_code="TIN_NOT_OBTAINED",
-                severity=Severity.RED,
-                score_impact=10,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="No TIN from NBR. Income Tax Act 2023: TIN mandatory. Cannot file returns, open accounts, or obtain licenses.",
-                statutory_basis="Income Tax Act 2023 (Bangladesh)",
+                flag_code="TIN_STATUS_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="The company profile records no TIN. Verify the legal entity and taxpayer identity, return-filing duty under section 166, registration under section 261, and any proof-of-return requirement under section 264. A profile entry alone is not a finding of breach.",
+                statutory_basis="Income Tax Act 2023, sections 166, 261 and 264; company-specific duty and evidence require verification",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"profile_tin_status": "reported_absent", "identity_verified": False, "statutory_duty_verified": False},
             ))
 
-        if not c.vat_registered and c.annual_turnover_bdt > _VAT_REGISTRATION_THRESHOLD_BDT:
+        if c.vat_registered is False and c.annual_turnover_bdt > _VAT_TURNOVER_TAX_ENLISTMENT_THRESHOLD_BDT:
             self._add_flag(ComplianceFlag(
                 rule_id="TAX-002",
-                flag_code="VAT_REGISTRATION_REQUIRED",
-                severity=Severity.YELLOW,
-                score_impact=5,
+                flag_code="VAT_REGISTRATION_OR_ENLISTMENT_STATUS_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="VAT registration threshold exceeded (BDT 8 million over a 12-month period) but registration is not evidenced. This rule does not assess turnover-tax enlistment for the BDT 3–8 million band.",
-                statutory_basis="Value Added Tax Act 2012 (Bangladesh)",
-                detail={"turnover_bdt": c.annual_turnover_bdt, "registration_threshold_bdt": _VAT_REGISTRATION_THRESHOLD_BDT, "turnover_tax_enlistment_threshold_bdt": _VAT_TURNOVER_TAX_ENLISTMENT_THRESHOLD_BDT, "application_period_days": 15}
+                description="Reported turnover exceeds the BDT 30 lakh turnover-tax enlistment threshold. This is only a review prompt: determine whether the verified rolling 12-month taxable turnover exceeds BDT 30 lakh but does not exceed the BDT 50 lakh registration threshold (enlistment), or exceeds BDT 50 lakh (registration), and check mandatory-registration categories under section 4(2), taxpayer activity, effective date and current status before finding a breach.",
+                statutory_basis="Value Added Tax and Supplementary Duty Act 2012, as amended by Act No. 77 of 2026; exact current section and taxpayer-specific instruments require counsel verification",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"reported_annual_turnover_bdt": c.annual_turnover_bdt, "registration_threshold_bdt": _VAT_REGISTRATION_THRESHOLD_BDT, "turnover_tax_enlistment_threshold_bdt": _VAT_TURNOVER_TAX_ENLISTMENT_THRESHOLD_BDT, "rolling_12_month_turnover_verified": False, "mandatory_category_verified": False, "turnover_tax_enlistment_application_window_days": 30}
             ))
 
         if c.tin_obtained and c.tax_return_filed_for_current_fy is False and c.financial_year_end:
             # VERIFY against ITA 2023: company return due 15th day of 7th month after FY end (30 Jun -> 15 Jan)
             fy_end = c.financial_year_end
-            due_month = fy_end.month + 7
-            due_year = fy_end.year
-            if due_month > 12:
-                due_month -= 12
-                due_year += 1
-            deadline = date(due_year, due_month, 15)
-            # A boolean "extended" flag is not a statutory extension order.
-            # Do not add an arbitrary 30 days. Until Tax Day and any actual
-            # written extension are verified for this taxpayer, this is only
-            # a review prompt and cannot be a confirmed legal violation.
+            # Finance Act 2026 (Act 96/2026) substituted Income Tax Act
+            # s.170. For non-individuals, use the 15th day of the ninth
+            # month after income-year end, but not earlier than the following
+            # 15 September. Section 171 now cross-refers to s.170.
+            ninth_month = fy_end.month + 9
+            ninth_year = fy_end.year
+            if ninth_month > 12:
+                ninth_month -= 12
+                ninth_year += 1
+            ninth_month_date = date(ninth_year, ninth_month, 15)
+            september_floor = date(fy_end.year + (1 if fy_end.month >= 9 else 0), 9, 15)
+            deadline = max(ninth_month_date, september_floor)
+            # Public-holiday roll-forward, taxpayer-specific extension,
+            # applicable income-year classification and later notices are
+            # not yet verified; keep this as a non-scoring review prompt.
             if self.today > deadline:
                 delay = (self.today - deadline).days
                 if delay <= 90:
@@ -1797,9 +1858,9 @@ class NLCRuleEngine:
                     rule_id="TAX-003",
                     flag_code="ANNUAL_TAX_RETURN_OVERDUE",
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Potential company return delay of {delay} days using a provisional date only. Verify current Tax Day under Sections 2 and 171, assessment-year amendments, taxpayer category and any written extension before determining default.",
-                    statutory_basis="Income Tax Act 2023, Sections 166 and 171 (taxpayer-specific Tax Day requires verification)",
-                    detail={"delay_days": delay, "fy_year": fy_end.year},
+                    description=f"Potential company return delay of {delay} days using the provisional section 170(2) formula. Verify the applicable income year, taxpayer category, holiday roll-forward, written extension and subsequent amendments before determining default.",
+                    statutory_basis="Income Tax Act 2023, Sections 170(2) and 171, as amended by Finance Act 2026 (Act No. 96 of 2026); taxpayer-specific and holiday verification required",
+                    detail={"delay_days": delay, "fy_year": fy_end.year, "ninth_month_date": ninth_month_date.isoformat(), "september_15_floor": september_floor.isoformat(), "provisional_deadline": deadline.isoformat(), "holiday_adjustment_verified": False, "extension_verified": False},
                     state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                     eval_state="UNKNOWN",
                     score_impact=0,
@@ -1836,27 +1897,29 @@ class NLCRuleEngine:
                     severity=Severity.NOT_EVALUATED,
                     score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Potential advance-tax instalment delay requiring review: {', '.join(missed)}. Income Tax Act 2023 Sections 154-157; due dates and liability require taxpayer-specific verification.",
-                    statutory_basis="Income Tax Act 2023, Sections 154-157 (s.155(2)-(3)); holiday and taxpayer applicability verification required",
+                    description=f"Potential advance-tax instalment delay requiring review: {', '.join(missed)}. Finance Act 2026 (Act 96/2026), sections 87-88, raises the section 154(1) threshold to BDT 10 lakh and amends section 155(2) and (5). Verify section 156 new-assessee treatment (separate BDT 6 lakh threshold), A-B liability after source deductions, estimate, exclusions, holiday roll-forward and payment evidence.",
+                    statutory_basis="Income Tax Act 2023, sections 154-157, as amended by Finance Act 2026 (Act 96/2026), sections 87-88; NOT_EVALUATED pending taxpayer-specific verification",
                     detail={"quarters": missed},
                     state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                     eval_state="UNKNOWN",
                 ))
 
-        if c.vat_registered:
-            fifteenth = self.today.replace(day=15)
-            if self.today > fifteenth:
-                last_day_prev = self.today.replace(day=1) - timedelta(days=1)
-                if c.last_vat_return_filed is not None and c.last_vat_return_filed < last_day_prev:
-                 self._add_flag(ComplianceFlag(
-                    rule_id="VAT-002",
-                    flag_code="MONTHLY_VAT_RETURN_OVERDUE",
-                    severity=Severity.YELLOW,
-                    score_impact=8,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Monthly/Bi-monthly VAT return overdue. VAT Act 2012.",
-                    statutory_basis="Value Added Tax Act 2012 (Bangladesh)",
-                ))
+        if c.vat_registered is True:
+            # Registration alone does not establish the taxpayer's filing
+            # cadence, special 20-day category, current s.64 period, holiday,
+            # extension or actual filing evidence. This is a review prompt only.
+            self._add_flag(ComplianceFlag(
+                rule_id="VAT-002",
+                flag_code="VAT_RETURN_OBLIGATION_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="VAT return obligation and filing status require verification. Determine the applicable version of section 64, tax period, taxpayer category, holiday rule, extension/order and return evidence. This is not a finding of default.",
+                statutory_basis="Value Added Tax and Supplementary Duty Act 2012, section 64 as amended by Finance Act 2026 and VAT Amendment Ordinance 2026, with applicable VAT Rules/SROs",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"last_vat_return_filed": c.last_vat_return_filed.isoformat() if c.last_vat_return_filed else None, "tax_period_verified": False, "applicable_due_date_verified": False, "extension_status_verified": False},
+            ))
 
         # VAT-003 remains a non-scoring evidence/review state. The current
         # corpus has not established one universal annual VAT return due date
@@ -2005,40 +2068,53 @@ class NLCRuleEngine:
         # manufacturing entities. UNKNOWN and NOT_APPLICABLE never create
         # a statutory breach or score deduction.
         if applicability.state is ApplicabilityState.APPLICABLE and c.factory_license_required_by_direction is True:
+            # The profile does not yet bind a Government direction, class,
+            # licence record and renewal terms to verified source evidence.
+            # Never turn a user-entered boolean or expiry date into a breach.
             if c.factory_license_obtained is False:
                 self._add_flag(ComplianceFlag(
                     rule_id="LBR-001",
-                    flag_code="FACTORY_LICENSE_MISSING",
-                    severity=Severity.RED,
-                    score_impact=10,
-                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description="Factory/establishment licence not evidenced under Section 326. A licence is required only where Government directions prescribe it for the relevant factory or establishment class; verify applicability and the 2026 amendments.",
-                    statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended in 2026"
+                    flag_code="FACTORY_LICENSE_STATUS_REQUIRES_VERIFICATION",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="A factory/establishment licence may be required under section 326 only if the applicable Government direction covers this establishment/class. Verify the direction, class, commencement, exemption and authentic licence search before finding a default.",
+                    statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
                 ))
 
             if c.factory_license_expiry and self.today > c.factory_license_expiry:
                 delay = (self.today - c.factory_license_expiry).days
                 self._add_flag(ComplianceFlag(
                     rule_id="LBR-002",
-                    flag_code="FACTORY_LICENSE_EXPIRED",
-                    severity=Severity.YELLOW,
-                    score_impact=5,
+                    flag_code="FACTORY_LICENSE_EXPIRY_REQUIRES_VERIFICATION",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Factory/establishment licence expired by {delay} days. Section 326 provides a five-year renewal cycle where a licence is required; contractor-agency licences are one year. Verify licence class and actual expiry.",
-                    statutory_basis="Labour Act 2006 (Bangladesh), Section 35"
+                    description=f"Recorded licence expiry is {delay} days in the past. Verify the licence class, section 326 Government direction, five-year/contractor one-year term, renewal application, extension and operative status before finding a breach.",
+                    statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
                 ))
 
         # LBR-003 is not gated by manufacturing status: applicability of an
         # existing labour-court order depends on the order's parties and scope.
         if c.labour_court_order_pending:
+            # The current profile stores only a boolean, not the order,
+            # parties, service, operative status, appeal or stay. Do not infer
+            # a statutory breach or adverse score from that boolean.
             self._add_flag(ComplianceFlag(
                 rule_id="LBR-003",
-                flag_code="LABOUR_COURT_ORDER_PENDING",
-                severity=Severity.RED,
-                score_impact=15,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="Labour court order pending against company. Labour Act 2006: compliance with court orders mandatory.",
-                statutory_basis="Labour Act 2006 (Bangladesh), Section 209"
+                flag_code="LABOUR_COURT_ORDER_STATUS_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="The profile reports a pending Labour Court order. Verify the certified order, parties and company identity, service, operative directions, appeal/revision and any stay before determining applicability or non-compliance.",
+                statutory_basis="Bangladesh Labour Act 2006 and the specific Labour Court order; enabling provision and operative status require case-specific verification",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"profile_order_status": "reported_pending", "order_evidence_verified": False, "stay_or_appeal_checked": False},
             ))
 
     # MODULE 14: ADDITIONAL COMPANIES ACT 1994
@@ -2102,35 +2178,43 @@ class NLCRuleEngine:
 
     # MODULE 15: BSEC CG CODE 2023
     def _run_bsec_rules(self, c: CompanyProfile) -> None:
+        # The Code is not a universal private-company obligation. Even where
+        # listed status is asserted, each condition requires verified scope,
+        # current instrument version and condition-specific evidence. Until
+        # those facts are verified, emit review prompts only.
         if c.bsec_listed:
-            if c.bsec_quarterly_report_filed is False:
-                self._add_flag(ComplianceFlag(
-                    rule_id="BSEC-001", flag_code="QUARTERLY_REPORT_NOT_FILED",
-                    severity=Severity.RED, score_impact=10,
-                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description="BSEC quarterly report not filed.",
-                    statutory_basis="Applicable BSEC listing/securities reporting instrument — exact rule and reporting period require verification"))
-            if c.cg_certificate_obtained is False:
-                self._add_flag(ComplianceFlag(
-                    rule_id="BSEC-002", flag_code="CG_CERTIFICATE_NOT_OBTAINED",
-                    severity=Severity.RED, score_impact=10,
-                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description="CG certificate not obtained.",
-                    statutory_basis="BSEC Corporate Governance Code 2018, as amended in 2023 and 2024 — certification condition requires verification"))
-            if c.board_independent_director is False:
-                self._add_flag(ComplianceFlag(
-                    rule_id="BSEC-003", flag_code="BOARD_COMPOSITION_NON_COMPLIANT",
-                    severity=Severity.YELLOW, score_impact=8,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Board composition non-compliant.",
-                    statutory_basis="BSEC Corporate Governance Code 2018, as amended in 2023 and 2024, Condition 1 — board composition"))
-            if c.audit_committee_established is False:
-                self._add_flag(ComplianceFlag(
-                    rule_id="BSEC-004", flag_code="AUDIT_COMMITTEE_NOT_ESTABLISHED",
-                    severity=Severity.YELLOW, score_impact=5,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Audit committee not established.",
-                    statutory_basis="BSEC Corporate Governance Code 2018, as amended in 2023 and 2024, Condition 5 — audit committee"))
+            candidates = (
+                ("BSEC-001", "QUARTERLY_REPORT_STATUS_REQUIRES_SOURCE_VERIFICATION",
+                 c.bsec_quarterly_report_filed,
+                 "Quarterly-report status requires the exact applicable BSEC reporting instrument, reporting period, issuer category and due date; it is not Condition 8 of the Corporate Governance Code."),
+                ("BSEC-002", "CG_CERTIFICATE_STATUS_REQUIRES_VERIFICATION",
+                 c.cg_certificate_obtained,
+                 "Corporate-governance compliance certification is associated with Condition 9; verify listed-issuer scope, auditor/certifier, reporting year and filing evidence."),
+                ("BSEC-003", "BOARD_COMPOSITION_STATUS_REQUIRES_VERIFICATION",
+                 c.board_independent_director,
+                 "Board composition is governed by Condition 1 as amended; verify board size, independent-director ratio, female independent-director requirement, eligibility and effective date."),
+                ("BSEC-004", "AUDIT_COMMITTEE_STATUS_REQUIRES_VERIFICATION",
+                 c.audit_committee_established,
+                 "Audit Committee is addressed by Condition 5; verify committee composition, terms, meetings, independence and issuer applicability."),
+            )
+            for rule_id, flag_code, supplied_status, description in candidates:
+                if supplied_status is False:
+                    basis = (
+                        "Applicable BSEC financial-reporting instrument; exact notification, issuer class, reporting period and due date require verification"
+                        if rule_id == "BSEC-001"
+                        else "BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification"
+                    )
+                    self._add_flag(ComplianceFlag(
+                        rule_id=rule_id,
+                        flag_code=flag_code,
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=description,
+                        statutory_basis=basis,
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                    ))
 
     # MODULE 16: FOREIGN EXCHANGE
     def _run_fx_rules(self, c: CompanyProfile) -> None:
