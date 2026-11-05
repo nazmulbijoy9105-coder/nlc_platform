@@ -191,8 +191,13 @@ class QuotationService(BaseService[Quotation]):
         notes: str | None = None,
     ) -> Quotation:
         """Create a quotation for an engagement owned by the specified company."""
-        engagement = await self.get_by_id(engagement_id)
-        if engagement is None or engagement.company_id != company_id:
+        engagement_result = await self.db.execute(
+            select(Engagement.id).where(
+                Engagement.id == engagement_id,
+                Engagement.company_id == company_id,
+            )
+        )
+        if engagement_result.scalar_one_or_none() is None:
             raise ValueError("Engagement not found for the specified company")
         professional_fee_bdt = professional_fee_bdt.quantize(Decimal("0.01"))
         government_fee_bdt = government_fee_bdt.quantize(Decimal("0.01"))
