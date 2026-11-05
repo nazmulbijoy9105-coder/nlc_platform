@@ -36,6 +36,7 @@ class Invoice(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("invoice_number", name="uq_invoices_invoice_number"),
         UniqueConstraint("id", "company_id", name="uq_invoices_id_company"),
+        ForeignKeyConstraint(["engagement_id", "company_id"], ["engagements.id", "engagements.company_id"], ondelete="RESTRICT", name="fk_invoices_engagement_company"),
         CheckConstraint("subtotal_bdt >= 0 AND tax_bdt >= 0 AND total_bdt >= 0", name="ck_invoice_amounts_nonnegative"),
         CheckConstraint("paid_bdt >= 0 AND balance_bdt >= 0 AND paid_bdt <= total_bdt", name="ck_invoice_balances_nonnegative"),
         CheckConstraint("total_bdt = subtotal_bdt + tax_bdt", name="ck_invoice_total_matches_components"),
@@ -47,7 +48,7 @@ class Invoice(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="RESTRICT"), nullable=False)
-    engagement_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="RESTRICT"), nullable=True)
+    engagement_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     invoice_number: Mapped[str] = mapped_column(String(40), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="BDT")
     subtotal_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
