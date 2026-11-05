@@ -57,7 +57,7 @@ class ComplianceFlag(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     company_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("companies.id", ondelete="CASCADE"),
+        ForeignKey("companies.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
     )
@@ -147,7 +147,7 @@ class ComplianceScoreHistory(UUIDPrimaryKeyMixin, Base):
     )
 
     # ── Score ─────────────────────────────────────────────────────
-    score: Mapped[int] = mapped_column(Integer, nullable=False)
+    score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     risk_band: Mapped[RiskBand] = mapped_column(
         Enum(RiskBand, name="risk_band"), nullable=False
     )
@@ -181,7 +181,7 @@ class ComplianceScoreHistory(UUIDPrimaryKeyMixin, Base):
     # ── Trigger ───────────────────────────────────────────────────
     evaluation_status: Mapped[str] = mapped_column(
         String(20), nullable=False, server_default="COMPLETED",
-        comment="PENDING | IN_PROGRESS | COMPLETED | FAILED (OPS-004)"
+        comment="PENDING | IN_PROGRESS | COMPLETED | NOT_RELEASED | FAILED (OPS-004)"
     )
 
     trigger_source: Mapped[str] = mapped_column(
@@ -199,6 +199,61 @@ class ComplianceScoreHistory(UUIDPrimaryKeyMixin, Base):
             f"<ScoreHistory company={self.company_id} "
             f"month={self.snapshot_month} score={self.score} [{self.risk_band}]>"
         )
+
+
+# ═══════════════════════════════════════════════════════════════════
+# PER-EVALUATION IMMUTABLE SNAPSHOT
+# ═══════════════════════════════════════════════════════════════════
+class ComplianceEvaluationRun(UUIDPrimaryKeyMixin, Base):
+    """
+    Immutable record for every evaluation run.
+
+    Monthly ComplianceScoreHistory remains a monthly trend snapshot. This
+    table is the authoritative per-run record used to bind current company
+    state and generated PDFs to the exact evaluation that produced them.
+    """
+    __tablename__ = "compliance_evaluation_runs"
+    __table_args__ = (
+        UniqueConstraint("company_id", "calculated_at", name="uq_eval_run_company_time"),
+    )
+
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    risk_band: Mapped[RiskBand] = mapped_column(
+        Enum(RiskBand, name="risk_band"), nullable=False
+    )
+    calculated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    engine_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    score_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    previous_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    evaluation_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="COMPLETED", server_default="COMPLETED"
+    )
+    trigger_source: Mapped[str] = mapped_column(
+        String(100), nullable=False, default="MANUAL", server_default="MANUAL"
+    )
+    active_flags_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    black_flags_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    flags_snapshot: Mapped[list[dict]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default="[]"
+    )
+    score_breakdown_snapshot: Mapped[dict | None] = mapped_column(
+        JSONB, nullable=True
+    )
+
+    company: Mapped["Company"] = relationship(
+        "Company", back_populates="evaluation_runs"
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════

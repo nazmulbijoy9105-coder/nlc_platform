@@ -185,7 +185,7 @@ def run_migrations_offline() -> None:
     """
     Offline mode: generate SQL script without DB connection.
     Used for: reviewing migrations before deployment, CI/CD checks.
-    
+
     Run: alembic upgrade head --sql > migration.sql
     """
     url = get_database_url()
@@ -253,8 +253,12 @@ async def run_async_migrations() -> None:
     )
 
     async with connectable.connect() as connection:
-        # Set timezone for the session
+        # SET starts an implicit SQLAlchemy transaction. Commit it before
+        # handing the connection to Alembic, otherwise Alembic's
+        # transaction_per_migration and autocommit boundaries are not owned
+        # by its MigrationContext.
         await connection.execute(text("SET timezone = 'UTC'"))
+        await connection.commit()
         await connection.run_sync(do_run_migrations)
         await connection.commit()
 

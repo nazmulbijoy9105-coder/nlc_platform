@@ -188,21 +188,20 @@ def test_statutory_basis_present():
 # ═════════════════════════════════════════════════════════════════
 # TEST 6: BLACK → final_score = 0 (score calculation)
 # ═════════════════════════════════════════════════════════════════
-def test_black_zeroes_score():
-    """Any BLACK-severity flag → final_score = 0."""
-    company = make_compliant(current_director_count=1)  # INC-003 BLACK
+def test_unapproved_black_does_not_zero_score():
+    """An unapproved BLACK finding remains visible but cannot force a statutory score override."""
+    company = make_compliant(current_director_count=1)  # INC-003 mapping awaits approval
     output = evaluate(company)
-    
-    print(f"\n=== TEST 6: BLACK → score 0 ===")
+
+    print(f"\n=== TEST 6: unapproved BLACK finding is not score-eligible ===")
     black = [f for f in output.flags if f.severity == Severity.BLACK]
     print(f"  BLACK flags: {[f.rule_id for f in black]}")
     print(f"  Score: {output.score_breakdown.final_score}")
     print(f"  Override: {output.score_breakdown.override_applied}")
-    
-    if black:
-        assert output.score_breakdown.final_score == 0, f"BLACK → score should be 0, got {output.score_breakdown.final_score}"
-        assert output.score_breakdown.override_applied
-        print(f"  [PASS] BLACK flag → score 0, override applied")
+
+    assert output.score_breakdown.final_score == 100
+    assert output.score_breakdown.override_applied is False
+    print("  [PASS] unapproved finding does not trigger override")
 
 
 # ═════════════════════════════════════════════════════════════════
@@ -352,7 +351,7 @@ if __name__ == "__main__":
         ("Deterministic (R_007)", test_deterministic),
         ("Compliant → 100/GREEN", test_compliant_green),
         ("Statutory basis (R_012)", test_statutory_basis_present),
-        ("BLACK → score 0", test_black_zeroes_score),
+        ("Unapproved BLACK is gated", test_unapproved_black_does_not_zero_score),
         ("RED → band RED", test_red_escalates_band),
         ("NOT_EVALUATED no penalty (R_013)", test_not_evaluated_no_penalty),
         ("Rule ordering (R_015)", test_rule_ordering),

@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
@@ -28,13 +28,29 @@ if TYPE_CHECKING:
 # CRITICAL FIX: Use settings to auto-convert postgres:// to postgresql+asyncpg://
 # Render injects postgres:// but asyncpg requires postgresql+asyncpg://
 # ══════════════════════════════════════════════════════════════════════
-DATABASE_URL = os.environ.get('DATABASE_URL', '')
+_APP_DATABASE_URL = os.environ.get("APP_DATABASE_URL", "").strip()
+_MIGRATION_DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+_ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").strip().lower()
+_REQUIRE_RLS_APP_ROLE = os.environ.get(
+    "REQUIRE_RLS_APP_ROLE", "true" if _ENVIRONMENT in {"prod", "production"} else "false"
+).strip().lower() == "true"
+
+if _REQUIRE_RLS_APP_ROLE and not _APP_DATABASE_URL:
+    raise RuntimeError(
+        "APP_DATABASE_URL is required when REQUIRE_RLS_APP_ROLE=true; "
+        "refusing to run the API with a potentially BYPASSRLS migration role."
+    )
+
+# AsyncSessionLocal is the runtime application pool. DATABASE_URL remains the
+# privileged connection used by Alembic; APP_DATABASE_URL must be a
+# non-superuser, NOBYPASSRLS role such as nlc_app_role.
+DATABASE_URL = _APP_DATABASE_URL or _MIGRATION_DATABASE_URL
 if not DATABASE_URL:
-    raise RuntimeError('DATABASE_URL is empty or unset; refusing to start')
-if DATABASE_URL.startswith('postgres://'):
-    DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql+asyncpg://', 1)
-elif DATABASE_URL.startswith('postgresql://'):
-    DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+asyncpg://', 1)
+    raise RuntimeError('DATABASE_URL or APP_DATABASE_URL is empty; refusing to start')
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 # ── CONNECTION ────────────────────────────────────────────────────────
 _testing = os.environ.get("TESTING", "false").lower() == "true"
@@ -92,6 +108,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     async with AsyncSessionLocal() as session:
         try:
+            await set_app_role(session)
             yield session
             await session.commit()
         except Exception:
@@ -110,16 +127,32 @@ async def get_db_for_user(request: Request) -> AsyncGenerator[AsyncSession, None
     """
     from app.core.security import decode_token
 
-    user_id = "ANONYMOUS"
+    principal = "ANONYMOUS"
     auth_header = request.headers.get("authorization", "")
-    if auth_header.startswith("Bearer "):
-        payload = decode_token(auth_header[7:])
-        if payload and payload.get("type") == "access":
-            user_id = payload.get("sub") or payload.get("user_id") or "ANONYMOUS"
+    if auth_header:
+        if not auth_header.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Invalid authorization header")
+        payload = decode_token(auth_header[7:], expected_type="access")
+        jti = payload.get("jti") if payload else None
+        if not payload or not isinstance(jti, str) or not jti:
+            raise HTTPException(status_code=401, detail="Invalid or expired access token")
+        from starlette.concurrency import run_in_threadpool
+        from app.core.token_blacklist import BlacklistUnavailable, is_revoked
+        try:
+            if await run_in_threadpool(is_revoked, jti, fail_closed=True):
+                raise HTTPException(status_code=401, detail="Token has been revoked")
+        except BlacklistUnavailable as exc:
+            raise HTTPException(status_code=503, detail="Authentication service temporarily unavailable") from exc
+        principal = payload.get("sub") or payload.get("user_id") or ""
+        if not principal:
+            raise HTTPException(status_code=401, detail="Access token has no user identity")
 
     async with AsyncSessionLocal() as session:
         try:
-            await set_rls_context(session, user_id)
+            if principal == "ANONYMOUS":
+                await _set_signed_rls_principal(session, principal)
+            else:
+                await set_rls_context(session, principal)
             yield session
             await session.commit()
         except Exception:
@@ -130,27 +163,87 @@ async def get_db_for_user(request: Request) -> AsyncGenerator[AsyncSession, None
 
 
 # ── ROW-LEVEL SECURITY ────────────────────────────────────────────────
-async def set_rls_context(session: AsyncSession, user_id: str) -> None:
-    """
-    Set PostgreSQL session variable for Row-Level Security.
-    Called after JWT validation, before any company data query.
-    RLS policies in schema check: current_setting('app.current_user_id').
-    """
+def _rls_signature(principal: str) -> str:
+    """Return the HMAC proof for a transaction-local RLS principal."""
+    import hashlib
+    import hmac
+
+    secret = os.environ.get("NLC_RLS_HMAC_SECRET", "")
+    if len(secret) < 32:
+        raise RuntimeError(
+            "NLC_RLS_HMAC_SECRET must contain at least 32 characters for signed RLS identity"
+        )
+    return hmac.new(
+        secret.encode("utf-8"),
+        principal.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+
+async def set_app_role(session: AsyncSession) -> None:
+    """Run application queries as the non-owner, non-BYPASSRLS database role."""
+    await session.execute(text("SET LOCAL ROLE nlc_app_role"))
+
+
+async def _set_signed_rls_principal(session: AsyncSession, principal: str) -> None:
+    await set_app_role(session)
+    signature = _rls_signature(principal)
     await session.execute(
-        text("SELECT set_config('app.current_user_id', :uid, true)"),
-        {"uid": str(user_id)},
+        text(
+            "SELECT set_config('app.current_user_id', :uid, true), "
+            "set_config('app.current_user_signature', :signature, true)"
+        ),
+        {"uid": principal, "signature": signature},
     )
+
+
+async def set_rls_context(session: AsyncSession, user_id: str) -> None:
+    """Set a signed UUID identity; malformed or non-UUID callers fail closed."""
+    import uuid
+
+    try:
+        principal = str(uuid.UUID(str(user_id)))
+    except (TypeError, ValueError, AttributeError) as exc:
+        raise ValueError("RLS user identity must be a valid UUID") from exc
+    await _set_signed_rls_principal(session, principal)
 
 
 async def set_admin_context(session: AsyncSession) -> None:
-    """
-    Bypass RLS for Super Admin and background jobs.
-    Only used for: cron jobs, rule engine evaluation, seeder scripts.
-    AI Constitution Article 2: Admin context is audited separately.
-    """
-    await session.execute(
-        text("SELECT set_config('app.current_user_id', 'ADMIN', true)")
-    )
+    """Set the signed service principal for trusted background/admin work."""
+    await _set_signed_rls_principal(session, "ADMIN")
+
+
+async def set_auth_context(session: AsyncSession) -> None:
+    """Set the signed, narrowly-scoped authentication service principal."""
+    await _set_signed_rls_principal(session, "AUTH")
+
+
+async def set_catalog_context(session: AsyncSession) -> None:
+    """Set the signed, read-only public-catalogue service principal."""
+    await _set_signed_rls_principal(session, "CATALOG")
+
+
+async def verify_runtime_database_role() -> None:
+    """Fail startup if production is connected through an owner/BYPASSRLS role."""
+    if not _REQUIRE_RLS_APP_ROLE:
+        return
+    async with engine.connect() as connection:
+        row = (
+            await connection.execute(
+                text(
+                    "SELECT current_user, rolsuper, rolbypassrls "
+                    "FROM pg_roles WHERE rolname = current_user"
+                )
+            )
+        ).one_or_none()
+    if row is None:
+        raise RuntimeError("Unable to verify runtime PostgreSQL role")
+    role_name, is_superuser, bypasses_rls = row
+    if role_name != "nlc_app_role" or is_superuser or bypasses_rls:
+        raise RuntimeError(
+            "Unsafe runtime database role: expected nlc_app_role with "
+            "NOSUPERUSER and NOBYPASSRLS"
+        )
 
 
 # ── STARTUP / SHUTDOWN ────────────────────────────────────────────────

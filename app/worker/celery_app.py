@@ -347,9 +347,10 @@ def on_task_failure(
             async def _log_failure() -> None:
                 from datetime import datetime
 
-                from app.models.database import AsyncSessionLocal
+                from app.models.database import AsyncSessionLocal, set_admin_context
                 from app.models.infrastructure import UserActivityLog
                 async with AsyncSessionLocal() as db, db.begin():
+                    await set_admin_context(db)
                     log = UserActivityLog(
                         action="TASK_FAILURE",
                         resource_type="CeleryTask",

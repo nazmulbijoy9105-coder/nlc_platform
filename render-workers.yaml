@@ -1,0 +1,44 @@
+# Optional paid background services. This file is intentionally separate from render.yaml.
+# Deploy only when the user explicitly approves Render Worker/Starter plan costs.
+services:
+  - type: worker
+    name: nlc-worker
+    runtime: docker
+    region: singapore
+    plan: starter
+    dockerCommand: celery -A app.worker.celery_app worker --loglevel=info --concurrency=2
+    autoDeploy: false
+    envVars:
+      - key: APP_DATABASE_URL
+        sync: false
+      - key: NLC_RLS_HMAC_SECRET
+        sync: false
+      - key: REQUIRE_RLS_APP_ROLE
+        value: "true"
+      - key: REDIS_URL
+        sync: false
+      - key: CELERY_BROKER_URL
+        sync: false
+      - key: ENVIRONMENT
+        value: production
+
+  - type: worker
+    name: nlc-beat
+    runtime: docker
+    region: singapore
+    plan: starter
+    dockerCommand: celery -A app.worker.celery_app beat --loglevel=info
+    autoDeploy: false
+    envVars:
+      - key: APP_DATABASE_URL
+        sync: false
+      - key: NLC_RLS_HMAC_SECRET
+        sync: false
+      - key: REQUIRE_RLS_APP_ROLE
+        value: "true"
+      - key: REDIS_URL
+        sync: false
+      - key: CELERY_BROKER_URL
+        sync: false
+      - key: ENVIRONMENT
+        value: production

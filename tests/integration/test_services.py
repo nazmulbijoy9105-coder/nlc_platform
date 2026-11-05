@@ -18,7 +18,8 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, timedelta
-from unittest.mock import MagicMock
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -214,22 +215,42 @@ class TestComplianceService:
         from app.services.compliance_service import ComplianceService
 
         # Mock rule engine to avoid complex setup
-        mock_engine = MagicMock()
-        mock_output = MagicMock()
-        mock_output.flags = []
-        mock_output.score_breakdown.final_score = 90
-        mock_output.score_breakdown.risk_band = "GREEN"
-        mock_output.score_breakdown.override_applied = False
-        mock_output.score_breakdown.black_flag_count = 0
-        mock_output.score_breakdown.red_flag_count = 0
-        mock_output.score_breakdown.score_hash = "abc123"
-        mock_output.score_breakdown.raw_total = 90
-        mock_output.score_breakdown.agm_score = 25
-        mock_output.score_breakdown.audit_score = 25
-        mock_output.score_breakdown.return_score = 20
-        mock_output.score_breakdown.director_score = 15
-        mock_output.score_breakdown.shareholding_score = 5
-        mock_engine.evaluate.return_value = mock_output
+        score_breakdown = SimpleNamespace(
+            final_score=90,
+            risk_band="GREEN",
+            exposure_band="LOW",
+            override_applied=False,
+            override_reason=None,
+            black_flag_count=0,
+            red_flag_count=0,
+            yellow_flag_count=0,
+            active_flag_count=0,
+            score_hash="abc123",
+            raw_total=90,
+            agm_score=25,
+            audit_score=25,
+            return_score=20,
+            director_score=15,
+            shareholding_score=5,
+            capital_score=0,
+            office_score=0,
+            register_score=0,
+            tax_score=0,
+            bankruptcy_score=0,
+            labour_score=0,
+            bsec_score=0,
+            fx_score=0,
+            escalation_score=0,
+            coverage=1.0,
+        )
+        mock_output = SimpleNamespace(
+            flags=[],
+            engine_version="test-engine-v1",
+            ilrmf_version="test-ilrmf-v1",
+            score_breakdown=score_breakdown,
+            rescue_sequence=None,
+        )
+        mock_engine = SimpleNamespace(evaluate=Mock(return_value=mock_output))
 
         svc = ComplianceService(db)
         result = await svc.evaluate_company(
@@ -239,6 +260,9 @@ class TestComplianceService:
         )
 
         assert result is not None
+        # A mocked/provisional GREEN band cannot bypass the global legal release gate.
+        assert result["score"] is None
+        assert result["risk_band"] == "NOT_EVALUATED"
         mock_engine.evaluate.assert_called_once()
 
 

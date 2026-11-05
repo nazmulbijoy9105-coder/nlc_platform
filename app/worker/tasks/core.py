@@ -44,8 +44,10 @@ import os as _os
 
 if _os.environ.get("CELERY_BROKER_URL") or _os.environ.get("CELERY_BROKER"):
     from app.core.config import settings as _settings
-    if not _settings.DATABASE_URL:
-        raise RuntimeError("SEC-009: DATABASE_URL not configured — refusing to run worker tasks")
+    if not _settings.ASYNC_APP_DATABASE_URL:
+        raise RuntimeError("SEC-009: runtime database URL not configured — refusing to run worker tasks")
+    if _settings.REQUIRE_RLS_APP_ROLE and not _settings.APP_DATABASE_URL:
+        raise RuntimeError("SEC-010: APP_DATABASE_URL is required for non-BYPASSRLS worker access")
 import logging
 import uuid
 from datetime import UTC, date, datetime, timedelta

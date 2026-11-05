@@ -10,6 +10,7 @@ Every create/update triggers a score re-evaluation via background task.
 """
 from __future__ import annotations
 
+import calendar
 from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
@@ -151,12 +152,13 @@ class AGMService(BaseService[AGM]):
         self,
         agm_id: uuid.UUID,
         agm_date: date,
-        members_present: int,
-        auditor_reappointed: bool,
+        members_present: int | None,
+        auditor_reappointed: bool | None,
         *,
         venue: str | None = None,
         accounts_adopted: bool | None = None,
         agm_held_without_audit: bool | None = None,
+        minutes_prepared: bool | None = None,
         minutes_document_id: uuid.UUID | None = None,
     ) -> AGM | None:
         """
@@ -179,7 +181,9 @@ class AGMService(BaseService[AGM]):
 
         if company_type == "PRIVATE_LIMITED" and member_count is not None and member_count > 0:
             quorum_required = 2 if member_count <= 6 else 3
-            quorum_met: bool | None = members_present >= quorum_required
+            quorum_met: bool | None = (
+                members_present >= quorum_required if members_present is not None else None
+            )
             quorum_basis = "SECTION_85_2_B_DEFAULT_ARTICLES_NOT_REVIEWED"
         else:
             # Do not invent a quorum where company type or verified membership
@@ -191,41 +195,77 @@ class AGMService(BaseService[AGM]):
         is_default = bool(agm.agm_deadline and agm_date > agm.agm_deadline)
         delay_days = (agm_date - agm.agm_deadline).days if is_default and agm.agm_deadline else 0
 
+        # A normal "mark held" request records user-entered facts; it does not
+        # perform legal verification. Preserve omitted raw values, but revoke
+        # any prior verification markers so changed meeting data cannot inherit
+        # stale evidence approval.
         return await self.update_instance(
             agm,
             agm_held=True,
             agm_date=agm_date,
             venue=venue,
-            members_present=members_present,
+            members_present=(
+                members_present if members_present is not None else agm.members_present
+            ),
             quorum_required=quorum_required,
             quorum_met=quorum_met,
-            auditor_reappointed=auditor_reappointed,
+            quorum_basis=quorum_basis,
+            auditor_reappointed=(
+                auditor_reappointed
+                if auditor_reappointed is not None else agm.auditor_reappointed
+            ),
             accounts_adopted=accounts_adopted,
             agm_held_without_audit=agm_held_without_audit,
-            minutes_document_id=minutes_document_id,
+            minutes_prepared=(
+                minutes_prepared if minutes_prepared is not None else agm.minutes_prepared
+            ),
+            minutes_document_id=(
+                minutes_document_id
+                if minutes_document_id is not None else agm.minutes_document_id
+            ),
+            members_present_verified=False,
+            members_present_evidence_ref=None,
+            members_present_verified_at=None,
+            members_present_verified_by=None,
+            quorum_required_verified=False,
+            quorum_evidence_ref=None,
+            quorum_verified_at=None,
+            quorum_verified_by=None,
+            auditor_reappointment_verified=False,
+            auditor_reappointment_evidence_ref=None,
+            auditor_reappointment_verified_at=None,
+            auditor_reappointment_verified_by=None,
             is_default=is_default,
             delay_days=delay_days,
         )
 
     @staticmethod
-    def calculate_first_agm_deadline(incorporation_date: date) -> date:
-        """
-        Section 81 CA 1994: First AGM within 18 months (548 days) of incorporation.
-        """
-        return incorporation_date + timedelta(days=548)
+    def _add_calendar_months(source: date, months: int) -> date:
+        month_index = source.month - 1 + months
+        year = source.year + month_index // 12
+        month = month_index % 12 + 1
+        day = min(source.day, calendar.monthrange(year, month)[1])
+        return date(year, month, day)
 
-    @staticmethod
+    @classmethod
+    def calculate_first_agm_deadline(cls, incorporation_date: date) -> date:
+        """Companies Act 1994 s.81: first AGM within 18 calendar months."""
+        return cls._add_calendar_months(incorporation_date, 18)
+
+    @classmethod
     def calculate_subsequent_agm_deadline(
+        cls,
         last_agm_date: date,
-        financial_year_end: date,
+        financial_year_end: date | None = None,
     ) -> date:
+        """Section 81: each subsequent AGM within 15 calendar months and in each calendar year.
+
+        financial_year_end is retained for API compatibility only. Section 81
+        does not impose a universal six-month-after-FY-end test.
         """
-        Section 81: Subsequent AGM within 15 months of previous (456 days)
-        OR within 6 months (182 days) of FY end — whichever is earlier.
-        """
-        by_last_agm = last_agm_date + timedelta(days=456)
-        by_fy_end = financial_year_end + timedelta(days=182)
-        return min(by_last_agm, by_fy_end)
+        by_interval = cls._add_calendar_months(last_agm_date, 15)
+        by_calendar_year = date(last_agm_date.year + 1, 12, 31)
+        return min(by_interval, by_calendar_year)
 
 
 # ═══════════════════════════════════════════════════════════════════════
