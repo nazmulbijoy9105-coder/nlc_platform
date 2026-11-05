@@ -87,12 +87,27 @@ async def test_quotation_accept_and_reject_routes_match_service_contract(
     accepted = await _create_quotation(
         api_client, commercial_admin_token, db_company.id, engagement["engagement_id"]
     )
+    premature_start = await api_client.patch(
+        f"/api/v1/commercial/engagements/{engagement['engagement_id']}/status",
+        headers=_auth(commercial_admin_token),
+        json={"new_status": "IN_PROGRESS"},
+    )
+    assert premature_start.status_code == 409, premature_start.text
+
     accept_response = await api_client.patch(
         f"/api/v1/commercial/quotations/{accepted['quotation_id']}/accept",
         headers=_auth(commercial_admin_token),
     )
     assert accept_response.status_code == 200, accept_response.text
     assert accept_response.json()["status"] == "ACCEPTED"
+
+    start_response = await api_client.patch(
+        f"/api/v1/commercial/engagements/{engagement['engagement_id']}/status",
+        headers=_auth(commercial_admin_token),
+        json={"new_status": "IN_PROGRESS", "note": "Service delivery started"},
+    )
+    assert start_response.status_code == 200, start_response.text
+    assert start_response.json()["status"] == "IN_PROGRESS"
 
     rejected = await _create_quotation(
         api_client, commercial_admin_token, db_company.id, engagement["engagement_id"]
