@@ -223,14 +223,13 @@ class ComplianceEvaluationRun(UUIDPrimaryKeyMixin, Base):
         UUID(as_uuid=True),
         ForeignKey("companies.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
     score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     risk_band: Mapped[RiskBand] = mapped_column(
         Enum(RiskBand, name="risk_band"), nullable=False
     )
     calculated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, index=True
+        DateTime(timezone=True), nullable=False
     )
     engine_version: Mapped[str] = mapped_column(String(50), nullable=False)
     score_hash: Mapped[str] = mapped_column(String(64), nullable=False)
