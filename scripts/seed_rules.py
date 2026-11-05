@@ -13,9 +13,9 @@ ID parity is verified by tests; field-level statutory_basis
 parity is enforced in tests/unit/test_canonical_integrity.py.
 
 USAGE:
-  python scripts/seed_rules.py
-  python scripts/seed_rules.py --dry-run
-  python scripts/seed_rules.py --verbose
+  python scripts/seed_rules.py                 # dry-run only
+  python scripts/seed_rules.py --apply         # explicitly write to DATABASE_URL
+  python scripts/seed_rules.py --apply --verbose
 """
 from __future__ import annotations
 
@@ -298,12 +298,16 @@ async def seed_rules(dry_run: bool = False, verbose: bool = False) -> int:
 
 
 def main():
-    p = argparse.ArgumentParser(description="Seed ILRMF 85-rule corpus")
-    p.add_argument("--dry-run", action="store_true")
+    p = argparse.ArgumentParser(description="Seed ILRMF 85-rule corpus (dry-run by default)")
+    p.add_argument(
+        "--apply",
+        action="store_true",
+        help="Apply the upsert to DATABASE_URL; without this flag the script is read-only",
+    )
     p.add_argument("--verbose", "-v", action="store_true")
     args = p.parse_args()
     try:
-        asyncio.run(seed_rules(dry_run=args.dry_run, verbose=args.verbose))
+        asyncio.run(seed_rules(dry_run=not args.apply, verbose=args.verbose))
     except Exception as e:
         print(f"\nFAILED: {e}", file=sys.stderr)
         sys.exit(1)
