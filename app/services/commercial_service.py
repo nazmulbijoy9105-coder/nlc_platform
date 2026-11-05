@@ -29,6 +29,11 @@ from app.services.base import BaseService
 if TYPE_CHECKING:
     import uuid
 
+
+class CommercialConflictError(ValueError):
+    """Raised when a commercial action conflicts with the current workflow state."""
+
+
 # ═══════════════════════════════════════════════════════════════════════
 # ENGAGEMENT SERVICE
 # ═══════════════════════════════════════════════════════════════════════
@@ -192,20 +197,30 @@ class QuotationService(BaseService[Quotation]):
     ) -> Quotation:
         """Create a quotation for an engagement owned by the specified company."""
         engagement_result = await self.db.execute(
-            select(Engagement.id).where(
+            select(Engagement)
+            .where(
                 Engagement.id == engagement_id,
                 Engagement.company_id == company_id,
             )
+            .with_for_update()
         )
-        if engagement_result.scalar_one_or_none() is None:
+        engagement = engagement_result.scalar_one_or_none()
+        if engagement is None:
             raise ValueError("Engagement not found for the specified company")
+        if engagement.engagement_status not in {
+            EngagementStatus.IDENTIFIED,
+            EngagementStatus.QUOTED,
+        }:
+            raise CommercialConflictError(
+                f"Cannot issue a quotation while engagement is {engagement.engagement_status}"
+            )
         professional_fee_bdt = professional_fee_bdt.quantize(Decimal("0.01"))
         government_fee_bdt = government_fee_bdt.quantize(Decimal("0.01"))
         vat_bdt = vat_bdt.quantize(Decimal("0.01"))
         total_bdt = (professional_fee_bdt + government_fee_bdt + vat_bdt).quantize(Decimal("0.01"))
         quotation_number = await self._next_quotation_number()
 
-        return await self.create(
+        quotation = await self.create(
             engagement_id=engagement_id,
             company_id=company_id,
             quotation_number=quotation_number,
@@ -219,6 +234,13 @@ class QuotationService(BaseService[Quotation]):
             line_items=line_items,
             notes=notes,
         )
+        engagement.quoted_fee_bdt = total_bdt
+        if engagement.engagement_status == EngagementStatus.IDENTIFIED:
+            engagement.engagement_status = EngagementStatus.QUOTED
+            engagement.quoted_date = date.today()
+        self.db.add(engagement)
+        await self.db.flush()
+        return quotation
 
     async def _next_quotation_number(self) -> str:
         """Generate next sequential quotation number NLC-YYYY-NNNN."""
@@ -247,7 +269,35 @@ class QuotationService(BaseService[Quotation]):
         q = await self.get_by_id(quotation_id)
         if not q:
             return None
-        return await self.update_instance(q, status="ACCEPTED", accepted_date=date.today())
+        if q.status == "ACCEPTED":
+            return q
+        if q.status not in {"DRAFT", "SENT"}:
+            raise CommercialConflictError(f"Cannot accept a quotation in {q.status} state")
+        if q.valid_until is not None and q.valid_until < date.today():
+            raise CommercialConflictError("Quotation has expired")
+        engagement_result = await self.db.execute(
+            select(Engagement)
+            .where(
+                Engagement.id == q.engagement_id,
+                Engagement.company_id == q.company_id,
+            )
+            .with_for_update()
+        )
+        engagement = engagement_result.scalar_one_or_none()
+        if engagement is None:
+            raise ValueError("Quotation engagement no longer exists")
+        if engagement.engagement_status != EngagementStatus.QUOTED:
+            raise CommercialConflictError(
+                f"Cannot accept a quotation while engagement is {engagement.engagement_status}"
+            )
+        accepted = await self.update_instance(q, status="ACCEPTED", accepted_date=date.today())
+        await EngagementService(self.db).update_instance(
+            engagement,
+            engagement_status=EngagementStatus.CONFIRMED,
+            confirmed_date=date.today(),
+            confirmed_fee_bdt=q.total_bdt,
+        )
+        return accepted
 
     async def reject(
         self,
@@ -259,6 +309,8 @@ class QuotationService(BaseService[Quotation]):
         q = await self.get_by_id(quotation_id)
         if not q:
             return None
+        if q.status not in {"DRAFT", "SENT"}:
+            raise CommercialConflictError(f"Cannot reject a quotation in {q.status} state")
         return await self.update_instance(q, status="REJECTED", rejection_reason=reason, rejected_by=rejected_by)  # COM-002
 
 
