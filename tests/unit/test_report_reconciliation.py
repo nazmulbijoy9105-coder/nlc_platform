@@ -24,7 +24,6 @@ def _flag(rid, sev, imp):
 
 
 def _enable_authorized_score_for_report_test(monkeypatch, rule_ids):
-    monkeypatch.setattr("app.services.pdf_report_service.LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
         "app.services.pdf_report_service.VERIFIED_RULE_IDS",
         frozenset(rule_ids),
@@ -91,7 +90,7 @@ def test_derive_plan_target_empty():
 def test_unreleased_provisional_findings_are_not_shown_as_score_deductions():
     page = build_compliance_report_html(
         _company(score=100, band="NOT_EVALUATED"),
-        [_flag("AGM-001", "RED", 20)],
+        [_flag("AUD-003", "RED", 20)],
         WHEN,
     )
     assert "Not scored" in page
