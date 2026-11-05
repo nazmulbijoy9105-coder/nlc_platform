@@ -20,11 +20,11 @@ A PR marked merged is not automatically proof that every original functional cha
 | #102 | Closed, not merged | 158-commit branch; no release credit without file-level ancestry/diff proof. |
 | #103 | Merged | AGM quorum and first-auditor corrections reached mainline; current statutory/evidence implementation still requires review. |
 | #104 | Closed, not merged | Superseded; do not treat as mainline implementation. |
-| #105 | Closed, not merged | 428-commit AGM/Articles/evidence/RLS branch; substantial work must be traced individually, not assumed incorporated. |
+| #105 | Closed, not merged | 428-commit AGM/Articles/evidence/RLS branch; review comments identify the ADMIN-sentinel UUID-cast issue and unsafe activity-log policies. Its full-document S3 upload approach also conflicts with the no-upload policy in #109; do not cherry-pick it. |
 | #106 | Closed, not merged | Dashboard isolation work not merged through this PR. |
 | #107 | Closed, not merged | Signed-RLS feature branch; not a mainline release source. |
 | #108 | Not retrievable | GitHub returned 404; no incorporation claim can be made. |
-| #109 | Closed, not merged | Workflow specification, not implementation evidence. |
+| #109 | Closed, not merged | Workflow specification only. It explicitly prohibits uploading complete MOA/AOA and original RJSC-issued records; implement NLC-only hard-copy examination records instead. |
 | #110 | Merged | Its own changed-file list is empty; no functional change can be attributed to this PR alone. |
 | #111 | Closed, not merged | Proposed charge-satisfaction mapping to Companies Act section 87(2) is wrong; section 87 concerns extraordinary resolutions, while section 172 is the charge-satisfaction anchor. |
 | #112 | Closed, not merged | Dashboard isolation branch; its own description said CI had not run. |
@@ -35,14 +35,14 @@ A PR marked merged is not automatically proof that every original functional cha
 | #117 | Merged | Large P0 consolidation; included overlapping migration branches and must be assessed with the final Alembic graph, not filename counting. |
 | #118 | Merged | Mainline release-gate consolidation; subsequent mainline divergence/regression is visible in the engine and service files. |
 | #119 | Closed, not merged | Migration/Docker patch is not mainline. Its Docker patch has duplicate `XDG_CACHE_HOME` assignments and should not be cherry-picked blindly. |
-| #120 | Merged into #107's signed-RLS branch | **Not merged into main.** GitHub's “merged” status is scoped to its feature-branch base. |
+| #120 | Merged into #107's signed-RLS branch | **Not merged into main.** Its ActivityService exception-propagation behavior is nevertheless present in the current mainline file; verified by direct file comparison. |
 
 ### Missing-work and history cautions
 
 - Large unmerged branches (#102, #105, #107, #114) are not sources of truth.
-- #120's feature-branch merge cannot be counted as a mainline fix.
+- #120's feature-branch merge cannot be counted as a mainline merge; its ActivityService exception-propagation behavior was separately confirmed present in main.
 - #110 has no changed files in its own PR diff.
-- #117/#118 introduced multiple migration branches. The current chain must be verified by Alembic, and production must be upgraded from its actual revision.
+- #117/#118 introduced multiple migration branches. PR #119 proposed another merge revision over already-merged parents and a malformed Dockerfile environment block; it was not restored. PR #125 CI must prove one head and two clean upgrades.
 - The current mainline engine differs from the earlier #118 branch version in material evaluator sections. PR #125 restores evidence-gated AGM, charge, tax, labour and BSEC behavior selectively; this is not proof that every historical change has been reconciled.
 - Use `git range-diff`, `git diff --find-renames`, full migration ancestry and current-file comparison. `git log origin/main..branch` alone is insufficient to prove functional inclusion.
 
@@ -50,9 +50,10 @@ A PR marked merged is not automatically proof that every original functional cha
 
 ### 3.1 Migration and schema drift
 
-- Production `alembic_version`: `0042_dedup_key`.
-- Current repository migration chain: `0057_merge_final_heads`.
-- The live `legal_rules` schema is behind the current ORM model; verification-status/evidence columns expected by the model are absent.
+- Neon branch named production reports alembic_version = 0042_dedup_key; current mainline migration head is 0057_merge_final_heads, and PR #125 adds migration 0058 for notification suppression.
+- The live legal_rules schema is behind the current ORM model; verification-status/evidence columns expected by the model are absent.
+- Render service nlc_platform is on branch main with automatic deploy disabled. Latest successful deploy observed: commit 9e4f99d; later deploy attempts for 51c7e6c failed.
+- Render logs contain both permission denied to alter role and Can't locate revision identified by 0049_evaluation_runs_and_identity_rls. The referenced migration file exists in the GitHub tree at 51c7e6c, and PR #125 CI has since passed single-head/fresh-upgrade checks. The Render artifact/database target mismatch is unresolved; confirm the exact Render image and database URL before deployment. Do not assume the Neon branch inspected here is necessarily the database used by Render.
 - Production must be backed up and upgraded through the exact tested chain. Do not stamp revisions, skip migrations or apply role DDL from Alembic.
 
 ### 3.2 Tenant identity forgery — P0 confirmed
@@ -70,12 +71,13 @@ Migration 0050 replaces raw-GUC trust with an HMAC-verified principal, recreates
 
 ### 3.3 RLS and privilege posture
 
-- `nlc_app_role` has safe role attributes (LOGIN, non-superuser, no createdb/createrole, NOINHERIT, no replication, NOBYPASSRLS).
-- It nevertheless has broad grants across tables/views, including `TRUNCATE`, `REFERENCES` and `TRIGGER`. RLS does not protect TRUNCATE.
-- No inspected table had `FORCE ROW LEVEL SECURITY` enabled.
-- Multiple RLS-enabled tables have no policies, including `company_user_access`, `legal_rules`, `legal_rule_versions`, `users`, `quotations`, `compliance_events` and activity/audit tables.
-- `compliance_calendar_events` has a `company_id` column but RLS is disabled in production. Migration 0050 includes it in the tenant table set; verify post-upgrade policy and FORCE RLS.
-- The live `nlc_ci_audit_role` is NOLOGIN, but migration 0050 preflight requires LOGIN. An authorised Neon administrator must correct this out-of-band before migration. Do not weaken the preflight.
+- The read-only inspection session was neondb_owner (BYPASSRLS=true). This proves the inspection credential is privileged; it does not by itself prove Render's runtime session. pg_stat_activity showed no separate Render application session at inspection time, so the actual Render connection identity remains unverified.
+- nlc_app_role and nlc_ci_audit_role both exist and are LOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOREPLICATION and NOBYPASSRLS, but both currently have INHERIT=true. Migration 0050's read-only preflight requires NOINHERIT; an authorised Neon administrator must change both roles out-of-band before migration. Do not weaken the preflight.
+- neondb_owner is a member of nlc_app_role and nlc_ci_audit_role with admin option; neither application role is a member of neondb_owner.
+- nlc_app_role has grants across 37 tables, including DELETE, REFERENCES, TRIGGER and TRUNCATE. Migration 0050 explicitly revokes TRUNCATE, REFERENCES and TRIGGER and removes selected DELETE privileges; verify effective grants after upgrade. RLS does not protect TRUNCATE.
+- 30 of 32 public tables currently have RLS enabled; zero have FORCE RLS.
+- Eight RLS-enabled tables have no policy, including company_user_access, legal_rules, legal_rule_versions, users, quotations, compliance_events and activity/audit tables.
+- compliance_calendar_events has a company_id column but RLS is disabled in production. Migration 0050 includes it in the tenant table set; verify post-upgrade policy and FORCE RLS.
 
 ### 3.4 Legal-rule catalogue drift
 
@@ -124,18 +126,25 @@ This pass checked primary-source anchors for the following high-risk rules. It i
 | VAT thresholds | VAT Act 2012 as amended by Act 77/2026: BDT 30 lakh turnover-tax enlistment and BDT 50 lakh registration thresholds, subject to taxpayer class and mandatory categories. | Verify rolling 12-month taxable turnover and mandatory categories; annual turnover alone is insufficient. |
 | VAT return cadence | VAT Amendment Ordinance 38/2026 (14 October 2026) substituted section 64: each tax period; 15-day rule and specified 20-day classes, holiday roll-forward and Board extension. | Do not use the superseded three-tax-period formulation. |
 | Factory licensing | Bangladesh Labour Act 2006, s.326 as amended by Act 43/2026; licensing is direction-based for specified institution/factory/class. | Require the applicable Government direction and establishment-class evidence; not universal. |
-| Strike-off | Companies Act 1994, s.304 Registrar process. Backlog alone is not proof that RJSC commenced strike-off. | Require actual notice, service, procedural stage and current register status; no automatic BLACK. |
+| Strike-off | Companies Act 1994, s.346 governs the Registrar's defunct-company removal process, including statutory inquiry/follow-up and Gazette/show-cause steps. Section 304 concerns liquidator reporting duties, not strike-off. | Backlog alone is not proof of proceedings. Require authenticated Registrar correspondence, service, Gazette notice, expiry of the 90-day show-cause period and current register status; no automatic BLACK. |
 
 Official source entry points:
 - [Companies Act 1994 — BDLaws](https://bdlaws.minlaw.gov.bd/act-print-788.html)
 - [Companies Act section 85 — BDLaws](https://bdlaws.minlaw.gov.bd/act-print-788/section-print-32909.html)
+- [Companies Act section 346 — BDLaws](https://bdlaws.minlaw.gov.bd/act-print-788/section-print-33170.html)
 - [BSEC Corporate Governance Code 2018 — official PDF](https://www.sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf)
 - [Income Tax Act 2023 — BDLaws](https://bdlaws.minlaw.gov.bd/act-print-1725.html)
 - [VAT Amendment Act 2026 — BDLaws](https://bdlaws.minlaw.gov.bd/act-print-1706.html)
 - [VAT Amendment Ordinance 2026, section 64 — BDLaws](https://bdlaws.minlaw.gov.bd/act-1742/section-59742.html)
 - [Bangladesh Labour (Amendment) Act 2026 — BDLaws](https://bdlaws.minlaw.gov.bd/act-print-1672.html)
 
-## 5. Changes currently on PR #125
+## 5. Additional omitted-work findings
+
+- PR #105's Articles/AGM evidence implementation is absent from mainline. Its PDF upload route is not suitable for restoration because it conflicts with the no-upload policy. The replacement design must record physical document identity/type, presenter, custody/return, pages/clauses examined, examiner, independent reviewer, effective date, provenance, limitations and unresolved facts without storing full document bytes.
+- Current AGM API serializers hide quorum/member counts unless attendance and quorum basis have separate verification markers. The service still computes a provisional statutory-default estimate from the company's stored member count; that value is not exposed as a verified result. Any future Articles workflow must not convert this estimate into a legal conclusion without hard-copy review.
+- Current signed-RLS code sets SET LOCAL ROLE nlc_app_role, signs UUID/service principals with NLC_RLS_HMAC_SECRET, rechecks active membership and compares the live database role to the token role. The startup role check must be proven against the actual Render connection; NLC_RLS_HMAC_SECRET must be at least 32 characters and remain stable across app instances.
+
+## 6. Changes currently on PR #125
 
 - Removed role creation/alteration/membership grant from migration 0050; added read-only preflight.
 - Fixed the PostgreSQL CI `DO $$ ... $$;` syntax.
@@ -147,7 +156,7 @@ Official source entry points:
 - Updated seed and canonical rule metadata; the seed script now refuses unversioned updates.
 - Updated legal basis matrix, 85-rule source triage, evidence mappings and production release runbook.
 
-## 6. CI and production release gates
+## 7. CI and production release gates
 
 At the time of this audit:
 - A previous PR #125 run passed compile, single Alembic head, two fresh PostgreSQL upgrades, integration/RLS tests, canonical integrity tests and Docker runtime smoke.
