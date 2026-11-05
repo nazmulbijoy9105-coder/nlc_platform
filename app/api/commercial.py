@@ -321,7 +321,6 @@ async def advance_engagement_status(
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
         company_id=engagement.company_id,
-        company_id=engagement.company_id,
     )
     return _engagement_to_response(engagement)
 
