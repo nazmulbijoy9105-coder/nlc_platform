@@ -240,11 +240,21 @@ APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {
         "strike-off proceedings."
     ),
     "ESC-002": ApplicabilityRule(
-        "ESC-002", ("ALL",), ("registrar_strike_off_notice_or_verified_register_status",), ("notice_service_evidence_ref",),
-        "Companies Act 1994, s.346: require evidence of the Registrar's statutory "
-        "notice sequence (initial inquiry, registered follow-up, Gazette notice, "
-        "and expiry of the stated 90-day show-cause period). Three years of backlog "
-        "or an unverified list indicator is not proof of strike-off or dissolution."
+        "ESC-002",
+        ("ALL",),
+        (
+            "registrar_first_inquiry_evidence_ref",
+            "registered_follow_up_evidence_ref",
+            "gazette_notice_evidence_ref",
+            "gazette_notice_date",
+            "show_cause_period_expired",
+            "current_register_status",
+            "appeal_or_restoration_status",
+        ),
+        (),
+        "Companies Act 1994, s.346: review the Registrar's actual notice sequence "
+        "and current register status. Filing backlog or an unverified list indicator "
+        "does not establish strike-off or dissolution."
     ),
 
     # ── Default (Sections 94, 397) ──────────────────────────────────
