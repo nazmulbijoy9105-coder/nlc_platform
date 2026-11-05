@@ -86,3 +86,15 @@ def test_derive_plan_target_from_steps():
 
 def test_derive_plan_target_empty():
     assert _derive_plan_target(None, []) is None
+
+
+def test_unreleased_provisional_findings_are_not_shown_as_score_deductions():
+    page = build_compliance_report_html(
+        _company(score=100, band="NOT_EVALUATED"),
+        [_flag("AGM-001", "RED", 20)],
+        WHEN,
+    )
+    assert "Not scored" in page
+    assert "pending independent legal approval" in page
+    assert "-20 pts" not in page
+    assert "Score reconciliation" not in page
