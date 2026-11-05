@@ -30,7 +30,27 @@ Set these in the Render service before running migrations or deploying the new a
 
 The runtime engine uses `APP_DATABASE_URL`; Alembic uses `DATABASE_URL`. The application refuses to start in production without `APP_DATABASE_URL`.
 
-## 3. Apply database migrations
+## 3. Provision database roles (one-time, outside Alembic)
+
+Before migration 0050, provision both cluster roles through the Neon project role-management interface or an authorized database administrator session. The migration deliberately does not create, alter, reset passwords for, or grant membership in roles.
+
+Required attributes for both roles:
+
+- LOGIN
+- NOSUPERUSER
+- NOCREATEDB
+- NOCREATEROLE
+- NOINHERIT
+- NOREPLICATION
+- NOBYPASSRLS
+
+Create:
+- nlc_app_role — set its password securely and use it only in APP_DATABASE_URL.
+- nlc_ci_audit_role — set a separate password securely; use it only for the read-only production parity secret.
+
+Do not reuse passwords, put credentials in migrations, or grant either role elevated membership. Migration 0050 performs a read-only attribute preflight and aborts with a specific error if either role is absent or unsafe. If a role already exists with incorrect attributes, correct it through the authorized Neon role-management path before deploying; do not broaden the migration credential or application role to bypass this check.
+
+## 4. Apply database migrations
 
 Using a secure release runner with the privileged migration URL and the same `NLC_RLS_HMAC_SECRET`:
 
@@ -46,7 +66,7 @@ Migration 0052 clears only current company-level score/risk/exposure state and d
 
 Do not run migrations through the runtime `nlc_app_role` connection.
 
-## 4. Synchronise the production rule catalogue
+## 5. Synchronise the production rule catalogue
 
 The production database previously had 75 active rules while the canonical engine/seed inventory contains 85. The live parity audit will fail until the catalogue is synchronised.
 
@@ -64,7 +84,7 @@ python scripts/seed_rules.py --apply --verbose
 
 This upserts rule metadata by `rule_id`. It does **not** approve rules or enable statutory scoring. Keep the fail-closed engine allowlist empty.
 
-## 5. Deploy backend and refresh evaluation snapshots
+## 6. Deploy backend and refresh evaluation snapshots
 
 The Render service has automatic deploy disabled. After the backend PR is reviewed and merged, manually deploy the exact merged `main` commit.
 
@@ -77,7 +97,7 @@ After the service starts:
 
 PDF generation must remain withheld when there is no completed, reconciled, released evaluation snapshot.
 
-## 6. Configure read-only production parity
+## 7. Configure read-only production parity
 
 Migration 0050 creates `nlc_ci_audit_role` with read-only access to `audit.active_legal_rule_ids`. After the migration:
 
@@ -90,7 +110,7 @@ Never use `DATABASE_URL` or `APP_DATABASE_URL` as this secret. The CI audit cred
 
 Then run the GitHub Actions workflow **Production Rule Parity**. It compares the live database view, public API catalogue, engine and seed. All four inventories must match.
 
-## 7. Frontend and final security verification
+## 8. Frontend and final security verification
 
 After backend deployment and API verification:
 - merge/deploy the frontend score-visibility PR;
@@ -100,7 +120,7 @@ After backend deployment and API verification:
 - run cross-tenant access, forged-GUC, signed-identity, staff/admin authorization and RLS tests;
 - confirm PDFs cannot be generated from stale or inconsistent snapshots.
 
-## 8. Release authority
+## 9. Release authority
 
 Statutory scoring stays disabled until:
 - every rule has an individually verified legal source, applicability, effective date and counsel approval;
