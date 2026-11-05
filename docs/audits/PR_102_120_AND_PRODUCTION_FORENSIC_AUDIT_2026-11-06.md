@@ -76,7 +76,7 @@ Migration 0050 replaces raw-GUC trust with an HMAC-verified principal, recreates
 - neondb_owner is a member of nlc_app_role and nlc_ci_audit_role with admin option; neither application role is a member of neondb_owner.
 - nlc_app_role has grants across 37 tables, including DELETE, REFERENCES, TRIGGER and TRUNCATE. Migration 0050 explicitly revokes TRUNCATE, REFERENCES and TRIGGER and removes selected DELETE privileges; verify effective grants after upgrade. RLS does not protect TRUNCATE.
 - 30 of 32 public tables currently have RLS enabled; zero have FORCE RLS.
-- Eight RLS-enabled tables have no policy, including company_user_access, legal_rules, legal_rule_versions, users, quotations, compliance_events and activity/audit tables.
+- Twelve RLS-enabled tables currently have no policy: eleven application tables (ai_output_log, ai_prompt_templates, company_user_access, compliance_events, document_access_log, legal_rule_versions, legal_rules, quotations, sro_registry, user_activity_logs and users) plus alembic_version. Migration 0050 defines policies for the eleven application tables and revokes all app-role access to alembic_version; verify every policy and FORCE RLS after upgrade.
 - compliance_calendar_events has a company_id column but RLS is disabled in production. Migration 0050 includes it in the tenant table set; verify post-upgrade policy and FORCE RLS.
 
 ### 3.4 Legal-rule catalogue drift
