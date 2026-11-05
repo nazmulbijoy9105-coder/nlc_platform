@@ -409,3 +409,33 @@ def test_black_override_is_reported_separately_from_category_deduction():
         "applied": 0,
         "status": "BLACK_OVERRIDE_POLICY",
     }
+
+
+def test_unverified_quorum_and_auditor_defaults_are_not_exposed_as_facts():
+    meeting = SimpleNamespace(
+        members_present=0,
+        members_present_verified=False,
+        members_present_evidence_ref=None,
+        members_present_verified_at=None,
+        members_present_verified_by=None,
+        quorum_required=2,
+        quorum_required_verified=False,
+        quorum_evidence_ref=None,
+        quorum_verified_at=None,
+        quorum_verified_by=None,
+        quorum_met=True,
+        auditor_reappointed=True,
+        auditor_reappointment_verified=False,
+        auditor_reappointment_evidence_ref=None,
+        auditor_reappointment_verified_at=None,
+        auditor_reappointment_verified_by=None,
+        minutes_prepared=False,
+        notice_sent_date=None,
+        notice_missing=False,
+    )
+    evidence = _agm_profile_evidence(meeting)
+    assert evidence["members_present_at_agm"] is None
+    assert evidence["agm_quorum_required"] is None
+    assert evidence["agm_quorum_met"] is None
+    assert evidence["auditor_reappointed_at_agm"] is None
+    assert evidence["agm_minutes_prepared"] is None
