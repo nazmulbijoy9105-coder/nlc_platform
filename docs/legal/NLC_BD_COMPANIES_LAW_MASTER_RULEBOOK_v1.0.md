@@ -134,7 +134,7 @@ The following is an inventory of rules present in the current legal-basis matrix
 | DIR-010 | Managing Director Appointed for More Than 5 Years | Section 110, Companies Act 1994 (Bangladesh) | YELLOW / 5 / BLACK=false | PENDING COUNSEL |
 | ESC-001 | Strike-Off Process Status Requires Verification | Section 346, Companies Act 1994 (Bangladesh) | NOT_EVALUATED / 0 / BLACK=false | PENDING COUNSEL — verify statutory notice sequence |
 | ESC-002 | Strike-Off Status Requires Verification | Section 346, Companies Act 1994 (Bangladesh) | NOT_EVALUATED / 0 / BLACK=false | PENDING COUNSEL — no backlog-based BLACK override |
-| ESC-003 | Corporate Rescue Mandatory — Systemic Failure | Sections 81, 115, 36, 346 (aggregate), Companies Act 1994 (Bangladesh) | BLACK / 10 / BLACK=true | PENDING COUNSEL |
+| ESC-003 | Corporate Rescue Mandatory — Systemic Failure | NLC internal risk policy; not a statutory Companies Act consequence | BLACK / 10 / BLACK=true | POLICY OWNER APPROVAL PENDING — internal policy only |
 | ESC-004 | Voluntary Winding Up | Section 130, Companies Act 1994 (Bangladesh) | BLACK / 30 / BLACK=true | PENDING COUNSEL |
 | ESC-005 | Investigation Order Pending | Section 104, Companies Act 1994 (Bangladesh) | RED / 20 / BLACK=false | PENDING COUNSEL |
 | FX-001 | Foreign Exchange Violation | Foreign Exchange Regulation Act 1947 (Bangladesh) | RED / 15 / BLACK=false | PENDING COUNSEL |
