@@ -11,6 +11,10 @@ services:
         value: production
       - key: DATABASE_URL
         sync: false
+      - key: APP_DATABASE_URL
+        sync: false
+      - key: REQUIRE_RLS_APP_ROLE
+        value: "true"
       - key: REDIS_URL
         sync: false
       - key: JWT_SECRET_KEY
@@ -28,8 +32,10 @@ services:
     dockerCommand: celery -A app.worker.celery_app worker --loglevel=info --concurrency=2
     autoDeploy: false
     envVars:
-      - key: DATABASE_URL
+      - key: APP_DATABASE_URL
         sync: false
+      - key: REQUIRE_RLS_APP_ROLE
+        value: "true"
       - key: REDIS_URL
         sync: false
       - key: CELERY_BROKER_URL
@@ -45,8 +51,10 @@ services:
     dockerCommand: celery -A app.worker.celery_app beat --loglevel=info
     autoDeploy: false
     envVars:
-      - key: DATABASE_URL
+      - key: APP_DATABASE_URL
         sync: false
+      - key: REQUIRE_RLS_APP_ROLE
+        value: "true"
       - key: REDIS_URL
         sync: false
       - key: CELERY_BROKER_URL
