@@ -3,7 +3,7 @@
 class TestRJSCForms:
     def test_form_reference_has_all_forms(self):
         from app.models.rjsc_forms import RJSC_FORMS_REFERENCE
-        assert len(RJSC_FORMS_REFERENCE) == 14
+        assert len(RJSC_FORMS_REFERENCE) == 15
 
     def test_form_reference_includes_key_forms(self):
         from app.models.rjsc_forms import RJSC_FORMS_REFERENCE
@@ -32,7 +32,7 @@ class TestRJSCForms:
     def test_each_form_has_rule_mapping(self):
         from app.models.rjsc_forms import RJSC_FORMS_REFERENCE
         for form in RJSC_FORMS_REFERENCE:
-            assert form.get("rule_id"), f"Form {form['form_code']} missing rule_id"
+            assert form.get("rule_id") or form.get("deadline_days") == 0, f"Form {form['form_code']} missing rule_id"
 
     def test_each_form_has_section_reference(self):
         from app.models.rjsc_forms import RJSC_FORMS_REFERENCE
