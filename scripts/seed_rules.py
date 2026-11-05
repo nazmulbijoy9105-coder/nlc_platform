@@ -307,17 +307,25 @@ async def seed_rules(dry_run: bool = True, verbose: bool = False) -> int:
             for item in drifted_rules:
                 print(f"   DRIFT: {item}")
 
-        cnt_res = await conn.execute(sa.text("SELECT COUNT(*) FROM legal_rules WHERE is_active = TRUE"))
-        db_count = cnt_res.scalar()
+        ids_result = await conn.execute(
+            sa.text("SELECT rule_id FROM legal_rules WHERE is_active = TRUE")
+        )
+        active_ids = {row[0] for row in ids_result.fetchall()}
+        expected_ids = {rule["rule_id"] for rule in SEED_RULES}
+        db_count = len(active_ids)
+        missing_ids = sorted(expected_ids - active_ids)
+        extra_ids = sorted(active_ids - expected_ids)
         await engine.dispose()
 
         print(f"\n{'='*60}")
         print(f" Done! Inserted: {inserted}, Existing unchanged: {unchanged}, Drift: {drift}")
-        print(f" DB active rules: {db_count}")
-        if db_count >= EXPECTED_RULE_COUNT:  # type: ignore
-            print(f"  AI Constitution satisfied: all {db_count} rules active.")
-        else:
-            print(f"  WARNING: expected {EXPECTED_RULE_COUNT}, got {db_count}")
+        print(f" DB active rules: {db_count} (seed expects {EXPECTED_RULE_COUNT})")
+        if missing_ids:
+            print("  Missing rule IDs: " + ", ".join(missing_ids))
+        if extra_ids:
+            print("  Extra active rule IDs (do not delete automatically): " + ", ".join(extra_ids))
+        if drifted_rules:
+            print("  Existing definition drift requires the audited Super Admin workflow.")
         print(f"{'='*60}\n")
         return inserted
 
