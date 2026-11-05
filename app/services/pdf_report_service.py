@@ -295,6 +295,30 @@ def _render_rescue_section(rescue_plan: Any) -> str:
     """
 
 
+def _verified_flag_score(flags: Any) -> tuple[int, bool]:
+    """Compute the score implied by verified rules only.
+
+    Returns (indicated_score, has_black_override). Unapproved rules
+    are excluded from both the score and the BLACK override check.
+    """
+    if not LEGAL_SCORE_RELEASED:
+        return (0, False)
+
+    verified = [
+        f for f in flags
+        if getattr(f, "rule_id", "") in VERIFIED_RULE_IDS
+    ]
+
+    total_impact = sum(getattr(f, "score_impact", 0) for f in verified)
+    indicated_score = max(0, min(100, 100 - total_impact))
+    has_black = any(
+        getattr(f, "is_black_override", False)
+        or getattr(f, "severity", "") == "BLACK"
+        for f in verified
+    )
+    return (indicated_score, has_black)
+
+
 def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
     """Render raw deductions, category caps, and applied deductions.
 
