@@ -49,3 +49,13 @@ the old production API before the new route has been deployed. After migration
 0049 and the application release are live, run the **Production Rule Parity**
 GitHub Actions workflow using the deployed API base URL. It compares the
 read-only DB view, the public active-rules API, the branch engine and seed set.
+
+The production Neon role `nlc_ci_audit_role` and view have been provisioned.
+To finish the GitHub secret step, open the repository's **Settings → Secrets and
+variables → Actions → New repository secret** and add:
+
+- Name: `NLC_PRODUCTION_DATABASE_URL`
+- Value: the Neon connection URI for `nlc_ci_audit_role` on the production
+  branch and `neondb` database.
+
+Do not paste the connection URI into issues, pull-request comments, or chat.
