@@ -28,10 +28,11 @@ if TYPE_CHECKING:
 # CRITICAL FIX: Use settings to auto-convert postgres:// to postgresql+asyncpg://
 # Render injects postgres:// but asyncpg requires postgresql+asyncpg://
 # ══════════════════════════════════════════════════════════════════════
-from app.core.config import get_settings
+_APP_DATABASE_URL = os.environ.get("APP_DATABASE_URL", "").strip()
+_MIGRATION_DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+_REQUIRE_RLS_APP_ROLE = os.environ.get("REQUIRE_RLS_APP_ROLE", "false").lower() == "true"
 
-_settings = get_settings()
-if _settings.REQUIRE_RLS_APP_ROLE and not _settings.APP_DATABASE_URL:
+if _REQUIRE_RLS_APP_ROLE and not _APP_DATABASE_URL:
     raise RuntimeError(
         "APP_DATABASE_URL is required when REQUIRE_RLS_APP_ROLE=true; "
         "refusing to run the API with a potentially BYPASSRLS migration role."
@@ -40,9 +41,13 @@ if _settings.REQUIRE_RLS_APP_ROLE and not _settings.APP_DATABASE_URL:
 # AsyncSessionLocal is the runtime application pool. DATABASE_URL remains the
 # privileged connection used by Alembic; APP_DATABASE_URL must be a
 # non-superuser, NOBYPASSRLS role such as nlc_app_role.
-DATABASE_URL = _settings.ASYNC_APP_DATABASE_URL
+DATABASE_URL = _APP_DATABASE_URL or _MIGRATION_DATABASE_URL
 if not DATABASE_URL:
     raise RuntimeError('DATABASE_URL or APP_DATABASE_URL is empty; refusing to start')
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 # ── CONNECTION ────────────────────────────────────────────────────────
 _testing = os.environ.get("TESTING", "false").lower() == "true"
