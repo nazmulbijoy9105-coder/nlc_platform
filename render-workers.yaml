@@ -11,6 +11,8 @@ services:
     envVars:
       - key: APP_DATABASE_URL
         sync: false
+      - key: NLC_RLS_HMAC_SECRET
+        sync: false
       - key: REQUIRE_RLS_APP_ROLE
         value: "true"
       - key: REDIS_URL
@@ -29,6 +31,8 @@ services:
     autoDeploy: false
     envVars:
       - key: APP_DATABASE_URL
+        sync: false
+      - key: NLC_RLS_HMAC_SECRET
         sync: false
       - key: REQUIRE_RLS_APP_ROLE
         value: "true"
