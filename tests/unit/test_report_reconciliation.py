@@ -40,14 +40,14 @@ FLAGS = [
 
 
 def test_cap_adjustment_row_rendered(monkeypatch):
-    _enable_authorized_score_for_report_test(monkeypatch, {"REG-002", "AUD-001", "TL-001"})
+    _enable_authorized_score_for_report_test(monkeypatch, {"REG-001", "AGM-001", "OFF-001"})
     page = build_compliance_report_html(_company(), FLAGS, WHEN)
     assert "Category cap applied (REG)" in page
     assert "raw deduction 12 pts capped to 10 pts" in page
 
 
 def test_reconciliation_line_matches_score(monkeypatch):
-    _enable_authorized_score_for_report_test(monkeypatch, {"REG-002", "AUD-001", "TL-001"})
+    _enable_authorized_score_for_report_test(monkeypatch, {"REG-001", "AGM-001", "OFF-001"})
     page = build_compliance_report_html(_company(score=75), FLAGS, WHEN)
     assert "effective deductions -25 pts" in page
     assert "indicated score 75/100" in page
