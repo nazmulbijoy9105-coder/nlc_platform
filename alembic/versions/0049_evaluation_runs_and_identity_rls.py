@@ -63,6 +63,28 @@ def upgrade() -> None:
     )
     op.execute(
         """
+        CREATE POLICY users_auth_select
+        ON users FOR SELECT
+        USING (current_setting('app.current_user_id', true) = 'AUTH')
+        """
+    )
+    op.execute(
+        """
+        CREATE POLICY users_auth_insert
+        ON users FOR INSERT
+        WITH CHECK (current_setting('app.current_user_id', true) = 'AUTH')
+        """
+    )
+    op.execute(
+        """
+        CREATE POLICY users_auth_update
+        ON users FOR UPDATE
+        USING (current_setting('app.current_user_id', true) = 'AUTH')
+        WITH CHECK (current_setting('app.current_user_id', true) = 'AUTH')
+        """
+    )
+    op.execute(
+        """
         CREATE POLICY company_user_access_self_or_admin_select
         ON company_user_access FOR SELECT
         USING (
@@ -390,6 +412,9 @@ def downgrade() -> None:
     op.execute("DROP POLICY IF EXISTS ai_prompt_templates_admin_only ON ai_prompt_templates")
     op.execute("DROP POLICY IF EXISTS company_user_access_admin_write ON company_user_access")
     op.execute("DROP POLICY IF EXISTS company_user_access_self_or_admin_select ON company_user_access")
+    op.execute("DROP POLICY IF EXISTS users_auth_update ON users")
+    op.execute("DROP POLICY IF EXISTS users_auth_insert ON users")
+    op.execute("DROP POLICY IF EXISTS users_auth_select ON users")
     op.execute("DROP POLICY IF EXISTS users_admin_write ON users")
     op.execute("DROP POLICY IF EXISTS users_self_or_admin_select ON users")
 
