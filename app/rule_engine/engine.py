@@ -1310,28 +1310,51 @@ class NLCRuleEngine:
                     detail={"delay_days": delay}
                 ))
 
-        if c.unfiled_returns_count is not None and c.unfiled_returns_count >= 2:  # type: ignore
+        if c.unfiled_returns_count is not None and c.unfiled_returns_count >= 2:
             self._add_flag(ComplianceFlag(
                 rule_id="AR-002",
-                flag_code="ANNUAL_RETURN_BACKLOG_RED",
-                severity=Severity.RED,
-                score_impact=20,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=f"{c.unfiled_returns_count} Annual Returns unfiled. Section 346: strike-off risk elevated.",
-                statutory_basis="Sections 36 and 304, Companies Act 1994 (Bangladesh)",
-                detail={"unfiled_count": c.unfiled_returns_count}
+                flag_code="ANNUAL_RETURN_BACKLOG_REVIEW_REQUIRED",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    f"{c.unfiled_returns_count} annual returns are reported outstanding. "
+                    "This is an internal review signal only; backlog alone does not "
+                    "establish Registrar strike-off, dissolution or director liability."
+                ),
+                statutory_basis=(
+                    "Section 36 and Schedule X (annual-return duty); Section 346 "
+                    "governs a separate Registrar strike-off procedure."
+                ),
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                is_black_override=False,
+                escalation_pending=True,
+                detail={"unfiled_count": c.unfiled_returns_count},
             ))
 
-        if c.unfiled_returns_count is not None and c.unfiled_returns_count >= 3:  # type: ignore
+        if c.unfiled_returns_count is not None and c.unfiled_returns_count >= 3:
             self._add_flag(ComplianceFlag(
                 rule_id="AR-003",
-                flag_code="ANNUAL_RETURN_BACKLOG_BLACK",
-                severity=Severity.BLACK,
-                score_impact=20,
-                revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description=f"{c.unfiled_returns_count} Annual Returns unfiled. Section 346: severe default, director liability.",
-                statutory_basis="Sections 36 and 304, Companies Act 1994 (Bangladesh)",
-                detail={"unfiled_count": c.unfiled_returns_count}
+                flag_code="ANNUAL_RETURN_BACKLOG_REVIEW_REQUIRED",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    f"{c.unfiled_returns_count} annual returns are reported outstanding. "
+                    "A three-year backlog does not itself prove that RJSC has begun "
+                    "Section 346 proceedings, that the company is dissolved, or that "
+                    "a director has incurred a separate penalty."
+                ),
+                statutory_basis=(
+                    "Section 36 and Schedule X (annual-return duty); Section 346 "
+                    "requires separate Registrar grounds and statutory notice steps."
+                ),
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                is_black_override=False,
+                escalation_pending=True,
+                detail={"unfiled_count": c.unfiled_returns_count},
             ))
 
         if c.annual_return_filed and c.annual_return_content_complete is False:
@@ -2486,8 +2509,8 @@ class NLCRuleEngine:
                 severity=Severity.NOT_EVALUATED,
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="A multi-year AGM/annual-return backlog is an internal escalation indicator only. It does not establish that RJSC has commenced strike-off. Verify the section 304 grounds, Registrar notice, service, procedural stage, appeal, restoration and current company status.",
-                statutory_basis="Section 304, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required",
+                description="A multi-year AGM/annual-return backlog is an internal escalation indicator only. It does not establish that RJSC has commenced strike-off. Verify the section 346 grounds, Registrar notice, service, procedural stage, appeal, restoration and current company status.",
+                statutory_basis="section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required",
                 state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                 eval_state="UNKNOWN",
                 detail={"agm_years": agm_years, "ar_years": ar_years, "official_notice_required": True}
@@ -2503,7 +2526,7 @@ class NLCRuleEngine:
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="Three or more years of apparent filing default or an RJSC strike-off-list indicator requires case-specific lawyer review. This is not a finding that strike-off is imminent or that dissolution has occurred.",
-                statutory_basis="Section 304, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required",
+                statutory_basis="section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required",
                 detail={"agm_years": agm_years, "ar_years": ar_years, "on_list": c.on_rjsc_strike_off_list},
                 state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                 eval_state="UNKNOWN",
