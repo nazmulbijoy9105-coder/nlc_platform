@@ -51,7 +51,7 @@ def test_company_response_redacts_financial_fields_without_permission():
 def test_company_response_includes_financial_fields_with_permission():
     response = _company_to_response(_company(), can_view_financials=True)
 
-    assert response.revenue_tier == RevenueTier.MEDIUM.value
+    assert response.revenue_tier == RevenueTier.STRUCTURED_REGULARIZATION.value
     assert response.tax_return_filed_for_current_fy is True
     assert response.advance_tax_q1_paid is True
     assert response.penalty_notices_received == 2
