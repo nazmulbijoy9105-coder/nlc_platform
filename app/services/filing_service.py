@@ -195,20 +195,46 @@ class AGMService(BaseService[AGM]):
         is_default = bool(agm.agm_deadline and agm_date > agm.agm_deadline)
         delay_days = (agm_date - agm.agm_deadline).days if is_default and agm.agm_deadline else 0
 
+        # A normal "mark held" request records user-entered facts; it does not
+        # perform legal verification. Preserve omitted raw values, but revoke
+        # any prior verification markers so changed meeting data cannot inherit
+        # stale evidence approval.
         return await self.update_instance(
             agm,
             agm_held=True,
             agm_date=agm_date,
             venue=venue,
-            members_present=members_present if members_present is not None else 0,
+            members_present=(
+                members_present if members_present is not None else agm.members_present
+            ),
             quorum_required=quorum_required,
             quorum_met=quorum_met,
             quorum_basis=quorum_basis,
-            auditor_reappointed=auditor_reappointed,
+            auditor_reappointed=(
+                auditor_reappointed
+                if auditor_reappointed is not None else agm.auditor_reappointed
+            ),
             accounts_adopted=accounts_adopted,
             agm_held_without_audit=agm_held_without_audit,
-            minutes_prepared=minutes_prepared,
-            minutes_document_id=minutes_document_id,
+            minutes_prepared=(
+                minutes_prepared if minutes_prepared is not None else agm.minutes_prepared
+            ),
+            minutes_document_id=(
+                minutes_document_id
+                if minutes_document_id is not None else agm.minutes_document_id
+            ),
+            members_present_verified=False,
+            members_present_evidence_ref=None,
+            members_present_verified_at=None,
+            members_present_verified_by=None,
+            quorum_required_verified=False,
+            quorum_evidence_ref=None,
+            quorum_verified_at=None,
+            quorum_verified_by=None,
+            auditor_reappointment_verified=False,
+            auditor_reappointment_evidence_ref=None,
+            auditor_reappointment_verified_at=None,
+            auditor_reappointment_verified_by=None,
             is_default=is_default,
             delay_days=delay_days,
         )
