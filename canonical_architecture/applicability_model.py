@@ -235,14 +235,16 @@ APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {
     # ── Escalation (Section 304; review only) ────────────────────────
     "ESC-001": ApplicabilityRule(
         "ESC-001", ("ALL",), ("agm_years_unfiled", "annual_return_years_unfiled"), (),
-        "Companies Act 1994, s.304: filing backlog is an escalation/review trigger "
-        "only; it does not prove that the Registrar commenced strike-off."
+        "Companies Act 1994, s.346: filing backlog is only a risk/review trigger; "
+        "it does not itself prove that the Registrar commenced defunct-company "
+        "strike-off proceedings."
     ),
     "ESC-002": ApplicabilityRule(
         "ESC-002", ("ALL",), ("registrar_strike_off_notice_or_verified_register_status",), ("notice_service_evidence_ref",),
-        "Companies Act 1994, s.304: require actual Registrar notice/procedural-stage "
-        "evidence. Three years of backlog or an unverified list indicator is not "
-        "proof that strike-off is imminent or dissolution has occurred."
+        "Companies Act 1994, s.346: require evidence of the Registrar's statutory "
+        "notice sequence (initial inquiry, registered follow-up, Gazette notice, "
+        "and expiry of the stated 90-day show-cause period). Three years of backlog "
+        "or an unverified list indicator is not proof of strike-off or dissolution."
     ),
 
     # ── Default (Sections 94, 397) ──────────────────────────────────
