@@ -542,7 +542,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
         return [
             {
                 "month":          row.snapshot_month.isoformat(),
-                "score":          row.score,
+                "score":          (
+                    None
+                    if getattr(row.risk_band, "value", row.risk_band) == "NOT_EVALUATED"
+                    else row.score
+                ),
                 "risk_band":      row.risk_band,
                 "agm_score":      row.agm_score,
                 "audit_score":    row.audit_score,
