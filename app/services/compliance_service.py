@@ -341,7 +341,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # ── Score snapshot (monthly, append-only, tamper-evident) ──
         snapshot_month = today.replace(day=1)
         score_hash = hashlib.sha256(
-            f"{company_id}{score}{risk_band}{snapshot_month}{settings.rule_engine_version}".encode()
+            f"{company_id}{score_for_current}{risk_band}{snapshot_month}{settings.rule_engine_version}".encode()
         ).hexdigest()
 
         # Only one snapshot per company per month
@@ -358,7 +358,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             snapshot = ComplianceScoreHistory(
                 id=uuid.uuid4(),
                 company_id=company_id,
-                score=score,
+                score=score_for_current,
                 risk_band=risk_band,
                 snapshot_month=snapshot_month,
                 calculated_at=now,
@@ -373,7 +373,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 score_hash=score_hash,
                 engine_version=settings.rule_engine_version,
                 trigger_source=trigger_source,
-                evaluation_status="COMPLETED",  # OPS-004
+                evaluation_status=("COMPLETED" if score_for_current is not None else "NOT_RELEASED"),
             )
             self.db.add(snapshot)
 
