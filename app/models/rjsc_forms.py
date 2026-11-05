@@ -57,8 +57,8 @@ RJSC_FORMS_REFERENCE = [
     {"form_code": "SCHEDULE_X", "form_number": "Schedule X", "form_name": "Annual Return", "section": "Section 36", "rule_id": "AR-001", "deadline_days": 21},
     {"form_code": "FORM_XII", "form_number": "XII", "form_name": "Particulars of Directors, Managers and Changes", "section": "Section 115", "rule_id": "DIR-001", "deadline_days": 14},
     {"form_code": "FORM_XV", "form_number": "XV", "form_name": "Return of Allotment", "section": "Section 151", "rule_id": "SH-001", "deadline_days": 60},
-    {"form_code": "FORM_XVIII", "form_number": "XVIII", "form_name": "Particulars of Mortgage or Charge", "section": "Section 159", "rule_id": "CAP-002", "deadline_days": 21},
-    {"form_code": "FORM_XIX", "form_number": "XIX", "form_name": "Particulars of Modification of Mortgage or Charge", "section": "Section 167(3)", "rule_id": "CHG-002", "deadline_days": 21},
+    {"form_code": "FORM_XVIII", "form_number": "XVIII", "form_name": "Particulars of Mortgage or Charge", "section": "Section 159(1)", "rule_id": "CAP-002", "deadline_days": 21},
+    {"form_code": "FORM_XIX", "form_number": "XIX", "form_name": "Particulars of Modification of Mortgage or Charge", "section": "Section 167(3)", "rule_id": None, "deadline_days": 21},
     {"form_code": "FORM_XXVIII", "form_number": "XXVIII", "form_name": "Memorandum of Satisfaction of Mortgage or Charge", "section": "Section 172", "rule_id": "CHG-001", "deadline_days": 21},
     # Auditor's separate notice duty under s.210(2); do not map to AUD-001,
     # which evaluates the company's first-auditor appointment under s.210(6).
