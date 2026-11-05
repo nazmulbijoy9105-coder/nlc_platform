@@ -57,7 +57,7 @@ class ComplianceFlag(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     company_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("companies.id", ondelete="CASCADE"),
+        ForeignKey("companies.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
     )
