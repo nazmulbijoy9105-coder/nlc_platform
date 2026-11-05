@@ -2441,7 +2441,6 @@ class NLCRuleEngine:
 
         # ACC-002: Section 190 allows 30 days after the AGM, or if no AGM
         # was held, 30 days after the latest date on which it should have been held.
-        if c.financial_statements_filed is False:
         if c.financial_statements_filed is False and self._agm_history_is_verified(c):
             filing_deadline = None
             deadline_basis = None
