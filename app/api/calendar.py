@@ -33,7 +33,7 @@ async def generate_calendar(
 async def get_calendar(
     company_id: UUID,
     days_ahead: int = Query(90, ge=30, le=365),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db_for_user),
     current_user=Depends(get_current_user),
 ):
     service = ComplianceCalendarService(db)
