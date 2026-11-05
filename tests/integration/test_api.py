@@ -343,7 +343,7 @@ class TestFilings:
 
         agm = await AGMService(db).create_agm(
             company_id=db_company.id,
-            financial_year=2021,
+            financial_year=2028,
         )
         response = await api_client.patch(
             f"/api/v1/filings/agm/{agm.id}/held",
@@ -360,11 +360,18 @@ class TestFilings:
         )
         assert response.status_code == 200, response.text
         result = response.json()
-        assert result["quorum_met"] is True
-        assert result["quorum_required"] == 2
+        # Client-provided quorum is not a legal verification. Without
+        # attendance and Articles evidence reviewed by an authorized reviewer,
+        # all derived legal conclusions remain unknown.
+        assert result["quorum_met"] is None
+        assert result["quorum_required"] is None
+        assert result["quorum_basis"] is None
+        assert result["members_present"] is None
         assert result["venue"] == "Registered Office"
-        assert result["accounts_adopted"] is True
-        assert result["agm_held_without_audit"] is False
+        assert result["accounts_adopted"] is None
+        assert result["agm_held_without_audit"] is None
+        assert result["auditor_reappointed"] is None
+        assert result["minutes_prepared"] is None
 
     @pytest.mark.asyncio
     async def test_list_agms_for_company(self, api_client, staff_token, db_company):
