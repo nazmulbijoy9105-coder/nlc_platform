@@ -19,7 +19,7 @@ from app.core.security import (
     verify_password,
     verify_totp_code,
 )
-from app.models.database import get_db, set_rls_context
+from app.models.database import AsyncSessionLocal, get_db, set_rls_context
 from app.models.user import User
 from app.services.notification_service import ActivityService
 from app.services.user_service import UserService
@@ -107,13 +107,21 @@ async def login(request: Request,body: LoginBody, db=Depends(get_auth_db)):
     verified_user = await svc.verify_credentials(body.email, body.password)
     if not verified_user:
         # Audit log failed login
-        activity = ActivityService(db)
-        await activity.log(
-            action="LOGIN_FAILED",
-            resource_type="user",
-            description=f"Failed login attempt for {body.email}",
-            actor_user_id=user.id,
-        )
+        # Persist this audit event in its own transaction: the request then
+        # returns 401, so the request-scoped DB dependency correctly rolls back.
+        async with AsyncSessionLocal() as audit_db:
+            try:
+                await set_rls_context(audit_db, str(user.id))
+                await ActivityService(audit_db).log(
+                    action="LOGIN_FAILED",
+                    resource_type="user",
+                    description=f"Failed login attempt for {body.email}",
+                    actor_user_id=user.id,
+                )
+                await audit_db.commit()
+            except Exception:
+                await audit_db.rollback()
+                raise
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     if not verified_user.is_active:
