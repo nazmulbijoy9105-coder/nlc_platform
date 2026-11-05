@@ -7,6 +7,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy import select
 
+from app.core.dependencies import get_admin_db, get_db_for_user
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -84,7 +85,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 @router.post("/login", response_model=LoginResponse)
 @_limiter.limit("10/minute")
-async def login(request: Request,body: LoginBody, db=Depends(get_db)):
+async def login(request: Request,body: LoginBody, db=Depends(get_admin_db)):
     """Login with lockout protection, failed attempt tracking, and 2FA support."""
     from app.services.user_service import UserService
     svc = UserService(db)
@@ -183,7 +184,7 @@ async def login(request: Request,body: LoginBody, db=Depends(get_db)):
 
 
 @router.get("/me", response_model=UserResponse)
-async def me(current_user: dict = Depends(get_current_user), db=Depends(get_db)):
+async def me(current_user: dict = Depends(get_current_user), db=Depends(get_db_for_user)):
     result = await db.execute(select(User).where(User.id == current_user["sub"]))
     user = result.scalar_one_or_none()
 
@@ -204,7 +205,7 @@ async def me(current_user: dict = Depends(get_current_user), db=Depends(get_db))
 @router.post("/2fa/setup")
 async def setup_2fa(
     current_user: dict = Depends(get_current_user),
-    db=Depends(get_db),
+    db=Depends(get_db_for_user),
 ):
     """Start TOTP setup for the authenticated, active user."""
     user_id = current_user.get("sub") or current_user.get("user_id")
@@ -264,9 +265,10 @@ async def verify_2fa(request: Request, body: Verify2FARequest, db=Depends(get_db
     jti = payload.get("jti") if payload else None
     exp = payload.get("exp") if payload else None
     user_id = payload.get("sub") if payload else None
-    if not payload or not isinstance(jti, str) or not jti or not user_id or not exp:
+    if not payload or not isinstance(jti, str) or not jti or not exp:
         raise HTTPException(status_code=401, detail="Invalid or expired 2FA challenge")
 
+    await set_rls_context(db, str(user_id))
     result = await db.execute(
         select(User).where(User.id == user_id, User.is_active.is_(True))
     )
@@ -309,8 +311,9 @@ async def verify_2fa(request: Request, body: Verify2FARequest, db=Depends(get_db
 async def refresh_token(body: RefreshRequest, db=Depends(get_db)):
     """Exchange a valid refresh token for a new access token."""
     payload = decode_token(body.refresh_token, expected_type="refresh")
-    if not payload:
+    if not payload or not payload.get("sub"):
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+    await set_rls_context(db, str(payload["sub"]))
     result = await db.execute(select(User).where(User.id == payload.get("sub")))
     user = result.scalar_one_or_none()
     if not user or not user.is_active:
@@ -379,7 +382,7 @@ class ChangePasswordRequest(BaseModel):
 async def change_password(
     body: ChangePasswordRequest,
     token: str = Depends(oauth2_scheme),
-    db=Depends(get_db),
+    db=Depends(get_db_for_user),
 ):
     """Change password with strength validation."""
     payload = await get_current_user(token)
@@ -412,7 +415,7 @@ class SignupRequest(BaseModel):
 
 
 @router.post("/signup", response_model=dict)
-async def signup(body: SignupRequest, db=Depends(get_db)):
+async def signup(body: SignupRequest, db=Depends(get_admin_db)):
     """Public signup — creates a new user account.
     
     Available roles: LEGAL_STAFF, ADMIN_STAFF, CLIENT_DIRECTOR, CLIENT_VIEW_ONLY
