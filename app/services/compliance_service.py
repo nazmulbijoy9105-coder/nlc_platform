@@ -411,6 +411,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "state": getattr(getattr(flag, "state", None), "value", getattr(flag, "state", None)),
             })
 
+        flags_snapshot = jsonable_encoder(flags_snapshot)
         sb = output.score_breakdown
         score_breakdown_snapshot = None if score_for_current is None else {
             "raw_total": sb.raw_total,
