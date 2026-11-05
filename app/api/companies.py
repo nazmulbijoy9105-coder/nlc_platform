@@ -333,7 +333,7 @@ async def list_companies(search: str | None = Query(None), risk_band: RiskBand |
         )
     companies, _total = await svc.list_companies(
         search=search,
-        risk_band=risk_band,
+        risk_band=risk_band if LEGAL_SCORE_RELEASED else None,
         company_status=company_status,
         revenue_tier=revenue_tier,
         is_dormant=is_dormant,
