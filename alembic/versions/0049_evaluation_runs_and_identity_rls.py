@@ -80,6 +80,43 @@ def upgrade() -> None:
         """
     )
 
+    # Existing tenant policies cast the identity GUC to UUID inside an OR
+    # expression. PostgreSQL may evaluate that cast even for ADMIN, making
+    # the admin sentinel invalid. Compare UUID text to the signed identity
+    # string instead, preserving the ADMIN branch without unsafe casts.
+    tenant_policies = {
+        "companies": ("companies_access_policy", "id"),
+        "agms": ("agms_company_policy", "company_id"),
+        "annual_returns": ("annual_returns_company_policy", "company_id"),
+        "audits": ("audits_company_policy", "company_id"),
+        "compliance_flags": ("compliance_flags_company_policy", "company_id"),
+        "compliance_score_history": ("compliance_score_history_company_policy", "company_id"),
+        "directors": ("directors_company_policy", "company_id"),
+        "documents": ("documents_company_policy", "company_id"),
+        "notifications": ("notifications_company_policy", "company_id"),
+        "registered_office_history": ("registered_office_history_company_policy", "company_id"),
+        "rescue_plans": ("rescue_plans_company_policy", "company_id"),
+        "rescue_steps": ("rescue_steps_company_policy", "company_id"),
+        "rjsc_form_filings": ("rjsc_form_filings_company_policy", "company_id"),
+        "share_transfers": ("share_transfers_company_policy", "company_id"),
+        "shareholders": ("shareholders_company_policy", "company_id"),
+        "statutory_registers": ("statutory_registers_company_policy", "company_id"),
+        "tasks": ("tasks_company_policy", "company_id"),
+    }
+    for table, (policy_name, company_column) in tenant_policies.items():
+        op.execute(f"DROP POLICY IF EXISTS {policy_name} ON {table}")
+        scope = (
+            "current_setting('app.current_user_id', true) = 'ADMIN' "
+            f"OR {company_column} IN ("
+            "SELECT access.company_id FROM company_user_access access "
+            "WHERE access.user_id::text = current_setting('app.current_user_id', true) "
+            "AND access.is_active = true)"
+        )
+        op.execute(
+            f"CREATE POLICY {policy_name} ON {table} FOR ALL "
+            f"USING ({scope}) WITH CHECK ({scope})"
+        )
+
     op.execute("ALTER TABLE compliance_evaluation_runs ENABLE ROW LEVEL SECURITY")
     op.execute(
         """
