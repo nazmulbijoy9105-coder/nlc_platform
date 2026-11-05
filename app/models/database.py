@@ -168,6 +168,13 @@ async def set_auth_context(session: AsyncSession) -> None:
     )
 
 
+async def set_catalog_context(session: AsyncSession) -> None:
+    """Expose only public legal/reference catalogue policies to anonymous reads."""
+    await session.execute(
+        text("SELECT set_config('app.current_user_id', 'CATALOG', true)")
+    )
+
+
 # ── STARTUP / SHUTDOWN ────────────────────────────────────────────────
 async def create_tables() -> None:
     """Create all tables. Used in testing only. Production uses Alembic."""
