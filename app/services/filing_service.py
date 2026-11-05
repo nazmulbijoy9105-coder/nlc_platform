@@ -45,7 +45,6 @@ class AGMService(BaseService[AGM]):
         quorum_required: int | None = None,
         auditor_reappointed: bool | None = None,
         minutes_prepared: bool | None = None,
-        minutes_prepared: bool = False,
         minutes_filed_rjsc: bool = False,
         rjsc_filing_date: date | None = None,
         is_default: bool = False,
