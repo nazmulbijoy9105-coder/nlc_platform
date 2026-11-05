@@ -432,3 +432,11 @@ def test_DEF_002_notice_count_alone_is_not_a_confirmed_statutory_breach():
     assert flag.severity == Severity.NOT_EVALUATED
     assert flag.score_impact == 0
     assert "Case-specific" in flag.statutory_basis
+
+
+def test_AUDIT_003_score_hash_binds_the_evaluation_input_snapshot():
+    first = _base_profile(company_name="Snapshot A Ltd")
+    second = _base_profile(company_name="Snapshot B Ltd")
+    result_a = NLCRuleEngine().evaluate(first, today=date(2026, 11, 3))
+    result_b = NLCRuleEngine().evaluate(second, today=date(2026, 11, 3))
+    assert result_a.score_breakdown.score_hash != result_b.score_breakdown.score_hash
