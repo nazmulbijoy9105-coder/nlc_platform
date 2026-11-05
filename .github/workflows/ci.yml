@@ -108,3 +108,18 @@ jobs:
 
       - name: Run canonical integrity tests
         run: python -m pytest tests/test_canonical_integrity.py -q --tb=short
+
+  docker-runtime-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build production API image
+        run: docker build --target api -t nlc-api:ci .
+      - name: Verify Fontconfig cache is writable as non-root runtime user
+        run: |
+          docker run --rm --entrypoint /bin/sh nlc-api:ci -c '
+            id
+            test -w "$XDG_CACHE_HOME/fontconfig"
+            fc-cache -f
+            fc-match "Noto Sans"
+          '
