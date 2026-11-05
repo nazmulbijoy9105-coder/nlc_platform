@@ -342,6 +342,15 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
     """
 
 
+def _flag_impact_label(flag: Any) -> str:
+    applied = getattr(
+        flag,
+        "score_impact_applied",
+        getattr(flag, "score_impact", 0),
+    ) or 0
+    return f"-{int(applied)} pts" if applied else "Not applied"
+
+
 def build_compliance_report_html(
     company: Any,
     flags: Any,
@@ -368,7 +377,7 @@ def build_compliance_report_html(
     if flags:
         rows = "".join(
             f"<tr><td>{esc(f.rule_id)}</td><td>{esc(f.severity)}</td>"
-            f"<td>{esc(f.description)}</td><td>{esc((f'-{getattr(f, 'score_impact_applied', getattr(f, 'score_impact', 0))} pts') if getattr(f, 'score_impact_applied', getattr(f, 'score_impact', 0)) else 'Not applied')}</td></tr>"
+            f"<td>{esc(f.description)}</td><td>{esc(_flag_impact_label(f))}</td></tr>"
             for f in flags
         )
     else:
