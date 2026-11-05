@@ -190,13 +190,18 @@ def _company_to_response(company) -> CompanyResponse:
             return None
         return str(val.value if hasattr(val, "value") else val)
 
+    risk_band = _s(company.current_risk_band)
+    compliance_score = (
+        None if risk_band == "NOT_EVALUATED" else company.current_compliance_score
+    )
+
     return CompanyResponse(
         id=str(company.id),
         name=company.company_name,
         registration_number=company.registration_number,
         incorporation_date=company.incorporation_date.isoformat() if company.incorporation_date else None,  # type: ignore
-        compliance_score=company.current_compliance_score,
-        band=_s(company.current_risk_band),
+        compliance_score=compliance_score,
+        band=risk_band,
         last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
         director_count=director_count,
         violation_count=violation_count,
@@ -315,7 +320,9 @@ async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_d
     compliance_svc = ComplianceService(db)
     company = await company_svc.get_by_id_or_404(company_id)
     flag_summary = await compliance_svc.get_flag_summary(company_id)
-    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=company.current_compliance_score, pre_override_score=None, risk_band=company.current_risk_band, active_flags=flag_summary.get("total_active_flags", 0), black_flags=flag_summary.get("black_flags", 0), red_flags=flag_summary.get("red_flags", 0), yellow_flags=flag_summary.get("yellow_flags", 0), last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
+    risk_band = getattr(company.current_risk_band, "value", company.current_risk_band)
+    current_score = None if risk_band == "NOT_EVALUATED" else company.current_compliance_score
+    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=current_score, pre_override_score=None, risk_band=risk_band, active_flags=flag_summary.get("total_active_flags", 0), black_flags=flag_summary.get("black_flags", 0), red_flags=flag_summary.get("red_flags", 0), yellow_flags=flag_summary.get("yellow_flags", 0), last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
 
 
 @router.get("/{company_id}/flags", response_model=list[FlagResponse], dependencies=[Depends(require_company_access("company_id"))], summary="Get active flags")
