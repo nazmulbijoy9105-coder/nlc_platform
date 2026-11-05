@@ -18,6 +18,15 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # PostgreSQL requires a newly-added enum label to be committed before it
+    # can appear in UPDATE/INSERT statements. Use Alembic's autocommit block
+    # so the label is durable before the data migration below references it.
+    with op.get_context().autocommit_block():
+        op.execute(
+            "ALTER TYPE public.risk_band "
+            "ADD VALUE IF NOT EXISTS 'NOT_EVALUATED'"
+        )
+
     op.execute(
         """
         UPDATE public.companies
