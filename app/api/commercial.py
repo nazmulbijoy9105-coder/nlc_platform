@@ -40,7 +40,7 @@ from app.core.dependencies import (
 )
 from app.models.enums import EngagementStatus, RevenueTier, TaskPriority, TaskStatus
 from app.models.user import User
-from app.services.commercial_service import EngagementService, QuotationService, TaskService
+from app.services.commercial_service import CommercialConflictError, EngagementService, QuotationService, TaskService
 from app.services.notification_service import ActivityService
 
 logger = structlog.get_logger(__name__)
@@ -356,6 +356,8 @@ async def create_quotation(
             valid_days=body.valid_days,
             notes=body.notes,
         )
+    except CommercialConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -386,7 +388,10 @@ async def accept_quotation(
     svc = QuotationService(db)
     activity = ActivityService(db)
 
-    quotation = await svc.accept(quotation_id=quotation_id)
+    try:
+        quotation = await svc.accept(quotation_id=quotation_id)
+    except CommercialConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
 
@@ -416,11 +421,14 @@ async def reject_quotation(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = QuotationService(db)
-    quotation = await svc.reject(
-        quotation_id=quotation_id,
-        reason=body.reason or "Rejected by authorized staff",
-        rejected_by=current_user.id,
-    )
+    try:
+        quotation = await svc.reject(
+            quotation_id=quotation_id,
+            reason=body.reason or "Rejected by authorized staff",
+            rejected_by=current_user.id,
+        )
+    except CommercialConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
     await ActivityService(db).log(
