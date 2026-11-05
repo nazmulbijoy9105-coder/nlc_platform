@@ -139,6 +139,20 @@ def upgrade() -> None:
             f"USING ({scope}) WITH CHECK ({scope})"
         )
 
+    # Expose only active rule identifiers to a dedicated CI audit role.
+    # The view deliberately lives in an isolated schema; the CI role receives
+    # no SELECT grants on public tenant tables.
+    op.execute("CREATE SCHEMA IF NOT EXISTS audit")
+    op.execute(
+        """
+        CREATE OR REPLACE VIEW audit.active_legal_rule_ids
+        WITH (security_barrier = true)
+        AS SELECT rule_id FROM public.legal_rules WHERE is_active = true
+        """
+    )
+    op.execute("REVOKE ALL ON SCHEMA audit FROM PUBLIC")
+    op.execute("REVOKE ALL ON audit.active_legal_rule_ids FROM PUBLIC")
+
     op.execute("ALTER TABLE compliance_evaluation_runs ENABLE ROW LEVEL SECURITY")
     op.execute(
         """
@@ -389,6 +403,8 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute("DROP TRIGGER IF EXISTS trg_compliance_evaluation_runs_append_only ON compliance_evaluation_runs")
     op.execute("DROP FUNCTION IF EXISTS prevent_compliance_evaluation_run_mutation()")
+    op.execute("DROP VIEW IF EXISTS audit.active_legal_rule_ids")
+    op.execute("DROP SCHEMA IF EXISTS audit")
     op.execute("DROP POLICY IF EXISTS evaluation_runs_company_scope ON compliance_evaluation_runs")
     op.execute("DROP TABLE IF EXISTS compliance_evaluation_runs")
     op.execute("DROP POLICY IF EXISTS calendar_events_company_scope ON compliance_calendar_events")
