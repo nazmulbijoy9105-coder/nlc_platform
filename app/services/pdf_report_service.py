@@ -18,7 +18,7 @@ from sqlalchemy import select
 from app.models.compliance import ComplianceEvaluationRun
 
 # Import CATEGORY_CAPS for score reconciliation (cap adjustment display)
-from app.rule_engine.engine import CATEGORY_CAPS, VERIFIED_RULE_IDS
+from app.rule_engine.engine import CATEGORY_CAPS, LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
 from app.services.company_service import CompanyService
 from app.services.pdf_render import (
     asset_uri,
@@ -301,16 +301,20 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
     Suppressed when band is BLACK (score is overridden to 0, reconciliation meaningless).
     Shows 'Category cap applied (XXX)' rows when a category's raw deduction exceeds its cap.
     """
-    if band in ("BLACK", "NOT_EVALUATED"):
+    if not LEGAL_SCORE_RELEASED or band in ("BLACK", "NOT_EVALUATED"):
         return ""
 
-    # Group flags by category and sum raw deductions
+    # Group only independently approved, authoritative findings. Internal
+    # source checks and visible provisional findings are not legal approval.
+    # Group flags by category and sum applied deductions
     cat_deductions: dict[str, dict] = {}
     for f in (flags or []):
         impact = getattr(f, "score_impact_applied", getattr(f, "score_impact", 0)) or 0
         if impact == 0:
             continue
         rule_id = getattr(f, "rule_id", "") or ""
+        if rule_id not in VERIFIED_RULE_IDS:
+            continue
         for cat_name, (cap, prefixes) in CATEGORY_CAPS.items():
             if any(rule_id.startswith(p) for p in prefixes):
                 if cat_name not in cat_deductions:
@@ -354,6 +358,9 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
 
 
 def _flag_impact_label(flag: Any) -> str:
+    rule_id = getattr(flag, "rule_id", "") or ""
+    if not LEGAL_SCORE_RELEASED or rule_id not in VERIFIED_RULE_IDS:
+        return "Not scored — pending independent legal approval"
     applied = getattr(
         flag,
         "score_impact_applied",
