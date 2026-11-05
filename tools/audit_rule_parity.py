@@ -63,7 +63,7 @@ def get_db_rules():
         async def query():
             connection = await asyncpg.connect(db_url)
             try:
-                rows = await connection.fetch("SELECT rule_id FROM legal_rules WHERE is_active = true")
+                rows = await connection.fetch("SELECT rule_id FROM audit.active_legal_rule_ids")
                 return {row["rule_id"] for row in rows}
             finally:
                 await connection.close()
