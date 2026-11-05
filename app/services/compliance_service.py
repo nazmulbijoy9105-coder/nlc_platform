@@ -28,7 +28,7 @@ from datetime import UTC, date, datetime
 from sqlalchemy import select, text, update
 
 from app.models.company import Company
-from app.models.compliance import ComplianceFlag, ComplianceScoreHistory
+from app.models.compliance import ComplianceEvaluationRun, ComplianceFlag, ComplianceScoreHistory
 from app.models.enums import (
     ExposureBand,
     FlagStatus,
@@ -265,6 +265,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
             risk_band = RiskBand(
                 "BLACK" if score <= 29 else "RED" if score <= 49 else "YELLOW" if score <= 69 else "GREEN"
             )
+        score_for_current = None if risk_band == RiskBand.NOT_EVALUATED else score
+
         rescue_required = _is_rescue_required(output)
         if rescue_required and not _has_rescue_output(output):
             logger.warning(
@@ -369,9 +371,81 @@ class ComplianceService(BaseService[ComplianceFlag]):
             )
             self.db.add(snapshot)
 
+        # ── Append immutable per-evaluation record ──────────────────
+        previous_result = await self.db.execute(
+            select(ComplianceEvaluationRun.score_hash)
+            .where(ComplianceEvaluationRun.company_id == company_id)
+            .order_by(ComplianceEvaluationRun.calculated_at.desc())
+            .limit(1)
+        )
+        previous_hash = previous_result.scalar_one_or_none()
+        from app.rule_engine.engine import CATEGORY_CAPS
+        applied_impacts = _applied_score_impacts(output.flags)
+        flags_snapshot = []
+        for flag, applied in zip(output.flags, applied_impacts):
+            severity_value = getattr(flag.severity, "value", flag.severity)
+            rule_category = next(
+                (
+                    name
+                    for name, (_, prefixes) in CATEGORY_CAPS.items()
+                    if flag.rule_id.startswith(prefixes)
+                ),
+                "OTHER",
+            )
+            flags_snapshot.append({
+                "rule_id": flag.rule_id,
+                "severity": severity_value,
+                "category": rule_category,
+                "score_impact": int(flag.score_impact or 0),
+                "score_impact_applied": int(applied["applied"]),
+                "scoring_status": applied["status"],
+                "description": getattr(flag, "description", None),
+                "detail": getattr(flag, "detail", None),
+                "statutory_basis": getattr(flag, "statutory_basis", None),
+                "eval_state": getattr(getattr(flag, "eval_state", None), "value", getattr(flag, "eval_state", None)),
+                "state": getattr(getattr(flag, "state", None), "value", getattr(flag, "state", None)),
+            })
+
+        sb = output.score_breakdown
+        score_breakdown_snapshot = None if score_for_current is None else {
+            "raw_total": sb.raw_total,
+            "final_score": score_for_current,
+            "agm_score": sb.agm_score,
+            "audit_score": sb.audit_score,
+            "return_score": sb.return_score,
+            "director_score": sb.director_score,
+            "shareholding_score": sb.shareholding_score,
+            "risk_band": risk_band.value,
+            "override_applied": sb.override_applied,
+        }
+        evaluation_hash = hashlib.sha256(
+            (
+                f"{previous_hash or 'GENESIS'}|{company_id}|{score_for_current}|"
+                f"{risk_band.value}|{now.isoformat()}|{settings.rule_engine_version}|{trigger_source}"
+            ).encode()
+        ).hexdigest()
+        black_flags = sum(1 for f in output.flags if getattr(getattr(f.severity, "value", f.severity), "upper", lambda: "")() == "BLACK")
+        evaluation_run = ComplianceEvaluationRun(
+            id=uuid.uuid4(),
+            company_id=company_id,
+            score=score_for_current,
+            risk_band=risk_band,
+            calculated_at=now,
+            engine_version=settings.rule_engine_version,
+            score_hash=evaluation_hash,
+            previous_hash=previous_hash,
+            evaluation_status="COMPLETED",
+            trigger_source=trigger_source,
+            active_flags_count=len(output.flags),
+            black_flags_count=black_flags,
+            flags_snapshot=flags_snapshot,
+            score_breakdown_snapshot=score_breakdown_snapshot,
+        )
+        self.db.add(evaluation_run)
+
         # ── Update company compliance state ────────────────────────
         company_svc_update: dict = {
-            "current_compliance_score": score,
+            "current_compliance_score": score_for_current,
             "current_risk_band":        risk_band,
             "rescue_required":          rescue_required,
             "last_evaluated_at":        now,
