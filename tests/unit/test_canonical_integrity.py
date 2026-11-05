@@ -14,6 +14,32 @@ ROOT = Path(__file__).resolve().parents[2]
 EXPECTED = 85  # ILRMF production corpus; this gate does not add or remove rules.
 
 
+
+def test_statutory_catalog_has_no_duplicate_literal_dictionary_keys():
+    """Reject silent Python dict-key overwrites in the legal rule catalogue."""
+    source = (
+        ROOT / "canonical_architecture" / "statutory_rules.py"
+    ).read_text(encoding="utf-8")
+    tree = ast.parse(source, filename="canonical_architecture/statutory_rules.py")
+    duplicates = []
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Dict):
+            continue
+        seen = {}
+        for key_node in node.keys:
+            if not isinstance(key_node, ast.Constant) or not isinstance(key_node.value, str):
+                continue
+            key = key_node.value
+            if key in seen:
+                duplicates.append(
+                    f"line {key_node.lineno}: duplicate key {key!r}; first at line {seen[key]}"
+                )
+            else:
+                seen[key] = key_node.lineno
+
+    assert not duplicates, "\\n".join(duplicates)
+
 def _is_rule_id(value: str) -> bool:
     """Validate the repository's PREFIX-NNN rule ID format without text scraping."""
     parts = value.split("-")
