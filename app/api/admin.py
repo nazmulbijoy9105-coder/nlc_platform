@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import get_current_user
@@ -13,6 +13,76 @@ from app.models.infrastructure import UserActivityLog
 from app.models.user import User
 
 router = APIRouter()
+
+
+@router.get("/security/rls-status")
+async def rls_runtime_status(
+    admin=Depends(require_super_admin),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Read-only runtime audit of the actual Render database connection role and RLS state."""
+    role_result = await db.execute(
+        text(
+            "SELECT current_user AS role_name, rolsuper, rolbypassrls "
+            "FROM pg_roles WHERE rolname = current_user"
+        )
+    )
+    role_row = role_result.mappings().one()
+    tables_result = await db.execute(
+        text(
+            """
+            SELECT c.relname AS table_name,
+                   c.relrowsecurity AS rls_enabled,
+                   c.relforcerowsecurity AS force_rls,
+                   count(p.policyname)::int AS policy_count
+            FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            LEFT JOIN pg_policies p
+              ON p.schemaname = n.nspname AND p.tablename = c.relname
+            WHERE n.nspname = 'public'
+              AND c.relkind = 'r'
+              AND c.relname = ANY(:tables)
+            GROUP BY c.relname, c.relrowsecurity, c.relforcerowsecurity
+            ORDER BY c.relname
+            """
+        ).bindparams(
+            sa.bindparam("tables", expanding=True)
+        )
+    )
+    table_rows = [dict(row) for row in tables_result.mappings().all()]
+    expected_tables = {
+        "companies",
+        "company_user_access",
+        "compliance_evaluation_runs",
+        "compliance_score_history",
+        "compliance_calendar_events",
+        "documents",
+        "users",
+    }
+    observed = {row["table_name"] for row in table_rows}
+    missing = sorted(expected_tables - observed)
+    unsafe_tables = [
+        row["table_name"]
+        for row in table_rows
+        if not row["rls_enabled"] or row["policy_count"] == 0
+    ]
+    bypass = bool(role_row["rolbypassrls"])
+    return {
+        "status": "UNSAFE" if bypass or missing or unsafe_tables else "RLS_ENABLED",
+        "database_role": role_row["role_name"],
+        "role_is_superuser": bool(role_row["rolsuper"]),
+        "role_bypasses_rls": bypass,
+        "rls_context": await _current_rls_context(db),
+        "tables": table_rows,
+        "missing_tables": missing,
+        "tables_without_rls_or_policy": unsafe_tables,
+        "note": "Production safety requires a non-BYPASSRLS application role and an authenticated tenant-scope test.",
+    }
+
+
+async def _current_rls_context(db: AsyncSession) -> str | None:
+    result = await db.execute(text("SELECT current_setting('app.current_user_id', true)"))
+    return result.scalar_one_or_none()
 
 
 async def require_admin(current_user=Depends(get_current_user)):
