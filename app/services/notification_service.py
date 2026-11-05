@@ -61,12 +61,8 @@ class NotificationService(BaseService[Notification]):
         title = title or subject
         body = body or message
         notification_type = notification_type or 'SYSTEM'
-        """
-        Queue a notification for delivery.
-        _queue_notification stub implementation.
-        Dashboard notifications are immediately PENDING.
-        Email/WhatsApp are sent by Celery worker.
-        """
+        # Unapproved legal alerts remain auditable but never enter delivery queues.
+        legal_alert_eligible = is_notification_eligible(notification_type)
         return await self.create(
             company_id=company_id,
             user_id=user_id,
@@ -74,7 +70,16 @@ class NotificationService(BaseService[Notification]):
             body=body,
             notification_type=notification_type,
             channel=channel,
-            notification_status=NotificationStatus.PENDING,
+            notification_status=(
+                NotificationStatus.PENDING
+                if legal_alert_eligible
+                else NotificationStatus.SUPPRESSED
+            ),
+            failure_reason=(
+                None
+                if legal_alert_eligible
+                else "Suppressed at creation: legal rule is not counsel-approved for release."
+            ),
             scheduled_for=scheduled_for or datetime.now(UTC),
             days_until_deadline=days_until_deadline,
             related_flag_id=related_flag_id,
@@ -214,6 +219,7 @@ class NotificationService(BaseService[Notification]):
         return [
             n for n in result.scalars().all()
             if n.notification_status != NotificationStatus.SUPPRESSED
+            and is_notification_eligible(n.notification_type)
         ]
 
     async def acknowledge(
