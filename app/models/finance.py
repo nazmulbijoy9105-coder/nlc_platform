@@ -115,6 +115,7 @@ class Payment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "payments"
     __table_args__ = (
         UniqueConstraint("payment_number", name="uq_payments_payment_number"),
+        UniqueConstraint("provider_transaction_id", name="uq_payments_provider_transaction_id"),
         UniqueConstraint("id", "company_id", name="uq_payments_id_company"),
         CheckConstraint("amount_bdt > 0", name="ck_payment_amount_positive"),
         CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL','BKASH_ONLINE','NAGAD_ONLINE','SSLCOMMERZ')", name="ck_payment_method"),
@@ -188,6 +189,8 @@ class PaymentIntent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "payment_intents"
     __table_args__ = (
         UniqueConstraint("provider_name", "idempotency_key", name="uq_payment_intent_provider_idempotency"),
+        UniqueConstraint("provider_order_id", name="uq_payment_intent_provider_order"),
+        UniqueConstraint("provider_transaction_id", name="uq_payment_intent_provider_transaction"),
         CheckConstraint("amount_bdt > 0", name="ck_payment_intent_amount_positive"),
         CheckConstraint("provider_name IN ('SSLCOMMERZ','BKASH','NAGAD')", name="ck_payment_intent_provider"),
         CheckConstraint("status IN ('CREATED','PENDING','SUCCEEDED','FAILED','EXPIRED','CANCELLED')", name="ck_payment_intent_status"),
