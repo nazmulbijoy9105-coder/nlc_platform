@@ -16,89 +16,89 @@ This matrix is a technical inventory of candidate legal anchors and internal rul
 
 | Rule ID | Rule Name | Statutory Basis (engine) | Severity | Score | Black | Status |
 |---------|-----------|--------------------------|----------|-------|-------|--------|
-| ACC-001 | Financial Statements Not Presented at AGM | Section 183, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
-| ACC-002 | Financial Statements Not Filed with Registrar | Section 190, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
-| ACC-003 | Books of Account Not Kept | Section 181, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
-| AGM-001 | First AGM Default | Section 81, Companies Act 1994 (Bangladesh) | RED | 20 | no | Engine-aligned 2026-11-02 |
-| AGM-002 | Subsequent AGM Default | Section 81, Companies Act 1994 (Bangladesh) | RED | 20 | no | Engine-aligned 2026-11-02 |
-| AGM-003 | AGM Notice Defective — Insufficient Days | Section 85, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| AGM-004 | AGM Notice Missing | Section 85, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
+| ACC-001 | Financial Statements Not Presented at AGM | Section 183, Companies Act 1994 (Bangladesh) | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| ACC-002 | Financial Statements Not Filed with Registrar | Section 190, Companies Act 1994 (Bangladesh) | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| ACC-003 | Books of Account Not Kept | Section 181, Companies Act 1994 (Bangladesh) | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AGM-001 | First AGM Default | Section 81, Companies Act 1994 (Bangladesh) | RED | 20 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AGM-002 | Subsequent AGM Default | Section 81, Companies Act 1994 (Bangladesh) | RED | 20 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AGM-003 | AGM Notice Defective — Insufficient Days | Section 85, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AGM-004 | AGM Notice Missing | Section 85, Companies Act 1994 (Bangladesh) | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | AGM-005 | AGM Quorum Not Met | Section 85(2)(b), Companies Act 1994 (Bangladesh), subject to the company’s Articles | RED | 15 | no | INTERNAL TRIAGE — verify Articles, member count and attendance evidence |
-| AGM-006 | AGM Minutes Not Prepared | Section 89, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
+| AGM-006 | AGM Minutes Not Prepared | Section 89, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | AGM-007 | AGM Adjourned Without Proper Notice | Section 85 and applicable Articles; exact adjournment provision requires counsel mapping | NOT_EVALUATED | 0 | no | REVIEW ONLY — no automatic default |
-| AR-001 | Annual Return Default — Single Year | Section 36 (Schedule X), Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
-| AR-002 | Annual Return 2-Year Backlog | Sections 36 and 304, Companies Act 1994 (Bangladesh) | RED | 20 | no | Engine-aligned 2026-11-02 |
-| AR-003 | Annual Return 3-Year Backlog — Strike-Off Risk | Sections 36 and 304, Companies Act 1994 (Bangladesh) | BLACK | 20 | no | Engine-aligned 2026-11-02 |
-| AR-004 | Annual Return Filed But Incomplete | Section 36, Schedule X, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
-| AUD-001 | First Auditor Not Appointed Within One Calendar Month | Section 210(6), Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
-| AUD-002 | Audit Not Completed Before AGM | Section 183, Companies Act 1994 (Bangladesh) | RED | 12 | no | Engine-aligned 2026-11-02 |
+| AR-001 | Annual Return Default — Single Year | Section 36 (Schedule X), Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AR-002 | Annual Return 2-Year Backlog | Sections 36 and 304, Companies Act 1994 (Bangladesh) | RED | 20 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AR-003 | Annual Return 3-Year Backlog — Strike-Off Risk | Sections 36 and 304, Companies Act 1994 (Bangladesh) | BLACK | 20 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AR-004 | Annual Return Filed But Incomplete | Section 36, Schedule X, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AUD-001 | First Auditor Not Appointed Within One Calendar Month | Section 210(6), Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AUD-002 | Audit Not Completed Before AGM | Section 183, Companies Act 1994 (Bangladesh) | RED | 12 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | AUD-003 | AGM Audit Status Requires Legal Review | Section 183, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | Audit/account evidence and legal consequences require case-specific review; no automatic BLACK override |
 | AUD-004 | Auditor Reappointment Requires Legal Review | Section 210(3), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | Verify statutory exceptions and notice requirements before determining non-compliance |
 | AUD-005 | Subsequent Auditor Reappointment Status Unknown | Section 210(3), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | Evidence-status only; no 120-day deadline; exceptions require legal review |
-| BNK-001 | Winding Up Petition Filed | Bankruptcy Act 1997 (Bangladesh), Section 12 | BLACK | 10 | YES | Engine-aligned 2026-11-02 |
-| BNK-002 | Liquidator Appointed | Bankruptcy Act 1997 (Bangladesh), Section 14 | BLACK | 10 | YES | Engine-aligned 2026-11-02 |
-| BNK-003 | Court-Ordered Winding Up | Bankruptcy Act 1997 (Bangladesh), Section 18 | BLACK | 35 | YES | Engine-aligned 2026-11-02 |
-| BOD-001 | Board Meeting Not Held Within Quarter | Section 96, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| BOD-002 | Board Meeting Notice Not Given | Section 95, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
-| BOD-003 | Board Meeting Minutes Not Prepared | Section 89, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
+| BNK-001 | Winding Up Petition Filed | Bankruptcy Act 1997 (Bangladesh), Section 12 | BLACK | 10 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| BNK-002 | Liquidator Appointed | Bankruptcy Act 1997 (Bangladesh), Section 14 | BLACK | 10 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| BNK-003 | Court-Ordered Winding Up | Bankruptcy Act 1997 (Bangladesh), Section 18 | BLACK | 35 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| BOD-001 | Board Meeting Not Held Within Quarter | Section 96, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| BOD-002 | Board Meeting Notice Not Given | Section 95, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| BOD-003 | Board Meeting Minutes Not Prepared | Section 89, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | BSEC-001 | BSEC Quarterly Report Not Filed | Applicable BSEC listing/securities reporting instrument; exact rule, issuer class, period and due date unresolved (not CG Code Condition 8) | NOT_EVALUATED | 0 | no | REVIEW ONLY — listed issuer scope and instrument required |
 | BSEC-002 | CG Certificate Not Obtained | BSEC Corporate Governance Code 2018, Condition 9, as amended; listed-issuer scope only | NOT_EVALUATED | 0 | no | REVIEW ONLY — certifier, AGM appointment and evidence required |
 | BSEC-003 | Board Composition Non-Compliant | BSEC Corporate Governance Code 2018, Condition 1, as amended; listed-issuer scope only | NOT_EVALUATED | 0 | no | REVIEW ONLY — current amendment and director eligibility required |
 | BSEC-004 | Audit Committee Not Established | BSEC Corporate Governance Code 2018, Condition 5, as amended; listed-issuer scope only | NOT_EVALUATED | 0 | no | REVIEW ONLY — committee composition and duties required |
-| CAP-001 | Capital Alteration Without Proper Resolution | Section 53, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| CAP-002 | Charge Not Registered With RJSC Within 21 Days | Section 159(1), Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| CAP-003 | Capital Reduction Without Court Order | Sections 59-60, Companies Act 1994 (Bangladesh) | BLACK | 15 | YES | Engine-aligned 2026-11-02 |
-| CAP-004 | Special Resolution Not Filed With RJSC within 15 days | Section 88(1), Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
-| CHG-001 | Charge Satisfaction Not Filed | Section 172, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
-| DEF-001 | Director Disqualified | Section 94, Companies Act 1994 (Bangladesh) | BLACK | 20 | YES | Engine-aligned 2026-11-02 |
-| DEF-002 | Unresolved Penalty Notices | Case-specific enabling provision; no universal section | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| DIR-001 | Director Appointment Particulars Not Filed Within 14 Days | Section 115, Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
-| DIR-002 | Director Cessation Particulars Not Filed Within 14 Days | Section 115, Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | Engine-aligned 2026-11-02 |
-| DIR-003 | Major Director Filing Irregularity — Over 1 Year | Section 115, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
-| DIR-004 | Departed Director Still Active on RJSC Register | Section 109, Companies Act 1994 (Bangladesh) | RED | 10 | no | Engine-aligned 2026-11-02 |
-| DIR-005 | Register of Directors Interests Missing | Section 130, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| DIR-006 | Register of Contracts Missing | Section 130, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| DIR-007 | Director Consent Not Filed Within 30 Days | Section 92, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| DIR-008 | Director Holding Office of Profit Without Consent | Section 104, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
-| DIR-010 | Managing Director Appointed for More Than 5 Years | Section 110, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| ESC-001 | Strike-Off Risk Elevated | Section 346, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
-| ESC-002 | Strike-Off Imminent — BLACK OVERRIDE | Section 346, Companies Act 1994 (Bangladesh) | BLACK | 10 | YES | Engine-aligned 2026-11-02 |
-| ESC-003 | Corporate Rescue Mandatory — Systemic Failure | Sections 81, 115, 36, 346 (aggregate), Companies Act 1994 (Bangladesh) | BLACK | 10 | YES | Engine-aligned 2026-11-02 |
-| ESC-004 | Voluntary Winding Up | Section 130, Companies Act 1994 (Bangladesh) | BLACK | 30 | YES | Engine-aligned 2026-11-02 |
-| ESC-005 | Investigation Order Pending | Section 104, Companies Act 1994 (Bangladesh) | RED | 20 | no | Engine-aligned 2026-11-02 |
-| FX-001 | Foreign Exchange Violation | Foreign Exchange Regulation Act 1947 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
-| INC-001 | Memorandum and Articles Not Filed | Section 23, Companies Act 1994 (Bangladesh) | RED | 15 | no | Engine-aligned 2026-11-02 |
-| INC-003 | Minimum Directors Not Appointed | Section 90(2), Companies Act 1994 (Bangladesh) | BLACK | 15 | YES | Engine-aligned 2026-11-02 |
+| CAP-001 | Capital Alteration Without Proper Resolution | Section 53, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| CAP-002 | Charge Not Registered With RJSC Within 21 Days | Section 159(1), Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| CAP-003 | Capital Reduction Without Court Order | Sections 59-60, Companies Act 1994 (Bangladesh) | BLACK | 15 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| CAP-004 | Special Resolution Not Filed With RJSC within 15 days | Section 88(1), Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| CHG-001 | Charge Satisfaction Not Filed | Section 172, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DEF-001 | Director Disqualified | Section 94, Companies Act 1994 (Bangladesh) | BLACK | 20 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DEF-002 | Unresolved Penalty Notices | Case-specific enabling provision; no universal section | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DIR-001 | Director Appointment Particulars Not Filed Within 14 Days | Section 115, Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DIR-002 | Director Cessation Particulars Not Filed Within 14 Days | Section 115, Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DIR-003 | Major Director Filing Irregularity — Over 1 Year | Section 115, Companies Act 1994 (Bangladesh) | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DIR-004 | Departed Director Still Active on RJSC Register | Section 109, Companies Act 1994 (Bangladesh) | RED | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DIR-005 | Register of Directors Interests Missing | Section 130, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DIR-006 | Register of Contracts Missing | Section 130, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DIR-007 | Director Consent Not Filed Within 30 Days | Section 92, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DIR-008 | Director Holding Office of Profit Without Consent | Section 104, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DIR-010 | Managing Director Appointed for More Than 5 Years | Section 110, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| ESC-001 | Strike-Off Risk Elevated | Section 346, Companies Act 1994 (Bangladesh) | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| ESC-002 | Strike-Off Imminent — BLACK OVERRIDE | Section 346, Companies Act 1994 (Bangladesh) | BLACK | 10 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| ESC-003 | Corporate Rescue Mandatory — Systemic Failure | Sections 81, 115, 36, 346 (aggregate), Companies Act 1994 (Bangladesh) | BLACK | 10 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| ESC-004 | Voluntary Winding Up | Section 130, Companies Act 1994 (Bangladesh) | BLACK | 30 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| ESC-005 | Investigation Order Pending | Section 104, Companies Act 1994 (Bangladesh) | RED | 20 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| FX-001 | Foreign Exchange Violation | Foreign Exchange Regulation Act 1947 (Bangladesh) | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| INC-001 | Memorandum and Articles Not Filed | Section 23, Companies Act 1994 (Bangladesh) | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| INC-003 | Minimum Directors Not Appointed | Section 90(2), Companies Act 1994 (Bangladesh) | BLACK | 15 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | INC-004 | Paid-Up / Authorised Capital Mismatch — Legal Review | Section 56, Companies Act 1994 (Bangladesh), subject to review | YELLOW | 0 | no | REVIEW_REQUIRED — not a void-allotment conclusion |
-| INC-005 | Encashment Certificate Missing — Foreign Shareholding | BIDA Foreign Investment Act 1980; Bangladesh Bank FDI Circular | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
-| INC-006 | Remittance Below Work Permit Threshold | BIDA Foreign Investment Act 1980 | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| INC-007 | Business Commenced Without Section 150 Declaration | Sections 59-60, Companies Act 1994 (Bangladesh) | RED | 10 | no | Engine-aligned 2026-11-02 |
+| INC-005 | Encashment Certificate Missing — Foreign Shareholding | BIDA Foreign Investment Act 1980; Bangladesh Bank FDI Circular | YELLOW | 8 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| INC-006 | Remittance Below Work Permit Threshold | BIDA Foreign Investment Act 1980 | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| INC-007 | Business Commenced Without Section 150 Declaration | Sections 59-60, Companies Act 1994 (Bangladesh) | RED | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | LBR-001 | Factory License Missing | Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026; only where an applicable Government direction covers the establishment/class | NOT_EVALUATED | 0 | no | REVIEW ONLY — Government direction and establishment class required |
 | LBR-002 | Factory License Expired | Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026; licence term/renewal depends on applicable direction and licence class | NOT_EVALUATED | 0 | no | REVIEW ONLY — licence, renewal and extension evidence required |
-| LBR-003 | Labour Court Order Pending | Labour Act 2006 (Bangladesh), Section 209 | RED | 15 | no | Engine-aligned 2026-11-02 |
-| MEM-001 | Company Operating with Fewer than Minimum Members | Section 222, Companies Act 1994 (Bangladesh) | RED | 10 | no | Engine-aligned 2026-11-02 |
-| OFF-001 | Change of Registered Office Not Filed Within 28 Days | Section 77, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
-| REG-001 | Statutory Registers Incomplete | Section 34, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| REG-002 | Core Statutory Registers Missing | Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh) | RED | 10 | no | Engine-aligned 2026-11-02 |
-| REG-003 | Registers Not Kept at Registered Office | Section 34(2), Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
-| SH-001 | Share Allotment Not Filed — Form XV | Section 151, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
-| SH-002 | Share Certificates Not Issued Within 60 Days | Section 158, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| SH-003 | Capital Increase Not Filed — Form IV | Section 56, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
-| STR-001 | Name Change Not Filed | Sections 11 and 88(1), Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
-| STR-002 | Object Clause Change Not Filed | Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
-| STR-003 | AoA Alteration Not Filed | Sections 20 and 88(1), Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | Engine-aligned 2026-11-02 |
+| LBR-003 | Labour Court Order Pending | Labour Act 2006 (Bangladesh), Section 209 | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| MEM-001 | Company Operating with Fewer than Minimum Members | Section 222, Companies Act 1994 (Bangladesh) | RED | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| OFF-001 | Change of Registered Office Not Filed Within 28 Days | Section 77, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| REG-001 | Statutory Registers Incomplete | Section 34, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| REG-002 | Core Statutory Registers Missing | Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh) | RED | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| REG-003 | Registers Not Kept at Registered Office | Section 34(2), Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| SH-001 | Share Allotment Not Filed — Form XV | Section 151, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| SH-002 | Share Certificates Not Issued Within 60 Days | Section 158, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| SH-003 | Capital Increase Not Filed — Form IV | Section 56, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| STR-001 | Name Change Not Filed | Sections 11 and 88(1), Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| STR-002 | Object Clause Change Not Filed | Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| STR-003 | AoA Alteration Not Filed | Sections 20 and 88(1), Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | TAX-001 | Tax Identification Number (TIN) Not Obtained | Income Tax Act 2023, Sections 166, 261 and 264; company-specific duty, identity and evidence require verification | NOT_EVALUATED | 0 | no | REVIEW ONLY — profile boolean is not proof of breach |
 | TAX-002 | VAT Registration Required But Not Obtained | VAT Act 2012, as amended by Act No. 77 of 2026: BDT 30 lakh enlistment and BDT 50 lakh registration thresholds, subject to rolling 12-month taxable turnover and mandatory categories | NOT_EVALUATED | 0 | no | REVIEW ONLY — taxpayer class, activity and BIN evidence required |
 | TAX-003 | Annual Tax Return Overdue | Income Tax Act 2023, Sections 170(2) and 171, as substituted by Finance Act 2026 (Act No. 96 of 2026) | NOT_EVALUATED | 0 | no | REVIEW ONLY — income-year, taxpayer class, holiday and extension checks required |
 | TAX-004 | Advance Tax Missed | Income Tax Act 2023, Sections 154–157, as amended by Finance Act 2026 (Act No. 96 of 2026) | NOT_EVALUATED | 0 | no | REVIEW ONLY — liability, s.156 class, A-B computation and payment evidence required |
-| TL-001 | Trade License Not Obtained | Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009 | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| TL-002 | Trade License Expired | Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009 | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| TR-001 | No Share Transfer Instrument — Form 117 | Section 38, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| TR-002 | Stamp Duty Not Paid on Share Transfer | Stamp Act 1899, Schedule I, Item 62 | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| TR-003 | No Board Approval for Share Transfer | Section 38; AoA, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | Engine-aligned 2026-11-02 |
-| TR-004 | Register of Members Not Updated After Transfer | Section 34, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | Engine-aligned 2026-11-02 |
-| TR-005 | Share Transfer Violates AoA Restriction — BLACK OVERRIDE | Section 38; AoA, Companies Act 1994 (Bangladesh) | BLACK | 15 | YES | Engine-aligned 2026-11-02 |
-| TR-006 | Composite Irregular Transfer | Sections 34, 47, 108, Companies Act 1994 (Bangladesh) | RED | 10 | no | Engine-aligned 2026-11-02 |
+| TL-001 | Trade License Not Obtained | Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009 | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| TL-002 | Trade License Expired | Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009 | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| TR-001 | No Share Transfer Instrument — Form 117 | Section 38, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| TR-002 | Stamp Duty Not Paid on Share Transfer | Stamp Act 1899, Schedule I, Item 62 | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| TR-003 | No Board Approval for Share Transfer | Section 38; AoA, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| TR-004 | Register of Members Not Updated After Transfer | Section 34, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| TR-005 | Share Transfer Violates AoA Restriction — BLACK OVERRIDE | Section 38; AoA, Companies Act 1994 (Bangladesh) | BLACK | 15 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| TR-006 | Composite Irregular Transfer | Sections 34, 47, 108, Companies Act 1994 (Bangladesh) | RED | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | VAT-002 | Monthly VAT Return Overdue | VAT Act 2012, Section 64, as substituted by VAT Amendment Ordinance 2026 (Ordinance No. 38 of 2026, dated 14 October 2026); each tax period, 15/20-day class rules and Board extensions | NOT_EVALUATED | 0 | no | REVIEW ONLY — do not use superseded three-tax-period cycle |
 | VAT-003 | VAT Annual Return Overdue | No universal annual VAT return duty identified; exact applicable Act/Rule/SRO/order must be established | NOT_EVALUATED | 0 | no | REVIEW ONLY — no automatic annual-return default |
 
@@ -131,6 +131,22 @@ This matrix is a technical inventory of candidate legal anchors and internal rul
 | TR | 6 |
 | VAT | 2 |
 | **TOTAL** | **85** |
+
+## Primary source links and legal provenance
+
+These are primary/official source entry points used for this limited correction pass. They do not replace a consolidated amendment history, commencement analysis, company-specific applicability review or signed counsel approval.
+
+- Companies Act 1994 (official BDLaws): https://bdlaws.minlaw.gov.bd/act-print-788.html
+- Companies Act 1994, section 85 (official BDLaws): https://bdlaws.minlaw.gov.bd/act-print-788/section-print-32909.html
+- Companies Act 1994, section 172 (official BDLaws): https://bdlaws.minlaw.gov.bd/act-788/act-part-print-355.html
+- BSEC Corporate Governance Code, Gazette notification dated 3 June 2018 (official BSEC PDF): https://www.sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf
+- Income Tax Act 2023 and Finance Act 2026 (official BDLaws): https://bdlaws.minlaw.gov.bd/act-print-1725.html
+- VAT Amendment Act 2026, Act No. 77 of 2026 (official BDLaws): https://bdlaws.minlaw.gov.bd/act-print-1706.html
+- VAT Amendment Ordinance 2026, Ordinance No. 38 of 2026, section 64 substitution (official BDLaws): https://bdlaws.minlaw.gov.bd/act-1742/section-59742.html
+- Bangladesh Labour (Amendment) Act 2026, Act No. 43 of 2026 (official BDLaws): https://bdlaws.minlaw.gov.bd/act-print-1672.html
+- DIFE official laws register: https://dife.gov.bd/pages/laws
+
+**Temporal caution:** VAT Ordinance No. 38 of 2026 is dated 14 October 2026 and replaces section 64 with filing per tax period (subject to 15/20-day class rules, holidays and Board extension). Do not use the superseded three-tax-period formulation from the Finance Act 2026 alone. The 2026 VAT Amendment Act No. 77 and Ordinance No. 38 are distinct instruments with different subject matter.
 
 ## Change log (matrix)
 
