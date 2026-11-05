@@ -87,7 +87,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### AGM-001 — First AGM Default
 
 - **Catalogue anchor:** Section 81(1), Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** RED / 20 / false
+- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -222,7 +222,7 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### AR-002 — Annual Return 2-Year Backlog
 
-- **Catalogue anchor:** Sections 36 and 304, Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Section 36 and Schedule X (annual-return duty); Section 346 (separate Registrar strike-off process)
 - **Seed default severity / score impact / BLACK override:** RED / 20 / false
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -240,7 +240,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### AR-003 — Annual Return 3-Year Backlog — Strike-Off Risk
 
 - **Catalogue anchor:** Sections 36 and 304, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** BLACK / 20 / false
+- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
