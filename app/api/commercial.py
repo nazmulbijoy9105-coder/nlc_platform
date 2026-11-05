@@ -76,8 +76,8 @@ class EngagementResponse(BaseModel):
     revenue_tier: str
     status: str
     description: str | None
-    estimated_fee_bdt: float | None
-    confirmed_fee_bdt: float | None
+    estimated_fee_bdt: Decimal | None
+    confirmed_fee_bdt: Decimal | None
     assigned_officer_id: str | None
     created_at: str
     updated_at: str
@@ -264,6 +264,7 @@ async def create_engagement(
         description=f"Engagement created: {body.engagement_type} for company {body.company_id}",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
+        company_id=engagement.company_id,
     )
     return _engagement_to_response(engagement)
 
@@ -356,6 +357,7 @@ async def create_quotation(
         description=f"Quotation {quotation.quotation_number} created",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
+        company_id=quotation.company_id,
     )
     return _quotation_to_response(quotation)
 
@@ -386,6 +388,7 @@ async def accept_quotation(
         description=f"Quotation {quotation.quotation_number} accepted",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
+        company_id=quotation.company_id,
     )
     return _quotation_to_response(quotation)
 
@@ -418,6 +421,7 @@ async def reject_quotation(
         description=f"Quotation {quotation.quotation_number} rejected: {body.reason or 'No reason supplied'}",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
+        company_id=quotation.company_id,
     )
     return _quotation_to_response(quotation)
 
