@@ -864,7 +864,7 @@ class NLCRuleEngine:
         return NLCRuleEngine._add_months(d, 1)
 
     @staticmethod
-    def _subsequent_agm_deadline(last_agm_date: date) -> date:
+    def _subsequent_agm_deadline_from_date(last_agm_date: date) -> date:
         """Section 81: hold an AGM in each calendar year and no more than 15 months apart."""
         interval_deadline = NLCRuleEngine._add_months(last_agm_date, 15)
         calendar_year_deadline = date(last_agm_date.year + 1, 12, 31)
@@ -3077,23 +3077,11 @@ class NLCRuleEngine:
         return 10
 
     def _calculate_agm_default_years(self, c: CompanyProfile) -> int:
-        if c.last_agm_date is None:
-            if c.agm_count == 0:
-                deadline = self._add_months(
-                    c.incorporation_date or self.today,
-                    FIRST_AGM_DEADLINE_MONTHS,
-                )
-                if self.today > deadline:
-                    return (self.today - deadline).days // 365
-                if c.incorporation_date is None:
-                    return 0
-                deadline = (c.incorporation_date or self.today) + timedelta(days=FIRST_AGM_DEADLINE_DAYS)  # type: ignore
-                if self.today > deadline:  # type: ignore
-                    return (self.today - deadline).days // 365  # type: ignore
-            return 0
-
+        # No AGM deadline contributes to even the internal score until the
+        # complete AGM history has provenance-backed verification.
         if not self._agm_history_is_verified(c) or c.agm_count is None:
             return 0
+
         if c.agm_count == 0:
             if c.incorporation_date is None:
                 return 0
@@ -3104,6 +3092,7 @@ class NLCRuleEngine:
             deadline = self._subsequent_agm_deadline(c)
             if deadline is None:
                 return 0
+
         if self.today > deadline:
             return (self.today - deadline).days // 365
         return 0
