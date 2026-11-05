@@ -3092,7 +3092,6 @@ class NLCRuleEngine:
                     return (self.today - deadline).days // 365  # type: ignore
             return 0
 
-        deadline = self._subsequent_agm_deadline(c.last_agm_date)
         if not self._agm_history_is_verified(c) or c.agm_count is None:
             return 0
         if c.agm_count == 0:
