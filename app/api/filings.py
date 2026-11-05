@@ -707,9 +707,25 @@ def _agm_to_response(agm) -> AGMResponse:
                 and getattr(agm, "quorum_verified_by", None) is not None
             ) else None
         ),
-        quorum_basis=agm.quorum_basis,
+        quorum_basis=(
+            agm.quorum_basis
+            if (
+                getattr(agm, "quorum_required_verified", False) is True
+                and bool(getattr(agm, "quorum_evidence_ref", None))
+                and getattr(agm, "quorum_verified_at", None) is not None
+                and getattr(agm, "quorum_verified_by", None) is not None
+            ) else None
+        ),
         venue=getattr(agm, "venue", None),
-        members_present=agm.members_present,
+        members_present=(
+            agm.members_present
+            if (
+                getattr(agm, "members_present_verified", False) is True
+                and bool(getattr(agm, "members_present_evidence_ref", None))
+                and getattr(agm, "members_present_verified_at", None) is not None
+                and getattr(agm, "members_present_verified_by", None) is not None
+            ) else None
+        ),
         auditor_reappointed=(
             agm.auditor_reappointed
             if (
@@ -719,14 +735,11 @@ def _agm_to_response(agm) -> AGMResponse:
                 and getattr(agm, "auditor_reappointment_verified_by", None) is not None
             ) else None
         ),
-        accounts_adopted=getattr(agm, "accounts_adopted", None),
-        agm_held_without_audit=getattr(agm, "agm_held_without_audit", None),
-        minutes_prepared=(
-            True
-            if getattr(agm, "minutes_prepared", None) is True
-            and getattr(agm, "minutes_document_id", None) is not None
-            else None
-        ),
+        # These raw legacy fields have no independent review/provenance path.
+        # Never expose them as affirmative or negative legal findings.
+        accounts_adopted=None,
+        agm_held_without_audit=None,
+        minutes_prepared=None,
         is_default=agm.is_default,
         created_at=agm.created_at.isoformat() if hasattr(agm, 'created_at') and agm.created_at else '',
     )
