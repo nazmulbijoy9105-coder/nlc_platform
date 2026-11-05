@@ -21,6 +21,7 @@ import pytest
 
 from app.rule_engine.engine import (
     VERIFIED_RULE_IDS,
+    ChargeEvent,
     CompanyProfile,
     NLCRuleEngine,
     RuleState,
@@ -312,3 +313,47 @@ class TestEvidenceSemantics:
         flag = _flag_by_id(result, "INC-001")
         if flag:
             assert flag.severity in (Severity.RED, Severity.NOT_EVALUATED)  # Engine may return NOT_EVALUATED
+
+
+class TestChargeSatisfactionDeadline:
+    def _charge(self, satisfaction_date):
+        return ChargeEvent(
+            charge_id="CHG-TEST-001",
+            creation_date=date(2025, 1, 1),
+            charge_type="FIXED",
+            amount_bdt=100000.0,
+            charge_holder="Test Bank",
+            satisfied=True,
+            satisfaction_date=satisfaction_date,
+            satisfaction_filed=False,
+        )
+
+    def test_CHG_001_missing_satisfaction_date_is_unknown(self):
+        result = NLCRuleEngine().evaluate(
+            _base_profile(charges=[self._charge(None)]),
+            today=date(2026, 11, 3),
+        )
+        flag = _flag_by_id(result, "CHG-001")
+        assert flag is not None
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
+
+    def test_CHG_001_satisfaction_filing_deadline_is_21_days(self):
+        result = NLCRuleEngine().evaluate(
+            _base_profile(charges=[self._charge(date(2026, 10, 1))]),
+            today=date(2026, 11, 3),
+        )
+        flag = _flag_by_id(result, "CHG-001")
+        assert flag is not None
+        assert flag.statutory_basis == "Section 172, Companies Act 1994 (Bangladesh)"
+        assert flag.detail["form"] == "Form XXVIII"
+        assert flag.detail["delay_days"] == 33
+
+    def test_CHG_001_no_flag_before_21_day_deadline(self):
+        result = NLCRuleEngine().evaluate(
+            _base_profile(charges=[self._charge(date(2026, 10, 20))]),
+            today=date(2026, 11, 3),
+        )
+        assert _flag_by_id(result, "CHG-001") is None
+
