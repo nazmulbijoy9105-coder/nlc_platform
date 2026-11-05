@@ -322,25 +322,6 @@ def upgrade() -> None:
         $function$
     """)
 
-    op.execute("""
-        CREATE OR REPLACE FUNCTION public.nlc_can_access_document(p_document_id uuid)
-        RETURNS boolean
-        LANGUAGE sql
-        STABLE
-        SECURITY DEFINER
-        SET search_path = pg_catalog, public
-        AS $function$
-            SELECT EXISTS (
-                SELECT 1 FROM public.documents d
-                WHERE d.id = p_document_id
-                  AND public.nlc_can_access_company(d.company_id)
-                  AND (
-                      d.document_type::text NOT IN ('AUDIT_REPORT', 'ANNUAL_RETURN', 'DUE_DILIGENCE')
-                      OR public.nlc_can_view_financials_company(d.company_id)
-                  )
-            )
-        $function$
-    """)
 
     for signature in (
         "nlc_current_user_principal()",
@@ -351,7 +332,6 @@ def upgrade() -> None:
         "nlc_can_view_financials_company(uuid)",
         "nlc_can_manage_financials_company(uuid)",
         "nlc_can_edit_company(uuid)",
-        "nlc_can_access_document(uuid)",
     ):
         op.execute(f"REVOKE ALL ON FUNCTION public.{signature} FROM PUBLIC")
         op.execute(f"GRANT EXECUTE ON FUNCTION public.{signature} TO nlc_app_role")
@@ -458,7 +438,13 @@ def upgrade() -> None:
     # Document visibility depends on document classification, not just tenant.
     op.execute("""
         CREATE POLICY documents_tenant_select ON public.documents
-        FOR SELECT USING (public.nlc_can_access_document(id))
+        FOR SELECT USING (
+            public.nlc_can_access_company(company_id)
+            AND (
+                document_type::text NOT IN ('AUDIT_REPORT', 'ANNUAL_RETURN', 'DUE_DILIGENCE')
+                OR public.nlc_can_view_financials_company(company_id)
+            )
+        )
     """)
     op.execute("""
         CREATE POLICY documents_tenant_insert ON public.documents
@@ -474,7 +460,13 @@ def upgrade() -> None:
     op.execute("""
         CREATE POLICY documents_tenant_update ON public.documents
         FOR UPDATE
-        USING (public.nlc_can_access_document(id) AND public.nlc_can_edit_company(company_id))
+        USING (
+            public.nlc_can_edit_company(company_id)
+            AND (
+                document_type::text NOT IN ('AUDIT_REPORT', 'ANNUAL_RETURN', 'DUE_DILIGENCE')
+                OR public.nlc_can_manage_financials_company(company_id)
+            )
+        )
         WITH CHECK (
             public.nlc_can_edit_company(company_id)
             AND (
@@ -486,7 +478,13 @@ def upgrade() -> None:
     op.execute("""
         CREATE POLICY documents_tenant_delete ON public.documents
         FOR DELETE
-        USING (public.nlc_can_access_document(id) AND public.nlc_can_edit_company(company_id))
+        USING (
+            public.nlc_can_edit_company(company_id)
+            AND (
+                document_type::text NOT IN ('AUDIT_REPORT', 'ANNUAL_RETURN', 'DUE_DILIGENCE')
+                OR public.nlc_can_manage_financials_company(company_id)
+            )
+        )
     """)
 
     op.execute("""
@@ -756,7 +754,10 @@ def upgrade() -> None:
         USING (
             public.nlc_current_user_is_staff()
             OR accessed_by = public.nlc_current_user_id()
-            OR public.nlc_can_access_document(document_id)
+            OR EXISTS (
+                SELECT 1 FROM public.documents d
+                WHERE d.id = document_id
+            )
         )
     """)
     op.execute("""
@@ -766,7 +767,10 @@ def upgrade() -> None:
             public.nlc_current_user_is_staff()
             OR (
                 accessed_by = public.nlc_current_user_id()
-                AND public.nlc_can_access_document(document_id)
+                AND EXISTS (
+                    SELECT 1 FROM public.documents d
+                    WHERE d.id = document_id
+                )
             )
         )
     """)
