@@ -161,14 +161,19 @@ async def test_valid_signed_identity_resolves_to_authenticated_user(db, db_clien
 async def test_revoked_membership_stops_company_access_immediately(db, db_client_user, db_company):
     from sqlalchemy import text
 
-    await set_rls_context(db, str(db_client_user.id))
-    await db.execute(
+    # Membership revocation is a privileged administrative write. Perform
+    # it under the signed service principal, then re-check access as the user.
+    await set_admin_context(db)
+    result = await db.execute(
         text(
             "UPDATE company_user_access SET is_active = FALSE "
             "WHERE user_id = :user_id AND company_id = :company_id"
         ),
         {"user_id": db_client_user.id, "company_id": db_company.id},
     )
+    assert result.rowcount == 1
+
+    await set_rls_context(db, str(db_client_user.id))
     await db.execute(text("SET LOCAL ROLE nlc_app_role"))
     result = await db.execute(
         text("SELECT public.nlc_can_access_company(:company_id)"),
