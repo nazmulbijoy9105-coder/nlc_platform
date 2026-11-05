@@ -92,7 +92,6 @@ def _patch_services(monkeypatch, company=COMPANY, flags=FLAGS):
 
 def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkeypatch):
     _patch_services(monkeypatch)
-    monkeypatch.setattr("app.services.pdf_report_service.LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
         "app.services.pdf_report_service.VERIFIED_RULE_IDS",
         frozenset({"AGM-001"}),
