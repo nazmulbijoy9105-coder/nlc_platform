@@ -135,6 +135,7 @@ class NotificationStatus(enum.StrEnum):
     SENT         = "SENT"
     ACKNOWLEDGED = "ACKNOWLEDGED"
     FAILED       = "FAILED"
+    SUPPRESSED   = "SUPPRESSED"
 
 
 # ── SHARE TRANSFER ───────────────────────────────────────────────────
