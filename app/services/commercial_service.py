@@ -77,11 +77,15 @@ class EngagementService(BaseService[Engagement]):
         grand_total_collected  = sum(v["total_collected"]  for v in pipeline.values())  # type: ignore
 
         return {
-            "by_tier":              pipeline,
-            "grand_total_estimated_bdt":  grand_total_estimated,
-            "grand_total_confirmed_bdt":  grand_total_confirmed,
-            "grand_total_collected_bdt":  grand_total_collected,
-            "collection_rate":      (
+            "by_tier": pipeline,
+            "grand_total_estimated_bdt": grand_total_estimated,
+            "grand_total_confirmed_bdt": grand_total_confirmed,
+            "grand_total_collected_bdt": grand_total_collected,
+            # These are manually recorded engagement aggregates, not receipts
+            # reconciled against a payment ledger or bank/gateway settlement.
+            "revenue_data_basis": "ENGAGEMENT_RECORDED_AGGREGATES",
+            "collected_cash_reconciled": False,
+            "collection_rate": (
                 round(grand_total_collected / grand_total_confirmed * 100, 1)
                 if grand_total_confirmed > 0 else 0
             ),
