@@ -107,16 +107,13 @@ async def login(request: Request,body: LoginBody, db=Depends(get_auth_db)):
     verified_user = await svc.verify_credentials(body.email, body.password)
     if not verified_user:
         # Audit log failed login
-        try:
-            activity = ActivityService(db)
-            await activity.log(
-                action="LOGIN_FAILED",
-                resource_type="user",
-                description=f"Failed login attempt for {body.email}",
-                actor_user_id=user.id,
-            )
-        except Exception:
-            pass
+        activity = ActivityService(db)
+        await activity.log(
+            action="LOGIN_FAILED",
+            resource_type="user",
+            description=f"Failed login attempt for {body.email}",
+            actor_user_id=user.id,
+        )
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     if not verified_user.is_active:
@@ -126,31 +123,15 @@ async def login(request: Request,body: LoginBody, db=Depends(get_auth_db)):
     await svc.record_login(verified_user)
     await set_rls_context(db, str(verified_user.id))
     
-    # Audit log
-    try:
-        activity = ActivityService(db)
-        await activity.log(
-            action="LOGIN_SUCCESS",
-            resource_type="user",
-            resource_id=str(verified_user.id),
-            description=f"User {verified_user.email} logged in successfully",
-            actor_user_id=verified_user.id,
-        )
-    except Exception:
-        pass  # Don't block login if audit log fails
-    
-    # Audit log
-    try:
-        activity = ActivityService(db)
-        await activity.log(
-            action="LOGIN_SUCCESS",
-            resource_type="user",
-            resource_id=str(verified_user.id),
-            description=f"User {verified_user.email} logged in successfully",
-            actor_user_id=verified_user.id,
-        )
-    except Exception:
-        pass  # Don't block login if audit log fails
+    # Mandatory audit event: do not issue credentials if the audit insert fails.
+    activity = ActivityService(db)
+    await activity.log(
+        action="LOGIN_SUCCESS",
+        resource_type="user",
+        resource_id=str(verified_user.id),
+        description=f"User {verified_user.email} logged in successfully",
+        actor_user_id=verified_user.id,
+    )
     
     user_dict = {
         "id": str(verified_user.id),
