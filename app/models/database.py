@@ -33,7 +33,7 @@ _MIGRATION_DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 _ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").strip().lower()
 _REQUIRE_RLS_APP_ROLE = os.environ.get(
     "REQUIRE_RLS_APP_ROLE", "true" if _ENVIRONMENT in {"prod", "production"} else "false"
-).strip().lower() == "true""
+).strip().lower() == "true"
 
 if _REQUIRE_RLS_APP_ROLE and not _APP_DATABASE_URL:
     raise RuntimeError(
@@ -127,16 +127,32 @@ async def get_db_for_user(request: Request) -> AsyncGenerator[AsyncSession, None
     """
     from app.core.security import decode_token
 
-    user_id = "ANONYMOUS"
+    principal = "ANONYMOUS"
     auth_header = request.headers.get("authorization", "")
-    if auth_header.startswith("Bearer "):
-        payload = decode_token(auth_header[7:])
-        if payload and payload.get("type") == "access":
-            user_id = payload.get("sub") or payload.get("user_id") or "ANONYMOUS"
+    if auth_header:
+        if not auth_header.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Invalid authorization header")
+        payload = decode_token(auth_header[7:], expected_type="access")
+        jti = payload.get("jti") if payload else None
+        if not payload or not isinstance(jti, str) or not jti:
+            raise HTTPException(status_code=401, detail="Invalid or expired access token")
+        from starlette.concurrency import run_in_threadpool
+        from app.core.token_blacklist import BlacklistUnavailable, is_revoked
+        try:
+            if await run_in_threadpool(is_revoked, jti, fail_closed=True):
+                raise HTTPException(status_code=401, detail="Token has been revoked")
+        except BlacklistUnavailable as exc:
+            raise HTTPException(status_code=503, detail="Authentication service temporarily unavailable") from exc
+        principal = payload.get("sub") or payload.get("user_id") or ""
+        if not principal:
+            raise HTTPException(status_code=401, detail="Access token has no user identity")
 
     async with AsyncSessionLocal() as session:
         try:
-            await set_rls_context(session, user_id)
+            if principal == "ANONYMOUS":
+                await _set_signed_rls_principal(session, principal)
+            else:
+                await set_rls_context(session, principal)
             yield session
             await session.commit()
         except Exception:
