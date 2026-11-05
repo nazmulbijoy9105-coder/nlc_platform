@@ -528,6 +528,9 @@ VERIFIED_RULE_IDS: frozenset[str] = frozenset({
     # Director disqualification rules remain outside scoring pending independent legal review.
     "DEF-002",
 })
+# Release remains disabled until the complete applicable rule corpus has named,
+# independent current-law approval recorded in the signed, versioned register.
+# Internal source checking is not independent counsel approval.
 # Release remains disabled until the applicable corpus has named, independent
 # current-law approval recorded in the signed, versioned legal approval register.
 LEGAL_SCORE_RELEASED: bool = False
@@ -2495,7 +2498,10 @@ class NLCRuleEngine:
             if f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and f.eval_state == "VIOLATION"
         ]
-        scored = [f for f in violations if f.rule_id in VERIFIED_RULE_IDS]
+        scored = [
+            f for f in violations
+            if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS
+        ]
 
         deductions = {
             "TAX": sum(f.score_impact for f in scored if f.rule_id.startswith(("TAX-", "VAT-"))),
@@ -2530,7 +2536,10 @@ class NLCRuleEngine:
         # P0 GATE: Only verified rules contribute to the authoritative score.
         # Unverified rules still generate flags for visibility but their
         # score_impact is excluded from deductions.
-        scored = [f for f in violations if f.rule_id in VERIFIED_RULE_IDS]
+        scored = [
+            f for f in violations
+            if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS
+        ]
 
         tax_ded = sum(f.score_impact for f in scored if f.rule_id.startswith(("TAX-", "VAT-")))
         agm_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("AGM-"))
