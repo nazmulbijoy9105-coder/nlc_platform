@@ -120,12 +120,14 @@ def _render_band_legend(current_band: str) -> str:
 
     Includes NOT_EVALUATED for companies with insufficient data (coverage < 0.5).
     """
+    # Risk band is the worst independently approved finding severity,
+    # not a numeric score range. A numeric range must not imply legal approval.
     bands = [
-        ("GREEN", "70-100", "Compliant"),
-        ("YELLOW", "50-69", "Monitor"),
-        ("RED", "30-49", "Action Required"),
-        ("BLACK", "0-29", "Critical"),
-        ("NOT_EVALUATED", "—", "Insufficient Data"),
+        ("GREEN", "No verified adverse finding", "Screening only"),
+        ("YELLOW", "Verified monitoring finding", "Review"),
+        ("RED", "Verified material finding", "Action required"),
+        ("BLACK", "Verified critical override", "Critical"),
+        ("NOT_EVALUATED", "Insufficient evidence", "No score released"),
     ]
     items = []
     for band_name, score_range, label in bands:
@@ -141,9 +143,18 @@ def _render_band_legend(current_band: str) -> str:
 def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue_plan: Any) -> str:
     """Generate a brief executive summary paragraph based on the company's status."""
     flag_count = len(flags) if flags else 0
-    black_count = sum(1 for f in (flags or []) if getattr(f, "severity", "") == "BLACK")
-    red_count = sum(1 for f in (flags or []) if getattr(f, "severity", "") == "RED")
-    yellow_count = sum(1 for f in (flags or []) if getattr(f, "severity", "") == "YELLOW")
+    def verified_severity(flag):
+        if getattr(flag, "rule_id", "") not in VERIFIED_RULE_IDS:
+            return None
+        return getattr(
+            getattr(flag, "severity", None),
+            "value",
+            getattr(flag, "severity", None),
+        )
+
+    black_count = sum(1 for f in (flags or []) if verified_severity(f) == "BLACK")
+    red_count = sum(1 for f in (flags or []) if verified_severity(f) == "RED")
+    yellow_count = sum(1 for f in (flags or []) if verified_severity(f) == "YELLOW")
 
     if band == "BLACK":
         urgency = "<strong>Critical legal deficiency detected.</strong> The company has a BLACK-severity compliance breach requiring immediate remediation. The compliance score has been overridden to 0 pending resolution of the critical flag(s)."
@@ -152,7 +163,7 @@ def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue
     elif band == "YELLOW":
         urgency = "<strong>Compliance monitoring recommended.</strong> The company has minor deficiencies that should be addressed to maintain good standing."
     elif band == "NOT_EVALUATED":
-        urgency = "<strong>Insufficient data for compliance evaluation.</strong> Less than 50% of required compliance data points are available. The company's compliance status cannot be determined. Please complete the company profile and trigger re-evaluation."
+        urgency = "<strong>No statutory compliance score has been released.</strong> The applicable rule corpus is awaiting independent legal approval or sufficient verified evidence. This report is not a compliance certification."
     else:
         urgency = "<strong>Company is in good compliance standing.</strong> No critical issues detected. Continue regular monitoring."
 
