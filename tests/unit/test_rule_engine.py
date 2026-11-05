@@ -1115,7 +1115,6 @@ class TestEngineIntegrity:
     def test_rescue_plan_generated_for_black_company(self, rule_engine, build_profile):
         """BLACK band company is correctly identified with score <= 29."""
         profile = build_profile(
-            current_director_count=0,
             paid_up_ge_authorized=True,
             paid_up_capital_bdt=2000000,
             authorized_capital_bdt=1000000,
