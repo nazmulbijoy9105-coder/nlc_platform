@@ -2572,21 +2572,15 @@ class NLCRuleEngine:
         override = False
         reason = None
         final = raw
+        # A BLACK label or override bit is not legal approval. Both require
+        # the exact rule ID to be in the independent counsel-approved allowlist.
         critical = [
             f for f in active
             if f.rule_id in VERIFIED_RULE_IDS
-            and f.is_black_override
+            and (f.is_black_override or f.severity == Severity.BLACK)
             and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and f.eval_state == "VIOLATION"
         ]
-        if not critical:
-            critical = [
-                f for f in active
-                if f.rule_id in VERIFIED_RULE_IDS
-                and f.severity == Severity.BLACK
-                and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
-                and f.eval_state == "VIOLATION"
-            ]
         if critical:
             override = True
             reason = f"BLACK: {', '.join(f.rule_id for f in critical)}"
@@ -2665,7 +2659,7 @@ class NLCRuleEngine:
             revenue_tier=REVENUE_TIER_MAP[band],
             active_flag_count=len(active),
             coverage=coverage,
-            black_flag_count=len([f for f in active if f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            black_flag_count=len([f for f in active if f.rule_id in VERIFIED_RULE_IDS and (f.is_black_override or f.severity == Severity.BLACK) and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             red_flag_count=len([f for f in active if f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.RED and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             yellow_flag_count=len([f for f in active if f.severity == Severity.YELLOW and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             green_flag_count=len([f for f in active if f.severity == Severity.GREEN and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
