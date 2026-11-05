@@ -24,19 +24,29 @@ from app.services.base import BaseService
 
 
 def _agm_profile_evidence(latest_agm) -> dict:
-    """Map AGM evidence from the AGM record without inventing attendance.
+    """Expose only AGM facts supported by explicit evidence provenance.
 
-    AGM.members_present has a database default of zero. Treat zero as
-    unrecorded attendance rather than proof that no members attended.
+    Raw form values are not automatically verified legal facts. In particular,
+    default zero attendance, default booleans, and a client-entered quorum
+    conclusion must not become a statutory finding.
     """
     if latest_agm is None:
         return {
             "members_present_at_agm": None,
+            "agm_attendance_verified": False,
+            "agm_attendance_evidence_ref": None,
+            "agm_quorum_required": None,
+            "agm_quorum_basis_verified": False,
+            "agm_quorum_evidence_ref": None,
+            "agm_quorum_met": None,
             "auditor_reappointed_at_agm": None,
             "auditor_reappointment_verified": False,
             "auditor_reappointment_evidence_ref": None,
             "agm_minutes_prepared": None,
             "notice_sent_date": None,
+            "agm_notice_verified_absent": None,
+            "agm_held_without_audit": None,
+            "accounts_adopted_at_agm": None,
             "short_notice_consent_obtained": None,
             "short_notice_consent_verified": False,
             "short_notice_consent_evidence_ref": None,
@@ -48,68 +58,73 @@ def _agm_profile_evidence(latest_agm) -> dict:
         and getattr(latest_agm, "members_present_verified_at", None) is not None
         and getattr(latest_agm, "members_present_verified_by", None) is not None
     )
-    members_present = getattr(latest_agm, "members_present", None)
-    if members_present == 0 and not attendance_verified:
-        members_present = None
-
-    minutes_prepared = getattr(latest_agm, "minutes_prepared", None)
-    # The ORM column defaults to False, so False alone cannot establish that
-    # minutes were never prepared; retain UNKNOWN until explicit evidence exists.
-    if minutes_prepared is False:
-        minutes_prepared = None
-
+    quorum_basis_verified = (
+        getattr(latest_agm, "quorum_required_verified", False) is True
+        and bool(getattr(latest_agm, "quorum_evidence_ref", None))
+        and getattr(latest_agm, "quorum_verified_at", None) is not None
+        and getattr(latest_agm, "quorum_verified_by", None) is not None
+        and getattr(latest_agm, "quorum_required", None) is not None
+    )
+    quorum_result_verified = (
+        attendance_verified
+        and quorum_basis_verified
+        and getattr(latest_agm, "quorum_met", None) is not None
+    )
     auditor_reappointment_verified = (
         getattr(latest_agm, "auditor_reappointment_verified", False) is True
         and bool(getattr(latest_agm, "auditor_reappointment_evidence_ref", None))
         and getattr(latest_agm, "auditor_reappointment_verified_at", None) is not None
         and getattr(latest_agm, "auditor_reappointment_verified_by", None) is not None
     )
+    short_notice_consent_verified = (
+        getattr(latest_agm, "short_notice_consent_verified", False) is True
+        and bool(getattr(latest_agm, "short_notice_consent_evidence_ref", None))
+        and getattr(latest_agm, "short_notice_consent_verified_at", None) is not None
+        and getattr(latest_agm, "short_notice_consent_verified_by", None) is not None
+    )
+    # No independent minutes-review metadata exists yet; a raw boolean or
+    # attached document ID alone is not a verified finding.
+    minutes_prepared = None
+
     return {
-        "members_present_at_agm": members_present,
+        "members_present_at_agm": (
+            getattr(latest_agm, "members_present", None) if attendance_verified else None
+        ),
         "agm_attendance_verified": attendance_verified,
         "agm_attendance_evidence_ref": getattr(latest_agm, "members_present_evidence_ref", None),
         "agm_quorum_required": (
-            getattr(latest_agm, "quorum_required", None)
-            if (
-                getattr(latest_agm, "quorum_required_verified", False) is True
-                and bool(getattr(latest_agm, "quorum_evidence_ref", None))
-                and getattr(latest_agm, "quorum_verified_at", None) is not None
-                and getattr(latest_agm, "quorum_verified_by", None) is not None
-            ) else None
+            getattr(latest_agm, "quorum_required", None) if quorum_basis_verified else None
         ),
-        "agm_quorum_basis_verified": (
-            getattr(latest_agm, "quorum_required_verified", False) is True
-            and bool(getattr(latest_agm, "quorum_evidence_ref", None))
-            and getattr(latest_agm, "quorum_verified_at", None) is not None
-            and getattr(latest_agm, "quorum_verified_by", None) is not None
-        ),
+        "agm_quorum_basis_verified": quorum_basis_verified,
         "agm_quorum_evidence_ref": getattr(latest_agm, "quorum_evidence_ref", None),
+        "agm_quorum_met": (
+            getattr(latest_agm, "quorum_met", None) if quorum_result_verified else None
+        ),
         "auditor_reappointed_at_agm": (
             getattr(latest_agm, "auditor_reappointed", None)
             if auditor_reappointment_verified else None
         ),
         "auditor_reappointment_verified": auditor_reappointment_verified,
-        "auditor_reappointment_evidence_ref": getattr(latest_agm, "auditor_reappointment_evidence_ref", None),
+        "auditor_reappointment_evidence_ref": getattr(
+            latest_agm, "auditor_reappointment_evidence_ref", None
+        ),
         "agm_minutes_prepared": minutes_prepared,
         "notice_sent_date": getattr(latest_agm, "notice_sent_date", None),
+        # The legacy notice_missing boolean has no reviewer/evidence metadata.
+        # It is therefore never promoted to verified absence.
+        "agm_notice_verified_absent": None,
+        # These legacy booleans also lack independent verification metadata.
+        "agm_held_without_audit": None,
+        "accounts_adopted_at_agm": None,
         "short_notice_consent_obtained": (
             getattr(latest_agm, "short_notice_consent_obtained", None)
-            if (
-                getattr(latest_agm, "short_notice_consent_verified", False) is True
-                and bool(getattr(latest_agm, "short_notice_consent_evidence_ref", None))
-                and getattr(latest_agm, "short_notice_consent_verified_at", None) is not None
-                and getattr(latest_agm, "short_notice_consent_verified_by", None) is not None
-            ) else None
+            if short_notice_consent_verified else None
         ),
-        "short_notice_consent_verified": (
-            getattr(latest_agm, "short_notice_consent_verified", False) is True
-            and bool(getattr(latest_agm, "short_notice_consent_evidence_ref", None))
-            and getattr(latest_agm, "short_notice_consent_verified_at", None) is not None
-            and getattr(latest_agm, "short_notice_consent_verified_by", None) is not None
+        "short_notice_consent_verified": short_notice_consent_verified,
+        "short_notice_consent_evidence_ref": getattr(
+            latest_agm, "short_notice_consent_evidence_ref", None
         ),
-        "short_notice_consent_evidence_ref": getattr(latest_agm, "short_notice_consent_evidence_ref", None),
     }
-
 
 class CompanyService(BaseService[Company]):
     model = Company
@@ -320,68 +335,77 @@ class CompanyService(BaseService[Company]):
             }
         return dict(row)
 
-    async def get_risk_distribution(self, user_id: uuid.UUID | None = None) -> list[dict]:
-        """Return risk aggregates for the caller's active company memberships only.
+    async def get_risk_distribution(self, user_id: uuid.UUID) -> list[dict]:
+        """Return risk distribution for companies the user can currently access.
 
-        A missing user identity fails closed; this method never falls back to
-        the global dashboard view.
+        The global materialized/view aggregate is deliberately not used here:
+        aggregation must happen *after* membership filtering.
         """
         if user_id is None:
-            return []
+            raise ValueError("user_id is required for tenant-scoped risk distribution")
         result = await self.db.execute(
-            text("""
-                SELECT c.current_risk_band AS risk_band,
-                       COUNT(DISTINCT c.id) AS company_count,
-                       ROUND(
-                           COUNT(DISTINCT c.id) * 100.0
-                           / NULLIF(SUM(COUNT(DISTINCT c.id)) OVER (), 0), 1
-                       ) AS percentage
+            text(
+                """
+                SELECT
+                    c.current_risk_band AS risk_band,
+                    COUNT(*) AS company_count,
+                    ROUND(
+                        COUNT(*) * 100.0 / NULLIF(SUM(COUNT(*)) OVER (), 0),
+                        1
+                    ) AS percentage
                 FROM companies c
-                JOIN company_user_access cua
-                  ON cua.company_id = c.id
-                 AND cua.user_id = :user_id
-                 AND cua.is_active = TRUE
                 WHERE c.is_active = TRUE
+                  AND EXISTS (
+                      SELECT 1
+                      FROM company_user_access cua
+                      WHERE cua.company_id = c.id
+                        AND cua.user_id = :user_id
+                        AND cua.is_active = TRUE
+                  )
                 GROUP BY c.current_risk_band
                 ORDER BY CASE c.current_risk_band
-                    WHEN 'BLACK' THEN 1 WHEN 'RED' THEN 2
-                    WHEN 'YELLOW' THEN 3 WHEN 'GREEN' THEN 4 ELSE 5 END
-            """),
-            {"user_id": user_id},
+                    WHEN 'BLACK' THEN 1
+                    WHEN 'RED' THEN 2
+                    WHEN 'YELLOW' THEN 3
+                    WHEN 'GREEN' THEN 4
+                    ELSE 5
+                END
+                """
+            ),
+            {"user_id": str(user_id)},
         )
         return [dict(row) for row in result.mappings().all()]
 
-    async def get_upcoming_deadlines(self, days_ahead: int = 30, user_id: uuid.UUID | None = None) -> list[dict]:
-        """Return deadlines only for companies actively assigned to this user."""
+    async def get_upcoming_deadlines(
+        self, days_ahead: int = 30, user_id: uuid.UUID | None = None
+    ) -> list[dict]:
+        """Return deadlines scoped to active memberships; no implicit global mode."""
         if user_id is None:
-            return []
+            raise ValueError(
+                "user_id is required; use get_upcoming_deadlines_for_system for worker scans"
+            )
         result = await self.db.execute(
-            text("""
+            text(
+                """
                 SELECT d.*
                 FROM vw_upcoming_deadlines d
-                JOIN company_user_access cua
-                  ON cua.company_id = d.company_id
-                 AND cua.user_id = :user_id
-                 AND cua.is_active = TRUE
-                WHERE d.days_remaining BETWEEN 0 AND :days
-                ORDER BY d.days_remaining, d.company_id
-            """),
-            {"user_id": user_id, "days": days_ahead},
+                WHERE d.days_remaining <= :days
+                  AND EXISTS (
+                      SELECT 1
+                      FROM company_user_access cua
+                      WHERE cua.company_id = d.company_id
+                        AND cua.user_id = :user_id
+                        AND cua.is_active = TRUE
+                  )
+                ORDER BY d.days_remaining
+                """
+            ),
+            {"days": days_ahead, "user_id": str(user_id)},
         )
         return [dict(row) for row in result.mappings().all()]
 
     async def get_upcoming_deadlines_for_system(self, days_ahead: int = 30) -> list[dict]:
-        """Unscoped deadline feed for trusted scheduled workers only."""
-        result = await self.db.execute(
-            text("""
-                SELECT * FROM vw_upcoming_deadlines
-                WHERE days_remaining BETWEEN 0 AND :days
-                ORDER BY days_remaining, company_id
-            """),
-            {"days": days_ahead},
-        )
-        return [dict(row) for row in result.mappings().all()]
-
+        """Privileged worker-only global deadline scan; never expose via user API."""
     # ── UPDATE ────────────────────────────────────────────────────
 
     async def update_compliance_state(

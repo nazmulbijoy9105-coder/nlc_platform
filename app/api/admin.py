@@ -3,13 +3,15 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import get_current_user
 from app.core.dependencies import get_db, get_db_for_user
+from app.models.database import set_admin_context
 from app.models.infrastructure import UserActivityLog
 from app.models.user import User
+from app.rule_engine.engine import LEGAL_SCORE_RELEASED
 
 router = APIRouter()
 
@@ -31,6 +33,78 @@ async def require_super_admin(current_user=Depends(get_current_user)):
 
 
 
+@router.get("/security/rls-status")
+async def rls_runtime_status(
+    admin=Depends(require_super_admin),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Read-only runtime audit of the actual Render database connection role and RLS state."""
+    role_result = await db.execute(
+        text(
+            "SELECT current_user AS role_name, rolsuper, rolbypassrls "
+            "FROM pg_roles WHERE rolname = current_user"
+        )
+    )
+    role_row = role_result.mappings().one()
+    tables_result = await db.execute(
+        text(
+            """
+            SELECT c.relname AS table_name,
+                   c.relrowsecurity AS rls_enabled,
+                   c.relforcerowsecurity AS force_rls,
+                   count(p.policyname)::int AS policy_count
+            FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            LEFT JOIN pg_policies p
+              ON p.schemaname = n.nspname AND p.tablename = c.relname
+            WHERE n.nspname = 'public'
+              AND c.relkind = 'r'
+              AND c.relname IN (
+                  'companies', 'company_user_access', 'compliance_evaluation_runs',
+                  'compliance_score_history', 'compliance_calendar_events', 'documents', 'users'
+              )
+            GROUP BY c.relname, c.relrowsecurity, c.relforcerowsecurity
+            ORDER BY c.relname
+            """
+        )
+    )
+    table_rows = [dict(row) for row in tables_result.mappings().all()]
+    expected_tables = {
+        "companies",
+        "company_user_access",
+        "compliance_evaluation_runs",
+        "compliance_score_history",
+        "compliance_calendar_events",
+        "documents",
+        "users",
+    }
+    observed = {row["table_name"] for row in table_rows}
+    missing = sorted(expected_tables - observed)
+    unsafe_tables = [
+        row["table_name"]
+        for row in table_rows
+        if not row["rls_enabled"] or row["policy_count"] == 0
+    ]
+    bypass = bool(role_row["rolbypassrls"])
+    is_superuser = bool(role_row["rolsuper"])
+    return {
+        "status": "UNSAFE" if bypass or is_superuser or missing or unsafe_tables else "RLS_ENABLED",
+        "database_role": role_row["role_name"],
+        "role_is_superuser": is_superuser,
+        "role_bypasses_rls": bypass,
+        "rls_context": await _current_rls_context(db),
+        "tables": table_rows,
+        "missing_tables": missing,
+        "tables_without_rls_or_policy": unsafe_tables,
+        "note": "Production safety requires a non-BYPASSRLS application role and an authenticated tenant-scope test.",
+    }
+
+
+async def _current_rls_context(db: AsyncSession) -> str | None:
+    result = await db.execute(text("SELECT current_setting('app.current_user_id', true)"))
+    return result.scalar_one_or_none()
+
+
 @router.get("/dashboard")
 async def admin_dashboard(
     admin=Depends(require_admin),
@@ -43,8 +117,14 @@ async def admin_dashboard(
     try:
         r = await db.execute(select(Company).where(Company.last_evaluated_at.isnot(None)).order_by(Company.last_evaluated_at.desc()).limit(5))
         for co in r.scalars().all():
-            score = co.current_compliance_score if co.current_compliance_score is not None else 0
-            activities.append({"id": str(co.id), "message": f"Evaluation for {co.company_name or 'Unknown'} - Score: {score}/100", "actor": "Rule Engine", "created_at": co.last_evaluated_at.isoformat() if co.last_evaluated_at else "", "type": "EVALUATION" if score >= 50 else "VIOLATION"})
+            if LEGAL_SCORE_RELEASED and co.current_compliance_score is not None:
+                score = co.current_compliance_score
+                message = f"Evaluation for {co.company_name or 'Unknown'} - Score: {score}/100"
+                activity_type = "EVALUATION" if score >= 50 else "VIOLATION"
+            else:
+                message = f"Evaluation for {co.company_name or 'Unknown'} - statutory score withheld pending independent legal approval"
+                activity_type = "NOT_EVALUATED"
+            activities.append({"id": str(co.id), "message": message, "actor": "Rule Engine", "created_at": co.last_evaluated_at.isoformat() if co.last_evaluated_at else "", "type": activity_type})
     except Exception:
         pass
     try:
@@ -294,7 +374,10 @@ async def cron_evaluate_all(
         provided = request.headers.get("X-Cron-Secret", "")
         if provided != cron_secret:
             raise HTTPException(status_code=403, detail="Invalid cron secret")
-    
+
+    # The secret is verified before granting this background task ADMIN RLS context.
+    await set_admin_context(db)
+
     try:
         from sqlalchemy import text
         result = await db.execute(text("SELECT id FROM companies WHERE is_active = true"))
@@ -344,7 +427,7 @@ async def cron_health():
 # ───────────────────────────────────────────────────────────────────
 
 @router.get("/users/{user_id}")
-async def get_user_by_id(user_id: str, admin=Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def get_user_by_id(user_id: str, admin=Depends(require_admin), db: AsyncSession = Depends(get_db_for_user)):
     """Get a single user by ID."""
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
@@ -359,7 +442,7 @@ async def get_user_by_id(user_id: str, admin=Depends(require_admin), db: AsyncSe
 
 
 @router.get("/logs/recent")
-async def get_recent_logs(limit: int = 50, admin=Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def get_recent_logs(limit: int = 50, admin=Depends(require_admin), db: AsyncSession = Depends(get_db_for_user)):
     """Return recent activity logs."""
     result = await db.execute(
         select(UserActivityLog).order_by(UserActivityLog.logged_at.desc()).limit(limit)
@@ -379,7 +462,7 @@ async def get_recent_logs(limit: int = 50, admin=Depends(require_admin), db: Asy
 
 
 @router.get("/logs/company/{company_id}")
-async def get_company_logs(company_id: str, limit: int = 50, admin=Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def get_company_logs(company_id: str, limit: int = 50, admin=Depends(require_admin), db: AsyncSession = Depends(get_db_for_user)):
     """Return activity logs for a specific company."""
     result = await db.execute(
         select(UserActivityLog)

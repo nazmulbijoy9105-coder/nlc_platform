@@ -7,6 +7,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy import select
 
+from app.core.dependencies import get_auth_db, get_db_for_user
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -18,7 +19,7 @@ from app.core.security import (
     verify_password,
     verify_totp_code,
 )
-from app.models.database import get_db, set_rls_context
+from app.models.database import AsyncSessionLocal, get_db, set_rls_context
 from app.models.user import User
 from app.services.notification_service import ActivityService
 from app.services.user_service import UserService
@@ -84,7 +85,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 @router.post("/login", response_model=LoginResponse)
 @_limiter.limit("10/minute")
-async def login(request: Request,body: LoginBody, db=Depends(get_db)):
+async def login(request: Request,body: LoginBody, db=Depends(get_auth_db)):
     """Login with lockout protection, failed attempt tracking, and 2FA support."""
     from app.services.user_service import UserService
     svc = UserService(db)
@@ -93,7 +94,11 @@ async def login(request: Request,body: LoginBody, db=Depends(get_db)):
     if not user:
         # Don't reveal whether email exists — return generic error
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
+
+    # The AUTH context is only for email lookup. Bind all subsequent reads,
+    # lockout updates and login-attempt writes to this verified user identity.
+    await set_rls_context(db, str(user.id))
+
     # Check account lockout
     if await svc.check_lockout(user):
         raise HTTPException(status_code=423, detail="Account temporarily locked due to too many failed attempts. Try again later.")
@@ -102,15 +107,21 @@ async def login(request: Request,body: LoginBody, db=Depends(get_db)):
     verified_user = await svc.verify_credentials(body.email, body.password)
     if not verified_user:
         # Audit log failed login
-        try:
-            activity = ActivityService(db)
-            await activity.log(
-                action="LOGIN_FAILED",
-                resource_type="user",
-                description=f"Failed login attempt for {body.email}",
-            )
-        except Exception:
-            pass
+        # Persist this audit event in its own transaction: the request then
+        # returns 401, so the request-scoped DB dependency correctly rolls back.
+        async with AsyncSessionLocal() as audit_db:
+            try:
+                await set_rls_context(audit_db, str(user.id))
+                await ActivityService(audit_db).log(
+                    action="LOGIN_FAILED",
+                    resource_type="user",
+                    description=f"Failed login attempt for {body.email}",
+                    actor_user_id=user.id,
+                )
+                await audit_db.commit()
+            except Exception:
+                await audit_db.rollback()
+                raise
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     if not verified_user.is_active:
@@ -120,31 +131,15 @@ async def login(request: Request,body: LoginBody, db=Depends(get_db)):
     await svc.record_login(verified_user)
     await set_rls_context(db, str(verified_user.id))
     
-    # Audit log
-    try:
-        activity = ActivityService(db)
-        await activity.log(
-            action="LOGIN_SUCCESS",
-            resource_type="user",
-            resource_id=str(verified_user.id),
-            description=f"User {verified_user.email} logged in successfully",
-            actor_user_id=verified_user.id,
-        )
-    except Exception:
-        pass  # Don't block login if audit log fails
-    
-    # Audit log
-    try:
-        activity = ActivityService(db)
-        await activity.log(
-            action="LOGIN_SUCCESS",
-            resource_type="user",
-            resource_id=str(verified_user.id),
-            description=f"User {verified_user.email} logged in successfully",
-            actor_user_id=verified_user.id,
-        )
-    except Exception:
-        pass  # Don't block login if audit log fails
+    # Mandatory audit event: do not issue credentials if the audit insert fails.
+    activity = ActivityService(db)
+    await activity.log(
+        action="LOGIN_SUCCESS",
+        resource_type="user",
+        resource_id=str(verified_user.id),
+        description=f"User {verified_user.email} logged in successfully",
+        actor_user_id=verified_user.id,
+    )
     
     user_dict = {
         "id": str(verified_user.id),
@@ -183,7 +178,7 @@ async def login(request: Request,body: LoginBody, db=Depends(get_db)):
 
 
 @router.get("/me", response_model=UserResponse)
-async def me(current_user: dict = Depends(get_current_user), db=Depends(get_db)):
+async def me(current_user: dict = Depends(get_current_user), db=Depends(get_db_for_user)):
     result = await db.execute(select(User).where(User.id == current_user["sub"]))
     user = result.scalar_one_or_none()
 
@@ -204,7 +199,7 @@ async def me(current_user: dict = Depends(get_current_user), db=Depends(get_db))
 @router.post("/2fa/setup")
 async def setup_2fa(
     current_user: dict = Depends(get_current_user),
-    db=Depends(get_db),
+    db=Depends(get_db_for_user),
 ):
     """Start TOTP setup for the authenticated, active user."""
     user_id = current_user.get("sub") or current_user.get("user_id")
@@ -237,7 +232,7 @@ async def confirm_2fa_setup(
     request: Request,
     body: VerifyTOTPSetupRequest,
     current_user: dict = Depends(get_current_user),
-    db=Depends(get_db),
+    db=Depends(get_db_for_user),
 ):
     """Enable TOTP only after the authenticated user proves possession."""
     user_id = current_user.get("sub") or current_user.get("user_id")
@@ -264,9 +259,10 @@ async def verify_2fa(request: Request, body: Verify2FARequest, db=Depends(get_db
     jti = payload.get("jti") if payload else None
     exp = payload.get("exp") if payload else None
     user_id = payload.get("sub") if payload else None
-    if not payload or not isinstance(jti, str) or not jti or not user_id or not exp:
+    if not payload or not isinstance(jti, str) or not jti or not exp:
         raise HTTPException(status_code=401, detail="Invalid or expired 2FA challenge")
 
+    await set_rls_context(db, str(user_id))
     result = await db.execute(
         select(User).where(User.id == user_id, User.is_active.is_(True))
     )
@@ -309,8 +305,9 @@ async def verify_2fa(request: Request, body: Verify2FARequest, db=Depends(get_db
 async def refresh_token(body: RefreshRequest, db=Depends(get_db)):
     """Exchange a valid refresh token for a new access token."""
     payload = decode_token(body.refresh_token, expected_type="refresh")
-    if not payload:
+    if not payload or not payload.get("sub"):
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+    await set_rls_context(db, str(payload["sub"]))
     result = await db.execute(select(User).where(User.id == payload.get("sub")))
     user = result.scalar_one_or_none()
     if not user or not user.is_active:
@@ -379,7 +376,7 @@ class ChangePasswordRequest(BaseModel):
 async def change_password(
     body: ChangePasswordRequest,
     token: str = Depends(oauth2_scheme),
-    db=Depends(get_db),
+    db=Depends(get_db_for_user),
 ):
     """Change password with strength validation."""
     payload = await get_current_user(token)
@@ -412,7 +409,7 @@ class SignupRequest(BaseModel):
 
 
 @router.post("/signup", response_model=dict)
-async def signup(body: SignupRequest, db=Depends(get_db)):
+async def signup(body: SignupRequest, db=Depends(get_auth_db)):
     """Public signup — creates a new user account.
     
     Available roles: LEGAL_STAFF, ADMIN_STAFF, CLIENT_DIRECTOR, CLIENT_VIEW_ONLY

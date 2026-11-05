@@ -4,7 +4,7 @@ from datetime import date
 from sqlalchemy import select
 
 from app.models.compliance_calendar import ComplianceCalendarEvent
-from app.models.database import AsyncSessionLocal
+from app.models.database import AsyncSessionLocal, set_admin_context
 from app.models.enums import CalendarEventStatus
 
 logger = logging.getLogger(__name__)
@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 async def check_overdue_events() -> int:
     """Mark UPCOMING/DUE_SOON events past their due_date as OVERDUE."""
     async with AsyncSessionLocal() as db:
+        await set_admin_context(db)
         result = await db.execute(
             select(ComplianceCalendarEvent).where(
                 ComplianceCalendarEvent.status.in_(

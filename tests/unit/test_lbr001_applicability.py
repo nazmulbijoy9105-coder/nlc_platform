@@ -12,13 +12,22 @@ def test_lbr001_silent_unless_confirmed_manufacturing(rule_engine, build_profile
     assert "LBR-001" not in _ids(out)
 
 
-def test_lbr001_fires_for_manufacturing_without_license(rule_engine, build_profile):
-    out = rule_engine.evaluate(build_profile(is_manufacturing=True, factory_license_obtained=False))
+def test_lbr001_fires_only_when_government_direction_requires_license(rule_engine, build_profile):
+    out = rule_engine.evaluate(build_profile(is_manufacturing=True, factory_license_required_by_direction=True, factory_license_obtained=False))
     assert "LBR-001" in _ids(out)
 
 
+def test_lbr001_not_assumed_from_manufacturing_alone(rule_engine, build_profile):
+    out = rule_engine.evaluate(build_profile(
+        is_manufacturing=True,
+        factory_license_required_by_direction=None,
+        factory_license_obtained=False,
+    ))
+    assert "LBR-001" not in _ids(out)
+
+
 def test_lbr001_silent_for_manufacturing_with_license(rule_engine, build_profile):
-    out = rule_engine.evaluate(build_profile(is_manufacturing=True, factory_license_obtained=True))
+    out = rule_engine.evaluate(build_profile(is_manufacturing=True, factory_license_required_by_direction=True, factory_license_obtained=True))
     assert "LBR-001" not in _ids(out)
 
 

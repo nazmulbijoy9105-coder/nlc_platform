@@ -203,6 +203,15 @@ async def create_rescue_plan(
     engine = NLCRuleEngine()
     engine_output = engine.evaluate(profile)
 
+    if not engine_output.rescue_sequence:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                "A rescue plan cannot be generated until a counsel-approved statutory "
+                "evaluation produces a RED or BLACK rescue sequence."
+            ),
+        )
+
     plan = await rescue_svc.generate_rescue_plan(  # type: ignore
         company_id=body.company_id,
         engine_output=engine_output,

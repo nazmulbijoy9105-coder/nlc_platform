@@ -111,7 +111,7 @@ profiles = {
         charges=[ChargeEvent(
             charge_id="C1", creation_date=today - timedelta(days=100),
             charge_type="mortgage", amount_bdt=1000000, charge_holder="Bank",
-            form_viii_filed=False, satisfied=True, satisfaction_filed=False,
+            form_xviii_filed=False, satisfied=True, satisfaction_filed=False,
         )],
         last_allotment_date=today - timedelta(days=100), form_xv_filed=False,
         share_certificates_issued=False,
