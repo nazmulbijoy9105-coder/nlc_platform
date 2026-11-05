@@ -37,7 +37,7 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
-from app.models.enums import EngagementStatus, RevenueTier
+from app.models.enums import EngagementStatus, RevenueTier, TaskPriority, TaskStatus
 from app.models.user import User
 from app.services.commercial_service import EngagementService, QuotationService, TaskService
 from app.services.notification_service import ActivityService
@@ -127,7 +127,7 @@ class TaskCreateRequest(BaseModel):
     assigned_to: uuid.UUID | None = None
     linked_flag_id: uuid.UUID | None = None
     source_rescue_step_id: uuid.UUID | None = None
-    priority: str = Field(default="MEDIUM", description="LOW | MEDIUM | HIGH | CRITICAL")
+    priority: TaskPriority = Field(default=TaskPriority.MEDIUM, description="LOW | MEDIUM | HIGH | CRITICAL")
 
 
 class TaskCompleteRequest(BaseModel):
@@ -301,8 +301,6 @@ async def advance_engagement_status(
     engagement = await svc.advance_status(  # type: ignore
         engagement_id=engagement_id,
         new_status=body.new_status,
-        note=body.note,
-        updated_by=current_user.id,
     )
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found.")
@@ -347,7 +345,6 @@ async def create_quotation(
         line_items=body.line_items,
         valid_days=body.valid_days,
         notes=body.notes,
-        created_by=current_user.id,
     )
 
     await activity.log(
@@ -376,7 +373,7 @@ async def accept_quotation(
     svc = QuotationService(db)
     activity = ActivityService(db)
 
-    quotation = await svc.accept(quotation_id=quotation_id, accepted_by=current_user.id)  # type: ignore
+    quotation = await svc.accept(quotation_id=quotation_id)
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
 
@@ -405,7 +402,7 @@ async def reject_quotation(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = QuotationService(db)
-    quotation = await svc.reject(quotation_id=quotation_id, reason=body.reason)  # type: ignore
+    quotation = await svc.reject(quotation_id=quotation_id, reason=body.reason, rejected_by=current_user.id)
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
     return _quotation_to_response(quotation)
@@ -433,11 +430,11 @@ async def create_task(
         company_id=body.company_id,
         title=body.title,
         description=body.description,
-        due_date=body.due_date,  # type: ignore
+        due_date=body.due_date,
         assigned_to=body.assigned_to,
         source_flag_id=body.linked_flag_id,
         source_rescue_step_id=body.source_rescue_step_id,
-        priority=body.priority,  # type: ignore
+        priority=body.priority,
         created_by=current_user.id,
     )
     return _task_to_response(task)
@@ -455,7 +452,7 @@ async def list_tasks(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = TaskService(db)
-    tasks = await svc.get_for_company(company_id=company_id, status=status_filter)  # type: ignore
+    tasks = await svc.get_for_company(company_id=company_id, status=TaskStatus(status_filter) if status_filter else None)
     return [_task_to_response(t) for t in tasks]
 
 
@@ -475,8 +472,6 @@ async def complete_task(
     svc = TaskService(db)
     task = await svc.complete_task(  # type: ignore
         task_id=task_id,
-        completed_by=current_user.id,
-        completion_note=body.completion_note,
     )
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
