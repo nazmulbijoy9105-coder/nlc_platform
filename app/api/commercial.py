@@ -254,6 +254,8 @@ async def create_engagement(
         revenue_tier=body.revenue_tier,
         engagement_title=body.description,
         estimated_fee_bdt=body.estimated_fee_bdt,
+        assigned_staff_id=body.assigned_officer_id,
+        notes=body.notes,
         identified_date=date.today(),
     )
 
@@ -300,11 +302,14 @@ async def advance_engagement_status(
     svc = EngagementService(db)
     activity = ActivityService(db)
 
-    engagement = await svc.advance_status(  # type: ignore
-        engagement_id=engagement_id,
-        new_status=body.new_status,
-        note=body.note,
-    )
+    try:
+        engagement = await svc.advance_status(
+            engagement_id=engagement_id,
+            new_status=body.new_status,
+            note=body.note,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found.")
 
@@ -339,16 +344,19 @@ async def create_quotation(
     svc = QuotationService(db)
     activity = ActivityService(db)
 
-    quotation = await svc.create_quotation(  # type: ignore
-        engagement_id=body.engagement_id,
-        company_id=body.company_id,
-        professional_fee_bdt=body.professional_fee_bdt,
-        government_fee_bdt=body.government_fee_bdt,
-        vat_bdt=body.vat_bdt,
-        line_items=body.line_items,
-        valid_days=body.valid_days,
-        notes=body.notes,
-    )
+    try:
+        quotation = await svc.create_quotation(
+            engagement_id=body.engagement_id,
+            company_id=body.company_id,
+            professional_fee_bdt=body.professional_fee_bdt,
+            government_fee_bdt=body.government_fee_bdt,
+            vat_bdt=body.vat_bdt,
+            line_items=body.line_items,
+            valid_days=body.valid_days,
+            notes=body.notes,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     await activity.log(
         action="QUOTATION_CREATED",
