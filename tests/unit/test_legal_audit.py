@@ -364,7 +364,7 @@ class TestVerifiedAGMStatutoryDeadlines:
         values = {
             "agm_history_verified": True,
             "agm_history_evidence_ref": "AGM-REGISTER-VERIFIED-001",
-            "agm_history_verified_at": date(2026, 1, 1),
+            "agm_history_verified_at": date(2024, 1, 1),
             "agm_history_verified_by": "reviewer-001",
         }
         values.update(overrides)
