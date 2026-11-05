@@ -23,6 +23,7 @@ import hashlib
 import json
 import logging
 import uuid
+from fastapi.encoders import jsonable_encoder
 from dataclasses import fields as dataclass_fields
 from datetime import UTC, date, datetime
 
