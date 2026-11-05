@@ -22,6 +22,7 @@ from .company import Company, CompanyUserAccess
 # ── Compliance (Flags, Score History, Events) ────────────────────────
 from .compliance import (
     ComplianceEvent,
+    ComplianceEvaluationRun,
     ComplianceFlag,
     ComplianceScoreHistory,
 )
@@ -105,6 +106,7 @@ __all__ = [
     "ComplexityLevel",
     "ComplianceCalendarEvent",
     "ComplianceEvent",
+    "ComplianceEvaluationRun",
     "ComplianceFlag",
     "ComplianceScoreHistory",
     "DeliveryStatus",
