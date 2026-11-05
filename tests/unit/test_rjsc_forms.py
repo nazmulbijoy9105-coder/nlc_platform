@@ -33,7 +33,7 @@ class TestRJSCForms:
 
     def test_each_form_has_rule_mapping_or_is_explicitly_reference_only(self):
         from app.models.rjsc_forms import RJSC_FORMS_REFERENCE
-        reference_only = {"FORM_I", "FORM_X", "FORM_23B"}
+        reference_only = {"FORM_I", "FORM_X", "FORM_XIX", "FORM_23B"}
         for form in RJSC_FORMS_REFERENCE:
             if form["form_code"] in reference_only:
                 assert form.get("rule_id") is None
