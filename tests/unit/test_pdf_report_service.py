@@ -85,6 +85,13 @@ def _patch_services(monkeypatch, company=COMPANY, flags=FLAGS):
 
 def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkeypatch):
     _patch_services(monkeypatch)
+    # This endpoint fixture represents an explicitly approved, released
+    # assessment so the PDF must reconcile its single approved finding.
+    monkeypatch.setattr("app.services.pdf_report_service.LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        "app.services.pdf_report_service.VERIFIED_RULE_IDS",
+        frozenset({"AGM-001"}),
+    )
     captured = {}
 
     async def fake_render(html_content):
