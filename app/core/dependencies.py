@@ -533,6 +533,11 @@ async def get_db_for_user(
                 UserRole.ADMIN_STAFF.value,
                 UserRole.LEGAL_STAFF.value,
             }
+            try:
+                user_uuid = uuid.UUID(token.user_id)
+            except (TypeError, ValueError):
+                raise HTTPException(status_code=401, detail="Invalid authenticated user identity.")
+
             if role_value in privileged_roles:
                 await set_admin_context(session)
             else:
@@ -540,7 +545,7 @@ async def get_db_for_user(
 
             result = await session.execute(
                 select(User).where(
-                    User.id == uuid.UUID(token.user_id),
+                    User.id == user_uuid,
                     User.is_active.is_(True),
                 )
             )
