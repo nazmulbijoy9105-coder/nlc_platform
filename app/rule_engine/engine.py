@@ -1081,30 +1081,21 @@ class NLCRuleEngine:
 
         if c.agm_held_this_cycle and c.auditor_reappointed_at_agm is None:
             self._add_flag(ComplianceFlag(
-                rule_id="AUD-003",
-                flag_code="AGM_AUDIT_STATUS_REQUIRES_REVIEW",
-                severity=Severity.NOT_EVALUATED,
-                score_impact=0,
-                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=(
-                    "The record says the audit was incomplete when the AGM was held. "
-                    "The underlying accounts, audit evidence, meeting record and legal "
-                    "consequences must be reviewed before classifying this as a breach."
-                ),
-                statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
-                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
-                eval_state="UNKNOWN",
-                detail={"override_to_black": False},
-                is_black_override=False,
                 rule_id="AUD-005",
                 flag_code="SUBSEQUENT_AUDITOR_STATUS_UNKNOWN",
                 severity=Severity.NOT_EVALUATED,
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="No verified record establishes whether the retiring auditor was reappointed or a statutory exception applied. This is an evidence-status finding, not a 120-day statutory deadline.",
+                description=(
+                    "No verified record establishes whether the retiring auditor was "
+                    "reappointed or a statutory exception applied. This is an "
+                    "evidence-status finding, not a 120-day statutory deadline."
+                ),
                 statutory_basis="Section 210(3), Companies Act 1994 (Bangladesh)",
                 state=RuleState.UNKNOWN,
                 eval_state="UNKNOWN",
+                detail={"override_to_black": False},
+                is_black_override=False,
             ))
 
         if (c.agm_held_this_cycle and c.auditor_reappointed_at_agm is False
