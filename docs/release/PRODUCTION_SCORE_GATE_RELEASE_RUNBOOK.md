@@ -62,6 +62,7 @@ The following observations were obtained from the live Neon production branch us
 - All 23 companies currently have numeric cached scores (range 0–50); all 51 historical score snapshots are numeric, the latest is dated 1 October 2026, and none is marked `NOT_EVALUATED`. Fourteen of the 23 companies have a cached score that differs from their latest history score.
 - Migration 0052 clears cached company scores and sets the risk band to `NOT_EVALUATED`. Migration 0051 makes history scores nullable but deliberately preserves immutable pre-release history; the API must continue returning `score: null` and `NOT_EVALUATED` until release.
 - The API company/score-history serializers already redact unreleased scores. PR #125 also withholds PDF generation and automated rescue creation while `LEGAL_SCORE_RELEASED = False`; verify both after deployment. Do not issue old score-bearing PDFs or rescue plans.
+- Production contains 476 queued notifications whose `notification_type` is a legal rule ID: 139 EMAIL and 337 DASHBOARD; none has been sent. These include rule-triggered alert records. PR #125 filters unapproved rule alerts from user/admin notification APIs, prevents worker delivery, adds `SUPPRESSED` status and migration 0058 suppresses the existing pending rule alerts. Non-legal deadline/payment notifications are not suppressed by the rule-ID filter.
 - The production `legal_rules` schema does not yet contain the model's verification-status/evidence columns. Confirm the exact post-migration schema against the ORM before starting the API.
 - `legal_rule_versions` currently has zero rows; `last_modified_by` and `last_modified_at` are unset on the live rule rows. Do not use an unversioned SQL or seed-script update to reconcile existing definitions.
 
@@ -84,6 +85,7 @@ The following observations were obtained from the live Neon production branch us
 6. Verify `compliance_calendar_events`, `company_user_access`, `users`, `legal_rules`, `legal_rule_versions`, `quotations` and every company table has the intended policy and `FORCE ROW LEVEL SECURITY`.
 7. Reconcile all 85 rule IDs against the database using the audited Super Admin workflow. Preserve an immutable version row, actor, change reason and prior definition for each existing-rule change. Retire `INC-002` only after its origin and usage are established.
 8. Confirm all 85 remain non-scoring / not legally approved until independent counsel approval is recorded; do not enable the release switch.
+9. Confirm all existing pending rule-ID notifications are SUPPRESSED, no unapproved rule notification is returned by the user API or admin send queue, and the Celery worker suppresses any newly encountered unapproved rule alert.
 
 **No production migration, role alteration, grant change or rule-row update has been performed by this audit.**
 
