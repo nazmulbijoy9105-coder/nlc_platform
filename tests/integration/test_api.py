@@ -959,7 +959,7 @@ class TestRBAC:
 
     @pytest.mark.asyncio
     async def test_unauthenticated_request_returns_401(self, api_client):
-        """All protected endpoints must return 401 without a token."""
+        """Protected endpoints require auth; read-only legal catalogue is public."""
         protected_endpoints = [
             ("/api/v1/auth/me", "GET"),
             ("/api/v1/companies", "GET"),
@@ -967,7 +967,6 @@ class TestRBAC:
             ("/api/v1/rescue/plans", "GET"),
             ("/api/v1/documents/templates", "GET"),
             ("/api/v1/commercial/pipeline", "GET"),
-            ("/api/v1/rules", "GET"),
             ("/api/v1/admin/users", "GET"),
         ]
         for path, method in protected_endpoints:
@@ -975,6 +974,12 @@ class TestRBAC:
             assert resp.status_code == 401, (
                 f"Expected 401 for unauthenticated {method} {path}, got {resp.status_code}"
             )
+
+    @pytest.mark.asyncio
+    async def test_public_legal_rule_catalogue_is_read_only(self, api_client):
+        resp = await api_client.get("/api/v1/rules")
+        assert resp.status_code == 200
+        assert isinstance(resp.json(), list)
 
     @pytest.mark.asyncio
     async def test_expired_token_returns_401(self, api_client):
