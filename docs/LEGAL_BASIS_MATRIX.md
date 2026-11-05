@@ -38,9 +38,9 @@ This matrix is a technical inventory of candidate legal anchors and internal rul
 | BNK-001 | Winding Up Petition Filed | Bankruptcy Act 1997 (Bangladesh), Section 12 | BLACK | 10 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | BNK-002 | Liquidator Appointed | Bankruptcy Act 1997 (Bangladesh), Section 14 | BLACK | 10 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | BNK-003 | Court-Ordered Winding Up | Bankruptcy Act 1997 (Bangladesh), Section 18 | BLACK | 35 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| BOD-001 | Board Meeting Not Held Within Quarter | Section 96, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| BOD-002 | Board Meeting Notice Not Given | Section 95, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| BOD-003 | Board Meeting Minutes Not Prepared | Section 89, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| BOD-001 | Board Meeting History Requires Verification | Section 96, Companies Act 1994 (Bangladesh) — at least one meeting every three months and four per year | NOT_EVALUATED | 0 | no | REVIEW ONLY — full verified meeting history required; no breach inferred from a single date |
+| BOD-002 | Board Meeting Notice Status Requires Verification | Section 95, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | REVIEW ONLY — verify notice to each director then in Bangladesh and service evidence |
+| BOD-003 | Board Minutes Status Requires Verification | Section 89, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | REVIEW ONLY — verify minute book and custody; missing upload is not proof of non-creation |
 | BSEC-001 | BSEC Quarterly Report Not Filed | Applicable BSEC listing/securities reporting instrument; exact rule, issuer class, period and due date unresolved (not CG Code Condition 8) | NOT_EVALUATED | 0 | no | REVIEW ONLY — listed issuer scope and instrument required |
 | BSEC-002 | CG Certificate Not Obtained | BSEC Corporate Governance Code 2018, Condition 9, as amended; listed-issuer scope only | NOT_EVALUATED | 0 | no | REVIEW ONLY — certifier, AGM appointment and evidence required |
 | BSEC-003 | Board Composition Non-Compliant | BSEC Corporate Governance Code 2018, Condition 1, as amended; listed-issuer scope only | NOT_EVALUATED | 0 | no | REVIEW ONLY — current amendment and director eligibility required |
@@ -56,12 +56,12 @@ This matrix is a technical inventory of candidate legal anchors and internal rul
 | DIR-002 | Director Cessation Particulars Not Filed Within 14 Days | Section 115, Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | DIR-003 | Major Director Filing Irregularity — Over 1 Year | Section 115, Companies Act 1994 (Bangladesh) | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | DIR-004 | Departed Director Still Active on RJSC Register | Section 109, Companies Act 1994 (Bangladesh) | RED | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| DIR-005 | Register of Directors Interests Missing | Section 130, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| DIR-006 | Register of Contracts Missing | Section 130, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DIR-005 | Director Interest Disclosure/Register Requires Review | Section 130, Companies Act 1994 (Bangladesh) — disclosure of interest in contracts/arrangements, not a generic register duty | NOT_EVALUATED | 0 | no | REVIEW ONLY — rule title/trigger and any separate register duty require legal reconciliation |
+| DIR-006 | Register of Contracts Requires Review | Companies Act 1994 and applicable Articles — exact provision not established | NOT_EVALUATED | 0 | no | REVIEW ONLY — no universal register duty assumed |
 | DIR-007 | Director Consent Not Filed Within 30 Days | Section 92, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| DIR-008 | Director Holding Office of Profit Without Consent | Section 104, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| DIR-010 | Managing Director Appointed for More Than 5 Years | Section 110, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| ESC-001 | Strike-Off Risk Elevated | Section 346, Companies Act 1994 (Bangladesh) | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DIR-008 | Office of Profit Status Requires Verification | Section 104, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | REVIEW ONLY — statutory exclusions and general-meeting consent must be checked |
+| DIR-010 | Managing Director Term Requires Verification | Section 110, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | REVIEW ONLY — verify current appointment term, reappointment and continuity |
+| ESC-001 | Strike-Off Process Status Requires Verification | Section 304, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required | NOT_EVALUATED | 0 | no | REVIEW ONLY — backlog is not proof of Registrar strike-off action |
 | ESC-002 | Strike-Off Imminent — BLACK OVERRIDE | Section 346, Companies Act 1994 (Bangladesh) | BLACK | 10 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | ESC-003 | Corporate Rescue Mandatory — Systemic Failure | Sections 81, 115, 36, 346 (aggregate), Companies Act 1994 (Bangladesh) | BLACK | 10 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | ESC-004 | Voluntary Winding Up | Section 130, Companies Act 1994 (Bangladesh) | BLACK | 30 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
