@@ -206,3 +206,51 @@ async def test_activity_log_has_exactly_one_actor_and_tenant_policy(db):
     policy_count, has_strict_policy = result.one()
     assert policy_count == 1
     assert has_strict_policy is True
+
+
+@pytest.mark.asyncio
+async def test_legal_evidence_tables_are_readable_by_members_but_writable_only_by_staff(db):
+    evidence_tables = {
+        "articles_verifications": {
+            "articles_verifications_company_read",
+            "articles_verifications_staff_insert",
+            "articles_verifications_staff_update",
+        },
+        "articles_verification_events": {
+            "articles_verification_events_company_read",
+            "articles_verification_events_staff_insert",
+        },
+        "agm_evidence_verifications": {
+            "agm_evidence_verifications_company_read",
+            "agm_evidence_verifications_staff_insert",
+            "agm_evidence_verifications_staff_update",
+        },
+        "agm_evidence_verification_events": {
+            "agm_evidence_verification_events_company_read",
+            "agm_evidence_verification_events_staff_insert",
+        },
+    }
+    for table, expected_names in evidence_tables.items():
+        result = await db.execute(
+            text(
+                "SELECT policyname, cmd, qual, with_check "
+                "FROM pg_policies WHERE schemaname = 'public' AND tablename = :table"
+            ),
+            {"table": table},
+        )
+        policies = {row[0]: row for row in result.fetchall()}
+        assert set(policies) == expected_names
+
+        read_policy = policies[f"{table}_company_read"]
+        assert read_policy[1] == "SELECT"
+        assert "nlc_can_access_company" in (read_policy[2] or "")
+
+        insert_policy = policies[f"{table}_staff_insert"]
+        assert insert_policy[1] == "INSERT"
+        assert "nlc_current_user_is_staff" in (insert_policy[3] or "")
+
+        if not table.endswith("_events"):
+            update_policy = policies[f"{table}_staff_update"]
+            assert update_policy[1] == "UPDATE"
+            assert "nlc_current_user_is_staff" in (update_policy[2] or "")
+            assert "nlc_current_user_is_staff" in (update_policy[3] or "")
