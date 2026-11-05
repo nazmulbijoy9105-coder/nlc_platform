@@ -56,6 +56,8 @@ RLS_TABLES = (
     "ai_prompt_templates",
     "engagements",
     "notifications",
+    "webhook_endpoints",
+    "webhook_deliveries",
 )
 
 
@@ -557,6 +559,87 @@ def upgrade() -> None:
         FOR ALL
         USING (public.nlc_current_user_is_staff())
         WITH CHECK (public.nlc_current_user_is_staff())
+    """)
+
+    op.execute("""
+        CREATE POLICY webhook_endpoints_owner_select ON public.webhook_endpoints
+        FOR SELECT USING (
+            public.nlc_current_user_is_staff()
+            OR user_id = public.nlc_current_user_id()
+        )
+    """)
+    op.execute("""
+        CREATE POLICY webhook_endpoints_owner_insert ON public.webhook_endpoints
+        FOR INSERT WITH CHECK (
+            public.nlc_current_user_is_staff()
+            OR user_id = public.nlc_current_user_id()
+        )
+    """)
+    op.execute("""
+        CREATE POLICY webhook_endpoints_owner_update ON public.webhook_endpoints
+        FOR UPDATE
+        USING (public.nlc_current_user_is_staff() OR user_id = public.nlc_current_user_id())
+        WITH CHECK (public.nlc_current_user_is_staff() OR user_id = public.nlc_current_user_id())
+    """)
+    op.execute("""
+        CREATE POLICY webhook_endpoints_owner_delete ON public.webhook_endpoints
+        FOR DELETE USING (
+            public.nlc_current_user_is_staff()
+            OR user_id = public.nlc_current_user_id()
+        )
+    """)
+    op.execute("""
+        CREATE POLICY webhook_deliveries_owner_select ON public.webhook_deliveries
+        FOR SELECT USING (
+            public.nlc_current_user_is_staff()
+            OR EXISTS (
+                SELECT 1 FROM public.webhook_endpoints e
+                WHERE e.id = webhook_deliveries.endpoint_id
+                  AND e.user_id = public.nlc_current_user_id()
+            )
+        )
+    """)
+    op.execute("""
+        CREATE POLICY webhook_deliveries_owner_insert ON public.webhook_deliveries
+        FOR INSERT WITH CHECK (
+            public.nlc_current_user_is_staff()
+            OR EXISTS (
+                SELECT 1 FROM public.webhook_endpoints e
+                WHERE e.id = webhook_deliveries.endpoint_id
+                  AND e.user_id = public.nlc_current_user_id()
+            )
+        )
+    """)
+    op.execute("""
+        CREATE POLICY webhook_deliveries_owner_update ON public.webhook_deliveries
+        FOR UPDATE
+        USING (
+            public.nlc_current_user_is_staff()
+            OR EXISTS (
+                SELECT 1 FROM public.webhook_endpoints e
+                WHERE e.id = webhook_deliveries.endpoint_id
+                  AND e.user_id = public.nlc_current_user_id()
+            )
+        )
+        WITH CHECK (
+            public.nlc_current_user_is_staff()
+            OR EXISTS (
+                SELECT 1 FROM public.webhook_endpoints e
+                WHERE e.id = webhook_deliveries.endpoint_id
+                  AND e.user_id = public.nlc_current_user_id()
+            )
+        )
+    """)
+    op.execute("""
+        CREATE POLICY webhook_deliveries_owner_delete ON public.webhook_deliveries
+        FOR DELETE USING (
+            public.nlc_current_user_is_staff()
+            OR EXISTS (
+                SELECT 1 FROM public.webhook_endpoints e
+                WHERE e.id = webhook_deliveries.endpoint_id
+                  AND e.user_id = public.nlc_current_user_id()
+            )
+        )
     """)
 
     op.execute("""
