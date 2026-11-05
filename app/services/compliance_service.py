@@ -170,6 +170,14 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # evaluation runs. Production callers retain the canonical engine.
         engine = rule_engine if rule_engine is not None else get_rule_engine()
         output = engine.evaluate(profile)
+        risk_band_value = getattr(
+            output.score_breakdown.risk_band,
+            "value",
+            output.score_breakdown.risk_band,
+        )
+        score_is_released = risk_band_value != "NOT_EVALUATED"
+        api_score = output.score_breakdown.final_score if score_is_released else None
+        api_raw_total = output.score_breakdown.raw_total if score_is_released else None
 
         # ── Step 3: Persist results ────────────────────────────────
         await self._persist_evaluation(company_id, output, trigger_source)
@@ -185,9 +193,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
         return {
             "company_id":    str(company_id),
-            "score":         output.score_breakdown.final_score,
-            "raw_total":     output.score_breakdown.raw_total,
-            "risk_band":     output.score_breakdown.risk_band,
+            "score":         api_score,
+            "raw_total":     api_raw_total,
+            "risk_band":     risk_band_value,
             "exposure_band": output.score_breakdown.exposure_band,
             "flags":         [
                 {
@@ -203,6 +211,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 for index, f in enumerate(output.flags)
             ],
             "score_breakdown": {
+                "risk_band": risk_band_value,
                 "agm_score":         output.score_breakdown.agm_score,
                 "audit_score":       output.score_breakdown.audit_score,
                 "return_score":      output.score_breakdown.return_score,
@@ -217,8 +226,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "bsec_score": output.score_breakdown.bsec_score,
                 "fx_score": output.score_breakdown.fx_score,
                 "escalation_score": output.score_breakdown.escalation_score,
-                "raw_total": output.score_breakdown.raw_total,
-                "final_score": output.score_breakdown.final_score,
+                "raw_total": api_raw_total,
+                "final_score": api_score,
                 "coverage": output.score_breakdown.coverage,
                 "active_flag_count": output.score_breakdown.active_flag_count,
                 "black_flag_count": output.score_breakdown.black_flag_count,
