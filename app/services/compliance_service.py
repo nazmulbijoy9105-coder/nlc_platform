@@ -189,8 +189,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
         logger.info(
             f"[Compliance] Evaluated company={company_id} | "
-            f"Score={output.score_breakdown.final_score} | "
-            f"Band={output.score_breakdown.risk_band} | "
+            f"Score={api_score if score_is_released else 'NOT_RELEASED'} | "
+            f"Band={public_risk_band} | "
             f"Flags={len(output.flags)} | Trigger={trigger_source}"
         )
 
