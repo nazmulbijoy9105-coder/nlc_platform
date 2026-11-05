@@ -15,6 +15,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     Numeric,
@@ -33,6 +34,7 @@ class Invoice(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "invoices"
     __table_args__ = (
         UniqueConstraint("invoice_number", name="uq_invoices_invoice_number"),
+        UniqueConstraint("id", "company_id", name="uq_invoices_id_company"),
         CheckConstraint("subtotal_bdt >= 0 AND tax_bdt >= 0 AND total_bdt >= 0", name="ck_invoice_amounts_nonnegative"),
         CheckConstraint("paid_bdt >= 0 AND balance_bdt >= 0", name="ck_invoice_balances_nonnegative"),
         CheckConstraint("currency = 'BDT'", name="ck_invoice_currency_bdt"),
@@ -63,9 +65,10 @@ class InvoiceLine(UUIDPrimaryKeyMixin, Base):
     __table_args__ = (
         CheckConstraint("quantity > 0 AND unit_price_bdt >= 0 AND line_total_bdt >= 0", name="ck_invoice_line_amounts"),
         Index("ix_invoice_lines_company_invoice", "company_id", "invoice_id"),
+        ForeignKeyConstraint(["invoice_id", "company_id"], ["invoices.id", "invoices.company_id"], ondelete="RESTRICT", name="fk_invoice_lines_invoice_company"),
     )
 
-    invoice_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("invoices.id", ondelete="RESTRICT"), nullable=False)
+    invoice_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="RESTRICT"), nullable=False)
     description: Mapped[str] = mapped_column(String(500), nullable=False)
     quantity: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("1.00"))
@@ -83,10 +86,11 @@ class PaymentSubmission(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         CheckConstraint("currency = 'BDT'", name="ck_payment_submission_currency_bdt"),
         Index("ix_payment_submissions_company_status", "company_id", "status"),
         Index("ix_payment_submissions_invoice", "invoice_id"),
+        ForeignKeyConstraint(["invoice_id", "company_id"], ["invoices.id", "invoices.company_id"], ondelete="RESTRICT", name="fk_payment_submissions_invoice_company"),
     )
 
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="RESTRICT"), nullable=False)
-    invoice_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("invoices.id", ondelete="RESTRICT"), nullable=False)
+    invoice_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     submitted_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
     method: Mapped[str] = mapped_column(String(32), nullable=False)
     amount_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
@@ -105,6 +109,7 @@ class Payment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "payments"
     __table_args__ = (
         UniqueConstraint("payment_number", name="uq_payments_payment_number"),
+        UniqueConstraint("id", "company_id", name="uq_payments_id_company"),
         CheckConstraint("amount_bdt > 0", name="ck_payment_amount_positive"),
         CheckConstraint("currency = 'BDT'", name="ck_payment_currency_bdt"),
         Index("ix_payments_company_received", "company_id", "received_at"),
@@ -133,11 +138,13 @@ class PaymentAllocation(UUIDPrimaryKeyMixin, Base):
         CheckConstraint("amount_bdt > 0", name="ck_payment_allocation_amount_positive"),
         CheckConstraint("currency = 'BDT'", name="ck_payment_allocation_currency_bdt"),
         Index("ix_payment_allocations_company_invoice", "company_id", "invoice_id"),
+        ForeignKeyConstraint(["payment_id", "company_id"], ["payments.id", "payments.company_id"], ondelete="RESTRICT", name="fk_payment_allocations_payment_company"),
+        ForeignKeyConstraint(["invoice_id", "company_id"], ["invoices.id", "invoices.company_id"], ondelete="RESTRICT", name="fk_payment_allocations_invoice_company"),
     )
 
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="RESTRICT"), nullable=False)
-    payment_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("payments.id", ondelete="RESTRICT"), nullable=False)
-    invoice_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("invoices.id", ondelete="RESTRICT"), nullable=False)
+    payment_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    invoice_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     amount_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="BDT")
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
@@ -149,12 +156,15 @@ class PaymentLedgerEvent(UUIDPrimaryKeyMixin, Base):
         CheckConstraint("amount_bdt >= 0", name="ck_payment_ledger_event_amount_nonnegative"),
         CheckConstraint("currency = 'BDT'", name="ck_payment_ledger_event_currency_bdt"),
         Index("ix_payment_ledger_events_company_created", "company_id", "created_at"),
+        ForeignKeyConstraint(["payment_id", "company_id"], ["payments.id", "payments.company_id"], ondelete="RESTRICT", name="fk_payment_ledger_payment_company"),
+        ForeignKeyConstraint(["invoice_id", "company_id"], ["invoices.id", "invoices.company_id"], ondelete="RESTRICT", name="fk_payment_ledger_invoice_company"),
+        ForeignKeyConstraint(["submission_id", "company_id"], ["payment_submissions.id", "payment_submissions.company_id"], ondelete="RESTRICT", name="fk_payment_ledger_submission_company"),
     )
 
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="RESTRICT"), nullable=False)
-    payment_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("payments.id", ondelete="RESTRICT"), nullable=True)
-    invoice_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("invoices.id", ondelete="RESTRICT"), nullable=True)
-    submission_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("payment_submissions.id", ondelete="RESTRICT"), nullable=True)
+    payment_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    invoice_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    submission_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     event_type: Mapped[str] = mapped_column(String(32), nullable=False)
     amount_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="BDT")
@@ -171,10 +181,11 @@ class PaymentIntent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         CheckConstraint("amount_bdt > 0", name="ck_payment_intent_amount_positive"),
         CheckConstraint("currency = 'BDT'", name="ck_payment_intent_currency_bdt"),
         Index("ix_payment_intents_company_status", "company_id", "status"),
+        ForeignKeyConstraint(["invoice_id", "company_id"], ["invoices.id", "invoices.company_id"], ondelete="RESTRICT", name="fk_payment_intents_invoice_company"),
     )
 
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="RESTRICT"), nullable=False)
-    invoice_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("invoices.id", ondelete="RESTRICT"), nullable=False)
+    invoice_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     provider_name: Mapped[str] = mapped_column(String(40), nullable=False)
     idempotency_key: Mapped[str] = mapped_column(String(120), nullable=False)
     provider_order_id: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
