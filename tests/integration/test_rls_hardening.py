@@ -166,3 +166,55 @@ async def test_revoked_membership_and_deactivated_user_fail_closed(
         {"company_id": db_company.id},
     )
     assert access.scalar_one() is False
+
+
+@pytest.mark.asyncio
+async def test_view_only_member_can_read_but_cannot_mutate_tenant_company(db, db_company):
+    import uuid
+
+    from app.models.company import CompanyUserAccess
+    from app.models.enums import UserRole
+    from app.models.user import User
+
+    view_user = User(
+        id=uuid.uuid4(),
+        email=f"view-only-{uuid.uuid4().hex[:8]}@nlctest.com",
+        full_name="View Only Tenant User",
+        password_hash="!test-no-login",
+        role=UserRole.CLIENT_VIEW_ONLY,
+        is_active=True,
+        totp_enabled=False,
+    )
+    db.add(view_user)
+    await db.flush()
+    db.add(
+        CompanyUserAccess(
+            user_id=view_user.id,
+            company_id=db_company.id,
+            can_edit=False,
+            can_view_financials=False,
+            is_active=True,
+        )
+    )
+    await db.flush()
+
+    await set_rls_context(db, str(view_user.id))
+    visible = await db.execute(
+        text("SELECT company_name FROM companies WHERE id = :company_id"),
+        {"company_id": db_company.id},
+    )
+    assert visible.scalar_one() == db_company.company_name
+
+    update_result = await db.execute(
+        text(
+            "UPDATE companies SET company_name = :new_name WHERE id = :company_id"
+        ),
+        {"new_name": "Unauthorized Mutation Ltd", "company_id": db_company.id},
+    )
+    assert update_result.rowcount == 0
+
+    unchanged = await db.execute(
+        text("SELECT company_name FROM companies WHERE id = :company_id"),
+        {"company_id": db_company.id},
+    )
+    assert unchanged.scalar_one() == db_company.company_name
