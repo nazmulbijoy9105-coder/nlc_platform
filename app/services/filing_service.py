@@ -200,6 +200,7 @@ class AGMService(BaseService[AGM]):
             members_present=members_present,
             quorum_required=quorum_required,
             quorum_met=quorum_met,
+            quorum_basis=quorum_basis,
             auditor_reappointed=auditor_reappointed,
             accounts_adopted=accounts_adopted,
             agm_held_without_audit=agm_held_without_audit,
