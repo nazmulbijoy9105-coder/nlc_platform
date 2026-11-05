@@ -160,7 +160,7 @@ class FlagResponse(BaseModel):
 
 class ScoreHistoryEntry(BaseModel):
     snapshot_month: str
-    score: int
+    score: int | None
     risk_band: str
     active_flags: int
     black_flags: int
