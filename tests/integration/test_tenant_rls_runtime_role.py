@@ -206,3 +206,37 @@ async def test_activity_log_has_exactly_one_actor_and_tenant_policy(db):
     policy_count, has_strict_policy = result.one()
     assert policy_count == 1
     assert has_strict_policy is True
+
+
+@pytest.mark.asyncio
+async def test_activity_service_inserts_with_signed_actor_and_keeps_transaction_usable(
+    db, db_client_user, db_company
+):
+    """The real service path must insert under signed user+tenant RLS context."""
+    from app.models.infrastructure import UserActivityLog
+    from app.services.notification_service import ActivityService
+
+    action = "INTEGRATION_ACTIVITY_INSERT_REGRESSION"
+    await set_rls_context(db, str(db_client_user.id))
+    await ActivityService(db).log(
+        user_id=db_client_user.id,
+        company_id=db_company.id,
+        action=action,
+        resource_type="IntegrationTest",
+        description="Signed actor and tenant insert regression",
+    )
+
+    # A successful query after flush proves the session transaction was not
+    # left aborted by a swallowed PostgreSQL/RLS error.
+    result = await db.execute(
+        text(
+            "SELECT count(*) FROM user_activity_logs "
+            "WHERE user_id = :user_id AND company_id = :company_id AND action = :action"
+        ),
+        {
+            "user_id": db_client_user.id,
+            "company_id": db_company.id,
+            "action": action,
+        },
+    )
+    assert result.scalar_one() == 1
