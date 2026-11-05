@@ -81,7 +81,8 @@ jobs:
       REDIS_URL: redis://localhost:6379/0
       JWT_SECRET_KEY: test-secret-key-not-for-production
       NLC_RLS_HMAC_SECRET: ci-only-rls-hmac-secret-not-for-production-2026
-      REQUIRE_RLS_APP_ROLE: "false"
+      APP_DATABASE_URL: postgresql+asyncpg://nlc_app_role:ci-only-nlc-app-role-password@localhost:5432/nlc_test
+      REQUIRE_RLS_APP_ROLE: "true"
       ENVIRONMENT: test
 
     steps:
@@ -113,6 +114,28 @@ jobs:
           alembic upgrade head
           alembic upgrade head
           alembic current
+
+          # Provision a CI-only credential for the runtime role. The app pool
+          # must connect as nlc_app_role itself, not as the migration owner.
+          python - <<'PY'
+          import asyncio
+          import os
+          import asyncpg
+
+          async def main():
+              url = os.environ["DATABASE_URL"].replace(
+                  "postgresql+asyncpg://", "postgresql://", 1
+              )
+              conn = await asyncpg.connect(url)
+              try:
+                  await conn.execute(
+                      "ALTER ROLE nlc_app_role WITH PASSWORD 'ci-only-nlc-app-role-password'"
+                  )
+              finally:
+                  await conn.close()
+
+          asyncio.run(main())
+          PY
 
           # A second independent empty database catches hidden dependence on
           # migration state left by the first upgrade.

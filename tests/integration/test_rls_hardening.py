@@ -36,6 +36,45 @@ async def test_runtime_role_is_non_bypass_and_has_no_dangerous_privileges(db):
 
 
 @pytest.mark.asyncio
+async def test_runtime_pool_connects_as_nlc_app_role_and_rejects_forged_admin():
+    from app.models.database import AsyncSessionLocal, verify_runtime_database_role
+
+    await verify_runtime_database_role()
+    async with AsyncSessionLocal() as session:
+        identity = await session.execute(
+            text("SELECT session_user, current_user, r.rolsuper, r.rolbypassrls "
+                 "FROM pg_roles r WHERE r.rolname = current_user")
+        )
+        session_user, current_user, is_superuser, bypasses_rls = identity.one()
+        assert session_user == "nlc_app_role"
+        assert current_user == "nlc_app_role"
+        assert is_superuser is False
+        assert bypasses_rls is False
+
+        # An ordinary runtime SQL session can set custom GUCs, but cannot
+        # manufacture the HMAC signature required for the ADMIN principal.
+        await session.execute(
+            text(
+                "SELECT set_config('app.current_user_id', 'ADMIN', true), "
+                "set_config('app.current_user_signature', '00', true)"
+            )
+        )
+        principal = await session.execute(
+            text("SELECT public.nlc_current_user_principal()")
+        )
+        assert principal.scalar_one_or_none() is None
+
+        staff = await session.execute(
+            text("SELECT public.nlc_current_user_is_staff()")
+        )
+        assert staff.scalar_one() is False
+
+        visible = await session.execute(text("SELECT id FROM public.companies"))
+        assert visible.scalar_one_or_none() is None
+        await session.rollback()
+
+
+@pytest.mark.asyncio
 async def test_activity_log_has_exactly_one_strict_actor_tenant_policy(db):
     result = await db.execute(
         text(
