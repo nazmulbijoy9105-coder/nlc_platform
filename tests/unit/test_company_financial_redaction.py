@@ -16,7 +16,7 @@ def _company():
         current_compliance_score=None,
         financial_year_end=date(2025, 12, 31),
         registered_address="Dhaka",
-        revenue_tier=RevenueTier.MEDIUM,
+        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
         is_fdi_registered=False,
         is_dormant=False,
         created_at=None,
