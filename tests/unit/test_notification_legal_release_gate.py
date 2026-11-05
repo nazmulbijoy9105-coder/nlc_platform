@@ -95,3 +95,19 @@ async def test_mark_suppressed_persists_terminal_status():
         failure_reason="awaiting legal approval",
     )
 
+@pytest.mark.asyncio
+async def test_user_notification_list_hides_unapproved_rule_alerts(monkeypatch):
+    monkeypatch.setattr(notification_module, "LEGAL_SCORE_RELEASED", False)
+    legal_alert = SimpleNamespace(notification_type="TAX-001")
+    payment_notice = SimpleNamespace(notification_type="PAYMENT_RECEIVED")
+    result = SimpleNamespace(
+        scalars=lambda: SimpleNamespace(all=lambda: [legal_alert, payment_notice])
+    )
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=result)
+    service = NotificationService(db)
+
+    visible = await service.get_for_user(uuid4())
+
+    assert visible == [payment_notice]
+
