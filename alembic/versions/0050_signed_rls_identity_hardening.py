@@ -355,8 +355,8 @@ def upgrade() -> None:
         END
         $function$
     """)
+    op.execute("DROP TRIGGER IF EXISTS users_protect_security_fields ON public.users")
     op.execute("""
-        DROP TRIGGER IF EXISTS users_protect_security_fields ON public.users;
         CREATE TRIGGER users_protect_security_fields
         BEFORE UPDATE ON public.users
         FOR EACH ROW EXECUTE FUNCTION public.nlc_protect_user_security_fields()
