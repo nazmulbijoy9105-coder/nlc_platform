@@ -98,8 +98,8 @@ async def test_mark_suppressed_persists_terminal_status():
 @pytest.mark.asyncio
 async def test_user_notification_list_hides_unapproved_rule_alerts(monkeypatch):
     monkeypatch.setattr(notification_module, "LEGAL_SCORE_RELEASED", False)
-    legal_alert = SimpleNamespace(notification_type="TAX-001")
-    payment_notice = SimpleNamespace(notification_type="PAYMENT_RECEIVED")
+    legal_alert = SimpleNamespace(notification_type="TAX-001", notification_status=NotificationStatus.PENDING)
+    payment_notice = SimpleNamespace(notification_type="PAYMENT_RECEIVED", notification_status=NotificationStatus.PENDING)
     result = SimpleNamespace(
         scalars=lambda: SimpleNamespace(all=lambda: [legal_alert, payment_notice])
     )
@@ -110,4 +110,23 @@ async def test_user_notification_list_hides_unapproved_rule_alerts(monkeypatch):
     visible = await service.get_for_user(uuid4())
 
     assert visible == [payment_notice]
+
+@pytest.mark.asyncio
+async def test_suppressed_rule_notifications_stay_hidden_after_release(monkeypatch):
+    monkeypatch.setattr(notification_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(notification_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    suppressed = SimpleNamespace(
+        notification_type="AGM-001",
+        notification_status=NotificationStatus.SUPPRESSED,
+    )
+    result = SimpleNamespace(
+        scalars=lambda: SimpleNamespace(all=lambda: [suppressed])
+    )
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=result)
+    service = NotificationService(db)
+
+    visible = await service.get_for_user(uuid4())
+
+    assert visible == []
 
