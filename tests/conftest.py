@@ -150,8 +150,10 @@ async def db(test_engine) -> AsyncGenerator[AsyncSession, None]:
         await conn.begin()
         session = AsyncSession(bind=conn, expire_on_commit=False)
 
-        # Bypass RLS for tests (admin context)
-        await session.execute(text("SET app.rls_bypass = 'true'"))
+        # Test setup uses the same cryptographically signed ADMIN principal
+        # as trusted service work. An arbitrary GUC must never bypass RLS.
+        from app.models.database import set_admin_context
+        await set_admin_context(session)
 
         yield session
 
@@ -785,15 +787,25 @@ async def db_for_user(test_engine, request):
 async def api_client_as_user(db_for_user):
     """
     HTTP client whose get_db_for_user uses a real RLS session.
-    Use this for tenant-isolation tests.
+    Seed fixture identities under the signed service principal, then restore
+    the original tenant identity before exposing the client to the test.
     """
     from httpx import ASGITransport, AsyncClient
     from unittest.mock import MagicMock, patch
+    from sqlalchemy import text
     from app.core.dependencies import get_db, get_db_for_user
     from app.main import create_app
-    from app.models.database import get_db as auth_get_db
+    from app.models.database import get_db as auth_get_db, set_admin_context, set_rls_context
     from app.models.enums import UserRole
     from app.models.user import User
+
+    principal_result = await db_for_user.execute(
+        text("SELECT current_setting('app.current_user_id', true)")
+    )
+    original_principal = principal_result.scalar_one_or_none()
+    if not original_principal:
+        raise RuntimeError("api_client_as_user requires an established signed tenant identity")
+    await set_admin_context(db_for_user)
 
     for _role in UserRole:
         _uid = _role_user_id(_role.value)
@@ -808,6 +820,7 @@ async def api_client_as_user(db_for_user):
                 totp_enabled=False,
             ))
     await db_for_user.flush()
+    await set_rls_context(db_for_user, str(original_principal))
 
     app = create_app()
 

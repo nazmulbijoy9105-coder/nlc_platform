@@ -119,6 +119,83 @@ def upgrade() -> None:
         )
     """)
 
+    # Evidence tables are legally significant records. Company membership
+    # permits read access only; submissions, reviews and revocations require
+    # trusted staff identity. Remove all earlier permissive membership-wide
+    # write policies before installing operation-specific policies.
+    evidence_tables = (
+        "articles_verifications",
+        "articles_verification_events",
+        "agm_evidence_verifications",
+        "agm_evidence_verification_events",
+    )
+    for table in evidence_tables:
+        op.execute(f"ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY")
+        op.execute(f"ALTER TABLE public.{table} FORCE ROW LEVEL SECURITY")
+        op.execute(f"""
+            DO $evidence_policies$
+            DECLARE p record;
+            BEGIN
+                FOR p IN
+                    SELECT policyname
+                    FROM pg_policies
+                    WHERE schemaname = 'public' AND tablename = '{table}'
+                LOOP
+                    EXECUTE format(
+                        'DROP POLICY %I ON public.{table}',
+                        p.policyname
+                    );
+                END LOOP;
+            END;
+            $evidence_policies$
+        """)
+        op.execute(f"""
+            CREATE POLICY {table}_company_read
+            ON public.{table}
+            FOR SELECT
+            USING (public.nlc_can_access_company(company_id))
+        """)
+        if table.endswith("_events"):
+            op.execute(f"""
+                CREATE POLICY {table}_staff_insert
+                ON public.{table}
+                FOR INSERT
+                WITH CHECK (
+                    public.nlc_current_user_is_staff()
+                    AND public.nlc_can_access_company(company_id)
+                )
+            """)
+            op.execute(
+                f"REVOKE UPDATE, DELETE, TRUNCATE ON TABLE public.{table} FROM nlc_app_role"
+            )
+        else:
+            op.execute(f"""
+                CREATE POLICY {table}_staff_insert
+                ON public.{table}
+                FOR INSERT
+                WITH CHECK (
+                    public.nlc_current_user_is_staff()
+                    AND public.nlc_can_access_company(company_id)
+                )
+            """)
+            op.execute(f"""
+                CREATE POLICY {table}_staff_update
+                ON public.{table}
+                FOR UPDATE
+                USING (
+                    public.nlc_current_user_is_staff()
+                    AND public.nlc_can_access_company(company_id)
+                )
+                WITH CHECK (
+                    public.nlc_current_user_is_staff()
+                    AND public.nlc_can_access_company(company_id)
+                )
+            """)
+            op.execute(
+                f"REVOKE DELETE, TRUNCATE ON TABLE public.{table} FROM nlc_app_role"
+            )
+
+
 
 def downgrade() -> None:
     # Forward-only security migration: dropping the active-user check or

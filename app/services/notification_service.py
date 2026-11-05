@@ -301,6 +301,8 @@ class ActivityService:
         # Audit records are mandatory: do not swallow database errors. A failed
         # flush must abort the caller's transaction rather than leave the
         # AsyncSession in a failed state while the request continues.
+        # Audit records are mandatory. Propagate database/RLS errors so the
+        # caller's transaction rolls back rather than silently losing evidence.
         await self.db.flush()
 
     async def get_logs(

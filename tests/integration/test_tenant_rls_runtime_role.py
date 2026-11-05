@@ -62,6 +62,10 @@ async def test_app_role_has_no_schema_creation_or_truncate_privilege(db):
     assert can_create.scalar_one() is False
     assert can_truncate.scalar_one() is False
 
+    # The app role intentionally lacks USAGE on nlc_private. Resolve the
+    # relation name from the migration-owner test session while querying the
+    # app role's privileges as data; do not grant schema visibility to test it.
+    await db.execute(text("RESET ROLE"))
     secret_schema = await db.execute(
         text("SELECT has_schema_privilege('nlc_app_role', 'nlc_private', 'USAGE')")
     )
@@ -160,15 +164,21 @@ async def test_valid_signed_identity_resolves_to_authenticated_user(db, db_clien
 @pytest.mark.asyncio
 async def test_revoked_membership_stops_company_access_immediately(db, db_client_user, db_company):
     from sqlalchemy import text
+    from app.models.database import set_admin_context, set_rls_context
 
-    await set_rls_context(db, str(db_client_user.id))
-    await db.execute(
+    # Membership revocation is a privileged administrative write. Perform
+    # it under the signed service principal, then re-check access as the user.
+    await set_admin_context(db)
+    result = await db.execute(
         text(
             "UPDATE company_user_access SET is_active = FALSE "
             "WHERE user_id = :user_id AND company_id = :company_id"
         ),
         {"user_id": db_client_user.id, "company_id": db_company.id},
     )
+    assert result.rowcount == 1
+
+    await set_rls_context(db, str(db_client_user.id))
     await db.execute(text("SET LOCAL ROLE nlc_app_role"))
     result = await db.execute(
         text("SELECT public.nlc_can_access_company(:company_id)"),
@@ -217,6 +227,60 @@ async def test_activity_service_inserts_with_signed_actor_and_keeps_transaction_
     from app.services.notification_service import ActivityService
 
     action = "INTEGRATION_ACTIVITY_INSERT_REGRESSION"
+async def test_legal_evidence_tables_are_readable_by_members_but_writable_only_by_staff(db):
+    evidence_tables = {
+        "articles_verifications": {
+            "articles_verifications_company_read",
+            "articles_verifications_staff_insert",
+            "articles_verifications_staff_update",
+        },
+        "articles_verification_events": {
+            "articles_verification_events_company_read",
+            "articles_verification_events_staff_insert",
+        },
+        "agm_evidence_verifications": {
+            "agm_evidence_verifications_company_read",
+            "agm_evidence_verifications_staff_insert",
+            "agm_evidence_verifications_staff_update",
+        },
+        "agm_evidence_verification_events": {
+            "agm_evidence_verification_events_company_read",
+            "agm_evidence_verification_events_staff_insert",
+        },
+    }
+    for table, expected_names in evidence_tables.items():
+        result = await db.execute(
+            text(
+                "SELECT policyname, cmd, qual, with_check "
+                "FROM pg_policies WHERE schemaname = 'public' AND tablename = :table"
+            ),
+            {"table": table},
+        )
+        policies = {row[0]: row for row in result.fetchall()}
+        assert set(policies) == expected_names
+
+        read_policy = policies[f"{table}_company_read"]
+        assert read_policy[1] == "SELECT"
+        assert "nlc_can_access_company" in (read_policy[2] or "")
+
+        insert_policy = policies[f"{table}_staff_insert"]
+        assert insert_policy[1] == "INSERT"
+        assert "nlc_current_user_is_staff" in (insert_policy[3] or "")
+
+        if not table.endswith("_events"):
+            update_policy = policies[f"{table}_staff_update"]
+            assert update_policy[1] == "UPDATE"
+            assert "nlc_current_user_is_staff" in (update_policy[2] or "")
+            assert "nlc_current_user_is_staff" in (update_policy[3] or "")
+
+
+@pytest.mark.asyncio
+async def test_activity_service_inserts_with_signed_actor_and_tenant(
+    db, db_client_user, db_company
+):
+    from app.services.notification_service import ActivityService
+
+    action = "SIGNED_RLS_ACTIVITY_INSERT"
     await set_rls_context(db, str(db_client_user.id))
     await ActivityService(db).log(
         user_id=db_client_user.id,
@@ -228,6 +292,41 @@ async def test_activity_service_inserts_with_signed_actor_and_keeps_transaction_
 
     # A successful query after flush proves the session transaction was not
     # left aborted by a swallowed PostgreSQL/RLS error.
+        description="ActivityService signed actor and tenant regression",
+    )
+    result = await db.execute(
+        text(
+            "SELECT count(*) FROM user_activity_logs "
+            "WHERE user_id = :user_id AND company_id = :company_id AND action = :action"
+        ),
+        {
+            "user_id": db_client_user.id,
+            "company_id": db_company.id,
+            "action": action,
+        },
+    )
+    assert result.scalar_one() == 1
+
+
+@pytest.mark.asyncio
+async def test_signed_admin_activity_insert_does_not_cast_admin_sentinel_to_uuid(
+    db, db_client_user, db_company
+):
+    from app.models.database import set_admin_context
+    from app.services.notification_service import ActivityService
+
+    action = "SIGNED_ADMIN_ACTIVITY_INSERT"
+    await set_admin_context(db)
+    staff = await db.execute(text("SELECT public.nlc_current_user_is_staff()"))
+    assert staff.scalar_one() is True
+
+    await ActivityService(db).log(
+        user_id=db_client_user.id,
+        company_id=db_company.id,
+        action=action,
+        resource_type="IntegrationTest",
+        description="Signed ADMIN principal must not be cast to UUID",
+    )
     result = await db.execute(
         text(
             "SELECT count(*) FROM user_activity_logs "
