@@ -456,8 +456,24 @@ def upgrade() -> None:
     op.execute("""
         CREATE POLICY notifications_actor_tenant_update ON public.notifications
         FOR UPDATE
-        USING (public.nlc_current_user_is_staff() OR user_id = public.nlc_current_user_id())
-        WITH CHECK (public.nlc_current_user_is_staff() OR user_id = public.nlc_current_user_id())
+        USING (
+            public.nlc_current_user_is_staff()
+            OR user_id = public.nlc_current_user_id()
+            OR (
+                user_id IS NULL
+                AND company_id IS NOT NULL
+                AND public.nlc_can_access_company(company_id)
+            )
+        )
+        WITH CHECK (
+            public.nlc_current_user_is_staff()
+            OR user_id = public.nlc_current_user_id()
+            OR (
+                user_id IS NULL
+                AND company_id IS NOT NULL
+                AND public.nlc_can_access_company(company_id)
+            )
+        )
     """)
 
     op.execute("""
