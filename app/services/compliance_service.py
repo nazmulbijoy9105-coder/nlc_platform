@@ -255,6 +255,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
         from app.core.config import get_settings
         settings = get_settings()
 
+        # Serialize evaluations per company so the immutable hash chain cannot fork.
+        await self.db.execute(
+            select(Company.id).where(Company.id == company_id).with_for_update()
+        )
         now = datetime.now(UTC)
         today = date.today()
         score = output.score_breakdown.final_score
