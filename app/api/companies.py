@@ -183,7 +183,10 @@ def _flag_to_response(flag) -> FlagResponse:
     return FlagResponse(
         flag_id=str(flag.id),
         rule_id=flag.rule_id,
-        rule_name=getattr(flag, "description", flag.flag_code) or flag.flag_code,
+        rule_name=(
+            (getattr(flag, "description", flag.flag_code) or flag.flag_code)
+            if approved else f"Pending counsel review: {getattr(flag, 'description', flag.flag_code) or flag.flag_code}"
+        ),
         severity=str(severity) if approved else "NOT_EVALUATED",
         score_impact=int(flag.score_impact or 0) if approved else 0,
         status=flag.flag_status.value if hasattr(flag.flag_status, "value") else str(flag.flag_status),
