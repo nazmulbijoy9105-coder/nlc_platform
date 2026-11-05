@@ -219,6 +219,14 @@ async def test_activity_log_has_exactly_one_actor_and_tenant_policy(db):
 
 
 @pytest.mark.asyncio
+async def test_activity_service_inserts_with_signed_actor_and_keeps_transaction_usable(
+    db, db_client_user, db_company
+):
+    """The real service path must insert under signed user+tenant RLS context."""
+    from app.models.infrastructure import UserActivityLog
+    from app.services.notification_service import ActivityService
+
+    action = "INTEGRATION_ACTIVITY_INSERT_REGRESSION"
 async def test_legal_evidence_tables_are_readable_by_members_but_writable_only_by_staff(db):
     evidence_tables = {
         "articles_verifications": {
@@ -279,6 +287,11 @@ async def test_activity_service_inserts_with_signed_actor_and_tenant(
         company_id=db_company.id,
         action=action,
         resource_type="IntegrationTest",
+        description="Signed actor and tenant insert regression",
+    )
+
+    # A successful query after flush proves the session transaction was not
+    # left aborted by a swallowed PostgreSQL/RLS error.
         description="ActivityService signed actor and tenant regression",
     )
     result = await db.execute(
