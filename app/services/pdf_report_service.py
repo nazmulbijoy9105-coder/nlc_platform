@@ -9,17 +9,17 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException, Response
 from sqlalchemy import select
 
-from app.models.compliance import ComplianceScoreHistory
+from app.models.compliance import ComplianceEvaluationRun
 
 # Import CATEGORY_CAPS for score reconciliation (cap adjustment display)
 from app.rule_engine.engine import CATEGORY_CAPS
 from app.services.company_service import CompanyService
-from app.services.compliance_service import ComplianceService
 from app.services.pdf_render import (
     asset_uri,
     esc,
@@ -296,7 +296,7 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
     # Group flags by category and sum raw deductions
     cat_deductions: dict[str, dict] = {}
     for f in (flags or []):
-        impact = getattr(f, "score_impact", 0) or 0
+        impact = getattr(f, "score_impact_applied", getattr(f, "score_impact", 0)) or 0
         if impact == 0:
             continue
         rule_id = getattr(f, "rule_id", "") or ""
@@ -368,7 +368,7 @@ def build_compliance_report_html(
     if flags:
         rows = "".join(
             f"<tr><td>{esc(f.rule_id)}</td><td>{esc(f.severity)}</td>"
-            f"<td>{esc(f.description)}</td><td>-{esc(f.score_impact or 0)} pts</td></tr>"
+            f"<td>{esc(f.description)}</td><td>{esc((f'-{getattr(f, 'score_impact_applied', getattr(f, 'score_impact', 0))} pts') if getattr(f, 'score_impact_applied', getattr(f, 'score_impact', 0)) else 'Not applied')}</td></tr>"
             for f in flags
         )
     else:
@@ -448,7 +448,6 @@ class PDFReportService:
 
     async def generate_company_compliance_pdf(self, company_id: str) -> Response:
         company = await CompanyService(self.db).get_by_id_or_404(company_id)
-        flags = await ComplianceService(self.db).get_active_flags(company_id)
 
         # Fetch the active rescue plan (if any) so the PDF includes the
         # 8-step recovery roadmap. GREEN/YELLOW companies have no plan;
@@ -463,9 +462,11 @@ class PDFReportService:
 
         # COM-007: bind report to evidence snapshot + engine version
         score_snapshot = await self.db.execute(
-            select(ComplianceScoreHistory)
-            .where(ComplianceScoreHistory.company_id == company.id)
-            .order_by(ComplianceScoreHistory.calculated_at.desc())
+            select(ComplianceEvaluationRun)
+            .where(
+                ComplianceEvaluationRun.company_id == company.id,
+                ComplianceEvaluationRun.calculated_at == company.last_evaluated_at,
+            )
             .limit(1)
         )
         snapshot = score_snapshot.scalar_one_or_none()
@@ -478,22 +479,28 @@ class PDFReportService:
             getattr(snapshot, "evaluation_status", None) != "COMPLETED"
             or not getattr(snapshot, "score_hash", None)
             or not getattr(snapshot, "engine_version", None)
+            or not isinstance(getattr(snapshot, "flags_snapshot", None), list)
         ):
             raise HTTPException(
                 status_code=409,
-                detail="PDF withheld: the latest evaluation snapshot is incomplete or lacks audit identity.",
+                detail="PDF withheld: the latest evaluation run is incomplete or lacks audit identity.",
             )
         if (
-            company.current_compliance_score is None
-            or company.current_risk_band is None
-            or snapshot.score != company.current_compliance_score
+            snapshot.score != company.current_compliance_score
             or snapshot.risk_band != company.current_risk_band
             or company.last_evaluated_at is None
             or snapshot.calculated_at != company.last_evaluated_at
         ):
             raise HTTPException(
                 status_code=409,
-                detail="PDF withheld: stored company score, risk band or evaluation time does not match the latest snapshot.",
+                detail="PDF withheld: company state does not match its authoritative per-evaluation record.",
+            )
+
+        flags = [SimpleNamespace(**item) for item in snapshot.flags_snapshot if isinstance(item, dict)]
+        if len(flags) != len(snapshot.flags_snapshot):
+            raise HTTPException(
+                status_code=409,
+                detail="PDF withheld: evaluation flag evidence is malformed.",
             )
 
         snapshot_hash = snapshot.score_hash
