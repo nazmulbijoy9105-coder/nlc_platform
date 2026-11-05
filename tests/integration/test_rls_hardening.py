@@ -218,3 +218,32 @@ async def test_view_only_member_can_read_but_cannot_mutate_tenant_company(db, db
         {"company_id": db_company.id},
     )
     assert unchanged.scalar_one() == db_company.company_name
+
+
+@pytest.mark.asyncio
+async def test_document_policies_are_nonrecursive_and_financially_scoped(db):
+    result = await db.execute(
+        text(
+            "SELECT policyname, cmd, qual, with_check "
+            "FROM pg_policies WHERE schemaname = 'public' AND tablename = 'documents'"
+        )
+    )
+    policies = {row[0]: row for row in result.fetchall()}
+    assert set(policies) == {
+        "documents_tenant_select",
+        "documents_tenant_insert",
+        "documents_tenant_update",
+        "documents_tenant_delete",
+    }
+
+    select_policy = policies["documents_tenant_select"]
+    assert "nlc_can_access_company" in (select_policy[2] or "")
+    assert "nlc_can_view_financials_company" in (select_policy[2] or "")
+    assert "nlc_can_access_document" not in (select_policy[2] or "")
+
+    for name in ("documents_tenant_insert", "documents_tenant_update", "documents_tenant_delete"):
+        row = policies[name]
+        expressions = " ".join(str(value or "") for value in row[2:])
+        assert "nlc_can_edit_company" in expressions
+        assert "nlc_can_manage_financials_company" in expressions
+        assert "nlc_can_access_document" not in expressions
