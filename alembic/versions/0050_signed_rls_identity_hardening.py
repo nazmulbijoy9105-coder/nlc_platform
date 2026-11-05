@@ -40,6 +40,8 @@ SENSITIVE_DOCUMENT_TYPES = ("AUDIT_REPORT", "ANNUAL_RETURN", "DUE_DILIGENCE")
 RLS_TABLES = (
     "companies",
     *COMPANY_TABLES,
+    "compliance_flags",
+    "documents",
     "users",
     "company_user_access",
     "compliance_events",
