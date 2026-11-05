@@ -495,39 +495,11 @@ CATEGORY_CAPS: dict[str, tuple[int, tuple[str, ...]]] = {
 # classification is released to users while LEGAL_SCORE_RELEASED is False.
 # Exclusions (including AGM-005, AUD-*, TAX-*, LBR-*, BNK-*, FX-*, BSEC-*,
 # disputed DEF-001 and unreviewed share-transfer/filing rules) remain provisional.
-VERIFIED_RULE_IDS: frozenset[str] = frozenset({
-    # AGM module (7 rules)
-    "AGM-001", "AGM-002", "AGM-003", "AGM-004",
-    # AGM-005 remains excluded until the AOA-specific quorum basis is verified.
-    "AGM-006",
-    # Registers module (3 rules)
-    "REG-001", "REG-002", "REG-003",
-    # Registered Office (1 rule)
-    "OFF-001",
-    # Directors module (6 rules)
-    "DIR-001", "DIR-002", "DIR-003",
-    "DIR-007",
-    # Capital module (3 rules)
-    "CAP-001", "CAP-002", "CAP-003",
-    # Charges (1 rule)
-    "CHG-001",
-    # Structural changes (3 rules)
-    "STR-001", "STR-002", "STR-003",
-    # Accounts (3 rules)
-    "ACC-001", "ACC-002", "ACC-003",
-    # Board meetings (3 rules)
+# The production allowlist is intentionally empty until each applicable rule
+# has named, independent current-law approval in the signed approval register.
+# Internal source triage or engine/seed parity is not legal approval.
+VERIFIED_RULE_IDS: frozenset[str] = frozenset()
 
-    # Incorporation (4 rules)
-    "INC-001", "INC-003", "INC-004", "INC-007",
-    # Members (1 rule)
-    "MEM-001",
-    # Share transfers (1 rule)
-    "TR-001",
-    # Escalation (2 rules)
-
-    # Director disqualification rules remain outside scoring pending independent legal review.
-    "DEF-002",
-})
 # Release remains disabled until the complete applicable rule corpus has named,
 # independent current-law approval recorded in the signed, versioned register.
 # Internal source checking is not independent counsel approval.
