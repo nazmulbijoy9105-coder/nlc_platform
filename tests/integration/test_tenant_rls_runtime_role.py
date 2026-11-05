@@ -299,6 +299,7 @@ async def test_activity_service_inserts_with_signed_actor_and_tenant(
 async def test_signed_admin_activity_insert_does_not_cast_admin_sentinel_to_uuid(
     db, db_client_user, db_company
 ):
+    from app.models.database import set_admin_context
     from app.services.notification_service import ActivityService
 
     action = "SIGNED_ADMIN_ACTIVITY_INSERT"
