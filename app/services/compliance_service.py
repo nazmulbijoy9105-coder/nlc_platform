@@ -78,7 +78,7 @@ def _applied_score_impacts(flags) -> list[dict]:
     The returned value is aligned by index with the original flags list so
     repeated rule IDs cannot overwrite one another.
     """
-    from app.rule_engine.engine import CATEGORY_CAPS, VERIFIED_RULE_IDS, RuleState
+    from app.rule_engine.engine import CATEGORY_CAPS, LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS, RuleState
 
     remaining = {name: cap[0] for name, cap in CATEGORY_CAPS.items()}
     results = []
@@ -96,6 +96,12 @@ def _applied_score_impacts(flags) -> list[dict]:
         # not acquire scoring or override semantics through a side path.
         if flag.rule_id not in VERIFIED_RULE_IDS:
             results.append({"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"})
+            continue
+        # Internal source-check allowlisting is not release authority. While
+        # statutory scoring is disabled, no downstream report may describe a
+        # provisional impact as applied.
+        if not LEGAL_SCORE_RELEASED:
+            results.append({"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"})
             continue
         severity_value = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
         if getattr(flag, "is_black_override", False) or severity_value == "BLACK":
