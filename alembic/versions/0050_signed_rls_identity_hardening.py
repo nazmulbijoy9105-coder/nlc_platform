@@ -461,6 +461,43 @@ def upgrade() -> None:
     """)
 
     op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_guard_notification_acknowledgement()
+        RETURNS trigger
+        LANGUAGE plpgsql
+        SECURITY DEFINER
+        SET search_path = pg_catalog, public
+        AS $function$
+        BEGIN
+            IF public.nlc_current_user_is_staff() THEN
+                RETURN NEW;
+            END IF;
+
+            IF OLD.notification_status::text <> 'PENDING'
+               OR NEW.notification_status::text <> 'ACKNOWLEDGED'
+               OR NEW.acknowledged_at IS NULL THEN
+                RAISE EXCEPTION 'Clients may only acknowledge pending notifications'
+                    USING ERRCODE = '42501';
+            END IF;
+
+            IF (to_jsonb(NEW) - ARRAY['notification_status', 'acknowledged_at', 'updated_at'])
+               IS DISTINCT FROM
+               (to_jsonb(OLD) - ARRAY['notification_status', 'acknowledged_at', 'updated_at']) THEN
+                RAISE EXCEPTION 'Clients may not modify notification content or delivery fields'
+                    USING ERRCODE = '42501';
+            END IF;
+            RETURN NEW;
+        END
+        $function$
+    """)
+    op.execute("DROP TRIGGER IF EXISTS notifications_guard_client_ack ON public.notifications")
+    op.execute("""
+        CREATE TRIGGER notifications_guard_client_ack
+        BEFORE UPDATE ON public.notifications
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_guard_notification_acknowledgement()
+    """)
+    op.execute("REVOKE ALL ON FUNCTION public.nlc_guard_notification_acknowledgement() FROM PUBLIC")
+
+    op.execute("""
         CREATE POLICY compliance_events_company_read ON public.compliance_events
         FOR SELECT
         USING (public.nlc_can_access_company(company_id))
