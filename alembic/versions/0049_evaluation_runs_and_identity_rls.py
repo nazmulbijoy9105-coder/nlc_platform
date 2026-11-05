@@ -392,3 +392,36 @@ def downgrade() -> None:
     op.execute("DROP POLICY IF EXISTS company_user_access_self_or_admin_select ON company_user_access")
     op.execute("DROP POLICY IF EXISTS users_admin_write ON users")
     op.execute("DROP POLICY IF EXISTS users_self_or_admin_select ON users")
+
+    # Restore the previous policy definitions when downgrading.
+    previous_tenant_policies = {
+        "companies": ("companies_access_policy", "id"),
+        "agms": ("agms_company_policy", "company_id"),
+        "annual_returns": ("annual_returns_company_policy", "company_id"),
+        "audits": ("audits_company_policy", "company_id"),
+        "compliance_flags": ("compliance_flags_company_policy", "company_id"),
+        "compliance_score_history": ("compliance_score_history_company_policy", "company_id"),
+        "directors": ("directors_company_policy", "company_id"),
+        "documents": ("documents_company_policy", "company_id"),
+        "notifications": ("notifications_company_policy", "company_id"),
+        "registered_office_history": ("registered_office_history_company_policy", "company_id"),
+        "rescue_plans": ("rescue_plans_company_policy", "company_id"),
+        "rescue_steps": ("rescue_steps_company_policy", "company_id"),
+        "rjsc_form_filings": ("rjsc_form_filings_company_policy", "company_id"),
+        "share_transfers": ("share_transfers_company_policy", "company_id"),
+        "shareholders": ("shareholders_company_policy", "company_id"),
+        "statutory_registers": ("statutory_registers_company_policy", "company_id"),
+        "tasks": ("tasks_company_policy", "company_id"),
+    }
+    for table, (policy_name, company_column) in previous_tenant_policies.items():
+        op.execute(f"DROP POLICY IF EXISTS {policy_name} ON {table}")
+        scope = (
+            "current_setting('app.current_user_id', true) = 'ADMIN' "
+            f"OR {company_column} IN ("
+            "SELECT company_id FROM company_user_access "
+            "WHERE user_id = current_setting('app.current_user_id', true)::uuid "
+            "AND is_active = true)"
+        )
+        op.execute(
+            f"CREATE POLICY {policy_name} ON {table} FOR ALL USING ({scope})"
+        )
