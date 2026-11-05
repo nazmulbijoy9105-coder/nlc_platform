@@ -21,6 +21,7 @@ class SeverityLevel(enum.StrEnum):
     YELLOW = "YELLOW"
     RED    = "RED"
     BLACK  = "BLACK"
+    NOT_EVALUATED = "NOT_EVALUATED"
 
 
 class ExposureBand(enum.StrEnum):

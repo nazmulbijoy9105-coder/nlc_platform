@@ -101,12 +101,26 @@ jobs:
       - name: Compile check
         run: python -m compileall app/
 
-      - name: Verify single Alembic head and clean database upgrade
+      - name: Verify single Alembic head and two fresh PostgreSQL upgrades
         run: |
-          alembic heads
-          HEAD_COUNT="$(alembic heads | grep -c '(head)')"
+          set -euo pipefail
+          HEADS="$(alembic heads)"
+          printf '%s\n' "$HEADS"
+          HEAD_COUNT="$(printf '%s\n' "$HEADS" | grep -c '(head)')"
           test "$HEAD_COUNT" -eq 1
+
+          # First clean PostgreSQL database: upgrade twice to prove idempotency.
           alembic upgrade head
+          alembic upgrade head
+          alembic current
+
+          # A second independent empty database catches hidden dependence on
+          # migration state left by the first upgrade.
+          PGPASSWORD=nlc_test createdb -h localhost -U nlc_test nlc_test_second
+          SECOND_DATABASE_URL="postgresql+asyncpg://nlc_test:nlc_test@localhost:5432/nlc_test_second"
+          DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
+          DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
+          DATABASE_URL="$SECOND_DATABASE_URL" alembic current
 
       - name: Run integration tests
         run: python -m pytest tests/integration -q --tb=short
