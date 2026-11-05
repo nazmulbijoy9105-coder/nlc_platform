@@ -142,6 +142,17 @@ class EngagementService(BaseService[Engagement]):
             raise ValueError(
                 f"Invalid engagement transition: {eng.engagement_status} -> {new_status}"
             )
+        if new_status == EngagementStatus.QUOTED:
+            raise CommercialConflictError("Create a quotation to move an engagement into QUOTED")
+        if new_status == EngagementStatus.CONFIRMED:
+            accepted_result = await self.db.execute(
+                select(func.count()).select_from(Quotation).where(
+                    Quotation.engagement_id == engagement_id,
+                    Quotation.status == "ACCEPTED",
+                )
+            )
+            if accepted_result.scalar_one() < 1:
+                raise CommercialConflictError("An accepted quotation is required before confirmation")
         updates: dict = {"engagement_status": new_status}
         status_date_map = {
             EngagementStatus.QUOTED:      "quoted_date",
