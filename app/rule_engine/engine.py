@@ -495,7 +495,39 @@ CATEGORY_CAPS: dict[str, tuple[int, tuple[str, ...]]] = {
 # classification is released to users while LEGAL_SCORE_RELEASED is False.
 # Exclusions (including AGM-005, AUD-*, TAX-*, LBR-*, BNK-*, FX-*, BSEC-*,
 # disputed DEF-001 and unreviewed share-transfer/filing rules) remain provisional.
-VERIFIED_RULE_IDS: frozenset[str] = frozenset()
+VERIFIED_RULE_IDS: frozenset[str] = frozenset({
+    # AGM module (7 rules)
+    "AGM-001", "AGM-002", "AGM-003", "AGM-004",
+    # AGM-005 remains excluded until the AOA-specific quorum basis is verified.
+    "AGM-006", "AGM-007",
+    # Registers module (3 rules)
+    "REG-001", "REG-002", "REG-003",
+    # Registered Office (1 rule)
+    "OFF-001",
+    # Directors module (6 rules)
+    "DIR-001", "DIR-002", "DIR-003",
+    "DIR-007", "DIR-008", "DIR-010",
+    # Capital module (3 rules)
+    "CAP-001", "CAP-002", "CAP-003",
+    # Charges (1 rule)
+    "CHG-001",
+    # Structural changes (3 rules)
+    "STR-001", "STR-002", "STR-003",
+    # Accounts (3 rules)
+    "ACC-001", "ACC-002", "ACC-003",
+    # Board meetings (3 rules)
+    "BOD-001", "BOD-002", "BOD-003",
+    # Incorporation (4 rules)
+    "INC-001", "INC-003", "INC-004", "INC-007",
+    # Members (1 rule)
+    "MEM-001",
+    # Share transfers (1 rule)
+    "TR-001",
+    # Escalation (2 rules)
+    "ESC-001", "ESC-002",
+    # Director disqualification rules remain outside scoring pending independent legal review.
+    "DEF-002",
+})
 # Release remains disabled until the complete applicable rule corpus has named,
 # independent current-law approval recorded in the signed, versioned register.
 # Internal source checking is not independent counsel approval.
@@ -2466,7 +2498,10 @@ class NLCRuleEngine:
             if f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and f.eval_state == "VIOLATION"
         ]
-        scored = [f for f in violations if f.rule_id in VERIFIED_RULE_IDS]
+        scored = [
+            f for f in violations
+            if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS
+        ]
 
         deductions = {
             "TAX": sum(f.score_impact for f in scored if f.rule_id.startswith(("TAX-", "VAT-"))),
@@ -2501,7 +2536,10 @@ class NLCRuleEngine:
         # P0 GATE: Only verified rules contribute to the authoritative score.
         # Unverified rules still generate flags for visibility but their
         # score_impact is excluded from deductions.
-        scored = [f for f in violations if f.rule_id in VERIFIED_RULE_IDS]
+        scored = [
+            f for f in violations
+            if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS
+        ]
 
         tax_ded = sum(f.score_impact for f in scored if f.rule_id.startswith(("TAX-", "VAT-")))
         agm_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("AGM-"))
