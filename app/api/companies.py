@@ -224,7 +224,10 @@ def _company_to_response(company, *, can_view_financials: bool = True) -> Compan
         incorporation_date=company.incorporation_date.isoformat() if company.incorporation_date else None,  # type: ignore
         compliance_score=compliance_score,
         band=risk_band,
-        last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
+        last_evaluated_at=(
+            getattr(company, "last_evaluated_at", None).isoformat()
+            if getattr(company, "last_evaluated_at", None) else None
+        ),
         director_count=director_count,
         violation_count=violation_count,
         company_type=_s(getattr(company, "company_type", None)),
