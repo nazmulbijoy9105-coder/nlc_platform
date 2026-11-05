@@ -463,7 +463,8 @@ class TestRescue:
 
         from app.models.company import Company
 
-        # Force RED band
+        # A manually edited RED band is not proof of a released statutory
+        # evaluation. Fail closed until approved rules yield an auditable rescue sequence.
         await db.execute(
             update(Company)
             .where(Company.id == db_company.id)
@@ -480,11 +481,8 @@ class TestRescue:
             headers=_auth(super_admin_tok),
             json={"company_id": str(db_company.id)}
         )
-        assert resp.status_code == 201
-        data = resp.json()
-        assert data["company_id"] == str(db_company.id)
-        assert data["status"] in ("ACTIVE", "IN_PROGRESS")
-        assert len(data["steps"]) >= 1  # RED company should produce at least one rescue step
+        assert resp.status_code == 422
+        assert "counsel-approved statutory evaluation" in resp.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_get_active_plan_not_found(self, api_client, super_admin_tok, db_company):
