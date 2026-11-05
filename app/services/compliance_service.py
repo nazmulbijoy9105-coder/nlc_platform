@@ -255,8 +255,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
         Persist all evaluation results to DB atomically.
         Order: resolve old flags → insert new flags → score snapshot → update company.
         """
-        from app.core.config import get_settings
-        settings = get_settings()
+        from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+
+        engine_version = str(getattr(output, "engine_version", "") or "").strip()
+        if not engine_version or engine_version.lower() == "unknown":
+            raise ValueError("Evaluation cannot be persisted without a concrete engine version.")
 
         # Serialize evaluations per company so the immutable hash chain cannot fork.
         await self.db.execute(
@@ -272,7 +275,16 @@ class ComplianceService(BaseService[ComplianceFlag]):
             risk_band = RiskBand(
                 "BLACK" if score <= 29 else "RED" if score <= 49 else "YELLOW" if score <= 69 else "GREEN"
             )
-        score_for_current = None if risk_band == RiskBand.NOT_EVALUATED else score
+        # Defense in depth: persistence independently enforces the
+        # counsel-approved release switch; a provisional engine band cannot
+        # publish a numeric score while legal approval is disabled.
+        if not LEGAL_SCORE_RELEASED:
+            risk_band = RiskBand.NOT_EVALUATED
+        score_for_current = (
+            score
+            if LEGAL_SCORE_RELEASED and risk_band != RiskBand.NOT_EVALUATED
+            else None
+        )
 
         # No remediation workflow may be triggered from a provisional, unreleased score.
         rescue_required = bool(score_for_current is not None and _is_rescue_required(output))
@@ -324,7 +336,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     id=uuid.uuid4(),
                     company_id=company_id,
                     rule_id=flag.rule_id,
-                    rule_version=settings.rule_engine_version,
+                    rule_version=str(getattr(flag, 'rule_version', None) or engine_version),
                     flag_code=flag.rule_id,
                     statutory_basis=flag.statutory_basis,
                     severity=SeverityLevel(flag.severity),
@@ -343,7 +355,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # ── Score snapshot (monthly, append-only, tamper-evident) ──
         snapshot_month = today.replace(day=1)
         score_hash = hashlib.sha256(
-            f"{company_id}{score_for_current}{risk_band}{snapshot_month}{settings.rule_engine_version}".encode()
+            f"{company_id}{score_for_current}{risk_band}{snapshot_month}{engine_version}".encode()
         ).hexdigest()
 
         # Only one snapshot per company per month
@@ -373,7 +385,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 black_flags_count=black_flags,
                 override_applied=sb.override_applied,
                 score_hash=score_hash,
-                engine_version=settings.rule_engine_version,
+                engine_version=engine_version,
                 trigger_source=trigger_source,
                 evaluation_status=("COMPLETED" if score_for_current is not None else "NOT_RELEASED"),
             )
@@ -434,7 +446,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "score": score_for_current,
                 "risk_band": risk_band.value,
                 "calculated_at": now.isoformat(),
-                "engine_version": settings.rule_engine_version,
+                "engine_version": engine_version,
                 "trigger_source": trigger_source,
                 "flags_snapshot": flags_snapshot,
                 "score_breakdown_snapshot": score_breakdown_snapshot,
@@ -451,7 +463,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             score=score_for_current,
             risk_band=risk_band,
             calculated_at=now,
-            engine_version=settings.rule_engine_version,
+            engine_version=engine_version,
             score_hash=evaluation_hash,
             previous_hash=previous_hash,
             evaluation_status=("COMPLETED" if score_for_current is not None else "NOT_RELEASED"),
