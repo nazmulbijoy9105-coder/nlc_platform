@@ -201,7 +201,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "score":         api_score,
             "raw_total":     api_raw_total,
             "risk_band":     public_risk_band,
-            "exposure_band": output.score_breakdown.exposure_band,
+            "exposure_band": output.score_breakdown.exposure_band if score_is_released else None,
             "flags":         [
                 {
                     "rule_id":        f.rule_id,
