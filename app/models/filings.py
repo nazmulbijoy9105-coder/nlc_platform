@@ -91,7 +91,7 @@ class AGM(FullMixin, Base):
     members_present_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     members_present_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     members_present_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-     quorum_required_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    quorum_required_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     quorum_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     quorum_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     quorum_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
