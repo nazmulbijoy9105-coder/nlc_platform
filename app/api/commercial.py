@@ -25,6 +25,7 @@ Endpoints:
 
 import uuid
 from datetime import date
+from decimal import Decimal
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -57,8 +58,8 @@ class EngagementCreateRequest(BaseModel):
     company_id: uuid.UUID
     engagement_type: str = Field(description="COMPLIANCE_PACKAGE | STRUCTURED_REGULARIZATION | CORPORATE_RESCUE")
     revenue_tier: RevenueTier
-    description: str | None = None
-    estimated_fee_bdt: float | None = Field(None, gt=0)
+    description: str = Field(min_length=3, max_length=500)
+    estimated_fee_bdt: Decimal | None = Field(None, gt=0)
     assigned_officer_id: uuid.UUID | None = None
     notes: str | None = None
 
@@ -89,9 +90,9 @@ class EngagementResponse(BaseModel):
 class QuotationCreateRequest(BaseModel):
     engagement_id: uuid.UUID
     company_id: uuid.UUID
-    professional_fee_bdt: float = Field(gt=0)
-    government_fee_bdt: float = Field(default=0, ge=0)
-    vat_bdt: float = Field(default=0, ge=0)
+    professional_fee_bdt: Decimal = Field(gt=0)
+    government_fee_bdt: Decimal = Field(default=Decimal('0.00'), ge=0)
+    vat_bdt: Decimal = Field(default=Decimal('0.00'), ge=0)
     line_items: list[dict] | None = None
     valid_days: int = Field(default=30, ge=7, le=90)
     notes: str | None = None
@@ -102,10 +103,10 @@ class QuotationResponse(BaseModel):
     quotation_number: str
     engagement_id: str
     company_id: str
-    professional_fee_bdt: float
-    government_fee_bdt: float
-    vat_bdt: float
-    total_fee_bdt: float
+    professional_fee_bdt: Decimal
+    government_fee_bdt: Decimal
+    vat_bdt: Decimal
+    total_fee_bdt: Decimal
     status: str
     valid_until: str
     created_at: str
@@ -179,9 +180,9 @@ def _quotation_to_response(q) -> QuotationResponse:
         engagement_id=str(q.engagement_id),
         company_id=str(q.company_id),
         professional_fee_bdt=q.professional_fee_bdt,
-        government_fee_bdt=q.government_fee_bdt,
-        vat_bdt=q.vat_bdt,
-        total_fee_bdt=q.professional_fee_bdt + q.government_fee_bdt + q.vat_bdt,
+        government_fee_bdt=q.government_fee_bdt or Decimal('0.00'),
+        vat_bdt=q.vat_bdt or Decimal('0.00'),
+        total_fee_bdt=q.total_bdt,
         status=q.status,
         valid_until=q.valid_until.isoformat(),
         created_at=q.created_at.isoformat(),
@@ -302,7 +303,6 @@ async def advance_engagement_status(
         engagement_id=engagement_id,
         new_status=body.new_status,
         note=body.note,
-        updated_by=current_user.id,
     )
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found.")
@@ -347,7 +347,6 @@ async def create_quotation(
         line_items=body.line_items,
         valid_days=body.valid_days,
         notes=body.notes,
-        created_by=current_user.id,
     )
 
     await activity.log(
@@ -376,7 +375,7 @@ async def accept_quotation(
     svc = QuotationService(db)
     activity = ActivityService(db)
 
-    quotation = await svc.accept(quotation_id=quotation_id, accepted_by=current_user.id)  # type: ignore
+    quotation = await svc.accept(quotation_id=quotation_id)
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
 
@@ -405,9 +404,21 @@ async def reject_quotation(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = QuotationService(db)
-    quotation = await svc.reject(quotation_id=quotation_id, reason=body.reason)  # type: ignore
+    quotation = await svc.reject(
+        quotation_id=quotation_id,
+        reason=body.reason or "Rejected by authorized staff",
+        rejected_by=current_user.id,
+    )
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
+    await ActivityService(db).log(
+        action="QUOTATION_REJECTED",
+        resource_type="quotation",
+        resource_id=str(quotation_id),
+        description=f"Quotation {quotation.quotation_number} rejected: {body.reason or 'No reason supplied'}",
+        ip_address=request.client.host if request.client else None,
+        actor_user_id=current_user.id,
+    )
     return _quotation_to_response(quotation)
 
 
@@ -473,11 +484,16 @@ async def complete_task(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = TaskService(db)
-    task = await svc.complete_task(  # type: ignore
-        task_id=task_id,
-        completed_by=current_user.id,
-        completion_note=body.completion_note,
-    )
+    task = await svc.complete_task(task_id=task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
+    await ActivityService(db).log(
+        action="TASK_COMPLETED",
+        resource_type="task",
+        resource_id=str(task_id),
+        description=body.completion_note or f"Task completed: {task.title}",
+        ip_address=request.client.host if request.client else None,
+        actor_user_id=current_user.id,
+        company_id=task.company_id,
+    )
     return _task_to_response(task)
