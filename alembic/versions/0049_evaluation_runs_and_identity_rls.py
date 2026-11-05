@@ -108,6 +108,188 @@ def upgrade() -> None:
         """
     )
 
+    # Tenant-scoped tables that previously had no policy or no RLS.
+    op.execute("ALTER TABLE compliance_calendar_events ENABLE ROW LEVEL SECURITY")
+    op.execute(
+        """
+        CREATE POLICY calendar_events_company_scope
+        ON compliance_calendar_events FOR ALL
+        USING (
+            current_setting('app.current_user_id', true) = 'ADMIN'
+            OR EXISTS (
+                SELECT 1 FROM company_user_access access
+                WHERE access.company_id = compliance_calendar_events.company_id
+                  AND access.user_id::text = current_setting('app.current_user_id', true)
+                  AND access.is_active = true
+            )
+        )
+        WITH CHECK (
+            current_setting('app.current_user_id', true) = 'ADMIN'
+            OR EXISTS (
+                SELECT 1 FROM company_user_access access
+                WHERE access.company_id = compliance_calendar_events.company_id
+                  AND access.user_id::text = current_setting('app.current_user_id', true)
+                  AND access.is_active = true
+            )
+        )
+        """
+    )
+
+    op.execute(
+        """
+        CREATE POLICY compliance_events_company_scope
+        ON compliance_events FOR ALL
+        USING (
+            current_setting('app.current_user_id', true) = 'ADMIN'
+            OR EXISTS (
+                SELECT 1 FROM company_user_access access
+                WHERE access.company_id = compliance_events.company_id
+                  AND access.user_id::text = current_setting('app.current_user_id', true)
+                  AND access.is_active = true
+            )
+        )
+        WITH CHECK (
+            current_setting('app.current_user_id', true) = 'ADMIN'
+            OR EXISTS (
+                SELECT 1 FROM company_user_access access
+                WHERE access.company_id = compliance_events.company_id
+                  AND access.user_id::text = current_setting('app.current_user_id', true)
+                  AND access.is_active = true
+            )
+        )
+        """
+    )
+
+    op.execute(
+        """
+        CREATE POLICY quotations_company_scope
+        ON quotations FOR ALL
+        USING (
+            current_setting('app.current_user_id', true) = 'ADMIN'
+            OR (
+                company_id IS NOT NULL
+                AND EXISTS (
+                    SELECT 1 FROM company_user_access access
+                    WHERE access.company_id = quotations.company_id
+                      AND access.user_id::text = current_setting('app.current_user_id', true)
+                      AND access.is_active = true
+                )
+            )
+        )
+        WITH CHECK (
+            current_setting('app.current_user_id', true) = 'ADMIN'
+            OR (
+                company_id IS NOT NULL
+                AND EXISTS (
+                    SELECT 1 FROM company_user_access access
+                    WHERE access.company_id = quotations.company_id
+                      AND access.user_id::text = current_setting('app.current_user_id', true)
+                      AND access.is_active = true
+                )
+            )
+        )
+        """
+    )
+
+    op.execute(
+        """
+        CREATE POLICY document_access_log_company_scope
+        ON document_access_log FOR SELECT
+        USING (
+            current_setting('app.current_user_id', true) = 'ADMIN'
+            OR accessed_by::text = current_setting('app.current_user_id', true)
+            OR EXISTS (
+                SELECT 1
+                FROM documents d
+                JOIN company_user_access access ON access.company_id = d.company_id
+                WHERE d.id = document_access_log.document_id
+                  AND access.user_id::text = current_setting('app.current_user_id', true)
+                  AND access.is_active = true
+            )
+        )
+        """
+    )
+    op.execute(
+        """
+        CREATE POLICY document_access_log_insert
+        ON document_access_log FOR INSERT
+        WITH CHECK (
+            current_setting('app.current_user_id', true) = 'ADMIN'
+            OR (
+                accessed_by::text = current_setting('app.current_user_id', true)
+                AND EXISTS (
+                    SELECT 1
+                    FROM documents d
+                    JOIN company_user_access access ON access.company_id = d.company_id
+                    WHERE d.id = document_access_log.document_id
+                      AND access.user_id::text = current_setting('app.current_user_id', true)
+                      AND access.is_active = true
+                )
+            )
+        )
+        """
+    )
+
+    op.execute(
+        """
+        CREATE POLICY user_activity_logs_self_or_company_read
+        ON user_activity_logs FOR SELECT
+        USING (
+            current_setting('app.current_user_id', true) = 'ADMIN'
+            OR user_id::text = current_setting('app.current_user_id', true)
+            OR (
+                company_id IS NOT NULL
+                AND EXISTS (
+                    SELECT 1 FROM company_user_access access
+                    WHERE access.company_id = user_activity_logs.company_id
+                      AND access.user_id::text = current_setting('app.current_user_id', true)
+                      AND access.is_active = true
+                )
+            )
+        )
+        """
+    )
+    op.execute(
+        """
+        CREATE POLICY user_activity_logs_self_insert
+        ON user_activity_logs FOR INSERT
+        WITH CHECK (
+            current_setting('app.current_user_id', true) = 'ADMIN'
+            OR user_id::text = current_setting('app.current_user_id', true)
+        )
+        """
+    )
+
+    # Global legal/reference catalogues are readable by authenticated users;
+    # mutation and internal audit logs remain admin-only.
+    for table in ("legal_rules", "sro_registry", "regulatory_rules"):
+        op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
+        op.execute(
+            f"""
+            CREATE POLICY {table}_authenticated_read
+            ON {table} FOR SELECT
+            USING (current_setting('app.current_user_id', true) IS NOT NULL)
+            """
+        )
+        op.execute(
+            f"""
+            CREATE POLICY {table}_admin_write
+            ON {table} FOR ALL
+            USING (current_setting('app.current_user_id', true) = 'ADMIN')
+            WITH CHECK (current_setting('app.current_user_id', true) = 'ADMIN')
+            """
+        )
+
+    for table in ("legal_rule_versions", "ai_output_log", "ai_prompt_templates"):
+        op.execute(
+            f"""
+            CREATE POLICY {table}_admin_only
+            ON {table} FOR ALL
+            USING (current_setting('app.current_user_id', true) = 'ADMIN')
+            WITH CHECK (current_setting('app.current_user_id', true) = 'ADMIN')
+            """
+        )
+
     # Evaluation records are append-only. No API role can rewrite/delete evidence.
     op.execute(
         """
