@@ -90,9 +90,10 @@ async def get_db() -> AsyncSession:  # type: ignore
     """
     Yield an async database session.
     Commits on success, rolls back on exception, always closes.
-    NOTE: RLS context is NOT set here — it is set by get_db_for_user()
-    which requires the authenticated user. Use this only for
-    admin-context operations (background jobs, seeding, migrations).
+    NOTE: RLS context is NOT set here. Use only for auth flows that set
+    AUTH or a verified user identity before querying protected tables, or
+    secret-validated jobs that call set_admin_context. Tenant routes must use
+    get_db_for_user(); privileged routes must use the verified admin path.
     """
     async with AsyncSessionLocal() as session:
         try:
