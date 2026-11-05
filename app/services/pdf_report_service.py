@@ -359,6 +359,7 @@ def build_compliance_report_html(
     rescue_plan: Any = None,
     engine_version: str = "unknown",
     snapshot_hash: str = "unknown",
+    evaluation_at: datetime | None = None,
 ) -> str:
     """Pure function: company + flags + rescue_plan -> report HTML. All dynamic values escaped.
 
@@ -421,6 +422,9 @@ def build_compliance_report_html(
             <td><strong>Financial Year End:</strong> {esc(getattr(company, 'financial_year_end', 'N/A') or 'N/A')}</td>
             <td><strong>Status:</strong> {esc(getattr(company, 'status', 'N/A'))}</td>
             <td><strong>Engine Version:</strong> {esc(engine_version)}</td>
+        </tr>
+        <tr>
+            <td colspan="4"><strong>Evaluation Snapshot Time:</strong> {esc(evaluation_at.isoformat() if evaluation_at else 'N/A')}</td>
         </tr>
     </table>
 
@@ -524,6 +528,7 @@ class PDFReportService:
                 rescue_plan=rescue_plan,
                 engine_version=engine_version,
                 snapshot_hash=snapshot_hash,
+                evaluation_at=snapshot.calculated_at,
             )
         except ScoreReconciliationError as exc:
             raise HTTPException(
