@@ -88,6 +88,15 @@ Migration 0050 replaces raw-GUC trust with an HMAC-verified principal, recreates
 
 The seeder previously updated existing legal-rule rows without writing immutable version snapshots. PR #125 changes it to insert-only and fail on drift; existing changes must go through the authenticated Super Admin workflow with actor, reason, previous definition and version increment.
 
+### 3.5 Stored scores and history
+
+- All 23 companies currently have numeric cached scores (range 0–50); none has a NULL score.
+- All 51 history snapshots are numeric, the latest is 1 October 2026, and none has `evaluation_status='NOT_EVALUATED'`.
+- 14 of 23 companies have a current cached score different from their latest history score.
+- Current flags: 129 BLACK, 194 RED and 111 YELLOW.
+- Migration 0052 clears cached company scores and sets risk band to `NOT_EVALUATED`. Migration 0051 makes history scores nullable but intentionally preserves immutable pre-release history. API serializers must continue returning NULL/NOT_EVALUATED until legal release.
+- PR #125 adds explicit PDF and automated-rescue release guards because relying on the database invalidation migration alone would leave a window in which old stored scores could be used.
+
 ## 4. Legal source corrections and fail-closed treatment
 
 This pass checked primary-source anchors for the following high-risk rules. It is source triage, not independent counsel approval:
