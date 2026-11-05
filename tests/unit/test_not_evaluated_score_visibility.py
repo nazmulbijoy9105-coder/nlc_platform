@@ -31,6 +31,7 @@ def test_legacy_stored_company_score_is_hidden_while_release_is_disabled():
     assert response.band == "NOT_EVALUATED"
     assert response.compliance_score is None
     assert response.violation_count == 0
+    assert response.active_flags == 0
     assert response.black_flags == response.red_flags == response.yellow_flags == 0
 
 
@@ -68,6 +69,7 @@ def test_legacy_score_history_is_hidden_without_mutating_the_database_record():
     assert response.score is None
     assert response.risk_band == "NOT_EVALUATED"
     assert response.black_flags == response.red_flags == response.yellow_flags == 0
+    assert response.active_flags == 0
     assert item["score"] == 72  # Preserve immutable historical evidence.
 
 
@@ -91,6 +93,7 @@ def test_unapproved_flag_severity_and_score_impact_are_not_presented_as_legal_fi
     assert response.severity == "NOT_EVALUATED"
     assert response.score_impact == 0
     assert response.is_black_override is False
+    assert response.rule_name.startswith("Pending counsel review:")
 
 
 def test_counsel_approved_flag_is_visible_after_release_switch(monkeypatch):
