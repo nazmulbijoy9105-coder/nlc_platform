@@ -242,7 +242,7 @@ class QuotationService(BaseService[Quotation]):
     async def reject(
         self,
         quotation_id: uuid.UUID,
-        reason: str,
+        reason: str | None = None,
         rejected_by: uuid.UUID | None = None,  # COM-002
     ) -> Quotation | None:
         """Mark quotation as rejected."""
