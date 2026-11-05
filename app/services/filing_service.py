@@ -271,7 +271,7 @@ class AGMService(BaseService[AGM]):
         A generic six-month-after-FY-end deadline is not imposed on ordinary
         private companies by the Companies Act rule.
         """
-        return NLCRuleEngine._subsequent_agm_deadline(last_agm_date)
+        return NLCRuleEngine._subsequent_agm_deadline_from_date(last_agm_date)
 
 
 # ═══════════════════════════════════════════════════════════════════════
