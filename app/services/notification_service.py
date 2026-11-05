@@ -192,7 +192,11 @@ class NotificationService(BaseService[Notification]):
             .limit(limit)
             .offset(offset)
         )
-        return [n for n in result.scalars().all() if is_notification_eligible(n.notification_type)]
+        return [
+            n for n in result.scalars().all()
+            if n.notification_status != NotificationStatus.SUPPRESSED
+            and is_notification_eligible(n.notification_type)
+        ]
 
     async def get_for_company(
         self,
@@ -207,7 +211,10 @@ class NotificationService(BaseService[Notification]):
             .order_by(Notification.created_at.desc())
             .limit(limit)
         )
-        return list(result.scalars().all())
+        return [
+            n for n in result.scalars().all()
+            if n.notification_status != NotificationStatus.SUPPRESSED
+        ]
 
     async def acknowledge(
         self,
@@ -219,7 +226,7 @@ class NotificationService(BaseService[Notification]):
         _acknowledge_notification stub implementation.
         """
         notif = await self.get_by_id(notification_id)
-        if not notif or (notif.user_id is not None and notif.user_id != user_id):
+        if not notif or notif.notification_status == NotificationStatus.SUPPRESSED or (notif.user_id is not None and notif.user_id != user_id):
             return None
         return await self.update_instance(
             notif,
