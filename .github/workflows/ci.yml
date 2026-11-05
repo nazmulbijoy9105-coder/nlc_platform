@@ -124,7 +124,7 @@ jobs:
               conn = await asyncpg.connect(url)
               try:
                   await conn.execute("""
-                      DO $
+                      DO $$
                       BEGIN
                           IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
                               CREATE ROLE nlc_app_role LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
@@ -135,7 +135,7 @@ jobs:
                                   NOINHERIT NOREPLICATION NOBYPASSRLS;
                           END IF;
                       END
-                      $;
+                      $$;
                   """)
               finally:
                   await conn.close()
