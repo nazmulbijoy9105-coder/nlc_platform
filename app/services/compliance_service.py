@@ -206,7 +206,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 {
                     "rule_id":        f.rule_id,
                     "severity":       f.severity if score_is_released and f.rule_id in VERIFIED_RULE_IDS else "NOT_EVALUATED",
-                    "description":    f.description,
+                    "description":    (
+                        f.description
+                        if score_is_released and f.rule_id in VERIFIED_RULE_IDS
+                        else f"Pending counsel review: {f.description}"
+                    ),
                     "score_impact":   f.score_impact if score_is_released and f.rule_id in VERIFIED_RULE_IDS else 0,
                     "score_impact_applied": applied_impacts[index]["applied"],
                     "scoring_status": applied_impacts[index]["status"],
