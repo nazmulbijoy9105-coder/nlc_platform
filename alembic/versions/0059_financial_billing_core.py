@@ -317,6 +317,14 @@ def upgrade() -> None:
             AND reviewed_at IS NULL
             AND review_note IS NULL
             AND cheque_cleared_at IS NULL
+            AND (
+                evidence_document_id IS NULL
+                OR EXISTS (
+                    SELECT 1 FROM public.documents d
+                    WHERE d.id = payment_submissions.evidence_document_id
+                      AND d.company_id = payment_submissions.company_id
+                )
+            )
             AND EXISTS (
                 SELECT 1 FROM public.invoices i
                 WHERE i.id = payment_submissions.invoice_id
@@ -382,6 +390,7 @@ def upgrade() -> None:
             AND status = 'CREATED'
             AND provider_transaction_id IS NULL
             AND verified_at IS NULL
+            AND checkout_url IS NULL
             AND EXISTS (
                 SELECT 1 FROM public.invoices i
                 WHERE i.id = payment_intents.invoice_id
