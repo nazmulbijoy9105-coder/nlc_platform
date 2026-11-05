@@ -10,8 +10,10 @@ Revises: 0046_legal_evidence_provenance, 0047_agm_unknown_defaults
 from alembic import op
 
 revision = "0048_merge_legal_evidence_and_agm_defaults"
-down_revision = "0046_legal_evidence_provenance"
-# 0047_agm_unknown_defaults was never committed; merge collapsed to single parent.
+down_revision = (
+    "0046_legal_evidence_provenance",
+    "0047_agm_unknown_defaults",
+)
 branch_labels = None
 depends_on = None
 
