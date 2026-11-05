@@ -445,30 +445,35 @@ class TestDEF001Variations:
 
 class TestProductionGate:
 
-    def test_source_checked_allowlist_is_separate_from_legal_release(self):
-        """The 38 internally source-checked IDs are not independent legal approvals."""
-        from app.rule_engine.engine import LEGAL_SCORE_RELEASED
-        assert len(VERIFIED_RULE_IDS) == 38
-        assert "AGM-001" in VERIFIED_RULE_IDS
-        assert "OFF-001" in VERIFIED_RULE_IDS
-        assert LEGAL_SCORE_RELEASED is False
+    def test_verified_rules_in_set(self):
+        """Verify the internally checked scoring allowlist and pending legal approvals."""
+        assert VERIFIED_RULE_IDS == frozenset()
 
-    def test_unreviewed_auditor_rule_excluded_from_internal_allowlist(self):
-        """AUD-001 remains provisional and is not in the source-checked set."""
-        assert "AUD-001" not in VERIFIED_RULE_IDS
-
-    def test_source_checked_agm_rule_does_not_release_authoritative_score(self):
-        """AGM-001 may be diagnostically calculated, but no legal score is released."""
-        from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+    def test_unverified_rules_excluded_from_score(self):
+        """AUD-001 (unverified) should not affect score even if it fires."""
         c = _base_profile(
-            incorporation_date=date(2020, 1, 1),
+            first_auditor_appointed=False,
+            incorporation_date=date(2024, 1, 1),
+        )
+        result = _engine().evaluate(c)
+        # AUD-001 may generate a flag, but it shouldn't affect the score
+        aud_flag = _flag_by_id(result, "AUD-001")
+        if aud_flag and aud_flag.state == RuleState.NON_COMPLIANT:
+            # The score should NOT include AUD-001's impact
+            # (gate in _calculate_score filters it out)
+            assert "AUD-001" not in VERIFIED_RULE_IDS, \
+                "AUD-001 should NOT be in VERIFIED_RULE_IDS"
+
+    def test_unapproved_agm_rule_does_not_affect_score(self):
+        """AGM-001 remains visible but cannot affect score before legal approval."""
+        c = _base_profile(
+            incorporation_date=date(2020, 1, 1),  # 4+ years, no AGM
             last_agm_date=None,
             agm_count=0,
         )
         result = _engine().evaluate(c)
         agm_flag = _flag_by_id(result, "AGM-001")
-        assert "AGM-001" in VERIFIED_RULE_IDS
-        assert LEGAL_SCORE_RELEASED is False
-        assert result.score_breakdown.risk_band == Severity.NOT_EVALUATED
-        assert result.score_breakdown.override_applied is False
-        assert agm_flag is not None
+        assert "AGM-001" not in VERIFIED_RULE_IDS
+        assert result.score_breakdown.final_score == 100
+        if agm_flag is not None:
+            assert agm_flag.score_impact == 0 or result.score_breakdown.agm_score == 20

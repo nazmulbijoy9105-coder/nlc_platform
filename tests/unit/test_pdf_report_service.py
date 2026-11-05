@@ -7,7 +7,7 @@ from enum import Enum
 from types import SimpleNamespace
 
 import pytest
-from fastapi import Response
+from fastapi import HTTPException, Response
 
 from app.services import pdf_render, pdf_report_service as report_module
 from app.services.pdf_report_service import (
@@ -29,8 +29,9 @@ COMPANY = SimpleNamespace(
     id="test-company-id",
     company_name=MALICIOUS_NAME,
     registration_number="C-1\r\nX-Evil: 1/2020",
-    current_compliance_score=None,
-    current_risk_band="NOT_EVALUATED",
+    current_compliance_score=85,
+    current_risk_band="GREEN",
+    last_evaluated_at=datetime(2026, 10, 20, 1, 0),
 )
 FLAGS = [
     SimpleNamespace(
@@ -76,15 +77,7 @@ def _patch_services(monkeypatch, company=COMPANY, flags=FLAGS):
         async def get_by_id_or_404(self, company_id):
             return company
 
-    class FakeComplianceService:
-        def __init__(self, db):
-            pass
-
-        async def get_active_flags(self, company_id):
-            return flags
-
     monkeypatch.setattr(report_module, "CompanyService", FakeCompanyService)
-    monkeypatch.setattr(report_module, "ComplianceService", FakeComplianceService)
 
 
 # --------------------------------------------------------------------------- endpoint
@@ -92,6 +85,13 @@ def _patch_services(monkeypatch, company=COMPANY, flags=FLAGS):
 
 def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkeypatch):
     _patch_services(monkeypatch)
+    # This endpoint fixture represents an explicitly approved, released
+    # assessment so the PDF must reconcile its single approved finding.
+    monkeypatch.setattr("app.services.pdf_report_service.LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        "app.services.pdf_report_service.VERIFIED_RULE_IDS",
+        frozenset({"AGM-001"}),
+    )
     captured = {}
 
     async def fake_render(html_content):
@@ -102,8 +102,22 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
 
     # Mock the COM-007 snapshot lookup: this test does not need a real database.
     snapshot = SimpleNamespace(
+        score=85,
+        risk_band="GREEN",
+        calculated_at=WHEN,
+        evaluation_status="COMPLETED",
         score_hash="test-snapshot-hash",
         engine_version="test-engine-v1",
+        flags_snapshot=[{
+            "rule_id": "AGM-001",
+            "severity": "RED",
+            "category": "AGM",
+            "score_impact": 15,
+            "score_impact_applied": 15,
+            "description": "AGM missing",
+            "detail": None,
+            "statutory_basis": "Companies Act 1994 s.81",
+        }],
     )
 
     class FakeDB:
@@ -131,8 +145,7 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
     assert "<script" not in page
     assert "&lt;img" in page
     assert "Acme &amp; Sons &quot;Ltd&quot;" in page
-    assert "AGM-001" in page and "RED" in page and "Not scored — pending independent legal approval" in page
-    assert "NOT RELEASED" in page
+    assert "AGM-001" in page and "RED" in page and "-15 pts" in page
 
 
 # --------------------------------------------------------------------------- HTML builder
@@ -147,7 +160,8 @@ def test_html_builder_handles_empty_flags_and_missing_values():
     )
     page = build_compliance_report_html(company, [], WHEN)
     assert "No active compliance flags." in page
-    assert "NOT RELEASED" in page
+    assert "NOT EVALUATED" in page
+    assert "0 / 100" not in page
     assert "NOT_EVALUATED" in page
     assert "20 October 2026" in page
     assert "score-warn" in page
@@ -244,7 +258,7 @@ def test_real_render_of_branded_report_includes_the_logo():
     _require_weasyprint()
     _require_logo()
     page = build_compliance_report_html(
-        COMPANY, FLAGS, WHEN, logo_uri=pdf_render.asset_uri(LOGO_FILE)
+        COMPANY, [], WHEN, logo_uri=pdf_render.asset_uri(LOGO_FILE)
     )
     pdf = pdf_render.render_html_to_pdf(page)
     assert pdf.startswith(b"%PDF")
@@ -260,11 +274,11 @@ def test_real_render_with_logo_still_blocks_injected_markup(tmp_path):
     company = SimpleNamespace(
         company_name=f'<link rel="attachment" href="{secret.as_uri()}">',
         registration_number="X-1",
-        current_compliance_score=None,
-        current_risk_band="NOT_EVALUATED",
+        current_compliance_score=50,
+        current_risk_band="AMBER",
     )
     page = build_compliance_report_html(
-        company, FLAGS, WHEN, logo_uri=pdf_render.asset_uri(LOGO_FILE)
+        company, [], WHEN, logo_uri=pdf_render.asset_uri(LOGO_FILE)
     )
     pdf = pdf_render.render_html_to_pdf(page)
     assert b"EmbeddedFile" not in pdf
@@ -276,8 +290,63 @@ def test_real_render_of_report_with_bengali_text():
     company = SimpleNamespace(
         company_name="নিউম লেক্স কাউন্সেল লিমিটেড",
         registration_number="C-123456/2020",
-        current_compliance_score=None,
+        current_compliance_score=82,
+        current_risk_band="GREEN",
+    )
+    pdf = pdf_render.render_html_to_pdf(build_compliance_report_html(company, [], WHEN))
+    assert pdf.startswith(b"%PDF")
+
+
+def test_html_builder_never_displays_placeholder_100_as_a_legal_score():
+    company = SimpleNamespace(
+        company_name="Unreleased Co",
+        registration_number="U-1",
+        current_compliance_score=100,
         current_risk_band="NOT_EVALUATED",
     )
-    pdf = pdf_render.render_html_to_pdf(build_compliance_report_html(company, FLAGS, WHEN))
-    assert pdf.startswith(b"%PDF")
+    page = build_compliance_report_html(company, FLAGS, WHEN)
+    assert "NOT EVALUATED" in page
+    assert "100 / 100" not in page
+    assert "Score reconciliation" not in page
+
+
+def test_endpoint_rejects_score_snapshot_mismatch(monkeypatch):
+    _patch_services(monkeypatch)
+    company = SimpleNamespace(
+        id="test-company-id",
+        company_name="Test Co",
+        registration_number="T-1",
+        current_compliance_score=85,
+        current_risk_band="GREEN",
+        last_evaluated_at=WHEN,
+    )
+    _patch_services(monkeypatch, company=company, flags=FLAGS)
+    snapshot = SimpleNamespace(
+        score=84,
+        risk_band="GREEN",
+        calculated_at=WHEN,
+        evaluation_status="COMPLETED",
+        score_hash="hash",
+        engine_version="engine-v1",
+        flags_snapshot=[],
+    )
+
+    class FakeDB:
+        async def execute(self, statement):
+            return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
+
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(PDFReportService(db=FakeDB()).generate_company_compliance_pdf("any-id"))
+    assert exc.value.status_code == 409
+
+
+def test_endpoint_rejects_missing_snapshot(monkeypatch):
+    _patch_services(monkeypatch)
+
+    class FakeDB:
+        async def execute(self, statement):
+            return SimpleNamespace(scalar_one_or_none=lambda: None)
+
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(PDFReportService(db=FakeDB()).generate_company_compliance_pdf("any-id"))
+    assert exc.value.status_code == 409

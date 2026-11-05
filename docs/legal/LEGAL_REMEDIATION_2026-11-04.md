@@ -1,112 +1,60 @@
-# Legal corpus remediation — 2026-11-04
+# Legal corpus remediation — 4 November 2026
 
 ## Release decision
 
-**Legal scoring is fail-closed.** The 85 active seed rule IDs are all marked
-`REVIEW_REQUIRED` in `legal_approval_register.yaml`. No rule is currently
-approved for production scoring. This is intentional: internal code review,
-a passing test, a section-number lookup, or an RJSC form catalogue is not
-independent legal sign-off. Provisional findings may be displayed for review,
-but they must not reduce the statutory compliance score or force a BLACK
-override until approved.
+**DO NOT MERGE / DO NOT RELEASE STATUTORY SCORING.**
 
-## Changes made in this branch
+- 85 canonical IDs exist across the catalogue, seed and approval register.
+- VERIFIED_RULE_IDS is empty.
+- approved_rule_ids: [] remains unchanged.
+- All 85 approval entries remain REVIEW_REQUIRED / score_eligible: false.
+- LEGAL_SCORE_RELEASED = False.
+- A numeric arithmetic placeholder is not a legal compliance certificate. The risk band remains NOT_EVALUATED.
+- Independent Bangladesh-qualified counsel has not signed any rule in this branch.
 
-1. `VERIFIED_RULE_IDS` is empty until a signed legal approval register exists.
-2. BLACK overrides are now subject to the same approval gate as score deductions.
-3. Corrected the RJSC form reference catalogue:
-   - Form IX: director consent, s.92, 30 days.
-   - Form XII: particulars of directors/managers and changes, s.115, 14 days.
-   - Schedule X: annual return, s.36, 21 days after AGM (not Form XII).
-   - Form XV: return of allotment, s.151, 60 days.
-   - Form IV: increase of share capital, s.56, 15 days.
-   - Form XVIII: creation of charge, s.159, 21 days.
-   - Form XIX: modification of charge, s.167(3), 21 days.
-   - Form XXVIII: satisfaction of charge, s.172, 21 days per RJSC process FAQ.
-   - Form 23B: auditor's notice of appointment, s.210(2), 30 days.
-4. Corrected engine and seed anchors for:
-   - Name change: s.11; resolution copy filing s.88(1), 15 days.
-   - Memorandum alteration: s.12 and, where applicable, court confirmation/registration under ss.15–16; resolution copy filing s.88(1), 15 days.
-   - Articles alteration: s.20; resolution copy filing s.88(1), 15 days.
-   - Capital reduction: ss.59–60, not s.150.
-   - Charge satisfaction: s.172/Form XXVIII, not s.159/Form XIX.
-   - Special resolution copy filing: s.88(1), 15 days.
-   - Income-tax advance instalments: s.155(2), 15 September, 15 December, 15 March and 15 June; s.155(3) moves a public-holiday date to the next working day.
-   - VAT registration and turnover-tax enlistment are distinct: NBR FAQ states registration above BDT 8m and enlistment above BDT 3m in a 12-month period, application within 15 days. Existing TAX-002 now tests the BDT 8m registration threshold only; the turnover-tax enlistment obligation needs its own rule and data model.
-   - Labour licensing: s.326 of the Labour Act, as amended in 2026, not s.35; licensing is conditional on Government directions / establishment class. Five-year licence renewal and one-year contractor-agency licence need class-aware handling.
-   - BSEC references identify the 2018 Corporate Governance Code as amended in 2023 and 2024; Condition 1 is board composition and Condition 5 is audit committee. Listed-company applicability and each amendment's effective date still need rule-level logic.
+## Verified code changes in this branch
 
-## Rule inventory discrepancy
+1. Removed unapproved rules from scoring/BLACK overrides and from BLACK count reporting.
+2. Added a release gate that prevents an arithmetic 100 from becoming GREEN.
+3. Corrected TAX-002 to surface review prompts from the BDT 30 lakh enlistment threshold; distinguish BDT 30–50 lakh turnover-tax enlistment from VAT registration above BDT 50 lakh. The annual-turnover input is not treated as verified rolling 12-month taxable turnover.
+4. TAX-002 remains NOT_EVALUATED pending rolling turnover, mandatory category, taxpayer activity and BIN/registration status verification.
+5. VAT-002 is now a review prompt only. Finance Act 2026 (Act 96/2026) changed s.64 from 1 July 2026 to a three-tax-period filing cycle; VAT Amendment Ordinance 2026 (Ordinance 38/2026) replaced s.64 again with effect from 1 October 2026. No automatic late-return finding is emitted without taxpayer class, applicable period, due date, holiday and extension evidence.
+6. VAT-003 remains NOT_EVALUATED; no universal annual VAT return duty is assumed without an exact applicable Act/Rule/SRO.
+7. TAX-003 now uses the provisional non-individual filing deadline under Income Tax Act 2023 s.170(2), as substituted by Finance Act 2026 (Act 96/2026), with s.171 cross-reference. It is not the former Tax Day formula. Holiday roll-forward, extension and taxpayer-class verification remain open.
+8. TAX-004 remains NOT_EVALUATED: Finance Act 2026 s.87 raises s.154(1)'s threshold to BDT 10 lakh; s.88 modifies s.155(2)/(5). TIN alone does not establish advance-tax liability; s.156, A-B computation, source deductions, estimate and payment records require review.
+8. BSEC-001–004 produce review prompts only, correct the known condition mapping (Condition 1 board composition; Condition 5 audit committee; Condition 9 compliance certificate; Condition 8 website), and do not assume listed-company rules apply to all private companies.
+9. LBR-001/002 produce review prompts only unless the applicable section 326 Government direction, establishment class, licence record and renewal terms are verified. The current statute is Bangladesh Labour Act 2006 s.326 as amended by Act 43/2026.
+10. Corrected SH-002 to the 90-day certificate deadline in Companies Act s.158; the engine still needs a transfer-registration event path, because s.158 covers both allotment and transfer.
+11. Removed a duplicate OFF-001 key from the statutory rescue dictionary; the stale duplicate incorrectly pointed to an INC rescue objective. Added a source-AST regression test requiring exactly 85 unique rescue keys.
+12. Canonical parity audit now recognises tuple-declared BSEC IDs. Canonical integrity tests have been re-enabled, with latest run pending.
 
-The current `scripts/seed_rules.py` contains **85 unique active rule IDs** (90 textual occurrences including duplicates). Earlier audit notes expected 86 active engine rules. This is an unresolved one-rule inventory/parity discrepancy. Do not silently invent or reactivate a ghost rule to make the count match. Reconcile engine, seed, DB rows, migrations and API output by exact rule ID before claiming parity.
+## Statutory anchors identified for counsel confirmation
 
-## Rule-by-rule legal review still required
+- Companies Act / RJSC: rule-by-rule source triage identifies material candidate citation defects, including AUD-003 (s.151), CAP-003 (ss.59–60), CHG-001 (s.172), DIR-007 (s.92/Form IX), and STR-001/002/003 (ss.11/12/15–16/20). The 2020 amendments also add OPC provisions, s.11A name suffixes and s.38(3A) share-transfer identity verification. These are not signed legal conclusions.
+- BSEC: Corporate Governance Code 2018, as amended by the 2023 and 2024 notifications; apply only within the instrument's listed-issuer scope.
+- VAT: VAT Act 2012 as amended by Act 77/2026 (threshold definitions), Finance Act 2026 Act 96/2026 (multiple VAT provisions, including s.64), and Ordinance 38/2026 (s.64 effective 1 October 2026). NBR Rules, SROs, GOs and taxpayer-specific orders still require exhaustive screening.
+- Income tax: Finance Act 2026 Act 96/2026 amended Income Tax Act 2023 s.170 and s.171. Company deadline formula must be verified against s.170(2), not old Tax Day descriptions.
+- Labour: Bangladesh Labour (Amendment) Act 2026 Act 43/2026 amended s.326; licensing is direction- and establishment-class-dependent.
 
-All 85 IDs in `legal_approval_register.yaml` remain unapproved. Review each against the
-law and subordinate instruments effective on the assessment date. At minimum:
+## Current blockers
 
-- **Companies Act / RJSC:** INC, AGM, AUD, AR, DIR, REG, OFF, SH, TR, CAP, CHG, STR,
-  ACC, BOD, MEM, DEF, ESC. Confirm the exact duty-holder, trigger date, calendar-day
-  versus working-day convention, company class, Articles, statutory exceptions,
-  Registrar extensions, court orders, penalty and consequence. Split combined rules
-  where one rule currently conflates different legal duties.
-- **Income tax:** TAX-001..004. The engine's current company return deadline formula
-  and extension boolean are not approved. Implement the current Tax Day definition,
-  assessment-year amendments, special company Tax Day alternatives, holiday rule,
-  taxpayer exclusions and only a verified extension order/date. Advance tax must
-  account for s.155(3) holidays, s.156 new assessee treatment and actual payment/
-  adjustment records.
-- **VAT:** TAX-002 / VAT-002 / VAT-003. Add a separate turnover-tax enlistment rule,
-  period-specific monthly/quarterly returns, correct VAT forms and effective-dated
-  threshold schedules. NBR FAQ alone is not a substitute for the operative Act,
-  Rules, SROs and Finance Act for the relevant period.
-- **Labour:** LBR-001..003. Apply the Labour Act amendment dated 16 April 2026,
-  Labour Rules and DIFE directions. Resolve establishment type, worker count,
-  factory/establishment class, licence direction, renewal period, contractor status,
-  and order-specific scope.
-- **BSEC:** BSEC-001..004. Version the 2018 Code and 2023/2024 amendments; do not
-  apply listed-company obligations to ordinary private companies. Test all conditions,
-  not a single boolean for independent director/audit committee.
-- **Foreign investment / FX:** INC-005, INC-006, FX-001. Replace generic USD thresholds
-  and blanket violation flags with specific dated BIDA/BB circulars, AD-bank evidence,
-  remittance category, investor type, work-permit rule and transaction facts.
-- **Local licences:** TL-001..002. Resolve the relevant City Corporation / Paurashava /
-  local authority law, trade category, location, renewal cycle and exemptions.
-- **Insolvency / winding-up:** BNK-001..003 and ESC-004..005. Distinguish Companies Act
-  winding-up proceedings, Bankruptcy Act proceedings, liquidation status, petition,
-  order, appointment, investigation and procedural stage. Do not use generic
-  Bankruptcy Act section numbers for Companies Act winding-up.
-- **Penalty notices:** DEF-002. A notice cannot be mapped to one universal penalty
-  provision; store the notice, alleged offence, enabling section, authority, response
-  deadline, appeal/stay and disposition.
-- **Transfer / registers / accounts:** TR-001..006, REG-001..003, ACC-001..003,
-  SH-001..003, DIR-005..006. Split each distinct register, transfer, filing, accounts
-  presentation and certificate obligation into its own evidence-backed test.
+1. Full official Bangla Companies Act amendment history and RJSC form/deadline reconciliation for all company-law rules.
+2. All 2026 Income Tax Rules, Withholding Tax Rules, SROs, GOs, circulars and taxpayer-specific extensions screened against TAX-001..004.
+3. All 2026 VAT Rules, SROs, GOs, Ordinance 38/2026 text and post-1 October implementation orders screened against TAX-002/VAT-002/VAT-003.
+4. Full Labour Rules 2015 amendment history, DIFE directions, factory/establishment classifications, exemptions and licence procedures.
+5. All TBD legal provisions resolved with exact official source, commencement, applicability, exceptions and remedy.
+6. Independent counsel review and signed disposition for each of 85 rules.
+7. Canonical engine/seed/registry/rescue/catalogue/approval/DB/API parity passing with no skipped integrity tests.
+8. Full unit and integration suites passing on the latest PR head.
 
-## Primary sources checked for this remediation
+## Required evidence for each rule
 
-- Bangladesh Companies Act 1994, official consolidated text:
-  https://bdlaws.minlaw.gov.bd/act-print-788.html
-- RJSC eBRS filing FAQ (forms and filing periods):
-  https://ebrs.roc.gov.bd/public/faqs
-- ICAB Corporate Laws & Practices (2024), statutory filing periods:
-  https://www.icab.org.bd/icabadmin/uploads/ckeditor/1384Corporate%20Laws%20%26%20Practices.pdf
-- NBR authentic English Income Tax Act 2023 / amendments listing:
-  https://nbr.gov.bd/regulations/acts/income-tax-acts/eng
-- NBR authentic Income Tax Act 2023 PDF (s.155 advance tax dates):
-  https://nbr.gov.bd/uploads/acts/Income_tax_act_2023.pdf
-- NBR VAT FAQ (registration/enlistment thresholds and 15-day application):
-  https://nbr.gov.bd/faq/vat-faq/eng
-- Bangladesh Labour Act, official BDLaws:
-  https://bdlaws.minlaw.gov.bd/act-details-952.html?lang=en
-- Ministry of Labour legislative information (Bangladesh Labour Amendment Act 2026):
-  https://mole.gov.bd/pages/legislative-informations
+Every signed rule record must contain: exact official Act/Gazette/SRO/Rule and section; authentic text extract; publication and commencement dates; retrospective/transitional/repeal effect; duty-holder; company class; trigger; deadline calculation; exceptions/exemptions; extension/condonation/order/stay; required evidence and identity/provenance; legal consequence; separate NLC severity/score rationale; positive and negative test vectors; counsel name, Bangladesh Bar enrolment, signature, date and next review.
 
-## Important limitations
+## Release criteria
 
-This branch does not claim that all 85 rules are legally validated. It prevents
-unapproved rules from producing a statutory score while the missing rule-by-rule
-legal work is completed. The rule catalogue, migration seed history, existing
-database rows, filing APIs, frontend labels and PDF reports must still be reconciled
-against this register. A Bangladesh-qualified independent reviewer must approve
-each rule and its applicable law version before any ID is added to the allowlist.
+No rule enters approved_rule_ids unless its own complete evidence record is signed by independent Bangladesh-qualified counsel, its negative tests pass, its canonical representations match, and its version is active for the relevant assessment date. Do not enable scoring or BLACK overrides by changing one global flag or by bulk approval.
+
+11. TAX-001 is now NOT_EVALUATED / zero score: the profile's TIN boolean is not authenticated proof of absence or the exact company duty; verify Income Tax Act ss.166, 261 and 264.
+12. LBR-003 is now NOT_EVALUATED / zero score: a profile boolean does not establish a certified, operative Labour Court order, service, parties, appeal or stay.
+13. TAX-004's engine description now reflects Finance Act 2026 ss.87–88: s.154(1) BDT 10 lakh threshold, separate s.156 BDT 6 lakh new-assessee threshold, and s.155 amendments. It remains review-only.

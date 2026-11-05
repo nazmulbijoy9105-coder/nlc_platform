@@ -31,10 +31,11 @@ async def _check_overdue_filings() -> None:
     try:
         from sqlalchemy import select
 
-        from app.models.database import AsyncSessionLocal
+        from app.models.database import AsyncSessionLocal, set_admin_context
         from app.models.rjsc_forms import RJSCFormFiling
 
         async with AsyncSessionLocal() as db:
+            await set_admin_context(db)
             today = date.today()
             result = await db.execute(
                 select(RJSCFormFiling).where(
@@ -54,9 +55,10 @@ async def _check_overdue_filings() -> None:
 
 async def _process_webhook_retries() -> None:
     try:
-        from app.models.database import AsyncSessionLocal
+        from app.models.database import AsyncSessionLocal, set_admin_context
         from app.services.webhook_service import WebhookService
         async with AsyncSessionLocal() as db:
+            await set_admin_context(db)
             svc = WebhookService(db)
             count = await svc.process_retries()
             await db.commit()

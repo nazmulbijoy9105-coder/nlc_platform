@@ -9,17 +9,17 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
-from fastapi import Response
+from fastapi import HTTPException, Response
 from sqlalchemy import select
 
-from app.models.compliance import ComplianceScoreHistory
+from app.models.compliance import ComplianceEvaluationRun
 
 # Import CATEGORY_CAPS for score reconciliation (cap adjustment display)
 from app.rule_engine.engine import CATEGORY_CAPS, LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
 from app.services.company_service import CompanyService
-from app.services.compliance_service import ComplianceService
 from app.services.pdf_render import (
     asset_uri,
     esc,
@@ -30,6 +30,10 @@ from app.services.rescue_service import RescueService
 
 REPORT_TZ = ZoneInfo("Asia/Dhaka")
 LOGO_FILE = "nlc_logo.png"
+
+
+class ScoreReconciliationError(ValueError):
+    """Raised when a PDF cannot prove that its displayed score reconciles."""
 
 # Brand colours sampled from the Neum Lex Counsel logo.
 NAVY = "#0f233c"
@@ -116,13 +120,14 @@ def _render_band_legend(current_band: str) -> str:
 
     Includes NOT_EVALUATED for companies with insufficient data (coverage < 0.5).
     """
-    # Risk band is the worst verified finding severity, not a numeric score range.
+    # Risk band is the worst independently approved finding severity,
+    # not a numeric score range. A numeric range must not imply legal approval.
     bands = [
         ("GREEN", "No verified adverse finding", "Screening only"),
         ("YELLOW", "Verified monitoring finding", "Review"),
         ("RED", "Verified material finding", "Action required"),
         ("BLACK", "Verified critical override", "Critical"),
-        ("NOT_EVALUATED", "Pending legal approval", "No score released"),
+        ("NOT_EVALUATED", "Insufficient evidence", "No score released"),
     ]
     items = []
     for band_name, score_range, label in bands:
@@ -139,10 +144,13 @@ def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue
     """Generate a brief executive summary paragraph based on the company's status."""
     flag_count = len(flags) if flags else 0
     def verified_severity(flag):
-        if not LEGAL_SCORE_RELEASED or getattr(flag, "rule_id", "") not in VERIFIED_RULE_IDS:
+        if getattr(flag, "rule_id", "") not in VERIFIED_RULE_IDS:
             return None
-        value = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
-        return value
+        return getattr(
+            getattr(flag, "severity", None),
+            "value",
+            getattr(flag, "severity", None),
+        )
 
     black_count = sum(1 for f in (flags or []) if verified_severity(f) == "BLACK")
     red_count = sum(1 for f in (flags or []) if verified_severity(f) == "RED")
@@ -155,23 +163,17 @@ def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue
     elif band == "YELLOW":
         urgency = "<strong>Compliance monitoring recommended.</strong> The company has minor deficiencies that should be addressed to maintain good standing."
     elif band == "NOT_EVALUATED":
-        urgency = "<strong>No authoritative compliance score is released.</strong> The applicable legal-rule corpus remains pending independent legal approval. Findings are provisional and require counsel review; this report does not certify compliance."
+        urgency = "<strong>No statutory compliance score has been released.</strong> The applicable rule corpus is awaiting independent legal approval or sufficient verified evidence. This report is not a compliance certification."
     else:
         urgency = "<strong>Company is in good compliance standing.</strong> No critical issues detected. Continue regular monitoring."
 
     parts = [urgency]
-    score_label = "NOT RELEASED" if not LEGAL_SCORE_RELEASED or band == "NOT_EVALUATED" else f"{score}/100"
-    if not LEGAL_SCORE_RELEASED or band == "NOT_EVALUATED":
-        parts.append(
-            f"Provisional findings: <strong>{flag_count}</strong>. "
-            "No findings are applied to an authoritative compliance score."
-        )
-    else:
-        parts.append(
-            f"Active flags: <strong>{flag_count}</strong> "
-            f"({black_count} BLACK, {red_count} RED, {yellow_count} YELLOW). "
-            f"Compliance score: <strong>{score_label}</strong>."
-        )
+    score_summary = "NOT EVALUATED" if band == "NOT_EVALUATED" else f"{score}/100"
+    parts.append(
+        f"Active flags: <strong>{flag_count}</strong> "
+        f"({black_count} BLACK, {red_count} RED, {yellow_count} YELLOW). "
+        f"Compliance score: <strong>{esc(score_summary)}</strong>."
+    )
 
     if rescue_plan is not None:
         completed = int(getattr(rescue_plan, "completed_steps", 0) or 0)
@@ -293,60 +295,124 @@ def _render_rescue_section(rescue_plan: Any) -> str:
     """
 
 
-def _verified_flag_score(flags: Any) -> tuple[int, bool]:
-    """Return the score implied by active, independently approved flags.
-
-    The risk band is not derived from score alone: verified RED findings may
-    elevate the band while the numeric score remains above the RED threshold.
-    """
-    category_deductions: dict[str, int] = {name: 0 for name in CATEGORY_CAPS}
-    verified_black_override = False
-    if not LEGAL_SCORE_RELEASED:
-        return 0, False
-    for flag in (flags or []):
-        rule_id = getattr(flag, "rule_id", "") or ""
-        if rule_id not in VERIFIED_RULE_IDS:
-            continue
-        severity = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
-        if severity == "BLACK":
-            verified_black_override = True
-            continue
-        impact = max(0, int(getattr(flag, "score_impact", 0) or 0))
-        for category, (_, prefixes) in CATEGORY_CAPS.items():
-            if rule_id.startswith(prefixes):
-                category_deductions[category] += impact
-                break
-    if verified_black_override:
-        return 0, True
-    effective_total = sum(
-        min(value, CATEGORY_CAPS[category][0])
-        for category, value in category_deductions.items()
-    )
-    return max(0, 100 - effective_total), False
-
-
 def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
-    """Render reconciliation using only rules approved for authoritative scoring."""
+    """Render raw deductions, category caps, and applied deductions.
+
+    Evaluation snapshots preserve both nominal score_impact and the actual
+    score_impact_applied. Use nominal impact to show cap reductions, and use
+    the persisted applied impact to reconcile the final score.
+    """
     if not LEGAL_SCORE_RELEASED or band in ("BLACK", "NOT_EVALUATED"):
         return ""
 
-    indicated_score, _ = _verified_flag_score(flags)
-    if indicated_score == score:
-        return (
-            '<div class="score-reconciliation" style="margin:8px 0;padding:8px;'
-            'background:#F8F9FA;border:1px solid #E0E0E0;border-radius:4px;">'
-            '<div style="font-size:11px;font-weight:bold;">Score reconciliation</div>'
-            f'<div style="font-size:10px;color:#555;margin-top:4px;">'
-            f'Approved-rule deductions reconcile to {indicated_score}/100.</div></div>'
+    cat_deductions: dict[str, dict] = {}
+    for f in (flags or []):
+        rule_id = getattr(f, "rule_id", "") or ""
+        if rule_id not in VERIFIED_RULE_IDS:
+            continue
+
+        scoring_status = getattr(f, "scoring_status", None)
+        if scoring_status is not None and scoring_status not in (
+            "APPLIED",
+            "CATEGORY_CAP_REACHED",
+        ):
+            continue
+
+        raw_impact = max(0, int(getattr(f, "score_impact", 0) or 0))
+        has_applied_metadata = hasattr(f, "score_impact_applied")
+        applied_impact = (
+            max(0, int(getattr(f, "score_impact_applied", 0) or 0))
+            if has_applied_metadata
+            else raw_impact
+        )
+        if raw_impact == 0 and applied_impact == 0:
+            continue
+
+        category = next(
+            (
+                name
+                for name, (_, prefixes) in CATEGORY_CAPS.items()
+                if any(rule_id.startswith(prefix) for prefix in prefixes)
+            ),
+            None,
+        )
+        if category is None:
+            continue
+
+        if category not in cat_deductions:
+            cap = CATEGORY_CAPS[category][0]
+            cat_deductions[category] = {
+                "raw": 0,
+                "applied": 0,
+                "cap": cap,
+                "has_complete_applied_metadata": True,
+            }
+
+        data = cat_deductions[category]
+        data["raw"] += raw_impact
+        data["applied"] += applied_impact
+        data["has_complete_applied_metadata"] = (
+            data["has_complete_applied_metadata"] and has_applied_metadata
         )
 
-    return (
-        '<div class="score-reconciliation" style="margin:8px 0;padding:8px;'
-        'background:#FEE2E2;border:1px solid #B91C1C;border-radius:4px;">'
-        '<strong>REPORT VALIDATION FAILURE</strong>'
-        f'<div>Stored score: {esc(score)}/100; approved-rule calculation: '
-        f'{esc(indicated_score)}/100. This assessment must not be issued.</div></div>'
-    )
+    if not cat_deductions:
+        return ""
+
+    cap_rows = []
+    effective_total = 0
+    for cat_name, data in sorted(cat_deductions.items()):
+        raw = data["raw"]
+        cap = data["cap"]
+        expected_effective = min(raw, cap)
+
+        if data["has_complete_applied_metadata"]:
+            effective = data["applied"]
+            if effective != expected_effective:
+                raise ScoreReconciliationError(
+                    f"PDF category reconciliation mismatch for {cat_name}: "
+                    f"raw={raw}, cap={cap}, persisted_applied={effective}, "
+                    f"expected_applied={expected_effective}"
+                )
+        else:
+            # Compatibility for older snapshots that predate applied-impact
+            # metadata. New evaluation snapshots always carry this value.
+            effective = expected_effective
+
+        effective_total += effective
+        if raw > cap:
+            cap_rows.append(
+                f'<div style="font-size:10px;color:#555;padding:2px 0;">'
+                f'Category cap applied ({esc(cat_name)}): '
+                f'raw deduction {raw} pts capped to {effective} pts'
+                f'</div>'
+            )
+
+    indicated_score = max(0, 100 - effective_total)
+    if indicated_score != score:
+        raise ScoreReconciliationError(
+            f"PDF score reconciliation mismatch: displayed={score}, indicated={indicated_score}"
+        )
+
+    return f"""
+    <div class="score-reconciliation" style="margin:8px 0;padding:8px;background:#F8F9FA;border:1px solid #E0E0E0;border-radius:4px;">
+        <div style="font-size:11px;font-weight:bold;margin-bottom:4px;">Score reconciliation</div>
+        {"".join(cap_rows)}
+        <div style="font-size:10px;color:#555;margin-top:4px;">
+            effective deductions -{effective_total} pts · indicated score {indicated_score}/100
+        </div>
+    </div>
+    """
+
+def _flag_impact_label(flag: Any) -> str:
+    rule_id = getattr(flag, "rule_id", "") or ""
+    if not LEGAL_SCORE_RELEASED or rule_id not in VERIFIED_RULE_IDS:
+        return "Not scored — pending independent legal approval"
+    applied = getattr(
+        flag,
+        "score_impact_applied",
+        getattr(flag, "score_impact", 0),
+    ) or 0
+    return f"-{int(applied)} pts" if applied else "Not applied"
 
 
 def build_compliance_report_html(
@@ -357,6 +423,7 @@ def build_compliance_report_html(
     rescue_plan: Any = None,
     engine_version: str = "unknown",
     snapshot_hash: str = "unknown",
+    evaluation_at: datetime | None = None,
 ) -> str:
     """Pure function: company + flags + rescue_plan -> report HTML. All dynamic values escaped.
 
@@ -367,15 +434,15 @@ def build_compliance_report_html(
     engine_version and snapshot_hash are included in the footer for audit trail.
     """
     score = company.current_compliance_score or 0
-    band = getattr(company.current_risk_band, "value", company.current_risk_band) or "NOT_EVALUATED"
-    score_display = "NOT RELEASED" if not LEGAL_SCORE_RELEASED or band == "NOT_EVALUATED" else f"{score} / 100"
-    score_class = "score-warn" if not LEGAL_SCORE_RELEASED or band == "NOT_EVALUATED" else _score_class(score)
+    band = company.current_risk_band or "NOT_EVALUATED"
     company_name = company.company_name or "[COMPANY NAME NOT ON FILE]"
+    score_display = "NOT EVALUATED" if band == "NOT_EVALUATED" else f"{score} / 100"
+    score_css_class = "score-warn" if band == "NOT_EVALUATED" else _score_class(score)
 
     if flags:
         rows = "".join(
-            f"<tr><td>{esc(f.rule_id)}</td><td>{esc(getattr(getattr(f, 'severity', None), 'value', getattr(f, 'severity', '')))}</td>"
-            f"<td>{esc(f.description)}</td><td>{('-' + esc(f.score_impact or 0) + ' pts') if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS else 'Not scored — pending independent legal approval'}</td></tr>"
+            f"<tr><td>{esc(f.rule_id)}</td><td>{esc(f.severity)}</td>"
+            f"<td>{esc(f.description)}</td><td>{esc(_flag_impact_label(f))}</td></tr>"
             for f in flags
         )
     else:
@@ -420,10 +487,13 @@ def build_compliance_report_html(
             <td><strong>Status:</strong> {esc(getattr(company, 'status', 'N/A'))}</td>
             <td><strong>Engine Version:</strong> {esc(engine_version)}</td>
         </tr>
+        <tr>
+            <td colspan="4"><strong>Evaluation Snapshot Time:</strong> {esc(evaluation_at.isoformat() if evaluation_at else 'N/A')}</td>
+        </tr>
     </table>
 
         <div class="score-box">
-        <div class="score-number {score_class}">{esc(score_display)}</div>
+        <div class="score-number {score_css_class}">{esc(score_display)}</div>
         <div class="band">Risk Band: {esc(band)}</div>
         {('<div style="font-size:11px;color:#B91C1C;margin-top:8px;"><strong>Score Override:</strong> A BLACK-severity rule has been triggered. The compliance score is set to 0 regardless of accumulated deductions, as the company has a critical legal deficiency requiring immediate remediation.</div>') if band == 'BLACK' else ''}
     </div>
@@ -443,7 +513,7 @@ def build_compliance_report_html(
     <div class="footer">
         <p>This compliance intelligence output is subject to professional review under the Companies Act 1994 (Bangladesh).</p>
         <p>Automated compliance screening. Not legal advice. Consult your legal counsel.</p>
-        <div class="audit-meta">Monthly history engine: {esc(engine_version)} | Monthly history hash: {esc(snapshot_hash[:16]) if snapshot_hash else 'unknown'} | Generated: {esc(generated_at.isoformat())}</div>
+        <div class="audit-meta">Engine: {esc(engine_version)} | Snapshot: {esc(snapshot_hash[:16]) if snapshot_hash else 'unknown'} | Generated: {esc(generated_at.isoformat())}</div>
     </div>
 </body>
 </html>"""
@@ -455,7 +525,6 @@ class PDFReportService:
 
     async def generate_company_compliance_pdf(self, company_id: str) -> Response:
         company = await CompanyService(self.db).get_by_id_or_404(company_id)
-        flags = await ComplianceService(self.db).get_active_flags(company_id)
 
         # Fetch the active rescue plan (if any) so the PDF includes the
         # 8-step recovery roadmap. GREEN/YELLOW companies have no plan;
@@ -468,50 +537,68 @@ class PDFReportService:
         except Exception:
             rescue_plan = None
 
-        # Monthly history is immutable and may predate a later evaluation in
-        # the same month. Use it as historical metadata, not as the source of
-        # the current company score.
+        # COM-007: bind report to evidence snapshot + engine version
         score_snapshot = await self.db.execute(
-            select(ComplianceScoreHistory)
-            .where(ComplianceScoreHistory.company_id == company.id)
-            .order_by(ComplianceScoreHistory.calculated_at.desc())
+            select(ComplianceEvaluationRun)
+            .where(
+                ComplianceEvaluationRun.company_id == company.id,
+                ComplianceEvaluationRun.calculated_at == company.last_evaluated_at,
+            )
             .limit(1)
         )
         snapshot = score_snapshot.scalar_one_or_none()
-        snapshot_hash = snapshot.score_hash if snapshot else "unknown"
-        engine_version = snapshot.engine_version if snapshot else "unknown"
-
-        current_score = int(company.current_compliance_score or 0)
-        current_band = getattr(company.current_risk_band, "value", company.current_risk_band) or "NOT_EVALUATED"
-        if current_band not in ("BLACK", "NOT_EVALUATED"):
-            indicated_score, _ = _verified_flag_score(flags)
-            if indicated_score != current_score:
-                from fastapi import HTTPException
-                raise HTTPException(
-                    status_code=409,
-                    detail={
-                        "code": "COMPLIANCE_REPORT_SCORE_MISMATCH",
-                        "stored_score": current_score,
-                        "approved_rule_score": indicated_score,
-                        "message": "Report withheld: current score does not reconcile with approved active rules.",
-                    },
-                )
-        elif current_band == "BLACK" and current_score != 0:
-            from fastapi import HTTPException
+        if snapshot is None:
             raise HTTPException(
                 status_code=409,
-                detail={"code": "COMPLIANCE_REPORT_BLACK_OVERRIDE_MISMATCH"},
+                detail="PDF withheld: no authoritative evaluation snapshot exists for this company.",
+            )
+        if (
+            getattr(snapshot, "evaluation_status", None) != "COMPLETED"
+            or not getattr(snapshot, "score_hash", None)
+            or not getattr(snapshot, "engine_version", None)
+            or not isinstance(getattr(snapshot, "flags_snapshot", None), list)
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="PDF withheld: the latest evaluation run is incomplete or lacks audit identity.",
+            )
+        if (
+            snapshot.score != company.current_compliance_score
+            or snapshot.risk_band != company.current_risk_band
+            or company.last_evaluated_at is None
+            or snapshot.calculated_at != company.last_evaluated_at
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="PDF withheld: company state does not match its authoritative per-evaluation record.",
             )
 
-        html_content = build_compliance_report_html(
-            company,
-            flags,
-            datetime.now(REPORT_TZ),
-            logo_uri=asset_uri(LOGO_FILE),
-            rescue_plan=rescue_plan,
-            engine_version=engine_version,
-            snapshot_hash=snapshot_hash,
-        )
+        flags = [SimpleNamespace(**item) for item in snapshot.flags_snapshot if isinstance(item, dict)]
+        if len(flags) != len(snapshot.flags_snapshot):
+            raise HTTPException(
+                status_code=409,
+                detail="PDF withheld: evaluation flag evidence is malformed.",
+            )
+
+        snapshot_hash = snapshot.score_hash
+        engine_version = snapshot.engine_version
+
+        try:
+            html_content = build_compliance_report_html(
+                company,
+                flags,
+                datetime.now(REPORT_TZ),
+                logo_uri=asset_uri(LOGO_FILE),
+                rescue_plan=rescue_plan,
+                engine_version=engine_version,
+                snapshot_hash=snapshot_hash,
+                evaluation_at=snapshot.calculated_at,
+            )
+        except ScoreReconciliationError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail="PDF withheld: score reconciliation does not match the authoritative evaluation.",
+            ) from exc
         pdf_bytes = await render_html_to_pdf_async(html_content)
 
         filename = f"compliance_report_{safe_filename_part(company.registration_number)}.pdf"

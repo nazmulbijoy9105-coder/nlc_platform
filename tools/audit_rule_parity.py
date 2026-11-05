@@ -22,6 +22,12 @@ def get_engine_rules():
             value = node.value.value
             if isinstance(value, str) and re.match(r"^[A-Z]{2,12}-\d{3}$", value):
                 ids.add(value)
+        # Some conditionally evaluated rules are declared as the first field
+        # of a tuple (e.g. BSEC candidates), not as rule_id= keyword arguments.
+        if isinstance(node, ast.Tuple) and node.elts and isinstance(node.elts[0], ast.Constant):
+            value = node.elts[0].value
+            if isinstance(value, str) and re.match(r"^[A-Z]{2,12}-\d{3}$", value):
+                ids.add(value)
         if isinstance(node, ast.Assign):
             for target in node.targets:
                 if isinstance(target, ast.Name) and target.id == "rule_id" and isinstance(node.value, ast.Constant):
@@ -57,7 +63,7 @@ def get_db_rules():
         async def query():
             connection = await asyncpg.connect(db_url)
             try:
-                rows = await connection.fetch("SELECT rule_id FROM legal_rules WHERE is_active = true")
+                rows = await connection.fetch("SELECT rule_id FROM audit.active_legal_rule_ids")
                 return {row["rule_id"] for row in rows}
             finally:
                 await connection.close()
@@ -68,18 +74,14 @@ def get_db_rules():
 
 
 def get_api_rules():
-    base = os.environ.get("API_URL", "https://nlc-platform.onrender.com")
+    base = os.environ.get("API_URL", "").rstrip("/")
+    if not base:
+        print("  API SKIPPED: set API_URL only for post-deploy live API verification")
+        return None
     try:
         import json
         import urllib.request
-        token = os.environ.get("API_TOKEN", "").strip()
-        if not token:
-            raise RuntimeError("API_TOKEN is required because the rules endpoint requires SUPER_ADMIN authentication.")
-        request = urllib.request.Request(
-            f"{base}/api/v1/rules?is_active=true",
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        with urllib.request.urlopen(request, timeout=15) as response:
+        with urllib.request.urlopen(f"{base}/api/v1/rules?is_active=true", timeout=15) as response:
             payload = json.loads(response.read())
         return {row["rule_id"] for row in payload}
     except Exception as exc:

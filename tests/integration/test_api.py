@@ -343,7 +343,7 @@ class TestFilings:
 
         agm = await AGMService(db).create_agm(
             company_id=db_company.id,
-            financial_year=2021,
+            financial_year=2028,
         )
         response = await api_client.patch(
             f"/api/v1/filings/agm/{agm.id}/held",
@@ -360,11 +360,18 @@ class TestFilings:
         )
         assert response.status_code == 200, response.text
         result = response.json()
-        assert result["quorum_met"] is True
-        assert result["quorum_required"] == 2
+        # Client-provided quorum is not a legal verification. Without
+        # attendance and Articles evidence reviewed by an authorized reviewer,
+        # all derived legal conclusions remain unknown.
+        assert result["quorum_met"] is None
+        assert result["quorum_required"] is None
+        assert result["quorum_basis"] is None
+        assert result["members_present"] is None
         assert result["venue"] == "Registered Office"
-        assert result["accounts_adopted"] is True
-        assert result["agm_held_without_audit"] is False
+        assert result["accounts_adopted"] is None
+        assert result["agm_held_without_audit"] is None
+        assert result["auditor_reappointed"] is None
+        assert result["minutes_prepared"] is None
 
     @pytest.mark.asyncio
     async def test_list_agms_for_company(self, api_client, staff_token, db_company):
@@ -463,7 +470,8 @@ class TestRescue:
 
         from app.models.company import Company
 
-        # Force RED band
+        # A manually edited RED band is not proof of a released statutory
+        # evaluation. Fail closed until approved rules yield an auditable rescue sequence.
         await db.execute(
             update(Company)
             .where(Company.id == db_company.id)
@@ -480,11 +488,8 @@ class TestRescue:
             headers=_auth(super_admin_tok),
             json={"company_id": str(db_company.id)}
         )
-        assert resp.status_code == 201
-        data = resp.json()
-        assert data["company_id"] == str(db_company.id)
-        assert data["status"] in ("ACTIVE", "IN_PROGRESS")
-        assert len(data["steps"]) >= 1  # RED company should produce at least one rescue step
+        assert resp.status_code == 422
+        assert "counsel-approved statutory evaluation" in resp.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_get_active_plan_not_found(self, api_client, super_admin_tok, db_company):
@@ -961,7 +966,7 @@ class TestRBAC:
 
     @pytest.mark.asyncio
     async def test_unauthenticated_request_returns_401(self, api_client):
-        """All protected endpoints must return 401 without a token."""
+        """Protected endpoints require auth; read-only legal catalogue is public."""
         protected_endpoints = [
             ("/api/v1/auth/me", "GET"),
             ("/api/v1/companies", "GET"),
@@ -969,7 +974,6 @@ class TestRBAC:
             ("/api/v1/rescue/plans", "GET"),
             ("/api/v1/documents/templates", "GET"),
             ("/api/v1/commercial/pipeline", "GET"),
-            ("/api/v1/rules", "GET"),
             ("/api/v1/admin/users", "GET"),
         ]
         for path, method in protected_endpoints:
@@ -977,6 +981,12 @@ class TestRBAC:
             assert resp.status_code == 401, (
                 f"Expected 401 for unauthenticated {method} {path}, got {resp.status_code}"
             )
+
+    @pytest.mark.asyncio
+    async def test_public_legal_rule_catalogue_is_read_only(self, api_client):
+        resp = await api_client.get("/api/v1/rules")
+        assert resp.status_code == 200
+        assert isinstance(resp.json(), list)
 
     @pytest.mark.asyncio
     async def test_expired_token_returns_401(self, api_client):

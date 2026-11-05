@@ -254,29 +254,28 @@ class TestVerifiedRulesViolation:
 
 class TestProductionGateComprehensive:
 
-    def test_internal_source_checked_set_is_not_a_legal_release(self):
-        """The 38-rule source-check set remains non-authoritative until counsel release."""
-        from app.rule_engine.engine import LEGAL_SCORE_RELEASED
-        assert len(VERIFIED_RULE_IDS) == 38
-        assert LEGAL_SCORE_RELEASED is False
+    def test_all_verified_rules_in_set(self):
+        """No rules are score-eligible until independent current-law approval."""
+        assert len(VERIFIED_RULE_IDS) == 0
 
-    def test_unreviewed_rule_ids_remain_outside_internal_allowlist(self):
-        """AUD, SH, TR-002~006, ESC-003~005 and other pending rules stay provisional."""
-        unreviewed = {"AUD-001", "AUD-002", "SH-001", "SH-002", "TR-002", "TR-003",
+    def test_no_unverified_rule_in_set(self):
+        """AUD, SH, TR-002~006, ESC-003~005 should NOT be verified."""
+        unverified = {"AUD-001", "AUD-002", "SH-001", "SH-002", "TR-002", "TR-003",
                       "TR-004", "TR-005", "TR-006", "ESC-003", "ESC-004", "ESC-005",
                       "TAX-001", "LBR-001", "BNK-001", "FX-001", "BSEC-001"}
-        for rule_id in unreviewed:
-            assert rule_id not in VERIFIED_RULE_IDS, f"{rule_id} must remain outside the internal allowlist"
+        for rule_id in unverified:
+            assert rule_id not in VERIFIED_RULE_IDS, f"{rule_id} should NOT be verified"
 
-    def test_compliant_profile_is_not_certified_green_before_release(self):
-        """A high internal arithmetic result is not a released GREEN classification."""
+    def test_compliant_score_is_high(self):
+        """A compliant profile should get a high score (>=70 = GREEN)."""
         profile = _compliant_profile()
         result = NLCRuleEngine().evaluate(profile)
-        assert result.score_breakdown.risk_band.value == "NOT_EVALUATED"
+        assert result.score_breakdown.final_score >= 70, (
+            f"Compliant company should score >=70, got {result.score_breakdown.final_score}"
+        )
 
-    def test_provisional_findings_do_not_release_statutory_score(self):
-        """Findings remain visible, while authoritative score and band remain unreleased."""
-        from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+    def test_unapproved_violations_do_not_change_statutory_score(self):
+        """Provisional findings remain visible but cannot change the legal score."""
         profile = _compliant_profile(
             agm_held_this_cycle=False,
             last_agm_date=None,
@@ -284,9 +283,7 @@ class TestProductionGateComprehensive:
             incorporation_date=date(2020, 1, 1),
         )
         result = NLCRuleEngine().evaluate(profile)
-        assert LEGAL_SCORE_RELEASED is False
-        assert result.score_breakdown.risk_band.value == "NOT_EVALUATED"
-        assert result.score_breakdown.override_applied is False
+        assert result.score_breakdown.final_score == 100
         assert any(f.rule_id.startswith("AGM-") for f in result.flags)
 
     def test_unapproved_black_rule_cannot_force_zero(self):

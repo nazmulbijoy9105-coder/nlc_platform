@@ -21,6 +21,7 @@ import pytest
 
 from app.rule_engine.engine import (
     VERIFIED_RULE_IDS,
+    ChargeEvent,
     CompanyProfile,
     NLCRuleEngine,
     RuleState,
@@ -312,3 +313,130 @@ class TestEvidenceSemantics:
         flag = _flag_by_id(result, "INC-001")
         if flag:
             assert flag.severity in (Severity.RED, Severity.NOT_EVALUATED)  # Engine may return NOT_EVALUATED
+
+
+class TestChargeSatisfactionDeadline:
+    def _charge(self, satisfaction_date):
+        return ChargeEvent(
+            charge_id="CHG-TEST-001",
+            creation_date=date(2025, 1, 1),
+            charge_type="FIXED",
+            amount_bdt=100000.0,
+            charge_holder="Test Bank",
+            satisfied=True,
+            satisfaction_date=satisfaction_date,
+            satisfaction_filed=False,
+        )
+
+    def test_CHG_001_missing_satisfaction_date_is_unknown(self):
+        result = NLCRuleEngine().evaluate(
+            _base_profile(charges=[self._charge(None)]),
+            today=date(2026, 11, 3),
+        )
+        flag = _flag_by_id(result, "CHG-001")
+        assert flag is not None
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
+
+    def test_CHG_001_satisfaction_filing_deadline_is_21_days(self):
+        result = NLCRuleEngine().evaluate(
+            _base_profile(charges=[self._charge(date(2026, 10, 1))]),
+            today=date(2026, 11, 3),
+        )
+        flag = _flag_by_id(result, "CHG-001")
+        assert flag is not None
+        assert flag.statutory_basis == "Section 172, Companies Act 1994 (Bangladesh)"
+        assert flag.detail["form"] == "Form XXVIII"
+        assert flag.detail["delay_days"] == 33
+
+    def test_CHG_001_no_flag_before_21_day_deadline(self):
+        result = NLCRuleEngine().evaluate(
+            _base_profile(charges=[self._charge(date(2026, 10, 20))]),
+            today=date(2026, 11, 3),
+        )
+        assert _flag_by_id(result, "CHG-001") is None
+
+
+
+class TestVerifiedAGMStatutoryDeadlines:
+    def _verified_history(self, **overrides):
+        values = {
+            "agm_history_verified": True,
+            "agm_history_evidence_ref": "AGM-REGISTER-VERIFIED-001",
+            "agm_history_verified_at": date(2024, 1, 1),
+            "agm_history_verified_by": "reviewer-001",
+        }
+        values.update(overrides)
+        return values
+
+    def test_DATE_003_first_agm_uses_18_calendar_months(self):
+        profile = _base_profile(
+            incorporation_date=date(2024, 1, 31),
+            agm_count=0,
+            last_agm_date=None,
+            agm_held_this_cycle=False,
+            **self._verified_history(),
+        )
+        on_deadline = NLCRuleEngine().evaluate(profile, today=date(2025, 7, 31))
+        after_deadline = NLCRuleEngine().evaluate(profile, today=date(2025, 8, 1))
+        assert _flag_by_id(on_deadline, "AGM-001") is None
+        assert _flag_by_id(after_deadline, "AGM-001") is not None
+
+    def test_DATE_006_subsequent_agm_enforces_calendar_year_and_15_month_cap(self):
+        profile = _base_profile(
+            incorporation_date=date(2020, 1, 1),
+            agm_count=1,
+            last_agm_date=date(2024, 12, 31),
+            agm_held_this_cycle=False,
+            **self._verified_history(),
+        )
+        on_deadline = NLCRuleEngine().evaluate(profile, today=date(2025, 12, 31))
+        after_deadline = NLCRuleEngine().evaluate(profile, today=date(2026, 1, 1))
+        assert _flag_by_id(on_deadline, "AGM-002") is None
+        flag = _flag_by_id(after_deadline, "AGM-002")
+        assert flag is not None
+        assert flag.detail["calendar_year_deadline"] == "2025-12-31"
+        assert flag.detail["interval_deadline"] == "2026-03-31"
+        assert flag.detail["basis"] == "CALENDAR_YEAR"
+
+
+
+def test_AUD_005_missing_reappointment_decision_is_unknown_not_120_day_breach():
+    profile = _base_profile(
+        agm_count=1,
+        last_agm_date=date(2026, 1, 1),
+        agm_held_this_cycle=True,
+        first_auditor_appointed=True,
+        auditor_reappointed_at_agm=None,
+        audit_in_progress=False,
+        financial_year_end=date(2025, 12, 31),
+    )
+    result = NLCRuleEngine().evaluate(profile, today=date(2026, 11, 3))
+    flag = _flag_by_id(result, "AUD-005")
+    assert flag is not None
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.score_impact == 0
+
+
+def test_DEF_002_notice_count_alone_is_not_a_confirmed_statutory_breach():
+    profile = _base_profile(
+        penalty_notices_received=2,
+        penalty_notices_resolved=0,
+    )
+    result = NLCRuleEngine().evaluate(profile, today=date(2026, 11, 3))
+    flag = _flag_by_id(result, "DEF-002")
+    assert flag is not None
+    assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.score_impact == 0
+    assert "Case-specific" in flag.statutory_basis
+
+
+def test_AUDIT_003_score_hash_binds_the_evaluation_input_snapshot():
+    first = _base_profile(company_name="Snapshot A Ltd")
+    second = _base_profile(company_name="Snapshot B Ltd")
+    result_a = NLCRuleEngine().evaluate(first, today=date(2026, 11, 3))
+    result_b = NLCRuleEngine().evaluate(second, today=date(2026, 11, 3))
+    assert result_a.score_breakdown.score_hash != result_b.score_breakdown.score_hash
