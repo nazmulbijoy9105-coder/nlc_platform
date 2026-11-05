@@ -98,8 +98,8 @@ The following is an inventory of rules present in the current legal-basis matrix
 | AGM-006 | AGM Minutes Not Prepared | Section 89, Companies Act 1994 (Bangladesh) | YELLOW / 5 / BLACK=false | PENDING COUNSEL |
 | AGM-007 | AGM Adjourned Without Proper Notice | Section 130, Companies Act 1994 (Bangladesh) | YELLOW / 5 / BLACK=false | PENDING COUNSEL |
 | AR-001 | Annual Return Default — Single Year | Section 36 (Schedule X), Companies Act 1994 (Bangladesh) | YELLOW / 10 / BLACK=false | PENDING COUNSEL |
-| AR-002 | Annual Return 2-Year Backlog | Sections 36 and 304, Companies Act 1994 (Bangladesh) | RED / 20 / BLACK=false | PENDING COUNSEL |
-| AR-003 | Annual Return 3-Year Backlog — Strike-Off Risk | Sections 36 and 304, Companies Act 1994 (Bangladesh) | BLACK / 20 / BLACK=false | PENDING COUNSEL |
+| AR-002 | Annual Return Backlog — Review Required | Section 36 and Schedule X; Section 346 governs a separate Registrar strike-off process | NOT_EVALUATED / 0 / BLACK=false | PENDING COUNSEL — backlog alone is not a legal conclusion |
+| AR-003 | Annual Return Backlog — Extended Review Required | Section 36 and Schedule X; Section 346 requires separate Registrar grounds and notice steps | NOT_EVALUATED / 0 / BLACK=false | PENDING COUNSEL — no automatic strike-off or rescue conclusion |
 | AR-004 | Annual Return Filed But Incomplete | Section 36, Schedule X, Companies Act 1994 (Bangladesh) | YELLOW / 8 / BLACK=false | PENDING COUNSEL |
 | AUD-001 | First Auditor Not Appointed Within One Calendar Month | Section 210(6), Companies Act 1994 (Bangladesh) | YELLOW / 10 / BLACK=false | PENDING COUNSEL |
 | AUD-002 | Audit Not Completed Before AGM | Section 183, Companies Act 1994 (Bangladesh) | RED / 12 / BLACK=false | PENDING COUNSEL |
@@ -132,8 +132,8 @@ The following is an inventory of rules present in the current legal-basis matrix
 | DIR-007 | Director Consent Not Filed Within 30 Days | Section 93, Companies Act 1994 (Bangladesh) | YELLOW / 5 / BLACK=false | PENDING COUNSEL |
 | DIR-008 | Director Holding Office of Profit Without Consent | Section 104, Companies Act 1994 (Bangladesh) | YELLOW / 8 / BLACK=false | PENDING COUNSEL |
 | DIR-010 | Managing Director Appointed for More Than 5 Years | Section 110, Companies Act 1994 (Bangladesh) | YELLOW / 5 / BLACK=false | PENDING COUNSEL |
-| ESC-001 | Strike-Off Risk Elevated | Section 346, Companies Act 1994 (Bangladesh) | RED / 15 / BLACK=false | PENDING COUNSEL |
-| ESC-002 | Strike-Off Imminent — BLACK OVERRIDE | Section 346, Companies Act 1994 (Bangladesh) | BLACK / 10 / BLACK=true | PENDING COUNSEL |
+| ESC-001 | Strike-Off Process Status Requires Verification | Section 346, Companies Act 1994 (Bangladesh) | NOT_EVALUATED / 0 / BLACK=false | PENDING COUNSEL — verify statutory notice sequence |
+| ESC-002 | Strike-Off Status Requires Verification | Section 346, Companies Act 1994 (Bangladesh) | NOT_EVALUATED / 0 / BLACK=false | PENDING COUNSEL — no backlog-based BLACK override |
 | ESC-003 | Corporate Rescue Mandatory — Systemic Failure | Sections 81, 115, 36, 346 (aggregate), Companies Act 1994 (Bangladesh) | BLACK / 10 / BLACK=true | PENDING COUNSEL |
 | ESC-004 | Voluntary Winding Up | Section 130, Companies Act 1994 (Bangladesh) | BLACK / 30 / BLACK=true | PENDING COUNSEL |
 | ESC-005 | Investigation Order Pending | Section 104, Companies Act 1994 (Bangladesh) | RED / 20 / BLACK=false | PENDING COUNSEL |
