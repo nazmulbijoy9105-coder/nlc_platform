@@ -240,9 +240,10 @@ async def lifespan(app: FastAPI):
             from sqlalchemy import select as _sel
 
             from app.core.security import hash_password as _hp, verify_password as _vp
-            from app.models.database import AsyncSessionLocal as _ASL
+            from app.models.database import AsyncSessionLocal as _ASL, set_admin_context as _set_admin_context
             from app.models.user import User as _User
             async with _ASL() as _db:
+                await _set_admin_context(_db)
                 _ex = await _db.execute(_sel(_User).where(_User.email == _ae))
                 _user = _ex.scalar_one_or_none()
                 _new_hash = _hp(_ap)
@@ -267,10 +268,11 @@ async def lifespan(app: FastAPI):
 
         import sqlalchemy as _sa
 
-        from app.models.database import AsyncSessionLocal
+        from app.models.database import AsyncSessionLocal, set_admin_context
         from scripts.seed_rules import EXPECTED_RULE_COUNT, ILRMF_RULES
 
         async with AsyncSessionLocal() as _sdb:
+            await set_admin_context(_sdb)
             # SEED-01: never gate on count < N. Upsert is idempotent (ON CONFLICT).
             # Count is logged for observability only — it does not control generation.
             _cnt = await _sdb.execute(_sa.text("SELECT COUNT(*) FROM legal_rules WHERE is_active = TRUE"))
