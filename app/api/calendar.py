@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
     get_current_user,
-    get_db,
+    get_db_for_user,
     require_company_access,
 )
 from app.services.compliance_calendar import ComplianceCalendarService
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/calendar", tags=["Compliance Calendar"])
 async def generate_calendar(
     company_id: UUID,
     years_ahead: int = Query(3, ge=1, le=5),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db_for_user),
     current_user=Depends(get_current_user),
 ):
     service = ComplianceCalendarService(db)
