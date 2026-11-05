@@ -775,8 +775,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
         "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "BLACK",
-        "score_impact": 25,
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "ESC-003": {
