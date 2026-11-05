@@ -77,15 +77,7 @@ def _patch_services(monkeypatch, company=COMPANY, flags=FLAGS):
         async def get_by_id_or_404(self, company_id):
             return company
 
-    class FakeComplianceService:
-        def __init__(self, db):
-            pass
-
-        async def get_active_flags(self, company_id):
-            return flags
-
     monkeypatch.setattr(report_module, "CompanyService", FakeCompanyService)
-    monkeypatch.setattr(report_module, "ComplianceService", FakeComplianceService)
 
 
 # --------------------------------------------------------------------------- endpoint
