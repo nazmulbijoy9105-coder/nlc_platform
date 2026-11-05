@@ -529,9 +529,9 @@ async def get_db_for_user(
         try:
             role_value = str(getattr(token.role, "value", token.role))
             privileged_roles = {
-                str(UserRole.SUPER_ADMIN),
-                str(UserRole.ADMIN_STAFF),
-                str(UserRole.LEGAL_STAFF),
+                UserRole.SUPER_ADMIN.value,
+                UserRole.ADMIN_STAFF.value,
+                UserRole.LEGAL_STAFF.value,
             }
             if role_value in privileged_roles:
                 await set_admin_context(session)
