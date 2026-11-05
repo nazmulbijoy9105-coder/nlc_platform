@@ -152,12 +152,13 @@ class AGMService(BaseService[AGM]):
         self,
         agm_id: uuid.UUID,
         agm_date: date,
-        members_present: int,
-        auditor_reappointed: bool,
+        members_present: int | None,
+        auditor_reappointed: bool | None,
         *,
         venue: str | None = None,
         accounts_adopted: bool | None = None,
         agm_held_without_audit: bool | None = None,
+        minutes_prepared: bool | None = None,
         minutes_document_id: uuid.UUID | None = None,
     ) -> AGM | None:
         """
@@ -180,7 +181,9 @@ class AGMService(BaseService[AGM]):
 
         if company_type == "PRIVATE_LIMITED" and member_count is not None and member_count > 0:
             quorum_required = 2 if member_count <= 6 else 3
-            quorum_met: bool | None = members_present >= quorum_required
+            quorum_met: bool | None = (
+                members_present >= quorum_required if members_present is not None else None
+            )
             quorum_basis = "SECTION_85_2_B_DEFAULT_ARTICLES_NOT_REVIEWED"
         else:
             # Do not invent a quorum where company type or verified membership
@@ -197,13 +200,14 @@ class AGMService(BaseService[AGM]):
             agm_held=True,
             agm_date=agm_date,
             venue=venue,
-            members_present=members_present,
+            members_present=members_present if members_present is not None else 0,
             quorum_required=quorum_required,
             quorum_met=quorum_met,
             quorum_basis=quorum_basis,
             auditor_reappointed=auditor_reappointed,
             accounts_adopted=accounts_adopted,
             agm_held_without_audit=agm_held_without_audit,
+            minutes_prepared=minutes_prepared,
             minutes_document_id=minutes_document_id,
             is_default=is_default,
             delay_days=delay_days,
