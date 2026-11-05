@@ -53,11 +53,10 @@ async def test_runtime_pool_connects_as_nlc_app_role_and_rejects_forged_admin():
 
         # An ordinary runtime SQL session can set custom GUCs, but cannot
         # manufacture the HMAC signature required for the ADMIN principal.
+        # Reproduce the exact production exploit: set only the unsigned ADMIN
+        # GUC. The missing signature must make the principal invalid.
         await session.execute(
-            text(
-                "SELECT set_config('app.current_user_id', 'ADMIN', true), "
-                "set_config('app.current_user_signature', '00', true)"
-            )
+            text("SELECT set_config('app.current_user_id', 'ADMIN', true)")
         )
         principal = await session.execute(
             text("SELECT public.nlc_current_user_principal()")
@@ -69,8 +68,11 @@ async def test_runtime_pool_connects_as_nlc_app_role_and_rejects_forged_admin():
         )
         assert staff.scalar_one() is False
 
-        visible = await session.execute(text("SELECT id FROM public.companies"))
-        assert visible.scalar_one_or_none() is None
+        for table in ("companies", "compliance_flags", "compliance_score_history"):
+            visible = await session.execute(
+                text(f"SELECT count(*) FROM public.{table}")
+            )
+            assert visible.scalar_one() == 0
         await session.rollback()
 
 
@@ -351,3 +353,25 @@ async def test_document_policies_are_nonrecursive_and_financially_scoped(db):
         assert "nlc_can_edit_company" in expressions
         assert "nlc_can_manage_financials_company" in expressions
         assert "nlc_can_access_document" not in expressions
+
+@pytest.mark.asyncio
+async def test_compliance_calendar_events_has_forced_tenant_rls(db):
+    rls = await db.execute(
+        text(
+            "SELECT c.relrowsecurity, c.relforcerowsecurity "
+            "FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "
+            "WHERE n.nspname='public' AND c.relname='compliance_calendar_events'"
+        )
+    )
+    assert rls.one() == (True, True)
+
+    policy_result = await db.execute(
+        text(
+            "SELECT cmd FROM pg_policies "
+            "WHERE schemaname='public' AND tablename='compliance_calendar_events'"
+        )
+    )
+    assert {row[0] for row in policy_result.fetchall()} == {
+        "SELECT", "INSERT", "UPDATE", "DELETE"
+    }
+
