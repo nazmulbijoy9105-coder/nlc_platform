@@ -254,3 +254,64 @@ async def test_legal_evidence_tables_are_readable_by_members_but_writable_only_b
             assert update_policy[1] == "UPDATE"
             assert "nlc_current_user_is_staff" in (update_policy[2] or "")
             assert "nlc_current_user_is_staff" in (update_policy[3] or "")
+
+
+@pytest.mark.asyncio
+async def test_activity_service_inserts_with_signed_actor_and_tenant(
+    db, db_client_user, db_company
+):
+    from app.services.notification_service import ActivityService
+
+    action = "SIGNED_RLS_ACTIVITY_INSERT"
+    await set_rls_context(db, str(db_client_user.id))
+    await ActivityService(db).log(
+        user_id=db_client_user.id,
+        company_id=db_company.id,
+        action=action,
+        resource_type="IntegrationTest",
+        description="ActivityService signed actor and tenant regression",
+    )
+    result = await db.execute(
+        text(
+            "SELECT count(*) FROM user_activity_logs "
+            "WHERE user_id = :user_id AND company_id = :company_id AND action = :action"
+        ),
+        {
+            "user_id": db_client_user.id,
+            "company_id": db_company.id,
+            "action": action,
+        },
+    )
+    assert result.scalar_one() == 1
+
+
+@pytest.mark.asyncio
+async def test_signed_admin_activity_insert_does_not_cast_admin_sentinel_to_uuid(
+    db, db_client_user, db_company
+):
+    from app.services.notification_service import ActivityService
+
+    action = "SIGNED_ADMIN_ACTIVITY_INSERT"
+    await set_admin_context(db)
+    staff = await db.execute(text("SELECT public.nlc_current_user_is_staff()"))
+    assert staff.scalar_one() is True
+
+    await ActivityService(db).log(
+        user_id=db_client_user.id,
+        company_id=db_company.id,
+        action=action,
+        resource_type="IntegrationTest",
+        description="Signed ADMIN principal must not be cast to UUID",
+    )
+    result = await db.execute(
+        text(
+            "SELECT count(*) FROM user_activity_logs "
+            "WHERE user_id = :user_id AND company_id = :company_id AND action = :action"
+        ),
+        {
+            "user_id": db_client_user.id,
+            "company_id": db_company.id,
+            "action": action,
+        },
+    )
+    assert result.scalar_one() == 1
