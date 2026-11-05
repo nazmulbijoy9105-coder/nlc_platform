@@ -185,7 +185,7 @@ async def seed_rules(dry_run: bool = True, verbose: bool = False) -> int:
 
     valid_types = {"AGM", "AUDIT", "RETURN", "DIRECTOR", "TRANSFER", "REGISTER",
                    "ESCALATION", "CASCADE", "DEADLINE", "DEPENDENCY", "THRESHOLD", "CONDITIONAL"}
-    valid_sev = {"GREEN", "YELLOW", "RED", "BLACK"}
+    valid_sev = {"GREEN", "YELLOW", "RED", "BLACK", "NOT_EVALUATED"}
     valid_tier = {"COMPLIANCE_PACKAGE", "STRUCTURED_REGULARIZATION", "CORPORATE_RESCUE"}
 
     print("Validating...")
@@ -228,35 +228,51 @@ async def seed_rules(dry_run: bool = True, verbose: bool = False) -> int:
     engine = create_async_engine(db_url, echo=False)
 
     async with engine.begin() as conn:
-        inserted = updated = 0
+        inserted = unchanged = drift = 0
+        drifted_rules: list[str] = []
         now = datetime.now(UTC)
 
         for rule in ILRMF_RULES:
             res = await conn.execute(
-                sa.text("SELECT id FROM legal_rules WHERE rule_id = :rid"),
+                sa.text("""
+                    SELECT id, rule_name, rule_type, statutory_basis, description,
+                           rule_condition, default_severity::text AS default_severity,
+                           score_impact, revenue_tier::text AS revenue_tier, is_black_override
+                    FROM legal_rules WHERE rule_id = :rid
+                """),
                 {"rid": rule["rule_id"]}
             )
             existing = res.fetchone()
 
             if existing:
-                await conn.execute(sa.text("""
-                    UPDATE legal_rules SET
-                    rule_name=:rn, rule_type=:rt,
-                    statutory_basis=:sb, description=:desc,
-                    rule_condition=CAST(:rc AS jsonb),
-                    default_severity=CAST(:ds AS severity_level),
-                    score_impact=:si, revenue_tier=CAST(:rev AS revenue_tier),
-                    is_black_override=:ibo, is_active=TRUE, updated_at=:now
-                    WHERE rule_id=:rid
-                """), {
-                    "rid": rule["rule_id"], "rn": rule["rule_name"], "rt": rule["rule_type"],
-                    "sb": rule["statutory_basis"], "desc": rule["description"],
-                    "rc": json.dumps(rule["rule_condition"]), "ds": rule["default_severity"],
-                    "si": rule["score_impact"], "rev": rule["revenue_tier"],
-                    "ibo": rule["is_black_override"], "now": now,
-                })
-                updated += 1
-                status = "updated"
+                actual = dict(existing._mapping)
+                expected = {
+                    "rule_name": rule["rule_name"],
+                    "rule_type": rule["rule_type"],
+                    "statutory_basis": rule["statutory_basis"],
+                    "description": rule["description"],
+                    "rule_condition": rule["rule_condition"],
+                    "default_severity": rule["default_severity"],
+                    "score_impact": rule["score_impact"],
+                    "revenue_tier": rule["revenue_tier"],
+                    "is_black_override": rule["is_black_override"],
+                }
+                differences = []
+                for key, expected_value in expected.items():
+                    actual_value = actual.get(key)
+                    if hasattr(actual_value, "value"):
+                        actual_value = actual_value.value
+                    if key == "rule_condition" and isinstance(actual_value, str):
+                        actual_value = json.loads(actual_value)
+                    if actual_value != expected_value:
+                        differences.append(key)
+                if differences:
+                    drift += 1
+                    drifted_rules.append(f"{rule['rule_id']} ({', '.join(differences)})")
+                    status = "DRIFT"
+                else:
+                    unchanged += 1
+                    status = "unchanged"
             else:
                 await conn.execute(sa.text("""
                     INSERT INTO legal_rules (
@@ -282,19 +298,29 @@ async def seed_rules(dry_run: bool = True, verbose: bool = False) -> int:
             if verbose:
                 print(f"  {status:8s} {rule['rule_id']:10s} {rule['default_severity']:7s} {rule['score_impact']:2d}pts")
 
+        if drifted_rules:
+            # Never mutate an existing legal rule without the authenticated
+            # RulesService workflow, a change_reason, and an immutable
+            # LegalRuleVersion snapshot. Roll back this entire transaction.
+            raise RuntimeError(
+                "Existing legal_rules differ from the seed; refusing an "
+                "unversioned update. Use the Super Admin rule-change workflow: "
+                + "; ".join(drifted_rules)
+            )
+
         cnt_res = await conn.execute(sa.text("SELECT COUNT(*) FROM legal_rules WHERE is_active = TRUE"))
         db_count = cnt_res.scalar()
         await engine.dispose()
 
         print(f"\n{'='*60}")
-        print(f" Done! Inserted: {inserted}, Updated: {updated}")
+        print(f" Done! Inserted: {inserted}, Existing unchanged: {unchanged}, Drift: {drift}")
         print(f" DB active rules: {db_count}")
         if db_count >= EXPECTED_RULE_COUNT:  # type: ignore
             print(f"  AI Constitution satisfied: all {db_count} rules active.")
         else:
             print(f"  WARNING: expected {EXPECTED_RULE_COUNT}, got {db_count}")
         print(f"{'='*60}\n")
-        return inserted + updated
+        return inserted
 
 
 def main():
@@ -302,7 +328,7 @@ def main():
     p.add_argument(
         "--apply",
         action="store_true",
-        help="Apply the upsert to DATABASE_URL; without this flag the script is read-only",
+        help="Insert missing rules only; existing rule changes require the audited Super Admin workflow",
     )
     p.add_argument("--verbose", "-v", action="store_true")
     args = p.parse_args()
