@@ -232,7 +232,7 @@ APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {
         "executed by both parties."
     ),
 
-    # ── Escalation (Section 304; review only) ────────────────────────
+    # ── Escalation (Section 346; review only) ────────────────────────
     "ESC-001": ApplicabilityRule(
         "ESC-001", ("ALL",), ("agm_years_unfiled", "annual_return_years_unfiled"), (),
         "Companies Act 1994, s.346: filing backlog is only a risk/review trigger; "
