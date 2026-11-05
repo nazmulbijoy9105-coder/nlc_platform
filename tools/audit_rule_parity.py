@@ -74,7 +74,10 @@ def get_db_rules():
 
 
 def get_api_rules():
-    base = os.environ.get("API_URL", "https://nlc-platform.onrender.com")
+    base = os.environ.get("API_URL", "").rstrip("/")
+    if not base:
+        print("  API SKIPPED: set API_URL only for post-deploy live API verification")
+        return None
     try:
         import json
         import urllib.request
