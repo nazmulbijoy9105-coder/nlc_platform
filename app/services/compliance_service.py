@@ -273,7 +273,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
             )
         score_for_current = None if risk_band == RiskBand.NOT_EVALUATED else score
 
-        rescue_required = _is_rescue_required(output)
+        # No remediation workflow may be triggered from a provisional, unreleased score.
+        rescue_required = bool(score_for_current is not None and _is_rescue_required(output))
         if rescue_required and not _has_rescue_output(output):
             logger.warning(
                 "rescue_required_but_no_sequence company=%s black=%s red=%s override=%s",
@@ -452,7 +453,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             engine_version=settings.rule_engine_version,
             score_hash=evaluation_hash,
             previous_hash=previous_hash,
-            evaluation_status="COMPLETED",
+            evaluation_status=("COMPLETED" if score_for_current is not None else "NOT_RELEASED"),
             trigger_source=trigger_source,
             active_flags_count=len(output.flags),
             black_flags_count=black_flags,
