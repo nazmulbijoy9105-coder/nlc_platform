@@ -40,6 +40,7 @@ from app.core.dependencies import (
 from app.models.enums import EngagementStatus, RevenueTier, TaskPriority, TaskStatus
 from app.models.user import User
 from app.services.commercial_service import EngagementService, QuotationService, TaskService
+from app.models.commercial import InvalidEngagementTransitionError
 from app.services.notification_service import ActivityService
 
 logger = structlog.get_logger(__name__)
@@ -298,10 +299,13 @@ async def advance_engagement_status(
     svc = EngagementService(db)
     activity = ActivityService(db)
 
-    engagement = await svc.advance_status(  # type: ignore
-        engagement_id=engagement_id,
-        new_status=body.new_status,
-    )
+    try:
+        engagement = await svc.advance_status(
+            engagement_id=engagement_id,
+            new_status=body.new_status,
+        )
+    except InvalidEngagementTransitionError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found.")
 
