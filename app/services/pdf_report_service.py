@@ -296,31 +296,64 @@ def _render_rescue_section(rescue_plan: Any) -> str:
 
 
 def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
-    """Render score reconciliation: category caps, effective deductions, indicated score.
+    """Render raw deductions, category caps, and applied deductions.
 
-    Suppressed when band is BLACK (score is overridden to 0, reconciliation meaningless).
-    Shows 'Category cap applied (XXX)' rows when a category's raw deduction exceeds its cap.
+    Evaluation snapshots preserve both nominal score_impact and the actual
+    score_impact_applied. Use nominal impact to show cap reductions, and use
+    the persisted applied impact to reconcile the final score.
     """
     if not LEGAL_SCORE_RELEASED or band in ("BLACK", "NOT_EVALUATED"):
         return ""
 
-    # Group only independently approved, authoritative findings. Internal
-    # source checks and visible provisional findings are not legal approval.
-    # Group flags by category and sum applied deductions
     cat_deductions: dict[str, dict] = {}
     for f in (flags or []):
-        impact = getattr(f, "score_impact_applied", getattr(f, "score_impact", 0)) or 0
-        if impact == 0:
-            continue
         rule_id = getattr(f, "rule_id", "") or ""
         if rule_id not in VERIFIED_RULE_IDS:
             continue
-        for cat_name, (cap, prefixes) in CATEGORY_CAPS.items():
-            if any(rule_id.startswith(p) for p in prefixes):
-                if cat_name not in cat_deductions:
-                    cat_deductions[cat_name] = {"raw": 0, "cap": cap}
-                cat_deductions[cat_name]["raw"] += impact
-                break
+
+        scoring_status = getattr(f, "scoring_status", None)
+        if scoring_status is not None and scoring_status not in (
+            "APPLIED",
+            "CATEGORY_CAP_REACHED",
+        ):
+            continue
+
+        raw_impact = max(0, int(getattr(f, "score_impact", 0) or 0))
+        has_applied_metadata = hasattr(f, "score_impact_applied")
+        applied_impact = (
+            max(0, int(getattr(f, "score_impact_applied", 0) or 0))
+            if has_applied_metadata
+            else raw_impact
+        )
+        if raw_impact == 0 and applied_impact == 0:
+            continue
+
+        category = next(
+            (
+                name
+                for name, (_, prefixes) in CATEGORY_CAPS.items()
+                if any(rule_id.startswith(prefix) for prefix in prefixes)
+            ),
+            None,
+        )
+        if category is None:
+            continue
+
+        if category not in cat_deductions:
+            cap = CATEGORY_CAPS[category][0]
+            cat_deductions[category] = {
+                "raw": 0,
+                "applied": 0,
+                "cap": cap,
+                "has_complete_applied_metadata": True,
+            }
+
+        data = cat_deductions[category]
+        data["raw"] += raw_impact
+        data["applied"] += applied_impact
+        data["has_complete_applied_metadata"] = (
+            data["has_complete_applied_metadata"] and has_applied_metadata
+        )
 
     if not cat_deductions:
         return ""
@@ -330,7 +363,21 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
     for cat_name, data in sorted(cat_deductions.items()):
         raw = data["raw"]
         cap = data["cap"]
-        effective = min(raw, cap)
+        expected_effective = min(raw, cap)
+
+        if data["has_complete_applied_metadata"]:
+            effective = data["applied"]
+            if effective != expected_effective:
+                raise ScoreReconciliationError(
+                    f"PDF category reconciliation mismatch for {cat_name}: "
+                    f"raw={raw}, cap={cap}, persisted_applied={effective}, "
+                    f"expected_applied={expected_effective}"
+                )
+        else:
+            # Compatibility for older snapshots that predate applied-impact
+            # metadata. New evaluation snapshots always carry this value.
+            effective = expected_effective
+
         effective_total += effective
         if raw > cap:
             cap_rows.append(
@@ -355,7 +402,6 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
         </div>
     </div>
     """
-
 
 def _flag_impact_label(flag: Any) -> str:
     rule_id = getattr(flag, "rule_id", "") or ""

@@ -108,3 +108,77 @@ def test_unreleased_provisional_findings_are_not_shown_as_score_deductions():
     assert "pending independent legal approval" in page
     assert "-20 pts" not in page
     assert "Score reconciliation" not in page
+
+def test_real_evaluation_snapshot_reconciles_nominal_and_applied_impacts(monkeypatch):
+    _enable_authorized_score_for_report_test(
+        monkeypatch,
+        {"REG-002", "AUD-001", "TL-001"},
+    )
+    snapshot_flags = [
+        SimpleNamespace(
+            rule_id="REG-002",
+            severity="BLACK",
+            description="d",
+            score_impact=12,
+            score_impact_applied=10,
+            scoring_status="APPLIED",
+        ),
+        SimpleNamespace(
+            rule_id="AUD-001",
+            severity="YELLOW",
+            description="d",
+            score_impact=10,
+            score_impact_applied=10,
+            scoring_status="APPLIED",
+        ),
+        SimpleNamespace(
+            rule_id="TL-001",
+            severity="YELLOW",
+            description="d",
+            score_impact=5,
+            score_impact_applied=5,
+            scoring_status="APPLIED",
+        ),
+    ]
+
+    page = build_compliance_report_html(_company(score=75), snapshot_flags, WHEN)
+    assert "raw deduction 12 pts capped to 10 pts" in page
+    assert "effective deductions -25 pts" in page
+    assert "indicated score 75/100" in page
+
+
+def test_snapshot_applied_impact_mismatch_is_rejected(monkeypatch):
+    _enable_authorized_score_for_report_test(
+        monkeypatch,
+        {"REG-002", "AUD-001", "TL-001"},
+    )
+    snapshot_flags = [
+        SimpleNamespace(
+            rule_id="REG-002",
+            severity="BLACK",
+            description="d",
+            score_impact=12,
+            score_impact_applied=9,
+            scoring_status="APPLIED",
+        ),
+        SimpleNamespace(
+            rule_id="AUD-001",
+            severity="YELLOW",
+            description="d",
+            score_impact=10,
+            score_impact_applied=10,
+            scoring_status="APPLIED",
+        ),
+        SimpleNamespace(
+            rule_id="TL-001",
+            severity="YELLOW",
+            description="d",
+            score_impact=5,
+            score_impact_applied=5,
+            scoring_status="APPLIED",
+        ),
+    ]
+
+    with pytest.raises(ScoreReconciliationError):
+        build_compliance_report_html(_company(score=76), snapshot_flags, WHEN)
+
