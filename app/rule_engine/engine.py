@@ -869,18 +869,6 @@ class NLCRuleEngine:
         interval_deadline = NLCRuleEngine._add_months(last_agm_date, 15)
         calendar_year_deadline = date(last_agm_date.year + 1, 12, 31)
         return min(interval_deadline, calendar_year_deadline)
-        """Add calendar months, clamping to the last valid day of the target month."""
-        import calendar as _cal
-        month_index = d.year * 12 + d.month - 1 + months
-        target_year, zero_month = divmod(month_index, 12)
-        target_month = zero_month + 1
-        last_day = _cal.monthrange(target_year, target_month)[1]
-        return date(target_year, target_month, min(d.day, last_day))
-
-    @staticmethod
-    def _add_one_month(d: date) -> date:
-        """Section 210(6): one calendar month, not a fixed 30-day period."""
-        return NLCRuleEngine._add_months(d, 1)
 
     def _run_auditor_rules(self, c: CompanyProfile) -> None:
         # P0 LEGAL FIX: Section 210(6) requires first auditor appointment
