@@ -24,7 +24,7 @@ def upgrade() -> None:
         sa.Column("score", sa.Integer(), nullable=True),
         sa.Column(
             "risk_band",
-            sa.Enum("GREEN", "YELLOW", "RED", "BLACK", "NOT_EVALUATED", name="risk_band", create_type=False),
+            postgresql.ENUM("GREEN", "YELLOW", "RED", "BLACK", "NOT_EVALUATED", name="risk_band", create_type=False),
             nullable=False,
         ),
         sa.Column("calculated_at", sa.DateTime(timezone=True), nullable=False),
