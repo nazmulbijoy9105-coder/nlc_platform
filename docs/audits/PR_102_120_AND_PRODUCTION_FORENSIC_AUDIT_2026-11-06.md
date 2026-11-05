@@ -88,6 +88,12 @@ Migration 0050 replaces raw-GUC trust with an HMAC-verified principal, recreates
 
 The seeder previously updated existing legal-rule rows without writing immutable version snapshots. PR #125 changes it to insert-only and fail on drift; existing changes must go through the authenticated Super Admin workflow with actor, reason, previous definition and version increment.
 
+### 3.6 Queued customer notifications
+
+- Production contains 476 queued notifications whose `notification_type` is a legal rule ID: 139 EMAIL and 337 DASHBOARD. None has `sent_at` set; the queue is pending, not delivered.
+- PR #125 filters unapproved rule alerts from user/admin notification APIs, prevents worker delivery, adds a `SUPPRESSED` status and migration 0058 suppresses existing pending rule notifications. Non-legal operational notifications are not suppressed by the rule-ID pattern.
+- Production queue rows have not been modified by this audit. Migration 0058 must be applied before any notification worker is restarted.
+
 ### 3.5 Stored scores and history
 
 - All 23 companies currently have numeric cached scores (range 0–50); none has a NULL score.
