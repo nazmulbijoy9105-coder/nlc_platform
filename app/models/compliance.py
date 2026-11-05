@@ -17,7 +17,6 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
-    Index,
     Integer,
     String,
     Text,
@@ -216,7 +215,6 @@ class ComplianceEvaluationRun(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "compliance_evaluation_runs"
     __table_args__ = (
         UniqueConstraint("company_id", "calculated_at", name="uq_eval_run_company_time"),
-        Index("ix_eval_runs_company_calculated_at", "company_id", "calculated_at"),
     )
 
     company_id: Mapped[uuid.UUID] = mapped_column(
