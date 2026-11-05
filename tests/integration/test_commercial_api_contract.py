@@ -144,3 +144,37 @@ async def test_task_completion_accepts_completion_note(
     )
     assert response.status_code == 200, response.text
     assert response.json()["status"] == "COMPLETED"
+
+@pytest.mark.asyncio
+async def test_quotation_cannot_be_attached_to_another_company(
+    api_client, commercial_admin_token, db_company
+):
+    engagement = await _create_engagement(
+        api_client, commercial_admin_token, db_company.id
+    )
+    response = await api_client.post(
+        "/api/v1/commercial/quotations",
+        headers=_auth(commercial_admin_token),
+        json={
+            "engagement_id": engagement["engagement_id"],
+            "company_id": "00000000-0000-0000-0000-000000000001",
+            "professional_fee_bdt": "10000.00",
+        },
+    )
+    assert response.status_code == 404, response.text
+
+
+@pytest.mark.asyncio
+async def test_engagement_rejects_invalid_status_jump(
+    api_client, commercial_admin_token, db_company
+):
+    engagement = await _create_engagement(
+        api_client, commercial_admin_token, db_company.id
+    )
+    response = await api_client.patch(
+        f"/api/v1/commercial/engagements/{engagement['engagement_id']}/status",
+        headers=_auth(commercial_admin_token),
+        json={"new_status": "COMPLETED"},
+    )
+    assert response.status_code == 409, response.text
+
