@@ -499,14 +499,14 @@ VERIFIED_RULE_IDS: frozenset[str] = frozenset({
     # AGM module (7 rules)
     "AGM-001", "AGM-002", "AGM-003", "AGM-004",
     # AGM-005 remains excluded until the AOA-specific quorum basis is verified.
-    "AGM-006", "AGM-007",
+    "AGM-006",
     # Registers module (3 rules)
     "REG-001", "REG-002", "REG-003",
     # Registered Office (1 rule)
     "OFF-001",
     # Directors module (6 rules)
     "DIR-001", "DIR-002", "DIR-003",
-    "DIR-007", "DIR-008", "DIR-010",
+    "DIR-007",
     # Capital module (3 rules)
     "CAP-001", "CAP-002", "CAP-003",
     # Charges (1 rule)
@@ -516,7 +516,7 @@ VERIFIED_RULE_IDS: frozenset[str] = frozenset({
     # Accounts (3 rules)
     "ACC-001", "ACC-002", "ACC-003",
     # Board meetings (3 rules)
-    "BOD-001", "BOD-002", "BOD-003",
+
     # Incorporation (4 rules)
     "INC-001", "INC-003", "INC-004", "INC-007",
     # Members (1 rule)
@@ -524,7 +524,7 @@ VERIFIED_RULE_IDS: frozenset[str] = frozenset({
     # Share transfers (1 rule)
     "TR-001",
     # Escalation (2 rules)
-    "ESC-001", "ESC-002",
+
     # Director disqualification rules remain outside scoring pending independent legal review.
     "DEF-002",
 })
@@ -2121,25 +2121,29 @@ class NLCRuleEngine:
     def _run_companies_act_extended_rules(self, c: CompanyProfile) -> None:
         if c.agm_adjourned_without_notice:
             self._add_flag(ComplianceFlag(
-                rule_id="AGM-007", flag_code="AGM_ADJOURNED_WITHOUT_NOTICE",
-                severity=Severity.YELLOW, score_impact=5,
+                rule_id="AGM-007", flag_code="AGM_ADJOURNMENT_NOTICE_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED, score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="AGM adjournment notice issue requires review of Section 85, the applicable meeting provisions and the company Articles; Section 84 concerns an extraordinary general meeting requisition process.",
-                statutory_basis="Section 85, Companies Act 1994 (Bangladesh)"))
+                description="An adjourned-AGM notice issue is reported. The applicable Articles, meeting resolution, adjournment terms, notice method and exact statutory consequence must be reviewed before classifying a breach.",
+                statutory_basis="Companies Act 1994, Section 85 and the company Articles; exact adjournment provision requires counsel verification",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT, eval_state="UNKNOWN",
+                detail={"legal_review_required": True, "source_evidence_required": True}))
         if c.register_of_directors_interests is False:
             self._add_flag(ComplianceFlag(
-                rule_id="DIR-005", flag_code="REGISTER_OF_DIRECTORS_INTERESTS_MISSING",
-                severity=Severity.YELLOW, score_impact=5,
+                rule_id="DIR-005", flag_code="DIRECTOR_INTEREST_REGISTER_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED, score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="Register of directors interests not maintained. Section 130.",
-                statutory_basis="Section 130, Companies Act 1994 (Bangladesh)"))
+                description="The profile reports no director-interest register. Section 130 concerns disclosure of a director's interest in a company contract or arrangement; it does not by itself establish this generic register obligation. Verify the actual disclosure duty, Articles and records.",
+                statutory_basis="Companies Act 1994, Section 130 (director-interest disclosure); generic register duty/title requires legal reconciliation",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT, eval_state="UNKNOWN"))
         if c.register_of_contracts is False:
             self._add_flag(ComplianceFlag(
-                rule_id="DIR-006", flag_code="REGISTER_OF_CONTRACTS_MISSING",
-                severity=Severity.YELLOW, score_impact=5,
+                rule_id="DIR-006", flag_code="REGISTER_OF_CONTRACTS_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED, score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="Register of contracts not maintained. Section 130.",
-                statutory_basis="Section 130, Companies Act 1994 (Bangladesh)"))
+                description="The profile reports no register of contracts. No universal register duty has been established for this generic rule; verify the exact statutory provision, company Articles, contract category and evidence before any finding.",
+                statutory_basis="Companies Act 1994 and applicable Articles; exact register obligation requires counsel verification",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT, eval_state="UNKNOWN"))
         if c.voluntary_winding_up:
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-004", flag_code="VOLUNTARY_WINDING_UP",
@@ -2230,62 +2234,69 @@ class NLCRuleEngine:
     # MODULE: BOARD MEETINGS (Section 95, 96, 89)
     # ───────────────────────────────────────────────────────────────────
     def _run_board_meeting_rules(self, c: CompanyProfile) -> None:
-        # BOD-001: Board meeting not held quarterly (Section 96)
-        # Issue 6 follow-up: Gate on bsec_listed until applicability confirmed.
-        # The "4 meetings per year" / "3 months" thresholds may come from the
-        # BSEC Corporate Governance Code, which likely binds only listed companies.
-        # Firing for all companies gives private companies a false violation.
-        if not c.bsec_listed:
-            return  # BOD-001 does not bind non-listed companies (pending legal review)
+        # Companies Act 1994 section 96 applies to every company: at least one
+        # Board meeting every three months and at least four in each year.
+        # This profile currently lacks a complete, verified meeting-history
+        # ledger, so it cannot prove either compliance or breach. Keep the rule
+        # visible as NOT_EVALUATED rather than infer a violation from a single
+        # date or from an unverified profile boolean.
+        days_since = (
+            (self.today - c.last_board_meeting_date).days
+            if c.last_board_meeting_date is not None
+            else None
+        )
+        self._add_flag(ComplianceFlag(
+            rule_id="BOD-001",
+            flag_code="BOARD_MEETING_HISTORY_REQUIRES_VERIFICATION",
+            severity=Severity.NOT_EVALUATED,
+            score_impact=0,
+            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+            description=(
+                "Section 96 requires at least one Board meeting every three months "
+                "and at least four meetings per year. The complete, verified meeting "
+                "history and applicable period are not available in this profile; "
+                "no breach or compliance conclusion can be made."
+            ),
+            statutory_basis="Section 96, Companies Act 1994 (Bangladesh)",
+            state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+            eval_state="UNKNOWN",
+            detail={
+                "last_board_meeting_date": c.last_board_meeting_date.isoformat()
+                if c.last_board_meeting_date else None,
+                "days_since_last_meeting": days_since,
+                "complete_verified_history_required": True,
+            },
+        ))
 
-        if c.last_board_meeting_date is None:
-            if c.incorporation_date and (self.today - c.incorporation_date).days > 90:
-                self._add_flag(ComplianceFlag(
-                    rule_id="BOD-001",
-                    flag_code="BOARD_MEETING_NOT_HELD",
-                    severity=Severity.YELLOW,
-                    score_impact=5,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Board meeting not held within 3 months. Section 96: minimum 4 board meetings per year.",
-                    statutory_basis="Section 96, Companies Act 1994 (Bangladesh)",
-                    detail={"incorporation_days": (self.today - c.incorporation_date).days}
-                ))
-        elif c.last_board_meeting_date:
-            days_since = (self.today - c.last_board_meeting_date).days
-            if days_since > 90:
-                self._add_flag(ComplianceFlag(
-                    rule_id="BOD-001",
-                    flag_code="BOARD_MEETING_OVERDUE",
-                    severity=Severity.YELLOW,
-                    score_impact=5,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Board meeting overdue by {days_since} days. Section 96: quarterly meeting required.",
-                    statutory_basis="Section 96, Companies Act 1994 (Bangladesh)",
-                    detail={"days_since": days_since}
-                ))
-
-        # BOD-002: Board meeting notice not given (Section 95)
+        # Section 95 requires written notice to every director then in Bangladesh.
+        # The current boolean has no service/evidence binding, so retain a review
+        # prompt rather than issue a confirmed breach.
         if c.last_board_meeting_date and c.board_meeting_notice_given is False:
             self._add_flag(ComplianceFlag(
                 rule_id="BOD-002",
-                flag_code="BOARD_NOTICE_NOT_GIVEN",
-                severity=Severity.YELLOW,
-                score_impact=3,
+                flag_code="BOARD_NOTICE_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="Board meeting notice not given to all directors. Section 95 requires written notice.",
+                description="The profile reports that Board notice was not given. Verify the meeting notice, service to each director then in Bangladesh, address, dispatch/receipt evidence and any applicable Articles before classifying a breach.",
                 statutory_basis="Section 95, Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
             ))
 
-        # BOD-003: Board minutes not prepared (Section 89)
+        # Section 89 requires minutes, but absence of an uploaded record is not
+        # proof that minutes were never prepared. Require documentary review.
         if c.last_board_meeting_date and c.board_minutes_prepared is False:
             self._add_flag(ComplianceFlag(
                 rule_id="BOD-003",
-                flag_code="BOARD_MINUTES_NOT_PREPARED",
-                severity=Severity.YELLOW,
-                score_impact=5,
+                flag_code="BOARD_MINUTES_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="Board meeting minutes not prepared. Section 89: minutes of all proceedings must be entered.",
+                description="The profile reports that Board minutes were not prepared. Verify the minute book, subsequent approval/signature, custody and inspection records; missing upload alone does not establish non-creation.",
                 statutory_basis="Section 89, Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
             ))
 
     # ───────────────────────────────────────────────────────────────────
@@ -2493,13 +2504,15 @@ class NLCRuleEngine:
         if agm_years >= 2 and ar_years >= 2:  # type: ignore
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-001",
-                flag_code="STRIKE_OFF_RISK_ELEVATED",
-                severity=Severity.RED,
-                score_impact=15,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=f"2+ year AGM and Return defaults. Section 346: RJSC strike-off risk elevated.",
-                statutory_basis="Section 346, Companies Act 1994 (Bangladesh)",
-                detail={"agm_years": agm_years, "ar_years": ar_years}
+                flag_code="STRIKE_OFF_STATUS_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="A multi-year AGM/annual-return backlog is an internal escalation indicator only. It does not establish that RJSC has commenced strike-off. Verify the section 304 grounds, Registrar notice, service, procedural stage, appeal, restoration and current company status.",
+                statutory_basis="Section 304, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={"agm_years": agm_years, "ar_years": ar_years, "official_notice_required": True}
             ))
 
         if agm_years >= 3 or ar_years >= 3 or c.on_rjsc_strike_off_list:  # type: ignore
