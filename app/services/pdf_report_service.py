@@ -317,26 +317,67 @@ def _verified_flag_score(flags: Any) -> tuple[int, bool]:
 
 
 def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
-    """Render reconciliation using only rules approved for authoritative scoring."""
+    """Render an auditable score reconciliation from approved, applied findings.
+
+    Unapproved rules and unverified findings are intentionally excluded.
+    Category caps are applied exactly once per category, matching the scoring
+    engine's cap model. BLACK and NOT_EVALUATED reports do not claim a score.
+    """
     if band in ("BLACK", "NOT_EVALUATED"):
         return ""
 
-    indicated_score, _ = _verified_flag_score(flags)
-    if indicated_score == score:
+    category_deductions: dict[str, int] = {name: 0 for name in CATEGORY_CAPS}
+    for flag in (flags or []):
+        rule_id = getattr(flag, "rule_id", "") or ""
+        if rule_id not in VERIFIED_RULE_IDS:
+            continue
+        impact = getattr(
+            flag,
+            "score_impact_applied",
+            getattr(flag, "score_impact", 0),
+        ) or 0
+        impact = max(0, int(impact))
+        if not impact:
+            continue
+        for category, (_, prefixes) in CATEGORY_CAPS.items():
+            if rule_id.startswith(prefixes):
+                category_deductions[category] += impact
+                break
+
+    cap_rows = []
+    effective_total = 0
+    for category, raw in sorted(category_deductions.items()):
+        if raw <= 0:
+            continue
+        cap = CATEGORY_CAPS[category][0]
+        effective = min(raw, cap)
+        effective_total += effective
+        if raw > cap:
+            cap_rows.append(
+                f'<div style="font-size:10px;color:#555;padding:2px 0;">'
+                f'Category cap applied ({esc(category)}): '
+                f'raw deduction {raw} pts capped to {effective} pts'
+                f'</div>'
+            )
+
+    indicated_score = max(0, 100 - effective_total)
+    if indicated_score != score:
         return (
             '<div class="score-reconciliation" style="margin:8px 0;padding:8px;'
-            'background:#F8F9FA;border:1px solid #E0E0E0;border-radius:4px;">'
-            '<div style="font-size:11px;font-weight:bold;">Score reconciliation</div>'
-            f'<div style="font-size:10px;color:#555;margin-top:4px;">'
-            f'Approved-rule deductions reconcile to {indicated_score}/100.</div></div>'
+            'background:#FEE2E2;border:1px solid #B91C1C;border-radius:4px;">'
+            '<strong>REPORT VALIDATION FAILURE</strong>'
+            f'<div>Stored score: {esc(score)}/100; approved-rule calculation: '
+            f'{esc(indicated_score)}/100. This assessment must not be issued.</div></div>'
         )
 
     return (
         '<div class="score-reconciliation" style="margin:8px 0;padding:8px;'
-        'background:#FEE2E2;border:1px solid #B91C1C;border-radius:4px;">'
-        '<strong>REPORT VALIDATION FAILURE</strong>'
-        f'<div>Stored score: {esc(score)}/100; approved-rule calculation: '
-        f'{esc(indicated_score)}/100. This assessment must not be issued.</div></div>'
+        'background:#F8F9FA;border:1px solid #E0E0E0;border-radius:4px;">'
+        '<div style="font-size:11px;font-weight:bold;">Score reconciliation</div>'
+        + "".join(cap_rows)
+        + f'<div style="font-size:10px;color:#555;margin-top:4px;">'
+        f'effective deductions -{effective_total} pts · indicated score '
+        f'{indicated_score}/100.</div></div>'
     )
 
 
