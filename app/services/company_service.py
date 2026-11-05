@@ -391,68 +391,6 @@ class CompanyService(BaseService[Company]):
 
     async def get_upcoming_deadlines_for_system(self, days_ahead: int = 30) -> list[dict]:
         """Privileged worker-only global deadline scan; never expose via user API."""
-    async def get_risk_distribution(self, user_id: uuid.UUID | None = None) -> list[dict]:
-        """Return risk aggregates for the caller's active company memberships only.
-
-        A missing user identity fails closed; this method never falls back to
-        the global dashboard view.
-        """
-        if user_id is None:
-            return []
-        result = await self.db.execute(
-            text("""
-                SELECT c.current_risk_band AS risk_band,
-                       COUNT(DISTINCT c.id) AS company_count,
-                       ROUND(
-                           COUNT(DISTINCT c.id) * 100.0
-                           / NULLIF(SUM(COUNT(DISTINCT c.id)) OVER (), 0), 1
-                       ) AS percentage
-                FROM companies c
-                JOIN company_user_access cua
-                  ON cua.company_id = c.id
-                 AND cua.user_id = :user_id
-                 AND cua.is_active = TRUE
-                WHERE c.is_active = TRUE
-                GROUP BY c.current_risk_band
-                ORDER BY CASE c.current_risk_band
-                    WHEN 'BLACK' THEN 1 WHEN 'RED' THEN 2
-                    WHEN 'YELLOW' THEN 3 WHEN 'GREEN' THEN 4 ELSE 5 END
-            """),
-            {"user_id": user_id},
-        )
-        return [dict(row) for row in result.mappings().all()]
-
-    async def get_upcoming_deadlines(self, days_ahead: int = 30, user_id: uuid.UUID | None = None) -> list[dict]:
-        """Return deadlines only for companies actively assigned to this user."""
-        if user_id is None:
-            return []
-        result = await self.db.execute(
-            text("""
-                SELECT d.*
-                FROM vw_upcoming_deadlines d
-                JOIN company_user_access cua
-                  ON cua.company_id = d.company_id
-                 AND cua.user_id = :user_id
-                 AND cua.is_active = TRUE
-                WHERE d.days_remaining BETWEEN 0 AND :days
-                ORDER BY d.days_remaining, d.company_id
-            """),
-            {"user_id": user_id, "days": days_ahead},
-        )
-        return [dict(row) for row in result.mappings().all()]
-
-    async def get_upcoming_deadlines_for_system(self, days_ahead: int = 30) -> list[dict]:
-        """Unscoped deadline feed for trusted scheduled workers only."""
-        result = await self.db.execute(
-            text("""
-                SELECT * FROM vw_upcoming_deadlines
-                WHERE days_remaining BETWEEN 0 AND :days
-                ORDER BY days_remaining, company_id
-            """),
-            {"days": days_ahead},
-        )
-        return [dict(row) for row in result.mappings().all()]
-
     # ── UPDATE ────────────────────────────────────────────────────
 
     async def update_compliance_state(
