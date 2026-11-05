@@ -1668,16 +1668,36 @@ class NLCRuleEngine:
                     ))
 
             if charge.satisfied and not charge.satisfaction_filed:
-                self._add_flag(ComplianceFlag(
-                    rule_id="CHG-001",
-                    flag_code="CHARGE_SATISFACTION_NOT_FILED",
-                    severity=Severity.YELLOW,
-                    score_impact=3,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Charge satisfaction not filed via Form XXVIII. Section 172; RJSC process guidance states 21 days. Verify charge satisfaction date and receipt before concluding default.",
-                    statutory_basis="Section 172, Companies Act 1994 (Bangladesh)",
-                    detail={"charge_id": charge.charge_id, "charge_type": charge.charge_type}
-                ))
+                if charge.satisfaction_date is None:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="CHG-001",
+                        flag_code="CHARGE_SATISFACTION_DATE_UNKNOWN",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="Charge satisfaction is recorded, but its effective date is missing. Verify the satisfaction date and RJSC Form XXVIII filing before determining a deadline breach.",
+                        statutory_basis="Section 172, Companies Act 1994 (Bangladesh)",
+                        detail={"charge_id": charge.charge_id, "legal_status": "DATE_EVIDENCE_UNKNOWN"},
+                        state=RuleState.UNKNOWN,
+                    ))
+                else:
+                    satisfaction_delay = (self.today - charge.satisfaction_date).days
+                    if satisfaction_delay > 21:
+                        self._add_flag(ComplianceFlag(
+                            rule_id="CHG-001",
+                            flag_code="CHARGE_SATISFACTION_NOT_FILED",
+                            severity=Severity.YELLOW,
+                            score_impact=3,
+                            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                            description=f"Charge satisfaction not filed via Form XXVIII within 21 days. Section 172. Overdue by {satisfaction_delay} days.",
+                            statutory_basis="Section 172, Companies Act 1994 (Bangladesh)",
+                            detail={
+                                "charge_id": charge.charge_id,
+                                "charge_type": charge.charge_type,
+                                "delay_days": satisfaction_delay,
+                                "form": "Form XXVIII",
+                            },
+                        ))
 
         if c.capital_reduction_pending and c.capital_reduction_court_order_obtained is False:
             self._add_flag(ComplianceFlag(
