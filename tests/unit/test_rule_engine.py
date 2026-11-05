@@ -813,7 +813,7 @@ class TestEscalationRules:
             for f in output.flags
         )
         assert has_black_override is False
-        assert output.score_breakdown.final_score == 100
+        assert output.score_breakdown.risk_band == "NOT_EVALUATED"
         assert output.score_breakdown.override_applied is False
 
     @pytest.mark.black
