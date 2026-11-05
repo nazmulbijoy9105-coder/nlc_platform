@@ -17,6 +17,7 @@ from sqlalchemy import (
     ForeignKey,
     ForeignKeyConstraint,
     Index,
+    func,
     Integer,
     Numeric,
     String,
@@ -36,7 +37,10 @@ class Invoice(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         UniqueConstraint("invoice_number", name="uq_invoices_invoice_number"),
         UniqueConstraint("id", "company_id", name="uq_invoices_id_company"),
         CheckConstraint("subtotal_bdt >= 0 AND tax_bdt >= 0 AND total_bdt >= 0", name="ck_invoice_amounts_nonnegative"),
-        CheckConstraint("paid_bdt >= 0 AND balance_bdt >= 0", name="ck_invoice_balances_nonnegative"),
+        CheckConstraint("paid_bdt >= 0 AND balance_bdt >= 0 AND paid_bdt <= total_bdt", name="ck_invoice_balances_nonnegative"),
+        CheckConstraint("total_bdt = subtotal_bdt + tax_bdt", name="ck_invoice_total_matches_components"),
+        CheckConstraint("balance_bdt = total_bdt - paid_bdt", name="ck_invoice_balance_matches_paid"),
+        CheckConstraint("status IN ('DRAFT','ISSUED','PARTIALLY_PAID','PAID','VOID','OVERDUE')", name="ck_invoice_status"),
         CheckConstraint("currency = 'BDT'", name="ck_invoice_currency_bdt"),
         Index("ix_invoices_company_status", "company_id", "status"),
         Index("ix_invoices_company_due", "company_id", "due_at"),
@@ -83,6 +87,8 @@ class PaymentSubmission(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "payment_submissions"
     __table_args__ = (
         CheckConstraint("amount_bdt > 0", name="ck_payment_submission_amount_positive"),
+        CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL')", name="ck_payment_submission_method"),
+        CheckConstraint("status IN ('PENDING_REVIEW','APPROVED','REJECTED')", name="ck_payment_submission_status"),
         CheckConstraint("currency = 'BDT'", name="ck_payment_submission_currency_bdt"),
         Index("ix_payment_submissions_company_status", "company_id", "status"),
         Index("ix_payment_submissions_invoice", "invoice_id"),
@@ -111,6 +117,9 @@ class Payment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         UniqueConstraint("payment_number", name="uq_payments_payment_number"),
         UniqueConstraint("id", "company_id", name="uq_payments_id_company"),
         CheckConstraint("amount_bdt > 0", name="ck_payment_amount_positive"),
+        CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL','BKASH_ONLINE','NAGAD_ONLINE','SSLCOMMERZ')", name="ck_payment_method"),
+        CheckConstraint("channel IN ('ONLINE','OFFLINE')", name="ck_payment_channel"),
+        CheckConstraint("status IN ('SETTLED','REVERSED','REFUNDED','DISPUTED')", name="ck_payment_status"),
         CheckConstraint("currency = 'BDT'", name="ck_payment_currency_bdt"),
         Index("ix_payments_company_received", "company_id", "received_at"),
     )
@@ -122,7 +131,7 @@ class Payment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     amount_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="BDT")
     provider_name: Mapped[str | None] = mapped_column(String(40), nullable=True)
-    provider_transaction_id: Mapped[str | None] = mapped_column(String(160), nullable=True, unique=True)
+    provider_transaction_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
     payer_reference: Mapped[str | None] = mapped_column(String(160), nullable=True)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="SETTLED")
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -153,7 +162,8 @@ class PaymentAllocation(UUIDPrimaryKeyMixin, Base):
 class PaymentLedgerEvent(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "payment_ledger_events"
     __table_args__ = (
-        CheckConstraint("amount_bdt >= 0", name="ck_payment_ledger_event_amount_nonnegative"),
+        CheckConstraint("amount_bdt > 0", name="ck_payment_ledger_event_amount_positive"),
+        CheckConstraint("event_type IN ('PAYMENT_VERIFIED','PAYMENT_ALLOCATED','PAYMENT_REVERSED','PAYMENT_REFUNDED','PAYMENT_DISPUTED','SUBMISSION_REJECTED')", name="ck_payment_ledger_event_type"),
         CheckConstraint("currency = 'BDT'", name="ck_payment_ledger_event_currency_bdt"),
         Index("ix_payment_ledger_events_company_created", "company_id", "created_at"),
         ForeignKeyConstraint(["payment_id", "company_id"], ["payments.id", "payments.company_id"], ondelete="RESTRICT", name="fk_payment_ledger_payment_company"),
@@ -171,7 +181,7 @@ class PaymentLedgerEvent(UUIDPrimaryKeyMixin, Base):
     reference: Mapped[str | None] = mapped_column(String(200), nullable=True)
     actor_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     event_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
 class PaymentIntent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -179,6 +189,8 @@ class PaymentIntent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("provider_name", "idempotency_key", name="uq_payment_intent_provider_idempotency"),
         CheckConstraint("amount_bdt > 0", name="ck_payment_intent_amount_positive"),
+        CheckConstraint("provider_name IN ('SSLCOMMERZ','BKASH','NAGAD')", name="ck_payment_intent_provider"),
+        CheckConstraint("status IN ('CREATED','PENDING','SUCCEEDED','FAILED','EXPIRED','CANCELLED')", name="ck_payment_intent_status"),
         CheckConstraint("currency = 'BDT'", name="ck_payment_intent_currency_bdt"),
         Index("ix_payment_intents_company_status", "company_id", "status"),
         ForeignKeyConstraint(["invoice_id", "company_id"], ["invoices.id", "invoices.company_id"], ondelete="RESTRICT", name="fk_payment_intents_invoice_company"),
@@ -188,12 +200,12 @@ class PaymentIntent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     invoice_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     provider_name: Mapped[str] = mapped_column(String(40), nullable=False)
     idempotency_key: Mapped[str] = mapped_column(String(120), nullable=False)
-    provider_order_id: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
+    provider_order_id: Mapped[str] = mapped_column(String(120), nullable=False)
     amount_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="BDT")
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="CREATED")
     checkout_url: Mapped[str | None] = mapped_column(Text, nullable=True)
-    provider_transaction_id: Mapped[str | None] = mapped_column(String(160), nullable=True, unique=True)
+    provider_transaction_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
@@ -204,6 +216,7 @@ class PaymentProviderEvent(UUIDPrimaryKeyMixin, Base):
     __table_args__ = (
         UniqueConstraint("provider_name", "provider_event_id", name="uq_payment_provider_event"),
         Index("ix_payment_provider_events_status_received", "processing_status", "received_at"),
+        CheckConstraint("processing_status IN ('RECEIVED','PROCESSING','PROCESSED','FAILED')", name="ck_payment_provider_event_status"),
     )
 
     provider_name: Mapped[str] = mapped_column(String(40), nullable=False)
@@ -221,6 +234,8 @@ class ClientSubscription(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "client_subscriptions"
     __table_args__ = (
         CheckConstraint("amount_bdt >= 0", name="ck_subscription_amount_nonnegative"),
+        CheckConstraint("billing_interval IN ('MONTHLY','QUARTERLY','ANNUAL','ONE_TIME')", name="ck_subscription_billing_interval"),
+        CheckConstraint("status IN ('PENDING','ACTIVE','PAST_DUE','CANCELLED','EXPIRED','SUSPENDED')", name="ck_subscription_status"),
         CheckConstraint("currency = 'BDT'", name="ck_subscription_currency_bdt"),
         Index("ix_client_subscriptions_company_status", "company_id", "status"),
     )
