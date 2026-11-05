@@ -63,7 +63,7 @@ This matrix is a technical inventory of candidate legal anchors and internal rul
 | DIR-010 | Managing Director Term Requires Verification | Section 110, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | REVIEW ONLY — verify current appointment term, reappointment and continuity |
 | ESC-001 | Strike-Off Process Status Requires Verification | Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required | NOT_EVALUATED | 0 | no | REVIEW ONLY — backlog is not proof of Registrar strike-off action |
 | ESC-002 | Strike-Off Status Requires Verification | Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required | NOT_EVALUATED | 0 | no | REVIEW ONLY — filing backlog or unverified list indicator is not proof of strike-off |
-| ESC-003 | Corporate Rescue Mandatory — Systemic Failure | Sections 81, 115, 36, 346 (aggregate), Companies Act 1994 (Bangladesh) | BLACK | 10 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| ESC-003 | Corporate Rescue Mandatory — Systemic Failure | NLC internal risk policy; not a statutory Companies Act consequence | BLACK | 10 | YES | POLICY OWNER APPROVAL PENDING — no statutory BLACK classification |
 | ESC-004 | Voluntary Winding Up | Section 130, Companies Act 1994 (Bangladesh) | BLACK | 30 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | ESC-005 | Investigation Order Pending | Section 104, Companies Act 1994 (Bangladesh) | RED | 20 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | FX-001 | Foreign Exchange Violation | Foreign Exchange Regulation Act 1947 (Bangladesh) | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
