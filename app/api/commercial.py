@@ -59,7 +59,7 @@ class EngagementCreateRequest(BaseModel):
     engagement_type: str = Field(description="COMPLIANCE_PACKAGE | STRUCTURED_REGULARIZATION | CORPORATE_RESCUE")
     revenue_tier: RevenueTier
     description: str = Field(min_length=3, max_length=500)
-    estimated_fee_bdt: Decimal | None = Field(None, gt=0)
+    estimated_fee_bdt: Decimal | None = Field(None, gt=0, max_digits=13, decimal_places=2, allow_inf_nan=False)
     assigned_officer_id: uuid.UUID | None = None
     notes: str | None = None
 
@@ -90,9 +90,9 @@ class EngagementResponse(BaseModel):
 class QuotationCreateRequest(BaseModel):
     engagement_id: uuid.UUID
     company_id: uuid.UUID
-    professional_fee_bdt: Decimal = Field(gt=0)
-    government_fee_bdt: Decimal = Field(default=Decimal('0.00'), ge=0)
-    vat_bdt: Decimal = Field(default=Decimal('0.00'), ge=0)
+    professional_fee_bdt: Decimal = Field(gt=0, max_digits=13, decimal_places=2, allow_inf_nan=False)
+    government_fee_bdt: Decimal = Field(default=Decimal('0.00'), ge=0, max_digits=13, decimal_places=2, allow_inf_nan=False)
+    vat_bdt: Decimal = Field(default=Decimal('0.00'), ge=0, max_digits=13, decimal_places=2, allow_inf_nan=False)
     line_items: list[dict] | None = None
     valid_days: int = Field(default=30, ge=7, le=90)
     notes: str | None = None
