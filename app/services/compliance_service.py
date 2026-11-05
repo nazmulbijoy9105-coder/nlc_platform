@@ -605,12 +605,18 @@ class ComplianceService(BaseService[ComplianceFlag]):
             for rule_id, severity in rows
             if LEGAL_SCORE_RELEASED and rule_id in VERIFIED_RULE_IDS
         ]
+        black_count = verified_severities.count("BLACK")
+        red_count = verified_severities.count("RED")
+        yellow_count = verified_severities.count("YELLOW")
         summary.update({
             "total_active": len(rows),
             "total_active_flags": len(rows),
-            "black": verified_severities.count("BLACK"),
-            "red": verified_severities.count("RED"),
-            "yellow": verified_severities.count("YELLOW"),
+            "black": black_count,
+            "red": red_count,
+            "yellow": yellow_count,
+            "black_flags": black_count,
+            "red_flags": red_count,
+            "yellow_flags": yellow_count,
             "not_evaluated": len(rows) - len(verified_severities),
         })
         return summary
@@ -669,27 +675,26 @@ class ComplianceService(BaseService[ComplianceFlag]):
             .limit(months)
         )
         rows = result.scalars().all()
-        return [
-            {
-                "month":          row.snapshot_month.isoformat(),
-                "score":          (
-                    None
-                    if getattr(row.risk_band, "value", row.risk_band) == "NOT_EVALUATED"
-                    else row.score
-                ),
-                "risk_band":      row.risk_band,
-                "agm_score":      row.agm_score,
-                "audit_score":    row.audit_score,
-                "return_score":   row.return_score,
-                "director_score": row.director_score,
-                "shareholding_score": row.shareholding_score,
-                "active_flags":   row.active_flags_count,
-                "black_flags":    row.black_flags_count,
-                "override":       row.override_applied,
-                "calculated_at":  row.calculated_at.isoformat(),
-            }
-            for row in rows
-        ]
+        from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+        history = []
+        for row in rows:
+            stored_band = getattr(row.risk_band, "value", row.risk_band)
+            released = LEGAL_SCORE_RELEASED and stored_band != "NOT_EVALUATED"
+            history.append({
+                "month": row.snapshot_month.isoformat(),
+                "score": row.score if released else None,
+                "risk_band": row.risk_band if released else "NOT_EVALUATED",
+                "agm_score": row.agm_score if released else None,
+                "audit_score": row.audit_score if released else None,
+                "return_score": row.return_score if released else None,
+                "director_score": row.director_score if released else None,
+                "shareholding_score": row.shareholding_score if released else None,
+                "active_flags": row.active_flags_count,
+                "black_flags": row.black_flags_count if released else 0,
+                "override": row.override_applied if released else False,
+                "calculated_at": row.calculated_at.isoformat(),
+            })
+        return history
 
 
     async def get_compliance_calendar(
