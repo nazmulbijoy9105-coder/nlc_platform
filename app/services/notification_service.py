@@ -73,9 +73,23 @@ class NotificationService(BaseService[Notification]):
         Generate notifications for new RED/BLACK compliance flags.
         _process_flag_notifications stub implementation.
         """
+        # A provisional RED/BLACK engine label is not an authorised legal
+        # alert. Do not notify customers until the statutory score release
+        # gate is open and the rule is in the internally source-checked set.
+        from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS, RuleState
+
+        if not LEGAL_SCORE_RELEASED:
+            return
+
         for flag in flags:
-            severity = getattr(flag, "severity", "")
-            if severity not in ("RED", "BLACK"):
+            severity = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", ""))
+            rule_id = getattr(flag, "rule_id", "")
+            if severity not in ("RED", "BLACK") or rule_id not in VERIFIED_RULE_IDS:
+                continue
+            if (
+                getattr(flag, "state", None) != RuleState.NON_COMPLIANT
+                or getattr(flag, "eval_state", "VIOLATION") == "UNKNOWN"
+            ):
                 continue
 
             title = f"{'🔴' if severity == 'RED' else '⚫'} Compliance Alert: {getattr(flag, 'rule_id', '')}"
