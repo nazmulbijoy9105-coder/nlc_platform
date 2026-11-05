@@ -1104,7 +1104,6 @@ class NLCRuleEngine:
             self._add_flag(ComplianceFlag(
                 rule_id="AUD-004",
                 flag_code="AUDITOR_REAPPOINTMENT_REQUIRES_REVIEW",
-                flag_code="AUDITOR_NOT_REAPPOINTED",
                 severity=Severity.NOT_EVALUATED,
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
