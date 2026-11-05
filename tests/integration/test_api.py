@@ -453,15 +453,15 @@ class TestRescue:
 
     @pytest.mark.asyncio
     async def test_create_rescue_plan_requires_red_band(self, api_client, super_admin_tok, db_company):
-        """GREEN band company should be rejected for rescue plan."""
+        """Automated rescue is withheld while statutory scoring is unreleased."""
         # db_company is GREEN band
         resp = await api_client.post(
             "/api/v1/rescue/plans",
             headers=_auth(super_admin_tok),
             json={"company_id": str(db_company.id)}
         )
-        assert resp.status_code == 422
-        assert "RED" in resp.json()["detail"] or "BLACK" in resp.json()["detail"]
+        assert resp.status_code == 409
+        assert "statutory scoring" in resp.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_create_rescue_plan_for_red_company(self, api_client, super_admin_tok, db, db_company):
@@ -488,8 +488,8 @@ class TestRescue:
             headers=_auth(super_admin_tok),
             json={"company_id": str(db_company.id)}
         )
-        assert resp.status_code == 422
-        assert "counsel-approved statutory evaluation" in resp.json()["detail"]
+        assert resp.status_code == 409
+        assert "statutory scoring" in resp.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_get_active_plan_not_found(self, api_client, super_admin_tok, db_company):
