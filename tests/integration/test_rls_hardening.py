@@ -133,6 +133,71 @@ async def test_forged_admin_guc_does_not_escalate_signed_user(db, db_client_user
 
 
 @pytest.mark.asyncio
+async def test_ordinary_sql_cannot_impersonate_another_tenant_user(
+    db, db_client_user, db_other_company
+):
+    import uuid
+
+    from app.models.company import CompanyUserAccess
+    from app.models.enums import UserRole
+    from app.models.user import User
+
+    target_user = User(
+        id=uuid.uuid4(),
+        email=f"impersonation-target-{uuid.uuid4().hex[:8]}@nlctest.com",
+        full_name="Other Tenant User",
+        password_hash="!test-no-login",
+        role=UserRole.CLIENT_VIEW_ONLY,
+        is_active=True,
+        totp_enabled=False,
+    )
+    db.add(target_user)
+    await db.flush()
+    db.add(
+        CompanyUserAccess(
+            user_id=target_user.id,
+            company_id=db_other_company.id,
+            can_edit=False,
+            can_view_financials=False,
+            is_active=True,
+        )
+    )
+    await db.flush()
+
+    # Begin as a real user, then attempt to replace both the principal and
+    # signature using ordinary SQL GUC writes. The application HMAC key is
+    # unavailable to this SQL session, so a forged signature must fail closed.
+    await set_rls_context(db, str(db_client_user.id))
+    await db.execute(
+        text("SELECT set_config('app.current_user_id', :principal, true)"),
+        {"principal": str(target_user.id)},
+    )
+    await db.execute(
+        text("SELECT set_config('app.current_user_signature', '00', true)")
+    )
+
+    principal = await db.execute(
+        text("SELECT public.nlc_current_user_principal()")
+    )
+    assert principal.scalar_one_or_none() is None
+
+    staff = await db.execute(text("SELECT public.nlc_current_user_is_staff()"))
+    assert staff.scalar_one() is False
+
+    access = await db.execute(
+        text("SELECT public.nlc_can_access_company(:company_id)"),
+        {"company_id": db_other_company.id},
+    )
+    assert access.scalar_one() is False
+
+    visible = await db.execute(
+        text("SELECT id FROM companies WHERE id = :company_id"),
+        {"company_id": db_other_company.id},
+    )
+    assert visible.scalar_one_or_none() is None
+
+
+@pytest.mark.asyncio
 async def test_user_sees_only_companies_with_active_membership(
     db, db_client_user, db_company, db_other_company
 ):
