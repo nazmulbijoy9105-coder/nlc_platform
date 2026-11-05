@@ -67,6 +67,8 @@ The following observations were obtained from the live Neon production branch us
 - The production `legal_rules` schema does not yet contain the model's verification-status/evidence columns. Confirm the exact post-migration schema against the ORM before starting the API.
 - `legal_rule_versions` currently has zero rows; `last_modified_by` and `last_modified_at` are unset on the live rule rows. Do not use an unversioned SQL or seed-script update to reconcile existing definitions.
 
+- Render logs recorded three blockers: at 19:37 UTC, `NLC_RLS_HMAC_SECRET` was missing or shorter than 32 characters; at 19:43 UTC, `permission denied to alter role`; and from 19:48 UTC, `Can't locate revision identified by '0049_evaluation_runs_and_identity_rls'`.
+
 ### RLS and role findings
 
 - A direct SQL test as `nlc_app_role` proved that setting only `app.current_user_id = 'ADMIN'` exposes 23 companies, 434 compliance flags and 51 score-history rows. This is a confirmed identity-forgery/tenant-isolation bypass in the current production policies.
