@@ -69,24 +69,61 @@ def upgrade() -> None:
             "applying signed RLS identity hardening"
         )
 
-    # The runtime role is deliberately non-superuser and cannot bypass RLS.
-    # Preserve LOGIN on an existing role; a newly-created role has no password
-    # and must receive its credential out-of-band before runtime cutover.
+    # Roles are provisioned out-of-band by the database administrator.
+    # Schema migrations must never require CREATEROLE or alter login credentials.
+    # Validate exact security attributes before changing any RLS objects.
     op.execute("""
-        DO $role$
+        DO $role_preflight$
+        DECLARE
+            app_role record;
+            audit_role record;
         BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
-                CREATE ROLE nlc_app_role LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
-                    NOINHERIT NOREPLICATION NOBYPASSRLS;
+            SELECT rolcanlogin, rolsuper, rolcreatedb, rolcreaterole,
+                   rolinherit, rolreplication, rolbypassrls
+              INTO app_role
+              FROM pg_roles
+             WHERE rolname = 'nlc_app_role';
+
+            IF NOT FOUND THEN
+                RAISE EXCEPTION
+                    'Required role nlc_app_role is missing; provision it out-of-band before migration 0050';
+            END IF;
+
+            IF NOT app_role.rolcanlogin
+               OR app_role.rolsuper
+               OR app_role.rolcreatedb
+               OR app_role.rolcreaterole
+               OR app_role.rolinherit
+               OR app_role.rolreplication
+               OR app_role.rolbypassrls THEN
+                RAISE EXCEPTION
+                    'nlc_app_role has unsafe attributes; require LOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, NOREPLICATION and NOBYPASSRLS';
+            END IF;
+
+            SELECT rolcanlogin, rolsuper, rolcreatedb, rolcreaterole,
+                   rolinherit, rolreplication, rolbypassrls
+              INTO audit_role
+              FROM pg_roles
+             WHERE rolname = 'nlc_ci_audit_role';
+
+            IF NOT FOUND THEN
+                RAISE EXCEPTION
+                    'Required role nlc_ci_audit_role is missing; provision it out-of-band before migration 0050';
+            END IF;
+
+            IF NOT audit_role.rolcanlogin
+               OR audit_role.rolsuper
+               OR audit_role.rolcreatedb
+               OR audit_role.rolcreaterole
+               OR audit_role.rolinherit
+               OR audit_role.rolreplication
+               OR audit_role.rolbypassrls THEN
+                RAISE EXCEPTION
+                    'nlc_ci_audit_role has unsafe attributes; require LOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, NOREPLICATION and NOBYPASSRLS';
             END IF;
         END
-        $role$;
+        $role_preflight$;
     """)
-    op.execute("""
-        ALTER ROLE nlc_app_role NOSUPERUSER NOCREATEDB NOCREATEROLE
-            NOINHERIT NOREPLICATION NOBYPASSRLS
-    """)
-    op.execute("GRANT nlc_app_role TO CURRENT_USER")
 
     op.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
     op.execute("CREATE SCHEMA IF NOT EXISTS nlc_private")
@@ -857,20 +894,6 @@ def upgrade() -> None:
     op.execute("CREATE SCHEMA IF NOT EXISTS audit")
     op.execute("REVOKE ALL ON SCHEMA audit FROM PUBLIC, nlc_app_role")
     op.execute("REVOKE ALL ON audit.active_legal_rule_ids FROM PUBLIC")
-    op.execute("""
-        DO $audit_role$
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_ci_audit_role') THEN
-                CREATE ROLE nlc_ci_audit_role LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
-                    NOINHERIT NOREPLICATION NOBYPASSRLS;
-            END IF;
-        END
-        $audit_role$;
-    """)
-    op.execute("""
-        ALTER ROLE nlc_ci_audit_role NOSUPERUSER NOCREATEDB NOCREATEROLE
-            NOINHERIT NOREPLICATION NOBYPASSRLS
-    """)
     op.execute("GRANT USAGE ON SCHEMA audit TO nlc_ci_audit_role")
     op.execute("GRANT SELECT ON audit.active_legal_rule_ids TO nlc_ci_audit_role")
 
