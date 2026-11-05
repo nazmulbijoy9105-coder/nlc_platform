@@ -38,7 +38,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.bearer import Bearer401
 from app.core.config import Settings, get_settings
 from app.core.security import decode_token
-from app.models.database import AsyncSessionLocal, set_admin_context, set_rls_context
+from app.models.database import AsyncSessionLocal, set_admin_context, set_auth_context, set_rls_context
 from app.models.enums import UserRole
 from app.models.user import User
 
@@ -96,6 +96,23 @@ async def get_db() -> AsyncSession:  # type: ignore
     """
     async with AsyncSessionLocal() as session:
         try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
+async def get_auth_db() -> AsyncSession:  # type: ignore
+    """
+    Yield a least-privilege session for login/signup only.
+    AUTH context is permitted by RLS on users, not tenant or company tables.
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            await set_auth_context(session)
             yield session
             await session.commit()
         except Exception:
