@@ -1115,6 +1115,21 @@ class NLCRuleEngine:
                     ))
                 elif c.agm_held_this_cycle is False:
                     agm_deadline = self._subsequent_agm_deadline(c)
+                    interval_deadline = (
+                        self._add_months(c.last_agm_date, 15)
+                        if c.last_agm_date is not None else None
+                    )
+                    calendar_year_deadline = (
+                        date(c.last_agm_date.year + 1, 12, 31)
+                        if c.last_agm_date is not None else None
+                    )
+                    deadline_basis = (
+                        "15_MONTH_INTERVAL"
+                        if interval_deadline is not None
+                        and calendar_year_deadline is not None
+                        and interval_deadline <= calendar_year_deadline
+                        else "CALENDAR_YEAR"
+                    )
                     if agm_deadline is None:
                         self._add_flag(ComplianceFlag(
                             rule_id="AGM-002", flag_code="AGM_EXTENSION_REQUIRES_REVIEW",
@@ -1128,7 +1143,7 @@ class NLCRuleEngine:
                     elif self.today > agm_deadline:
                         delay = (self.today - agm_deadline).days
                         severity = Severity.BLACK if delay > 365 else Severity.RED
-                        basis = "VALIDATED_EXTENSION" if c.agm_extension_granted_until else "SECTION_81(1)"
+                        basis = "VALIDATED_EXTENSION" if c.agm_extension_granted_until else deadline_basis
                         self._add_flag(ComplianceFlag(
                             rule_id="AGM-002", flag_code="SUBSEQUENT_AGM_DEFAULT",
                             severity=severity,
@@ -1136,7 +1151,15 @@ class NLCRuleEngine:
                             revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                             description=f"AGM overdue by {delay} days. Section 81(1): deadline determined by {basis}.",
                             statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
-                            detail={"delay_days": delay, "deadline": str(agm_deadline), "basis": basis},
+                            detail={
+                                "delay_days": delay,
+                                "deadline": str(agm_deadline),
+                                "basis": basis,
+                                "interval_deadline": str(interval_deadline) if interval_deadline else None,
+                                "calendar_year_deadline": (
+                                    str(calendar_year_deadline) if calendar_year_deadline else None
+                                ),
+                            },
                         ))
         # Unverified AGM history is not converted into a deadline breach.
         # Notice, quorum and minutes checks below use their own evidence requirements.
