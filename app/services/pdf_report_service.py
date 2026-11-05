@@ -548,6 +548,11 @@ class PDFReportService:
         self.db = db
 
     async def generate_company_compliance_pdf(self, company_id: str) -> Response:
+        if not LEGAL_SCORE_RELEASED:
+            raise HTTPException(
+                status_code=409,
+                detail="PDF withheld: statutory score release is disabled; no score-bearing compliance report may be issued.",
+            )
         company = await CompanyService(self.db).get_by_id_or_404(company_id)
 
         # Fetch the active rescue plan (if any) so the PDF includes the
