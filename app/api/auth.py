@@ -415,7 +415,7 @@ class SignupRequest(BaseModel):
 
 
 @router.post("/signup", response_model=dict)
-async def signup(body: SignupRequest, db=Depends(get_admin_db)):
+async def signup(body: SignupRequest, db=Depends(get_auth_db)):
     """Public signup — creates a new user account.
     
     Available roles: LEGAL_STAFF, ADMIN_STAFF, CLIENT_DIRECTOR, CLIENT_VIEW_ONLY
