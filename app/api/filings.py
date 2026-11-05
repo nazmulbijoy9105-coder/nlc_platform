@@ -66,11 +66,10 @@ class AGMCreateRequest(BaseModel):
 class AGMMarkHeldRequest(BaseModel):
     held_date: date
     venue: str | None = None
-    members_present: int = Field(ge=0)
-    # Deprecated compatibility input. The server derives quorum from company
-    # membership and does not trust a client-provided compliance conclusion.
-    quorum_met: bool | None = None
-    auditor_reappointed: bool
+    members_present: int | None = Field(default=None, ge=0)
+    # Client-supplied quorum conclusions are intentionally not accepted.
+    auditor_reappointed: bool | None = None
+    minutes_prepared: bool | None = None
     accounts_adopted: bool | None = None
     agm_held_without_audit: bool | None = None
     minutes_document_id: uuid.UUID | None = None
@@ -92,9 +91,11 @@ class AGMResponse(BaseModel):
     quorum_required: int | None = None
     quorum_basis: str | None = None
     venue: str | None = None
+    members_present: int | None = None
     auditor_reappointed: bool | None
     accounts_adopted: bool | None
     agm_held_without_audit: bool | None
+    minutes_prepared: bool | None
     is_default: bool
     created_at: str
 
@@ -354,6 +355,7 @@ async def mark_agm_held(
         venue=body.venue,
         members_present=body.members_present,
         auditor_reappointed=body.auditor_reappointed,
+        minutes_prepared=body.minutes_prepared,
         accounts_adopted=body.accounts_adopted,
         agm_held_without_audit=body.agm_held_without_audit,
         minutes_document_id=body.minutes_document_id,
@@ -680,16 +682,18 @@ def _agm_to_response(agm) -> AGMResponse:
         agm_id=str(agm.id),
         company_id=str(agm.company_id),
         financial_year=agm.financial_year,
-        agm_due_date=agm.agm_deadline.isoformat() if agm.agm_deadline else '2099-12-31',
+        agm_due_date=agm.agm_deadline.isoformat() if agm.agm_deadline else None,
         held_date=agm.agm_date.isoformat() if agm.agm_date else None,
         filed_date=agm.rjsc_filing_date.isoformat() if agm.rjsc_filing_date else None,
         quorum_met=agm.quorum_met,
         quorum_required=agm.quorum_required,
         quorum_basis=agm.quorum_basis,
         venue=getattr(agm, "venue", None),
+        members_present=agm.members_present,
         auditor_reappointed=agm.auditor_reappointed,
         accounts_adopted=getattr(agm, "accounts_adopted", None),
         agm_held_without_audit=getattr(agm, "agm_held_without_audit", None),
+        minutes_prepared=getattr(agm, "minutes_prepared", None),
         is_default=agm.is_default,
         created_at=agm.created_at.isoformat() if hasattr(agm, 'created_at') and agm.created_at else '',
     )
