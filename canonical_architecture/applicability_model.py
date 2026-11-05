@@ -45,17 +45,33 @@ APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {
         "S85: Written notice with date/time/place/business required."
     ),
     "AGM-005": ApplicabilityRule(
-        "AGM-005", ("ALL",), ("agm_held",), (),
-        "S85(2)(b): Private company needs 2 members present (if <=7 total); "
-        "3 if >7. Public company needs 5."
+        "AGM-005",
+        ("PRIVATE_LIMITED",),
+        (
+            "agm_held",
+            "members_total_at_agm",
+            "members_total_evidence_ref",
+            "members_present_at_agm",
+            "members_present_evidence_ref",
+            "articles_quorum_verified",
+            "articles_quorum_verified_by",
+            "articles_quorum_verified_at",
+            "articles_quorum_evidence_ref",
+        ),
+        ("articles_quorum_required",),
+        "Companies Act 1994, s.85(2)(b): private-company default quorum is "
+        "2 where total membership is 6 or fewer and 3 where membership exceeds 6. "
+        "The operative Articles may prescribe otherwise; do not evaluate without "
+        "verified member counts and the Articles version effective on the meeting date."
     ),
     "AGM-006": ApplicabilityRule(
         "AGM-006", ("ALL",), ("agm_held",), (),
         "S89: Minutes must be entered in books, signed by chairman."
     ),
     "AGM-007": ApplicabilityRule(
-        "AGM-007", ("ALL",), ("agm_held",), (),
-        "S84: EGM requisition rules. Adjournment requires proper notice."
+        "AGM-007", ("ALL",), ("agm_adjourned_without_notice",), ("articles_version_at_meeting",),
+        "Companies Act 1994, s.85 and the operative Articles: adjournment/notice "
+        "consequence is fact-specific and requires lawyer review; not an automatic breach."
     ),
 
     # ── Registers Module (Sections 34-36, 89, 115, 159, 174) ────────
@@ -132,8 +148,10 @@ APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {
         "Exception: Court order obtained."
     ),
     "CHG-001": ApplicabilityRule(
-        "CHG-001", ("ALL",), ("charge_created",), (),
-        "S159: Same as CAP-002. Charge must be registered with RJSC."
+        "CHG-001", ("ALL",), ("charge_satisfied", "satisfaction_date", "registrable_charge_under_s159"), ("registrar_filing_date",),
+        "Companies Act 1994, s.172(1): notice of payment/satisfaction of a "
+        "registrable charge within 21 days. Distinguish s.159 charge registration "
+        "from s.172 satisfaction; missing satisfaction date is UNKNOWN."
     ),
 
     # ── Structural (Sections 11, 17, 18) ────────────────────────────
@@ -214,14 +232,17 @@ APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {
         "executed by both parties."
     ),
 
-    # ── Escalation (Section 346) ────────────────────────────────────
+    # ── Escalation (Section 304; review only) ────────────────────────
     "ESC-001": ApplicabilityRule(
-        "ESC-001", ("ALL",), ("is_active",), (),
-        "S346: Strike-off risk for non-filing/non-trading."
+        "ESC-001", ("ALL",), ("agm_years_unfiled", "annual_return_years_unfiled"), (),
+        "Companies Act 1994, s.304: filing backlog is an escalation/review trigger "
+        "only; it does not prove that the Registrar commenced strike-off."
     ),
     "ESC-002": ApplicabilityRule(
-        "ESC-002", ("ALL",), ("is_active",), (),
-        "S346: Strike-off imminent. 3+ years non-filing or notice received."
+        "ESC-002", ("ALL",), ("registrar_strike_off_notice_or_verified_register_status",), ("notice_service_evidence_ref",),
+        "Companies Act 1994, s.304: require actual Registrar notice/procedural-stage "
+        "evidence. Three years of backlog or an unverified list indicator is not "
+        "proof that strike-off is imminent or dissolution has occurred."
     ),
 
     # ── Default (Sections 94, 397) ──────────────────────────────────
