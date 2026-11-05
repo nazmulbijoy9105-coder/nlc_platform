@@ -101,6 +101,13 @@ jobs:
       - name: Compile check
         run: python -m compileall app/
 
+      - name: Verify single Alembic head and clean database upgrade
+        run: |
+          alembic heads
+          HEAD_COUNT="$(alembic heads | grep -c '(head)')"
+          test "$HEAD_COUNT" -eq 1
+          alembic upgrade head
+
       - name: Run integration tests
         run: python -m pytest tests/integration -q --tb=short
 
