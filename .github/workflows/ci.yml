@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, fix/rls-identity-boundary-20261104]
   pull_request:
     branches: [main, fix/agm-schema-forward-reconcile-clean-20261103]
 
