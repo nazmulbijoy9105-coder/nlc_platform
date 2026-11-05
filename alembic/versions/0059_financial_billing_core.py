@@ -53,6 +53,10 @@ def upgrade() -> None:
         sa.CheckConstraint("subtotal_bdt >= 0 AND tax_bdt >= 0 AND total_bdt >= 0", name="ck_invoice_amounts_nonnegative"),
         sa.CheckConstraint("paid_bdt >= 0 AND balance_bdt >= 0", name="ck_invoice_balances_nonnegative"),
         sa.CheckConstraint("currency = 'BDT'", name="ck_invoice_currency_bdt"),
+        sa.CheckConstraint("paid_bdt <= total_bdt", name="ck_invoice_paid_not_over_total"),
+        sa.CheckConstraint("total_bdt = subtotal_bdt + tax_bdt", name="ck_invoice_total_matches_components"),
+        sa.CheckConstraint("balance_bdt = total_bdt - paid_bdt", name="ck_invoice_balance_matches_paid"),
+        sa.CheckConstraint("status IN ('DRAFT','ISSUED','PARTIALLY_PAID','PAID','VOID','OVERDUE')", name="ck_invoice_status"),
     )
     op.create_index("ix_invoices_company_status", "invoices", ["company_id", "status"])
     op.create_index("ix_invoices_company_due", "invoices", ["company_id", "due_at"])
@@ -94,6 +98,8 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["invoice_id", "company_id"], ["invoices.id", "invoices.company_id"], ondelete="RESTRICT", name="fk_payment_submissions_invoice_company"),
         sa.CheckConstraint("amount_bdt > 0", name="ck_payment_submission_amount_positive"),
         sa.CheckConstraint("currency = 'BDT'", name="ck_payment_submission_currency_bdt"),
+        sa.CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL')", name="ck_payment_submission_method"),
+        sa.CheckConstraint("status IN ('PENDING_REVIEW','APPROVED','REJECTED')", name="ck_payment_submission_status"),
     )
     op.create_index("ix_payment_submissions_company_status", "payment_submissions", ["company_id", "status"])
     op.create_index("ix_payment_submissions_invoice", "payment_submissions", ["invoice_id"])
@@ -120,6 +126,9 @@ def upgrade() -> None:
         sa.UniqueConstraint("payment_number", name="uq_payments_payment_number"),
         sa.UniqueConstraint("id", "company_id", name="uq_payments_id_company"),
         sa.UniqueConstraint("provider_transaction_id", name="uq_payments_provider_transaction_id"),
+        sa.CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL','BKASH_ONLINE','NAGAD_ONLINE','SSLCOMMERZ')", name="ck_payment_method"),
+        sa.CheckConstraint("channel IN ('ONLINE','OFFLINE')", name="ck_payment_channel"),
+        sa.CheckConstraint("status IN ('SETTLED','REVERSED','REFUNDED','DISPUTED')", name="ck_payment_status"),
         sa.CheckConstraint("amount_bdt > 0", name="ck_payment_amount_positive"),
         sa.CheckConstraint("currency = 'BDT'", name="ck_payment_currency_bdt"),
     )
@@ -159,7 +168,8 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["payment_id", "company_id"], ["payments.id", "payments.company_id"], ondelete="RESTRICT", name="fk_payment_ledger_payment_company"),
         sa.ForeignKeyConstraint(["invoice_id", "company_id"], ["invoices.id", "invoices.company_id"], ondelete="RESTRICT", name="fk_payment_ledger_invoice_company"),
         sa.ForeignKeyConstraint(["submission_id", "company_id"], ["payment_submissions.id", "payment_submissions.company_id"], ondelete="RESTRICT", name="fk_payment_ledger_submission_company"),
-        sa.CheckConstraint("amount_bdt >= 0", name="ck_payment_ledger_event_amount_nonnegative"),
+        sa.CheckConstraint("amount_bdt > 0", name="ck_payment_ledger_event_amount_positive"),
+        sa.CheckConstraint("event_type IN ('PAYMENT_VERIFIED','PAYMENT_ALLOCATED','PAYMENT_REVERSED','PAYMENT_REFUNDED','PAYMENT_DISPUTED','SUBMISSION_REJECTED')", name="ck_payment_ledger_event_type"),
         sa.CheckConstraint("currency = 'BDT'", name="ck_payment_ledger_event_currency_bdt"),
     )
     op.create_index("ix_payment_ledger_events_company_created", "payment_ledger_events", ["company_id", "created_at"])
@@ -185,6 +195,8 @@ def upgrade() -> None:
         sa.UniqueConstraint("provider_name", "idempotency_key", name="uq_payment_intent_provider_idempotency"),
         sa.UniqueConstraint("provider_order_id", name="uq_payment_intent_provider_order"),
         sa.UniqueConstraint("provider_transaction_id", name="uq_payment_intent_provider_transaction"),
+        sa.CheckConstraint("provider_name IN ('SSLCOMMERZ','BKASH','NAGAD')", name="ck_payment_intent_provider"),
+        sa.CheckConstraint("status IN ('CREATED','PENDING','SUCCEEDED','FAILED','EXPIRED','CANCELLED')", name="ck_payment_intent_status"),
         sa.ForeignKeyConstraint(["invoice_id", "company_id"], ["invoices.id", "invoices.company_id"], ondelete="RESTRICT", name="fk_payment_intents_invoice_company"),
         sa.CheckConstraint("amount_bdt > 0", name="ck_payment_intent_amount_positive"),
         sa.CheckConstraint("currency = 'BDT'", name="ck_payment_intent_currency_bdt"),
@@ -204,6 +216,7 @@ def upgrade() -> None:
         sa.Column("processed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("failure_reason", sa.Text(), nullable=True),
         sa.UniqueConstraint("provider_name", "provider_event_id", name="uq_payment_provider_event"),
+        sa.CheckConstraint("processing_status IN ('RECEIVED','PROCESSING','PROCESSED','FAILED')", name="ck_payment_provider_event_status"),
     )
     op.create_index("ix_payment_provider_events_status_received", "payment_provider_events", ["processing_status", "received_at"])
 
@@ -226,6 +239,8 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.CheckConstraint("amount_bdt >= 0", name="ck_subscription_amount_nonnegative"),
         sa.CheckConstraint("currency = 'BDT'", name="ck_subscription_currency_bdt"),
+        sa.CheckConstraint("billing_interval IN ('MONTHLY','QUARTERLY','ANNUAL','ONE_TIME')", name="ck_subscription_billing_interval"),
+        sa.CheckConstraint("status IN ('PENDING','ACTIVE','PAST_DUE','CANCELLED','EXPIRED','SUSPENDED')", name="ck_subscription_status"),
     )
     op.create_index("ix_client_subscriptions_company_status", "client_subscriptions", ["company_id", "status"])
 
