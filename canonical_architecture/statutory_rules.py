@@ -977,7 +977,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "DIR-005": {
         "rule_id": "DIR-005",
         "legal_domain": "Corporate",
-        "law": "Companies Act 1994, Section 130 (director-interest disclosure); generic register obligation requires reconciliation",
+        "law": "Companies Act 1994, Section 130 (director-interest disclosure); generic register duty/title requires legal reconciliation",
         "requirement": "The profile reports no director-interest register. Section 130 concerns disclosure of interests in company contracts/arrangements; it does not by itself establish this generic register duty.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
