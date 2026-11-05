@@ -176,7 +176,7 @@ def get_database_url() -> str:
     return url
 
 
-async def seed_rules(dry_run: bool = False, verbose: bool = False) -> int:
+async def seed_rules(dry_run: bool = True, verbose: bool = False) -> int:
     print(f"\n{'='*60}")
     print(f" NEUM LEX COUNSEL — Legal Rules Seeder v2.0")
     print(f" ILRMF — {EXPECTED_RULE_COUNT} rules")
