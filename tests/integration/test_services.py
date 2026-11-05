@@ -19,6 +19,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, timedelta
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -249,7 +250,7 @@ class TestComplianceService:
             score_breakdown=score_breakdown,
             rescue_sequence=None,
         )
-        mock_engine = SimpleNamespace(evaluate=lambda _profile: mock_output)
+        mock_engine = SimpleNamespace(evaluate=Mock(return_value=mock_output))
 
         svc = ComplianceService(db)
         result = await svc.evaluate_company(
