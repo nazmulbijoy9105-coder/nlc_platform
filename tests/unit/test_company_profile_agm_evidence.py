@@ -52,7 +52,9 @@ def test_agm_profile_evidence_comes_from_the_latest_agm_record():
     assert evidence["agm_quorum_basis_verified"] is True
     assert evidence["agm_quorum_met"] is True
     assert evidence["auditor_reappointed_at_agm"] is False
-    assert evidence["agm_minutes_prepared"] is True
+    # A stored boolean/document ID is still not a reviewer-verified
+    # minute-book finding; the engine must remain fail-closed.
+    assert evidence["agm_minutes_prepared"] is None
     assert evidence["notice_sent_date"] == date(2026, 1, 1)
     assert evidence["agm_notice_verified_absent"] is None
 
