@@ -39,17 +39,6 @@ def upgrade() -> None:
         sa.Column("score_breakdown_snapshot", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.UniqueConstraint("company_id", "calculated_at", name="uq_eval_run_company_time"),
     )
-    op.create_index(
-        "ix_eval_runs_company_calculated_at",
-        "compliance_evaluation_runs",
-        ["company_id", "calculated_at"],
-    )
-    op.create_index(
-        "ix_eval_runs_calculated_at",
-        "compliance_evaluation_runs",
-        ["calculated_at"],
-    )
-
     # A non-owner application role must be able to read its own identity and
     # company mappings. Writes to these access-control tables remain admin-only.
     op.execute("ALTER TABLE users ENABLE ROW LEVEL SECURITY")
