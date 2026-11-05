@@ -85,7 +85,7 @@ def upgrade() -> None:
 
     op.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
     op.execute("CREATE SCHEMA IF NOT EXISTS nlc_private")
-    op.execute("REVOKE ALL ON SCHEMA nlc_private FROM PUBLIC")
+    op.execute("REVOKE ALL ON SCHEMA nlc_private FROM PUBLIC, nlc_app_role")
     op.execute("""
         CREATE TABLE IF NOT EXISTS nlc_private.rls_signing_key (
             singleton boolean PRIMARY KEY DEFAULT TRUE CHECK (singleton),
@@ -519,6 +519,7 @@ def upgrade() -> None:
 
     # Runtime privileges: RLS supplies row scope; SQL grants supply operation
     # scope. TRUNCATE, REFERENCES and TRIGGER are never granted to the app role.
+    op.execute("REVOKE CREATE ON SCHEMA public FROM nlc_app_role")
     op.execute("GRANT USAGE ON SCHEMA public TO nlc_app_role")
     op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO nlc_app_role")
     op.execute("GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO nlc_app_role")
@@ -529,7 +530,7 @@ def upgrade() -> None:
 
     # Read-only rule parity is exposed through a narrow view, not tenant tables.
     op.execute("CREATE SCHEMA IF NOT EXISTS audit")
-    op.execute("REVOKE ALL ON SCHEMA audit FROM PUBLIC")
+    op.execute("REVOKE ALL ON SCHEMA audit FROM PUBLIC, nlc_app_role")
     op.execute("REVOKE ALL ON audit.active_legal_rule_ids FROM PUBLIC")
     op.execute("""
         DO $audit_role$
