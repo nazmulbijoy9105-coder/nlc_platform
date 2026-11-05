@@ -213,8 +213,8 @@ class QuotationService(BaseService[Quotation]):
         )
         result = await self.db.execute(
             text(
-                "SELECT COUNT(*) FROM quotations "
-                "WHERE quotation_number LIKE :prefix"
+                "SELECT COALESCE(MAX(CAST(SPLIT_PART(quotation_number, '-', 3) AS INTEGER)), 0) "
+                "FROM quotations WHERE quotation_number LIKE :prefix"
             ),
             {"prefix": f"NLC-{year}-%"},
         )
