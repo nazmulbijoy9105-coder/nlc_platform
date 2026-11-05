@@ -82,12 +82,9 @@ def _agm_profile_evidence(latest_agm) -> dict:
         and getattr(latest_agm, "short_notice_consent_verified_at", None) is not None
         and getattr(latest_agm, "short_notice_consent_verified_by", None) is not None
     )
-    minutes_prepared = (
-        True
-        if getattr(latest_agm, "minutes_prepared", None) is True
-        and getattr(latest_agm, "minutes_document_id", None) is not None
-        else None
-    )
+    # No independent minutes-review metadata exists yet; a raw boolean or
+    # attached document ID alone is not a verified finding.
+    minutes_prepared = None
 
     return {
         "members_present_at_agm": (
