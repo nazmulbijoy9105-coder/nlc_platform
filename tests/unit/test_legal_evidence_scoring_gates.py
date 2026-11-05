@@ -1,4 +1,5 @@
 from datetime import date
+from types import SimpleNamespace
 
 from app.rule_engine.engine import (
     CompanyProfile,
@@ -9,6 +10,7 @@ from app.rule_engine.engine import (
     Severity,
     VERIFIED_RULE_IDS,
 )
+from app.services.compliance_service import _applied_score_impacts
 
 
 def _profile(**overrides):
@@ -39,6 +41,45 @@ def _profile(**overrides):
 
 def _flag(result, rule_id):
     return next(flag for flag in result.flags if flag.rule_id == rule_id)
+
+
+def test_unapproved_black_override_is_excluded_before_override_semantics():
+    flag = SimpleNamespace(
+        rule_id="UNAPPROVED-TEST-ONLY",
+        resolved=False,
+        conditional_applies=True,
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+        severity=Severity.BLACK,
+        is_black_override=True,
+        score_impact=100,
+    )
+
+    result = _applied_score_impacts([flag])
+
+    assert result == [{"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"}]
+
+
+def test_unapproved_black_rule_cannot_force_black_score_band():
+    profile = _profile()
+    unapproved_black = ComplianceFlag(
+        rule_id="UNAPPROVED-TEST-ONLY",
+        flag_code="UNAPPROVED-BLACK",
+        severity=Severity.BLACK,
+        score_impact=100,
+        revenue_tier=RevenueTier.CORPORATE_RESCUE,
+        description="Unapproved test finding.",
+        statutory_basis="Test only; not a legal rule.",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+        is_black_override=True,
+    )
+
+    result = NLCRuleEngine()._calculate_score([unapproved_black], profile)
+
+    assert result.override_applied is False
+    assert result.black_flag_count == 0
+    assert result.risk_band == Severity.NOT_EVALUATED
 
 
 def test_calendar_month_and_18_month_deadline_are_not_fixed_day_approximations():
