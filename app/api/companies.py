@@ -9,6 +9,7 @@ from datetime import date
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
@@ -18,7 +19,8 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
-from app.models.enums import CompanyStatus, CompanyType, RevenueTier, RiskBand
+from app.models.company import CompanyUserAccess
+from app.models.enums import CompanyStatus, CompanyType, RevenueTier, RiskBand, UserRole
 from app.models.user import User
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
@@ -174,7 +176,27 @@ class MessageResponse(BaseModel):
     success: bool = True
 
 
-def _company_to_response(company) -> CompanyResponse:
+async def _financial_access_ids(
+    db: AsyncSession,
+    current_user: User,
+    company_ids: list[uuid.UUID],
+) -> set[uuid.UUID]:
+    if current_user.role in (UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRole.LEGAL_STAFF):
+        return set(company_ids)
+    if not company_ids:
+        return set()
+    result = await db.execute(
+        select(CompanyUserAccess.company_id).where(
+            CompanyUserAccess.user_id == current_user.id,
+            CompanyUserAccess.company_id.in_(company_ids),
+            CompanyUserAccess.is_active.is_(True),
+            CompanyUserAccess.can_view_financials.is_(True),
+        )
+    )
+    return set(result.scalars().all())
+
+
+def _company_to_response(company, *, can_view_financials: bool = True) -> CompanyResponse:
     director_count = 0
     if hasattr(company, "directors") and company.directors is not None:
         director_count = len(company.directors)
@@ -209,7 +231,7 @@ def _company_to_response(company) -> CompanyResponse:
         company_status=_s(getattr(company, "company_status", None)),
         financial_year_end=company.financial_year_end.isoformat() if getattr(company, "financial_year_end", None) else None,
         registered_address=getattr(company, "registered_address", None),
-        revenue_tier=_s(getattr(company, "revenue_tier", None)),
+        revenue_tier=_s(getattr(company, "revenue_tier", None)) if can_view_financials else None,
         is_fdi_registered=getattr(company, "is_fdi_registered", None),
         is_dormant=getattr(company, "is_dormant", None),
         created_at=company.created_at.isoformat() if getattr(company, "created_at", None) else None,
@@ -218,6 +240,16 @@ def _company_to_response(company) -> CompanyResponse:
         red_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("RED", "Severity.RED")]),
         yellow_flags=len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("YELLOW", "Severity.YELLOW")]),
         is_manufacturing=getattr(company, "is_manufacturing", None),
+        tax_return_filed_for_current_fy=(
+            getattr(company, "tax_return_filed_for_current_fy", None)
+            if can_view_financials else None
+        ),
+        advance_tax_q1_paid=getattr(company, "advance_tax_q1_paid", None) if can_view_financials else None,
+        advance_tax_q2_paid=getattr(company, "advance_tax_q2_paid", None) if can_view_financials else None,
+        advance_tax_q3_paid=getattr(company, "advance_tax_q3_paid", None) if can_view_financials else None,
+        advance_tax_q4_paid=getattr(company, "advance_tax_q4_paid", None) if can_view_financials else None,
+        penalty_notices_received=getattr(company, "penalty_notices_received", None) if can_view_financials else None,
+        penalty_notices_resolved=getattr(company, "penalty_notices_resolved", None) if can_view_financials else None,
     )
 
 
@@ -253,8 +285,30 @@ async def create_company(body: CompanyCreateRequest, request: Request, current_u
 @router.get("", response_model=list[CompanyResponse], summary="List companies")
 async def list_companies(search: str | None = Query(None), risk_band: RiskBand | None = Query(None), company_status: CompanyStatus | None = Query(None), revenue_tier: RevenueTier | None = Query(None), is_dormant: bool | None = Query(None), pagination: Pagination = Depends(), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     svc = CompanyService(db)
-    companies, _total = await svc.list_companies(search=search, risk_band=risk_band, company_status=company_status, revenue_tier=revenue_tier, is_dormant=is_dormant, offset=pagination.offset, limit=pagination.page_size,     user_id=current_user.id)
-    return [_company_to_response(c) for c in companies]
+    if revenue_tier is not None and current_user.role not in (
+        UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRole.LEGAL_STAFF
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Revenue-tier filtering requires financial-data access.",
+        )
+    companies, _total = await svc.list_companies(
+        search=search,
+        risk_band=risk_band,
+        company_status=company_status,
+        revenue_tier=revenue_tier,
+        is_dormant=is_dormant,
+        offset=pagination.offset,
+        limit=pagination.page_size,
+        user_id=current_user.id,
+    )
+    financial_ids = await _financial_access_ids(
+        db, current_user, [company.id for company in companies]
+    )
+    return [
+        _company_to_response(c, can_view_financials=c.id in financial_ids)
+        for c in companies
+    ]
 
 
 @router.get("/{company_id}", response_model=CompanyResponse, dependencies=[Depends(require_company_access("company_id"))], summary="Get company")
@@ -263,7 +317,11 @@ async def get_company(company_id: uuid.UUID, current_user: User = Depends(get_cu
     company = await svc.get_with_relations(company_id)
     if not company:
         raise HTTPException(status_code=404, detail="Company not found.")
-    return _company_to_response(company)
+    financial_ids = await _financial_access_ids(db, current_user, [company.id])
+    return _company_to_response(
+        company,
+        can_view_financials=company.id in financial_ids,
+    )
 
 
 @router.patch("/{company_id}", response_model=CompanyResponse, dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN")), Depends(require_company_access("company_id"))], summary="Update company")
