@@ -29,11 +29,13 @@ def upgrade() -> None:
     uuid = postgresql.UUID(as_uuid=True)
     money = sa.Numeric(15, 2)
 
+    op.create_unique_constraint("uq_engagements_id_company", "engagements", ["id", "company_id"])
+
     op.create_table(
         "invoices",
         sa.Column("id", uuid, primary_key=True, server_default=sa.text("uuid_generate_v4()")),
         sa.Column("company_id", uuid, sa.ForeignKey("companies.id", ondelete="RESTRICT"), nullable=False),
-        sa.Column("engagement_id", uuid, sa.ForeignKey("engagements.id", ondelete="RESTRICT"), nullable=True),
+        sa.Column("engagement_id", uuid, nullable=True),
         sa.Column("invoice_number", sa.String(40), nullable=False),
         sa.Column("currency", sa.String(3), nullable=False, server_default="BDT"),
         sa.Column("subtotal_bdt", money, nullable=False),
@@ -50,6 +52,7 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.UniqueConstraint("invoice_number", name="uq_invoices_invoice_number"),
         sa.UniqueConstraint("id", "company_id", name="uq_invoices_id_company"),
+        sa.ForeignKeyConstraint(["engagement_id", "company_id"], ["engagements.id", "engagements.company_id"], ondelete="RESTRICT", name="fk_invoices_engagement_company"),
         sa.CheckConstraint("subtotal_bdt >= 0 AND tax_bdt >= 0 AND total_bdt >= 0", name="ck_invoice_amounts_nonnegative"),
         sa.CheckConstraint("paid_bdt >= 0 AND balance_bdt >= 0", name="ck_invoice_balances_nonnegative"),
         sa.CheckConstraint("currency = 'BDT'", name="ck_invoice_currency_bdt"),
