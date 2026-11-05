@@ -251,8 +251,12 @@ class TestAGMRules:
             agm_held_this_cycle=True,
         )
         output = rule_engine.evaluate(profile)
-        # Attendance alone cannot establish a quorum breach or threshold.
-        assert_flag_not_triggered(output, "AGM-005")
+        # Verified attendance without a verified Articles/statutory quorum
+        # basis is UNKNOWN, never a confirmed quorum breach or deduction.
+        flag = next(f for f in output.flags if f.rule_id == "AGM-005")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
 
     # ── AGM-006: Auditor Not Reappointed ─────────────────────────────────────
 
@@ -384,9 +388,9 @@ class TestAuditRules:
         )
         output = rule_engine.evaluate(profile)
         flag = next(f for f in output.flags if f.rule_id == "AUD-003")
-        assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
-        assert flag.score_impact == 0
         assert flag.state == RuleState.UNKNOWN
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
         assert flag.is_black_override is False
         assert output.score_breakdown.override_applied is False
 
