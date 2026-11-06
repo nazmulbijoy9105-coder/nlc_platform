@@ -122,6 +122,8 @@ The production Neon branch `production` (`br-purple-fog-aodj8s04`), database `ne
 **Consequence:** do not deploy the new API against this production database, do not start migration 0050, and do not change the score-release switch. First reconcile the production migration lineage and role topology under an approved DBA runbook, take and verify a restorable backup, then prove the post-migration role, RLS, signed identity, and tenant-isolation controls against the actual runtime connection.
 
 ### Render deployment identity and migration error
+The Render `nlc_platform` service is currently on live deployment commit `9e4f99dcb3fade6510f77b555d47330e3af5b19b` (4 November 2026), triggered manually; `autoDeploy` is disabled. The latest inspected deployment remains that live revision. Merging these PRs will not automatically update production, and no deployment has been triggered from this audit.
+
 
 - Render service `nlc_platform` is configured for branch `main` with automatic deployment disabled. Latest successful deployment observed was commit `9e4f99d`; later attempts for `51c7e6c` failed.
 - Render logs recorded `permission denied to alter role` and later `Can't locate revision identified by '0049_evaluation_runs_and_identity_rls'`. The referenced migration file exists in the GitHub tree at `51c7e6c`; PR #125 CI subsequently passed the single-head and fresh-PostgreSQL upgrade jobs. The runtime artifact/database target mismatch remains unresolved. Confirm the exact deployed image and actual Render database URL before deployment; do not assume the inspected Neon branch is the same database.
