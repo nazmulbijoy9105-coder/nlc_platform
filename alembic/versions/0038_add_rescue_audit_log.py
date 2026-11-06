@@ -33,6 +33,22 @@ def upgrade() -> None:
     op.create_index("ix_rescue_audit_log_finding_id", "rescue_audit_log", ["finding_id"])
     op.create_index("ix_rescue_audit_log_created_at", "rescue_audit_log", ["created_at"])
 
+    # Rescue audit records contain actor/evidence history. Keep the table
+    # inaccessible to the application until signed tenant policies are
+    # installed by migration 0050; no raw-GUC policy is acceptable here.
+    op.execute("ALTER TABLE public.rescue_audit_log ENABLE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE public.rescue_audit_log FORCE ROW LEVEL SECURITY")
+    op.execute("REVOKE ALL ON TABLE public.rescue_audit_log FROM PUBLIC")
+    op.execute("""
+        DO $role$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
+                EXECUTE 'REVOKE ALL ON TABLE public.rescue_audit_log FROM nlc_app_role';
+            END IF;
+        END
+        $role$;
+    """)
+
 
 def downgrade() -> None:
     # Forward-only: rescue audit records are legal/compliance evidence.
