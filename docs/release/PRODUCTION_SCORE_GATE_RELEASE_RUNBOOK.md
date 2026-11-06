@@ -26,7 +26,7 @@ Set these in the Render service before running migrations or deploying the new a
 - `DATABASE_URL`: privileged Neon migration/maintenance URL. Never use this connection for API runtime.
 - `APP_DATABASE_URL`: URL for `nlc_app_role`, a non-superuser role with `BYPASSRLS=false`.
 - `REQUIRE_RLS_APP_ROLE=true`. Render runtime detection also forces this guard whenever `RENDER=true`, even if `ENVIRONMENT` is omitted or misconfigured; Render services must always receive `APP_DATABASE_URL` as `nlc_app_role`.
-- `NLC_RLS_HMAC_SECRET`: generate with `openssl rand -hex 32`. Use the exact same value for the migration and the application runtime. Do not paste it into chat, commits, or logs.
+- `NLC_RLS_HMAC_SECRET`: generate with `openssl rand -hex 32`. Use the exact same value for the migration and the application runtime. Production/Render startup now fails if this secret is missing or shorter than 32 characters. Do not paste it into chat, commits, or logs.
 
 The runtime engine uses `APP_DATABASE_URL`; Alembic uses `DATABASE_URL`. The application refuses to start in production without `APP_DATABASE_URL`.
 
