@@ -546,36 +546,31 @@ async def test_legal_rule_registry_is_superadmin_write_and_history_is_append_onl
 
 
 @pytest.mark.asyncio
-async def test_security_definer_rls_helpers_are_owned_by_bypassrls_principal(db):
+async def test_all_public_security_definer_functions_have_safe_owners(db):
     result = await db.execute(
         text(
             """
-            SELECT p.proname, owner.rolname, owner.rolsuper, owner.rolbypassrls
+            SELECT p.oid::regprocedure::text AS signature,
+                   owner.rolname,
+                   owner.rolsuper,
+                   owner.rolbypassrls
             FROM pg_proc p
             JOIN pg_namespace n ON n.oid = p.pronamespace
             JOIN pg_roles owner ON owner.oid = p.proowner
             WHERE n.nspname = 'public'
               AND p.prosecdef IS TRUE
-              AND p.proname IN (
-                  'nlc_current_user_principal',
-                  'nlc_current_user_id',
-                  'nlc_current_user_context_valid',
-                  'nlc_current_user_is_staff',
-                  'nlc_can_access_company',
-                  'nlc_can_view_financials_company',
-                  'nlc_can_manage_financials_company',
-                  'nlc_can_edit_company',
-                  'nlc_protect_user_security_fields',
-                  'nlc_guard_notification_acknowledgement'
-              )
-            ORDER BY p.proname
+            ORDER BY signature
             """
         )
     )
     owners = result.fetchall()
-    assert len(owners) == 10
-    for function_name, owner_name, is_superuser, bypasses_rls in owners:
-        assert is_superuser or bypasses_rls, (
-            f"{function_name} owner {owner_name} must bypass RLS; "
-            "otherwise FORCE-RLS policy helper queries can recurse"
-        )
+    assert owners, "expected security-definer functions installed by the migrations"
+    unsafe = [
+        (signature, owner_name)
+        for signature, owner_name, is_superuser, bypasses_rls in owners
+        if not is_superuser and not bypasses_rls
+    ]
+    assert unsafe == [], (
+        "SECURITY DEFINER functions that access FORCE-RLS data must be owned "
+        f"by a BYPASSRLS or SUPERUSER migration principal: {unsafe}"
+    )
