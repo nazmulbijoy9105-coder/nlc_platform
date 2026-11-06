@@ -120,7 +120,7 @@ The following is an inventory of rules present in the current legal-basis matrix
 | CAP-002 | Charge Not Registered With RJSC Within 21 Days | Section 159(1), Companies Act 1994 (Bangladesh) | YELLOW / 5 / BLACK=false | PENDING COUNSEL |
 | CAP-003 | Capital Reduction Without Court Order | Section 150, Companies Act 1994 (Bangladesh) | BLACK / 15 / BLACK=true | PENDING COUNSEL |
 | CAP-004 | Special Resolution Not Filed With RJSC | Section 88, Companies Act 1994 (Bangladesh) | YELLOW / 8 / BLACK=false | PENDING COUNSEL |
-| CHG-001 | Charge Satisfaction Not Filed | Section 159, Companies Act 1994 (Bangladesh) | YELLOW / 3 / BLACK=false | PENDING COUNSEL |
+| CHG-001 | Charge Satisfaction — Evidence Review Required | Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh) | NOT_EVALUATED / 0 / BLACK=false | PENDING COUNSEL; registrability and filing evidence required |
 | DEF-001 | Director Disqualified | Section 94, Companies Act 1994 (Bangladesh) | BLACK / 20 / BLACK=true | PENDING COUNSEL |
 | DEF-002 | Unresolved Penalty Notices | Section 397, Companies Act 1994 (Bangladesh) | YELLOW / 5 / BLACK=false | PENDING COUNSEL |
 | DIR-001 | Director Appointment Not Filed Within 14 Days | Section 90, Companies Act 1994 (Bangladesh) | YELLOW / 10 / BLACK=false | PENDING COUNSEL |
