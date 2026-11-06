@@ -106,6 +106,18 @@ The following observations were obtained from the live Neon production branch us
 - `compliance_calendar_events` currently has `company_id` but RLS is disabled. Migration 0050 includes it in the tenant-scoped table set; verify it is enabled, forced and covered by the correct company policy after upgrade.
 - The live `nlc_ci_audit_role` is already `LOGIN` but currently `INHERIT`; change it to `NOINHERIT` through the authorised Neon role-management path. Do not weaken the preflight to hide this mismatch.
 
+### 6 November 2026 live Neon production re-check (read-only)
+
+The production Neon branch `production` (`br-purple-fog-aodj8s04`), database `neondb`, was queried read-only on 6 November 2026. The observed state is:
+
+- `alembic_version` is `0042_dedup_key`; the expected current main migration chain is at `0057_merge_final_heads`, with PR #125 adding `0058_suppress_unreleased_rule_notifications`. Production is substantially behind the repository chain.
+- `nlc_private.rls_signing_key` does not exist, confirming signed RLS identity migration 0050 has not been applied.
+- `public.companies` has RLS not forced (`relforcerowsecurity=false`).
+- Both `nlc_app_role` and `nlc_ci_audit_role` are LOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOREPLICATION and NOBYPASSRLS, but both still have `INHERIT=true`.
+- The only observed memberships involving these roles are `nlc_app_role` granted to `neondb_owner` and `nlc_ci_audit_role` granted to `neondb_owner`; both rows have `admin_option=true`, `inherit_option=false`, `set_option=false`. Migration 0050 rejects any membership in either direction. The DBA must assess and remove these memberships through an authorised role-management operation before migration; do not assume that `NOINHERIT` alone satisfies the preflight.
+
+**Consequence:** do not deploy the new API against this production database, do not start migration 0050, and do not change the score-release switch. First reconcile the production migration lineage and role topology under an approved DBA runbook, take and verify a restorable backup, then prove the post-migration role, RLS, signed identity, and tenant-isolation controls against the actual runtime connection.
+
 ### Render deployment identity and migration error
 
 - Render service `nlc_platform` is configured for branch `main` with automatic deployment disabled. Latest successful deployment observed was commit `9e4f99d`; later attempts for `51c7e6c` failed.
