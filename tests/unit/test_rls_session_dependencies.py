@@ -122,3 +122,32 @@ async def test_stale_token_role_is_rejected_before_session_is_yielded(monkeypatc
     assert exc.value.status_code == 401
     assert session.rolled_back is True
     assert session.closed is True
+
+
+@pytest.mark.asyncio
+async def test_legal_staff_keeps_signed_user_identity_not_admin_service_principal(monkeypatch):
+    user_id = uuid.uuid4()
+    session = _Session(SimpleNamespace(role=UserRole.LEGAL_STAFF, is_active=True))
+    calls = []
+
+    monkeypatch.setattr(dependencies, "AsyncSessionLocal", lambda: session)
+
+    async def set_user_context(db, value):
+        calls.append(("user", value))
+
+    async def set_admin_context(db):
+        calls.append(("admin", None))
+
+    monkeypatch.setattr(dependencies, "set_rls_context", set_user_context)
+    monkeypatch.setattr(dependencies, "set_admin_context", set_admin_context)
+
+    token = TokenData(user_id=str(user_id), email="legal@example.test", role="LEGAL_STAFF")
+    generator = dependencies.get_db_for_user(token)
+    yielded = await generator.__anext__()
+    assert yielded is session
+    with pytest.raises(StopAsyncIteration):
+        await generator.__anext__()
+
+    assert calls == [("user", str(user_id))]
+    assert session.committed is True
+    assert session.closed is True
