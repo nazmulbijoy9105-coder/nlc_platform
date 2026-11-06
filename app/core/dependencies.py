@@ -565,22 +565,15 @@ async def get_db_for_user(
     async with AsyncSessionLocal() as session:
         try:
             role_value = str(getattr(token.role, "value", token.role))
-            # Never map a human staff account to the shared ADMIN
-            # service principal. Finance policies intentionally distinguish
-            # LEGAL_STAFF from SUPER_ADMIN/ADMIN_STAFF.
-            privileged_roles = {
-                UserRole.SUPER_ADMIN.value,
-                UserRole.ADMIN_STAFF.value,
-            }
+            # Every human account, including SUPER_ADMIN and ADMIN_STAFF,
+            # retains its signed UUID. ADMIN is reserved for trusted internal
+            # service/cron operations, never an authenticated human session.
             try:
                 user_uuid = uuid.UUID(token.user_id)
             except (TypeError, ValueError):
                 raise HTTPException(status_code=401, detail="Invalid authenticated user identity.")
 
-            if role_value in privileged_roles:
-                await set_admin_context(session)
-            else:
-                await set_rls_context(session, token.user_id)
+            await set_rls_context(session, token.user_id)
 
             result = await session.execute(
                 select(User).where(
