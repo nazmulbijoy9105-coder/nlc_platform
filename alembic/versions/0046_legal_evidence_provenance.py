@@ -1,7 +1,7 @@
 """Add explicit legal evidence verification fields.
 
-Revision ID: 0045_legal_evidence_provenance
-Revises: 0044_webhook_schema_reconcile
+Revision ID: 0046_legal_evidence_provenance
+Revises: 0045_agm_held_fields
 """
 from alembic import op
 
