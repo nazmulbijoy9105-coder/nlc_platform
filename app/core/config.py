@@ -1,6 +1,7 @@
 import os
 from typing import List
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -36,6 +37,17 @@ class Settings(BaseSettings):
         or os.getenv("ENVIRONMENT", "production").strip().lower() in {"prod", "production"}
         else os.getenv("REQUIRE_RLS_APP_ROLE", "false").strip().lower() == "true"
     )
+
+    @model_validator(mode="after")
+    def enforce_deployment_rls_role(self):
+        # BaseSettings may load REQUIRE_RLS_APP_ROLE from the environment and
+        # override its class default. Reassert the invariant after env parsing.
+        if (
+            os.getenv("RENDER", "").strip().lower() == "true"
+            or self.ENVIRONMENT.strip().lower() in {"prod", "production"}
+        ):
+            self.REQUIRE_RLS_APP_ROLE = True
+        return self
 
     @property
     def ASYNC_DATABASE_URL(self) -> str:
