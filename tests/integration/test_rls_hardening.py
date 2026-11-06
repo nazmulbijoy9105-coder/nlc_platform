@@ -523,24 +523,21 @@ async def test_security_definer_rls_helpers_are_owned_by_bypassrls_principal(db)
             JOIN pg_roles owner ON owner.oid = p.proowner
             WHERE n.nspname = 'public'
               AND p.prosecdef IS TRUE
-              AND p.proname = ANY(:function_names)
+              AND p.proname IN (
+                  'nlc_current_user_principal',
+                  'nlc_current_user_id',
+                  'nlc_current_user_context_valid',
+                  'nlc_current_user_is_staff',
+                  'nlc_can_access_company',
+                  'nlc_can_view_financials_company',
+                  'nlc_can_manage_financials_company',
+                  'nlc_can_edit_company',
+                  'nlc_protect_user_security_fields',
+                  'nlc_guard_notification_acknowledgement'
+              )
             ORDER BY p.proname
             """
-        ),
-        {
-            "function_names": [
-                "nlc_current_user_principal",
-                "nlc_current_user_id",
-                "nlc_current_user_context_valid",
-                "nlc_current_user_is_staff",
-                "nlc_can_access_company",
-                "nlc_can_view_financials_company",
-                "nlc_can_manage_financials_company",
-                "nlc_can_edit_company",
-                "nlc_protect_user_security_fields",
-                "nlc_guard_notification_acknowledgement",
-            ]
-        },
+        )
     )
     owners = result.fetchall()
     assert len(owners) == 10
