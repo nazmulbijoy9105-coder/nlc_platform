@@ -614,16 +614,21 @@ class ComplianceService(BaseService[ComplianceFlag]):
         black_count = verified_severities.count("BLACK")
         red_count = verified_severities.count("RED")
         yellow_count = verified_severities.count("YELLOW")
+        pending_review_count = len(rows) - len(verified_severities)
         summary.update({
-            "total_active": len(rows),
-            "total_active_flags": len(rows),
+            # Customer-facing active counts include only rules approved for release.
+            # Unapproved engine flags remain separately visible as review prompts.
+            "total_active": len(verified_severities),
+            "total_active_flags": len(verified_severities),
+            "pending_review": pending_review_count,
+            "pending_review_flags": pending_review_count,
             "black": black_count,
             "red": red_count,
             "yellow": yellow_count,
             "black_flags": black_count,
             "red_flags": red_count,
             "yellow_flags": yellow_count,
-            "not_evaluated": len(rows) - len(verified_severities),
+            "not_evaluated": pending_review_count,
         })
         return summary
 
