@@ -656,3 +656,120 @@ async def test_runtime_startup_rejects_mismatched_rls_signing_secret(monkeypatch
     monkeypatch.setattr(database, "_rls_signature", lambda principal: "invalid-signature")
     with pytest.raises(RuntimeError, match="does not match the database signing key"):
         await database.verify_runtime_database_role()
+
+
+@pytest.mark.asyncio
+async def test_public_aggregate_views_execute_as_invoker_and_obey_tenant_rls(
+    db, db_client_user, db_company, db_other_company
+):
+    """View ownership must not bypass forced tenant RLS on base tables."""
+    result = await db.execute(
+        text(
+            """
+            SELECT c.relname, c.reloptions
+            FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public'
+              AND c.relkind = 'v'
+              AND c.relname IN (
+                  'vw_admin_dashboard_kpis',
+                  'vw_company_flag_summary',
+                  'vw_risk_distribution',
+                  'vw_upcoming_deadlines',
+                  'vw_revenue_pipeline'
+              )
+            """
+        )
+    )
+    options = {name: (reloptions or []) for name, reloptions in result.fetchall()}
+    expected = {
+        "vw_admin_dashboard_kpis",
+        "vw_company_flag_summary",
+        "vw_risk_distribution",
+        "vw_upcoming_deadlines",
+        "vw_revenue_pipeline",
+    }
+    assert set(options) == expected
+    for name, reloptions in options.items():
+        assert "security_invoker=true" in reloptions, name
+
+    await set_rls_context(db, str(db_client_user.id))
+    visible = await db.execute(
+        text("SELECT company_id FROM public.vw_company_flag_summary")
+    )
+    visible_company_ids = {str(row[0]) for row in visible.fetchall()}
+    assert str(db_company.id) in visible_company_ids
+    assert str(db_other_company.id) not in visible_company_ids
+
+
+@pytest.mark.asyncio
+async def test_legal_staff_cannot_read_engagements_or_revenue_pipeline(
+    db, db_company
+):
+    """Legal staff permissions must not inherit commercial revenue visibility."""
+    import uuid
+    from datetime import date
+    from decimal import Decimal
+
+    from app.models.commercial import Engagement
+    from app.models.enums import RevenueTier, UserRole
+    from app.models.user import User
+
+    admin_user = User(
+        id=uuid.uuid4(),
+        email=f"revenue-admin-{uuid.uuid4().hex[:8]}@nlctest.com",
+        full_name="Revenue Admin",
+        password_hash="!test-no-login",
+        role=UserRole.ADMIN_STAFF,
+        is_active=True,
+        totp_enabled=False,
+    )
+    legal_user = User(
+        id=uuid.uuid4(),
+        email=f"revenue-legal-{uuid.uuid4().hex[:8]}@nlctest.com",
+        full_name="Legal Staff",
+        password_hash="!test-no-login",
+        role=UserRole.LEGAL_STAFF,
+        is_active=True,
+        totp_enabled=False,
+    )
+    await set_admin_context(db)
+    db.add_all([admin_user, legal_user])
+    await db.flush()
+    await set_rls_context(db, str(admin_user.id))
+    engagement = Engagement(
+        company_id=db_company.id,
+        engagement_title="Restricted commercial revenue test",
+        engagement_type="COMPLIANCE_PACKAGE",
+        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+        identified_date=date.today(),
+        estimated_fee_bdt=Decimal("50000.00"),
+    )
+    db.add(engagement)
+    await db.flush()
+
+    await set_rls_context(db, str(admin_user.id))
+    admin_gate = await db.execute(
+        text("SELECT public.nlc_current_user_is_revenue_staff()")
+    )
+    assert admin_gate.scalar_one() is True
+    admin_rows = await db.execute(
+        text("SELECT count(*) FROM public.engagements WHERE id = :id"),
+        {"id": engagement.id},
+    )
+    assert admin_rows.scalar_one() == 1
+
+    await set_rls_context(db, str(legal_user.id))
+    legal_gate = await db.execute(
+        text("SELECT public.nlc_current_user_is_revenue_staff()")
+    )
+    assert legal_gate.scalar_one() is False
+    legal_rows = await db.execute(
+        text("SELECT count(*) FROM public.engagements WHERE id = :id"),
+        {"id": engagement.id},
+    )
+    assert legal_rows.scalar_one() == 0
+    revenue_rows = await db.execute(
+        text("SELECT count(*) FROM public.vw_revenue_pipeline")
+    )
+    assert revenue_rows.scalar_one() == 0
