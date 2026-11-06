@@ -132,7 +132,7 @@ The Render `nlc_platform` service is currently on live deployment commit `9e4f99
 ### Required post-upgrade production proof
 
 1. Query `alembic_version` and confirm the exact expected single head.
-2. Connect as `nlc_app_role`; verify `rolsuper=false`, `rolbypassrls=false`, `rolcreatedb=false`, `rolcreaterole=false`, `rolreplication=false`, and `rolinherit=false`.
+2. Connect as `nlc_app_role`; verify `rolsuper=false`, `rolbypassrls=false`, `rolcreatedb=false`, `rolcreaterole=false`, `rolreplication=false`, and `rolinherit=false`; verify zero role memberships in either direction. Startup now enforces this complete attribute and membership set.
 3. Verify the application cannot `TRUNCATE`, create triggers, or create references on tenant tables.
 4. As `nlc_app_role`, set only `app.current_user_id='ADMIN'` with no signature and confirm zero rows are visible in companies, flags, score history, users and access mappings.
 5. Verify signed user A can access only company A; signed user B can access only company B; forged UUIDs, stale signatures, raw ADMIN/AUTH/CATALOG sentinels and cross-tenant writes all fail.
