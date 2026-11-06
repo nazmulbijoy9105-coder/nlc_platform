@@ -253,18 +253,50 @@ async def verify_runtime_database_role() -> None:
         row = (
             await connection.execute(
                 text(
-                    "SELECT current_user, rolsuper, rolbypassrls "
+                    "SELECT current_user, rolsuper, rolcreatedb, rolcreaterole, "
+                    "rolinherit, rolreplication, rolbypassrls "
                     "FROM pg_roles WHERE rolname = current_user"
                 )
             )
         ).one_or_none()
-    if row is None:
-        raise RuntimeError("Unable to verify runtime PostgreSQL role")
-    role_name, is_superuser, bypasses_rls = row
-    if role_name != "nlc_app_role" or is_superuser or bypasses_rls:
+        if row is None:
+            raise RuntimeError("Unable to verify runtime PostgreSQL role")
+        (
+            role_name,
+            is_superuser,
+            can_create_db,
+            can_create_role,
+            inherits_roles,
+            can_replicate,
+            bypasses_rls,
+        ) = row
+        memberships = (
+            await connection.execute(
+                text(
+                    "SELECT EXISTS ("
+                    "SELECT 1 FROM pg_auth_members m "
+                    "JOIN pg_roles granted_role ON granted_role.oid = m.roleid "
+                    "JOIN pg_roles member_role ON member_role.oid = m.member "
+                    "WHERE granted_role.rolname = current_user "
+                    "OR member_role.rolname = current_user)"
+                )
+            )
+        ).scalar_one()
+
+    if (
+        role_name != "nlc_app_role"
+        or is_superuser
+        or can_create_db
+        or can_create_role
+        or inherits_roles
+        or can_replicate
+        or bypasses_rls
+        or memberships
+    ):
         raise RuntimeError(
             "Unsafe runtime database role: expected nlc_app_role with "
-            "NOSUPERUSER and NOBYPASSRLS"
+            "NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, "
+            "NOREPLICATION, NOBYPASSRLS and no role memberships"
         )
 
 
