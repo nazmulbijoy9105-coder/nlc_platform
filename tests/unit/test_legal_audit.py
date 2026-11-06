@@ -353,7 +353,7 @@ class TestChargeSatisfactionDeadline:
         )
         flag = _flag_by_id(result, "CHG-001")
         assert flag is not None
-        assert flag.statutory_basis == "Section 172, Companies Act 1994 (Bangladesh)"
+        assert flag.statutory_basis == "Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh)"
         assert flag.detail["form"] == "Form XXVIII"
         assert flag.detail["delay_days"] == 33
 
