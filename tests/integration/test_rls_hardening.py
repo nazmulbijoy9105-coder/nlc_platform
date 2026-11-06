@@ -703,15 +703,16 @@ async def test_public_aggregate_views_execute_as_invoker_and_obey_tenant_rls(
 
 
 @pytest.mark.asyncio
-async def test_legal_staff_cannot_read_engagements_or_revenue_pipeline(
-    db, db_company
+async def test_legal_staff_cannot_read_engagements_quotations_or_revenue_pipeline(
+    db, db_company, db_client_user
 ):
     """Legal staff permissions must not inherit commercial revenue visibility."""
     import uuid
     from datetime import date
     from decimal import Decimal
 
-    from app.models.commercial import Engagement
+    from app.models.commercial import Engagement, Quotation
+    from app.models.company import CompanyUserAccess
     from app.models.enums import RevenueTier, UserRole
     from app.models.user import User
 
@@ -736,6 +737,16 @@ async def test_legal_staff_cannot_read_engagements_or_revenue_pipeline(
     await set_admin_context(db)
     db.add_all([admin_user, legal_user])
     await db.flush()
+    db.add(
+        CompanyUserAccess(
+            user_id=legal_user.id,
+            company_id=db_company.id,
+            can_edit=False,
+            can_view_financials=False,
+            is_active=True,
+        )
+    )
+    await db.flush()
     await set_rls_context(db, str(admin_user.id))
     engagement = Engagement(
         company_id=db_company.id,
@@ -746,6 +757,20 @@ async def test_legal_staff_cannot_read_engagements_or_revenue_pipeline(
         estimated_fee_bdt=Decimal("50000.00"),
     )
     db.add(engagement)
+    await db.flush()
+    quotation = Quotation(
+        engagement_id=engagement.id,
+        company_id=db_company.id,
+        quotation_number=f"Q-REVENUE-{uuid.uuid4().hex[:12].upper()}",
+        quotation_date=date.today(),
+        valid_until=date.today(),
+        professional_fee_bdt=Decimal("50000.00"),
+        government_fee_bdt=Decimal("0.00"),
+        vat_bdt=Decimal("0.00"),
+        total_bdt=Decimal("50000.00"),
+        status="DRAFT",
+    )
+    db.add(quotation)
     await db.flush()
 
     await set_rls_context(db, str(admin_user.id))
@@ -758,6 +783,18 @@ async def test_legal_staff_cannot_read_engagements_or_revenue_pipeline(
         {"id": engagement.id},
     )
     assert admin_rows.scalar_one() == 1
+    admin_quotes = await db.execute(
+        text("SELECT count(*) FROM public.quotations WHERE id = :id"),
+        {"id": quotation.id},
+    )
+    assert admin_quotes.scalar_one() == 1
+
+    await set_rls_context(db, str(db_client_user.id))
+    customer_quotes = await db.execute(
+        text("SELECT count(*) FROM public.quotations WHERE id = :id"),
+        {"id": quotation.id},
+    )
+    assert customer_quotes.scalar_one() == 1
 
     await set_rls_context(db, str(legal_user.id))
     legal_gate = await db.execute(
@@ -769,6 +806,11 @@ async def test_legal_staff_cannot_read_engagements_or_revenue_pipeline(
         {"id": engagement.id},
     )
     assert legal_rows.scalar_one() == 0
+    legal_quotes = await db.execute(
+        text("SELECT count(*) FROM public.quotations WHERE id = :id"),
+        {"id": quotation.id},
+    )
+    assert legal_quotes.scalar_one() == 0
     revenue_rows = await db.execute(
         text("SELECT count(*) FROM public.vw_revenue_pipeline")
     )
