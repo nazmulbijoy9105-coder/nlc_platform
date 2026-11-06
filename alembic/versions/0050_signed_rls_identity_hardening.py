@@ -37,6 +37,17 @@ COMPANY_TABLES = (
 FINANCIAL_TABLES = ("annual_returns", "audits", "compliance_evaluation_runs")
 SENSITIVE_DOCUMENT_TYPES = ("AUDIT_REPORT", "ANNUAL_RETURN", "DUE_DILIGENCE")
 
+# PostgreSQL views execute with the view owner's privileges by default. These
+# views expose tenant, compliance, deadline and revenue aggregates; all must
+# evaluate underlying table permissions and RLS as the invoking runtime role.
+RLS_VIEWS = (
+    "vw_admin_dashboard_kpis",
+    "vw_company_flag_summary",
+    "vw_risk_distribution",
+    "vw_upcoming_deadlines",
+    "vw_revenue_pipeline",
+)
+
 RLS_TABLES = (
     "companies",
     *COMPANY_TABLES,
@@ -178,6 +189,21 @@ def upgrade() -> None:
             "RLS migration preflight found missing expected public tables: "
             + ", ".join(sorted(missing_rls_tables))
             + ". Reconcile schema drift and audit evidence before retrying."
+        )
+
+    missing_rls_views = [
+        view
+        for view in RLS_VIEWS
+        if bind.execute(
+            sa.text("SELECT to_regclass(:qualified_name)"),
+            {"qualified_name": f"public.{view}"},
+        ).scalar_one() is None
+    ]
+    if missing_rls_views:
+        raise RuntimeError(
+            "RLS migration preflight found missing expected public views: "
+            + ", ".join(sorted(missing_rls_views))
+            + ". Reconcile the view inventory before retrying."
         )
 
     op.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
@@ -325,6 +351,22 @@ def upgrade() -> None:
         $function$
     """)
     op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_current_user_is_revenue_staff()
+        RETURNS boolean
+        LANGUAGE sql
+        STABLE
+        SECURITY DEFINER
+        SET search_path = pg_catalog, public
+        AS $function$
+            SELECT EXISTS (
+                SELECT 1 FROM public.users u
+                WHERE u.id = public.nlc_current_user_id()
+                  AND u.is_active IS TRUE
+                  AND u.role::text IN ('SUPER_ADMIN', 'ADMIN_STAFF')
+            )
+        $function$
+    """)
+    op.execute("""
         CREATE OR REPLACE FUNCTION public.nlc_current_user_is_super_admin()
         RETURNS boolean
         LANGUAGE sql
@@ -454,6 +496,7 @@ def upgrade() -> None:
         "nlc_current_user_context_valid()",
         "nlc_current_user_is_staff()",
         "nlc_current_user_is_rule_admin()",
+        "nlc_current_user_is_revenue_staff()",
         "nlc_current_user_is_super_admin()",
         "nlc_can_access_company(uuid)",
         "nlc_can_view_financials_company(uuid)",
@@ -1008,13 +1051,21 @@ def upgrade() -> None:
         FOR INSERT
         WITH CHECK (public.nlc_current_user_is_super_admin())
     """)
-    for table in ("ai_output_log", "ai_prompt_templates", "engagements"):
+    for table in ("ai_output_log", "ai_prompt_templates"):
         op.execute(f"""
             CREATE POLICY {table}_staff_only ON public.{table}
             FOR ALL
             USING (public.nlc_current_user_is_staff())
             WITH CHECK (public.nlc_current_user_is_staff())
         """)
+    # Engagements contain commercial fees and revenue-pipeline facts. Legal
+    # staff is staff for legal operations, but must not read commercial data.
+    op.execute("""
+        CREATE POLICY engagements_revenue_staff_only ON public.engagements
+        FOR ALL
+        USING (public.nlc_current_user_is_revenue_staff())
+        WITH CHECK (public.nlc_current_user_is_revenue_staff())
+    """)
 
     # Runtime privileges: RLS supplies row scope; SQL grants supply operation
     # scope. TRUNCATE, REFERENCES and TRIGGER are never granted to the app role.
@@ -1023,6 +1074,13 @@ def upgrade() -> None:
     op.execute("GRANT USAGE ON SCHEMA public TO nlc_app_role")
     op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO nlc_app_role")
     op.execute("GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO nlc_app_role")
+    # Views owned by a BYPASSRLS migration role must not evaluate underlying
+    # rows with owner privileges. PostgreSQL 15+ security_invoker makes the
+    # caller's SELECT grants and row-level policies apply to the base tables.
+    for view in RLS_VIEWS:
+        op.execute(
+            f"ALTER VIEW public.{view} SET (security_invoker = true)"
+        )
     op.execute("REVOKE TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA public FROM nlc_app_role")
     op.execute("REVOKE ALL ON TABLE public.rescue_audit_log FROM PUBLIC")
     op.execute("REVOKE ALL ON TABLE public.alembic_version FROM nlc_app_role")
