@@ -27,10 +27,15 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "")  # privileged migration/maintenance connection
     APP_DATABASE_URL: str = os.getenv("APP_DATABASE_URL", "")  # non-BYPASSRLS runtime connection
-    REQUIRE_RLS_APP_ROLE: bool = os.getenv(
-        "REQUIRE_RLS_APP_ROLE",
-        "true" if os.getenv("ENVIRONMENT", "production").strip().lower() in {"prod", "production"} else "false",
-    ).strip().lower() == "true"
+    # Render is a deployment runtime even if ENVIRONMENT is omitted or
+    # incorrectly set. Never let an environment override disable RLS-role
+    # enforcement for an API or worker running on Render.
+    REQUIRE_RLS_APP_ROLE: bool = (
+        True
+        if os.getenv("RENDER", "").strip().lower() == "true"
+        or os.getenv("ENVIRONMENT", "production").strip().lower() in {"prod", "production"}
+        else os.getenv("REQUIRE_RLS_APP_ROLE", "false").strip().lower() == "true"
+    )
 
     @property
     def ASYNC_DATABASE_URL(self) -> str:
