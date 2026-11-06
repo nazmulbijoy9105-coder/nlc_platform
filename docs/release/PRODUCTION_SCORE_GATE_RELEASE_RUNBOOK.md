@@ -156,7 +156,7 @@ Before any production DDL or data migration:
 
 **Do not use Alembic downgrade as the production rollback strategy.** Migrations `0044`, `0046`, and `0053` are now explicitly forward-only because downgrading them would disable webhook RLS, delete legal evidence/provenance, or coerce unknown AGM minutes into false values. Other security and finance migrations are also forward-only. If a migration fails after applying transactional or autocommit work, stop and diagnose; use a verified Neon restore to a separate branch for recovery planning, or apply a reviewed forward-fix. Never restore over the live branch without an approved change window and explicit confirmation.
 
-Using a secure release runner with the privileged migration URL and the same `NLC_RLS_HMAC_SECRET`:
+Using a secure release runner with the privileged migration URL and the same `NLC_RLS_HMAC_SECRET`. The migration executor must be `BYPASSRLS` or `SUPERUSER` because it owns the `SECURITY DEFINER` RLS helper functions; migration 0050 fails closed if this is not true. This privilege belongs only to the controlled migration executor, never to `nlc_app_role` or `nlc_ci_audit_role`:
 
 ```bash
 alembic upgrade head
