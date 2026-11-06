@@ -1,9 +1,10 @@
-"""Reconcile existing webhook schema and keep evidence closed until signed RLS.
+"""Reconcile webhook schema without silently recreating missing evidence.
 
 Revision ID: 0044_webhook_schema_reconcile
 Revises: b10c91ac6860
 """
 from alembic import op
+import sqlalchemy as sa
 
 revision = "0044_webhook_schema_reconcile"
 down_revision = "b10c91ac6860"
@@ -11,29 +12,34 @@ branch_labels = None
 depends_on = None
 
 
+REQUIRED_TABLES = (
+    "webhook_endpoints",
+    "webhook_deliveries",
+    "rescue_audit_log",
+)
+
+
 def upgrade() -> None:
-    # 0037/0038 are the authoritative table-creation migrations. If an
-    # installation already records a later revision but these evidence tables
-    # are missing, do not silently create empty replacements and hide data
-    # loss. Stop for backup/schema-drift reconciliation.
-    op.execute("""
-        DO $preflight$
-        BEGIN
-            IF to_regclass('public.webhook_endpoints') IS NULL THEN
-                RAISE EXCEPTION
-                    'Expected public.webhook_endpoints from migration 0037 is missing; restore/reconcile evidence before continuing';
-            END IF;
-            IF to_regclass('public.webhook_deliveries') IS NULL THEN
-                RAISE EXCEPTION
-                    'Expected public.webhook_deliveries from migration 0037 is missing; restore/reconcile evidence before continuing';
-            END IF;
-            IF to_regclass('public.rescue_audit_log') IS NULL THEN
-                RAISE EXCEPTION
-                    'Expected public.rescue_audit_log from migration 0038 is missing; restore/reconcile audit evidence before continuing';
-            END IF;
-        END
-        $preflight$;
-    """)
+    # These objects are created by earlier revisions (0037/0038). If one is
+    # missing, the database has drifted or lost operational/audit evidence.
+    # Do not CREATE TABLE IF NOT EXISTS here: an empty replacement would hide
+    # missing webhook configuration, delivery history, or rescue audit rows.
+    bind = op.get_bind()
+    missing = [
+        table
+        for table in REQUIRED_TABLES
+        if bind.execute(
+            sa.text("SELECT to_regclass(:qualified_name)"),
+            {"qualified_name": f"public.{table}"},
+        ).scalar_one() is None
+    ]
+    if missing:
+        raise RuntimeError(
+            "Webhook/rescue schema preflight found missing historical tables: "
+            + ", ".join(sorted(missing))
+            + ". Restore/reconcile schema and evidence from a verified backup "
+            "before retrying; this migration will not recreate empty tables."
+        )
 
     for statement in (
         "CREATE INDEX IF NOT EXISTS idx_webhook_endpoints_user ON public.webhook_endpoints(user_id)",
@@ -49,10 +55,10 @@ def upgrade() -> None:
         "ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()"
     )
 
-    # Remove every legacy raw-GUC policy and force RLS with no replacement
-    # policy. This intentionally denies app access until migration 0050
-    # installs HMAC-verified owner/staff policies.
-    for table in ("webhook_endpoints", "webhook_deliveries", "rescue_audit_log"):
+    # Do not install raw caller-settable GUC policies. Close webhook and
+    # rescue-audit tables with FORCE RLS and no policies until 0050 installs
+    # cryptographically verified signed-identity policies.
+    for table in REQUIRED_TABLES:
         op.execute(f"ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY")
         op.execute(f"ALTER TABLE public.{table} FORCE ROW LEVEL SECURITY")
         op.execute(f"REVOKE ALL ON TABLE public.{table} FROM PUBLIC")
@@ -76,5 +82,5 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Forward-only: reintroducing raw-GUC policies would restore the
-    # caller-controlled identity vulnerability; table data is retained.
+    # caller-controlled identity vulnerability.
     pass
