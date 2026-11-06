@@ -949,8 +949,13 @@ def upgrade() -> None:
         )
     """)
     op.execute("""
-        CREATE POLICY legal_rules_super_admin_write ON public.legal_rules
-        FOR ALL
+        CREATE POLICY legal_rules_super_admin_insert ON public.legal_rules
+        FOR INSERT
+        WITH CHECK (public.nlc_current_user_is_super_admin())
+    """)
+    op.execute("""
+        CREATE POLICY legal_rules_super_admin_update ON public.legal_rules
+        FOR UPDATE
         USING (public.nlc_current_user_is_super_admin())
         WITH CHECK (public.nlc_current_user_is_super_admin())
     """)
@@ -1002,6 +1007,8 @@ def upgrade() -> None:
     op.execute("REVOKE ALL ON TABLE public.alembic_version FROM nlc_app_role")
     # Rule history is append-only. Only a SUPER_ADMIN may create a version;
     # no human or service session may rewrite or erase historical snapshots.
+    op.execute("REVOKE DELETE, TRUNCATE ON TABLE public.legal_rules FROM nlc_app_role")
+    op.execute("GRANT SELECT, INSERT, UPDATE ON TABLE public.legal_rules TO nlc_app_role")
     op.execute("REVOKE UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE public.legal_rule_versions FROM nlc_app_role")
     op.execute("GRANT SELECT, INSERT ON TABLE public.legal_rule_versions TO nlc_app_role")
     for table in ("user_activity_logs", "document_access_log", "compliance_evaluation_runs", "compliance_events", "ai_output_log", "rescue_audit_log"):
