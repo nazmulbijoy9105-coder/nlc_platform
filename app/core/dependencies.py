@@ -558,27 +558,21 @@ async def get_db_for_user(
     """
     Yield an authenticated database session with identity-bound RLS context.
 
-    Client roles receive their own user identity. SUPER_ADMIN, ADMIN_STAFF and
-    LEGAL_STAFF receive ADMIN context only after the signed token is validated
-    and the current database role is confirmed against the active user row.
+    Every human user, including staff, receives an identity-bound UUID context.
+    ADMIN context is reserved for explicitly trusted service/background sessions.
     """
     async with AsyncSessionLocal() as session:
         try:
             role_value = str(getattr(token.role, "value", token.role))
-            privileged_roles = {
-                UserRole.SUPER_ADMIN.value,
-                UserRole.ADMIN_STAFF.value,
-                UserRole.LEGAL_STAFF.value,
-            }
             try:
                 user_uuid = uuid.UUID(token.user_id)
             except (TypeError, ValueError):
                 raise HTTPException(status_code=401, detail="Invalid authenticated user identity.")
 
-            if role_value in privileged_roles:
-                await set_admin_context(session)
-            else:
-                await set_rls_context(session, token.user_id)
+            # Keep the signed principal bound to the actual human identity.
+            # RLS helpers derive privileges from the active database role;
+            # a JWT role claim never becomes the trusted ADMIN principal.
+            await set_rls_context(session, token.user_id)
 
             result = await session.execute(
                 select(User).where(

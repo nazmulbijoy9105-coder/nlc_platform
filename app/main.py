@@ -39,6 +39,7 @@ from app.api import (
     companies,
     documents,
     filings,
+    finance,
     health,
     notifications,
     rescue,
@@ -373,6 +374,7 @@ def create_app() -> FastAPI:
     app.include_router(rescue.router,     prefix=f"{API_PREFIX}/rescue",     tags=["Corporate Rescue"])
     app.include_router(documents.router,  prefix=f"{API_PREFIX}/documents",  tags=["Documents"])
     app.include_router(commercial.router, prefix=f"{API_PREFIX}/commercial", tags=["Commercial"])
+    app.include_router(finance.router, prefix=f"{API_PREFIX}/finance", tags=["Finance & Billing"])
     app.include_router(rjsc_forms.router, prefix=f"{API_PREFIX}/rjsc-forms", tags=["RJSC Forms"])
     app.include_router(calendar.router, prefix=API_PREFIX, tags=["Compliance Calendar"])
     app.include_router(rules.router,      prefix=f"{API_PREFIX}/rules",      tags=["Legal Rules"])
