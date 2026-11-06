@@ -6,7 +6,7 @@ AI Constitution Article 1: Only Super Admin may modify rules.
 Every change creates an immutable legal_rule_versions snapshot.
 
 Endpoints:
-  GET   /rules                    List all 86 ILRMF rules
+  GET   /rules                    List all ILRMF rules
   GET   /rules/{rule_id}          Get single rule with version history
   PATCH /rules/{rule_id}          Update a rule (SUPER_ADMIN only — creates version snapshot)
   GET   /rules/{rule_id}/history  Rule version history
@@ -212,14 +212,14 @@ async def get_rule_summary(
 
 
 # ---------------------------------------------------------------------------
-# GET /rules/black-overrides — The 4 BLACK override rules
+# GET /rules/black-overrides — BLACK override rules
 # ---------------------------------------------------------------------------
 
 @router.get(
     "/black-overrides",
     response_model=list[RuleResponse],
     summary="List all BLACK override rules",
-    description="Returns rules where is_black_override=True (INC-003, AUD-003, TR-005, ESC-002, ESC-003, DEF-001, CAP-003, INC-004).",
+    description="Returns all rules where is_black_override=True; the set is data-driven and may change through governed rule updates.",
     dependencies=[Depends(require_roles("SUPER_ADMIN"))],
 )
 async def get_black_overrides(
