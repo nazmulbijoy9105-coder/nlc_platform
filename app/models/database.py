@@ -58,6 +58,11 @@ if _REQUIRE_RLS_APP_ROLE and not _APP_DATABASE_URL:
         "refusing to run the API with a potentially BYPASSRLS migration role."
     )
 
+if _PRODUCTION_ENVIRONMENT and len(os.environ.get("NLC_RLS_HMAC_SECRET", "")) < 32:
+    raise RuntimeError(
+        "NLC_RLS_HMAC_SECRET must contain at least 32 characters in production/Render"
+    )
+
 # AsyncSessionLocal is the runtime application pool. DATABASE_URL remains the
 # privileged connection used by Alembic; APP_DATABASE_URL must be a
 # non-superuser, NOBYPASSRLS role such as nlc_app_role.
