@@ -156,6 +156,7 @@ class FlagResponse(BaseModel):
     severity: str
     score_impact: int
     status: str
+    legal_review_status: str
     is_black_override: bool
     triggered_at: str
     resolved_at: str | None
@@ -191,6 +192,7 @@ def _flag_to_response(flag) -> FlagResponse:
         severity=str(severity) if approved else "NOT_EVALUATED",
         score_impact=int(flag.score_impact or 0) if approved else 0,
         status=flag.flag_status.value if hasattr(flag.flag_status, "value") else str(flag.flag_status),
+        legal_review_status="APPROVED_FOR_RELEASE" if approved else "PENDING_COUNSEL_REVIEW",
         is_black_override=bool(getattr(flag, "is_black_override", False)) if approved else False,
         triggered_at=flag.triggered_date.isoformat() if flag.triggered_date else "",
         resolved_at=flag.resolved_date.isoformat() if getattr(flag, "resolved_date", None) else None,
