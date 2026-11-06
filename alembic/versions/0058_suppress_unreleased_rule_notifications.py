@@ -21,9 +21,9 @@ def upgrade() -> None:
             "ADD VALUE IF NOT EXISTS 'SUPPRESSED'"
         )
 
-    # Rule IDs use the stable PREFIX-000 convention. Also suppress any pending
-    # notification explicitly linked to a compliance flag, even if its display
-    # type is generic. Do not suppress unrelated payment/subscription notices.
+    # Rule IDs use the stable PREFIX-000 convention. Also suppress pending
+    # generic legal alerts and any notification linked to a compliance flag.
+    # Unrelated payment/subscription/operational notices remain untouched.
     op.execute(
         """
         UPDATE public.notifications
@@ -35,16 +35,10 @@ def upgrade() -> None:
                updated_at = NOW()
          WHERE notification_status = 'PENDING'
            AND (
-               notification_type ~ '^[A-Z]{2,5}-[0-9]{3}
-        """
-    )
-
-
-def downgrade() -> None:
-    # SUPPRESSED is a forward-only operational state. Do not requeue old
-    # legal alerts on downgrade; that could send unapproved conclusions.
-    pass
-
+               notification_type ~ '^[A-Z]{2,5}-[0-9]{3}$'
+               OR notification_type IN (
+                   'COMPLIANCE_ALERT', 'LEGAL_ALERT', 'RISK_ALERT', 'RULE_ALERT'
+               )
                OR related_flag_id IS NOT NULL
            )
         """
