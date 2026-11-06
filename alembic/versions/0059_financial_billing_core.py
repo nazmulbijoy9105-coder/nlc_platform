@@ -98,6 +98,7 @@ def upgrade() -> None:
         sa.Column("cheque_cleared_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.UniqueConstraint("id", "company_id", name="uq_payment_submissions_id_company"),
         sa.ForeignKeyConstraint(["invoice_id", "company_id"], ["invoices.id", "invoices.company_id"], ondelete="RESTRICT", name="fk_payment_submissions_invoice_company"),
         sa.CheckConstraint("amount_bdt > 0", name="ck_payment_submission_amount_positive"),
         sa.CheckConstraint("currency = 'BDT'", name="ck_payment_submission_currency_bdt"),
