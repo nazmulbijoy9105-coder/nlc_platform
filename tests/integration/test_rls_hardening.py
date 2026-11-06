@@ -574,3 +574,12 @@ async def test_all_public_security_definer_functions_have_safe_owners(db):
         "SECURITY DEFINER functions that access FORCE-RLS data must be owned "
         f"by a BYPASSRLS or SUPERUSER migration principal: {unsafe}"
     )
+
+
+@pytest.mark.asyncio
+async def test_runtime_startup_rejects_mismatched_rls_signing_secret(monkeypatch):
+    import app.models.database as database
+
+    monkeypatch.setattr(database, "_rls_signature", lambda principal: "invalid-signature")
+    with pytest.raises(RuntimeError, match="does not match the database signing key"):
+        await database.verify_runtime_database_role()
