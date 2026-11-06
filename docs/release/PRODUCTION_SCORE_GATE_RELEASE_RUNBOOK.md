@@ -187,6 +187,7 @@ python scripts/seed_rules.py --apply --verbose
 The seeder inserts missing rows only. It never updates an existing row; if a definition differs, it reports `DRIFT` and leaves that row unchanged while allowing safe missing-row inserts to commit. Existing-rule changes must use the authenticated Super Admin `RulesService.update_rule` workflow with a named actor, mandatory `change_reason`, previous-definition snapshot and version increment. Do not use direct SQL or the seeder to modify existing legal rules.
 
 A seed row or database row is not legal approval. Keep `approved_rule_ids: []`, `LEGAL_SCORE_RELEASED = False`, and the engine allowlist empty until independent counsel approval is recorded.
+Migration `0049_reconcile_company_profile_and_rule_registry` restores missing catalogue rows with `is_active=true` but `verification_status='PENDING'`; `is_active` is registry/parity state, not a finding of legal correctness. The public `/rules` response now exposes `verification_status`, `verified_at`, and `statutory_effective_date`. The frontend must visibly label `PENDING` and `DISPUTED`; do not present active catalogue rows as counsel-approved.
 
 ## 6. Deploy backend and refresh evaluation snapshots
 
