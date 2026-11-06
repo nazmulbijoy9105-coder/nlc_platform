@@ -159,7 +159,7 @@ The following is an inventory of rules present in the current legal-basis matrix
 | STR-002 | Object Clause Change Not Filed | Section 17, Companies Act 1994 (Bangladesh) | YELLOW / 3 / BLACK=false | PENDING COUNSEL |
 | STR-003 | AoA Alteration Not Filed | Section 18, Companies Act 1994 (Bangladesh) | YELLOW / 3 / BLACK=false | PENDING COUNSEL |
 | TAX-001 | Tax Identification Number (TIN) Not Obtained | Income Tax Act 2023 (Bangladesh) | RED / 10 / BLACK=false | PENDING COUNSEL |
-| TAX-002 | VAT Registration Required But Not Obtained | Value Added Tax Act 2012 (Bangladesh) | YELLOW / 5 / BLACK=false | PENDING COUNSEL |
+| TAX-002 | VAT / turnover-tax status — review only | VAT & SD Act 2012, ss.2(48), 2(57), 4 and 10; Act 77/2026 and Finance Act 96/2026 | NOT_EVALUATED / 0 / BLACK=false | PENDING COUNSEL; no automatic breach finding |
 | TAX-003 | Annual Tax Return Overdue | Income Tax Act 2023, Section 75 | YELLOW / 5 / BLACK=false | PENDING COUNSEL |
 | TAX-004 | Advance Tax Missed | Income Tax Act 2023, Section 74 | YELLOW / 3 / BLACK=false | PENDING COUNSEL |
 | TL-001 | Trade License Not Obtained | Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009 | YELLOW / 5 / BLACK=false | PENDING COUNSEL |
