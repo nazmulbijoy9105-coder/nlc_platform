@@ -14,6 +14,9 @@ def test_webhook_reconciliation_is_fail_closed_before_signed_identity():
     assert "DROP POLICY" in migration
     assert "current_setting('app.current_user_id'" not in migration
     assert "CREATE POLICY" not in migration
+    assert "CREATE TABLE IF NOT EXISTS" not in migration
+    assert "REQUIRED_TABLES" in migration
+    assert "will not recreate empty tables" in migration
 
 
 def test_rescue_audit_table_is_forced_rls_when_created():
