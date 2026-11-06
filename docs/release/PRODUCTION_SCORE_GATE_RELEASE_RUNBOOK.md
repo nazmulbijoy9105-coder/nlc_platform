@@ -167,7 +167,7 @@ alembic current
 alembic heads
 ```
 
-Current `main` head observed in this audit: `0057_merge_final_heads`. PR #125 adds `0058_suppress_unreleased_rule_notifications`; after that PR is merged, expected head is `0058_suppress_unreleased_rule_notifications`, with exactly one head.
+Current `main` head observed in this audit: `0057_merge_final_heads`. PR #125 adds `0058_suppress_unreleased_rule_notifications`; the stacked PR #130 adds finance migrations `0059`–`0064` and the rescue-audit retention correction `0065_rescue_audit_log_restrict_delete`. After the complete #125 → #129 → #130 stack is merged, the expected single head is `0065_rescue_audit_log_restrict_delete`. If only PR #125 is merged, the expected head is `0058_suppress_unreleased_rule_notifications`. Never stamp or skip revisions to force the expected version.
 
 Migration 0052 clears only current company-level score/risk/exposure state and disables score-triggered rescue state. It preserves the immutable monthly history rows. API responses independently suppress legacy history scores while release is disabled.
 
