@@ -22,7 +22,7 @@ REQUIRED_TABLES = (
 def upgrade() -> None:
     # These objects are created by earlier revisions (0037/0038). If one is
     # missing, the database has drifted or lost operational/audit evidence.
-    # Do not CREATE TABLE IF NOT EXISTS here: an empty replacement would hide
+    # Do not silently create replacement tables here: an empty replacement would hide
     # missing webhook configuration, delivery history, or rescue audit rows.
     bind = op.get_bind()
     missing = [
