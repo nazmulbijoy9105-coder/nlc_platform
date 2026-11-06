@@ -95,9 +95,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # The reconciliation may have adopted tables created by the earlier 0037
-    # migration. Never drop customer webhook data when reverting this revision.
-    op.execute("DROP POLICY IF EXISTS webhook_deliveries_owner_scope ON webhook_deliveries")
-    op.execute("DROP POLICY IF EXISTS webhook_endpoints_owner_scope ON webhook_endpoints")
-    op.execute("ALTER TABLE IF EXISTS webhook_deliveries DISABLE ROW LEVEL SECURITY")
-    op.execute("ALTER TABLE IF EXISTS webhook_endpoints DISABLE ROW LEVEL SECURITY")
+    # Forward-only security migration. Disabling RLS or removing owner policies
+    # would expose customer webhook endpoints and delivery payloads.
+    pass
