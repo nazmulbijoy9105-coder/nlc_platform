@@ -88,7 +88,11 @@ def upgrade() -> None:
               FROM pg_roles
              WHERE rolname = current_user;
 
-            IF NOT FOUND OR (NOT migration_role.rolsuper AND NOT migration_role.rolbypassrls) THEN
+            IF NOT FOUND THEN
+                RAISE EXCEPTION 'Unable to inspect migration role %', current_user;
+            END IF;
+
+            IF NOT migration_role.rolsuper AND NOT migration_role.rolbypassrls THEN
                 RAISE EXCEPTION
                     'Migration role % must have BYPASSRLS or SUPERUSER to own the SECURITY DEFINER RLS helpers',
                     current_user;
