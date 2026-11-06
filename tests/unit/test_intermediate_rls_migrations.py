@@ -40,7 +40,7 @@ def test_webhook_tables_are_forced_rls_when_created():
         ROOT / "alembic" / "versions" / "0037_add_webhook_tables.py"
     ).read_text(encoding="utf-8")
 
-    for table in ("webhook_endpoints", "webhook_deliveries"):
-        assert f"ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY" in migration
-        assert f"ALTER TABLE public.{table} FORCE ROW LEVEL SECURITY" in migration
-        assert f"REVOKE ALL ON TABLE public.{table} FROM PUBLIC" in migration
+    assert 'for table in ("webhook_endpoints", "webhook_deliveries")' in migration
+    assert "ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY" in migration
+    assert "ALTER TABLE public.{table} FORCE ROW LEVEL SECURITY" in migration
+    assert "REVOKE ALL ON TABLE public.{table} FROM PUBLIC" in migration
