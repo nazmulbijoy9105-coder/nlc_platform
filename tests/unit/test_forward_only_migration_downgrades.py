@@ -7,9 +7,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 FORWARD_ONLY_MIGRATIONS = (
+    "alembic/versions/0038_add_rescue_audit_log.py",
     "alembic/versions/0044_webhook_schema_reconcile.py",
     "alembic/versions/0046_legal_evidence_provenance.py",
+    "alembic/versions/0050_signed_rls_identity_hardening.py",
     "alembic/versions/0053_agm_minutes_unknown_default.py",
+    "alembic/versions/0058_suppress_unreleased_rule_notifications.py",
 )
 
 
