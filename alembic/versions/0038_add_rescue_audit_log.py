@@ -35,8 +35,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("ix_rescue_audit_log_created_at", table_name="rescue_audit_log")
-    op.drop_index("ix_rescue_audit_log_finding_id", table_name="rescue_audit_log")
-    op.drop_index("ix_rescue_audit_log_actor_id", table_name="rescue_audit_log")
-    op.drop_index("ix_rescue_audit_log_plan_id", table_name="rescue_audit_log")
-    op.drop_table("rescue_audit_log")
+    # Forward-only: rescue audit records are legal/compliance evidence.
+    # Dropping this table would irreversibly erase actor and remediation history.
+    pass
