@@ -33,10 +33,14 @@ def is_rule_notification_type(notification_type: str | None) -> bool:
     return bool(notification_type and _RULE_NOTIFICATION_TYPE.fullmatch(notification_type))
 
 
-def is_notification_eligible(notification_type: str | None) -> bool:
-    """Only independently approved rule alerts may be delivered or exposed."""
+def is_notification_eligible(
+    notification_type: str | None,
+    *,
+    related_flag_id: uuid.UUID | None = None,
+) -> bool:
+    """Fail closed for rule alerts and any notification linked to a compliance flag."""
     if not is_rule_notification_type(notification_type):
-        return True
+        return related_flag_id is None
     return LEGAL_SCORE_RELEASED and notification_type in VERIFIED_RULE_IDS
 
 
@@ -62,7 +66,10 @@ class NotificationService(BaseService[Notification]):
         body = body or message
         notification_type = notification_type or 'SYSTEM'
         # Unapproved legal alerts remain auditable but never enter delivery queues.
-        legal_alert_eligible = is_notification_eligible(notification_type)
+        legal_alert_eligible = is_notification_eligible(
+            notification_type,
+            related_flag_id=related_flag_id,
+        )
         return await self.create(
             company_id=company_id,
             user_id=user_id,
@@ -300,7 +307,15 @@ class NotificationService(BaseService[Notification]):
             .order_by(Notification.created_at)
             .limit(limit)
         )
-        return list(result.scalars().all())
+        # Re-check the release gate at dispatch time. Rows queued before the
+        # gate was closed (or before this guard existed) must not be delivered.
+        return [
+            n for n in result.scalars().all()
+            if is_notification_eligible(
+                n.notification_type,
+                related_flag_id=n.related_flag_id,
+            )
+        ]
 
 
 # ═══════════════════════════════════════════════════════════════════════
