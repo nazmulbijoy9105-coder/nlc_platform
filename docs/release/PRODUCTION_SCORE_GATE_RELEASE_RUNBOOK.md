@@ -142,6 +142,17 @@ The production Neon branch `production` (`br-purple-fog-aodj8s04`), database `ne
 
 ## 4. Apply database migrations
 
+### Backup and rollback policy
+
+Before any production DDL or data migration:
+
+1. Create a Neon snapshot/restore point for the exact `production` branch and database.
+2. Verify the snapshot is complete and perform a restore rehearsal to a separate branch/database; a snapshot listing alone is not proof of recoverability.
+3. Capture pre-migration row counts and checksums for companies, users, compliance flags, score history, legal rules, notifications, and financial tables (where present).
+4. Keep the previous application artifact and migration logs. Do not combine a schema migration, API deployment, and rule-corpus update into one unobservable step.
+
+**Do not use Alembic downgrade as the production rollback strategy.** Migrations `0044`, `0046`, and `0053` are now explicitly forward-only because downgrading them would disable webhook RLS, delete legal evidence/provenance, or coerce unknown AGM minutes into false values. Other security and finance migrations are also forward-only. If a migration fails after applying transactional or autocommit work, stop and diagnose; use a verified Neon restore to a separate branch for recovery planning, or apply a reviewed forward-fix. Never restore over the live branch without an approved change window and explicit confirmation.
+
 Using a secure release runner with the privileged migration URL and the same `NLC_RLS_HMAC_SECRET`:
 
 ```bash
