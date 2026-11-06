@@ -111,7 +111,11 @@ def test_render_settings_force_rls_role_guard_even_with_development_override():
         "REQUIRE_RLS_APP_ROLE": "false",
     })
     result = subprocess.run(
-        [sys.executable, "-c", "from app.core.config import settings; assert settings.REQUIRE_RLS_APP_ROLE"],
+        [
+            sys.executable,
+            "-c",
+            "import importlib.util; spec = importlib.util.spec_from_file_location('isolated_nlc_config', 'app/core/config.py'); module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module); assert module.settings.REQUIRE_RLS_APP_ROLE",
+        ],
         cwd=ROOT,
         env=env,
         capture_output=True,
