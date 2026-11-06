@@ -31,9 +31,22 @@ if TYPE_CHECKING:
 _APP_DATABASE_URL = os.environ.get("APP_DATABASE_URL", "").strip()
 _MIGRATION_DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 _ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").strip().lower()
-_REQUIRE_RLS_APP_ROLE = os.environ.get(
-    "REQUIRE_RLS_APP_ROLE", "true" if _ENVIRONMENT in {"prod", "production"} else "false"
-).strip().lower() == "true"
+_PRODUCTION_ENVIRONMENT = _ENVIRONMENT in {"prod", "production"}
+_RLS_ROLE_SETTING = os.environ.get("REQUIRE_RLS_APP_ROLE")
+if _PRODUCTION_ENVIRONMENT:
+    # A deployment operator must not be able to disable the runtime-role
+    # boundary with an environment override and silently fall back to the
+    # privileged migration URL.
+    if _RLS_ROLE_SETTING is not None and _RLS_ROLE_SETTING.strip().lower() != "true":
+        raise RuntimeError(
+            "REQUIRE_RLS_APP_ROLE cannot be disabled in production; "
+            "the API must use APP_DATABASE_URL as nlc_app_role."
+        )
+    _REQUIRE_RLS_APP_ROLE = True
+else:
+    _REQUIRE_RLS_APP_ROLE = (
+        (_RLS_ROLE_SETTING or "false").strip().lower() == "true"
+    )
 
 if _REQUIRE_RLS_APP_ROLE and not _APP_DATABASE_URL:
     raise RuntimeError(
