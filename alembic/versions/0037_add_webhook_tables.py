@@ -49,7 +49,25 @@ def upgrade() -> None:
     op.create_index("idx_webhook_deliveries_pending", "webhook_deliveries", ["status"], postgresql_where=sa.text("status = 'PENDING'"))
     op.create_index("idx_webhook_deliveries_retry", "webhook_deliveries", ["next_retry_at"], postgresql_where=sa.text("status = 'PENDING' AND next_retry_at IS NOT NULL"))
 
+    # Keep endpoint secrets and delivery payloads closed until signed RLS
+    # policies are installed by migration 0050. Do not expose these tables
+    # through the legacy caller-controlled identity GUC.
+    for table in ("webhook_endpoints", "webhook_deliveries"):
+        op.execute(f"ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY")
+        op.execute(f"ALTER TABLE public.{table} FORCE ROW LEVEL SECURITY")
+        op.execute(f"REVOKE ALL ON TABLE public.{table} FROM PUBLIC")
+        op.execute(f"""
+            DO $role$
+            BEGIN
+                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
+                    EXECUTE 'REVOKE ALL ON TABLE public.{table} FROM nlc_app_role';
+                END IF;
+            END
+            $role$;
+        """)
+
 
 def downgrade() -> None:
-    op.drop_table("webhook_deliveries")
-    op.drop_table("webhook_endpoints")
+    # Forward-only: webhook endpoint secrets and delivery payloads are
+    # operational evidence and must not be erased by schema rollback.
+    pass
