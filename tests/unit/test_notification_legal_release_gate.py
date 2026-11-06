@@ -209,3 +209,19 @@ async def test_flag_linked_generic_notification_fails_closed(monkeypatch):
 
     kwargs = service.create.await_args.kwargs
     assert kwargs["notification_status"] == NotificationStatus.SUPPRESSED
+
+
+@pytest.mark.asyncio
+async def test_generic_legal_alert_is_suppressed_even_without_flag_link(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
+    service = NotificationService(MagicMock())
+    service.create = AsyncMock(return_value=SimpleNamespace())
+
+    await service.queue_notification(
+        title="Legal alert",
+        body="Potential compliance breach",
+        notification_type="COMPLIANCE_ALERT",
+    )
+
+    kwargs = service.create.await_args.kwargs
+    assert kwargs["notification_status"] == NotificationStatus.SUPPRESSED
