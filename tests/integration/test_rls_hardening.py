@@ -417,3 +417,96 @@ async def test_rescue_audit_log_has_forced_tenant_rls_and_is_append_only(db):
             {"privilege": privilege},
         )
         assert result.scalar_one() is False
+
+
+@pytest.mark.asyncio
+async def test_human_staff_database_helpers_preserve_distinct_roles(db):
+    import uuid
+
+    from app.models.enums import UserRole
+    from app.models.user import User
+
+    await set_admin_context(db)
+    users = {}
+    for role in (UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRole.LEGAL_STAFF):
+        user = User(
+            id=uuid.uuid4(),
+            email=f"rls-role-{role.value.lower()}-{uuid.uuid4().hex[:8]}@nlctest.com",
+            full_name=f"RLS {role.value}",
+            password_hash="!test-no-login",
+            role=role,
+            is_active=True,
+            totp_enabled=False,
+        )
+        db.add(user)
+        users[role] = user
+    await db.flush()
+
+    for role, user in users.items():
+        await set_rls_context(db, str(user.id))
+        result = await db.execute(
+            text(
+                "SELECT public.nlc_current_user_is_staff(), "
+                "public.nlc_current_user_is_rule_admin(), "
+                "public.nlc_current_user_is_super_admin()"
+            )
+        )
+        is_staff, is_rule_admin, is_super_admin = result.one()
+        assert is_staff is True
+        assert is_rule_admin is (role in (UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF))
+        assert is_super_admin is (role == UserRole.SUPER_ADMIN)
+
+
+@pytest.mark.asyncio
+async def test_legal_rule_registry_is_superadmin_write_and_history_is_append_only(db):
+    legal_rule_policies = await db.execute(
+        text(
+            "SELECT policyname, cmd, qual, with_check FROM pg_policies "
+            "WHERE schemaname='public' AND tablename='legal_rules'"
+        )
+    )
+    legal_policies = {row[0]: row[1:] for row in legal_rule_policies.fetchall()}
+    assert set(legal_policies) == {
+        "legal_rules_authenticated_read",
+        "legal_rules_super_admin_write",
+    }
+    assert "nlc_current_user_is_super_admin" in (legal_policies["legal_rules_super_admin_write"][1] or "")
+    assert "nlc_current_user_is_super_admin" in (legal_policies["legal_rules_super_admin_write"][2] or "")
+
+    history_policies = await db.execute(
+        text(
+            "SELECT policyname, cmd, qual, with_check FROM pg_policies "
+            "WHERE schemaname='public' AND tablename='legal_rule_versions'"
+        )
+    )
+    history = {row[0]: row[1:] for row in history_policies.fetchall()}
+    assert set(history) == {
+        "legal_rule_versions_rule_admin_read",
+        "legal_rule_versions_super_admin_insert",
+    }
+    assert history["legal_rule_versions_rule_admin_read"][0] == "SELECT"
+    assert "nlc_current_user_is_rule_admin" in (history["legal_rule_versions_rule_admin_read"][1] or "")
+    assert history["legal_rule_versions_super_admin_insert"][0] == "INSERT"
+    assert "nlc_current_user_is_super_admin" in (history["legal_rule_versions_super_admin_insert"][2] or "")
+
+    for privilege in ("UPDATE", "DELETE", "TRUNCATE"):
+        allowed = await db.execute(
+            text(
+                "SELECT has_table_privilege('nlc_app_role', "
+                "'public.legal_rule_versions', :privilege)"
+            ),
+            {"privilege": privilege},
+        )
+        assert allowed.scalar_one() is False
+
+    triggers = await db.execute(
+        text(
+            "SELECT tgname FROM pg_trigger "
+            "WHERE tgrelid='public.legal_rule_versions'::regclass "
+            "AND NOT tgisinternal"
+        )
+    )
+    assert {row[0] for row in triggers.fetchall()} >= {
+        "legal_rule_versions_reject_row_mutation",
+        "legal_rule_versions_reject_truncate",
+    }
