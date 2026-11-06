@@ -33,15 +33,23 @@ def is_rule_notification_type(notification_type: str | None) -> bool:
     return bool(notification_type and _RULE_NOTIFICATION_TYPE.fullmatch(notification_type))
 
 
+GENERIC_LEGAL_ALERT_TYPES = frozenset({
+    "COMPLIANCE_ALERT", "LEGAL_ALERT", "RISK_ALERT", "RULE_ALERT",
+})
+
+
 def is_notification_eligible(
     notification_type: str | None,
     *,
     related_flag_id: uuid.UUID | None = None,
 ) -> bool:
-    """Fail closed for rule alerts and any notification linked to a compliance flag."""
-    if not is_rule_notification_type(notification_type):
-        return related_flag_id is None
-    return LEGAL_SCORE_RELEASED and notification_type in VERIFIED_RULE_IDS
+    """Fail closed for rule alerts and generic legal/compliance alert types."""
+    normalized_type = str(notification_type or "").upper()
+    if is_rule_notification_type(normalized_type):
+        return LEGAL_SCORE_RELEASED and normalized_type in VERIFIED_RULE_IDS
+    if normalized_type in GENERIC_LEGAL_ALERT_TYPES or related_flag_id is not None:
+        return False
+    return True
 
 
 class NotificationService(BaseService[Notification]):
@@ -301,6 +309,27 @@ class NotificationService(BaseService[Notification]):
         filters = [Notification.notification_status == NotificationStatus.PENDING]
         if channel:
             filters.append(Notification.channel == channel)
+        # Filter at SQL level before LIMIT so a large legacy legal-alert backlog
+        # cannot starve unrelated payment, subscription or operational notices.
+        rule_id_type = Notification.notification_type.op("~")(r"^[A-Z]{2,5}-[0-9]{3}$")
+        generic_legal_type = Notification.notification_type.in_(GENERIC_LEGAL_ALERT_TYPES)
+        if LEGAL_SCORE_RELEASED:
+            eligible_rule = and_(
+                rule_id_type,
+                Notification.notification_type.in_(VERIFIED_RULE_IDS),
+            )
+            eligible_operational = and_(
+                not_(rule_id_type),
+                not_(generic_legal_type),
+                Notification.related_flag_id.is_(None),
+            )
+            filters.append(or_(eligible_rule, eligible_operational))
+        else:
+            filters.append(and_(
+                not_(rule_id_type),
+                not_(generic_legal_type),
+                Notification.related_flag_id.is_(None),
+            ))
         result = await self.db.execute(
             select(Notification)
             .where(*filters)
