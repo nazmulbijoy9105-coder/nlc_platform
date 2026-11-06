@@ -378,7 +378,10 @@ def send_pending_notifications(
             pending = await svc.get_pending(limit=batch_size)
 
             for notif in pending:
-                if not is_notification_eligible(notif.notification_type):
+                if not is_notification_eligible(
+                    notif.notification_type,
+                    related_flag_id=notif.related_flag_id,
+                ):
                     await svc.mark_suppressed(
                         notif.id,
                         reason=(
