@@ -19,6 +19,10 @@ The current backend release branch keeps:
 
 Do not change these until counsel approval is recorded rule-by-rule.
 
+## 1A. Human staff identity and finance separation
+
+Human users must retain their signed UUID RLS identity. Only `SUPER_ADMIN` and `ADMIN_STAFF` may receive the shared trusted `ADMIN` service principal through the authenticated API dependency. `LEGAL_STAFF` must retain its UUID: general legal-staff policies can recognise the active database role, while finance policies must continue to deny finance access. Do not map legal staff to `ADMIN`, because the finance helper intentionally trusts that service principal for internal finance operations.
+
 ## 2. Render environment separation
 
 Set these in the Render service before running migrations or deploying the new application:
