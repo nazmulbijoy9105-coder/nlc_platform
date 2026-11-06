@@ -19,7 +19,7 @@ CAP-004,False,"Section 88, Companies Act 1994 (Bangladesh)",['87'],"Special reso
 ESC-001,False,"Section 346, Companies Act 1994 (Bangladesh)",['346'],"Review-only: Section 346 requires the Registrar statutory notice sequence. Filing backlog or cross-module flags alone do not establish that strike-off proceedings have commenced.",,
 ESC-002,False,"Section 346, Companies Act 1994 (Bangladesh)",['346'],"Review-only: require authenticated Registrar correspondence, registered follow-up, Gazette notice, expiry of the 90-day show-cause period and current register status. Do not infer dissolution, contract invalidity, account freeze or restoration consequences without separate legal review.",,
 AGM-007,True,"Section 85, Companies Act 1994 (Bangladesh)",['84'],AGM adjourned without proper notice. Section 84.,,
-CHG-001,True,"Section 159, Companies Act 1994 (Bangladesh)",['87'],Charge satisfaction not filed via Form XIX. Section 87.,,
+CHG-001,False,"Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh)",['159','172'],"Review-only: verify s.159 registrability, satisfaction evidence/date and RJSC filing status before applying the 21-day s.172(1) period.",,
 DEF-002,True,"Section 397, Companies Act 1994 (Bangladesh)",['447'],"Unresolved penalty notices. Section 447: fine up to Tk 10,000 per offence.",,
 DIR-005,False,"Section 130, Companies Act 1994 (Bangladesh)",['97'],Register of directors interests not maintained. Section 97.,,
 DIR-006,False,"Section 130, Companies Act 1994 (Bangladesh)",['98'],Register of contracts not maintained. Section 98.,,
