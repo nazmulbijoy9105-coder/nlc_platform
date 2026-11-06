@@ -15,14 +15,38 @@ async def test_runtime_role_is_non_bypass_and_has_no_dangerous_privileges(db):
     await set_rls_context(db, "00000000-0000-0000-0000-000000000001")
     role = await db.execute(
         text(
-            "SELECT current_user, r.rolsuper, r.rolbypassrls "
+            "SELECT current_user, r.rolsuper, r.rolcreatedb, r.rolcreaterole, "
+            "r.rolinherit, r.rolreplication, r.rolbypassrls "
             "FROM pg_roles r WHERE r.rolname = current_user"
         )
     )
-    role_name, is_superuser, bypasses_rls = role.one()
+    (
+        role_name,
+        is_superuser,
+        can_create_db,
+        can_create_role,
+        inherits_roles,
+        can_replicate,
+        bypasses_rls,
+    ) = role.one()
     assert role_name == "nlc_app_role"
     assert is_superuser is False
+    assert can_create_db is False
+    assert can_create_role is False
+    assert inherits_roles is False
+    assert can_replicate is False
     assert bypasses_rls is False
+
+    memberships = await db.execute(
+        text(
+            "SELECT count(*) FROM pg_auth_members m "
+            "JOIN pg_roles granted_role ON granted_role.oid = m.roleid "
+            "JOIN pg_roles member_role ON member_role.oid = m.member "
+            "WHERE granted_role.rolname = 'nlc_app_role' "
+            "OR member_role.rolname = 'nlc_app_role'"
+        )
+    )
+    assert memberships.scalar_one() == 0
 
     for privilege in ("TRUNCATE", "TRIGGER", "REFERENCES"):
         result = await db.execute(
