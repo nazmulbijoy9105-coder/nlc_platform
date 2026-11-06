@@ -468,10 +468,19 @@ async def test_legal_rule_registry_is_superadmin_write_and_history_is_append_onl
     legal_policies = {row[0]: row[1:] for row in legal_rule_policies.fetchall()}
     assert set(legal_policies) == {
         "legal_rules_authenticated_read",
-        "legal_rules_super_admin_write",
+        "legal_rules_super_admin_insert",
+        "legal_rules_super_admin_update",
     }
-    assert "nlc_current_user_is_super_admin" in (legal_policies["legal_rules_super_admin_write"][1] or "")
-    assert "nlc_current_user_is_super_admin" in (legal_policies["legal_rules_super_admin_write"][2] or "")
+    assert "nlc_current_user_is_super_admin" in (legal_policies["legal_rules_super_admin_insert"][2] or "")
+    assert "nlc_current_user_is_super_admin" in (legal_policies["legal_rules_super_admin_update"][1] or "")
+    assert "nlc_current_user_is_super_admin" in (legal_policies["legal_rules_super_admin_update"][2] or "")
+
+    for privilege in ("DELETE", "TRUNCATE"):
+        allowed = await db.execute(
+            text("SELECT has_table_privilege('nlc_app_role', 'public.legal_rules', :privilege)"),
+            {"privilege": privilege},
+        )
+        assert allowed.scalar_one() is False
 
     history_policies = await db.execute(
         text(
