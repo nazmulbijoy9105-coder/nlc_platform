@@ -93,6 +93,7 @@ def test_unapproved_flag_severity_and_score_impact_are_not_presented_as_legal_fi
     assert response.severity == "NOT_EVALUATED"
     assert response.score_impact == 0
     assert response.is_black_override is False
+    assert response.legal_review_status == "PENDING_COUNSEL_REVIEW"
     assert response.rule_name.startswith("Pending counsel review:")
 
 
@@ -117,6 +118,7 @@ def test_counsel_approved_flag_is_visible_after_release_switch(monkeypatch):
 
     assert response.severity == "RED"
     assert response.score_impact == 15
+    assert response.legal_review_status == "APPROVED_FOR_RELEASE"
 
 
 def test_flag_summary_separates_pending_review_from_released_findings(monkeypatch):
