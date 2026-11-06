@@ -4,7 +4,11 @@ on:
   push:
     branches: [main, fix/nlc-canonical-release-gates-20261105]
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - fix/0050-role-provisioning-preflight-20261106
+      - fix/canonical-migration-chain-20261106
+      - feat/finance-ledger-integrated-on-canonical-chain-20261106
 
 jobs:
   unit-tests:
