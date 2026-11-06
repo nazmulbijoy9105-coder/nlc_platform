@@ -121,6 +121,21 @@ def upgrade() -> None:
                 RAISE EXCEPTION
                     'nlc_ci_audit_role has unsafe attributes; require LOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, NOREPLICATION and NOBYPASSRLS';
             END IF;
+
+            -- NOINHERIT does not prevent SET ROLE. Reject memberships in
+            -- either direction so neither principal can inherit or assume
+            -- another role, and no other role can assume these principals.
+            IF EXISTS (
+                SELECT 1
+                  FROM pg_auth_members membership
+                  JOIN pg_roles granted_role ON granted_role.oid = membership.roleid
+                  JOIN pg_roles member_role ON member_role.oid = membership.member
+                 WHERE granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
+                    OR member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
+            ) THEN
+                RAISE EXCEPTION
+                    'nlc_app_role and nlc_ci_audit_role must have no role memberships in either direction';
+            END IF;
         END
         $role_preflight$;
     """)
