@@ -49,7 +49,7 @@ This matrix is a technical inventory of candidate legal anchors and internal rul
 | CAP-002 | Charge Not Registered With RJSC Within 21 Days | Section 159(1), Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | CAP-003 | Capital Reduction Without Court Order | Sections 59-60, Companies Act 1994 (Bangladesh) | BLACK | 15 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | CAP-004 | Special Resolution Not Filed With RJSC within 15 days | Section 88(1), Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| CHG-001 | Charge Satisfaction Not Filed | Section 172, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| CHG-001 | Charge satisfaction — evidence review only | Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | Require verified s.159 registrability, satisfaction date and RJSC filing-status evidence; no inference from missing data |
 | DEF-001 | Director Disqualified | Section 94, Companies Act 1994 (Bangladesh) | BLACK | 20 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | DEF-002 | Unresolved Penalty Notices | Case-specific enabling provision; no universal section | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | DIR-001 | Director Appointment Particulars Not Filed Within 14 Days | Section 115, Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
