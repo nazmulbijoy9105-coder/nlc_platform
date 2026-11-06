@@ -558,17 +558,19 @@ async def get_db_for_user(
     """
     Yield an authenticated database session with identity-bound RLS context.
 
-    Client roles receive their own user identity. SUPER_ADMIN, ADMIN_STAFF and
-    LEGAL_STAFF receive ADMIN context only after the signed token is validated
-    and the current database role is confirmed against the active user row.
+    Every human account keeps its signed user UUID. Only trusted internal
+    service operations use the ADMIN principal; staff permissions are derived
+    from the active database user row and the relevant RLS helper.
     """
     async with AsyncSessionLocal() as session:
         try:
             role_value = str(getattr(token.role, "value", token.role))
+            # Never map a human staff account to the shared ADMIN
+            # service principal. Finance policies intentionally distinguish
+            # LEGAL_STAFF from SUPER_ADMIN/ADMIN_STAFF.
             privileged_roles = {
                 UserRole.SUPER_ADMIN.value,
                 UserRole.ADMIN_STAFF.value,
-                UserRole.LEGAL_STAFF.value,
             }
             try:
                 user_uuid = uuid.UUID(token.user_id)
