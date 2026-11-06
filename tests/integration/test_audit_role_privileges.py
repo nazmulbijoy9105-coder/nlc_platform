@@ -78,14 +78,16 @@ async def test_rule_parity_role_is_login_and_can_read_only_the_audit_view():
             )
             assert allowed is False, f"audit role unexpectedly has {privilege} on public.companies"
 
-        # The role must not inherit membership in an application or owner role.
+        # NOINHERIT alone does not prevent SET ROLE. Reject memberships
+        # both from and to this principal.
         memberships = await connection.fetch(
             """
-            SELECT parent.rolname
+            SELECT parent.rolname AS granted_role, member.rolname AS member_role
             FROM pg_auth_members membership
             JOIN pg_roles parent ON parent.oid = membership.roleid
             JOIN pg_roles member ON member.oid = membership.member
             WHERE member.rolname = current_user
+               OR parent.rolname = current_user
             """
         )
         assert memberships == []
