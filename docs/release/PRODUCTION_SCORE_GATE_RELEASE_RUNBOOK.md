@@ -140,11 +140,14 @@ The Render `nlc_platform` service is currently on live deployment commit `9e4f99
 4. As `nlc_app_role`, set only `app.current_user_id='ADMIN'` with no signature and confirm zero rows are visible in companies, flags, score history, users and access mappings.
 5. Verify signed user A can access only company A; signed user B can access only company B; forged UUIDs, stale signatures, raw ADMIN/AUTH/CATALOG sentinels and cross-tenant writes all fail.
 6. Verify `compliance_calendar_events`, `company_user_access`, `users`, `legal_rules`, `legal_rule_versions`, `quotations`, `rescue_audit_log` and every company table has the intended policy and `FORCE ROW LEVEL SECURITY`. `rescue_audit_log` must have only tenant-scoped SELECT and actor-bound INSERT policies; UPDATE, DELETE and TRUNCATE must be denied.
-7. Reconcile all 85 rule IDs against the database using the audited Super Admin workflow. Preserve an immutable version row, actor, change reason and prior definition for each existing-rule change. Retire `INC-002` only after its origin and usage are established.
-8. Confirm all 85 remain non-scoring / not legally approved until independent counsel approval is recorded; do not enable the release switch.
-9. Confirm all existing pending rule-ID notifications are SUPPRESSED, no unapproved rule notification is returned by the user API or admin send queue, and the Celery worker suppresses any newly encountered unapproved rule alert.
+7. Verify every public aggregate view uses PostgreSQL `security_invoker=true`: `vw_admin_dashboard_kpis`, `vw_company_flag_summary`, `vw_risk_distribution`, `vw_upcoming_deadlines`, and `vw_revenue_pipeline`. As `nlc_app_role`, test signed client identities and confirm each view obeys underlying forced-RLS policies.
+8. Verify the `engagements` table is restricted to active `SUPER_ADMIN` and `ADMIN_STAFF` identities. `LEGAL_STAFF` must see zero engagement and revenue-pipeline rows even through direct SQL; route-level authorization is not sufficient.
+9. Reconcile all 85 rule IDs against the database using the audited Super Admin workflow. Preserve an immutable version row, actor, change reason and prior definition for each existing-rule change. Retire `INC-002` only after its origin and usage are established.
+10. Confirm all 85 remain non-scoring / not legally approved until independent counsel approval is recorded; do not enable the release switch.
+11. Confirm all existing pending rule-ID notifications are SUPPRESSED, no unapproved rule notification is returned by the user API or admin send queue, and the Celery worker suppresses any newly encountered unapproved rule alert.
 
-**No production migration, role alteration, grant change or rule-row update has been performed by this audit.**
+The five aggregate views must have `reloptions` containing `security_invoker=true`. The `engagements` policy must call `nlc_current_user_is_revenue_staff()`; legal staff must not be able to read commercial fee fields directly.
+\n**No production migration, role alteration, grant change or rule-row update has been performed by this audit.**
 
 ## 4. Apply database migrations
 
@@ -167,7 +170,9 @@ alembic current
 alembic heads
 ```
 
-Current `main` head observed in this audit: `0057_merge_final_heads`. PR #125 adds `0058_suppress_unreleased_rule_notifications`; the stacked PR #130 adds finance migrations `0059`–`0064` and the rescue-audit retention correction `0065_rescue_audit_log_restrict_delete`. After the complete #125 → #129 → #130 stack is merged, the expected single head is `0065_rescue_audit_log_restrict_delete`. If only PR #125 is merged, the expected head is `0058_suppress_unreleased_rule_notifications`. Never stamp or skip revisions to force the expected version.
+Current `main` head observed in this audit: `0057_merge_final_heads`. PR #125 adds `0058_suppress_unreleased_rule_notifications`; the stacked PR #130 adds finance migrations `0059`–`0064`, rescue-audit retention correction `0065_rescue_audit_log_restrict_delete`, verified-ledger revenue view `0066_verified_revenue_pipeline`, permanent manual wallet-reference uniqueness `0067_unique_manual_wallet_references`, and forward repair `0068_repair_aggregate_view_and_revenue_rls`. After the complete #125 → #129 → #130 stack is merged, the expected single head is `0068_repair_aggregate_view_and_revenue_rls`. If only PR #125 is merged, the expected head is `0058_suppress_unreleased_rule_notifications`. Never stamp or skip revisions to force the expected version.
+
+Migration `0050_signed_rls_identity_hardening` must include invoker security on all five aggregate views and an admin-only `engagements` RLS policy. The final PR #130 repair migration repeats these controls for databases where an earlier version of `0050` was already applied. Do not deploy a partial stack that lacks the forward repair.
 
 Migration 0052 clears only current company-level score/risk/exposure state and disables score-triggered rescue state. It preserves the immutable monthly history rows. API responses independently suppress legacy history scores while release is disabled.
 
