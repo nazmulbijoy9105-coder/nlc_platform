@@ -152,9 +152,17 @@ class ChargeEvent:
     form_xviii_filed_date: Optional[date] = None
     form_xix_filed: bool = False
     form_xxviii_filed: bool = False
-    satisfied: bool = False
+    satisfied: bool | None = None
     satisfaction_date: Optional[date] = None
-    satisfaction_filed: bool = False
+    satisfaction_filed: bool | None = None
+    # Section 172 applies only to charges whose registration is required by s.159.
+    registrable_under_s159: bool | None = None
+    registrability_verified: bool = False
+    registrability_evidence_ref: str | None = None
+    satisfaction_verified: bool = False
+    satisfaction_evidence_ref: str | None = None
+    satisfaction_filing_status_verified: bool = False
+    satisfaction_filing_evidence_ref: str | None = None
 
 @dataclass
 class CompanyProfile:
@@ -1727,20 +1735,45 @@ class NLCRuleEngine:
                         detail={"charge_id": charge.charge_id, "delay": delay, "amount": charge.amount_bdt}
                     ))
 
-            if charge.satisfied and not charge.satisfaction_filed:
+            if charge.satisfied is True:
+                unknown_reasons = []
+                if not charge.satisfaction_verified or not charge.satisfaction_evidence_ref:
+                    unknown_reasons.append("SATISFACTION_NOT_AUTHENTICATED")
                 if charge.satisfaction_date is None:
+                    unknown_reasons.append("SATISFACTION_DATE_UNKNOWN")
+                if (
+                    charge.registrable_under_s159 is None
+                    or not charge.registrability_verified
+                    or not charge.registrability_evidence_ref
+                ):
+                    unknown_reasons.append("SECTION_159_REGISTRABILITY_UNKNOWN")
+                elif charge.registrable_under_s159 is False:
+                    # Section 172 does not apply to a charge outside s.159.
+                    continue
+                if (
+                    charge.satisfaction_filed is None
+                    or not charge.satisfaction_filing_status_verified
+                    or not charge.satisfaction_filing_evidence_ref
+                ):
+                    unknown_reasons.append("RJSC_FILING_STATUS_UNVERIFIED")
+                if unknown_reasons:
                     self._add_flag(ComplianceFlag(
                         rule_id="CHG-001",
-                        flag_code="CHARGE_SATISFACTION_DATE_UNKNOWN",
+                        flag_code="CHARGE_SATISFACTION_REQUIRES_EVIDENCE_REVIEW",
                         severity=Severity.NOT_EVALUATED,
                         score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description="Charge satisfaction is recorded, but its effective date is missing. Verify the satisfaction date and RJSC Form XXVIII filing before determining a deadline breach.",
-                        statutory_basis="Section 172, Companies Act 1994 (Bangladesh)",
-                        detail={"charge_id": charge.charge_id, "legal_status": "DATE_EVIDENCE_UNKNOWN"},
+                        description=(
+                            "Charge satisfaction is reported, but Section 172 applicability, "
+                            "satisfaction date, or RJSC filing status is not independently "
+                            "verified. This is a review prompt, not a finding of default."
+                        ),
+                        statutory_basis="Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh)",
+                        detail={"charge_id": charge.charge_id, "unknown_reasons": unknown_reasons},
                         state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
                     ))
-                else:
+                elif charge.satisfaction_filed is False:
                     satisfaction_delay = (self.today - charge.satisfaction_date).days
                     if satisfaction_delay > 21:
                         self._add_flag(ComplianceFlag(
@@ -1749,14 +1782,16 @@ class NLCRuleEngine:
                             severity=Severity.YELLOW,
                             score_impact=3,
                             revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                            description=f"Charge satisfaction not filed via Form XXVIII within 21 days. Section 172. Overdue by {satisfaction_delay} days.",
-                            statutory_basis="Section 172, Companies Act 1994 (Bangladesh)",
+                            description=f"Verified s.159-registrable charge satisfaction is not evidenced as filed via Form XXVIII within 21 days. Section 172(1). Overdue by {satisfaction_delay} days.",
+                            statutory_basis="Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh)",
                             detail={
                                 "charge_id": charge.charge_id,
                                 "charge_type": charge.charge_type,
                                 "delay_days": satisfaction_delay,
                                 "form": "Form XXVIII",
                             },
+                            state=RuleState.NON_COMPLIANT,
+                            eval_state="VIOLATION",
                         ))
 
         if c.capital_reduction_pending and c.capital_reduction_court_order_obtained is False:
