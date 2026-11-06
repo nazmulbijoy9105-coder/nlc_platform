@@ -15,7 +15,7 @@ import re
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import and_, not_, or_, select
+from sqlalchemy import and_, or_, select
 
 from app.models.enums import NotificationChannel, NotificationStatus
 from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
@@ -314,6 +314,7 @@ class NotificationService(BaseService[Notification]):
         # Filter at SQL level before LIMIT so a large legacy legal-alert backlog
         # cannot starve unrelated payment, subscription or operational notices.
         rule_id_type = Notification.notification_type.op("~")(r"^[A-Z]{2,5}-[0-9]{3}$")
+        non_rule_id_type = Notification.notification_type.op("!~")(r"^[A-Z]{2,5}-[0-9]{3}$")
         generic_legal_type = Notification.notification_type.in_(GENERIC_LEGAL_ALERT_TYPES)
         if LEGAL_SCORE_RELEASED:
             eligible_rule = and_(
@@ -321,14 +322,14 @@ class NotificationService(BaseService[Notification]):
                 Notification.notification_type.in_(VERIFIED_RULE_IDS),
             )
             eligible_operational = and_(
-                not_(rule_id_type),
-                not_(generic_legal_type),
+                non_rule_id_type,
+                ~generic_legal_type,
                 Notification.related_flag_id.is_(None),
             )
             filters.append(or_(eligible_rule, eligible_operational))
         else:
             filters.append(and_(
-                not_(rule_id_type),
+                non_rule_id_type,
                 not_(generic_legal_type),
                 Notification.related_flag_id.is_(None),
             ))
