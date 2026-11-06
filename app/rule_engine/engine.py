@@ -1817,7 +1817,7 @@ class NLCRuleEngine:
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="Reported turnover exceeds the BDT 30 lakh turnover-tax enlistment threshold. This is only a review prompt: determine whether the verified rolling 12-month taxable turnover exceeds BDT 30 lakh but does not exceed the BDT 50 lakh registration threshold (enlistment), or exceeds BDT 50 lakh (registration), and check mandatory-registration categories under section 4(2), taxpayer activity, effective date and current status before finding a breach.",
-                statutory_basis="Value Added Tax and Supplementary Duty Act 2012, as amended by Act No. 77 of 2026; exact current section and taxpayer-specific instruments require counsel verification",
+                statutory_basis="Value Added Tax and Supplementary Duty Act 2012, sections 2(48), 2(57), 4 and 10, as amended by Act No. 77 of 2026 and Finance Act No. 96 of 2026; exact current section and taxpayer-specific instruments require counsel verification",
                 state=RuleState.UNKNOWN,
                 eval_state="UNKNOWN",
                 detail={"reported_annual_turnover_bdt": c.annual_turnover_bdt, "registration_threshold_bdt": _VAT_REGISTRATION_THRESHOLD_BDT, "turnover_tax_enlistment_threshold_bdt": _VAT_TURNOVER_TAX_ENLISTMENT_THRESHOLD_BDT, "rolling_12_month_turnover_verified": False, "mandatory_category_verified": False, "turnover_tax_enlistment_application_window_days": 30}
