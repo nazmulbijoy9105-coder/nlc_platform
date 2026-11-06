@@ -596,6 +596,10 @@ def upgrade() -> None:
         FOR EACH ROW EXECUTE FUNCTION public.nlc_protect_user_security_fields()
     """)
 
+    # Trigger execution does not require callers to hold EXECUTE. This
+    # SECURITY DEFINER function must never be callable directly by PUBLIC.
+    op.execute("REVOKE ALL ON FUNCTION public.nlc_protect_user_security_fields() FROM PUBLIC")
+
     op.execute("""
         CREATE POLICY company_user_access_self_read ON public.company_user_access
         FOR SELECT
