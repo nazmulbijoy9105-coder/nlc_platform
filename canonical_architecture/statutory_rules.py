@@ -744,7 +744,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "CONDITIONAL — taxpayer activity, statutory exclusions and mandatory-registration categories",
         "exceptions": ["Exempt supplies", "Sale of capital assets", "Other statutory exclusions", "Mandatory registration categories under section 4(2) require separate analysis"],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT, RuleState.NOT_APPLICABLE],
         "severity": "NOT_EVALUATED",
         "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
@@ -939,7 +939,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "CONDITIONAL — only charges whose registration is required by section 159",
         "exceptions": ["Charges not registrable under section 159"],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT, RuleState.NOT_APPLICABLE],
         "severity": "NOT_EVALUATED",
         "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
