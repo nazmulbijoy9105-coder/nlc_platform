@@ -39,15 +39,25 @@ from __future__ import annotations
 
 import asyncio
 
-# SEC-009: fail closed if required secrets are missing (worker context only)
+# SEC-009/010: fail closed before a production/Render worker accepts tasks.
 import os as _os
 
-if _os.environ.get("CELERY_BROKER_URL") or _os.environ.get("CELERY_BROKER"):
+_RENDER_RUNTIME = _os.environ.get("RENDER", "").strip().lower() == "true"
+_PRODUCTION_WORKER = (
+    _RENDER_RUNTIME
+    or _os.environ.get("ENVIRONMENT", "development").strip().lower() in {"prod", "production"}
+)
+if _PRODUCTION_WORKER or _os.environ.get("CELERY_BROKER_URL") or _os.environ.get("CELERY_BROKER"):
     from app.core.config import settings as _settings
+
     if not _settings.ASYNC_APP_DATABASE_URL:
         raise RuntimeError("SEC-009: runtime database URL not configured — refusing to run worker tasks")
-    if _settings.REQUIRE_RLS_APP_ROLE and not _settings.APP_DATABASE_URL:
+    if _PRODUCTION_WORKER and not _settings.APP_DATABASE_URL:
         raise RuntimeError("SEC-010: APP_DATABASE_URL is required for non-BYPASSRLS worker access")
+    if _PRODUCTION_WORKER and len(_os.environ.get("NLC_RLS_HMAC_SECRET", "")) < 32:
+        raise RuntimeError("SEC-011: NLC_RLS_HMAC_SECRET must contain at least 32 characters for production/Render workers")
+    if _PRODUCTION_WORKER and not (_settings.CELERY_BROKER_URL or _settings.redis_url):
+        raise RuntimeError("SEC-012: CELERY_BROKER_URL or REDIS_URL is required for production/Render workers")
 import logging
 import uuid
 from datetime import UTC, date, datetime, timedelta
