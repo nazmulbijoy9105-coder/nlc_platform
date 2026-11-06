@@ -46,23 +46,26 @@ APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {
     ),
     "AGM-005": ApplicabilityRule(
         "AGM-005",
-        ("PRIVATE_LIMITED",),
+        ("PRIVATE_LIMITED", "PUBLIC_LIMITED"),
         (
-            "agm_held",
-            "members_total_at_agm",
-            "members_total_evidence_ref",
+            "company_type",
+            "agm_held_this_cycle",
+            "member_count",
             "members_present_at_agm",
-            "members_present_evidence_ref",
-            "articles_quorum_verified",
-            "articles_quorum_verified_by",
-            "articles_quorum_verified_at",
-            "articles_quorum_evidence_ref",
+            "agm_attendance_verified",
+            "agm_attendance_evidence_ref",
+            "agm_quorum_basis_verified",
+            "agm_quorum_evidence_ref",
+            "agm_quorum_required",
         ),
-        ("articles_quorum_required",),
-        "Companies Act 1994, s.85(2)(b): private-company default quorum is "
-        "2 where total membership is 6 or fewer and 3 where membership exceeds 6. "
-        "The operative Articles may prescribe otherwise; do not evaluate without "
-        "verified member counts and the Articles version effective on the meeting date."
+        (),
+        "Companies Act 1994, s.85(2)(b): the default quorum is 2 for a private "
+        "company with not more than 6 members, 3 for a private company with more "
+        "than 6 members, and 5 for other companies. The operative Articles may "
+        "prescribe otherwise. The current profile has no independently verified "
+        "member-count evidence field; therefore the stored member_count is not "
+        "sufficient to evaluate quorum. Require hard-copy Articles review and "
+        "independent evidence before any finding."
     ),
     "AGM-006": ApplicabilityRule(
         "AGM-006", ("ALL",), ("agm_held",), (),
@@ -148,10 +151,13 @@ APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {
         "Exception: Court order obtained."
     ),
     "CHG-001": ApplicabilityRule(
-        "CHG-001", ("ALL",), ("charge_satisfied", "satisfaction_date", "registrable_charge_under_s159"), ("registrar_filing_date",),
-        "Companies Act 1994, s.172(1): notice of payment/satisfaction of a "
-        "registrable charge within 21 days. Distinguish s.159 charge registration "
-        "from s.172 satisfaction; missing satisfaction date is UNKNOWN."
+        "CHG-001", ("ALL",), ("charges",), (),
+        "Companies Act 1994, s.172(1): notice of payment/satisfaction within 21 "
+        "days applies only to a charge whose registration is required by s.159. "
+        "The current ChargeEvent model does not record verified s.159 "
+        "registrability or authoritative evidence of satisfaction/filing status. "
+        "Until those facts are separately evidenced, this rule must remain "
+        "UNKNOWN / NOT_EVALUATED and must not infer non-filing from a default False."
     ),
 
     # ── Structural (Sections 11, 17, 18) ────────────────────────────
@@ -234,10 +240,10 @@ APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {
 
     # ── Escalation (Section 346; review only) ────────────────────────
     "ESC-001": ApplicabilityRule(
-        "ESC-001", ("ALL",), ("agm_years_unfiled", "annual_return_years_unfiled"), (),
-        "Companies Act 1994, s.346: filing backlog is only a risk/review trigger; "
-        "it does not itself prove that the Registrar commenced defunct-company "
-        "strike-off proceedings."
+        "ESC-001", ("ALL",), ("last_agm_date", "unfiled_returns_count"), (),
+        "Companies Act 1994, s.346: filing backlog is only an internal risk/review "
+        "trigger; it does not itself prove that the Registrar commenced the "
+        "statutory notice sequence or that the company is defunct or dissolved."
     ),
     "ESC-002": ApplicabilityRule(
         "ESC-002",
