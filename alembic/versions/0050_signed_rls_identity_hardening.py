@@ -160,6 +160,26 @@ def upgrade() -> None:
         $role_preflight$;
     """)
 
+    # Validate the complete RLS target inventory before making any schema
+    # changes. A database claiming to be at 0042 but missing a table created
+    # by 0038 must stop for explicit drift reconciliation, not silently skip
+    # or recreate potentially lost audit evidence.
+    bind = op.get_bind()
+    missing_rls_tables = [
+        table
+        for table in RLS_TABLES
+        if bind.execute(
+            sa.text("SELECT to_regclass(:qualified_name)"),
+            {"qualified_name": f"public.{table}"},
+        ).scalar_one() is None
+    ]
+    if missing_rls_tables:
+        raise RuntimeError(
+            "RLS migration preflight found missing expected public tables: "
+            + ", ".join(sorted(missing_rls_tables))
+            + ". Reconcile schema drift and audit evidence before retrying."
+        )
+
     op.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
     op.execute("CREATE SCHEMA IF NOT EXISTS nlc_private")
     op.execute("REVOKE ALL ON SCHEMA nlc_private FROM PUBLIC, nlc_app_role")
