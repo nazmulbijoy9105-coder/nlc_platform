@@ -136,7 +136,7 @@ The Render `nlc_platform` service is currently on live deployment commit `9e4f99
 3. Verify the application cannot `TRUNCATE`, create triggers, or create references on tenant tables.
 4. As `nlc_app_role`, set only `app.current_user_id='ADMIN'` with no signature and confirm zero rows are visible in companies, flags, score history, users and access mappings.
 5. Verify signed user A can access only company A; signed user B can access only company B; forged UUIDs, stale signatures, raw ADMIN/AUTH/CATALOG sentinels and cross-tenant writes all fail.
-6. Verify `compliance_calendar_events`, `company_user_access`, `users`, `legal_rules`, `legal_rule_versions`, `quotations` and every company table has the intended policy and `FORCE ROW LEVEL SECURITY`.
+6. Verify `compliance_calendar_events`, `company_user_access`, `users`, `legal_rules`, `legal_rule_versions`, `quotations`, `rescue_audit_log` and every company table has the intended policy and `FORCE ROW LEVEL SECURITY`. `rescue_audit_log` must have only tenant-scoped SELECT and actor-bound INSERT policies; UPDATE, DELETE and TRUNCATE must be denied.
 7. Reconcile all 85 rule IDs against the database using the audited Super Admin workflow. Preserve an immutable version row, actor, change reason and prior definition for each existing-rule change. Retire `INC-002` only after its origin and usage are established.
 8. Confirm all 85 remain non-scoring / not legally approved until independent counsel approval is recorded; do not enable the release switch.
 9. Confirm all existing pending rule-ID notifications are SUPPRESSED, no unapproved rule notification is returned by the user API or admin send queue, and the Celery worker suppresses any newly encountered unapproved rule alert.
