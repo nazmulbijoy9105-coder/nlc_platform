@@ -15,10 +15,10 @@ def test_webhook_reconciliation_is_fail_closed_before_signed_identity():
     assert "current_setting('app.current_user_id'" not in migration
     assert "CREATE POLICY" not in migration
     assert "CREATE TABLE IF NOT EXISTS" not in migration
-    for table in ("webhook_endpoints", "webhook_deliveries", "rescue_audit_log"):
-        assert f"to_regclass('public.{table}')" in migration
-    assert "CREATE TABLE IF NOT EXISTS" not in migration
+    assert "to_regclass(:qualified_name)" in migration
     assert "REQUIRED_TABLES" in migration
+    for table in ("webhook_endpoints", "webhook_deliveries", "rescue_audit_log"):
+        assert f'"{table}"' in migration
     assert "will not recreate empty tables" in migration
 
 
