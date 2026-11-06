@@ -754,8 +754,8 @@ async def test_legal_staff_cannot_read_engagements_quotations_or_revenue_pipelin
         CompanyUserAccess(
             user_id=legal_user.id,
             company_id=db_company.id,
-            can_edit=False,
-            can_view_financials=False,
+            can_edit=True,
+            can_view_financials=True,
             is_active=True,
         ),
         CompanyUserAccess(
