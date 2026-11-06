@@ -75,9 +75,9 @@ class RuleResponse(BaseModel):
     revenue_tier: str
     is_black_override: bool
     is_active: bool
-    verification_status: str
-    verified_at: str | None
-    statutory_effective_date: str | None
+    verification_status: str = Field(description="Citation review status only; not a legal opinion or confirmation of company-specific applicability.")
+    verified_at: str | None = Field(description="Date the citation review status was recorded, if applicable.")
+    statutory_effective_date: str | None = Field(description="Recorded statutory effective date; applicability must still be assessed for the relevant company and period.")
     version: str
     created_at: str
     updated_at: str | None
@@ -147,7 +147,7 @@ def _rule_to_response(rule) -> RuleResponse:
     "",
     response_model=list[RuleResponse],
     summary="List all ILRMF legal rules",
-    description="Returns public legal-rule metadata; tenant and user data are not exposed.",
+    description="Returns public legal-rule metadata and citation-review status. Citation verification is not a legal opinion or confirmation of company-specific applicability; tenant and user data are not exposed.",
 )
 async def list_rules(
     rule_type: str | None = None,
