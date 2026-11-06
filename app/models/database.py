@@ -299,6 +299,32 @@ async def verify_runtime_database_role() -> None:
             "NOREPLICATION, NOBYPASSRLS and no role memberships"
         )
 
+    # Prove that the runtime secret matches the database's private signing key.
+    # This uses a synthetic UUID inside a transaction and rolls it back; the
+    # API must not become healthy with a mismatched secret that makes every
+    # authenticated RLS query silently fail closed.
+    principal = "00000000-0000-0000-0000-000000000001"
+    async with engine.connect() as connection:
+        await connection.execute(
+            text(
+                "SELECT set_config('app.current_user_id', :uid, true), "
+                "set_config('app.current_user_signature', :signature, true)"
+            ),
+            {"uid": principal, "signature": _rls_signature(principal)},
+        )
+        verified_principal = (
+            await connection.execute(
+                text("SELECT public.nlc_current_user_principal()")
+            )
+        ).scalar_one_or_none()
+        await connection.rollback()
+
+    if verified_principal != principal:
+        raise RuntimeError(
+            "NLC_RLS_HMAC_SECRET does not match the database signing key; "
+            "refusing to start the runtime API"
+        )
+
 
 # ── STARTUP / SHUTDOWN ────────────────────────────────────────────────
 async def create_tables() -> None:
