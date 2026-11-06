@@ -140,6 +140,7 @@ class ComplianceSummaryResponse(BaseModel):
     pre_override_score: int | None = None  # Issue 4: underlying score before BLACK override
     risk_band: str | None
     active_flags: int
+    pending_review_flags: int = 0
     black_flags: int
     red_flags: int
     yellow_flags: int
@@ -430,7 +431,7 @@ async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_d
     if not LEGAL_SCORE_RELEASED:
         risk_band = "NOT_EVALUATED"
     current_score = None if (not LEGAL_SCORE_RELEASED or risk_band == "NOT_EVALUATED") else company.current_compliance_score
-    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=current_score, pre_override_score=None, risk_band=risk_band, active_flags=flag_summary.get("total_active", 0), black_flags=flag_summary.get("black", 0) if LEGAL_SCORE_RELEASED else 0, red_flags=flag_summary.get("red", 0) if LEGAL_SCORE_RELEASED else 0, yellow_flags=flag_summary.get("yellow", 0) if LEGAL_SCORE_RELEASED else 0, last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
+    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=current_score, pre_override_score=None, risk_band=risk_band, active_flags=flag_summary.get("total_active", 0), pending_review_flags=flag_summary.get("pending_review", 0), black_flags=flag_summary.get("black", 0) if LEGAL_SCORE_RELEASED else 0, red_flags=flag_summary.get("red", 0) if LEGAL_SCORE_RELEASED else 0, yellow_flags=flag_summary.get("yellow", 0) if LEGAL_SCORE_RELEASED else 0, last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
 
 
 @router.get("/{company_id}/flags", response_model=list[FlagResponse], dependencies=[Depends(require_company_access("company_id"))], summary="Get active flags")
