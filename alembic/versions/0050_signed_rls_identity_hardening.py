@@ -25,6 +25,7 @@ COMPANY_TABLES = (
     "registered_office_history",
     "rescue_plans",
     "rescue_steps",
+    "rescue_audit_log",
     "rjsc_form_filings",
     "share_transfers",
     "shareholders",
@@ -491,6 +492,35 @@ def upgrade() -> None:
             FOR DELETE USING (public.{write_fn}(company_id))
         """)
 
+    # Rescue audit records are tenant-scoped through their parent plan.
+    # They are append-only: the actor must be the signed current user and
+    # must have edit access to the plan's company.
+    op.execute("""
+        CREATE POLICY rescue_audit_log_tenant_select ON public.rescue_audit_log
+        FOR SELECT
+        USING (
+            EXISTS (
+                SELECT 1
+                FROM public.rescue_plans rp
+                WHERE rp.id = rescue_audit_log.rescue_plan_id
+                  AND public.nlc_can_access_company(rp.company_id)
+            )
+        )
+    """)
+    op.execute("""
+        CREATE POLICY rescue_audit_log_tenant_insert ON public.rescue_audit_log
+        FOR INSERT
+        WITH CHECK (
+            actor_user_id = public.nlc_current_user_id()
+            AND EXISTS (
+                SELECT 1
+                FROM public.rescue_plans rp
+                WHERE rp.id = rescue_audit_log.rescue_plan_id
+                  AND public.nlc_can_edit_company(rp.company_id)
+            )
+        )
+    """)
+
     # Compliance flags may expose tax, audit, annual-return and capital data.
     op.execute("""
         CREATE POLICY compliance_flags_tenant_select ON public.compliance_flags
@@ -955,7 +985,7 @@ def upgrade() -> None:
     # no human or service session may rewrite or erase historical snapshots.
     op.execute("REVOKE UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE public.legal_rule_versions FROM nlc_app_role")
     op.execute("GRANT SELECT, INSERT ON TABLE public.legal_rule_versions TO nlc_app_role")
-    for table in ("user_activity_logs", "document_access_log", "compliance_evaluation_runs", "compliance_events", "ai_output_log"):
+    for table in ("user_activity_logs", "document_access_log", "compliance_evaluation_runs", "compliance_events", "ai_output_log", "rescue_audit_log"):
         op.execute(f"REVOKE UPDATE, DELETE, TRUNCATE ON TABLE public.{table} FROM nlc_app_role")
 
     # Enforce append-only rule history even if a future grant/policy regresses.
