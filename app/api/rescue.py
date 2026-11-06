@@ -163,6 +163,13 @@ async def create_rescue_plan(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+    if not LEGAL_SCORE_RELEASED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Automated rescue generation is withheld until statutory scoring is independently approved and released.",
+        )
+
     company_svc = CompanyService(db)
     rescue_svc = RescueService(db)
     activity = ActivityService(db)

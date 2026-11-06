@@ -11,17 +11,47 @@ AI Constitution Article 6: All notifications logged with flag reference.
 from __future__ import annotations
 
 import uuid
+import re
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import and_, or_, select
 
 from app.models.enums import NotificationChannel, NotificationStatus
+from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
 from app.models.infrastructure import Notification
 from app.services.base import BaseService
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
+
+
+_RULE_NOTIFICATION_TYPE = re.compile(r"^[A-Z]{2,5}-[0-9]{3}$")
+
+
+def is_rule_notification_type(notification_type: str | None) -> bool:
+    return bool(notification_type and _RULE_NOTIFICATION_TYPE.fullmatch(notification_type))
+
+
+GENERIC_LEGAL_ALERT_TYPES = frozenset({
+    "COMPLIANCE_ALERT", "LEGAL_ALERT", "RISK_ALERT", "RULE_ALERT",
+})
+
+
+def is_notification_eligible(
+    notification_type: str | None,
+    *,
+    related_flag_id: uuid.UUID | None = None,
+) -> bool:
+    """Fail closed for rule alerts and generic legal/compliance alert types."""
+    normalized_type = str(notification_type or "").strip().upper()
+    if not normalized_type:
+        return False
+    if is_rule_notification_type(normalized_type):
+        return LEGAL_SCORE_RELEASED and normalized_type in VERIFIED_RULE_IDS
+    if normalized_type in GENERIC_LEGAL_ALERT_TYPES or related_flag_id is not None:
+        return False
+    return True
 
 
 class NotificationService(BaseService[Notification]):
@@ -45,12 +75,11 @@ class NotificationService(BaseService[Notification]):
         title = title or subject
         body = body or message
         notification_type = notification_type or 'SYSTEM'
-        """
-        Queue a notification for delivery.
-        _queue_notification stub implementation.
-        Dashboard notifications are immediately PENDING.
-        Email/WhatsApp are sent by Celery worker.
-        """
+        # Unapproved legal alerts remain auditable but never enter delivery queues.
+        legal_alert_eligible = is_notification_eligible(
+            notification_type,
+            related_flag_id=related_flag_id,
+        )
         return await self.create(
             company_id=company_id,
             user_id=user_id,
@@ -58,7 +87,16 @@ class NotificationService(BaseService[Notification]):
             body=body,
             notification_type=notification_type,
             channel=channel,
-            notification_status=NotificationStatus.PENDING,
+            notification_status=(
+                NotificationStatus.PENDING
+                if legal_alert_eligible
+                else NotificationStatus.SUPPRESSED
+            ),
+            failure_reason=(
+                None
+                if legal_alert_eligible
+                else "Suppressed at creation: legal rule is not counsel-approved for release."
+            ),
             scheduled_for=scheduled_for or datetime.now(UTC),
             days_until_deadline=days_until_deadline,
             related_flag_id=related_flag_id,
@@ -73,9 +111,23 @@ class NotificationService(BaseService[Notification]):
         Generate notifications for new RED/BLACK compliance flags.
         _process_flag_notifications stub implementation.
         """
+        # A provisional RED/BLACK engine label is not an authorised legal
+        # alert. Do not notify customers until the statutory score release
+        # gate is open and the rule is in the internally source-checked set.
+        from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS, RuleState
+
+        if not LEGAL_SCORE_RELEASED:
+            return
+
         for flag in flags:
-            severity = getattr(flag, "severity", "")
-            if severity not in ("RED", "BLACK"):
+            severity = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", ""))
+            rule_id = getattr(flag, "rule_id", "")
+            if severity not in ("RED", "BLACK") or rule_id not in VERIFIED_RULE_IDS:
+                continue
+            if (
+                getattr(flag, "state", None) != RuleState.NON_COMPLIANT
+                or getattr(flag, "eval_state", "VIOLATION") == "UNKNOWN"
+            ):
                 continue
 
             title = f"{'🔴' if severity == 'RED' else '⚫'} Compliance Alert: {getattr(flag, 'rule_id', '')}"
@@ -162,7 +214,11 @@ class NotificationService(BaseService[Notification]):
             .limit(limit)
             .offset(offset)
         )
-        return list(result.scalars().all())
+        return [
+            n for n in result.scalars().all()
+            if n.notification_status != NotificationStatus.SUPPRESSED
+            and is_notification_eligible(n.notification_type)
+        ]
 
     async def get_for_company(
         self,
@@ -177,7 +233,11 @@ class NotificationService(BaseService[Notification]):
             .order_by(Notification.created_at.desc())
             .limit(limit)
         )
-        return list(result.scalars().all())
+        return [
+            n for n in result.scalars().all()
+            if n.notification_status != NotificationStatus.SUPPRESSED
+            and is_notification_eligible(n.notification_type)
+        ]
 
     async def acknowledge(
         self,
@@ -189,7 +249,7 @@ class NotificationService(BaseService[Notification]):
         _acknowledge_notification stub implementation.
         """
         notif = await self.get_by_id(notification_id)
-        if not notif or (notif.user_id is not None and notif.user_id != user_id):
+        if not notif or notif.notification_status == NotificationStatus.SUPPRESSED or (notif.user_id is not None and notif.user_id != user_id):
             return None
         return await self.update_instance(
             notif,
@@ -227,6 +287,21 @@ class NotificationService(BaseService[Notification]):
             retry_count=notif.retry_count + 1,
         )
 
+    async def mark_suppressed(
+        self,
+        notification_id: uuid.UUID,
+        reason: str,
+    ) -> Notification | None:
+        """Stop an unapproved legal-rule alert from entering delivery queues."""
+        notif = await self.get_by_id(notification_id)
+        if not notif:
+            return None
+        return await self.update_instance(
+            notif,
+            notification_status=NotificationStatus.SUPPRESSED,
+            failure_reason=reason,
+        )
+
     async def get_pending(
         self,
         channel: NotificationChannel | None = None,
@@ -236,13 +311,43 @@ class NotificationService(BaseService[Notification]):
         filters = [Notification.notification_status == NotificationStatus.PENDING]
         if channel:
             filters.append(Notification.channel == channel)
+        # Filter at SQL level before LIMIT so a large legacy legal-alert backlog
+        # cannot starve unrelated payment, subscription or operational notices.
+        rule_id_type = Notification.notification_type.op("~")(r"^[A-Z]{2,5}-[0-9]{3}$")
+        non_rule_id_type = Notification.notification_type.op("!~")(r"^[A-Z]{2,5}-[0-9]{3}$")
+        generic_legal_type = Notification.notification_type.in_(GENERIC_LEGAL_ALERT_TYPES)
+        if LEGAL_SCORE_RELEASED:
+            eligible_rule = and_(
+                rule_id_type,
+                Notification.notification_type.in_(VERIFIED_RULE_IDS),
+            )
+            eligible_operational = and_(
+                non_rule_id_type,
+                ~generic_legal_type,
+                Notification.related_flag_id.is_(None),
+            )
+            filters.append(or_(eligible_rule, eligible_operational))
+        else:
+            filters.append(and_(
+                non_rule_id_type,
+                ~generic_legal_type,
+                Notification.related_flag_id.is_(None),
+            ))
         result = await self.db.execute(
             select(Notification)
             .where(*filters)
             .order_by(Notification.created_at)
             .limit(limit)
         )
-        return list(result.scalars().all())
+        # Re-check the release gate at dispatch time. Rows queued before the
+        # gate was closed (or before this guard existed) must not be delivered.
+        return [
+            n for n in result.scalars().all()
+            if is_notification_eligible(
+                n.notification_type,
+                related_flag_id=n.related_flag_id,
+            )
+        ]
 
 
 # ═══════════════════════════════════════════════════════════════════════

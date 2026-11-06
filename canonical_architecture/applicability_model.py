@@ -45,17 +45,36 @@ APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {
         "S85: Written notice with date/time/place/business required."
     ),
     "AGM-005": ApplicabilityRule(
-        "AGM-005", ("ALL",), ("agm_held",), (),
-        "S85(2)(b): Private company needs 2 members present (if <=7 total); "
-        "3 if >7. Public company needs 5."
+        "AGM-005",
+        ("PRIVATE_LIMITED", "PUBLIC_LIMITED"),
+        (
+            "company_type",
+            "agm_held_this_cycle",
+            "member_count",
+            "members_present_at_agm",
+            "agm_attendance_verified",
+            "agm_attendance_evidence_ref",
+            "agm_quorum_basis_verified",
+            "agm_quorum_evidence_ref",
+            "agm_quorum_required",
+        ),
+        (),
+        "Companies Act 1994, s.85(2)(b): the default quorum is 2 for a private "
+        "company with not more than 6 members, 3 for a private company with more "
+        "than 6 members, and 5 for other companies. The operative Articles may "
+        "prescribe otherwise. The current profile has no independently verified "
+        "member-count evidence field; therefore the stored member_count is not "
+        "sufficient to evaluate quorum. Require hard-copy Articles review and "
+        "independent evidence before any finding."
     ),
     "AGM-006": ApplicabilityRule(
         "AGM-006", ("ALL",), ("agm_held",), (),
         "S89: Minutes must be entered in books, signed by chairman."
     ),
     "AGM-007": ApplicabilityRule(
-        "AGM-007", ("ALL",), ("agm_held",), (),
-        "S84: EGM requisition rules. Adjournment requires proper notice."
+        "AGM-007", ("ALL",), ("agm_adjourned_without_notice",), ("articles_version_at_meeting",),
+        "Companies Act 1994, s.85 and the operative Articles: adjournment/notice "
+        "consequence is fact-specific and requires lawyer review; not an automatic breach."
     ),
 
     # ── Registers Module (Sections 34-36, 89, 115, 159, 174) ────────
@@ -132,8 +151,13 @@ APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {
         "Exception: Court order obtained."
     ),
     "CHG-001": ApplicabilityRule(
-        "CHG-001", ("ALL",), ("charge_created",), (),
-        "S159: Same as CAP-002. Charge must be registered with RJSC."
+        "CHG-001", ("ALL",), ("charges",), (),
+        "Companies Act 1994, s.172(1): notice of payment/satisfaction within 21 "
+        "days applies only to a charge whose registration is required by s.159. "
+        "The current ChargeEvent model does not record verified s.159 "
+        "registrability or authoritative evidence of satisfaction/filing status. "
+        "Until those facts are separately evidenced, this rule must remain "
+        "UNKNOWN / NOT_EVALUATED and must not infer non-filing from a default False."
     ),
 
     # ── Structural (Sections 11, 17, 18) ────────────────────────────
@@ -214,14 +238,26 @@ APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {
         "executed by both parties."
     ),
 
-    # ── Escalation (Section 346) ────────────────────────────────────
+    # ── Escalation (Section 346; review only) ────────────────────────
     "ESC-001": ApplicabilityRule(
-        "ESC-001", ("ALL",), ("is_active",), (),
-        "S346: Strike-off risk for non-filing/non-trading."
+        "ESC-001", ("ALL",), ("last_agm_date", "unfiled_returns_count"), (),
+        "Companies Act 1994, s.346: filing backlog is only an internal risk/review "
+        "trigger; it does not itself prove that the Registrar commenced the "
+        "statutory notice sequence or that the company is defunct or dissolved."
     ),
     "ESC-002": ApplicabilityRule(
-        "ESC-002", ("ALL",), ("is_active",), (),
-        "S346: Strike-off imminent. 3+ years non-filing or notice received."
+        "ESC-002",
+        ("ALL",),
+        (
+            "rjsc_strike_off_notice_date",
+            "on_rjsc_strike_off_list",
+            "rjsc_status",
+            "last_rjsc_compliance_date",
+        ),
+        (),
+        "Companies Act 1994, s.346: review the Registrar's actual notice sequence "
+        "and current register status. Filing backlog or an unverified list indicator "
+        "does not establish strike-off or dissolution."
     ),
 
     # ── Default (Sections 94, 397) ──────────────────────────────────
