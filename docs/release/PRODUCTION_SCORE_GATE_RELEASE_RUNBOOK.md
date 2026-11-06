@@ -147,6 +147,7 @@ The Render `nlc_platform` service is currently on live deployment commit `9e4f99
 11. Confirm all existing pending rule-ID notifications are SUPPRESSED, no unapproved rule notification is returned by the user API or admin send queue, and the Celery worker suppresses any newly encountered unapproved rule alert.
 
 The five aggregate views must have `reloptions` containing `security_invoker=true`. The `engagements` policy must call `nlc_current_user_is_revenue_staff()`; legal staff must not be able to read commercial fee fields directly.
+\nRead-only production view audit (7 November 2026): all five public aggregate views are owned by `neondb_owner` (`BYPASSRLS=true`), have no `security_invoker` reloption, and grant `SELECT` to `nlc_app_role`. Production remains at Alembic `0042_dedup_key`; the invoker-view and revenue/quotation/billing role corrections are not live until the approved migration stack is applied. The app and audit roles still have `INHERIT=true`; `neondb_owner` remains a member of both roles with `ADMIN OPTION=true` (grantor `cloud_admin`). These are read-only observations; no live changes were made.
 \n**No production migration, role alteration, grant change or rule-row update has been performed by this audit.**
 
 ## 4. Apply database migrations
