@@ -1,4 +1,4 @@
-"""Reconcile webhook schema and keep it closed until signed RLS is installed.
+"""Reconcile existing webhook schema and keep evidence closed until signed RLS.
 
 Revision ID: 0044_webhook_schema_reconcile
 Revises: b10c91ac6860
@@ -12,40 +12,27 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # These tables are reconciled here, but 0050 is the first migration that
-    # installs cryptographically verified user identity. Do not install a
-    # raw caller-settable GUC policy in this intermediate revision.
+    # 0037/0038 are the authoritative table-creation migrations. If an
+    # installation already records a later revision but these evidence tables
+    # are missing, do not silently create empty replacements and hide data
+    # loss. Stop for backup/schema-drift reconciliation.
     op.execute("""
-        CREATE TABLE IF NOT EXISTS public.webhook_endpoints (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-            url VARCHAR(500) NOT NULL,
-            secret VARCHAR(128) NOT NULL,
-            events VARCHAR(50)[] NOT NULL DEFAULT '{}',
-            is_active BOOLEAN NOT NULL DEFAULT TRUE,
-            last_delivery_at TIMESTAMPTZ NULL,
-            last_response_code INTEGER NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """)
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS public.webhook_deliveries (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            endpoint_id UUID NOT NULL REFERENCES public.webhook_endpoints(id) ON DELETE CASCADE,
-            event_type VARCHAR(50) NOT NULL,
-            payload JSONB NOT NULL,
-            status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
-            attempts INTEGER NOT NULL DEFAULT 0,
-            max_attempts INTEGER NOT NULL DEFAULT 3,
-            response_code INTEGER NULL,
-            response_body TEXT NULL,
-            error_message TEXT NULL,
-            delivered_at TIMESTAMPTZ NULL,
-            next_retry_at TIMESTAMPTZ NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
+        DO $preflight$
+        BEGIN
+            IF to_regclass('public.webhook_endpoints') IS NULL THEN
+                RAISE EXCEPTION
+                    'Expected public.webhook_endpoints from migration 0037 is missing; restore/reconcile evidence before continuing';
+            END IF;
+            IF to_regclass('public.webhook_deliveries') IS NULL THEN
+                RAISE EXCEPTION
+                    'Expected public.webhook_deliveries from migration 0037 is missing; restore/reconcile evidence before continuing';
+            END IF;
+            IF to_regclass('public.rescue_audit_log') IS NULL THEN
+                RAISE EXCEPTION
+                    'Expected public.rescue_audit_log from migration 0038 is missing; restore/reconcile audit evidence before continuing';
+            END IF;
+        END
+        $preflight$;
     """)
 
     for statement in (
@@ -57,11 +44,15 @@ def upgrade() -> None:
     ):
         op.execute(statement)
 
-    op.execute("ALTER TABLE public.webhook_deliveries ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()")
+    op.execute(
+        "ALTER TABLE public.webhook_deliveries "
+        "ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+    )
 
-    # Remove every legacy policy and force RLS with no replacement policy.
-    # This intentionally denies app access if 0050 cannot complete.
-    for table in ("webhook_endpoints", "webhook_deliveries"):
+    # Remove every legacy raw-GUC policy and force RLS with no replacement
+    # policy. This intentionally denies app access until migration 0050
+    # installs HMAC-verified owner/staff policies.
+    for table in ("webhook_endpoints", "webhook_deliveries", "rescue_audit_log"):
         op.execute(f"ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY")
         op.execute(f"ALTER TABLE public.{table} FORCE ROW LEVEL SECURITY")
         op.execute(f"REVOKE ALL ON TABLE public.{table} FROM PUBLIC")
@@ -82,33 +73,8 @@ def upgrade() -> None:
             $policies$;
         """)
 
-    # Rescue audit records are also closed during the transition. The table
-    # may be absent on a drifted legacy installation; 0050 preflight must
-    # reject that installation rather than silently recreating its evidence.
-    op.execute("""
-        DO $rescue$
-        DECLARE p record;
-        BEGIN
-            IF to_regclass('public.rescue_audit_log') IS NOT NULL THEN
-                EXECUTE 'ALTER TABLE public.rescue_audit_log ENABLE ROW LEVEL SECURITY';
-                EXECUTE 'ALTER TABLE public.rescue_audit_log FORCE ROW LEVEL SECURITY';
-                EXECUTE 'REVOKE ALL ON TABLE public.rescue_audit_log FROM PUBLIC';
-                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
-                    EXECUTE 'REVOKE ALL ON TABLE public.rescue_audit_log FROM nlc_app_role';
-                END IF;
-                FOR p IN
-                    SELECT policyname FROM pg_policies
-                    WHERE schemaname = 'public' AND tablename = 'rescue_audit_log'
-                LOOP
-                    EXECUTE format('DROP POLICY %I ON public.rescue_audit_log', p.policyname);
-                END LOOP;
-            END IF;
-        END
-        $rescue$;
-    """)
-
 
 def downgrade() -> None:
     # Forward-only: reintroducing raw-GUC policies would restore the
-    # caller-controlled identity vulnerability.
+    # caller-controlled identity vulnerability; table data is retained.
     pass
