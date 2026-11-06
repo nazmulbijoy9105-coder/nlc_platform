@@ -72,10 +72,11 @@ async def test_client_session_sets_verified_user_rls_context(monkeypatch):
     assert session.closed is True
 
 
+@pytest.mark.parametrize("role", [UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF])
 @pytest.mark.asyncio
-async def test_admin_session_gets_admin_context_only_for_verified_admin_role(monkeypatch):
+async def test_human_admin_sessions_keep_signed_user_identity(monkeypatch, role):
     user_id = uuid.uuid4()
-    session = _Session(SimpleNamespace(role=UserRole.SUPER_ADMIN, is_active=True))
+    session = _Session(SimpleNamespace(role=role, is_active=True))
     calls = []
 
     monkeypatch.setattr(dependencies, "AsyncSessionLocal", lambda: session)
@@ -89,14 +90,16 @@ async def test_admin_session_gets_admin_context_only_for_verified_admin_role(mon
     monkeypatch.setattr(dependencies, "set_rls_context", set_user_context)
     monkeypatch.setattr(dependencies, "set_admin_context", set_admin_context)
 
-    token = TokenData(user_id=str(user_id), email="admin@example.test", role="SUPER_ADMIN")
+    token = TokenData(user_id=str(user_id), email="admin@example.test", role=role.value)
     generator = dependencies.get_db_for_user(token)
-    await generator.__anext__()
+    yielded = await generator.__anext__()
+    assert yielded is session
     with pytest.raises(StopAsyncIteration):
         await generator.__anext__()
 
-    assert calls == [("admin", None)]
+    assert calls == [("user", str(user_id))]
     assert session.committed is True
+    assert session.closed is True
 
 
 @pytest.mark.asyncio
@@ -125,7 +128,7 @@ async def test_stale_token_role_is_rejected_before_session_is_yielded(monkeypatc
 
 
 @pytest.mark.asyncio
-async def test_legal_staff_keeps_signed_user_identity_not_admin_service_principal(monkeypatch):
+async def test_legal_staff_keeps_signed_user_identity(monkeypatch):
     user_id = uuid.uuid4()
     session = _Session(SimpleNamespace(role=UserRole.LEGAL_STAFF, is_active=True))
     calls = []
