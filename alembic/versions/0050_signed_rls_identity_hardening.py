@@ -78,7 +78,22 @@ def upgrade() -> None:
         DECLARE
             app_role record;
             audit_role record;
+            migration_role record;
         BEGIN
+            -- The SECURITY DEFINER RLS helpers query FORCE-RLS tables whose
+            -- policies call those same helpers. Their owner must bypass RLS
+            -- (or be superuser) to avoid recursive policy evaluation.
+            SELECT rolsuper, rolbypassrls
+              INTO migration_role
+              FROM pg_roles
+             WHERE rolname = current_user;
+
+            IF NOT FOUND OR (NOT migration_role.rolsuper AND NOT migration_role.rolbypassrls) THEN
+                RAISE EXCEPTION
+                    'Migration role % must have BYPASSRLS or SUPERUSER to own the SECURITY DEFINER RLS helpers',
+                    current_user;
+            END IF;
+
             SELECT rolcanlogin, rolsuper, rolcreatedb, rolcreaterole,
                    rolinherit, rolreplication, rolbypassrls
               INTO app_role
