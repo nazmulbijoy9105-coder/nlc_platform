@@ -941,15 +941,29 @@ def upgrade() -> None:
         CREATE POLICY quotations_company_read ON public.quotations
         FOR SELECT
         USING (
-            public.nlc_current_user_is_staff()
-            OR (company_id IS NOT NULL AND public.nlc_can_access_company(company_id))
+            public.nlc_current_user_is_revenue_staff()
+            OR (
+                NOT public.nlc_current_user_is_staff()
+                AND public.nlc_current_user_id() IS NOT NULL
+                AND EXISTS (
+                    SELECT 1 FROM public.users u
+                    WHERE u.id = public.nlc_current_user_id()
+                      AND u.is_active IS TRUE
+                )
+                AND EXISTS (
+                    SELECT 1 FROM public.company_user_access cua
+                    WHERE cua.company_id = quotations.company_id
+                      AND cua.user_id = public.nlc_current_user_id()
+                      AND cua.is_active IS TRUE
+                )
+            )
         )
     """)
     op.execute("""
         CREATE POLICY quotations_staff_write ON public.quotations
         FOR ALL
-        USING (public.nlc_current_user_is_staff())
-        WITH CHECK (public.nlc_current_user_is_staff())
+        USING (public.nlc_current_user_is_revenue_staff())
+        WITH CHECK (public.nlc_current_user_is_revenue_staff())
     """)
     op.execute("""
         CREATE POLICY document_access_log_actor_tenant_select ON public.document_access_log
