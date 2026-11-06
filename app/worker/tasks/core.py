@@ -47,17 +47,24 @@ _PRODUCTION_WORKER = (
     _RENDER_RUNTIME
     or _os.environ.get("ENVIRONMENT", "development").strip().lower() in {"prod", "production"}
 )
-if _PRODUCTION_WORKER or _os.environ.get("CELERY_BROKER_URL") or _os.environ.get("CELERY_BROKER"):
-    from app.core.config import settings as _settings
-
-    if not _settings.ASYNC_APP_DATABASE_URL:
-        raise RuntimeError("SEC-009: runtime database URL not configured — refusing to run worker tasks")
-    if _PRODUCTION_WORKER and not _settings.APP_DATABASE_URL:
+_APP_DATABASE_URL = _os.environ.get("APP_DATABASE_URL", "").strip()
+_DATABASE_URL = _os.environ.get("DATABASE_URL", "").strip()
+_BROKER_URL = (
+    _os.environ.get("CELERY_BROKER_URL", "").strip()
+    or _os.environ.get("REDIS_URL", "").strip()
+)
+if _PRODUCTION_WORKER:
+    # Check raw deployment environment before importing app.core.config:
+    # app.core package initialisation imports API dependencies and database.
+    if not _APP_DATABASE_URL:
         raise RuntimeError("SEC-010: APP_DATABASE_URL is required for non-BYPASSRLS worker access")
-    if _PRODUCTION_WORKER and len(_os.environ.get("NLC_RLS_HMAC_SECRET", "")) < 32:
+    if len(_os.environ.get("NLC_RLS_HMAC_SECRET", "")) < 32:
         raise RuntimeError("SEC-011: NLC_RLS_HMAC_SECRET must contain at least 32 characters for production/Render workers")
-    if _PRODUCTION_WORKER and not (_settings.CELERY_BROKER_URL or _settings.redis_url):
+    if not _BROKER_URL:
         raise RuntimeError("SEC-012: CELERY_BROKER_URL or REDIS_URL is required for production/Render workers")
+elif _os.environ.get("CELERY_BROKER_URL") or _os.environ.get("CELERY_BROKER"):
+    if not (_APP_DATABASE_URL or _DATABASE_URL):
+        raise RuntimeError("SEC-009: runtime database URL not configured — refusing to run worker tasks")
 import logging
 import uuid
 from datetime import UTC, date, datetime, timedelta
