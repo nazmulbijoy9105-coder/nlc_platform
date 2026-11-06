@@ -25,7 +25,6 @@ COMPANY_TABLES = (
     "registered_office_history",
     "rescue_plans",
     "rescue_steps",
-    "rescue_audit_log",
     "rjsc_form_filings",
     "share_transfers",
     "shareholders",
@@ -41,6 +40,7 @@ SENSITIVE_DOCUMENT_TYPES = ("AUDIT_REPORT", "ANNUAL_RETURN", "DUE_DILIGENCE")
 RLS_TABLES = (
     "companies",
     *COMPANY_TABLES,
+    "rescue_audit_log",
     "compliance_flags",
     "documents",
     "users",
