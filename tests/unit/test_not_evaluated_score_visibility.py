@@ -117,3 +117,26 @@ def test_counsel_approved_flag_is_visible_after_release_switch(monkeypatch):
 
     assert response.severity == "RED"
     assert response.score_impact == 15
+
+
+def test_flag_summary_separates_pending_review_from_released_findings(monkeypatch):
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock
+    import app.services.compliance_service as compliance_module
+    from app.services.compliance_service import ComplianceService
+
+    monkeypatch.setattr(compliance_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(compliance_module, "VERIFIED_RULE_IDS", {"AGM-001"})
+    summary_result = MagicMock()
+    summary_result.mappings.return_value.one_or_none.return_value = {"total_active": 2}
+    flags_result = MagicMock()
+    flags_result.all.return_value = [("AGM-001", "RED"), ("TAX-001", "YELLOW")]
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=[summary_result, flags_result])
+
+    result = asyncio.run(ComplianceService(db).get_flag_summary(uuid4()))
+
+    assert result["total_active"] == 0
+    assert result["black"] == result["red"] == result["yellow"] == 0
+    assert result["pending_review"] == 2
+    assert result["pending_review_flags"] == 2
