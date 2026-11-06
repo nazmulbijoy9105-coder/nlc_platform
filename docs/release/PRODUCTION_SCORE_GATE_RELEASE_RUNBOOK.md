@@ -43,6 +43,27 @@ Required attributes for both roles:
 - NOINHERIT
 - NOREPLICATION
 - NOBYPASSRLS
+- No role memberships in either direction (NOINHERIT alone does not prevent `SET ROLE`).
+
+For an authorised DBA, the attribute correction is:
+
+```sql
+ALTER ROLE nlc_app_role NOINHERIT;
+ALTER ROLE nlc_ci_audit_role NOINHERIT;
+```
+
+Before migration, run this read-only membership check and require **zero rows**:
+
+```sql
+SELECT granted.rolname AS granted_role, member.rolname AS member_role
+FROM pg_auth_members membership
+JOIN pg_roles granted ON granted.oid = membership.roleid
+JOIN pg_roles member ON member.oid = membership.member
+WHERE granted.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
+   OR member.rolname IN ('nlc_app_role', 'nlc_ci_audit_role');
+```
+
+If rows are returned, stop and have the DBA assess each grant before revoking it. Do not automatically remove memberships without confirming the dependent service and access path. Migration 0050 now rejects memberships in either direction.
 
 Create:
 - nlc_app_role — set its password securely and use it only in APP_DATABASE_URL.
