@@ -78,6 +78,42 @@ async def test_rule_parity_role_is_login_and_can_read_only_the_audit_view():
             )
             assert allowed is False, f"audit role unexpectedly has {privilege} on public.companies"
 
+        # Check every public table/view, not just companies. The audit role
+        # must not inherit tenant access through a different table grant.
+        public_relation_privileges = await connection.fetch(
+            """
+            SELECT c.relname AS relation_name, p.privilege
+            FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            CROSS JOIN (VALUES
+                ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE'),
+                ('TRUNCATE'), ('REFERENCES'), ('TRIGGER')
+            ) AS p(privilege)
+            WHERE n.nspname = 'public'
+              AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+              AND has_table_privilege(current_user, c.oid, p.privilege)
+            ORDER BY relation_name, p.privilege
+            """
+        )
+        assert public_relation_privileges == []
+
+        public_sequence_privileges = await connection.fetch(
+            """
+            SELECT c.relname AS sequence_name, p.privilege
+            FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            CROSS JOIN (VALUES ('USAGE'), ('SELECT'), ('UPDATE')) AS p(privilege)
+            WHERE n.nspname = 'public'
+              AND c.relkind = 'S'
+              AND has_sequence_privilege(current_user, c.oid, p.privilege)
+            ORDER BY sequence_name, p.privilege
+            """
+        )
+        assert public_sequence_privileges == []
+        assert await connection.fetchval(
+            "SELECT has_schema_privilege(current_user, 'public', 'CREATE')"
+        ) is False
+
         # NOINHERIT alone does not prevent SET ROLE. Reject memberships
         # both from and to this principal.
         memberships = await connection.fetch(
