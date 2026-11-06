@@ -955,6 +955,7 @@ def upgrade() -> None:
                     WHERE cua.company_id = quotations.company_id
                       AND cua.user_id = public.nlc_current_user_id()
                       AND cua.is_active IS TRUE
+                      AND cua.can_view_financials IS TRUE
                 )
             )
         )
