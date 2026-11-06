@@ -746,6 +746,10 @@ async def test_legal_staff_cannot_read_engagements_quotations_or_revenue_pipelin
     await set_admin_context(db)
     db.add_all([admin_user, legal_user, view_only_user])
     await db.flush()
+    system_gate = await db.execute(
+        text("SELECT public.nlc_current_user_is_revenue_staff()")
+    )
+    assert system_gate.scalar_one() is True
     db.add_all([
         CompanyUserAccess(
             user_id=legal_user.id,
