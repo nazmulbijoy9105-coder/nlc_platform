@@ -269,6 +269,39 @@ def upgrade() -> None:
         $function$
     """)
     op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_current_user_is_rule_admin()
+        RETURNS boolean
+        LANGUAGE sql
+        STABLE
+        SECURITY DEFINER
+        SET search_path = pg_catalog, public
+        AS $function$
+            SELECT EXISTS (
+                SELECT 1 FROM public.users u
+                WHERE u.id = public.nlc_current_user_id()
+                  AND u.is_active IS TRUE
+                  AND u.role::text IN ('SUPER_ADMIN', 'ADMIN_STAFF')
+            )
+        $function$
+    """)
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_current_user_is_super_admin()
+        RETURNS boolean
+        LANGUAGE sql
+        STABLE
+        SECURITY DEFINER
+        SET search_path = pg_catalog, public
+        AS $function$
+            SELECT EXISTS (
+                SELECT 1 FROM public.users u
+                WHERE u.id = public.nlc_current_user_id()
+                  AND u.is_active IS TRUE
+                  AND u.role::text = 'SUPER_ADMIN'
+            )
+        $function$
+    """)
+
+    op.execute("""
         CREATE OR REPLACE FUNCTION public.nlc_can_access_company(p_company_id uuid)
         RETURNS boolean
         LANGUAGE sql
@@ -380,6 +413,8 @@ def upgrade() -> None:
         "nlc_current_user_id()",
         "nlc_current_user_context_valid()",
         "nlc_current_user_is_staff()",
+        "nlc_current_user_is_rule_admin()",
+        "nlc_current_user_is_super_admin()",
         "nlc_can_access_company(uuid)",
         "nlc_can_view_financials_company(uuid)",
         "nlc_can_manage_financials_company(uuid)",
@@ -865,10 +900,10 @@ def upgrade() -> None:
         )
     """)
     op.execute("""
-        CREATE POLICY legal_rules_staff_write ON public.legal_rules
+        CREATE POLICY legal_rules_super_admin_write ON public.legal_rules
         FOR ALL
-        USING (public.nlc_current_user_is_staff())
-        WITH CHECK (public.nlc_current_user_is_staff())
+        USING (public.nlc_current_user_is_super_admin())
+        WITH CHECK (public.nlc_current_user_is_super_admin())
     """)
     for table in ("sro_registry", "regulatory_rules"):
         op.execute(f"""
@@ -889,7 +924,17 @@ def upgrade() -> None:
             USING (public.nlc_current_user_is_staff())
             WITH CHECK (public.nlc_current_user_is_staff())
         """)
-    for table in ("legal_rule_versions", "ai_output_log", "ai_prompt_templates", "engagements"):
+    op.execute("""
+        CREATE POLICY legal_rule_versions_rule_admin_read ON public.legal_rule_versions
+        FOR SELECT
+        USING (public.nlc_current_user_is_rule_admin())
+    """)
+    op.execute("""
+        CREATE POLICY legal_rule_versions_super_admin_insert ON public.legal_rule_versions
+        FOR INSERT
+        WITH CHECK (public.nlc_current_user_is_super_admin())
+    """)
+    for table in ("ai_output_log", "ai_prompt_templates", "engagements"):
         op.execute(f"""
             CREATE POLICY {table}_staff_only ON public.{table}
             FOR ALL
@@ -906,8 +951,40 @@ def upgrade() -> None:
     op.execute("GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO nlc_app_role")
     op.execute("REVOKE TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA public FROM nlc_app_role")
     op.execute("REVOKE ALL ON TABLE public.alembic_version FROM nlc_app_role")
+    # Rule history is append-only. Only a SUPER_ADMIN may create a version;
+    # no human or service session may rewrite or erase historical snapshots.
+    op.execute("REVOKE UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE public.legal_rule_versions FROM nlc_app_role")
+    op.execute("GRANT SELECT, INSERT ON TABLE public.legal_rule_versions TO nlc_app_role")
     for table in ("user_activity_logs", "document_access_log", "compliance_evaluation_runs", "compliance_events", "ai_output_log"):
         op.execute(f"REVOKE UPDATE, DELETE, TRUNCATE ON TABLE public.{table} FROM nlc_app_role")
+
+    # Enforce append-only rule history even if a future grant/policy regresses.
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_reject_legal_rule_version_mutation()
+        RETURNS trigger
+        LANGUAGE plpgsql
+        SECURITY DEFINER
+        SET search_path = pg_catalog, public
+        AS $function$
+        BEGIN
+            RAISE EXCEPTION 'legal_rule_versions is append-only'
+                USING ERRCODE = '55000';
+        END
+        $function$
+    """)
+    op.execute("REVOKE ALL ON FUNCTION public.nlc_reject_legal_rule_version_mutation() FROM PUBLIC")
+    op.execute("DROP TRIGGER IF EXISTS legal_rule_versions_reject_row_mutation ON public.legal_rule_versions")
+    op.execute("""
+        CREATE TRIGGER legal_rule_versions_reject_row_mutation
+        BEFORE UPDATE OR DELETE ON public.legal_rule_versions
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_reject_legal_rule_version_mutation()
+    """)
+    op.execute("DROP TRIGGER IF EXISTS legal_rule_versions_reject_truncate ON public.legal_rule_versions")
+    op.execute("""
+        CREATE TRIGGER legal_rule_versions_reject_truncate
+        BEFORE TRUNCATE ON public.legal_rule_versions
+        FOR EACH STATEMENT EXECUTE FUNCTION public.nlc_reject_legal_rule_version_mutation()
+    """)
 
     # Read-only rule parity is exposed through a narrow view, not tenant tables.
     op.execute("CREATE SCHEMA IF NOT EXISTS audit")
