@@ -1004,6 +1004,7 @@ def upgrade() -> None:
     op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO nlc_app_role")
     op.execute("GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO nlc_app_role")
     op.execute("REVOKE TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA public FROM nlc_app_role")
+    op.execute("REVOKE ALL ON TABLE public.rescue_audit_log FROM PUBLIC")
     op.execute("REVOKE ALL ON TABLE public.alembic_version FROM nlc_app_role")
     # Rule history is append-only. Only a SUPER_ADMIN may create a version;
     # no human or service session may rewrite or erase historical snapshots.
