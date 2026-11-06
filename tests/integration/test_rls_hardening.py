@@ -546,6 +546,59 @@ async def test_legal_rule_registry_is_superadmin_write_and_history_is_append_onl
 
 
 @pytest.mark.asyncio
+async def test_webhook_tables_have_signed_identity_rls(db):
+    table_state = await db.execute(
+        text(
+            """
+            SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity
+            FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public'
+              AND c.relname IN ('webhook_endpoints', 'webhook_deliveries')
+            ORDER BY c.relname
+            """
+        )
+    )
+    states = {row[0]: (row[1], row[2]) for row in table_state.fetchall()}
+    assert set(states) == {"webhook_endpoints", "webhook_deliveries"}
+    assert all(enabled and forced for enabled, forced in states.values())
+
+    result = await db.execute(
+        text(
+            """
+            SELECT tablename, policyname, cmd, qual, with_check
+            FROM pg_policies
+            WHERE schemaname = 'public'
+              AND tablename IN ('webhook_endpoints', 'webhook_deliveries')
+            ORDER BY tablename, policyname
+            """
+        )
+    )
+    policies = result.fetchall()
+    expected = {
+        "webhook_endpoints": {
+            "webhook_endpoints_owner_select",
+            "webhook_endpoints_owner_insert",
+            "webhook_endpoints_owner_update",
+            "webhook_endpoints_owner_delete",
+        },
+        "webhook_deliveries": {
+            "webhook_deliveries_owner_select",
+            "webhook_deliveries_owner_insert",
+            "webhook_deliveries_owner_update",
+            "webhook_deliveries_owner_delete",
+        },
+    }
+    actual = {table: set() for table in expected}
+    for table, policy, _cmd, qual, with_check in policies:
+        actual[table].add(policy)
+        expression = f"{qual or ''} {with_check or ''}".lower()
+        assert "nlc_current_user_id" in expression or "nlc_current_user_is_staff" in expression
+        assert "current_setting('app.current_user_id'" not in expression
+    assert actual == expected
+
+
+@pytest.mark.asyncio
 async def test_all_public_security_definer_functions_have_safe_owners(db):
     result = await db.execute(
         text(
