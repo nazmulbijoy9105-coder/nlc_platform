@@ -44,6 +44,32 @@ async def test_rule_parity_role_is_login_and_can_read_only_the_audit_view():
             "SELECT count(*) FROM audit.active_legal_rule_ids"
         )
         assert visible_rule_count is not None
+        assert await connection.fetchval(
+            "SELECT has_schema_privilege(current_user, 'audit', 'CREATE')"
+        ) is False
+
+        # The audit principal is read-only even on its one permitted view.
+        for privilege in ("INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"):
+            allowed = await connection.fetchval(
+                "SELECT has_table_privilege(current_user, 'audit.active_legal_rule_ids', $1)",
+                privilege,
+            )
+            assert allowed is False, f"audit role unexpectedly has {privilege} on the audit view"
+
+        # PUBLIC EXECUTE on a SECURITY DEFINER routine would silently widen
+        # the audit role's authority. None may be executable by this principal.
+        executable_definers = await connection.fetch(
+            """
+            SELECT p.oid::regprocedure::text AS signature
+            FROM pg_proc p
+            JOIN pg_namespace n ON n.oid = p.pronamespace
+            WHERE n.nspname = 'public'
+              AND p.prosecdef IS TRUE
+              AND has_function_privilege(current_user, p.oid, 'EXECUTE')
+            ORDER BY signature
+            """
+        )
+        assert executable_definers == []
 
         for privilege in ("SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"):
             allowed = await connection.fetchval(
