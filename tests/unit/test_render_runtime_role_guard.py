@@ -60,8 +60,23 @@ def test_render_runtime_starts_with_explicit_nonprivileged_app_url():
             "DATABASE_URL": "postgresql+asyncpg://migration:secret@localhost/test",
             "APP_DATABASE_URL": "postgresql+asyncpg://app:secret@localhost/test",
             "REQUIRE_RLS_APP_ROLE": "true",
+            "NLC_RLS_HMAC_SECRET": "ci-only-hmac-secret-with-at-least-32-characters",
         },
         remove=("ENVIRONMENT",),
     )
 
     assert result.returncode == 0, result.stderr
+
+def test_render_runtime_requires_hmac_signing_secret_at_startup():
+    result = _import_database(
+        {
+            "RENDER": "true",
+            "DATABASE_URL": "postgresql+asyncpg://migration:secret@localhost/test",
+            "APP_DATABASE_URL": "postgresql+asyncpg://app:secret@localhost/test",
+            "REQUIRE_RLS_APP_ROLE": "true",
+        },
+        remove=("ENVIRONMENT", "NLC_RLS_HMAC_SECRET"),
+    )
+
+    assert result.returncode != 0
+    assert "NLC_RLS_HMAC_SECRET must contain at least 32 characters" in result.stderr
