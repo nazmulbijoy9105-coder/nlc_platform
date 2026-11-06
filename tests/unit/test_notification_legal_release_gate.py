@@ -225,3 +225,10 @@ async def test_generic_legal_alert_is_suppressed_even_without_flag_link(monkeypa
 
     kwargs = service.create.await_args.kwargs
     assert kwargs["notification_status"] == NotificationStatus.SUPPRESSED
+
+
+def test_related_flag_notification_is_never_eligible_even_after_rule_release(monkeypatch):
+    monkeypatch.setattr(notification_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(notification_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+
+    assert is_notification_eligible("CUSTOM_ALERT", related_flag_id=uuid4()) is False
