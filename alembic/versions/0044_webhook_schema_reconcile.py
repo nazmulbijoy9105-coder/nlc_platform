@@ -64,10 +64,14 @@ def upgrade() -> None:
     for table in ("webhook_endpoints", "webhook_deliveries"):
         op.execute(f"ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY")
         op.execute(f"ALTER TABLE public.{table} FORCE ROW LEVEL SECURITY")
+        op.execute(f"REVOKE ALL ON TABLE public.{table} FROM PUBLIC")
         op.execute(f"""
             DO $policies$
             DECLARE p record;
             BEGIN
+                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
+                    EXECUTE 'REVOKE ALL ON TABLE public.{table} FROM nlc_app_role';
+                END IF;
                 FOR p IN
                     SELECT policyname FROM pg_policies
                     WHERE schemaname = 'public' AND tablename = '{table}'
@@ -77,21 +81,27 @@ def upgrade() -> None:
             END
             $policies$;
         """)
-        op.execute(f"REVOKE ALL ON TABLE public.{table} FROM PUBLIC")
-        op.execute(f"REVOKE ALL ON TABLE public.{table} FROM nlc_app_role")
 
     # Rescue audit records are also closed during the transition. The table
     # may be absent on a drifted legacy installation; 0050 preflight must
     # reject that installation rather than silently recreating its evidence.
     op.execute("""
         DO $rescue$
+        DECLARE p record;
         BEGIN
             IF to_regclass('public.rescue_audit_log') IS NOT NULL THEN
-                ALTER TABLE public.rescue_audit_log ENABLE ROW LEVEL SECURITY;
-                ALTER TABLE public.rescue_audit_log FORCE ROW LEVEL SECURITY;
+                EXECUTE 'ALTER TABLE public.rescue_audit_log ENABLE ROW LEVEL SECURITY';
+                EXECUTE 'ALTER TABLE public.rescue_audit_log FORCE ROW LEVEL SECURITY';
                 EXECUTE 'REVOKE ALL ON TABLE public.rescue_audit_log FROM PUBLIC';
-                EXECUTE 'REVOKE ALL ON TABLE public.rescue_audit_log FROM nlc_app_role';
-                EXECUTE 'DROP POLICY IF EXISTS rescue_audit_log_tenant_scope ON public.rescue_audit_log';
+                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
+                    EXECUTE 'REVOKE ALL ON TABLE public.rescue_audit_log FROM nlc_app_role';
+                END IF;
+                FOR p IN
+                    SELECT policyname FROM pg_policies
+                    WHERE schemaname = 'public' AND tablename = 'rescue_audit_log'
+                LOOP
+                    EXECUTE format('DROP POLICY %I ON public.rescue_audit_log', p.policyname);
+                END LOOP;
             END IF;
         END
         $rescue$;
