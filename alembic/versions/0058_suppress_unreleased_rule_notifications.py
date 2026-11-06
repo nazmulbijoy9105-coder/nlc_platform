@@ -35,13 +35,7 @@ def upgrade() -> None:
                updated_at = NOW()
          WHERE notification_status = 'PENDING'
            AND (
-               notification_type ~ '^[A-Z]{2,5}-[0-9]{3}
-
-def downgrade() -> None:
-    # SUPPRESSED is a forward-only operational state. Do not requeue old
-    # legal alerts on downgrade; that could send unapproved conclusions.
-    pass
-
+               notification_type ~ '^[A-Z]{2,5}-[0-9]{3}$'
                OR notification_type IN (
                    'COMPLIANCE_ALERT', 'LEGAL_ALERT', 'RISK_ALERT', 'RULE_ALERT'
                )
