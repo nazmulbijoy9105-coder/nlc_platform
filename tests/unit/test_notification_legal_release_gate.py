@@ -169,3 +169,43 @@ async def test_company_notification_list_hides_unapproved_rule_alerts(monkeypatc
 
     assert visible == [payment_notice]
 
+
+
+@pytest.mark.asyncio
+async def test_pending_worker_queue_rechecks_release_gate_for_legacy_rows(monkeypatch):
+    monkeypatch.setattr(notification_module, "LEGAL_SCORE_RELEASED", False)
+    legacy_legal_alert = SimpleNamespace(
+        notification_type="AGM-001",
+        related_flag_id=None,
+    )
+    payment_notice = SimpleNamespace(
+        notification_type="PAYMENT_RECEIVED",
+        related_flag_id=None,
+    )
+    result = SimpleNamespace(
+        scalars=lambda: SimpleNamespace(all=lambda: [legacy_legal_alert, payment_notice])
+    )
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=result)
+    service = NotificationService(db)
+
+    pending = await service.get_pending()
+
+    assert pending == [payment_notice]
+
+
+@pytest.mark.asyncio
+async def test_flag_linked_generic_notification_fails_closed(monkeypatch):
+    monkeypatch.setattr(notification_module, "LEGAL_SCORE_RELEASED", False)
+    service = NotificationService(MagicMock())
+    service.create = AsyncMock(return_value=SimpleNamespace())
+
+    await service.queue_notification(
+        title="Compliance alert",
+        body="Provisional finding",
+        notification_type="COMPLIANCE_FLAG",
+        related_flag_id=uuid4(),
+    )
+
+    kwargs = service.create.await_args.kwargs
+    assert kwargs["notification_status"] == NotificationStatus.SUPPRESSED
