@@ -44,7 +44,9 @@ def is_notification_eligible(
     related_flag_id: uuid.UUID | None = None,
 ) -> bool:
     """Fail closed for rule alerts and generic legal/compliance alert types."""
-    normalized_type = str(notification_type or "").upper()
+    normalized_type = str(notification_type or "").strip().upper()
+    if not normalized_type:
+        return False
     if is_rule_notification_type(normalized_type):
         return LEGAL_SCORE_RELEASED and normalized_type in VERIFIED_RULE_IDS
     if normalized_type in GENERIC_LEGAL_ALERT_TYPES or related_flag_id is not None:
