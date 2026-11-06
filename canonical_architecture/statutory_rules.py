@@ -1257,16 +1257,26 @@ def _legacy_rule(key: str, d: Dict[str, Any]) -> StatutoryRule:
         raise RuntimeError(f"{key}: unknown legacy keys {sorted(extra)}")
     if d["rule_id"] != key:
         raise RuntimeError(f"{key}: rule_id mismatch {d['rule_id']}")
-    if d["applicability"] != "ALL_ACTIVE_COMPANIES" or d["exceptions"]:
-        raise RuntimeError(f"{key}: narrowed applicability not representable")
+    applicability = d["applicability"]
+    if not isinstance(applicability, str) or not applicability.strip():
+        raise RuntimeError(f"{key}: applicability must be a non-empty string")
+    exceptions = d["exceptions"]
+    if not isinstance(exceptions, (list, tuple)) or any(
+        not isinstance(item, str) or not item.strip() for item in exceptions
+    ):
+        raise RuntimeError(f"{key}: exceptions must be non-empty strings")
     if list(d["evidence_required"]) != ["DOCUMENTARY_EVIDENCE"]:
         raise RuntimeError(f"{key}: unexpected legacy evidence keys")
     auth = _LEGACY_AUTHORITY_OVERRIDE.get(key) or _LEGACY_AUTHORITY[d["legal_domain"]]
+    applies_if = None if applicability == "ALL_ACTIVE_COMPANIES" else applicability
     return StatutoryRule(
         key, d["legal_domain"], d["law"], d["requirement"], d["provision"],
         d["provision_status"], auth,
         (key + ":DOCUMENTARY_EVIDENCE",),   # per-rule key: shared key would couple all rules
-        Severity(d["severity"]), d["score_impact"])
+        Severity(d["severity"]), d["score_impact"],
+        applies_if=applies_if,
+        exceptions=tuple(exceptions),
+    )
 
 
 for _k, _d in _LEGACY_RULE_DICTS.items():
