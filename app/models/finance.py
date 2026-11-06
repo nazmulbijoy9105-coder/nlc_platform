@@ -88,6 +88,7 @@ class InvoiceLine(UUIDPrimaryKeyMixin, Base):
 class PaymentSubmission(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "payment_submissions"
     __table_args__ = (
+        UniqueConstraint("id", "company_id", name="uq_payment_submissions_id_company"),
         CheckConstraint("amount_bdt > 0", name="ck_payment_submission_amount_positive"),
         CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL')", name="ck_payment_submission_method"),
         CheckConstraint("status IN ('PENDING_REVIEW','APPROVED','REJECTED')", name="ck_payment_submission_status"),
