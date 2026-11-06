@@ -58,6 +58,26 @@ async def test_runtime_role_is_non_bypass_and_has_no_dangerous_privileges(db):
         )
         assert result.scalar_one() is False
 
+    dangerous_public_privileges = await db.execute(
+        text(
+            """
+            SELECT c.relname AS relation_name, p.privilege
+            FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            CROSS JOIN (VALUES ('TRUNCATE'), ('REFERENCES'), ('TRIGGER')) AS p(privilege)
+            WHERE n.nspname = 'public'
+              AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+              AND has_table_privilege('nlc_app_role', c.oid, p.privilege)
+            ORDER BY relation_name, p.privilege
+            """
+        )
+    )
+    assert dangerous_public_privileges.fetchall() == []
+    schema_create = await db.execute(
+        text("SELECT has_schema_privilege('nlc_app_role', 'public', 'CREATE')")
+    )
+    assert schema_create.scalar_one() is False
+
 
 @pytest.mark.asyncio
 async def test_runtime_pool_connects_as_nlc_app_role_and_rejects_forged_admin():
