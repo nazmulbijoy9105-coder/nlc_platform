@@ -31,7 +31,11 @@ if TYPE_CHECKING:
 _APP_DATABASE_URL = os.environ.get("APP_DATABASE_URL", "").strip()
 _MIGRATION_DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 _ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").strip().lower()
-_PRODUCTION_ENVIRONMENT = _ENVIRONMENT in {"prod", "production"}
+# Render always injects RENDER=true. Treat every Render runtime (including
+# preview/staging services) as deployment-grade: never silently fall back to
+# the privileged migration URL because ENVIRONMENT was omitted or mistyped.
+_RENDER_RUNTIME = os.environ.get("RENDER", "").strip().lower() == "true"
+_PRODUCTION_ENVIRONMENT = _ENVIRONMENT in {"prod", "production"} or _RENDER_RUNTIME
 _RLS_ROLE_SETTING = os.environ.get("REQUIRE_RLS_APP_ROLE")
 if _PRODUCTION_ENVIRONMENT:
     # A deployment operator must not be able to disable the runtime-role
