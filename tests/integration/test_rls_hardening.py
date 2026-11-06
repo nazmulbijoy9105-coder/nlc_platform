@@ -734,18 +734,34 @@ async def test_legal_staff_cannot_read_engagements_quotations_or_revenue_pipelin
         is_active=True,
         totp_enabled=False,
     )
+    view_only_user = User(
+        id=uuid.uuid4(),
+        email=f"revenue-viewer-{uuid.uuid4().hex[:8]}@nlctest.com",
+        full_name="Client View Only",
+        password_hash="!test-no-login",
+        role=UserRole.CLIENT_VIEW_ONLY,
+        is_active=True,
+        totp_enabled=False,
+    )
     await set_admin_context(db)
-    db.add_all([admin_user, legal_user])
+    db.add_all([admin_user, legal_user, view_only_user])
     await db.flush()
-    db.add(
+    db.add_all([
         CompanyUserAccess(
             user_id=legal_user.id,
             company_id=db_company.id,
             can_edit=False,
             can_view_financials=False,
             is_active=True,
-        )
-    )
+        ),
+        CompanyUserAccess(
+            user_id=view_only_user.id,
+            company_id=db_company.id,
+            can_edit=False,
+            can_view_financials=False,
+            is_active=True,
+        ),
+    ])
     await db.flush()
     await set_rls_context(db, str(admin_user.id))
     engagement = Engagement(
@@ -795,6 +811,13 @@ async def test_legal_staff_cannot_read_engagements_quotations_or_revenue_pipelin
         {"id": quotation.id},
     )
     assert customer_quotes.scalar_one() == 1
+
+    await set_rls_context(db, str(view_only_user.id))
+    view_only_quotes = await db.execute(
+        text("SELECT count(*) FROM public.quotations WHERE id = :id"),
+        {"id": quotation.id},
+    )
+    assert view_only_quotes.scalar_one() == 0
 
     await set_rls_context(db, str(legal_user.id))
     legal_gate = await db.execute(
