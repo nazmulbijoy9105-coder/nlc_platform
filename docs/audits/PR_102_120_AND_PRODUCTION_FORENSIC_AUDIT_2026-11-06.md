@@ -142,7 +142,10 @@ Official source entry points:
 
 - PR #105's Articles/AGM evidence implementation is absent from mainline. Its PDF upload route is not suitable for restoration because it conflicts with the no-upload policy. The replacement design must record physical document identity/type, presenter, custody/return, pages/clauses examined, examiner, independent reviewer, effective date, provenance, limitations and unresolved facts without storing full document bytes.
 - Current AGM API serializers hide quorum/member counts unless attendance and quorum basis have separate verification markers. The service still computes a provisional statutory-default estimate from the company's stored member count; that value is not exposed as a verified result. Any future Articles workflow must not convert this estimate into a legal conclusion without hard-copy review.
-- Current signed-RLS code sets SET LOCAL ROLE nlc_app_role, signs UUID/service principals with NLC_RLS_HMAC_SECRET, rechecks active membership and compares the live database role to the token role. The startup role check must be proven against the actual Render connection; NLC_RLS_HMAC_SECRET must be at least 32 characters and remain stable across app instances.
+- Current signed-RLS code sets SET LOCAL ROLE nlc_app_role, signs UUID/service principals with NLC_RLS_HMAC_SECRET, rechecks active membership and compares the live database role to the token role. Production now rejects `REQUIRE_RLS_APP_ROLE=false`; the runtime role guard cannot be disabled by an environment override. The startup role check must still be proven against the actual Render connection; NLC_RLS_HMAC_SECRET must be at least 32 characters and remain stable across app instances.
+- Notification dispatch now rechecks the legal release gate when Celery fetches pending rows, so legacy pending rule alerts are filtered before delivery. Generic notifications linked to a compliance flag also fail closed. Compliance summaries now separate released active findings from pending legal-review counts.
+- VAT thresholds are now cited to VAT & SD Act 2012 ss.2(48), 2(57), 4 and 10, as amended by Act 77/2026 and Finance Act 96/2026. The rule remains NOT_EVALUATED because annual turnover is not the statutory rolling 12-month taxable-turnover computation and s.4(2) categories require separate review.
+- CHG-001 now requires verified s.159 registrability, authenticated satisfaction/date, and independently evidenced RJSC filing status before a 21-day s.172(1) breach can be raised. The current production profile builder still supplies `charges: []`; there is no persisted charge-record model/workflow in the inspected path, so live charge evaluation is not implemented and must not be advertised as available.
 
 ## 6. Changes currently on PR #125
 
@@ -150,7 +153,11 @@ Official source entry points:
 - Fixed the PostgreSQL CI `DO $$ ... $$;` syntax.
 - Restored evidence-gated AGM, charge, tax, labour and BSEC evaluators from the prior legal remediation.
 - Added a global closed release gate to score-impact reporting and kept `VERIFIED_RULE_IDS` empty pending counsel approval.
-- Suppressed provisional customer RED/BLACK alerts until legal score release and rule eligibility.
+- Suppressed provisional customer RED/BLACK alerts until legal score release and rule eligibility; rechecks legacy pending alerts at worker dispatch time and fails closed for flag-linked generic notifications.
+- Separated approved active-flag counts from pending legal-review counts in the compliance summary API.
+- Prevented production operators from disabling the `nlc_app_role` runtime guard with `REQUIRE_RLS_APP_ROLE=false`.
+- Tightened CHG-001 to require s.159 registrability and evidence for satisfaction, date and RJSC filing status; updated its canonical rule/evidence metadata and regression tests.
+- Corrected TAX-002's source basis to include Act 77/2026 and Finance Act 96/2026, and reconciled the statutory rule registry from a stale YELLOW/5 rule to NOT_EVALUATED/0.
 - Implemented the missing system deadline query.
 - Quarantined AGM adjournment, Board evidence, director-register, office-of-profit, MD-term and strike-off findings as `NOT_EVALUATED` where the profile lacks sufficient evidence or legal mapping.
 - Updated seed and canonical rule metadata; the seed script now refuses unversioned updates.
@@ -161,7 +168,7 @@ Official source entry points:
 At the time of this audit:
 - A previous PR #125 run passed compile, single Alembic head, two fresh PostgreSQL upgrades, integration/RLS tests, canonical integrity tests and Docker runtime smoke.
 - Its unit job exposed two failures (DIR-005 engine/seed text parity and the scoring-gate test patch target); both were corrected in subsequent commits.
-- The latest exact-head CI run must complete successfully. No passing status is claimed until that run is complete.
+- Latest exact-head CI is running/queued after the additional notification, VAT, charge-evidence and production-role-guard edits. The earlier exact head `a7eb49e` passed all three jobs (unit, integration/canonical integrity, Docker smoke), but that success does not cover the later commits. No passing status is claimed until CI completes on the current head.
 
 Before merge/deploy, require:
 1. All CI jobs green on the exact PR head, including static engine/seed parity and the empty rule-verification check.
@@ -173,3 +180,8 @@ Before merge/deploy, require:
 7. Independent, named, signed Bangladesh-lawyer approval for every applicable rule and separate approval of scoring policy. Until then `approved_rule_ids: []`, `LEGAL_SCORE_RELEASED = False`, and the allowlist remains empty.
 
 **No production migration, role alteration, privilege change, rule-row update, Render deployment or statutory score release has been performed.**
+
+## 8. Separate frontend safety PR
+
+- `nlc_frontend` PR #33 (`fix/security: disable full AOA MOA and RJSC document uploads`) replaces the old Articles PDF upload UI with a hard-copy examination notice and explicit no-upload state. Its frontend build CI passed on head `6b5478989326e22e3716ab8a1688729e82ccbe88`.
+- PR #33 remains open and draft. The previous page called an unavailable Articles verification API; no backend Articles examination-record API exists on main. This is a safety stop only, not the completed physical-examination workflow. No deployment occurred.
