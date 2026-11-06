@@ -330,7 +330,7 @@ class NotificationService(BaseService[Notification]):
         else:
             filters.append(and_(
                 non_rule_id_type,
-                not_(generic_legal_type),
+                ~generic_legal_type,
                 Notification.related_flag_id.is_(None),
             ))
         result = await self.db.execute(
