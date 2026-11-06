@@ -1,7 +1,7 @@
 """add webhook tables
 
 Revision ID: 0037_add_webhook_tables
-Revises: 0036_nullable_boolean_columns
+Revises: 0036_nullable_bools
 """
 from alembic import op
 import sqlalchemy as sa
