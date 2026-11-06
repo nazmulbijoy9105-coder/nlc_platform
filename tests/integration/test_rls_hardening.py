@@ -375,3 +375,45 @@ async def test_compliance_calendar_events_has_forced_tenant_rls(db):
         "SELECT", "INSERT", "UPDATE", "DELETE"
     }
 
+
+
+@pytest.mark.asyncio
+async def test_rescue_audit_log_has_forced_tenant_rls_and_is_append_only(db):
+    relation = await db.execute(
+        text(
+            "SELECT c.relrowsecurity, c.relforcerowsecurity "
+            "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+            "WHERE n.nspname = 'public' AND c.relname = 'rescue_audit_log'"
+        )
+    )
+    assert relation.one() == (True, True)
+
+    policy_result = await db.execute(
+        text(
+            "SELECT policyname, cmd, qual, with_check "
+            "FROM pg_policies "
+            "WHERE schemaname = 'public' AND tablename = 'rescue_audit_log'"
+        )
+    )
+    policies = {row[0]: row for row in policy_result.fetchall()}
+    assert set(policies) == {
+        "rescue_audit_log_tenant_select",
+        "rescue_audit_log_tenant_insert",
+    }
+    select_policy = policies["rescue_audit_log_tenant_select"]
+    assert select_policy[1] == "SELECT"
+    assert "nlc_can_access_company" in (select_policy[2] or "")
+    insert_policy = policies["rescue_audit_log_tenant_insert"]
+    assert insert_policy[1] == "INSERT"
+    assert "nlc_current_user_id" in (insert_policy[3] or "")
+    assert "nlc_can_edit_company" in (insert_policy[3] or "")
+
+    for privilege in ("UPDATE", "DELETE", "TRUNCATE"):
+        result = await db.execute(
+            text(
+                "SELECT has_table_privilege('nlc_app_role', "
+                "'public.rescue_audit_log', :privilege)"
+            ),
+            {"privilege": privilege},
+        )
+        assert result.scalar_one() is False
