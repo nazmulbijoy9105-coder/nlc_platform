@@ -73,7 +73,6 @@ class SubscriptionPlanFeature(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     plan_code: Mapped[str] = mapped_column(String(60), ForeignKey("subscription_plans.plan_code", ondelete="RESTRICT"), nullable=False)
     feature_code: Mapped[str] = mapped_column(String(80), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
-    limits: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
 
 class ClientSubscriptionFeature(UUIDPrimaryKeyMixin, Base):
@@ -96,7 +95,6 @@ class ClientSubscriptionFeature(UUIDPrimaryKeyMixin, Base):
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="RESTRICT"), nullable=False)
     feature_code: Mapped[str] = mapped_column(String(80), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
-    limits: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
 
 
