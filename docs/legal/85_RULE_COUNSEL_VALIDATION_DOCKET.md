@@ -2,7 +2,7 @@
 
 **Repository:** nazmulbijoy9105-coder/nlc_platform  
 **Review baseline:** fix/legal-corpus-current-law-reconciliation  
-**Prepared:** 4 November 2026  
+**Prepared:** 7 November 2026  
 **Status:** Research docket for independent Bangladesh-qualified counsel; NOT a legal opinion or approval.
 
 ## Executive control
@@ -14,7 +14,7 @@ This docket expands the source triage into a separate signed-review record for e
 ## Mandatory review protocol
 
 1. Retrieve the official Bangla Gazette text and any official authentic English text; the Bangla promulgated text controls where translation differs.
-2. Build chronological amendment history from publication through 4 November 2026, including commencement, retrospective effect, transitional provisions, repeal, savings and corrigenda.
+2. Build chronological amendment history from publication through 7 November 2026, including commencement, retrospective effect, transitional provisions, repeal, savings and corrigenda.
 3. State the exact legal proposition in element form: actor + duty/prohibition + trigger + deadline/standard + breach + consequence.
 4. Determine applicability from company type, listed status, subsidiary status, sector, employee/factory classification, turnover, registration, transaction and constitutional documents. Do not assume that all 85 rules apply to every private limited company.
 5. Define admissible evidence, identity binding, source provenance, verification method and freshness. An absent upload is not proof that a statutory act did not occur.
@@ -1579,3 +1579,22 @@ The NBR's current site separately lists Finance Act 2026 (6 July 2026), the auth
 ## Release rule
 
 Do not populate `approved_rule_ids`, do not set `score_eligible: true`, and do not set `LEGAL_SCORE_RELEASED = true` merely because this docket is complete. Only independent counsel's rule-specific signed decisions plus passing tests and canonical parity can authorise a later release. Any unresolved TBD, unavailable authoritative source, unknown scope or unverified evidence keeps the rule NOT_EVALUATED.
+
+
+## Primary-source research update — 7 November 2026
+
+Official source locations identified for the next rule-by-rule verification pass:
+
+- Bangladesh Laws consolidated Companies Act 1994: https://bdlaws.minlaw.gov.bd/act-print-788.html
+- Companies Act section 38 (transfer instrument, registration and Articles restrictions): https://bdlaws.minlaw.gov.bd/act-788/section-32862.html
+- Companies Act section 90 (director-number distinctions by company type): https://bdlaws.minlaw.gov.bd/act-788/section-32914.html
+- Companies Act section 158 (share-certificate period): https://bdlaws.minlaw.gov.bd/act-print-788/section-print-33470.html
+- Companies Act section 183 (annual accounts and accounting-period rules): https://bdlaws.minlaw.gov.bd/act-print-788/section-print-33572.html
+- Companies Act section 241 (winding-up grounds): https://bdlaws.minlaw.gov.bd/act-788/section-33986.html
+- Bangladesh Laws Stamp Act 1899: https://bdlaws.minlaw.gov.bd/act-print-77.html
+- NBR Finance Acts, Income Tax Acts, VAT Acts, rules and SRO index: https://nbr.gov.bd/regulations/acts/finance-acts and https://nbr.gov.bd/regulations/acts/income-tax-acts
+- Ministry of Labour legislative index, including the Bangladesh Labour (Amendment) Act 2026: https://mole.gov.bd/pages/legislative-informations
+- BSEC Acts, Rules and Regulations index: https://www.sec.gov.bd/act-rules-and-regulations
+- DSE regulations index: https://www.dse.com.bd/regulations
+
+This is source discovery and citation triage, not completed validation. A section link alone does not establish amendment chronology, commencement, transitional effect, exact proposition, entity scope, exception, evidence or remedy. The 85 rule records still require individual dossiers and signed independent counsel dispositions. The approval allowlist remains empty; every rule remains REVIEW_REQUIRED / score_eligible=false.
