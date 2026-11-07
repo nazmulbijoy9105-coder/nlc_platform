@@ -182,10 +182,16 @@ jobs:
           DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
           DATABASE_URL="$SECOND_DATABASE_URL" alembic current
 
-          # Disposable second database: exercise the latest migration's
-          # downgrade and re-upgrade path without touching production data.
-          DATABASE_URL="$SECOND_DATABASE_URL" alembic downgrade 0073_payment_allocations_append_only
-          DATABASE_URL="$SECOND_DATABASE_URL" alembic current
+          # Migration 0074 is intentionally forward-only. A no-op downgrade
+          # would lie about schema state, so assert it fails without moving the
+          # revision, then verify the head remains safe to re-apply.
+          if DATABASE_URL="$SECOND_DATABASE_URL" alembic downgrade 0073_payment_allocations_append_only; then
+            echo "ERROR: forward-only subscription migration unexpectedly downgraded"
+            exit 1
+          fi
+          CURRENT_REVISION="$(DATABASE_URL="$SECOND_DATABASE_URL" alembic current)"
+          printf '%s\\n' "$CURRENT_REVISION"
+          printf '%s\\n' "$CURRENT_REVISION" | grep -q '0074_subscription_entitlements'
           DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
           DATABASE_URL="$SECOND_DATABASE_URL" alembic current
 
