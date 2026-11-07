@@ -267,8 +267,10 @@ class SubscriptionService:
                 SubscriptionPlanPrice.billing_interval == interval,
                 SubscriptionPlanPrice.is_active.is_(True),
             )
-            .with_for_update()
         )
+        # Do not SELECT FOR UPDATE the customer-visible catalogue. PostgreSQL
+        # applies UPDATE RLS to row-locking reads, hiding prices from customers.
+        # The INSERT policy revalidates the exact active price snapshot.
         row = plan_result.one_or_none()
         if row is None:
             raise SubscriptionNotFoundError("Active plan price not found")
