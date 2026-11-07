@@ -12,8 +12,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import (
 from app.core.entitlement import require_entitlement
+from app.core.dependencies import (
     Pagination,
     get_current_user,
     get_db_for_user,
