@@ -1,3 +1,4 @@
+# LEGACY DATABASE EXPORT — provenance/date not verified. This file contains pre-quarantine severity/score values and is not a seed, legal approval record, or current production snapshot. Do not use it to activate rules; reconcile only against a fresh read-only production query and the legal_approval_register.yaml.
 AGM-001|First AGM Default|Section 81, Companies Act 1994 (Bangladesh)|RED|25|f|t
 AGM-002|Subsequent AGM Default|Section 81, Companies Act 1994 (Bangladesh)|YELLOW|20|f|t
 AGM-003|AGM Notice Defective|Companies Act 1994, Section 85|YELLOW|10|f|t
