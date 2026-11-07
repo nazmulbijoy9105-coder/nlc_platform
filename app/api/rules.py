@@ -199,11 +199,8 @@ async def get_rule_summary(
             inactive_rules=len(rules),
             black_override_rules=0,
             by_module={
-                rule.rule_id.split("-")[0]: sum(
-                    1 for item in rules
-                    if item.rule_id.split("-")[0] == rule.rule_id.split("-")[0]
-                )
-                for rule in rules
+                module: sum(1 for item in rules if item.rule_id.split("-")[0] == module)
+                for module in {rule.rule_id.split("-")[0] for rule in rules}
             },
             by_severity={"NOT_EVALUATED": len(rules)},
             total_max_deduction=0,
