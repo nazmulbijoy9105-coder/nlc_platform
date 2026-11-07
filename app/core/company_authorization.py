@@ -10,7 +10,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import HTTPException, status
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company import Company, CompanyUserAccess
@@ -45,16 +45,19 @@ async def ensure_staff_company_scope(
             CompanyUserAccess.user_id == current_user.id,
             CompanyUserAccess.is_active.is_(True),
         )
+        .correlate(Company)
         .exists()
     )
+    scope_conditions = [
+        Company.assigned_staff_id == current_user.id,
+        active_membership,
+    ]
+    if additional_staff_id == current_user.id:
+        scope_conditions.append(true())
     result = await db.execute(
         select(Company.id).where(
             Company.id == company_id,
-            or_(
-                Company.assigned_staff_id == current_user.id,
-                active_membership,
-                *([additional_staff_id == current_user.id] if additional_staff_id is not None else []),
-            ),
+            or_(*scope_conditions),
         ).limit(1)
     )
     if result.scalar_one_or_none() is None:
