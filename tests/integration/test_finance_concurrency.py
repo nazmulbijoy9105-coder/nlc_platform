@@ -73,7 +73,7 @@ async def _committed_finance_fixture(test_engine, *, with_submission: bool):
         await set_admin_context(session)
         session.add_all([user, company])
         await session.flush()
-        await set_rls_context(session, str(finance_user_id))
+        await set_rls_context(session, str(user_id))
 
         service = FinanceService(session)
         invoice = await service.create_invoice(
@@ -97,7 +97,7 @@ async def _committed_finance_fixture(test_engine, *, with_submission: bool):
             submission = await service.submit_offline_payment(
                 company_id=company_id,
                 invoice_id=invoice_id,
-                submitted_by=client_user_id,
+                submitted_by=user_id,
                 method="CASH",
                 amount_bdt=Decimal("100.00"),
                 payer_reference=None,
@@ -270,9 +270,12 @@ async def _committed_active_subscription(
             is_active=True,
             granted_by=finance_user_id,
         )
-        await set_rls_context(session, str(finance_user_id))
+        # Trusted test fixture bootstrap: tenant RLS must not be bypassed by
+        # the runtime finance identity before the company and membership exist.
+        await set_admin_context(session)
         session.add_all([company, client_user, finance_user, access])
         await session.flush()
+        await set_rls_context(session, str(finance_user_id))
         subscriptions = SubscriptionService(session)
         await subscriptions.upsert_plan(
             plan_code=plan_code,
