@@ -564,7 +564,7 @@ class TestTransferRules:
         assert_flag_not_triggered(output, "TR-001")
 
     def test_TR002_requires_explicit_unpaid_status(self, rule_engine, build_profile, make_share_transfer):
-        transfer = make_share_transfer(stamp_duty_paid=False, stamp_duty_amount=0)
+        transfer = make_share_transfer(stamp_duty_paid=False, stamp_duty_applicability_verified=True, stamp_duty_amount=0)
         output = rule_engine.evaluate(build_profile(share_transfers=[transfer]))
         assert_flag_triggered(output, "TR-002")
         flag = next(f for f in output.flags if f.rule_id == "TR-002")
