@@ -94,7 +94,7 @@ def upgrade() -> None:
                        AND allocation.amount_bdt = NEW.amount_bdt
                 ) INTO evidence_exists;
                 IF NOT evidence_exists THEN
-                    RAISE EXCEPTION 'approved payment submission requires its exact source-linked, reviewer-bound verified receipt, allocation and ledger evidence'
+                    RAISE EXCEPTION 'approved payment submission requires reviewer-bound verified payment, exact source-linked receipt, allocation and ledger evidence'
                         USING ERRCODE = '23514';
                 END IF;
             ELSIF NEW.status = 'REJECTED' THEN
