@@ -47,7 +47,7 @@ This matrix is a technical inventory of candidate legal anchors and internal rul
 | BSEC-004 | Audit Committee Not Established | BSEC Corporate Governance Code 2018, Condition 5, as amended; listed-issuer scope only | NOT_EVALUATED | 0 | no | REVIEW ONLY — committee composition and duties required |
 | CAP-001 | Capital Alteration Authority Requires Review | Sections 53, 54 and 56, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | CAP-002 | Charge Not Registered With RJSC Within 21 Days | Section 159(1), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| CAP-003 | Capital Reduction Without Court Order | Sections 59-60, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| CAP-003 | Capital Reduction — Court Confirmation Review | Sections 59-60, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | CAP-004 | Special Resolution Not Filed With RJSC within 15 days | Section 88(1), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | CHG-001 | Charge satisfaction — evidence review only | Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | Require verified s.159 registrability, satisfaction date and RJSC filing-status evidence; no inference from missing data |
 | DEF-001 | Director Disqualified | Section 94, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
