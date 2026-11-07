@@ -27,7 +27,7 @@ def _request(company_id: uuid.UUID | None = None) -> Request:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("role", ["SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF"])
+@pytest.mark.parametrize("role", ["SUPER_ADMIN", "ADMIN_STAFF"])
 async def test_authorized_staff_roles_bypass_customer_subscription_lookup(role):
     dependency = entitlement.require_entitlement("compliance_package")
     db = MagicMock()
@@ -35,6 +35,17 @@ async def test_authorized_staff_roles_bypass_customer_subscription_lookup(role):
 
     assert await dependency(request=_request(), db=db, current_user=user) is True
     db.execute.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_legal_staff_does_not_receive_implicit_subscription_bypass():
+    dependency = entitlement.require_entitlement("compliance_package")
+    user = SimpleNamespace(id=uuid.uuid4(), role="LEGAL_STAFF")
+
+    with pytest.raises(HTTPException) as exc:
+        await dependency(request=_request(), db=MagicMock(), current_user=user)
+
+    assert exc.value.status_code == 403
 
 
 @pytest.mark.asyncio
