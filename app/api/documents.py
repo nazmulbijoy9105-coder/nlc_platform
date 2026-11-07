@@ -392,7 +392,21 @@ async def _assert_document_entitlement(doc, current_user: User, db: AsyncSession
     role = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
     if role in ("SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF"):
         return
+    from sqlalchemy import select
+
+    from app.models.company import CompanyUserAccess
     from app.services.subscription_service import SubscriptionService
+
+    membership = await db.execute(
+        select(CompanyUserAccess.company_id).where(
+            CompanyUserAccess.user_id == current_user.id,
+            CompanyUserAccess.company_id == doc.company_id,
+            CompanyUserAccess.is_active.is_(True),
+            CompanyUserAccess.can_view_financials.is_(True),
+        ).limit(1)
+    )
+    if membership.scalar_one_or_none() is None:
+        raise HTTPException(status_code=403, detail="Active company financial access is required.")
 
     if not await SubscriptionService(db).has_entitlement(
         company_id=doc.company_id,
