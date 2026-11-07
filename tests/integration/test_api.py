@@ -612,6 +612,23 @@ class TestDocuments:
         assert isinstance(resp.json(), list)
 
     @pytest.mark.asyncio
+    async def test_client_document_portfolio_requires_entitlement(
+        self, api_client, db_client_user
+    ):
+        from app.core.security import create_access_token
+
+        client_tok = create_access_token({
+            "sub": str(db_client_user.id), "user_id": str(db_client_user.id),
+            "type": "access", "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email, "company_ids": [],
+        })
+        resp = await api_client.get(
+            "/api/v1/documents/", headers=_auth(client_tok)
+        )
+        assert resp.status_code == 503
+        assert resp.headers["retry-after"] == "3600"
+
+    @pytest.mark.asyncio
     async def test_client_document_list_requires_entitlement(
         self, api_client, db_client_user, db_company
     ):
