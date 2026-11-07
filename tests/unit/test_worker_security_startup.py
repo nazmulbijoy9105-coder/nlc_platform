@@ -79,3 +79,32 @@ def test_first_task_gates_non_prefork_worker_pools(monkeypatch):
     )
 
     assert calls == ["verified"]
+
+def test_eager_tasks_default_off_in_production(monkeypatch):
+    import app.worker.celery_app as celery_app
+
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.delenv("RENDER", raising=False)
+    monkeypatch.delenv("CELERY_TASK_ALWAYS_EAGER", raising=False)
+
+    assert celery_app._resolve_task_always_eager() is False
+
+
+def test_eager_tasks_rejected_in_production(monkeypatch):
+    import app.worker.celery_app as celery_app
+
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("CELERY_TASK_ALWAYS_EAGER", "true")
+
+    with pytest.raises(RuntimeError, match="forbidden in production"):
+        celery_app._resolve_task_always_eager()
+
+
+def test_eager_tasks_remain_available_for_development(monkeypatch):
+    import app.worker.celery_app as celery_app
+
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.delenv("RENDER", raising=False)
+    monkeypatch.delenv("CELERY_TASK_ALWAYS_EAGER", raising=False)
+
+    assert celery_app._resolve_task_always_eager() is True
