@@ -310,6 +310,8 @@ class CompanyProfile:
     section150_prospectus_issued: bool | None = None
     section150_applicability_verified: bool = False
     section150_applicability_evidence_ref: str | None = None
+    business_commencement_declaration_verified: bool = False
+    business_commencement_declaration_evidence_ref: str | None = None
     charges: List[ChargeEvent] = field(default_factory=list)
     special_resolution_date: Optional[date] = None
     special_resolution_filed: bool = False
@@ -828,6 +830,8 @@ class NLCRuleEngine:
             and c.section150_prospectus_issued is True
             and c.section150_applicability_verified
             and bool(c.section150_applicability_evidence_ref)
+            and c.business_commencement_declaration_verified
+            and bool(c.business_commencement_declaration_evidence_ref)
             and c.business_commencement_declaration_filed is False
         ):
             self._add_flag(ComplianceFlag(
