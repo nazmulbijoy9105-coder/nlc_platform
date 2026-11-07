@@ -380,6 +380,17 @@ class FinanceService:
             raise FinanceConflictError("Invoice balance changed; payment must be reconciled before approval")
 
         now = datetime.now(UTC)
+        # Mark the source claim approved in this transaction before inserting
+        # its linked receipt. The deferred ledger-integrity constraint validates
+        # the reviewer-bound evidence at commit; the DB guard only exempts this
+        # exact approved source claim from cross-table duplicate detection.
+        submission.status = "APPROVED"
+        submission.reviewed_by = reviewer_id
+        submission.reviewed_at = now
+        submission.review_note = review_note
+        if submission.method == "CHEQUE":
+            submission.cheque_cleared_at = cheque_cleared_at
+
         payment_number = await self._next_number("PAY", "payments", "payment_number")
         payment = Payment(
             company_id=submission.company_id,
@@ -423,13 +434,6 @@ class FinanceService:
         invoice.paid_bdt = _money(invoice.paid_bdt + amount)
         invoice.balance_bdt = _money(invoice.total_bdt - invoice.paid_bdt)
         invoice.status = "PAID" if invoice.balance_bdt == 0 else "PARTIALLY_PAID"
-
-        submission.status = "APPROVED"
-        submission.reviewed_by = reviewer_id
-        submission.reviewed_at = now
-        submission.review_note = review_note
-        if submission.method == "CHEQUE":
-            submission.cheque_cleared_at = cheque_cleared_at
 
         self.db.add_all([
             PaymentLedgerEvent(
