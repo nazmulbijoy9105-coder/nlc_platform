@@ -872,6 +872,35 @@ def process_ai_review_queue(
 @celery_app.task(
     bind=True,
     base=NLCBaseTask,
+    name="app.worker.tasks.process_due_subscriptions",
+    queue="maintenance",
+    max_retries=3,
+    default_retry_delay=120,
+    time_limit=600,
+)
+def process_due_subscriptions(self: Task) -> dict[str, Any]:
+    """Advance subscription expiry, grace and scheduled-cancellation states daily."""
+    async def _process():
+        from app.models.database import AsyncSessionLocal, set_admin_context
+        from app.services.subscription_service import SubscriptionService
+
+        async with AsyncSessionLocal() as db, db.begin():
+            await set_admin_context(db)
+            return await SubscriptionService(db).process_due_subscriptions(actor_id=None)
+
+    try:
+        result = run_async(_process())
+        logger.info("[Subscriptions] Daily lifecycle processing: %s", result)
+        return cast("dict[str, Any]", result)
+    except Exception as exc:
+        if _is_transient_error(exc):
+            raise self.retry(exc=exc)
+        raise
+
+
+@celery_app.task(
+    bind=True,
+    base=NLCBaseTask,
     name="app.worker.tasks.monthly_score_snapshot_all",
     queue="maintenance",
     max_retries=1,
