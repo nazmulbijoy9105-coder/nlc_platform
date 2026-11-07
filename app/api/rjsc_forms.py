@@ -17,6 +17,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.entitlement import require_entitlement
+from app.core.company_authorization import ensure_staff_company_scope
 from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
@@ -64,7 +66,7 @@ async def get_form_reference():
 
 
 @router.get("/{company_id}", response_model=list[FormFilingResponse],
-            dependencies=[Depends(require_company_access("company_id"))],
+            dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
             summary="List all RJSC form filings for a company")
 async def list_forms(company_id: str, db: AsyncSession = Depends(get_db_for_user)):
     svc = RJSCFormService(db)
@@ -81,7 +83,7 @@ async def list_forms(company_id: str, db: AsyncSession = Depends(get_db_for_user
 
 
 @router.get("/{company_id}/pending", response_model=list[FormFilingResponse],
-            dependencies=[Depends(require_company_access("company_id"))],
+            dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
             summary="List pending RJSC forms")
 async def list_pending_forms(company_id: str, db: AsyncSession = Depends(get_db_for_user)):
     svc = RJSCFormService(db)
