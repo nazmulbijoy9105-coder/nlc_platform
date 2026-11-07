@@ -219,10 +219,10 @@ async def test_database_rejects_allocation_without_invoice_balance_reconciliatio
 
 @pytest.mark.parametrize("mutation", ["UPDATE", "DELETE"])
 @pytest.mark.asyncio
-async def test_database_rejects_allocation_mutation_without_invoice_reconciliation(
+async def test_app_role_cannot_mutate_posted_allocations(
     db, db_company, db_user, mutation
 ):
-    """Allocation amount edits and deletion cannot silently alter invoice balances."""
+    """The runtime role is denied UPDATE/DELETE before trigger execution."""
     await set_rls_context(db, str(db_user.id))
     invoice = await _issued_invoice(db, db_company, db_user)
     now = datetime.now(UTC)
@@ -288,7 +288,8 @@ async def test_database_rejects_allocation_mutation_without_invoice_reconciliati
             await db.execute(text(
                 "SET CONSTRAINTS payment_allocations_invoice_reconciliation IMMEDIATE"
             ))
-    # Migration 0073 rejects posted allocation edits/deletes at the BEFORE
-    # trigger, before deferred reconciliation can be evaluated.
-    assert getattr(exc_info.value.orig, "sqlstate", None) == "55000"
+    # The runtime role has no UPDATE/DELETE privilege, so PostgreSQL rejects
+    # the statement at the ACL boundary (42501) before any row trigger runs.
+    # Migration 0073 separately protects owner-level SQL with its BEFORE trigger.
+    assert getattr(exc_info.value.orig, "sqlstate", None) == "42501"
 
