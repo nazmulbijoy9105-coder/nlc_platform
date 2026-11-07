@@ -1178,7 +1178,7 @@ class TestSubscriptionEntitlementRouteGates:
 
     @pytest.mark.asyncio
     async def test_legal_staff_requires_assignment_and_paid_entitlement(
-        self, api_client, legal_tokenen, db_company, legal_staff_company_scope
+        self, api_client, legal_token, db_company, legal_staff_company_scope
     ):
         response = await api_client.get(
             f"/api/v1/companies/{db_company.id}/compliance",
