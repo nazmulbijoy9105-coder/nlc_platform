@@ -146,6 +146,9 @@ class ShareTransfer:
     board_approval_obtained: bool | None = None
     form_117_filed: bool | None = None
     transfer_registered: bool | None = None
+    registration_refused: bool | None = None
+    refusal_notice_sent: bool | None = None
+    instrument_lodged_date: Optional[date] = None
 
 @dataclass
 class ChargeEvent:
@@ -1657,28 +1660,36 @@ class NLCRuleEngine:
                 self._add_flag(flag)
                 transfer_review_flags.append(flag)
 
-            # The register update duty is considered only after registration
-            # of the transfer is itself verified.
-            if transfer.transfer_registered is True and transfer.share_register_updated is False:
-                flag = ComplianceFlag(
-                    rule_id="TR-004",
-                    flag_code="REGISTER_OF_MEMBERS_UPDATE_REQUIRES_VERIFICATION",
-                    severity=Severity.NOT_EVALUATED,
-                    score_impact=0,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=(
-                        "Internal review signal only: a transfer is reported as "
-                        "registered but the register of members is not verified as "
-                        "updated. Check the registration date, register entries and "
-                        "any rectification/court order under section 34."
-                    ),
-                    statutory_basis="Section 34, Companies Act 1994 (Bangladesh)",
-                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
-                    eval_state="UNKNOWN",
-                    detail={"transfer_id": transfer.transfer_id},
-                )
-                self._add_flag(flag)
-                transfer_review_flags.append(flag)
+            # Section 38(4): where registration is refused, the company
+            # must notify both transferor and transferee within 30 days of
+            # lodgement. Do not infer refusal or non-notice from missing data.
+            if (
+                transfer.registration_refused is True
+                and transfer.refusal_notice_sent is False
+                and transfer.instrument_lodged_date is not None
+            ):
+                refusal_delay = (self.today - transfer.instrument_lodged_date).days
+                if refusal_delay > 30:
+                    flag = ComplianceFlag(
+                        rule_id="TR-004",
+                        flag_code="TRANSFER_REFUSAL_NOTICE_REQUIRES_REVIEW",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            f"A refusal to register is reported but notice to both "
+                            f"parties is not verified {refusal_delay} days after the "
+                            "instrument was lodged. Section 38(4) requires notice "
+                            "within 30 days; verify lodgement, refusal, dispatch and "
+                            "receipt evidence before any default conclusion."
+                        ),
+                        statutory_basis="Section 38(4), Companies Act 1994 (Bangladesh)",
+                        state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                        eval_state="UNKNOWN",
+                        detail={"transfer_id": transfer.transfer_id, "delay": refusal_delay},
+                    )
+                    self._add_flag(flag)
+                    transfer_review_flags.append(flag)
 
             # Section 38(7) preserves the company's power under its Articles
             # to refuse registration; it does not make every restricted transfer
