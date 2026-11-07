@@ -67,6 +67,7 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.UniqueConstraint("plan_code", "feature_code", name="uq_subscription_plan_feature"),
         sa.CheckConstraint("length(feature_code) BETWEEN 2 AND 80", name="ck_subscription_feature_code_length"),
+        sa.CheckConstraint("feature_code IN ('compliance_package','document_management','corporate_rescue')", name="ck_subscription_plan_feature_supported"),
     )
 
     op.add_column("client_subscriptions", sa.Column("tax_bdt", sa.Numeric(15, 2), nullable=False, server_default="0"))
@@ -117,6 +118,7 @@ def upgrade() -> None:
             name="fk_client_subscription_features_subscription_company",
         ),
         sa.CheckConstraint("length(feature_code) BETWEEN 2 AND 80", name="ck_client_subscription_feature_code_length"),
+        sa.CheckConstraint("feature_code IN ('compliance_package','document_management','corporate_rescue')", name="ck_client_subscription_feature_supported"),
     )
     op.create_index(
         "ix_client_subscription_features_lookup",
