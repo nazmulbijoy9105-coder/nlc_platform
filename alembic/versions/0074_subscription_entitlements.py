@@ -50,7 +50,7 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.UniqueConstraint("plan_code", "billing_interval", name="uq_subscription_plan_price_interval"),
         sa.CheckConstraint("billing_interval IN ('MONTHLY','QUARTERLY','ANNUAL','ONE_TIME')", name="ck_subscription_plan_price_interval"),
-        sa.CheckConstraint("amount_bdt >= 0", name="ck_subscription_plan_price_amount"),
+        sa.CheckConstraint("amount_bdt > 0", name="ck_subscription_plan_price_amount"),
         sa.CheckConstraint("tax_bdt >= 0", name="ck_subscription_plan_price_tax"),
         sa.CheckConstraint("length(trim(tax_policy_reference)) BETWEEN 3 AND 500", name="ck_subscription_plan_price_tax_reference"),
         sa.CheckConstraint("currency = 'BDT'", name="ck_subscription_plan_price_currency"),
