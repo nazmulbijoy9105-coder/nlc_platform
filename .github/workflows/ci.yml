@@ -246,12 +246,12 @@ jobs:
           # path, then prove that the canonical branch can continue from it.
           DATABASE_URL="$LEGACY_DATABASE_URL" alembic upgrade 0048_articles_verification
           LEGACY_MARKER="$(DATABASE_URL="$LEGACY_DATABASE_URL" alembic current)"
-          printf '%s\\n' "$LEGACY_MARKER"
+          printf '%s\n' "$LEGACY_MARKER"
           grep -q "0048_articles_verification" <<< "$LEGACY_MARKER"
 
           DATABASE_URL="$LEGACY_DATABASE_URL" alembic upgrade head
           FINAL_MARKER="$(DATABASE_URL="$LEGACY_DATABASE_URL" alembic current)"
-          printf '%s\\n' "$FINAL_MARKER"
+          printf '%s\n' "$FINAL_MARKER"
           grep -q "0079_reconcile_legacy_agm_evidence_types" <<< "$FINAL_MARKER"
 
       - name: Upload isolated migration rehearsal schema
