@@ -122,7 +122,7 @@ class EngagementService(BaseService[Engagement]):
         engagement_id: uuid.UUID,
         new_status: EngagementStatus,
         *,
-        fee_bdt: float | None = None,
+        fee_bdt: Decimal | None = None,
     ) -> Engagement | None:
         """Advance engagement through the pipeline stages."""
         from app.models.commercial import validate_engagement_transition, InvalidEngagementTransitionError
@@ -131,6 +131,24 @@ class EngagementService(BaseService[Engagement]):
             return None
         if not validate_engagement_transition(eng.engagement_status, new_status):
             raise InvalidEngagementTransitionError(str(eng.engagement_status), str(new_status))
+        if new_status == EngagementStatus.QUOTED:
+            quotation_count = await self.db.execute(
+                select(func.count()).select_from(Quotation).where(
+                    Quotation.engagement_id == engagement_id,
+                    Quotation.status.in_({"DRAFT", "SENT"}),
+                )
+            )
+            if quotation_count.scalar_one() < 1:
+                raise ValueError("An issued quotation is required before moving an engagement to QUOTED.")
+        if new_status == EngagementStatus.CONFIRMED:
+            accepted_count = await self.db.execute(
+                select(func.count()).select_from(Quotation).where(
+                    Quotation.engagement_id == engagement_id,
+                    Quotation.status == "ACCEPTED",
+                )
+            )
+            if accepted_count.scalar_one() < 1:
+                raise ValueError("An accepted quotation is required before confirming an engagement.")
         updates: dict = {"engagement_status": new_status}
         status_date_map = {
             EngagementStatus.QUOTED:      "quoted_date",
@@ -250,9 +268,14 @@ class QuotationService(BaseService[Quotation]):
         quotation_id: uuid.UUID,
     ) -> Quotation | None:
         """Mark quotation as accepted."""
-        q = await self.get_by_id(quotation_id)
+        quotation_result = await self.db.execute(
+            select(Quotation).where(Quotation.id == quotation_id).with_for_update()
+        )
+        q = quotation_result.scalar_one_or_none()
         if not q:
             return None
+        if q.status not in {"DRAFT", "SENT"}:
+            raise ValueError(f"Cannot accept a quotation in {q.status} state.")
         engagement_result = await self.db.execute(
             select(Engagement).where(
                 Engagement.id == q.engagement_id,
