@@ -358,7 +358,8 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### BNK-001 — Winding Up Petition Filed
 
-- **Catalogue anchor:** Bankruptcy Act 1997 (Bangladesh), Section 12
+- **Catalogue anchor:** Companies Act 1994 (Bangladesh), Part V, sections 241–244; exact petition provision and case status require review
+- **Source correction (7 Nov 2026):** Corporate company winding-up is governed by Part V of the Companies Act 1994, not the personal Bankruptcy Act 1997. Sections 241–244 address court-winding-up grounds/petition procedure. A petition is not a winding-up order or proof of insolvency without the authenticated case record.
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -375,7 +376,8 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### BNK-002 — Liquidator Appointed
 
-- **Catalogue anchor:** Bankruptcy Act 1997 (Bangladesh), Section 14
+- **Catalogue anchor:** Companies Act 1994 (Bangladesh), Part V; section 255 for court-appointed Official Liquidators; voluntary route requires separate mapping
+- **Source correction (7 Nov 2026):** A liquidator appointment must be classified by route. Section 255 addresses court-appointed Official Liquidators; voluntary winding-up appointments arise under separate Part V provisions. Do not apply one section or BLACK status to every appointment.
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -392,7 +394,8 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### BNK-003 — Court-Ordered Winding Up
 
-- **Catalogue anchor:** Bankruptcy Act 1997 (Bangladesh), Section 18
+- **Catalogue anchor:** Companies Act 1994 (Bangladesh), Part V, sections 241–246; exact order provision requires case review
+- **Source correction (7 Nov 2026):** Court-ordered company winding-up is a Companies Act Part V process. Require the authenticated order, operative date, jurisdiction, appeal/stay/suspension and current status. Do not cite Bankruptcy Act 1997 or infer the order from a petition.
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -562,7 +565,8 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### CAP-003 — Capital Reduction — Court Confirmation Review
 
-- **Catalogue anchor:** Sections 59-60, Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Section 150(1) and (6), Companies Act 1994 (Bangladesh)
+- **Source correction (7 Nov 2026):** Section 150(6) excludes private companies and companies that do not issue a prospectus inviting public subscription. This rule cannot apply to every company. The engine now requires verified public-company/prospectus applicability and an evidence reference before creating an internal review signal.
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -871,7 +875,8 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### ESC-005 — Investigation Order Pending
 
-- **Catalogue anchor:** Section 195, Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Sections 195 and 197; section 199 where related entities are included, Companies Act 1994 (Bangladesh)
+- **Source correction (7 Nov 2026):** Sections 195 and 197 concern Government appointment of inspectors; section 199 concerns extending investigation to related entities/agents. A reported inquiry or investigation is not itself a finding of liability; require the authenticated appointment/order and scope.
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
