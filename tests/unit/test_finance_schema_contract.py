@@ -68,7 +68,7 @@ def test_cheque_clearance_timestamp_requires_explicit_timezone():
         )
 
     accepted = PaymentApprovalRequest(
-        cheque_cleared_at=datetime(2026, 11, 6, 12, 0, 0, tzinfo=timezone.utc)
+        cheque_cleared_at=datetime(2026, 11, 6, 12, 0, 0, tzinfo=UTC)
     )
     assert accepted.cheque_cleared_at is not None
     assert accepted.cheque_cleared_at.utcoffset() is not None
