@@ -418,7 +418,12 @@ def require_company_access(company_id_param: str = "company_id"):
         if db_role != token.role:
             raise HTTPException(status_code=401, detail="Account permissions changed. Please sign in again.")
 
-        if db_role in ("SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF"):
+        if db_role in ("SUPER_ADMIN", "ADMIN_STAFF"):
+            return company_id
+        if db_role == "LEGAL_STAFF":
+            from app.core.company_authorization import ensure_staff_company_scope
+
+            await ensure_staff_company_scope(company_id, user, db)
             return company_id
 
         from app.models.company import CompanyUserAccess
