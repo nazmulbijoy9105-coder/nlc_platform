@@ -75,6 +75,7 @@ def upgrade() -> None:
     op.add_column("client_subscriptions", sa.Column("suspension_reason", sa.Text(), nullable=True))
     op.add_column("client_subscriptions", sa.Column("activated_by", uuid, sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True))
     op.create_unique_constraint("uq_client_subscriptions_id_company", "client_subscriptions", ["id", "company_id"])
+    op.create_check_constraint("ck_client_subscription_grace_days", "client_subscriptions", "grace_days BETWEEN 0 AND 30")
     op.create_foreign_key(
         "fk_client_subscriptions_invoice_company",
         "client_subscriptions", "invoices",
@@ -314,6 +315,7 @@ def upgrade() -> None:
                 OR NEW.billing_interval IS DISTINCT FROM OLD.billing_interval
                 OR NEW.amount_bdt IS DISTINCT FROM OLD.amount_bdt
                 OR NEW.currency IS DISTINCT FROM OLD.currency
+                OR NEW.grace_days IS DISTINCT FROM OLD.grace_days
                 OR NEW.created_by IS DISTINCT FROM OLD.created_by
                 OR (OLD.invoice_id IS NOT NULL AND NEW.invoice_id IS DISTINCT FROM OLD.invoice_id)
             ) THEN
@@ -355,6 +357,16 @@ def upgrade() -> None:
                         USING ERRCODE = '42501';
                 END IF;
             END IF;
+            IF OLD.invoice_id IS NULL AND NEW.invoice_id IS NOT NULL AND NOT EXISTS (
+                SELECT 1 FROM public.invoices i
+                WHERE i.id = NEW.invoice_id
+                  AND i.company_id = NEW.company_id
+                  AND i.status = 'ISSUED'
+                  AND i.total_bdt = NEW.amount_bdt
+            ) THEN
+                RAISE EXCEPTION 'subscription invoice must be an issued invoice for the exact subscription amount'
+                    USING ERRCODE = '55000';
+            END IF;
             IF NEW.status = 'ACTIVE' AND (
                 NEW.invoice_id IS NULL OR NEW.starts_at IS NULL
                 OR (NEW.billing_interval <> 'ONE_TIME' AND NEW.ends_at IS NULL)
@@ -365,6 +377,16 @@ def upgrade() -> None:
                       AND i.status = 'PAID'
                       AND i.balance_bdt = 0
                       AND i.paid_bdt = i.total_bdt
+                      AND COALESCE((
+                          SELECT SUM(a.amount_bdt)
+                          FROM public.payment_allocations a
+                          JOIN public.payments p
+                            ON p.id = a.payment_id
+                           AND p.company_id = a.company_id
+                          WHERE a.invoice_id = i.id
+                            AND a.company_id = i.company_id
+                            AND p.status = 'SETTLED'
+                      ), 0) = i.total_bdt
                 )
             ) THEN
                 RAISE EXCEPTION 'subscription cannot activate without a fully settled invoice and valid term'
