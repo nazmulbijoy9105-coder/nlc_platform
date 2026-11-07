@@ -390,6 +390,9 @@ async def accept_quotation(
         quotation = await svc.accept(quotation_id=quotation_id)
     except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        # Keep inaccessible or inactive engagement details tenant-safe.
+        raise HTTPException(status_code=404, detail="Quotation not found.") from exc
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
 
