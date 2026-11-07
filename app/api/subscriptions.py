@@ -289,6 +289,16 @@ async def suspend_subscription(
     return _subscription_response(item)
 
 
+@router.post("/maintenance/process-due", response_model=dict)
+async def process_due_subscriptions(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+    _role: None = Depends(require_roles(*FINANCE_ROLES)),
+):
+    """Daily finance/operations maintenance; safe to retry and row-locks each term."""
+    return await SubscriptionService(db).process_due_subscriptions(actor_id=current_user.id)
+
+
 @router.post("/{subscription_id}/resume", response_model=SubscriptionResponse)
 async def resume_subscription(
     subscription_id: uuid.UUID,
