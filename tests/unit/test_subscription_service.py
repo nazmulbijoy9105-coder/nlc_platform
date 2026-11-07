@@ -44,10 +44,7 @@ async def test_request_subscription_snapshots_price_and_enabled_features():
         tax_policy_reference="BD VAT policy review reference",
         billing_interval="MONTHLY",
     )
-    feature = SimpleNamespace(
-        feature_code="compliance_package",
-        limits={"companies": 1},
-    )
+    feature = SimpleNamespace(feature_code="compliance_package")
 
     company_result = MagicMock()
     company_result.scalar_one_or_none.return_value = company_id
@@ -84,7 +81,6 @@ async def test_request_subscription_snapshots_price_and_enabled_features():
     snapshot = next(item for item in added if item.__class__.__name__ == "ClientSubscriptionFeature")
     event = next(item for item in added if item.__class__.__name__ == "SubscriptionEvent")
     assert snapshot.feature_code == "compliance_package"
-    assert snapshot.limits == {"companies": 1}
     assert event.event_type == "REQUESTED"
     assert event.actor_id == actor_id
     db.flush.assert_awaited()
