@@ -87,6 +87,8 @@ class SubscriptionService:
                     {
                         "billing_interval": item.billing_interval,
                         "amount_bdt": item.amount_bdt,
+                        "tax_bdt": item.tax_bdt,
+                        "tax_policy_reference": item.tax_policy_reference,
                         "currency": item.currency,
                     }
                     for item in prices.scalars().all()
@@ -124,10 +126,16 @@ class SubscriptionService:
         for price in prices:
             interval = str(price["billing_interval"]).upper()
             amount = Decimal(str(price["amount_bdt"]))
+            tax = Decimal(str(price["tax_bdt"]))
+            tax_reference = str(price["tax_policy_reference"]).strip()
             if interval not in BILLING_INTERVALS or interval in intervals:
                 raise SubscriptionConflictError("Billing intervals must be supported and unique")
             if amount <= 0 or amount != amount.quantize(Decimal("0.01")):
                 raise SubscriptionConflictError("Subscription price must be a positive BDT amount with two decimals")
+            if tax < 0 or tax != tax.quantize(Decimal("0.01")):
+                raise SubscriptionConflictError("Subscription tax amount must be nonnegative BDT with two decimals")
+            if len(tax_reference) < 3 or len(tax_reference) > 500:
+                raise SubscriptionConflictError("A tax policy reference is required for every subscription price")
             intervals.add(interval)
 
         requested_features: dict[str, dict[str, Any]] = {}
@@ -167,14 +175,20 @@ class SubscriptionService:
         for price in prices:
             interval = str(price["billing_interval"]).upper()
             amount = Decimal(str(price["amount_bdt"])).quantize(Decimal("0.01"))
+            tax = Decimal(str(price["tax_bdt"])).quantize(Decimal("0.01"))
+            tax_reference = str(price["tax_policy_reference"]).strip()
             item = existing_prices.get(interval)
             if item is None:
                 self.db.add(SubscriptionPlanPrice(
                     plan_code=code, billing_interval=interval,
-                    amount_bdt=amount, currency="BDT", is_active=True,
+                    amount_bdt=amount, tax_bdt=tax,
+                    tax_policy_reference=tax_reference,
+                    currency="BDT", is_active=True,
                 ))
             else:
                 item.amount_bdt = amount
+                item.tax_bdt = tax
+                item.tax_policy_reference = tax_reference
                 item.currency = "BDT"
                 item.is_active = True
 
@@ -272,6 +286,8 @@ class SubscriptionService:
             plan_name=plan.plan_name,
             billing_interval=interval,
             amount_bdt=price.amount_bdt,
+            tax_bdt=price.tax_bdt,
+            tax_policy_reference=price.tax_policy_reference,
             currency="BDT",
             status="PENDING",
             grace_days=plan.grace_days,
@@ -334,7 +350,7 @@ class SubscriptionService:
                 "quantity": Decimal("1.00"),
                 "unit_price_bdt": subscription.amount_bdt,
             }],
-            tax_bdt=Decimal("0.00"),
+            tax_bdt=subscription.tax_bdt,
             due_at=None,
             notes=f"Subscription ID: {subscription.id}",
             actor_id=actor_id,
