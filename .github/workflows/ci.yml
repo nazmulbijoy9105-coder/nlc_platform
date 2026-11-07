@@ -182,6 +182,13 @@ jobs:
           DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
           DATABASE_URL="$SECOND_DATABASE_URL" alembic current
 
+          # Disposable second database: exercise the latest migration's
+          # downgrade and re-upgrade path without touching production data.
+          DATABASE_URL="$SECOND_DATABASE_URL" alembic downgrade 0073_payment_allocations_append_only
+          DATABASE_URL="$SECOND_DATABASE_URL" alembic current
+          DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
+          DATABASE_URL="$SECOND_DATABASE_URL" alembic current
+
       - name: Run integration tests
         run: python -m pytest tests/integration -q --tb=short
 
