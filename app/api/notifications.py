@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db_for_user, require_admin
 from app.models.enums import NotificationChannel
-from app.services.notification_service import NotificationService
+from app.services.notification_service import NotificationService, is_notification_eligible
 
 router = APIRouter()
 
@@ -85,6 +85,7 @@ async def get_pending_notifications(
     svc: NotificationService = Depends(_get_svc),
 ):
     notifications = await svc.get_pending(channel=channel, limit=limit)
+    notifications = [n for n in notifications if is_notification_eligible(n.notification_type)]
     return [
         {
             "id":                str(n.id),

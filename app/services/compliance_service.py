@@ -78,7 +78,7 @@ def _applied_score_impacts(flags) -> list[dict]:
     The returned value is aligned by index with the original flags list so
     repeated rule IDs cannot overwrite one another.
     """
-    from app.rule_engine.engine import CATEGORY_CAPS, VERIFIED_RULE_IDS, RuleState
+    from app.rule_engine.engine import CATEGORY_CAPS, LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS, RuleState
 
     remaining = {name: cap[0] for name, cap in CATEGORY_CAPS.items()}
     results = []
@@ -96,6 +96,12 @@ def _applied_score_impacts(flags) -> list[dict]:
         # not acquire scoring or override semantics through a side path.
         if flag.rule_id not in VERIFIED_RULE_IDS:
             results.append({"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"})
+            continue
+        # Internal source-check allowlisting is not release authority. While
+        # statutory scoring is disabled, no downstream report may describe a
+        # provisional impact as applied.
+        if not LEGAL_SCORE_RELEASED:
+            results.append({"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"})
             continue
         severity_value = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
         if getattr(flag, "is_black_override", False) or severity_value == "BLACK":
@@ -608,16 +614,21 @@ class ComplianceService(BaseService[ComplianceFlag]):
         black_count = verified_severities.count("BLACK")
         red_count = verified_severities.count("RED")
         yellow_count = verified_severities.count("YELLOW")
+        pending_review_count = len(rows) - len(verified_severities)
         summary.update({
-            "total_active": len(rows),
-            "total_active_flags": len(rows),
+            # Customer-facing active counts include only rules approved for release.
+            # Unapproved engine flags remain separately visible as review prompts.
+            "total_active": len(verified_severities),
+            "total_active_flags": len(verified_severities),
+            "pending_review": pending_review_count,
+            "pending_review_flags": pending_review_count,
             "black": black_count,
             "red": red_count,
             "yellow": yellow_count,
             "black_flags": black_count,
             "red_flags": red_count,
             "yellow_flags": yellow_count,
-            "not_evaluated": len(rows) - len(verified_severities),
+            "not_evaluated": pending_review_count,
         })
         return summary
 

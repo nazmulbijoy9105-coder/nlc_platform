@@ -326,6 +326,13 @@ class TestChargeSatisfactionDeadline:
             satisfied=True,
             satisfaction_date=satisfaction_date,
             satisfaction_filed=False,
+            registrable_under_s159=True,
+            registrability_verified=True,
+            registrability_evidence_ref="RJSC-CHARGE-CLASS-001",
+            satisfaction_verified=True,
+            satisfaction_evidence_ref="BANK-SATISFACTION-001",
+            satisfaction_filing_status_verified=True,
+            satisfaction_filing_evidence_ref="RJSC-SEARCH-RESULT-001",
         )
 
     def test_CHG_001_missing_satisfaction_date_is_unknown(self):
@@ -346,13 +353,53 @@ class TestChargeSatisfactionDeadline:
         )
         flag = _flag_by_id(result, "CHG-001")
         assert flag is not None
-        assert flag.statutory_basis == "Section 172, Companies Act 1994 (Bangladesh)"
+        assert flag.statutory_basis == "Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh)"
         assert flag.detail["form"] == "Form XXVIII"
         assert flag.detail["delay_days"] == 33
 
     def test_CHG_001_no_flag_before_21_day_deadline(self):
         result = NLCRuleEngine().evaluate(
             _base_profile(charges=[self._charge(date(2026, 10, 20))]),
+            today=date(2026, 11, 3),
+        )
+        assert _flag_by_id(result, "CHG-001") is None
+
+    def test_CHG_001_unverified_s159_registrability_is_review_only(self):
+        charge = self._charge(date(2026, 10, 1))
+        charge.registrable_under_s159 = None
+        charge.registrability_verified = False
+        charge.registrability_evidence_ref = None
+        result = NLCRuleEngine().evaluate(
+            _base_profile(charges=[charge]),
+            today=date(2026, 11, 3),
+        )
+        flag = _flag_by_id(result, "CHG-001")
+        assert flag is not None
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
+        assert "SECTION_159_REGISTRABILITY_UNKNOWN" in flag.detail["unknown_reasons"]
+
+    def test_CHG_001_unverified_rjsc_filing_status_is_review_only(self):
+        charge = self._charge(date(2026, 10, 1))
+        charge.satisfaction_filing_status_verified = False
+        charge.satisfaction_filing_evidence_ref = None
+        result = NLCRuleEngine().evaluate(
+            _base_profile(charges=[charge]),
+            today=date(2026, 11, 3),
+        )
+        flag = _flag_by_id(result, "CHG-001")
+        assert flag is not None
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
+        assert "RJSC_FILING_STATUS_UNVERIFIED" in flag.detail["unknown_reasons"]
+
+    def test_CHG_001_non_s159_charge_is_not_subject_to_section_172(self):
+        charge = self._charge(date(2026, 10, 1))
+        charge.registrable_under_s159 = False
+        result = NLCRuleEngine().evaluate(
+            _base_profile(charges=[charge]),
             today=date(2026, 11, 3),
         )
         assert _flag_by_id(result, "CHG-001") is None
