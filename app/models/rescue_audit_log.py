@@ -29,7 +29,7 @@ class RescueAuditLog(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     rescue_plan_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("rescue_plans.id", ondelete="CASCADE"), nullable=False)
+        UUID(as_uuid=True), ForeignKey("rescue_plans.id", ondelete="RESTRICT"), nullable=False)
     finding_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("compliance_flags.id", ondelete="SET NULL"), nullable=True)
     rule_id: Mapped[str] = mapped_column(String(50), nullable=False)

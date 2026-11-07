@@ -2,12 +2,11 @@ import time
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.auth import get_current_user
-from app.core.dependencies import get_db, get_db_for_user
+from app.core.dependencies import get_current_user, get_db, get_db_for_user
 from app.models.database import set_admin_context
 from app.models.infrastructure import UserActivityLog
 from app.models.user import User
@@ -150,8 +149,7 @@ class UserListItem(BaseModel):
     full_name: str
     role: str
     is_active: bool
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class GrantAccessRequest(BaseModel):
     company_id: str
