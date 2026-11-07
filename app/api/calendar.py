@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.entitlement import require_entitlement
+from app.core.company_authorization import ensure_staff_company_scope
 from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
@@ -22,6 +23,7 @@ async def generate_calendar(
     db: AsyncSession = Depends(get_db_for_user),
     current_user=Depends(get_current_user),
 ):
+    await ensure_staff_company_scope(company_id, current_user, db)
     service = ComplianceCalendarService(db)
     events = await service.get_calendar(company_id, years_ahead=years_ahead)
     return {"message": f"Generated {len(events)} events", "count": len(events)}
@@ -37,6 +39,7 @@ async def get_calendar(
     db: AsyncSession = Depends(get_db_for_user),
     current_user=Depends(get_current_user),
 ):
+    await ensure_staff_company_scope(company_id, current_user, db)
     service = ComplianceCalendarService(db)
     events = await service.get_upcoming(company_id, days_ahead=days_ahead)
     return {"company_id": str(company_id), "events": events}
