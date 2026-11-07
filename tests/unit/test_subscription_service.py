@@ -83,7 +83,7 @@ async def test_request_subscription_snapshots_price_and_enabled_features():
     assert snapshot.limits == {"companies": 1}
     assert event.event_type == "REQUESTED"
     assert event.actor_id == actor_id
-    await db.flush.assert_awaited()
+    db.flush.assert_awaited()
 
 
 @pytest.mark.asyncio
@@ -168,4 +168,4 @@ async def test_due_subscription_processing_records_terminal_and_grace_transition
     assert event_types.count("CANCELLED") == 1
     assert event_types.count("PAST_DUE") == 1
     assert event_types.count("EXPIRED") == 2
-    await db.flush.assert_awaited()
+    db.flush.assert_awaited()
