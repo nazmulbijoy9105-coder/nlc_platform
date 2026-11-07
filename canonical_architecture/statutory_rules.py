@@ -166,8 +166,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "INC-005": {
         "rule_id": "INC-005",
         "legal_domain": "Corporate",
-        "law": "Section 150, Companies Act 1994; BIDA Foreign Investment Guidelines",
-        "requirement": "Encashment Certificate Missing — Foreign Shareholding - Foreign shareholding detected but Encashment Certificate from AD bank not uploaded. Required under BIDA guidelines. CONDITIONAL: Only applies if has_foreign_shareholder == True.",
+        "law": "GFET-2018 Vol.1, Chapter 9, paragraph 2(A); FE Circular No.10 (21 June 2023); FEID Circular No.01 (27 January 2025) and subsequent circulars",
+        "requirement": "An AD-bank encashment-certificate record is not present for a foreign-shareholder case. This is an evidence-review prompt only; verify the applicable GFET instructions, current circulars, foreign-currency-account retention and zone exceptions. Absence of an upload is not proof of breach.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -181,8 +181,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "INC-006": {
         "rule_id": "INC-006",
         "legal_domain": "Corporate",
-        "law": "BIDA Foreign Investment Act 1980; BOI Guidelines",
-        "requirement": "Remittance Below Work Permit Threshold - Foreign remittance below USD 50,000 threshold for work permit sponsorship. BIDA registration may be challenged. CONDITIONAL: Only applies if has_foreign_shareholder == True AND bida_registered == True.",
+        "law": "BIDA Guidelines 2023 for foreign commercial offices and work permits; exact operative clause/version and current amendments require verification",
+        "requirement": "A reported initial-establishment remittance below the USD 50,000 reference amount is a screening prompt only. Verify the operative BIDA guideline, applicant category, effective version, exceptions and bank evidence. Do not infer a statutory breach or automatic work-permit refusal.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
