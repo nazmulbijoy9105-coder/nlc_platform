@@ -4,23 +4,57 @@ on:
   schedule:
     # Every day at 00:00 UTC (6:00 AM Bangladesh time)
     - cron: '0 0 * * *'
-  workflow_dispatch: # Manual trigger
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-compliance-evaluation
+  cancel-in-progress: false
 
 jobs:
   evaluate:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Trigger evaluation
+      - name: Validate credentials and trigger evaluation
+        shell: bash
+        env:
+          NLC_EMAIL: ${{ secrets.NLC_EMAIL }}
+          NLC_PASSWORD: ${{ secrets.NLC_PASSWORD }}
         run: |
-          # Login to get token
-          TOKEN=$(curl -s -X POST https://nlc-platform.onrender.com/api/v1/auth/login \
-            -H "Content-Type: application/json" \
-            -d '{"email":"${{ secrets.NLC_EMAIL }}","password":"${{ secrets.NLC_PASSWORD }}"}' | \
-            python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")
-          
-          # Trigger daily evaluation
-          curl -s -X POST https://nlc-platform.onrender.com/api/v1/cron/evaluate-all \
-            -H "Authorization: Bearer $TOKEN"
-          
-          # Check health
-          curl -s https://nlc-platform.onrender.com/api/v1/health/live
+          set -Eeuo pipefail
+
+          : "${NLC_EMAIL:?Required GitHub Actions secret NLC_EMAIL is missing or empty}"
+          : "${NLC_PASSWORD:?Required GitHub Actions secret NLC_PASSWORD is missing or empty}"
+
+          login_response="$(curl --fail --silent --show-error \
+            --connect-timeout 10 --max-time 30 \
+            --retry 2 --retry-all-errors --retry-delay 2 \
+            --request POST "https://nlc-platform.onrender.com/api/v1/auth/login" \
+            --header "Content-Type: application/json" \
+            --data "$(jq -n --arg email "$NLC_EMAIL" --arg password "$NLC_PASSWORD" \
+              '{email: $email, password: $password}')")"
+
+          token="$(jq -er '.access_token | strings | select(length > 0)' <<<"$login_response")"
+          unset login_response
+          if [[ -z "$token" ]]; then
+            echo "::error::Authentication response did not contain a non-empty access_token."
+            exit 1
+          fi
+
+          curl --fail --silent --show-error \
+            --connect-timeout 10 --max-time 120 \
+            --request POST "https://nlc-platform.onrender.com/api/v1/cron/evaluate-all" \
+            --header "Authorization: Bearer $token" \
+            --output /dev/null
+
+          unset token
+
+          curl --fail --silent --show-error \
+            --connect-timeout 10 --max-time 20 \
+            "https://nlc-platform.onrender.com/api/v1/health/live" \
+            --output /dev/null
+
+          echo "Evaluation endpoint accepted the request and the live health endpoint responded."
