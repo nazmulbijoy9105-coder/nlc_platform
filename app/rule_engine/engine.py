@@ -1339,6 +1339,7 @@ class NLCRuleEngine:
             and c.members_present_at_agm is not None
             and attendance_verified
             and quorum_basis_verified
+            and c.agm_quorum_required is not None
             and c.members_present_at_agm < c.agm_quorum_required
         ):
             self._add_flag(ComplianceFlag(
@@ -1971,7 +1972,10 @@ class NLCRuleEngine:
                         state=RuleState.UNKNOWN,
                         eval_state="UNKNOWN",
                     ))
-                elif charge.satisfaction_filed is False:
+                elif (
+                    charge.satisfaction_filed is False
+                    and charge.satisfaction_date is not None
+                ):
                     satisfaction_delay = (self.today - charge.satisfaction_date).days
                     if satisfaction_delay > 21:
                         self._add_flag(ComplianceFlag(
@@ -2583,8 +2587,9 @@ class NLCRuleEngine:
         # ACC-002: Section 190 allows 30 days after the AGM, or if no AGM
         # was held, 30 days after the latest date on which it should have been held.
         if c.financial_statements_filed is False and self._agm_history_is_verified(c):
-            filing_deadline = None
-            deadline_basis = None
+            filing_deadline: date | None = None
+            deadline_basis: str | None = None
+            agm_due: date | None = None
             if c.agm_held_this_cycle is True and c.last_agm_date is not None:
                 filing_deadline = c.last_agm_date + timedelta(days=30)
                 deadline_basis = "30 days after AGM"
@@ -2593,8 +2598,6 @@ class NLCRuleEngine:
                     agm_due = self._add_months(c.incorporation_date, 18)
                 elif c.agm_count is not None and c.agm_count > 0 and c.last_agm_date is not None:
                     agm_due = self._subsequent_agm_deadline(c)
-                else:
-                    agm_due = None
                 if agm_due is not None:
                     filing_deadline = agm_due + timedelta(days=30)
                     deadline_basis = "30 days after latest date AGM should have been held"
@@ -2657,7 +2660,7 @@ class NLCRuleEngine:
 
         # Check for verified, structured disqualification grounds
         verified_grounds = []
-        unverified_allegations = []
+        unverified_allegations: list[dict[str, Any] | str] = []
         disputed_grounds = []
 
         if c.disqualification_grounds:
@@ -3267,7 +3270,7 @@ class NLCRuleEngine:
         if c.agm_count == 0:
             if c.incorporation_date is None:
                 return 0
-            deadline = self._add_months(c.incorporation_date, 18)
+            deadline: date | None = self._add_months(c.incorporation_date, 18)
         else:
             if c.last_agm_date is None:
                 return 0
