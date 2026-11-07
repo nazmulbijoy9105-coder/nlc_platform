@@ -66,9 +66,10 @@ async def _company_contexts(
         result = await db.execute(
             select(Document.company_id).where(Document.id == document_id).limit(1)
         )
-        company_id = result.scalar_one_or_none()
-        if company_id is None:
+        document_company_id = result.scalar_one_or_none()
+        if document_company_id is None:
             raise HTTPException(status_code=404, detail="Document not found")
+        company_id = document_company_id
         if role_value == "LEGAL_STAFF":
             from app.core.company_authorization import ensure_staff_company_scope
 
