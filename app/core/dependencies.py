@@ -469,10 +469,28 @@ async def get_client_company_filter(
     if db_role != token.role:
         raise HTTPException(status_code=401, detail="Account permissions changed. Please sign in again.")
 
-    if db_role in ("SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF"):
+    if db_role in ("SUPER_ADMIN", "ADMIN_STAFF"):
         return None
 
-    from app.models.company import CompanyUserAccess
+    from app.models.company import Company, CompanyUserAccess
+    if db_role == "LEGAL_STAFF":
+        assigned = await db.execute(
+            select(Company.id).where(Company.assigned_staff_id == user.id)
+        )
+        memberships = await db.execute(
+            select(CompanyUserAccess.company_id).where(
+                CompanyUserAccess.user_id == user.id,
+                CompanyUserAccess.is_active.is_(True),
+            )
+        )
+        return [
+            str(company_id)
+            for company_id in dict.fromkeys([
+                *assigned.scalars().all(),
+                *memberships.scalars().all(),
+            ])
+        ]
+
     membership_result = await db.execute(
         select(CompanyUserAccess.company_id).where(
             CompanyUserAccess.user_id == uuid.UUID(token.user_id),
