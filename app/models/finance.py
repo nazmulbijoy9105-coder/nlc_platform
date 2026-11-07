@@ -273,6 +273,13 @@ class PaymentProviderEvent(UUIDPrimaryKeyMixin, Base):
 class ClientSubscription(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "client_subscriptions"
     __table_args__ = (
+        UniqueConstraint("id", "company_id", name="uq_client_subscriptions_id_company"),
+        ForeignKeyConstraint(
+            ["invoice_id", "company_id"],
+            ["invoices.id", "invoices.company_id"],
+            ondelete="RESTRICT",
+            name="fk_client_subscriptions_invoice_company",
+        ),
         CheckConstraint("amount_bdt >= 0", name="ck_subscription_amount_nonnegative"),
         CheckConstraint("billing_interval IN ('MONTHLY','QUARTERLY','ANNUAL','ONE_TIME')", name="ck_subscription_billing_interval"),
         CheckConstraint("status IN ('PENDING','ACTIVE','PAST_DUE','CANCELLED','EXPIRED','SUSPENDED')", name="ck_subscription_status"),
@@ -291,4 +298,11 @@ class ClientSubscription(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     renews_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     auto_renew: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    invoice_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    grace_ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    suspension_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    activated_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
