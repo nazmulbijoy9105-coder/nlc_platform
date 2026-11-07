@@ -48,7 +48,6 @@ from app.api import (
     webhooks,
 )
 from app.core.config import get_settings
-from app.tasks.scheduler import start_scheduler, stop_scheduler
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -408,11 +407,3 @@ def create_app() -> FastAPI:
 # WSGI/ASGI entrypoint
 # ---------------------------------------------------------------------------
 app = create_app()
-
-@app.on_event("startup")
-async def _start_scheduler():
-    await start_scheduler()
-
-@app.on_event("shutdown")
-async def _stop_scheduler():
-    await stop_scheduler()
