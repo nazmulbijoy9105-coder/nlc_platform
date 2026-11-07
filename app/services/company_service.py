@@ -516,20 +516,28 @@ class CompanyService(BaseService[Company]):
             ))
 
         # ── Share Transfers ───────────────────────────────────────
+        # Legacy ShareTransfer booleans have no verification/provenance fields
+        # and historically defaulted to True. Do not treat those defaults as
+        # proof of filing, payment, approval or registration.
         share_transfers = []
         for t in company.share_transfers:
             from app.rule_engine import ShareTransfer as EngineTransfer
             share_transfers.append(EngineTransfer(
                 transfer_id=str(t.id),
                 transfer_date=t.transfer_date,  # type: ignore
-                instrument_recorded=bool(t.has_transfer_instrument),
-                stamp_duty_paid=t.stamp_duty_paid,
+                instrument_recorded=None,
+                form_117_filed=None,
+                stamp_duty_paid=None,
+                stamp_duty_applicability_verified=False,
                 stamp_duty_amount=float(t.stamp_duty_amount_bdt) if t.stamp_duty_amount_bdt else None,
-                board_approval=t.board_approval_obtained,
-                board_approval_obtained=t.board_approval_obtained,
-                share_register_updated=t.register_updated,
-                aoa_restriction_apply=t.aoa_restriction_violated,
-                form_117_filed=bool(getattr(t, "form_117_filed", None)) if t is not None else False,  # UNKNOWN until RJSC filings table lookup implemented (TR-007)
+                board_approval=None,
+                board_approval_obtained=None,
+                share_register_updated=None,
+                aoa_restriction_apply=None,
+                transfer_registered=None,
+                registration_refused=None,
+                refusal_notice_sent=None,
+                instrument_lodged_date=None,
             ))
 
         # ── Statutory Registers ───────────────────────────────────
