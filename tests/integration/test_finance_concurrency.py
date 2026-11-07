@@ -262,8 +262,8 @@ async def _committed_active_subscription(
             is_active=True,
             granted_by=finance_user_id,
         )
-        session.add_all([company, client_user, finance_user, access])
         await set_rls_context(session, str(finance_user_id))
+        session.add_all([company, client_user, finance_user, access])
         await session.flush()
         subscriptions = SubscriptionService(session)
         await subscriptions.upsert_plan(
