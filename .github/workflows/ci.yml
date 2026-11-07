@@ -110,8 +110,8 @@ jobs:
         run: |
           set -euo pipefail
           HEADS="$(alembic heads)"
-          printf '%s\n' "$HEADS"
-          HEAD_COUNT="$(printf '%s\n' "$HEADS" | grep -c '(head)')"
+          printf '%s\\n' "$HEADS"
+          HEAD_COUNT="$(printf '%s\\n' "$HEADS" | grep -c '(head)')"
           test "$HEAD_COUNT" -eq 1
 
           # Roles are cluster-level objects: provision them before Alembic.
@@ -184,6 +184,9 @@ jobs:
 
       - name: Run integration tests
         run: python -m pytest tests/integration -q --tb=short
+
+      - name: Run finance concurrency regression tests explicitly
+        run: python -m pytest tests/integration/test_finance_concurrency.py -q --tb=short
 
       - name: Run canonical integrity tests
         run: python -m pytest tests/test_canonical_integrity.py -q --tb=short
