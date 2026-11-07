@@ -71,7 +71,7 @@ class StatutoryRule:
 _RULES = (
     StatutoryRule(
         "INC-001", "Corporate", "Companies Act 1994",
-        "File Memorandum and Articles of Association", "Section 23",
+        "MoA/AoA Registration Status Requires Verification", "Section 23",
         ProvisionStatus.RECONCILE, "RJSC", ("MOA_FILED", "AOA_FILED"),
         Severity.NOT_EVALUATED, 0),
     StatutoryRule(
@@ -512,7 +512,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "TR-001": {
         "rule_id": "TR-001",
         "legal_domain": "Corporate",
-        "law": "Section 38, Companies Act 1994 (Bangladesh)",
+        "law": "Section 38(3), Companies Act 1994 (Bangladesh)",
         "requirement": "Section 38(3) requires a proper transfer instrument duly stamped and executed by transferor and transferee, together with the relevant share/debenture certificate, subject to the statutory lost-instrument/indemnity exception. A missing upload is not proof of absence or automatic invalidity.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
@@ -572,7 +572,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "TR-005": {
         "rule_id": "TR-005",
         "legal_domain": "Corporate",
-        "law": "Section 47, Companies Act 1994 (Bangladesh); Articles of Association",
+        "law": "Section 38(7), Companies Act 1994 (Bangladesh); Articles of Association",
         "requirement": "Reported registration despite an Articles restriction requires case-specific review under section 38(7), the Articles, notices, registration record and remedies. The section preserves a power to refuse registration; it does not automatically make every restricted transfer void ab initio.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
