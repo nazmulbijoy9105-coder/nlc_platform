@@ -77,7 +77,7 @@ class EngagementResponse(BaseModel):
     company_id: str
     engagement_type: str
     revenue_tier: str
-    status: str
+    status: str | None
     description: str | None
     estimated_fee_bdt: Decimal | None
     confirmed_fee_bdt: Decimal | None
@@ -143,7 +143,7 @@ class TaskResponse(BaseModel):
     company_id: str
     title: str
     description: str | None
-    status: str
+    status: str | None
     priority: str
     due_date: str | None
     assigned_to: str | None
