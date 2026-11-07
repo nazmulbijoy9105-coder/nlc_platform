@@ -22,6 +22,7 @@ from app.services.notification_service import is_notification_eligible
         "BILLING_TAX_RETURN_DEADLINE_WARNING",
         "VAT_RETURN_OVERDUE",
         "UNKNOWN_LEGAL_TYPE",
+        "SRO_RULE_UPDATE_REQUIRED",
         "ARBITRARY_UNREGISTERED_TYPE",
     ],
 )
@@ -34,7 +35,6 @@ def test_legal_deadline_and_unknown_notifications_are_suppressed(notification_ty
     [
         "SYSTEM",
         "AI_REVIEW_QUEUE_ALERT",
-        "SRO_RULE_UPDATE_REQUIRED",
         "PAYMENT_RECEIPT",
         "BILLING_INVOICE",
         "BILLING_DEADLINE_WARNING",
