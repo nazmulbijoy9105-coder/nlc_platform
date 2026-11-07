@@ -197,6 +197,27 @@ jobs:
       - uses: actions/checkout@v5
       - name: Build production API image
         run: docker build --target api -t nlc-api:ci .
+      - name: Verify API startup command preserves PID 1 signal delivery
+        run: |
+          python - <<'PY'
+          import json
+          import subprocess
+
+          raw = subprocess.check_output(
+              ["docker", "image", "inspect", "nlc-api:ci", "--format", "{{json .Config.Cmd}}"],
+              text=True,
+          )
+          command = json.loads(raw)
+          expected = [
+              "sh",
+              "-c",
+              "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000",
+          ]
+          if command != expected:
+              raise SystemExit(f"Unexpected API startup command: {command!r}")
+          print("API startup command uses exec for direct Uvicorn PID 1 signal handling")
+          PY
+
       - name: Verify Fontconfig cache is writable as non-root runtime user
         run: |
           docker run --rm --entrypoint /bin/sh nlc-api:ci -c '
