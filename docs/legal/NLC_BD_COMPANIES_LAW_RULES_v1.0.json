@@ -1056,7 +1056,7 @@
     {
       "rule_id": "INC-006",
       "rule_name": "Initial Establishment Remittance Evidence — Work Permit Review",
-      "statutory_basis": "BIDA Guidelines 2023 for foreign commercial offices and work permits; exact operative clause/version and current amendments require verification",
+      "statutory_basis": "BIDA Guidelines for permission to establish foreign commercial offices and issue work permits in Bangladesh (2023); exact operative clause/version and current amendments require verification",
       "engine_severity": "NOT_EVALUATED",
       "engine_score_impact": 0,
       "engine_black_override": false,
