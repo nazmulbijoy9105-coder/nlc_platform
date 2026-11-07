@@ -61,7 +61,7 @@ def test_upcoming_deadlines_filter_active_membership_and_user():
     assert "company_user_access" in sql
     assert "cua.user_id = :user_id" in sql
     assert "cua.is_active = true" in sql
-    assert db.params[0] == {"days": 21, "user_id": str(user_id)}
+    assert db.params[0] == {"days": 21, "user_id": str(user_id), "include_assigned_staff": False}
 
 
 def test_upcoming_deadlines_reject_missing_user():
