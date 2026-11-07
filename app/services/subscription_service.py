@@ -61,22 +61,17 @@ class SubscriptionService:
         plans = list((await self.db.execute(query)).scalars().all())
         output: list[dict[str, Any]] = []
         for plan in plans:
-            prices = await self.db.execute(
-                select(SubscriptionPlanPrice)
-                .where(
-                    SubscriptionPlanPrice.plan_code == plan.plan_code,
-                    SubscriptionPlanPrice.is_active.is_(True),
-                )
-                .order_by(SubscriptionPlanPrice.billing_interval)
+            price_query = select(SubscriptionPlanPrice).where(
+                SubscriptionPlanPrice.plan_code == plan.plan_code
             )
-            features = await self.db.execute(
-                select(SubscriptionPlanFeature)
-                .where(
-                    SubscriptionPlanFeature.plan_code == plan.plan_code,
-                    SubscriptionPlanFeature.enabled.is_(True),
-                )
-                .order_by(SubscriptionPlanFeature.feature_code)
+            feature_query = select(SubscriptionPlanFeature).where(
+                SubscriptionPlanFeature.plan_code == plan.plan_code
             )
+            if not include_inactive:
+                price_query = price_query.where(SubscriptionPlanPrice.is_active.is_(True))
+                feature_query = feature_query.where(SubscriptionPlanFeature.enabled.is_(True))
+            prices = await self.db.execute(price_query.order_by(SubscriptionPlanPrice.billing_interval))
+            features = await self.db.execute(feature_query.order_by(SubscriptionPlanFeature.feature_code))
             output.append({
                 "plan_code": plan.plan_code,
                 "plan_name": plan.plan_name,
@@ -90,11 +85,12 @@ class SubscriptionService:
                         "tax_bdt": item.tax_bdt,
                         "tax_policy_reference": item.tax_policy_reference,
                         "currency": item.currency,
+                        "is_active": item.is_active,
                     }
                     for item in prices.scalars().all()
                 ],
                 "features": [
-                    {"feature_code": item.feature_code}
+                    {"feature_code": item.feature_code, "enabled": item.enabled}
                     for item in features.scalars().all()
                 ],
             })
