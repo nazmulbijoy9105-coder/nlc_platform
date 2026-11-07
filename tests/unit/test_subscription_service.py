@@ -147,10 +147,17 @@ async def test_due_subscription_processing_records_terminal_and_grace_transition
         status="PAST_DUE", grace_ends_at=now - timedelta(seconds=1),
         invoice_id=None,
     )
+    suspended_expired = SimpleNamespace(
+        id=__import__("uuid").uuid4(), company_id=__import__("uuid").uuid4(),
+        status="SUSPENDED", ends_at=now - timedelta(days=5),
+        grace_ends_at=now - timedelta(days=1), cancel_at_period_end=False,
+        cancelled_at=None, invoice_id=None,
+    )
     db = MagicMock()
     db.execute = AsyncMock(side_effect=[
         _result_with_rows([cancelled, grace, expired]),
         _result_with_rows([grace_expired]),
+        _result_with_rows([suspended_expired]),
     ])
     db.add = MagicMock()
     db.flush = AsyncMock()
@@ -159,13 +166,14 @@ async def test_due_subscription_processing_records_terminal_and_grace_transition
         actor_id=__import__("uuid").uuid4()
     )
 
-    assert counts == {"past_due": 1, "expired": 2, "cancelled": 1}
+    assert counts == {"past_due": 1, "expired": 3, "cancelled": 1}
     assert cancelled.status == "CANCELLED"
     assert grace.status == "PAST_DUE"
     assert expired.status == "EXPIRED"
     assert grace_expired.status == "EXPIRED"
+    assert suspended_expired.status == "EXPIRED"
     event_types = [call.args[0].event_type for call in db.add.call_args_list]
     assert event_types.count("CANCELLED") == 1
     assert event_types.count("PAST_DUE") == 1
-    assert event_types.count("EXPIRED") == 2
+    assert event_types.count("EXPIRED") == 3
     db.flush.assert_awaited()
