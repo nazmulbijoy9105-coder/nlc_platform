@@ -967,7 +967,7 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### INC-005 — Encashment Certificate Missing — Foreign Shareholding
 
-- **Catalogue anchor:** BIDA Foreign Investment Act 1980; Bangladesh Bank FDI Circular
+- **Catalogue anchor:** GFET-2018 Vol.1, Chapter 9, paragraph 2(A); FE Circular No.10 (21 June 2023); FEID Circular No.01 (27 January 2025) and subsequent applicable circulars
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -982,9 +982,9 @@ This docket expands the source triage into a separate signed-review record for e
 - **Minimum negative tests:** wrong company class; unknown fact; missing document only; valid extension/condonation; timely filing; appeal/stay/order; inapplicable sector/listing; contradictory evidence.
 - **Counsel decision:** PENDING — reviewer, enrolment/chamber, signed date, exact scope and next review required.
 
-### INC-006 — Remittance Below Work Permit Threshold
+### INC-006 — Initial Establishment Remittance Evidence — Work Permit Review
 
-- **Catalogue anchor:** BIDA Foreign Investment Act 1980
+- **Catalogue anchor:** BIDA Guidelines 2023 for permission to establish foreign commercial offices and issue work permits; exact operative clause/version and current amendments require verification
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
