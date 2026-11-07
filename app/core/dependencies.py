@@ -28,6 +28,7 @@ Usage:
 from __future__ import annotations
 
 import uuid
+from collections.abc import AsyncGenerator
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, Security, status
@@ -87,7 +88,7 @@ class TokenData(BaseModel):
 # DATABASE SESSION
 # ═══════════════════════════════════════════════════════════════════════
 
-async def get_db() -> AsyncSession:  # type: ignore
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Yield an async database session.
     Commits on success, rolls back on exception, always closes.
