@@ -164,19 +164,29 @@ def upgrade() -> None:
                       )
                 ) INTO duplicate_exists;
             ELSIF TG_TABLE_NAME = 'payments' THEN
+                -- A receipt may reuse the reference of exactly one source
+                -- claim, but only when that claim is approved and every
+                -- tenant/payment identity field matches the receipt.
+                IF NEW.source_submission_id IS NOT NULL AND NOT EXISTS (
+                    SELECT 1
+                    FROM public.payment_submissions source
+                    WHERE source.id = NEW.source_submission_id
+                      AND source.company_id = NEW.company_id
+                      AND source.status = 'APPROVED'
+                      AND source.method = NEW.method
+                      AND lower(btrim(source.payer_reference)) = normalized_reference
+                ) THEN
+                    RAISE EXCEPTION
+                        'linked payment source must be an approved matching claim'
+                        USING ERRCODE = '23514';
+                END IF;
+
                 SELECT EXISTS (
                     SELECT 1
                     FROM public.payment_submissions ps
                     WHERE ps.method = NEW.method
                       AND lower(btrim(ps.payer_reference)) = normalized_reference
-                      AND (
-                          ps.id IS DISTINCT FROM NEW.source_submission_id
-                          OR ps.status <> 'APPROVED'
-                          OR ps.company_id <> NEW.company_id
-                          OR ps.method <> NEW.method
-                          OR lower(btrim(ps.payer_reference)) <>
-                             lower(btrim(NEW.payer_reference))
-                      )
+                      AND ps.id IS DISTINCT FROM NEW.source_submission_id
                 ) INTO duplicate_exists;
             ELSE
                 RAISE EXCEPTION 'manual-reference guard attached to unsupported table %',
