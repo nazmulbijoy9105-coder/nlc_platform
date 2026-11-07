@@ -22,13 +22,6 @@ async def _company_contexts(
     current_user: User,
 ) -> list[uuid.UUID]:
     raw_company_id = request.path_params.get("company_id") or request.query_params.get("company_id")
-    if raw_company_id is None and request.method not in {"GET", "HEAD"}:
-        try:
-            payload = await request.json()
-        except (ValueError, TypeError):
-            payload = None
-        if isinstance(payload, dict):
-            raw_company_id = payload.get("company_id")
     if raw_company_id:
         try:
             company_id = uuid.UUID(str(raw_company_id))
@@ -39,10 +32,11 @@ async def _company_contexts(
                 CompanyUserAccess.company_id == company_id,
                 CompanyUserAccess.user_id == current_user.id,
                 CompanyUserAccess.is_active.is_(True),
+                CompanyUserAccess.can_view_financials.is_(True),
             ).limit(1)
         )
         if membership.scalar_one_or_none() is None:
-            raise HTTPException(status_code=403, detail="Active company membership is required.")
+            raise HTTPException(status_code=403, detail="Active company financial access is required.")
         return [company_id]
 
     raw_document_id = request.path_params.get("document_id")
@@ -75,15 +69,10 @@ async def _company_contexts(
         select(CompanyUserAccess.company_id).where(
             CompanyUserAccess.user_id == current_user.id,
             CompanyUserAccess.is_active.is_(True),
+            CompanyUserAccess.can_view_financials.is_(True),
         )
     )
-    company_ids = list(dict.fromkeys(result.scalars().all()))
-    if len(company_ids) > 1:
-        raise HTTPException(
-            status_code=400,
-            detail="A company context is required when the account belongs to multiple companies.",
-        )
-    return company_ids
+    return list(result.scalars().all())
 
 
 def require_entitlement(feature_name: str):
