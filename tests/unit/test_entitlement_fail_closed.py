@@ -53,8 +53,13 @@ async def test_customer_without_company_entitlement_receives_payment_required(mo
     dependency = entitlement.require_entitlement("compliance_package")
     user = SimpleNamespace(id=uuid.uuid4(), role="CLIENT_DIRECTOR")
 
+    membership = MagicMock()
+    membership.scalar_one_or_none.return_value = company_id
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=membership)
+
     with pytest.raises(HTTPException) as exc:
-        await dependency(request=_request(company_id), db=MagicMock(), current_user=user)
+        await dependency(request=_request(company_id), db=db, current_user=user)
 
     assert exc.value.status_code == 402
     assert "does not include" in exc.value.detail
@@ -76,8 +81,12 @@ async def test_customer_with_verified_company_entitlement_is_allowed(monkeypatch
     dependency = entitlement.require_entitlement("document_management")
     user = SimpleNamespace(id=uuid.uuid4(), role="CLIENT_DIRECTOR")
     request = _request(company_id)
+    membership = MagicMock()
+    membership.scalar_one_or_none.return_value = company_id
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=membership)
 
-    assert await dependency(request=request, db=MagicMock(), current_user=user) is True
+    assert await dependency(request=request, db=db, current_user=user) is True
     assert request.state.entitled_company_ids == [str(company_id)]
 
 
