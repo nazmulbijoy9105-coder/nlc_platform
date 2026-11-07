@@ -170,6 +170,7 @@ def upgrade() -> None:
                 WITH CHECK (
                     actor_id = public.nlc_current_user_id()
                     AND public.nlc_can_edit_company(company_id)
+                    AND public.nlc_can_access_articles_company(company_id)
                 )
             """)
 
@@ -191,7 +192,7 @@ def upgrade() -> None:
                 )
                 WITH CHECK (
                     public.nlc_current_user_is_staff()
-                    AND public.nlc_can_access_company(company_id)
+                    AND public.nlc_can_access_articles_company(company_id)
                 )
             """)
             op.execute(
