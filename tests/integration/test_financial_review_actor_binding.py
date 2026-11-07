@@ -66,6 +66,7 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
         amount_bdt=amount,
         currency="BDT",
         payer_reference=submission.payer_reference,
+        source_submission_id=submission.id,
         status="SETTLED",
         received_at=now,
         verified_by=db_user.id,
@@ -140,6 +141,18 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
     if allocation_event_matches_invoice:
         async with db.begin_nested():
             await approve_and_force_deferred_constraint()
+        # Provenance cannot be detached after approval, even for non-wallet
+        # methods that are outside the cross-table wallet-reference trigger.
+        with pytest.raises(DBAPIError):
+            async with db.begin_nested():
+                await db.execute(
+                    text("""
+                        UPDATE public.payments
+                           SET source_submission_id = NULL
+                         WHERE id = :payment_id
+                    """),
+                    {"payment_id": payment.id},
+                )
     else:
         with pytest.raises(DBAPIError):
             async with db.begin_nested():
