@@ -1,7 +1,7 @@
 """Quarantine current customer-facing legal outputs pending independent review.
 
 Revision ID: 0074_legal_release_quarantine
-Revises: 0060_financial_billing_core
+Revises: 0073_payment_allocations_append_only
 
 This migration is forward-only. It preserves historical score records and
 records the number of rows quarantined. It does not approve legal rules.
