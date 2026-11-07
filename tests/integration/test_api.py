@@ -500,6 +500,50 @@ class TestRescue:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
+    async def test_client_active_rescue_plan_requires_entitlement(
+        self, api_client, db_client_user, db_company
+    ):
+        """A valid tenant membership does not imply a paid rescue entitlement."""
+        from app.core.security import create_access_token
+
+        client_tok = create_access_token({
+            "sub": str(db_client_user.id),
+            "user_id": str(db_client_user.id),
+            "type": "access",
+            "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email,
+            "company_ids": [str(db_company.id)],
+        })
+        resp = await api_client.get(
+            f"/api/v1/rescue/plans/{db_company.id}/active",
+            headers=_auth(client_tok),
+        )
+        assert resp.status_code == 503
+        assert "entitlement verification is not configured" in resp.json()["detail"]
+        assert resp.headers["retry-after"] == "3600"
+
+    @pytest.mark.asyncio
+    async def test_client_cannot_use_rescue_entitlement_for_foreign_company(
+        self, api_client, db_client_user, db_other_company
+    ):
+        """Company membership denial remains effective before entitlement checks."""
+        from app.core.security import create_access_token
+
+        client_tok = create_access_token({
+            "sub": str(db_client_user.id),
+            "user_id": str(db_client_user.id),
+            "type": "access",
+            "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email,
+            "company_ids": [],
+        })
+        resp = await api_client.get(
+            f"/api/v1/rescue/plans/{db_other_company.id}/active",
+            headers=_auth(client_tok),
+        )
+        assert resp.status_code == 403
+
+    @pytest.mark.asyncio
     async def test_list_rescue_plans(self, api_client, super_admin_tok):
         resp = await api_client.get(
             "/api/v1/rescue/plans",
