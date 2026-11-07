@@ -96,8 +96,19 @@ def run_async(coro):
     try:
         return loop.run_until_complete(coro)
     finally:
-        loop.close()
-        asyncio.set_event_loop(None)
+        # SQLAlchemy async pooled connections are bound to the event loop
+        # that created them. This worker deliberately creates a new loop for
+        # every task, so dispose the pool before closing that loop; otherwise
+        # a later task can reuse an asyncpg connection from a closed loop.
+        try:
+            from app.models.database import dispose_engine
+
+            loop.run_until_complete(dispose_engine())
+        except Exception:
+            logger.exception("worker_async_engine_dispose_failed")
+        finally:
+            loop.close()
+            asyncio.set_event_loop(None)
 
 
 # ═══════════════════════════════════════════════════════════════════════
