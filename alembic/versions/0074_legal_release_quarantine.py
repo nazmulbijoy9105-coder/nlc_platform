@@ -9,7 +9,7 @@ records the number of rows quarantined. It does not approve legal rules.
 from alembic import op
 
 revision = "0074_legal_release_quarantine"
-down_revision = "0060_financial_billing_core"
+down_revision = "0073_payment_allocations_append_only"
 branch_labels = None
 depends_on = None
 
