@@ -56,3 +56,26 @@ def test_worker_task_disposes_async_engine_before_closing_event_loop(monkeypatch
 
     assert run_async(task_body()) == "task-result"
     assert calls == ["disposed"]
+
+
+def test_first_task_gates_non_prefork_worker_pools(monkeypatch):
+    import types
+
+    import app.worker.celery_app as celery_app
+
+    calls = []
+    monkeypatch.setattr(celery_app, "_worker_runtime_verified", False)
+    monkeypatch.setattr(
+        celery_app,
+        "verify_worker_runtime_security",
+        lambda: calls.append("verified"),
+    )
+
+    celery_app.on_task_prerun(
+        task_id="task-1",
+        task=types.SimpleNamespace(name="unit-test-task"),
+        args=(),
+        kwargs={},
+    )
+
+    assert calls == ["verified"]
