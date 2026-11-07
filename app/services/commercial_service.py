@@ -130,7 +130,7 @@ class EngagementService(BaseService[Engagement]):
         fee_bdt: Decimal | None = None,
     ) -> Engagement | None:
         """Advance engagement through the pipeline stages."""
-        from app.models.commercial import validate_engagement_transition, InvalidEngagementTransitionError
+        from app.models.commercial import InvalidEngagementTransitionError, validate_engagement_transition
         eng = await self.get_by_id(engagement_id)
         if not eng:
             return None
