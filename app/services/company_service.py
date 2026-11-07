@@ -504,30 +504,79 @@ class CompanyService(BaseService[Company]):
         director_changes = []
         for d in company.directors:
             from app.rule_engine import DirectorChange
+            form_xii_verified = bool(
+                d.form_xii_status_verified
+                and d.form_xii_filed is not None
+                and d.form_xii_evidence_ref
+                and d.form_xii_verified_at
+                and d.form_xii_verified_by
+            )
+            consent_verified = bool(
+                d.consent_verified
+                and d.consent_filed is not None
+                and d.consent_evidence_ref
+                and d.consent_verified_at
+                and d.consent_verified_by
+            )
             director_changes.append(DirectorChange(
                 director_id=str(d.id),
                 event_type="appointment" if d.director_status.value == "ACTIVE" else "resignation",
                 event_date=d.appointment_date or d.departure_date or date.today(),
-                form_filed=bool(d.appointment_filed_date or d.departure_filed_date),
-                form_filed_date=d.appointment_filed_date or d.departure_filed_date,
+                form_filed=d.form_xii_filed if form_xii_verified else None,
+                form_filed_date=d.form_xii_filed_date if form_xii_verified else None,
                 form_type="XII",
+                form_filed_verified=form_xii_verified,
+                form_filed_evidence_ref=d.form_xii_evidence_ref if form_xii_verified else None,
+                consent_filed=d.consent_filed if consent_verified else None,
+                consent_filed_date=d.consent_filed_date if consent_verified else None,
+                consent_verified=consent_verified,
+                consent_evidence_ref=d.consent_evidence_ref if consent_verified else None,
             ))
 
         # ── Share Transfers ───────────────────────────────────────
+        # Only evidence-bound statuses are passed to the deterministic engine.
         share_transfers = []
         for t in company.share_transfers:
             from app.rule_engine import ShareTransfer as EngineTransfer
+            instrument_verified = bool(
+                t.transfer_instrument_verified and t.transfer_instrument_evidence_ref
+            )
+            stamp_verified = bool(
+                t.stamp_duty_applicability_verified and t.stamp_duty_evidence_ref
+            )
+            board_verified = bool(t.board_approval_verified and t.board_approval_evidence_ref)
+            registration_verified = bool(
+                t.transfer_registered is not None and t.transfer_registration_evidence_ref
+            )
+            refusal_verified = bool(
+                t.registration_refusal_verified and t.refusal_decision_evidence_ref
+            )
+            refusal_notice_verified = bool(
+                t.refusal_notice_verified and t.refusal_notice_evidence_ref
+            )
+            lodgement_verified = bool(
+                t.instrument_lodged_date and t.instrument_lodgement_evidence_ref
+            )
+            articles_verified = bool(t.aoa_restriction_apply is not None and t.articles_clause_evidence_ref)
             share_transfers.append(EngineTransfer(
                 transfer_id=str(t.id),
                 transfer_date=t.transfer_date,  # type: ignore
-                instrument_recorded=bool(t.has_transfer_instrument),
-                stamp_duty_paid=t.stamp_duty_paid,
+                instrument_recorded=t.has_transfer_instrument if instrument_verified else None,
+                form_117_filed=t.form_117_filed if instrument_verified and t.form_117_evidence_ref else None,
+                stamp_duty_paid=t.stamp_duty_paid if stamp_verified else None,
+                stamp_duty_applicability_verified=stamp_verified,
                 stamp_duty_amount=float(t.stamp_duty_amount_bdt) if t.stamp_duty_amount_bdt else None,
-                board_approval=t.board_approval_obtained,
-                board_approval_obtained=t.board_approval_obtained,
-                share_register_updated=t.register_updated,
-                aoa_restriction_apply=t.aoa_restriction_violated,
-                form_117_filed=bool(getattr(t, "form_117_filed", None)) if t is not None else False,  # UNKNOWN until RJSC filings table lookup implemented (TR-007)
+                board_approval=t.board_approval_obtained if board_verified else None,
+                board_approval_obtained=t.board_approval_obtained if board_verified else None,
+                share_register_updated=t.register_updated if t.register_update_verified and t.register_update_evidence_ref else None,
+                aoa_restriction_apply=t.aoa_restriction_apply if articles_verified else None,
+                transfer_registered=t.transfer_registered if registration_verified else None,
+                registration_refused=t.registration_refused if refusal_verified else None,
+                refusal_notice_sent=t.refusal_notice_sent if refusal_notice_verified else None,
+                instrument_lodged_date=t.instrument_lodged_date if lodgement_verified else None,
+                articles_clause_evidence_ref=t.articles_clause_evidence_ref if articles_verified else None,
+                refusal_decision_evidence_ref=t.refusal_decision_evidence_ref if refusal_verified else None,
+                transfer_registration_evidence_ref=t.transfer_registration_evidence_ref if registration_verified else None,
             ))
 
         # ── Statutory Registers ───────────────────────────────────
@@ -636,7 +685,7 @@ class CompanyService(BaseService[Company]):
             # Capital
             "authorized_capital_bdt":       float(company.authorized_capital_bdt) if company.authorized_capital_bdt else 0.0,
             "paid_up_capital_bdt":          float(company.paid_up_capital_bdt) if company.paid_up_capital_bdt else 0.0,
-            "capital_increase_date":       getattr(company, "capital_increase_date", None),
+            "capital_increase_date":       None,  # unverified event date; legal engine remains NOT_EVALUATED
             "capital_increase_resolution": getattr(company, "capital_increase_resolution", None),
             "charges":                     [],
             # form_viii_filed removed — not a CompanyProfile field
@@ -736,12 +785,12 @@ class CompanyService(BaseService[Company]):
             # RJSC Form Filings
             "form_iii_filed":               getattr(company, "form_iii_filed", False),
             "form_iii_filed_date":          getattr(company, "form_iii_filed_date", None),
-            "form_iv_filed":                getattr(company, "form_iv_filed", False),
-            "form_iv_filed_date":           getattr(company, "form_iv_filed_date", None),
+            "form_iv_filed":                None,  # no evidence-bound Form IV status yet
+            "form_iv_filed_date":           None,
             "form_vi_filed":                getattr(company, "form_vi_filed", None),
             "form_vi_filed_date":           getattr(company, "form_vi_filed_date", None),
-            "form_xv_filed":                getattr(company, "form_xv_filed", None),
-            "form_xv_filed_date":           getattr(company, "form_xv_filed_date", None),
+            "form_xv_filed":                None,  # no evidence-bound Form XV status yet
+            "form_xv_filed_date":           None,
 
             # Annual Return Attachments
             "balance_sheet_attached":       getattr(company, "balance_sheet_attached", False),
@@ -817,18 +866,18 @@ class CompanyService(BaseService[Company]):
             "last_tax_return_filed_year":   getattr(company, "last_tax_return_filed_year", None),
 
             # Shareholders
-            "share_certificates_issued":     getattr(company, "share_certificates_issued", False),
-            "share_certificates_issued_date": getattr(company, "share_certificates_issued_date", None),
+            "share_certificates_issued":     None,  # no evidence-bound certificate status yet
+            "share_certificates_issued_date": None,
 
             # Misc
             "is_dormant":                    getattr(company, "is_dormant", False),
             "aoa_transfer_restriction":       getattr(company, "aoa_transfer_restriction", False),
             "is_fdi_registered":              getattr(company, "is_fdi_registered", False),
-            "last_allotment_date":            getattr(company, "last_allotment_date", None),
+            "last_allotment_date":            None,  # no authenticated allotment event provenance yet
             "registered_office_change_date":  getattr(company, "registered_office_change_date", None),
             "shareholder_change_date":        getattr(company, "shareholder_change_date", None),
             "has_foreign_shareholder":       getattr(company, "has_foreign_shareholder", False),
-            "capital_increase_special_resolution": getattr(company, "capital_increase_special_resolution", False),
+            "capital_increase_special_resolution": None,  # legacy assertion; resolution type requires Articles/source review
             "minimum_directors_met":        getattr(company, "minimum_directors_met", False),
             "registered_office_address":    getattr(company, "registered_office_address", None),
 
@@ -889,8 +938,8 @@ class CompanyService(BaseService[Company]):
             "fdi_registration_date": company.fdi_registration_date,
             "remittance_amount_usd": float(company.remittance_amount_usd) if company.remittance_amount_usd else 0.0,
             # Form filing status
-            "form_iii_filed": company.form_iii_filed,
-            "form_iv_filed": company.form_iv_filed,
+            "form_iii_filed": None,
+            "form_iv_filed": None,
             # RJSC strike-off
             "rjsc_status": company.rjsc_status or "ACTIVE",
             "rjsc_strike_off_notice_date": company.rjsc_strike_off_notice_date,
@@ -923,7 +972,38 @@ class CompanyService(BaseService[Company]):
             "director_office_of_profit": company.director_office_of_profit,
             "managing_director_appointment_date": company.managing_director_appointment_date,
             "member_count": company.member_count or 0,
-            "business_commencement_declaration_filed": company.business_commencement_declaration_filed,
+            "business_commencement_declaration_filed": (
+                company.business_commencement_declaration_filed
+                if (
+                    company.business_commencement_declaration_verified
+                    and company.business_commencement_declaration_evidence_ref
+                    and company.business_commencement_declaration_verified_at
+                    and company.business_commencement_declaration_verified_by
+                ) else None
+            ),
+            "business_commencement_declaration_verified": bool(
+                company.business_commencement_declaration_verified
+                and company.business_commencement_declaration_evidence_ref
+                and company.business_commencement_declaration_verified_at
+                and company.business_commencement_declaration_verified_by
+            ),
+            "business_commencement_declaration_evidence_ref": company.business_commencement_declaration_evidence_ref,
+            "section150_prospectus_issued": (
+                company.section150_prospectus_issued
+                if (
+                    company.section150_applicability_verified
+                    and company.section150_applicability_evidence_ref
+                    and company.section150_applicability_verified_at
+                    and company.section150_applicability_verified_by
+                ) else None
+            ),
+            "section150_applicability_verified": bool(
+                company.section150_applicability_verified
+                and company.section150_applicability_evidence_ref
+                and company.section150_applicability_verified_at
+                and company.section150_applicability_verified_by
+            ),
+            "section150_applicability_evidence_ref": company.section150_applicability_evidence_ref,
         })
 
         return profile
