@@ -274,6 +274,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     raise RuntimeError(
-        "0062 is forward-only: downgrading would discard evidence provenance "
+        "0075 is forward-only: downgrading would discard evidence provenance "
         "or restore unverified legacy share-transfer booleans."
     )
