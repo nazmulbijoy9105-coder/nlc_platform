@@ -268,3 +268,88 @@ async def test_customer_can_cancel_pending_request_before_invoice_issuance():
     assert event.event_type == "CANCELLED"
     assert event.event_metadata["reason"] == "customer_cancelled_before_invoice"
     db.flush.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_finance_can_void_unpaid_subscription_invoice_and_cancel_request():
+    company_id = __import__("uuid").uuid4()
+    actor_id = __import__("uuid").uuid4()
+    invoice = SimpleNamespace(
+        id=__import__("uuid").uuid4(),
+        company_id=company_id,
+        status="ISSUED",
+        paid_bdt=Decimal("0.00"),
+        balance_bdt=Decimal("1000.00"),
+        total_bdt=Decimal("1000.00"),
+    )
+    subscription = SimpleNamespace(
+        id=__import__("uuid").uuid4(),
+        company_id=company_id,
+        status="PENDING",
+        invoice_id=invoice.id,
+        cancelled_at=None,
+    )
+    subscription_result = MagicMock()
+    subscription_result.scalar_one_or_none.return_value = subscription
+    invoice_result = MagicMock()
+    invoice_result.scalar_one_or_none.return_value = invoice
+    claims_result = MagicMock()
+    claims_result.scalar_one_or_none.return_value = None
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=[subscription_result, invoice_result, claims_result])
+    db.add = MagicMock()
+    db.flush = AsyncMock()
+
+    cancelled = await SubscriptionService(db).cancel_pending_by_staff(
+        subscription_id=subscription.id,
+        actor_id=actor_id,
+        reason="Customer request withdrawn",
+    )
+
+    assert cancelled.status == "CANCELLED"
+    assert invoice.status == "VOID"
+    assert cancelled.cancelled_at is not None
+    event = db.add.call_args.args[0]
+    assert event.event_type == "CANCELLED"
+    assert event.invoice_id == invoice.id
+    assert event.event_metadata["voided_invoice"] is True
+    db.flush.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_finance_cannot_void_subscription_invoice_with_pending_payment_claim():
+    company_id = __import__("uuid").uuid4()
+    invoice = SimpleNamespace(
+        id=__import__("uuid").uuid4(),
+        company_id=company_id,
+        status="ISSUED",
+        paid_bdt=Decimal("0.00"),
+        balance_bdt=Decimal("1000.00"),
+        total_bdt=Decimal("1000.00"),
+    )
+    subscription = SimpleNamespace(
+        id=__import__("uuid").uuid4(),
+        company_id=company_id,
+        status="PENDING",
+        invoice_id=invoice.id,
+        cancelled_at=None,
+    )
+    subscription_result = MagicMock()
+    subscription_result.scalar_one_or_none.return_value = subscription
+    invoice_result = MagicMock()
+    invoice_result.scalar_one_or_none.return_value = invoice
+    claims_result = MagicMock()
+    claims_result.scalar_one_or_none.return_value = __import__("uuid").uuid4()
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=[subscription_result, invoice_result, claims_result])
+
+    with pytest.raises(ValueError, match="pending payment submissions"):
+        await SubscriptionService(db).cancel_pending_by_staff(
+            subscription_id=subscription.id,
+            actor_id=__import__("uuid").uuid4(),
+            reason="Customer request withdrawn",
+        )
+
+    assert invoice.status == "ISSUED"
+    assert subscription.status == "PENDING"
+    db.add.assert_not_called()
