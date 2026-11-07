@@ -827,8 +827,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "BNK-001": {
         "rule_id": "BNK-001",
         "legal_domain": "Corporate",
-        "law": "Bankruptcy Act 1997 (Bangladesh), Section 12",
-        "requirement": "Winding Up Petition Filed - Winding up petition filed against company. Company under court supervision.",
+        "law": "Companies Act 1994 (Bangladesh), Part V, sections 241–244",
+        "requirement": "Reported company winding-up petition; verify Companies Act grounds, petition provision, court, case number, service, current status and authenticated court record. Do not conflate corporate winding-up with personal bankruptcy.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -842,8 +842,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "BNK-002": {
         "rule_id": "BNK-002",
         "legal_domain": "Corporate",
-        "law": "Bankruptcy Act 1997 (Bangladesh), Section 14",
-        "requirement": "Liquidator Appointed - Liquidator appointed. Company under liquidation proceedings.",
+        "law": "Companies Act 1994 (Bangladesh), Part V; section 255 for court-appointed Official Liquidators; route-specific provision requires review",
+        "requirement": "Reported liquidator appointment; distinguish court winding-up, voluntary winding-up and other statutory routes; verify the appointment instrument, appointee authority and current status.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -857,8 +857,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "BNK-003": {
         "rule_id": "BNK-003",
         "legal_domain": "Corporate",
-        "law": "Bankruptcy Act 1997 (Bangladesh), Section 18",
-        "requirement": "Court-Ordered Winding Up - Court-ordered winding up. Company being wound up by court order.",
+        "law": "Companies Act 1994 (Bangladesh), Part V, sections 241–246",
+        "requirement": "Reported court winding-up order; verify authenticated order, operative date, jurisdiction, appeal/stay, suspension/discharge and current liquidation status.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -1007,8 +1007,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "ESC-004": {
         "rule_id": "ESC-004",
         "legal_domain": "Corporate",
-        "law": "Section 234, Companies Act 1994 (Bangladesh)",
-        "requirement": "Voluntary Winding Up - Voluntary winding up initiated. Section 196.",
+        "law": "Section 286, Companies Act 1994 (Bangladesh)",
+        "requirement": "Reported voluntary winding-up resolution; verify statutory ground, resolution, solvency declaration where applicable, liquidator appointment, creditor process and current status under Part V.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -1022,8 +1022,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "ESC-005": {
         "rule_id": "ESC-005",
         "legal_domain": "Corporate",
-        "law": "Section 199, Companies Act 1994 (Bangladesh)",
-        "requirement": "Investigation Order Pending - Investigation order pending under Section 199.",
+        "law": "Sections 195 and 197; section 199 where related entities are included, Companies Act 1994 (Bangladesh)",
+        "requirement": "Reported company investigation; verify Government inspector appointment under section 195 or 197, the scope of any section 199 related-entity investigation, authenticated order, parties and current status. An inquiry is not itself a finding of liability.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -1240,7 +1240,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "DIR-008": {"rule_id": "DIR-008", "legal_domain": "Corporate", "law": "Section 104, Companies Act 1994 (Bangladesh)", "requirement": "Verify office category, statutory exclusions, company relationship and general-meeting consent before assessing an office-of-profit issue.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "DIR-010": {"rule_id": "DIR-010", "legal_domain": "Corporate", "law": "Section 110, Companies Act 1994 (Bangladesh)", "requirement": "Verify current managing-director appointment instrument, term, reappointment, approval and continuity before assessing the five-year-at-a-time limit.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "MEM-001": {"rule_id": "MEM-001", "legal_domain": "Corporate", "law": "Section 222, Companies Act 1994 (Bangladesh)", "requirement": "Company below minimum members. Section 222: private < 2, public < 7.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
-    "INC-007": {"rule_id": "INC-007", "legal_domain": "Corporate", "law": "Section 150, Companies Act 1994 (Bangladesh)", "requirement": "Business commenced without Section 150 declaration.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
+    "INC-007": {"rule_id": "INC-007", "legal_domain": "Corporate", "law": "Section 150(1) and (6), Companies Act 1994 (Bangladesh)", "requirement": "Review only if the company is a public company that issued a prospectus inviting public subscription and all section 150(1) conditions are applicable and evidenced. Section 150(6) excludes private companies and companies not issuing such a prospectus.", "provision": "Section 150(1), (6)", "provision_status": ProvisionStatus.RECONCILE, "applicability": "PUBLIC_COMPANY_WITH_PROSPECTUS_ONLY; verify every statutory condition", "exceptions": ["Private company", "Public company not issuing a prospectus inviting public subscription", "Other statutory exclusions or valid Registrar evidence"], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
 
 }
 
