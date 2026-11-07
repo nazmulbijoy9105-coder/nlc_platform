@@ -531,7 +531,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### CAP-001 — Capital Alteration Without Proper Resolution
 
-- **Catalogue anchor:** Section 53, Companies Act 1994 (Bangladesh)
+- **Source correction (7 Nov 2026):** Section 53 concerns alteration of share capital subject to Articles authority; section 54 addresses specified consolidation/conversion/subdivision notices; section 56 separately governs increase of registered share capital. The prior claim that s.54 is the generic capital-increase procedure was removed. The exact resolution type must be checked against the Articles and transaction.
+
+- **Catalogue anchor:** Sections 53, 54 and 56, Companies Act 1994 (Bangladesh)
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -685,6 +687,8 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### DIR-003 — Major Director Filing Irregularity — Over 1 Year
 
+- **Source correction (7 Nov 2026):** Section 115(2) contains the 14-day Form XII particulars filing duty. The 365-day threshold is NLC internal escalation policy only. The prior assertions of a continuing offence under s.92 and a daily statutory fine were removed; no such consequence is inferred without a separate verified provision.
+
 - **Catalogue anchor:** Section 115, Companies Act 1994 (Bangladesh)
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
@@ -756,7 +760,7 @@ This docket expands the source triage into a separate signed-review record for e
 - **Source reconciliation (7 Nov 2026):** The Companies Act text distinguishes s.92 pre-appointment consent/eligibility requirements from s.93(2), which requires the signed consent to be filed with the Registrar within 30 days after appointment. The RJSC eBRS FAQ/Form IX materials label Form IX with s.92 while also describing a 30-day post-appointment filing. Do not collapse the form reference and statutory trigger into one unqualified citation. The current 30-day engine rule is provisionally anchored to s.93(2); counsel must confirm the applicable form mapping and any transitional/current RJSC instructions before approval.
 
 
-- **Catalogue anchor:** Section 93, Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Section 93(2), Companies Act 1994 (Bangladesh); section 92/Form IX mapping requires counsel reconciliation
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -909,6 +913,8 @@ This docket expands the source triage into a separate signed-review record for e
 - **Counsel decision:** PENDING — reviewer, enrolment/chamber, signed date, exact scope and next review required.
 
 ### INC-001 — Memorandum and Articles Not Filed
+
+- **Source correction (7 Nov 2026):** The governing registration provision is section 23, not section 11. The prior assertion that non-production means the company has no valid constitution was removed. NLC absence is a data gap; only an authenticated RJSC search/record can support a verified-absence status.
 
 - **Catalogue anchor:** Section 23, Companies Act 1994 (Bangladesh)
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
@@ -1098,7 +1104,7 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### REG-001 — Statutory Registers Incomplete
 
-- **Catalogue anchor:** Section 34, Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Section 38(4), Companies Act 1994 (Bangladesh)
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1361,7 +1367,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### TR-001 — No Share Transfer Instrument — Form 117
 
-- **Catalogue anchor:** Section 38, Companies Act 1994 (Bangladesh)
+- **Source correction (7 Nov 2026):** Section 38(3) requires a proper transfer instrument duly stamped and executed by transferor and transferee, with the relevant certificate, subject to the statutory lost-instrument/indemnity exception. The prior s.108 citation and automatic-void assertion were removed.
+
+- **Catalogue anchor:** Section 38(3), Companies Act 1994 (Bangladesh)
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1377,6 +1385,8 @@ This docket expands the source triage into a separate signed-review record for e
 - **Counsel decision:** PENDING — reviewer, enrolment/chamber, signed date, exact scope and next review required.
 
 ### TR-002 — Stamp Duty Not Paid on Share Transfer
+
+- **Source correction (7 Nov 2026):** Stamp duty applicability and amount depend on the instrument category, execution facts and current Schedule I/amendments. The prior automatic inadmissibility/unenforceable-title assertions were removed; missing payment evidence is not proof of non-payment.
 
 - **Catalogue anchor:** Stamp Act 1899, Schedule I, Item 62
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
@@ -1395,7 +1405,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### TR-003 — No Board Approval for Share Transfer
 
-- **Catalogue anchor:** Section 38; AoA, Companies Act 1994 (Bangladesh)
+- **Source correction (7 Nov 2026):** Section 38(7) preserves the company's power under its Articles to refuse registration. Board approval is not a universal statutory requirement; the operative Articles restriction must be verified. The prior s.47 citation and automatic-void/title assertions were removed.
+
+- **Catalogue anchor:** Section 38(7), Companies Act 1994 (Bangladesh), and the company's Articles
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1412,6 +1424,8 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### TR-004 — Register of Members Not Updated After Transfer
 
+- **Source correction (7 Nov 2026):** The prior two-month register-update deadline under s.34 was unsupported. The corrected rule is limited to s.38(4): where registration is refused, notice of refusal must be sent to both transferor and transferee within 30 days after lodgement. It triggers only with verified refusal, lodgement date and notice status.
+
 - **Catalogue anchor:** Section 34, Companies Act 1994 (Bangladesh)
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
@@ -1427,7 +1441,9 @@ This docket expands the source triage into a separate signed-review record for e
 - **Minimum negative tests:** wrong company class; unknown fact; missing document only; valid extension/condonation; timely filing; appeal/stay/order; inapplicable sector/listing; contradictory evidence.
 - **Counsel decision:** PENDING — reviewer, enrolment/chamber, signed date, exact scope and next review required.
 
-### TR-005 — Share Transfer Violates AoA Restriction — BLACK OVERRIDE
+### TR-005 — Share Transfer Violates AoA Restriction — Counsel Review
+
+- **Source correction (7 Nov 2026):** Section 38(7) concerns the company's power to refuse registration under its Articles; it does not automatically make every restricted transfer void ab initio. The prior BLACK override, no-title conclusion and unverified court-order/unanimous-ratification assertions were removed.
 
 - **Catalogue anchor:** Section 38; AoA, Companies Act 1994 (Bangladesh)
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
@@ -1446,7 +1462,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### TR-006 — Composite Irregular Transfer
 
-- **Catalogue anchor:** Sections 34, 47, 108, Companies Act 1994 (Bangladesh)
+- **Source correction (7 Nov 2026):** Composite transfer-record signals are internal review prompts only. The previous s.47/s.108 references and assertion that each deficiency may independently void a transfer were removed; use sections 34 and 38 plus the operative Articles as applicable.
+
+- **Catalogue anchor:** Sections 34 and 38, Companies Act 1994 (Bangladesh), and applicable Articles
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
