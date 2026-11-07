@@ -393,7 +393,7 @@ async def test_database_rejects_status_only_payment_submission_rejection(db, db_
 
 
 @pytest.mark.asyncio
-async def test_manual_wallet_transaction_reference_cannot_be_submitted_twice(db, db_company, db_user):
+async def test_manual_payment_reference_cannot_be_submitted_twice(db, db_company, db_user):
     from decimal import Decimal
 
     from app.services.finance_service import FinanceConflictError, FinanceService
@@ -401,7 +401,7 @@ async def test_manual_wallet_transaction_reference_cannot_be_submitted_twice(db,
     await set_rls_context(db, str(db_user.id))
     service = FinanceService(db)
     invoices = []
-    for description in ("First wallet claim", "Second wallet claim"):
+    for description in ("First payment claim", "Second wallet claim"):
         invoice = await service.create_invoice(
             company_id=db_company.id,
             engagement_id=None,
