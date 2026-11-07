@@ -62,7 +62,7 @@ def test_unapproved_black_flag_is_excluded_from_persisted_score_reconciliation(m
         is_black_override=True,
     )
     assert _applied_score_impacts([flag]) == [
-        {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
+        {"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"}
     ]
 
 

@@ -65,6 +65,7 @@ async def require_company_access(
         result = await db.execute(
             select(CompanyUserAccess).where(
                 CompanyUserAccess.user_id == current_user.id,
+                CompanyUserAccess.is_active.is_(True),
                 CompanyUserAccess.company_id == cid,
             )
         )

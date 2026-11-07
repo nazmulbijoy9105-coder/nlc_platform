@@ -53,22 +53,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Restore the exact pre-migration value where available. Rows created
-    # after upgrade with NULL receive FALSE only because the old schema
-    # required a non-null boolean.
-    op.execute("""
-        UPDATE agms
-        SET minutes_prepared = COALESCE(
-            minutes_prepared_legacy,
-            minutes_prepared,
-            FALSE
-        )
-    """)
-    op.drop_column("agms", "minutes_prepared_legacy")
-    op.alter_column(
-        "agms",
-        "minutes_prepared",
-        existing_type=sa.Boolean(),
-        nullable=False,
-        server_default=None,
-    )
+    # Forward-only: the legacy archive column preserves original values.
+    # Dropping it or coercing NULL back to FALSE would destroy evidence and
+    # recreate a false statutory conclusion.
+    pass
