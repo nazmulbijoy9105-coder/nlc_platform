@@ -23,6 +23,8 @@ async def ensure_staff_company_scope(
     company_id: uuid.UUID,
     current_user,
     db: AsyncSession,
+    *,
+    additional_staff_id: uuid.UUID | None = None,
 ) -> None:
     """Require a staff actor to be assigned to the company being operated on."""
     role = getattr(current_user, "role", None)
@@ -51,6 +53,7 @@ async def ensure_staff_company_scope(
             or_(
                 Company.assigned_staff_id == current_user.id,
                 active_membership,
+                *([additional_staff_id == current_user.id] if additional_staff_id is not None else []),
             ),
         ).limit(1)
     )
