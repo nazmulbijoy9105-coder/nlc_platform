@@ -195,6 +195,15 @@ def main() -> int:
         print("FAIL: canonical statutory rule registry contains a BLACK override")
         return 1
 
+    if "_BASE_STATES = (RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT)" not in canonical_source:
+        print("FAIL: canonical rule defaults must remain UNKNOWN / REQUIRES_LAWYER_JUDGMENT")
+        return 1
+    for states_match in re.finditer(r'"evaluation_states":\s*\[([^\]]*)\]', canonical_source):
+        states = states_match.group(1)
+        if "RuleState.COMPLIANT" in states or "RuleState.NON_COMPLIANT" in states:
+            print("FAIL: unapproved canonical rules cannot emit COMPLIANT or NON_COMPLIANT states")
+            return 1
+
     matrix_rows = [
         line for line in matrix_path.read_text(encoding="utf-8").splitlines()
         if re.match(r"^\| [A-Z]{2,5}-\d{3} \|", line)
