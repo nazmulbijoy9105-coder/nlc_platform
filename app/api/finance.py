@@ -23,7 +23,11 @@ from app.core.dependencies import (
 )
 from app.models.finance import Invoice, Payment, PaymentSubmission
 from app.models.user import User
-from app.services.finance_service import (\n    FinanceConflictError,\n    FinanceNotFoundError,\n    FinanceService,\n)
+from app.services.finance_service import (
+    FinanceConflictError,
+    FinanceNotFoundError,
+    FinanceService,
+)
 from app.services.notification_service import ActivityService
 
 logger = structlog.get_logger(__name__)
