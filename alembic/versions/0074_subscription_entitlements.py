@@ -557,6 +557,10 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Forward-only: reverting subscription authorization could expose premium
-    # routes without verified entitlement checks.
-    pass
+    # Forward-only: a no-op downgrade would move alembic_version backwards
+    # while leaving subscription tables, RLS policies and triggers in place.
+    # Refuse the operation so recovery must use a verified restore/rebuild plan.
+    raise RuntimeError(
+        "0074_subscription_entitlements is forward-only; restore a verified backup "
+        "or apply a reviewed forward migration instead of downgrading."
+    )
