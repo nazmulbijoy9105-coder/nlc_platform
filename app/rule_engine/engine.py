@@ -290,6 +290,9 @@ class CompanyProfile:
     member_count: int | None = None
     # ── Business commencement (Section 150) ──
     business_commencement_declaration_filed: bool | None = None
+    section150_prospectus_issued: bool | None = None
+    section150_applicability_verified: bool = False
+    section150_applicability_evidence_ref: str | None = None
     charges: List[ChargeEvent] = field(default_factory=list)
     special_resolution_date: Optional[date] = None
     special_resolution_filed: bool = False
@@ -800,16 +803,32 @@ class NLCRuleEngine:
                     detail={"member_count": member_count, "minimum": min_members}
                 ))
 
-        # INC-007: Business commenced without Section 150 declaration (Section 150)
-        if c.business_commencement_declaration_filed is False:
+        # INC-007: Section 150 is not universal. It does not apply to
+        # private companies or to companies that do not issue a prospectus
+        # inviting public subscription (s.150(6)). Require verified scope.
+        if (
+            c.company_type == "PUBLIC_LIMITED"
+            and c.section150_prospectus_issued is True
+            and c.section150_applicability_verified
+            and bool(c.section150_applicability_evidence_ref)
+            and c.business_commencement_declaration_filed is False
+        ):
             self._add_flag(ComplianceFlag(
                 rule_id="INC-007",
-                flag_code="BUSINESS_COMMENCED_WITHOUT_DECLARATION",
-                severity=Severity.RED,
-                score_impact=10,
+                flag_code="SECTION_150_COMMENCEMENT_DECLARATION_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="Business commenced without Section 150 declaration filed with Registrar.",
-                statutory_basis="Sections 59-60, Companies Act 1994 (Bangladesh)",
+                description=(
+                    "Internal review signal only: verified Section 150 applicability "
+                    "and a reported missing commencement declaration require counsel "
+                    "review of every statutory condition, exemption and filing record. "
+                    "No legal breach is determined."
+                ),
+                statutory_basis="Section 150(1) and (6), Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={"applicability_evidence_ref": c.section150_applicability_evidence_ref},
             ))
 
         if c.trade_license_obtained is False:
@@ -2032,45 +2051,65 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     # MODULE 12: ESCALATION
     # ───────────────────────────────────────────────────────────────────
-    # MODULE 12: INSOLVENCY (Bankruptcy Act 1997)
+    # MODULE 12: COMPANY WINDING-UP PROCEEDINGS (Companies Act 1994).
+    # Do not conflate corporate winding-up with personal bankruptcy.
+    # These booleans are reported facts only; each requires authenticated
+    # court/RJSC records and route-specific counsel classification.
     def _run_insolvency_rules(self, c: CompanyProfile) -> None:
         if c.winding_up_petition_filed:
             self._add_flag(ComplianceFlag(
                 rule_id="BNK-001",
-                flag_code="WINDING_UP_PETITION_FILED",
-                severity=Severity.BLACK,
-                score_impact=25,
+                flag_code="WINDING_UP_PETITION_REQUIRES_CASE_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Winding up petition filed against company. Bankruptcy Act 1997, Section 12. Company under court supervision.",
-                statutory_basis="Bankruptcy Act 1997 (Bangladesh), Section 12",
-                is_black_override=True,
-                detail={"petition_filed": True}
+                description=(
+                    "Reported company winding-up petition. Verify the Companies Act "
+                    "1994 petition, grounds, court, case number, service, current status, "
+                    "withdrawal/dismissal/stay and authenticated court record. "
+                    "This is not a Bankruptcy Act finding or an automatic liability conclusion."
+                ),
+                statutory_basis="Companies Act 1994 (Bangladesh), Part V, including sections 241–244; exact petition provision requires case review",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={"petition_filed": True},
             ))
 
         if c.liquidator_appointed:
             self._add_flag(ComplianceFlag(
                 rule_id="BNK-002",
-                flag_code="LIQUIDATOR_APPOINTED",
-                severity=Severity.BLACK,
-                score_impact=25,
+                flag_code="LIQUIDATOR_APPOINTMENT_REQUIRES_ROUTE_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Liquidator appointed. Bankruptcy Act 1997, Section 14. Company under liquidation proceedings.",
-                statutory_basis="Bankruptcy Act 1997 (Bangladesh), Section 14",
-                is_black_override=True,
-                detail={"liquidator_appointed": True}
+                description=(
+                    "Reported liquidator appointment. Verify whether the appointment "
+                    "arises from a court winding-up order, voluntary winding-up or "
+                    "another statutory route; obtain the appointment instrument and "
+                    "confirm the appointee's authority and current status."
+                ),
+                statutory_basis="Companies Act 1994 (Bangladesh), Part V; section 255 applies to court-appointed Official Liquidators; route-specific provision requires review",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={"liquidator_appointed": True},
             ))
 
         if c.court_ordered_winding_up:
             self._add_flag(ComplianceFlag(
                 rule_id="BNK-003",
-                flag_code="COURT_ORDERED_WINDING_UP",
-                severity=Severity.BLACK,
-                score_impact=35,
+                flag_code="COURT_WINDING_UP_ORDER_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Court-ordered winding up. Bankruptcy Act 1997, Section 18. Company being wound up by court order.",
-                statutory_basis="Bankruptcy Act 1997 (Bangladesh), Section 18",
-                is_black_override=True,
-                detail={"court_ordered": True}
+                description=(
+                    "Reported court winding-up order. Verify the authenticated order, "
+                    "operative date, court jurisdiction, appeal/stay, correction, "
+                    "suspension or discharge, and current liquidation status."
+                ),
+                statutory_basis="Companies Act 1994 (Bangladesh), Part V, including sections 241–246; exact order provision requires case review",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={"court_ordered": True},
             ))
 
     # MODULE 13: LABOUR COMPLIANCE (Labour Act 2006)
@@ -2177,19 +2216,30 @@ class NLCRuleEngine:
                 state=RuleState.REQUIRES_LAWYER_JUDGMENT, eval_state="UNKNOWN"))
         if c.voluntary_winding_up:
             self._add_flag(ComplianceFlag(
-                rule_id="ESC-004", flag_code="VOLUNTARY_WINDING_UP",
-                severity=Severity.BLACK, score_impact=30,
+                rule_id="ESC-004", flag_code="VOLUNTARY_WINDING_UP_REQUIRES_STATUS_VERIFICATION",
+                severity=Severity.NOT_EVALUATED, score_impact=0,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Voluntary winding up. Section 286.",
-                statutory_basis="Section 286, Companies Act 1994 (Bangladesh)",
-                is_black_override=True))
+                description=(
+                    "Reported voluntary winding-up resolution. Verify the statutory "
+                    "ground, special/extraordinary resolution, solvency declaration "
+                    "where applicable, liquidator appointment, creditor process and "
+                    "current status under Part V. No automatic BLACK classification."
+                ),
+                statutory_basis="Section 286 and following provisions, Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT, eval_state="UNKNOWN"))
         if c.investigation_order:
             self._add_flag(ComplianceFlag(
-                rule_id="ESC-005", flag_code="INVESTIGATION_ORDER_PENDING",
-                severity=Severity.RED, score_impact=20,
+                rule_id="ESC-005", flag_code="INVESTIGATION_APPOINTMENT_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED, score_impact=0,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="Investigation order pending. Section 195.",
-                statutory_basis="Section 195, Companies Act 1994 (Bangladesh)"))
+                description=(
+                    "Reported company investigation. Verify the Government inspector "
+                    "appointment under section 195 or 197, the scope of any section 199 "
+                    "related-entity investigation, authenticated order, parties, status "
+                    "and any resulting proceedings. A report or inquiry is not itself a finding of liability."
+                ),
+                statutory_basis="Sections 195 and 197; section 199 where related entities are included, Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT, eval_state="UNKNOWN"))
 
         # DIR-008: Section 104 contains role-specific exclusions. A bare
         # profile boolean does not establish the office category or absence of
