@@ -48,6 +48,7 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
     now = datetime.now(UTC)
     amount = Decimal("100.00")
     submission = PaymentSubmission(
+        id=uuid.uuid4(),
         company_id=db_company.id,
         invoice_id=submission_invoice.id,
         submitted_by=db_user.id,
