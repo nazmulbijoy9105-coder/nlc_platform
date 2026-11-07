@@ -519,6 +519,9 @@ def make_share_transfer():
         registration_refused: bool | None = None,
         refusal_notice_sent: bool | None = None,
         instrument_lodged_date: date | None = None,
+        articles_clause_evidence_ref: str | None = None,
+        refusal_decision_evidence_ref: str | None = None,
+        transfer_registration_evidence_ref: str | None = None,
     ) -> ShareTransfer:
         return ShareTransfer(
             transfer_id=str(uuid.uuid4()),
@@ -536,6 +539,9 @@ def make_share_transfer():
             registration_refused=registration_refused,
             refusal_notice_sent=refusal_notice_sent,
             instrument_lodged_date=instrument_lodged_date,
+            articles_clause_evidence_ref=articles_clause_evidence_ref,
+            refusal_decision_evidence_ref=refusal_decision_evidence_ref,
+            transfer_registration_evidence_ref=transfer_registration_evidence_ref,
         )
 
     return _make
