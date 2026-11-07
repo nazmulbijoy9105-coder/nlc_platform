@@ -90,6 +90,14 @@ def main() -> int:
         return 1
 
     engine_source = engine_path.read_text(encoding="utf-8")
+    seed_source = seed_path.read_text(encoding="utf-8")
+    if re.search(r"UPDATE\s+legal_rules", seed_source, re.IGNORECASE):
+        print("FAIL: seed_rules.py must not update existing legal_rules outside the audited version workflow")
+        return 1
+    if '"NOT_EVALUATED"' not in seed_source:
+        print("FAIL: seed_rules.py must accept NOT_EVALUATED severity")
+        return 1
+
     if not re.search(r"^LEGAL_SCORE_RELEASED:\s*bool\s*=\s*False\s*$", engine_source, re.MULTILINE):
         print("FAIL: legal score release flag is not explicitly disabled")
         return 1

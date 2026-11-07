@@ -560,10 +560,16 @@ async def get_db_for_user(
 
     Every human user, including staff, receives an identity-bound UUID context.
     ADMIN context is reserved for explicitly trusted service/background sessions.
+    Every human account keeps its signed user UUID. Only trusted internal
+    service operations use the ADMIN principal; staff permissions are derived
+    from the active database user row and the relevant RLS helper.
     """
     async with AsyncSessionLocal() as session:
         try:
             role_value = str(getattr(token.role, "value", token.role))
+            # Every human account, including SUPER_ADMIN and ADMIN_STAFF,
+            # retains its signed UUID. ADMIN is reserved for trusted internal
+            # service/cron operations, never an authenticated human session.
             try:
                 user_uuid = uuid.UUID(token.user_id)
             except (TypeError, ValueError):

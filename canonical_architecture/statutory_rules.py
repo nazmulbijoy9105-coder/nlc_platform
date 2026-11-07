@@ -362,31 +362,31 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AR-002": {
         "rule_id": "AR-002",
         "legal_domain": "Corporate",
-        "law": "Sections 36 and 304, Companies Act 1994 (Bangladesh)",
-        "requirement": "Annual Return 2-Year Backlog - Annual returns unfiled for 2+ consecutive years. Multi-year default increases RJSC enforcement risk. RJSC may commence strike-off under Section 304. Directors face cumulative personal fines.",
+        "law": "Section 36 and Schedule X, Companies Act 1994 (Bangladesh); Section 346 governs a separate Registrar strike-off process",
+        "requirement": "Two or more reported outstanding annual returns are an internal review signal only. Backlog alone does not establish Registrar strike-off, dissolution, director liability or a mandatory rescue outcome.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 20,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "AR-003": {
         "rule_id": "AR-003",
         "legal_domain": "Corporate",
-        "law": "Sections 36 and 304, Companies Act 1994 (Bangladesh)",
-        "requirement": "Annual Return 3-Year Backlog — Strike-Off Risk - Annual returns unfiled for 3+ consecutive years. RJSC has legal basis and practice of initiating strike-off under Section 304. Struck-off company loses legal personality; contracts void, accounts frozen. Corporate Rescue mandatory.",
+        "law": "Section 36 and Schedule X, Companies Act 1994 (Bangladesh); Section 346 governs a separate Registrar strike-off process",
+        "requirement": "Three or more reported outstanding annual returns remain an internal review signal only. A backlog does not prove that RJSC has commenced Section 346 proceedings, that the company is dissolved, or that directors have incurred a separate penalty.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "BLACK",
-        "score_impact": 20,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "AR-004": {
@@ -737,46 +737,46 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "TAX-002": {
         "rule_id": "TAX-002",
         "legal_domain": "Tax",
-        "law": "Value Added Tax Act 2012 (Bangladesh)",
-        "requirement": "VAT Registration Required But Not Obtained - Company exceeds VAT threshold but not registered. VAT Act 2012: registration required above turnover threshold (Tk 30 lakh goods, Tk 15 lakh services). Without VAT: cannot issue tax invoices, claim input credits, or legally supply taxable goods/services. CONDITIONAL: Only applies if estimated turnover exceeds threshold.",
-        "provision": "TBD",
+        "law": "Value Added Tax and Supplementary Duty Act 2012, sections 2(48), 2(57), 4 and 10, as amended by Act No. 77 of 2026 and Finance Act No. 96 of 2026",
+        "requirement": "Review prompt only. The current statutory thresholds are BDT 30 lakh for turnover-tax enlistment and BDT 50 lakh for VAT registration, measured against the statutory 12-month turnover rules and exclusions. Section 4(2) mandatory-registration categories may apply irrespective of threshold. Section 10, as substituted by Finance Act No. 96 of 2026, provides the current enlistment application process and 30-day period. Reported annual turnover alone does not establish taxable turnover, a statutory trigger, failure to enlist/register, or a breach. Do not score or classify a breach without current taxpayer-specific legal and documentary review.",
+        "provision": "Sections 2(48), 2(57), 4 and 10",
         "provision_status": ProvisionStatus.RECONCILE,
-        "applicability": "ALL_ACTIVE_COMPANIES",
-        "exceptions": [],
+        "applicability": "CONDITIONAL — taxpayer activity, statutory exclusions and mandatory-registration categories",
+        "exceptions": ["Exempt supplies", "Sale of capital assets", "Other statutory exclusions", "Mandatory registration categories under section 4(2) require separate analysis"],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT, RuleState.NOT_APPLICABLE],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "ESC-001": {
         "rule_id": "ESC-001",
         "legal_domain": "Corporate",
-        "law": "Section 304, Companies Act 1994 (Bangladesh)",
-        "requirement": "Strike-Off Risk Elevated - Compliance profile shows RJSC strike-off criteria under Section 304: multi-year missed filings, no recent trading, or RED flags across 3+ modules. Section 304 permits strike-off for non-filing or non-trading. Structured Regularization required immediately.",
+        "law": "Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required",
+        "requirement": "Multi-year filing backlog is an internal escalation indicator, not proof that RJSC commenced strike-off. Verify statutory grounds, notice, service, stage, appeal, restoration and current status.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 15,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "ESC-002": {
         "rule_id": "ESC-002",
         "legal_domain": "Corporate",
-        "law": "Section 304, Companies Act 1994 (Bangladesh)",
-        "requirement": "Strike-Off Imminent — BLACK OVERRIDE - Immediate RJSC strike-off risk. Criteria: 3+ years non-filing, strike-off notice received, or on published strike-off list. Once struck off: company ceases to exist, contracts void, accounts frozen. Restoration requires court proceedings under Section 305. Corporate Rescue mandatory. BLACK OVERRIDE: forces score to BLACK band.",
+        "law": "Section 346, Companies Act 1994 (Bangladesh)",
+        "requirement": "Review-only status. Section 346 requires Registrar grounds and a statutory notice sequence, including the first inquiry, registered follow-up, Gazette notice and the 90-day show-cause period. A filing backlog or unverified list indicator is not proof of strike-off, dissolution or automatic restoration consequences.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "BLACK",
-        "score_impact": 25,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "ESC-003": {
@@ -797,16 +797,16 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "AGM-007": {
         "rule_id": "AGM-007",
         "legal_domain": "Corporate",
-        "law": "Section 84, Companies Act 1994 (Bangladesh)",
-        "requirement": "AGM Adjourned Without Proper Notice - AGM adjourned without proper notice. Section 84.",
+        "law": "Companies Act 1994, Section 85 and the company Articles; exact adjournment provision requires counsel verification",
+        "requirement": "Adjourned-AGM notice issue requires review of Articles, resolution, adjournment terms, notice method and statutory consequence.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "AUD-005": {
@@ -932,16 +932,16 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "CHG-001": {
         "rule_id": "CHG-001",
         "legal_domain": "Corporate",
-        "law": "Section 172, Companies Act 1994 (Bangladesh)",
-        "requirement": "Charge satisfaction must be notified using Form XXVIII within 21 days per RJSC process guidance; confirm satisfaction date and filing receipt. Section 172 is the Act provision for registration of payment or satisfaction of mortgage/charge.",
-        "provision": "TBD",
+        "law": "Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh)",
+        "requirement": "Review-only unless the charge is proved to be registrable under s.159, satisfaction and its date are authenticated, and the RJSC filing status is independently evidenced. Section 172(1) requires notice of payment/satisfaction of a registrable charge within 21 days. A missing satisfaction date or unverified registry search is UNKNOWN, not proof of non-filing.",
+        "provision": "Sections 159 and 172(1)",
         "provision_status": ProvisionStatus.RECONCILE,
-        "applicability": "ALL_ACTIVE_COMPANIES",
-        "exceptions": [],
+        "applicability": "CONDITIONAL — only charges whose registration is required by section 159",
+        "exceptions": ["Charges not registrable under section 159"],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 3,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT, RuleState.NOT_APPLICABLE],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "DEF-001": {
@@ -977,31 +977,31 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "DIR-005": {
         "rule_id": "DIR-005",
         "legal_domain": "Corporate",
-        "law": "Section 97, Companies Act 1994 (Bangladesh)",
-        "requirement": "Register of Directors Interests Missing - Register of directors interests not maintained. Section 97.",
+        "law": "Companies Act 1994, Section 130 (director-interest disclosure); generic register duty/title requires legal reconciliation",
+        "requirement": "The profile reports no director-interest register. Section 130 concerns disclosure of interests in company contracts/arrangements; it does not by itself establish this generic register duty.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "DIR-006": {
         "rule_id": "DIR-006",
         "legal_domain": "Corporate",
-        "law": "Section 98, Companies Act 1994 (Bangladesh)",
-        "requirement": "Register of Contracts Missing - Register of contracts not maintained. Section 98.",
+        "law": "Companies Act 1994 and applicable Articles; exact register-of-contracts provision not established",
+        "requirement": "The profile reports no register of contracts. Exact statutory/Articles obligation, contract category and evidence require counsel verification.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "ESC-004": {
@@ -1230,15 +1230,15 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
 
-    "BOD-001": {"rule_id": "BOD-001", "legal_domain": "Corporate", "law": "Section 96, Companies Act 1994 (Bangladesh)", "requirement": "Board meeting not held within 3 months. Section 96: minimum 4 board meetings per year.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "YELLOW", "score_impact": 5, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
-    "BOD-002": {"rule_id": "BOD-002", "legal_domain": "Corporate", "law": "Section 95, Companies Act 1994 (Bangladesh)", "requirement": "Board meeting notice not given to all directors. Section 95 requires written notice.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "YELLOW", "score_impact": 3, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
-    "BOD-003": {"rule_id": "BOD-003", "legal_domain": "Corporate", "law": "Section 89, Companies Act 1994 (Bangladesh)", "requirement": "Board meeting minutes not prepared. Section 89: minutes of all proceedings must be entered.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "YELLOW", "score_impact": 5, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
+    "BOD-001": {"rule_id": "BOD-001", "legal_domain": "Corporate", "law": "Section 96, Companies Act 1994 (Bangladesh)", "requirement": "Section 96 requires at least one Board meeting every three months and at least four meetings per year; full verified meeting history is required before evaluation.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
+    "BOD-002": {"rule_id": "BOD-002", "legal_domain": "Corporate", "law": "Section 95, Companies Act 1994 (Bangladesh)", "requirement": "Written notice to each director then in Bangladesh; verify service, address, dispatch/receipt and applicable Articles before any breach finding.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
+    "BOD-003": {"rule_id": "BOD-003", "legal_domain": "Corporate", "law": "Section 89, Companies Act 1994 (Bangladesh)", "requirement": "Minutes must be entered in the minute book; verify records, subsequent signature, custody and inspection. Missing upload alone is not proof of non-creation.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "ACC-001": {"rule_id": "ACC-001", "legal_domain": "Corporate", "law": "Section 183, Companies Act 1994 (Bangladesh)", "requirement": "AGM held but balance sheet and P&L not presented. Section 183.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "RED", "score_impact": 15, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "ACC-002": {"rule_id": "ACC-002", "legal_domain": "Corporate", "law": "Section 190, Companies Act 1994 (Bangladesh)", "requirement": "Balance sheet not filed within 30 days of AGM. Section 190.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "RED", "score_impact": 15, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "ACC-003": {"rule_id": "ACC-003", "legal_domain": "Corporate", "law": "Section 181, Companies Act 1994 (Bangladesh)", "requirement": "Proper books of account not maintained. Section 181.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "RED", "score_impact": 15, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "DIR-007": {"rule_id": "DIR-007", "legal_domain": "Corporate", "law": "Section 92, Companies Act 1994 (Bangladesh)", "requirement": "Director consent to act filed using Form IX within 30 days of appointment under Section 92; distinguish this from Form XII particulars under Section 115.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "YELLOW", "score_impact": 5, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
-    "DIR-008": {"rule_id": "DIR-008", "legal_domain": "Corporate", "law": "Section 104, Companies Act 1994 (Bangladesh)", "requirement": "Director holding office of profit without consent. Section 104.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "YELLOW", "score_impact": 8, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
-    "DIR-010": {"rule_id": "DIR-010", "legal_domain": "Corporate", "law": "Section 110, Companies Act 1994 (Bangladesh)", "requirement": "MD term exceeds 5 years. Section 110: max 5 years at a time.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "YELLOW", "score_impact": 5, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
+    "DIR-008": {"rule_id": "DIR-008", "legal_domain": "Corporate", "law": "Section 104, Companies Act 1994 (Bangladesh)", "requirement": "Verify office category, statutory exclusions, company relationship and general-meeting consent before assessing an office-of-profit issue.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
+    "DIR-010": {"rule_id": "DIR-010", "legal_domain": "Corporate", "law": "Section 110, Companies Act 1994 (Bangladesh)", "requirement": "Verify current managing-director appointment instrument, term, reappointment, approval and continuity before assessing the five-year-at-a-time limit.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "MEM-001": {"rule_id": "MEM-001", "legal_domain": "Corporate", "law": "Section 222, Companies Act 1994 (Bangladesh)", "requirement": "Company below minimum members. Section 222: private < 2, public < 7.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "RED", "score_impact": 10, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "INC-007": {"rule_id": "INC-007", "legal_domain": "Corporate", "law": "Section 150, Companies Act 1994 (Bangladesh)", "requirement": "Business commenced without Section 150 declaration.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "RED", "score_impact": 10, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
 
@@ -1257,16 +1257,26 @@ def _legacy_rule(key: str, d: Dict[str, Any]) -> StatutoryRule:
         raise RuntimeError(f"{key}: unknown legacy keys {sorted(extra)}")
     if d["rule_id"] != key:
         raise RuntimeError(f"{key}: rule_id mismatch {d['rule_id']}")
-    if d["applicability"] != "ALL_ACTIVE_COMPANIES" or d["exceptions"]:
-        raise RuntimeError(f"{key}: narrowed applicability not representable")
+    applicability = d["applicability"]
+    if not isinstance(applicability, str) or not applicability.strip():
+        raise RuntimeError(f"{key}: applicability must be a non-empty string")
+    exceptions = d["exceptions"]
+    if not isinstance(exceptions, (list, tuple)) or any(
+        not isinstance(item, str) or not item.strip() for item in exceptions
+    ):
+        raise RuntimeError(f"{key}: exceptions must be non-empty strings")
     if list(d["evidence_required"]) != ["DOCUMENTARY_EVIDENCE"]:
         raise RuntimeError(f"{key}: unexpected legacy evidence keys")
     auth = _LEGACY_AUTHORITY_OVERRIDE.get(key) or _LEGACY_AUTHORITY[d["legal_domain"]]
+    applies_if = None if applicability == "ALL_ACTIVE_COMPANIES" else applicability
     return StatutoryRule(
         key, d["legal_domain"], d["law"], d["requirement"], d["provision"],
         d["provision_status"], auth,
         (key + ":DOCUMENTARY_EVIDENCE",),   # per-rule key: shared key would couple all rules
-        Severity(d["severity"]), d["score_impact"])
+        Severity(d["severity"]), d["score_impact"],
+        applies_if=applies_if,
+        exceptions=tuple(exceptions),
+    )
 
 
 for _k, _d in _LEGACY_RULE_DICTS.items():

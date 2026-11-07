@@ -78,7 +78,7 @@ nlc_platform/
 | Module | Rules | Statutory Basis |
 |--------|-------|-----------------|
 | AGM (7) | AGM-001 to AGM-007 | Companies Act 1994, Sections 81-85 |
-| Annual Return (4) | AR-001 to AR-004 | Sections 36, 190, 304 |
+| Annual Return (4) | AR-001 to AR-004 | Sections 36 and 346 (separate Registrar strike-off process) |
 | Auditor (5) | AUD-001 to AUD-005 | Sections 151, 210 |
 | Bankruptcy (3) | BNK-001 to BNK-003 | Bankruptcy Act 1997 |
 | BSEC Governance (4) | BSEC-001 to BSEC-004 | BSEC CG Code 2023 |

@@ -1,3 +1,6 @@
+ARCHIVED HISTORICAL SNAPSHOT — NOT AN AUTHORITATIVE SOURCE
+This file contains copied code, git-status output, rule definitions and legal citations from earlier recovery work. It is not the current repository state and contains superseded/incorrect statutory references, including the former Section 304 strike-off citation. Do not use it to determine current law, scoring, rule status or deployment state. Current canonical materials are in docs/legal/, docs/LEGAL_BASIS_MATRIX.md, scripts/seed_rules.py and app/rule_engine/engine.py. Historical content is retained for provenance only.
+
 
 ================================================================================
 1. REPOSITORY / VERSION IDENTITY

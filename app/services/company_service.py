@@ -406,6 +406,20 @@ class CompanyService(BaseService[Company]):
 
     async def get_upcoming_deadlines_for_system(self, days_ahead: int = 30) -> list[dict]:
         """Privileged worker-only global deadline scan; never expose via user API."""
+        if days_ahead < 0:
+            raise ValueError("days_ahead must be non-negative")
+        result = await self.db.execute(
+            text(
+                """
+                SELECT d.*
+                FROM vw_upcoming_deadlines d
+                WHERE d.days_remaining BETWEEN 0 AND :days
+                ORDER BY d.days_remaining
+                """
+            ),
+            {"days": days_ahead},
+        )
+        return [dict(row) for row in result.mappings().all()]
     # ── UPDATE ────────────────────────────────────────────────────
 
     async def update_compliance_state(

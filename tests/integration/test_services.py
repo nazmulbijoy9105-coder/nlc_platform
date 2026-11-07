@@ -706,8 +706,12 @@ class TestRulesService:
 
     @pytest.mark.asyncio
     async def test_update_rule_creates_version_snapshot(self, db, db_super_admin):
+        from app.models.database import set_rls_context
         from app.services.rules_service import RulesService as LegalRuleService
 
+        # The legal-rule trigger requires the real, signed Super Admin UUID;
+        # an unscoped test-owner session is not a valid human actor.
+        await set_rls_context(db, str(db_super_admin.id))
         svc = LegalRuleService(db)
         rules = await svc.get_all()
         if not rules:

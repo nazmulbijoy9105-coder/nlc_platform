@@ -86,7 +86,10 @@ def test_unapproved_black_rule_cannot_force_black_score_band():
 
 
 def test_counsel_approved_black_override_is_honoured_by_engine(monkeypatch):
+    # Simulate a separately approved rule and an explicitly authorised release.
+    # The production default remains LEGAL_SCORE_RELEASED=False.
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AUD-003"}))
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     approved_black = ComplianceFlag(
         rule_id="AUD-003",
         flag_code="AUD-003",
