@@ -1250,7 +1250,7 @@ _LEGACY_KEYS = frozenset({"rule_id", "legal_domain", "law", "requirement", "prov
     "evaluation_states", "severity", "score_impact", "invariants"})
 
 
-def _legacy_rule(key: str, d: Dict[str, Any]) -> StatutoryRule:
+def _legacy_rule(key: str, d: Dict[str, Any]) -> Optional[StatutoryRule]:
     extra = set(d) - _LEGACY_KEYS
     if extra:
         raise RuntimeError(f"{key}: unknown legacy keys {sorted(extra)}")
@@ -1290,7 +1290,9 @@ def _legacy_rule(key: str, d: Dict[str, Any]) -> StatutoryRule:
 
 for _k, _d in _LEGACY_RULE_DICTS.items():
     if _k not in STATUTORY_RULE_REGISTRY:   # canonical wins on overlap
-        STATUTORY_RULE_REGISTRY[_k] = _legacy_rule(_k, _d)
+        _r = _legacy_rule(_k, _d)
+        if _r is not None:
+            STATUTORY_RULE_REGISTRY[_k] = _r
 
 def as_dict(rule: StatutoryRule) -> dict:
     """Thin adapter for tests/callers that still expect dict-style access.
