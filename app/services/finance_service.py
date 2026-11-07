@@ -281,7 +281,10 @@ class FinanceService:
                 self.db.add(submission)
                 await self.db.flush()
         except IntegrityError as exc:
-            if _integrity_constraint_name(exc) == "uq_payment_submission_wallet_reference":
+            if _integrity_constraint_name(exc) in {
+                "uq_payment_submission_wallet_reference",
+                "uq_wallet_reference_across_finance_tables",
+            }:
                 raise FinanceConflictError(
                     "This manual wallet transaction reference has already been submitted or credited"
                 ) from exc
@@ -413,7 +416,10 @@ class FinanceService:
                 self.db.add(payment)
                 await self.db.flush()
         except IntegrityError as exc:
-            if _integrity_constraint_name(exc) == "uq_payment_wallet_reference":
+            if _integrity_constraint_name(exc) in {
+                "uq_payment_wallet_reference",
+                "uq_wallet_reference_across_finance_tables",
+            }:
                 raise FinanceConflictError(
                     "This manual wallet transaction reference has already been credited"
                 ) from exc
