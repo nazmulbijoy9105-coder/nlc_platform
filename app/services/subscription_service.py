@@ -311,6 +311,8 @@ class SubscriptionService:
                 "plan_code": plan.plan_code,
                 "billing_interval": interval,
                 "amount_bdt": str(price.amount_bdt),
+                "tax_bdt": str(price.tax_bdt),
+                "tax_policy_reference": price.tax_policy_reference,
                 "currency": "BDT",
                 "feature_snapshot": [item.feature_code for item in enabled_features],
             },
