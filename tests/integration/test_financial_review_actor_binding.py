@@ -75,14 +75,15 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
         verified_at=now,
         created_by=db_user.id,
     )
-    # The production approval path marks the source claim approved and
-    # reviewer-bound before inserting its linked receipt. The deferred ledger
-    # constraint is checked only after the matching evidence events are added.
+    # A claim must first be persisted in PENDING_REVIEW. The production
+    # approval service later updates that existing row to APPROVED before it
+    # creates the linked receipt; inserting a new row as APPROVED is forbidden.
+    db.add(submission)
+    await db.flush()
     submission.status = "APPROVED"
     submission.reviewed_by = db_user.id
     submission.reviewed_at = now
     submission.review_note = "Regression test approval"
-    db.add(submission)
     await db.flush()
     db.add(payment)
     await db.flush()
