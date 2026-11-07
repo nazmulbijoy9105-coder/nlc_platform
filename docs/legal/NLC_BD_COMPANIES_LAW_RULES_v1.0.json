@@ -1086,8 +1086,8 @@
       "company_types": [
         "PUBLIC_LIMITED_ONLY_IF_PROSPECTUS"
       ],
-      "applicability_conditions": "Only if public-company status, prospectus inviting public subscription and every s.150(1) condition are independently verified; apply s.150(6) exclusions for private companies and non-prospectus companies.",
-      "evidence_requirements": "Obtain the authoritative primary instrument, authentic event/filing evidence, identity and issuer verification, provenance, timestamps, current status, exceptions and extension records; independent counsel approval required.",
+      "applicability_conditions": "Only if public-company status, prospectus inviting public subscription, all s.150(1) conditions, and the declaration status are independently verified with separate evidence references; apply s.150(6) exclusions.",
+      "evidence_requirements": "Obtain certified prospectus, share allotment/minimum subscription records, director payment records, signed declaration, RJSC filing/search result and reviewer identity/timestamp.",
       "reviewer": null,
       "review_date": null
     },
