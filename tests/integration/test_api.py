@@ -612,6 +612,30 @@ class TestDocuments:
         assert isinstance(resp.json(), list)
 
     @pytest.mark.asyncio
+    async def test_client_compliance_endpoints_require_entitlement(
+        self, api_client, db_client_user, db_company
+    ):
+        """Tenant membership alone must not grant paid compliance package access."""
+        from app.core.security import create_access_token
+
+        client_tok = create_access_token({
+            "sub": str(db_client_user.id), "user_id": str(db_client_user.id),
+            "type": "access", "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email, "company_ids": [str(db_company.id)],
+        })
+        headers = _auth(client_tok)
+        paths = [
+            f"/api/v1/companies/{db_company.id}/compliance",
+            f"/api/v1/companies/{db_company.id}/flags",
+            f"/api/v1/companies/{db_company.id}/compliance-pdf",
+            f"/api/v1/companies/{db_company.id}/score-history",
+        ]
+        for path in paths:
+            resp = await api_client.get(path, headers=headers)
+            assert resp.status_code == 503, (path, resp.status_code, resp.text)
+            assert resp.headers["retry-after"] == "3600"
+
+    @pytest.mark.asyncio
     async def test_client_document_portfolio_requires_entitlement(
         self, api_client, db_client_user
     ):
