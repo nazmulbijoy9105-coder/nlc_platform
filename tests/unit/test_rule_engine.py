@@ -515,11 +515,19 @@ class TestShareholderRules:
     def test_SH001_triggers_change_not_in_return(self, rule_engine, build_profile):
         """Share allotment not filed via Form XV → SH-001."""
         profile = build_profile(
-            last_allotment_date=date.today() - timedelta(days=65),
+            last_allotment_date=date.today() - timedelta(days=61),
             form_xv_filed=False,
         )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "SH-001")
+
+    def test_SH001_no_trigger_at_60_day_limit(self, rule_engine, build_profile):
+        profile = build_profile(
+            last_allotment_date=date.today() - timedelta(days=60),
+            form_xv_filed=False,
+        )
+        output = rule_engine.evaluate(profile)
+        assert_flag_not_triggered(output, "SH-001")
 
     def test_SH001_no_trigger_when_filed(self, rule_engine, build_profile):
         profile = build_profile(
@@ -673,7 +681,7 @@ class TestRegisterRules:
         
 
     def test_REG002_triggers_certificate_not_issued(self, rule_engine, build_profile):
-        """Share certificates not issued within 60 days of allotment → SH-002.
+        """Share certificates not issued within 90 days of allotment → SH-002.
         NOTE: Test was originally asserting REG-002, but REG-002 = core registers missing.
         Share certificate non-issuance is SH-002 in the engine.
         """
@@ -1178,8 +1186,12 @@ class TestUntestedRules:
         assert_flag_triggered(rule_engine.evaluate(profile), "SH-002")
 
     def test_SH003_triggers(self, rule_engine, build_profile):
-        profile = build_profile(capital_increase_date=date.today() - timedelta(days=65), form_iv_filed=False)
+        profile = build_profile(capital_increase_date=date.today() - timedelta(days=16), form_iv_filed=False)
         assert_flag_triggered(rule_engine.evaluate(profile), "SH-003")
+
+    def test_SH003_no_trigger_at_15_day_limit(self, rule_engine, build_profile):
+        profile = build_profile(capital_increase_date=date.today() - timedelta(days=15), form_iv_filed=False)
+        assert_flag_not_triggered(rule_engine.evaluate(profile), "SH-003")
 
     def test_TAX001_triggers(self, rule_engine, build_profile):
         assert_flag_triggered(rule_engine.evaluate(build_profile(tin_obtained=False)), "TAX-001")
