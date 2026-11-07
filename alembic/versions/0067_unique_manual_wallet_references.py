@@ -103,5 +103,5 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Forward-only: removing these constraints would permit duplicate manual
-    # wallet receipts to be credited against multiple invoices.
+    # manual receipts to be credited against multiple invoices.
     pass
