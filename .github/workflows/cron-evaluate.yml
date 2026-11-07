@@ -4,23 +4,53 @@ on:
   schedule:
     # Every day at 00:00 UTC (6:00 AM Bangladesh time)
     - cron: '0 0 * * *'
-  workflow_dispatch: # Manual trigger
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-compliance-evaluation
+  cancel-in-progress: false
 
 jobs:
   evaluate:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Trigger evaluation
+      - name: Validate cron secret and trigger evaluation
+        shell: bash
+        env:
+          NLC_CRON_SECRET: ${{ secrets.NLC_CRON_SECRET }}
         run: |
-          # Login to get token
-          TOKEN=$(curl -s -X POST https://nlc-platform.onrender.com/api/v1/auth/login \
-            -H "Content-Type: application/json" \
-            -d '{"email":"${{ secrets.NLC_EMAIL }}","password":"${{ secrets.NLC_PASSWORD }}"}' | \
-            python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")
-          
-          # Trigger daily evaluation
-          curl -s -X POST https://nlc-platform.onrender.com/api/v1/cron/evaluate-all \
-            -H "Authorization: Bearer $TOKEN"
-          
-          # Check health
-          curl -s https://nlc-platform.onrender.com/api/v1/health/live
+          set -Eeuo pipefail
+
+          : "${NLC_CRON_SECRET:?Required GitHub Actions secret NLC_CRON_SECRET is missing or empty}"
+
+          curl --fail --silent --show-error \
+            --connect-timeout 10 --max-time 20 \
+            "https://nlc-platform.onrender.com/api/v1/admin/cron/health" \
+            --output /dev/null
+
+          evaluation_response="$(curl --fail --silent --show-error \
+            --connect-timeout 10 --max-time 180 \
+            --request POST "https://nlc-platform.onrender.com/api/v1/admin/cron/evaluate-all" \
+            --header "X-Cron-Secret: $NLC_CRON_SECRET")"
+
+          jq -e '
+            .status == "complete"
+            and (.total_companies | type == "number")
+            and (.evaluated | type == "number")
+            and (.errors | type == "number")
+          ' <<<"$evaluation_response" >/dev/null
+
+          total="$(jq -r '.total_companies' <<<"$evaluation_response")"
+          evaluated="$(jq -r '.evaluated' <<<"$evaluation_response")"
+          errors="$(jq -r '.errors' <<<"$evaluation_response")"
+          unset evaluation_response NLC_CRON_SECRET
+
+          echo "Evaluation result: total=$total evaluated=$evaluated errors=$errors"
+          if [[ "$errors" != "0" ]]; then
+            echo "::error::One or more company evaluations failed; inspect the application logs."
+            exit 1
+          fi
