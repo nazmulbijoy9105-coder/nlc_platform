@@ -174,3 +174,45 @@ async def test_rejected_manual_wallet_reference_cannot_be_reused(db, db_company,
             paid_at=None,
             evidence_document_id=None,
         )
+
+@pytest.mark.asyncio
+async def test_database_rejects_allocation_without_invoice_balance_reconciliation(
+    db, db_company, db_user
+):
+    """An allocation cannot commit unless invoice paid/balance totals also change."""
+    await set_rls_context(db, str(db_user.id))
+    invoice = await _issued_invoice(db, db_company, db_user)
+    now = datetime.now(UTC)
+    payment = Payment(
+        company_id=db_company.id,
+        payment_number=f"PAY-TEST-{invoice.id.hex[:12]}",
+        method="CASH",
+        channel="OFFLINE",
+        amount_bdt=Decimal("25.00"),
+        currency="BDT",
+        status="SETTLED",
+        received_at=now,
+        verified_by=db_user.id,
+        verified_at=now,
+        created_by=db_user.id,
+    )
+    db.add(payment)
+    await db.flush()
+
+    with pytest.raises(DBAPIError):
+        async with db.begin_nested():
+            db.add(PaymentAllocation(
+                company_id=db_company.id,
+                payment_id=payment.id,
+                invoice_id=invoice.id,
+                amount_bdt=Decimal("25.00"),
+                currency="BDT",
+                created_by=db_user.id,
+            ))
+            await db.flush()
+            await db.execute(
+                __import__("sqlalchemy").text(
+                    "SET CONSTRAINTS payment_allocations_invoice_reconciliation IMMEDIATE"
+                )
+            )
+
