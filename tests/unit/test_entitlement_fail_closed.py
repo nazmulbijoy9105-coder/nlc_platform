@@ -42,8 +42,13 @@ async def test_legal_staff_does_not_receive_implicit_subscription_bypass():
     dependency = entitlement.require_entitlement("compliance_package")
     user = SimpleNamespace(id=uuid.uuid4(), role="LEGAL_STAFF")
 
+    result = MagicMock()
+    result.scalars.return_value.all.return_value = []
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=result)
+
     with pytest.raises(HTTPException) as exc:
-        await dependency(request=_request(), db=MagicMock(), current_user=user)
+        await dependency(request=_request(), db=db, current_user=user)
 
     assert exc.value.status_code == 403
 
@@ -143,7 +148,7 @@ async def test_customer_without_live_financial_company_membership_is_denied():
         await dependency(request=_request(), db=db, current_user=user)
 
     assert exc.value.status_code == 403
-    assert "financial access" in exc.value.detail
+    assert "company membership" in exc.value.detail
 
 
 @pytest.mark.asyncio
@@ -184,26 +189,25 @@ async def test_known_company_id_without_financial_membership_is_denied(monkeypat
 
 
 @pytest.mark.asyncio
-async def test_active_company_member_without_financial_permission_is_denied(monkeypatch):
+async def test_active_company_member_without_financial_permission_can_use_document_entitlement(monkeypatch):
     company_id = uuid.uuid4()
 
-    class MustNotCheckEntitlement:
+    class PaidDocumentSubscription:
         def __init__(self, db):
             pass
 
         async def has_entitlement(self, *, company_id, feature_code):
-            raise AssertionError("Billing visibility must be checked before reading paid entitlement")
+            return company_id == expected_company and feature_code == "document_management"
 
-    monkeypatch.setattr(entitlement, "SubscriptionService", MustNotCheckEntitlement)
+    expected_company = company_id
+    monkeypatch.setattr(entitlement, "SubscriptionService", PaidDocumentSubscription)
     membership = MagicMock()
-    membership.scalar_one_or_none.return_value = None
+    membership.scalar_one_or_none.return_value = company_id
     db = MagicMock()
     db.execute = AsyncMock(return_value=membership)
     dependency = entitlement.require_entitlement("document_management")
     user = SimpleNamespace(id=uuid.uuid4(), role="CLIENT_VIEW_ONLY")
 
-    with pytest.raises(HTTPException) as exc:
-        await dependency(request=_request(company_id), db=db, current_user=user)
-
-    assert exc.value.status_code == 403
-    assert "financial access" in exc.value.detail
+    # A document entitlement is not a financial-data permission. Active
+    # membership plus the exact paid feature is sufficient for this route.
+    assert await dependency(request=_request(company_id), db=db, current_user=user) is True
