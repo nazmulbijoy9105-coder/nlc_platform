@@ -61,16 +61,15 @@ async def _committed_finance_fixture(test_engine, *, with_submission: bool):
             is_active=True,
             totp_enabled=False,
         )
-        # Bootstrap the test actor through the explicit trusted service
-        # principal, then switch to the actor's signed UUID before creating
-        # tenant data. This exercises the real companies INSERT RLS policy;
-        # it does not disable RLS or rely on an unsigned session setting.
+        # Bootstrap fixtures under the signed service principal. A newly
+        # created company has no membership row yet, so a tenant principal
+        # cannot legitimately INSERT it through companies_tenant_insert.
+        # Switch to the actor's signed UUID only after trusted fixture setup;
+        # all finance operations below then run under the normal RLS identity.
         await set_admin_context(session)
-        session.add(user)
+        session.add_all([user, company])
         await session.flush()
         await set_rls_context(session, str(user_id))
-        session.add(company)
-        await session.flush()
 
         service = FinanceService(session)
         invoice = await service.create_invoice(
