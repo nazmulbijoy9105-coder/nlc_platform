@@ -235,3 +235,36 @@ async def test_plan_upsert_rejects_unimplemented_feature_before_database_write()
         )
 
     db.get.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_customer_can_cancel_pending_request_before_invoice_issuance():
+    company_id = __import__("uuid").uuid4()
+    actor_id = __import__("uuid").uuid4()
+    subscription = SimpleNamespace(
+        id=__import__("uuid").uuid4(),
+        company_id=company_id,
+        created_by=actor_id,
+        status="PENDING",
+        invoice_id=None,
+        cancelled_at=None,
+    )
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = subscription
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=result)
+    db.add = MagicMock()
+    db.flush = AsyncMock()
+
+    cancelled = await SubscriptionService(db).request_cancel_at_period_end(
+        company_id=company_id,
+        subscription_id=subscription.id,
+        actor_id=actor_id,
+    )
+
+    assert cancelled.status == "CANCELLED"
+    assert cancelled.cancelled_at is not None
+    event = db.add.call_args.args[0]
+    assert event.event_type == "CANCELLED"
+    assert event.event_metadata["reason"] == "customer_cancelled_before_invoice"
+    db.flush.assert_awaited()
