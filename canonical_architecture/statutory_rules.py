@@ -35,8 +35,7 @@ class Severity(str, Enum):
     YELLOW = "YELLOW"
 
 
-_BASE_STATES = (RuleState.COMPLIANT, RuleState.NON_COMPLIANT,
-                RuleState.UNKNOWN, RuleState.CONTRADICTORY)
+_BASE_STATES = (RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT)
 _COMMON_INVARIANTS = ("R-001", "R-002", "R-003", "R-005", "R-007", "R-008",
                       "R-009", "R-010", "R-012", "R-014", "R-018", "R-019")
 
