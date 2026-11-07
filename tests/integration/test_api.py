@@ -258,9 +258,15 @@ class TestCompanies:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_get_dashboard_kpis_requires_staff(self, api_client, admin_token):
-        resp = await api_client.get("/api/v1/companies/dashboard/kpis", headers=_auth(admin_token))
-        assert resp.status_code == 200
+    async def test_get_dashboard_kpis_withholds_unreleased_legal_aggregates(
+        self, api_client, admin_token
+    ):
+        resp = await api_client.get(
+            "/api/v1/companies/dashboard/kpis",
+            headers=_auth(admin_token),
+        )
+        assert resp.status_code == 503
+        assert "Compliance risk aggregates are unavailable" in resp.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_get_compliance_returns_summary(self, api_client, admin_token, db_company):
