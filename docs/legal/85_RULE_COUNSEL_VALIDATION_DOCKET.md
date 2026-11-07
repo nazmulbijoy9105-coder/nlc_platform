@@ -529,7 +529,7 @@ This docket expands the source triage into a separate signed-review record for e
 - **Minimum negative tests:** wrong company class; unknown fact; missing document only; valid extension/condonation; timely filing; appeal/stay/order; inapplicable sector/listing; contradictory evidence.
 - **Counsel decision:** PENDING — reviewer, enrolment/chamber, signed date, exact scope and next review required.
 
-### CAP-001 — Capital Alteration Without Proper Resolution
+### CAP-001 — Capital Alteration Authority Requires Review
 
 - **Source correction (7 Nov 2026):** Section 53 concerns alteration of share capital subject to Articles authority; section 54 addresses specified consolidation/conversion/subdivision notices; section 56 separately governs increase of registered share capital. The prior claim that s.54 is the generic capital-increase procedure was removed. The exact resolution type must be checked against the Articles and transaction.
 
@@ -685,7 +685,7 @@ This docket expands the source triage into a separate signed-review record for e
 - **Minimum negative tests:** wrong company class; unknown fact; missing document only; valid extension/condonation; timely filing; appeal/stay/order; inapplicable sector/listing; contradictory evidence.
 - **Counsel decision:** PENDING — reviewer, enrolment/chamber, signed date, exact scope and next review required.
 
-### DIR-003 — Major Director Filing Irregularity — Over 1 Year
+### DIR-003 — Director Filing Delay — Internal 365-Day Escalation
 
 - **Source correction (7 Nov 2026):** Section 115(2) contains the 14-day Form XII particulars filing duty. The 365-day threshold is NLC internal escalation policy only. The prior assertions of a continuing offence under s.92 and a daily statutory fine were removed; no such consequence is inferred without a separate verified provision.
 
@@ -912,7 +912,7 @@ This docket expands the source triage into a separate signed-review record for e
 - **Minimum negative tests:** wrong company class; unknown fact; missing document only; valid extension/condonation; timely filing; appeal/stay/order; inapplicable sector/listing; contradictory evidence.
 - **Counsel decision:** PENDING — reviewer, enrolment/chamber, signed date, exact scope and next review required.
 
-### INC-001 — Memorandum and Articles Not Filed
+### INC-001 — MoA/AoA Registration Status Requires Verification
 
 - **Source correction (7 Nov 2026):** The governing registration provision is section 23, not section 11. The prior assertion that non-production means the company has no valid constitution was removed. NLC absence is a data gap; only an authenticated RJSC search/record can support a verified-absence status.
 
@@ -1384,7 +1384,7 @@ This docket expands the source triage into a separate signed-review record for e
 - **Minimum negative tests:** wrong company class; unknown fact; missing document only; valid extension/condonation; timely filing; appeal/stay/order; inapplicable sector/listing; contradictory evidence.
 - **Counsel decision:** PENDING — reviewer, enrolment/chamber, signed date, exact scope and next review required.
 
-### TR-002 — Stamp Duty Not Paid on Share Transfer
+### TR-002 — Share Transfer Stamp Duty Requires Verification
 
 - **Source correction (7 Nov 2026):** Stamp duty applicability and amount depend on the instrument category, execution facts and current Schedule I/amendments. The prior automatic inadmissibility/unenforceable-title assertions were removed; missing payment evidence is not proof of non-payment.
 
@@ -1403,7 +1403,7 @@ This docket expands the source triage into a separate signed-review record for e
 - **Minimum negative tests:** wrong company class; unknown fact; missing document only; valid extension/condonation; timely filing; appeal/stay/order; inapplicable sector/listing; contradictory evidence.
 - **Counsel decision:** PENDING — reviewer, enrolment/chamber, signed date, exact scope and next review required.
 
-### TR-003 — No Board Approval for Share Transfer
+### TR-003 — Articles-Based Transfer Restriction Review
 
 - **Source correction (7 Nov 2026):** Section 38(7) preserves the company's power under its Articles to refuse registration. Board approval is not a universal statutory requirement; the operative Articles restriction must be verified. The prior s.47 citation and automatic-void/title assertions were removed.
 
@@ -1422,7 +1422,7 @@ This docket expands the source triage into a separate signed-review record for e
 - **Minimum negative tests:** wrong company class; unknown fact; missing document only; valid extension/condonation; timely filing; appeal/stay/order; inapplicable sector/listing; contradictory evidence.
 - **Counsel decision:** PENDING — reviewer, enrolment/chamber, signed date, exact scope and next review required.
 
-### TR-004 — Register of Members Not Updated After Transfer
+### TR-004 — Notice of Refusal to Register Transfer
 
 - **Source correction (7 Nov 2026):** The prior two-month register-update deadline under s.34 was unsupported. The corrected rule is limited to s.38(4): where registration is refused, notice of refusal must be sent to both transferor and transferee within 30 days after lodgement. It triggers only with verified refusal, lodgement date and notice status.
 
@@ -1460,7 +1460,7 @@ This docket expands the source triage into a separate signed-review record for e
 - **Minimum negative tests:** wrong company class; unknown fact; missing document only; valid extension/condonation; timely filing; appeal/stay/order; inapplicable sector/listing; contradictory evidence.
 - **Counsel decision:** PENDING — reviewer, enrolment/chamber, signed date, exact scope and next review required.
 
-### TR-006 — Composite Irregular Transfer
+### TR-006 — Composite Transfer Record Review
 
 - **Source correction (7 Nov 2026):** Composite transfer-record signals are internal review prompts only. The previous s.47/s.108 references and assertion that each deficiency may independently void a transfer were removed; use sections 34 and 38 plus the operative Articles as applicable.
 
