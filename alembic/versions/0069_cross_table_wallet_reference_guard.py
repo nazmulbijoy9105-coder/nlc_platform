@@ -56,6 +56,7 @@ def upgrade() -> None:
                    AND e.submission_id IS NOT NULL
                    AND (
                        p.company_id IS DISTINCT FROM ps.company_id
+                       OR ps.status IS DISTINCT FROM 'APPROVED'
                        OR p.method IS DISTINCT FROM ps.method
                        OR lower(btrim(p.payer_reference)) IS DISTINCT FROM
                           lower(btrim(ps.payer_reference))
