@@ -258,9 +258,15 @@ class TestCompanies:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_get_dashboard_kpis_requires_staff(self, api_client, admin_token):
-        resp = await api_client.get("/api/v1/companies/dashboard/kpis", headers=_auth(admin_token))
-        assert resp.status_code == 200
+    async def test_get_dashboard_kpis_withholds_unreleased_legal_aggregates(
+        self, api_client, admin_token
+    ):
+        resp = await api_client.get(
+            "/api/v1/companies/dashboard/kpis",
+            headers=_auth(admin_token),
+        )
+        assert resp.status_code == 503
+        assert "Compliance risk aggregates are unavailable" in resp.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_get_compliance_returns_summary(self, api_client, admin_token, db_company):
@@ -497,7 +503,8 @@ class TestRescue:
             f"/api/v1/rescue/plans/{db_company.id}/active",
             headers=_auth(super_admin_tok),
         )
-        assert resp.status_code == 404
+        assert resp.status_code == 503
+        assert "independent counsel approval" in resp.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_client_active_rescue_plan_requires_entitlement(
@@ -547,8 +554,8 @@ class TestRescue:
             "/api/v1/rescue/plans",
             headers=_auth(super_admin_tok),
         )
-        assert resp.status_code == 200
-        assert isinstance(resp.json(), list)
+        assert resp.status_code == 503
+        assert "independent counsel approval" in resp.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_rescue_requires_auth(self, api_client):
@@ -1021,7 +1028,8 @@ class TestRules:
         if resp.status_code == 200:
             # If rule doesn't exist in test DB (not seeded), 404 is also valid
             pytest.skip("Rules not seeded in test DB")
-        assert resp.status_code in (404, 422)
+        assert resp.status_code == 503
+        assert "legal release gate" in resp.json()["detail"]
 
 
 # =============================================================================

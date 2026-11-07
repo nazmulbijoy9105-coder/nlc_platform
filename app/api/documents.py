@@ -45,6 +45,26 @@ logger = structlog.get_logger(__name__)
 router = APIRouter()
 
 
+def _require_document_legal_release(document_type: DocumentType) -> None:
+    """Hold AI legal conclusions until the underlying rule catalogue is approved."""
+    from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+
+    restricted_types = {
+        DocumentType.RESCUE_PLAN,
+        DocumentType.DUE_DILIGENCE,
+        DocumentType.STATUTORY_NOTICE,
+    }
+    if document_type in restricted_types and not LEGAL_SCORE_RELEASED:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "This AI-generated legal document type cannot be released while " 
+                "the underlying statutory rule catalogue remains unapproved. " 
+                "A human approval alone does not substitute for rule-level legal validation."
+            ),
+        )
+
+
 # ---------------------------------------------------------------------------
 # Schemas
 # ---------------------------------------------------------------------------
@@ -565,6 +585,7 @@ async def release_document(
 
     doc = await svc.get_by_id_or_404(document_id)
     await _assert_document_company_access(doc, current_user, db)
+    _require_document_legal_release(doc.document_type)
     if not doc.human_approved:
         raise HTTPException(
             status_code=422,

@@ -110,12 +110,20 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("rule_engine_warm_failed", error=str(e))
 
+    # Start the scheduler inside the application lifespan. FastAPI ignores
+    # legacy on_event handlers when a lifespan context is configured.
+    await start_scheduler()
     logger.info("nlc_api_ready", host="0.0.0.0", port=8000)
 
-    yield  # ← application runs here
+    yield  # application runs here
 
     # ---- SHUTDOWN ----
     logger.info("nlc_api_shutting_down")
+    try:
+        await stop_scheduler()
+        logger.info("scheduler_stopped")
+    except Exception as e:
+        logger.warning("scheduler_stop_error", error=str(e))
     try:
         from app.models.database import engine
         await engine.dispose()
@@ -411,10 +419,3 @@ def create_app() -> FastAPI:
 # ---------------------------------------------------------------------------
 app = create_app()
 
-@app.on_event("startup")
-async def _start_scheduler():
-    await start_scheduler()
-
-@app.on_event("shutdown")
-async def _stop_scheduler():
-    await stop_scheduler()

@@ -480,17 +480,30 @@ def make_director_change():
     def _make(
         event_type: str = "appointment",
         days_ago: int = 400,
-        form_filed: bool = False,
+        form_filed: bool | None = False,
         form_filed_days_ago: int | None = None,
+        form_filed_verified: bool = True,
+        form_filed_evidence_ref: str | None = "evidence://test/form-xii",
+        consent_filed: bool | None = None,
+        consent_filed_days_ago: int | None = None,
+        consent_verified: bool = False,
+        consent_evidence_ref: str | None = None,
     ) -> DirectorChange:
         today = date.today()
         filed_date = today - timedelta(days=form_filed_days_ago) if form_filed and form_filed_days_ago else None
+        consent_date = today - timedelta(days=consent_filed_days_ago) if consent_filed and consent_filed_days_ago else None
         return DirectorChange(
             director_id=str(uuid.uuid4()),
             event_type=event_type,
             event_date=today - timedelta(days=days_ago),
             form_filed=form_filed,
             form_filed_date=filed_date,
+            form_filed_verified=form_filed_verified,
+            form_filed_evidence_ref=form_filed_evidence_ref,
+            consent_filed=consent_filed,
+            consent_filed_date=consent_date,
+            consent_verified=consent_verified,
+            consent_evidence_ref=consent_evidence_ref,
         )
 
     return _make
@@ -506,26 +519,42 @@ def make_share_transfer():
 
     def _make(
         days_ago: int = 30,
-        instrument_recorded: bool = True,
-        stamp_duty_paid: bool = True,
-        board_approval: bool = True,
-        share_register_updated: bool = True,
-        aoa_restriction_apply: bool = False,
-        board_approval_obtained: bool = True,
-        stamp_duty_amount: float | None = 1000.0,
-        form_117_filed: bool = True,
+        instrument_recorded: bool | None = None,
+        stamp_duty_paid: bool | None = None,
+        stamp_duty_applicability_verified: bool = False,
+        board_approval: bool | None = None,
+        share_register_updated: bool | None = None,
+        aoa_restriction_apply: bool | None = None,
+        board_approval_obtained: bool | None = None,
+        stamp_duty_amount: float | None = None,
+        form_117_filed: bool | None = None,
+        transfer_registered: bool | None = None,
+        registration_refused: bool | None = None,
+        refusal_notice_sent: bool | None = None,
+        instrument_lodged_date: date | None = None,
+        articles_clause_evidence_ref: str | None = None,
+        refusal_decision_evidence_ref: str | None = None,
+        transfer_registration_evidence_ref: str | None = None,
     ) -> ShareTransfer:
         return ShareTransfer(
             transfer_id=str(uuid.uuid4()),
             transfer_date=date.today() - timedelta(days=days_ago),
             instrument_recorded=instrument_recorded,
             stamp_duty_paid=stamp_duty_paid,
+            stamp_duty_applicability_verified=stamp_duty_applicability_verified,
             stamp_duty_amount=stamp_duty_amount,
             board_approval=board_approval,
             share_register_updated=share_register_updated,
             aoa_restriction_apply=aoa_restriction_apply,
             board_approval_obtained=board_approval_obtained,
             form_117_filed=form_117_filed,
+            transfer_registered=transfer_registered,
+            registration_refused=registration_refused,
+            refusal_notice_sent=refusal_notice_sent,
+            instrument_lodged_date=instrument_lodged_date,
+            articles_clause_evidence_ref=articles_clause_evidence_ref,
+            refusal_decision_evidence_ref=refusal_decision_evidence_ref,
+            transfer_registration_evidence_ref=transfer_registration_evidence_ref,
         )
 
     return _make

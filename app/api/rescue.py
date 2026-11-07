@@ -40,6 +40,20 @@ from app.services.rescue_service import RescueService
 
 router = APIRouter()
 
+
+def _require_legal_release() -> None:
+    """Prevent rescue actions based on unapproved legal findings."""
+    from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+
+    if not LEGAL_SCORE_RELEASED:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Rescue plans are withheld until the underlying legal rules "
+                "receive independent counsel approval and the legal score is released."
+            ),
+        )
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
@@ -264,6 +278,7 @@ async def list_rescue_plans(
     Without company_id, returns all plans (admin/portfolio view).
     With company_id, returns only that company's plans.
     """
+    _require_legal_release()
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
 
@@ -303,6 +318,7 @@ async def get_active_plan(
 ):
     if current_user.role == "LEGAL_STAFF":
         await ensure_staff_company_scope(company_id, current_user, db)
+    _require_legal_release()
     rescue_svc = RescueService(db)
     company_svc = CompanyService(db)
 
@@ -332,6 +348,7 @@ async def get_rescue_plan(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    _require_legal_release()
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
 
@@ -371,6 +388,7 @@ async def update_rescue_step(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    _require_legal_release()
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
@@ -442,6 +460,7 @@ async def create_engagement_from_rescue(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    _require_legal_release()
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
