@@ -106,3 +106,29 @@ async def test_unknown_account_role_does_not_receive_entitlement():
         await dependency(request=_request(), db=MagicMock(), current_user=user)
 
     assert exc.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_known_company_id_without_financial_membership_is_denied(monkeypatch):
+    company_id = uuid.uuid4()
+
+    class MustNotCheckEntitlement:
+        def __init__(self, db):
+            pass
+
+        async def has_entitlement(self, *, company_id, feature_code):
+            raise AssertionError("Entitlement lookup must not run before membership authorization")
+
+    monkeypatch.setattr(entitlement, "SubscriptionService", MustNotCheckEntitlement)
+    membership = MagicMock()
+    membership.scalar_one_or_none.return_value = None
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=membership)
+    dependency = entitlement.require_entitlement("document_management")
+    user = SimpleNamespace(id=uuid.uuid4(), role="CLIENT_DIRECTOR")
+
+    with pytest.raises(HTTPException) as exc:
+        await dependency(request=_request(company_id), db=db, current_user=user)
+
+    assert exc.value.status_code == 403
+    assert "financial access" in exc.value.detail
