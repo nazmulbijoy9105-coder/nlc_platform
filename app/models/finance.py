@@ -18,11 +18,11 @@ from sqlalchemy import (
     ForeignKeyConstraint,
     Index,
     Integer,
-    func,
     Numeric,
     String,
     Text,
     UniqueConstraint,
+    func,
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
