@@ -188,6 +188,13 @@ def main() -> int:
         print("FAIL: canonical statutory rule registry contains non-zero score impact")
         return 1
 
+    if re.search(r"Severity\.(?:BLACK|RED|YELLOW|GREEN),\s*\d+", canonical_source):
+        print("FAIL: legacy positional StatutoryRule entries contain publishable severity or score")
+        return 1
+    if re.search(r'"is_black_override":\s*True', canonical_source):
+        print("FAIL: canonical statutory rule registry contains a BLACK override")
+        return 1
+
     matrix_rows = [
         line for line in matrix_path.read_text(encoding="utf-8").splitlines()
         if re.match(r"^\| [A-Z]{2,5}-\d{3} \|", line)
