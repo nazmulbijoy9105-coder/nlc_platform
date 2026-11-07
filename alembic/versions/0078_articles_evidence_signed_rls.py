@@ -42,6 +42,9 @@ def upgrade() -> None:
     missing_helpers = [
         signature
         for signature in (
+            "public.nlc_current_user_principal()",
+            "public.nlc_current_user_id()",
+            "public.nlc_current_user_context_valid()",
             "public.nlc_can_access_company(uuid)",
             "public.nlc_current_user_is_staff()",
             "public.nlc_can_edit_company(uuid)",
