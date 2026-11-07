@@ -46,7 +46,7 @@ jobs:
             tests/unit/test_legal_notification_gate.py
 
       - name: Type-check disabled legacy calendar adapter
-        run: mypy --follow-imports=skip --ignore-missing-imports app/services/bd_calendar_generator.py
+        run: mypy app/services/bd_calendar_generator.py
 
       - name: Verify single Alembic head
         run: |
