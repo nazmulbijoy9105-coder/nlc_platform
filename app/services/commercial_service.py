@@ -265,11 +265,11 @@ class QuotationService(BaseService[Quotation]):
         result = await self.db.execute(
             text(
                 "SELECT COALESCE(MAX("
-                "CAST(SUBSTRING(quotation_number FROM :suffix_start) AS INTEGER)"
+                "CAST(SUBSTRING(quotation_number FROM CAST(:suffix_start AS INTEGER)) AS INTEGER)"
                 "), 0) + 1 "
                 "FROM quotations "
                 "WHERE quotation_number LIKE :pattern "
-                "AND SUBSTRING(quotation_number FROM :suffix_start) ~ '^[0-9]+$'"
+                "AND SUBSTRING(quotation_number FROM CAST(:suffix_start AS INTEGER)) ~ '^[0-9]+$'"
             ),
             {"pattern": f"{prefix}%", "suffix_start": len(prefix) + 1},
         )

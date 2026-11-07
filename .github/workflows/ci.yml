@@ -228,13 +228,31 @@ jobs:
           DATABASE_URL="$BASELINE_DATABASE_URL" alembic upgrade head
           CURRENT="$(DATABASE_URL="$BASELINE_DATABASE_URL" alembic current)"
           printf '%s\n' "$CURRENT"
-          grep -q "0075_director_transfer_evidence" <<< "$CURRENT"
+          grep -q "0079_reconcile_legacy_agm_evidence_types" <<< "$CURRENT"
 
           # Export the resulting schema snapshot for independent review.
           PGPASSWORD=nlc_test pg_dump -h localhost -U nlc_test \
             --schema-only --no-owner --no-privileges nlc_test_baseline_0042 \
             > /tmp/nlc_0042_to_head_schema.sql
           test -s /tmp/nlc_0042_to_head_schema.sql
+
+      - name: Rehearse deployed Articles baseline 0048 through head
+        run: |
+          set -euo pipefail
+          PGPASSWORD=nlc_test createdb -h localhost -U nlc_test nlc_test_legacy_0048
+          LEGACY_DATABASE_URL="postgresql+asyncpg://nlc_test:nlc_test@localhost:5432/nlc_test_legacy_0048"
+
+          # Recreate the historical deployed revision using the real migration
+          # path, then prove that the canonical branch can continue from it.
+          DATABASE_URL="$LEGACY_DATABASE_URL" alembic upgrade 0048_articles_verification
+          LEGACY_MARKER="$(DATABASE_URL="$LEGACY_DATABASE_URL" alembic current)"
+          printf '%s\n' "$LEGACY_MARKER"
+          grep -q "0048_articles_verification" <<< "$LEGACY_MARKER"
+
+          DATABASE_URL="$LEGACY_DATABASE_URL" alembic upgrade head
+          FINAL_MARKER="$(DATABASE_URL="$LEGACY_DATABASE_URL" alembic current)"
+          printf '%s\n' "$FINAL_MARKER"
+          grep -q "0079_reconcile_legacy_agm_evidence_types" <<< "$FINAL_MARKER"
 
       - name: Upload isolated migration rehearsal schema
         uses: actions/upload-artifact@v4
