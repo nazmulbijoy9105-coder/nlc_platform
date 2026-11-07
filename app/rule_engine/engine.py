@@ -444,7 +444,8 @@ REGISTERED_OFFICE_DEADLINE_DAYS = 28
 # deadline by adding one calendar month to the incorporation date.
 FIRST_AUDITOR_DEADLINE_DAYS = 30  # DEPRECATED: kept for backward compat, use _add_one_month()
 CHARGE_REGISTRATION_DEADLINE_DAYS = 21  # Section 159(1): charge registration within 21 days of creation
-ALLOTMENT_FILING_DEADLINE_DAYS = 60
+ALLOTMENT_FILING_DEADLINE_DAYS = 60  # Section 151: return of allotment
+CAPITAL_INCREASE_NOTICE_DEADLINE_DAYS = 15  # Section 56: notice of increase
 SPECIAL_RESOLUTION_DEADLINE_DAYS = 15  # Companies Act 1994, Section 88 (15 days)
 
 REQUIRED_REGISTERS = [
@@ -1498,14 +1499,14 @@ class NLCRuleEngine:
 
         if c.capital_increase_date and c.form_iv_filed is False:
             delay = (self.today - c.capital_increase_date).days
-            if delay > ALLOTMENT_FILING_DEADLINE_DAYS:
+            if delay > CAPITAL_INCREASE_NOTICE_DEADLINE_DAYS:
                 self._add_flag(ComplianceFlag(
                     rule_id="SH-003",
                     flag_code="FORM_IV_CAPITAL_INCREASE_NOT_FILED",
                     severity=Severity.YELLOW if delay < 90 else Severity.RED,
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Capital increase not filed via Form IV. Section 52: 30-day deadline. Overdue by {delay} days.",
+                    description=f"Capital increase not filed via Form IV within 15 days under Section 56. Overdue by {delay} days.",
                     statutory_basis="Section 56, Companies Act 1994 (Bangladesh)",
                     detail={"delay": delay}
                 ))
