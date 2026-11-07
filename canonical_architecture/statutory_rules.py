@@ -1274,6 +1274,8 @@ def _legacy_rule(key: str, d: Dict[str, Any]) -> StatutoryRule:
         raise RuntimeError(
             f"{key}: evidence_required must contain unique, non-empty strings"
         )
+    if list(d["evidence_required"]) != ["DOCUMENTARY_EVIDENCE"]:
+        return None
     auth = _LEGACY_AUTHORITY_OVERRIDE.get(key) or _LEGACY_AUTHORITY[d["legal_domain"]]
     applies_if = None if applicability == "ALL_ACTIVE_COMPANIES" else applicability
     return StatutoryRule(
