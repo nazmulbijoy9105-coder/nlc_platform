@@ -571,6 +571,10 @@ class TestTransferRules:
         assert flag.severity == Severity.NOT_EVALUATED
         assert flag.score_impact == 0
 
+    def test_TR002_unknown_applicability_does_not_infer_stamp_duty_default(self, rule_engine, build_profile, make_share_transfer):
+        transfer = make_share_transfer(stamp_duty_paid=False, stamp_duty_applicability_verified=False)
+        assert_flag_not_triggered(rule_engine.evaluate(build_profile(share_transfers=[transfer])), "TR-002")
+
     def test_TR003_only_applies_when_articles_restriction_is_verified(self, rule_engine, build_profile, make_share_transfer):
         no_restriction = make_share_transfer(aoa_restriction_apply=False, board_approval_obtained=False)
         assert_flag_not_triggered(rule_engine.evaluate(build_profile(share_transfers=[no_restriction])), "TR-003")
@@ -618,6 +622,7 @@ class TestTransferRules:
         transfer = make_share_transfer(
             instrument_recorded=False,
             stamp_duty_paid=False,
+            stamp_duty_applicability_verified=True,
         )
         output = rule_engine.evaluate(build_profile(share_transfers=[transfer]))
         assert_flag_triggered(output, "TR-006")
