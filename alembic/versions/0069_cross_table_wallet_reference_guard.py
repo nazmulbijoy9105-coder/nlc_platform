@@ -184,7 +184,7 @@ def upgrade() -> None:
 
             IF duplicate_exists THEN
                 RAISE EXCEPTION
-                    'manual wallet transaction reference already exists across finance claims and receipts'
+                    'uq_wallet_reference_across_finance_tables: manual wallet transaction reference already exists across finance claims and receipts'
                     USING ERRCODE = '23505',
                           CONSTRAINT = 'uq_wallet_reference_across_finance_tables';
             END IF;
