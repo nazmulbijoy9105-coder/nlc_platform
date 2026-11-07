@@ -128,7 +128,19 @@ def upgrade() -> None:
                     FROM public.payments p
                     WHERE p.method = NEW.method
                       AND lower(btrim(p.payer_reference)) = normalized_reference
-                      AND p.source_submission_id IS DISTINCT FROM NEW.id
+                      AND (
+                          p.source_submission_id IS DISTINCT FROM NEW.id
+                          OR NOT EXISTS (
+                              SELECT 1
+                                FROM public.payment_submissions source
+                               WHERE source.id = NEW.id
+                                 AND source.company_id = p.company_id
+                                 AND source.status = 'APPROVED'
+                                 AND source.method = p.method
+                                 AND lower(btrim(source.payer_reference)) =
+                                     lower(btrim(p.payer_reference))
+                          )
+                      )
                 ) INTO duplicate_exists;
             ELSIF TG_TABLE_NAME = 'payments' THEN
                 SELECT EXISTS (
@@ -136,7 +148,14 @@ def upgrade() -> None:
                     FROM public.payment_submissions ps
                     WHERE ps.method = NEW.method
                       AND lower(btrim(ps.payer_reference)) = normalized_reference
-                      AND ps.id IS DISTINCT FROM NEW.source_submission_id
+                      AND (
+                          ps.id IS DISTINCT FROM NEW.source_submission_id
+                          OR ps.status <> 'APPROVED'
+                          OR ps.company_id <> NEW.company_id
+                          OR ps.method <> NEW.method
+                          OR lower(btrim(ps.payer_reference)) <>
+                             lower(btrim(NEW.payer_reference))
+                      )
                 ) INTO duplicate_exists;
             ELSE
                 RAISE EXCEPTION 'wallet-reference guard attached to unsupported table %',
