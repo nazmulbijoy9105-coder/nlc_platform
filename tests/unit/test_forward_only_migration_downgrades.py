@@ -16,6 +16,15 @@ FORWARD_ONLY_MIGRATIONS = (
     "alembic/versions/0058_suppress_unreleased_rule_notifications.py",
     "alembic/versions/0059_finance_role_separation.py",
     "alembic/versions/0060_financial_billing_core.py",
+    "alembic/versions/0065_rescue_audit_log_restrict_delete.py",
+    "alembic/versions/0066_verified_revenue_pipeline.py",
+    "alembic/versions/0067_unique_manual_wallet_references.py",
+    "alembic/versions/0068_repair_aggregate_view_and_revenue_rls.py",
+    "alembic/versions/0069_cross_table_wallet_reference_guard.py",
+    "alembic/versions/0070_deferred_invoice_allocation_reconciliation.py",
+    "alembic/versions/0071_immutable_payment_submission_link.py",
+    "alembic/versions/0072_allocation_mutation_reconciliation.py",
+    "alembic/versions/0073_payment_allocations_append_only.py",
 )
 
 

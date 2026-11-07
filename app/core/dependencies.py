@@ -142,23 +142,6 @@ async def get_auth_db() -> AsyncSession:  # type: ignore
             await session.close()
 
 
-async def get_admin_db() -> AsyncSession:  # type: ignore
-    """
-    Yield a DB session with ADMIN RLS context.
-    Use for: background cron jobs, Celery tasks, Super Admin operations.
-    """
-    async with AsyncSessionLocal() as session:
-        try:
-            await set_admin_context(session)
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
-        finally:
-            await session.close()
-
-
 # ═══════════════════════════════════════════════════════════════════════
 # TOKEN VERIFICATION
 # ═══════════════════════════════════════════════════════════════════════
@@ -339,6 +322,26 @@ def require_roles(*allowed_roles: str):
 require_admin = require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF)
 require_super_admin = require_roles(UserRole.SUPER_ADMIN)
 require_staff = require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRole.LEGAL_STAFF)
+
+
+async def get_admin_db(
+    token: TokenData = Depends(require_super_admin),
+) -> AsyncSession:  # type: ignore
+    """
+    Yield an ADMIN-context session only after live database-backed
+    SUPER_ADMIN authorization. Background workers must use their separately
+    verified service-task path, not this HTTP dependency.
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            await set_admin_context(session)
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
 
 
 # ═══════════════════════════════════════════════════════════════════════

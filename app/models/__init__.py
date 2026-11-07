@@ -15,6 +15,17 @@ before Alembic migrations are generated.
 # ── Database infrastructure ─────────────────────────────────────────
 # ── Commercial (Tasks, Engagements, Quotations) ──────────────────────
 from .commercial import Engagement, Quotation, Task
+from .finance import (
+    ClientSubscription,
+    Invoice,
+    InvoiceLine,
+    Payment,
+    PaymentAllocation,
+    PaymentIntent,
+    PaymentLedgerEvent,
+    PaymentProviderEvent,
+    PaymentSubmission,
+)
 
 # ── Companies ────────────────────────────────────────────────────────
 from .company import Company, CompanyUserAccess
