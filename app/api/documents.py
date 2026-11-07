@@ -205,6 +205,10 @@ async def list_all_documents(
         from sqlalchemy import or_
         from app.models.company import Company
 
+        entitled_ids = [
+            uuid.UUID(value)
+            for value in getattr(request.state, "entitled_company_ids", [])
+        ]
         assigned_or_accessible = select(Company.id).where(
             or_(
                 Company.assigned_staff_id == current_user.id,
@@ -217,6 +221,7 @@ async def list_all_documents(
             )
         )
         filters.append(Document.company_id.in_(assigned_or_accessible))  # type: ignore
+        filters.append(Document.company_id.in_(entitled_ids))  # type: ignore
 
     if document_type:
         filters.append(Document.document_type == document_type)  # type: ignore
