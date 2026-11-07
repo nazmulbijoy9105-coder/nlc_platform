@@ -574,7 +574,7 @@
         "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
       ],
       "applicability_conditions": "Identify the exact capital alteration type and Articles authority under s.53; s.54 covers specified consolidation/conversion/subdivision notices; increase of registered capital is separately under s.56.",
-      "evidence_requirements": "Obtain current Articles, shareholder resolution, capital structure before/after, relevant notice/forms, RJSC receipt and effective-date record.",
+      "evidence_requirements": "Obtain operative Articles, exact alteration type, shareholder resolution and its type, capital before/after, statutory notice/form, RJSC receipt, effective date and any court/Registrar order.",
       "reviewer": null,
       "review_date": null
     },
@@ -745,7 +745,7 @@
         "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
       ],
       "applicability_conditions": "Form XII particulars due within 14 days under s.115(2). A 365-day escalation is internal NLC policy, not a separate continuing offence or daily penalty.",
-      "evidence_requirements": "Verify event type/date, duty-holder, Form XII filing receipt, RJSC registry response, extensions/corrections and applicable statutory penalty text.",
+      "evidence_requirements": "Verify director event, Form XII filing status and date, authenticated RJSC filing/registry record, evidence provenance, reviewer identity/timestamp; 365-day threshold is NLC internal policy only.",
       "reviewer": null,
       "review_date": null
     },
@@ -821,7 +821,7 @@
         "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
       ],
       "applicability_conditions": "Written director consent is a separate filing from Form XII; verify appointment date and consent filing within 30 days under s.93(2), and reconcile s.92/Form IX instructions.",
-      "evidence_requirements": "Obtain signed consent, appointment resolution, Registrar filing receipt, current Form IX/Form X version and RJSC record.",
+      "evidence_requirements": "Obtain signed director consent, appointment resolution/date, separate Registrar filing receipt, current Form IX/Form X version, evidence reference and reviewer identity/timestamp; do not infer consent status from Form XII.",
       "reviewer": null,
       "review_date": null
     },
