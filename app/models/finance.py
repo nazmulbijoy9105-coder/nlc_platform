@@ -281,6 +281,7 @@ class ClientSubscription(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             name="fk_client_subscriptions_invoice_company",
         ),
         CheckConstraint("amount_bdt >= 0", name="ck_subscription_amount_nonnegative"),
+        CheckConstraint("tax_bdt >= 0", name="ck_client_subscription_tax_nonnegative"),
         CheckConstraint("grace_days BETWEEN 0 AND 30", name="ck_client_subscription_grace_days"),
         CheckConstraint("billing_interval IN ('MONTHLY','QUARTERLY','ANNUAL','ONE_TIME')", name="ck_subscription_billing_interval"),
         CheckConstraint("status IN ('PENDING','ACTIVE','PAST_DUE','CANCELLED','EXPIRED','SUSPENDED')", name="ck_subscription_status"),
@@ -293,6 +294,8 @@ class ClientSubscription(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     plan_name: Mapped[str] = mapped_column(String(120), nullable=False)
     billing_interval: Mapped[str] = mapped_column(String(16), nullable=False)
     amount_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    tax_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False, default=Decimal("0.00"), server_default="0")
+    tax_policy_reference: Mapped[str | None] = mapped_column(Text, nullable=True)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="BDT")
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="PENDING")
     starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
