@@ -327,7 +327,7 @@ require_staff = require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRo
 
 async def get_admin_db(
     token: TokenData = Depends(require_super_admin),
-) -> AsyncSession:  # type: ignore
+) -> AsyncGenerator[AsyncSession, None]:
     """
     Yield an ADMIN-context session only after live database-backed
     SUPER_ADMIN authorization. Background workers must use their separately
@@ -558,7 +558,7 @@ def get_rule_engine():
 
 async def get_db_for_user(
     token: TokenData = Depends(verify_access_token),
-) -> AsyncSession:  # type: ignore
+) -> AsyncGenerator[AsyncSession, None]:
     """
     Yield an authenticated database session with identity-bound RLS context.
 
