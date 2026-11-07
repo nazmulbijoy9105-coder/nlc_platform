@@ -33,7 +33,7 @@ def upgrade() -> None:
             occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             affected_company_count INTEGER NOT NULL,
             affected_active_flag_count INTEGER NOT NULL,
-            suppressed_deadline_notification_count INTEGER NOT NULL,
+            suppressed_legal_notification_count INTEGER NOT NULL,
             reason TEXT NOT NULL,
             details JSONB NOT NULL DEFAULT '{}'::jsonb
         )
@@ -46,7 +46,7 @@ def upgrade() -> None:
         DECLARE
             company_count INTEGER := 0;
             active_flag_count INTEGER := 0;
-            deadline_notification_count INTEGER := 0;
+            legal_notification_count INTEGER := 0;
         BEGIN
             UPDATE public.companies
                SET current_compliance_score = NULL,
@@ -79,13 +79,56 @@ def upgrade() -> None:
                    updated_at = NOW()
              WHERE notification_status = 'PENDING'
                AND (
-                   notification_type LIKE '%_DEADLINE_WARNING'
+                   notification_type ~ '^[A-Z]{2,5}-[0-9]{3}
+            INSERT INTO audit.legal_release_quarantine_events (
+                migration_revision,
+                affected_company_count,
+                affected_active_flag_count,
+                suppressed_legal_notification_count,
+                reason,
+                details
+            )
+            VALUES (
+                '0061_legal_release_quarantine',
+                company_count,
+                active_flag_count,
+                legal_notification_count,
+                'Legal scoring and statutory calendar remain unreleased pending individual independent counsel approval.',
+                jsonb_build_object(
+                    'current_company_scores', 'cleared_to_null',
+                    'current_company_risk_band', 'NOT_EVALUATED',
+                    'active_compliance_flags', 'NOT_EVALUATED / score_impact 0 / no exposure band',
+                    'immutable_score_history', 'preserved_without_mutation',
+                    'legal_rule_definitions', 'preserved; public API release gate remains closed',
+                    'pending_rule_and_legal_alert_notifications', 'suppressed; operational billing/payment/security notifications preserved',
+                    'rescue_required', FALSE
+                )
+            );
+        END
+        $quarantine$;
+        """
+    )
+
+
+def downgrade() -> None:
+    # Irreversible by design: restoring prior scores, active findings or
+    # deadline notifications could re-publish unapproved legal conclusions.
+    # Immutable score history remains available for audit.
+    pass
+
+                   OR notification_type LIKE '%_DEADLINE_WARNING'
                    OR notification_type LIKE 'DEADLINE_%'
+                   OR notification_type IN (
+                       'COMPLIANCE_ALERT', 'LEGAL_ALERT', 'RISK_ALERT', 'RULE_ALERT'
+                   )
                )
                AND notification_type !~ (
                    '^(BILLING_|PAYMENT_|SUBSCRIPTION_|ACCOUNT_SECURITY_)'
+               )
+               AND notification_type !~ (
+                   '(COMPLIANCE|LEGAL|RISK|RULE_ALERT|TAX_|VAT_|AGM_|BSEC_|LABOUR_|LABOR_|TRADE_LICENCE_|TRADE_LICENSE_)'
                );
-            GET DIAGNOSTICS deadline_notification_count = ROW_COUNT;
+            GET DIAGNOSTICS legal_notification_count = ROW_COUNT;
 
             INSERT INTO audit.legal_release_quarantine_events (
                 migration_revision,
