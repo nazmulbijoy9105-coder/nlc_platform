@@ -1,5 +1,5 @@
 """Regression checks for tenant-scoped payment references and timestamps."""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -52,7 +52,7 @@ def test_offline_payment_timestamp_requires_explicit_timezone():
         invoice_id=uuid4(),
         method="CASH",
         amount_bdt=Decimal("10.00"),
-        paid_at=datetime(2026, 11, 6, 12, 0, 0, tzinfo=timezone.utc),
+        paid_at=datetime(2026, 11, 6, 12, 0, 0, tzinfo=UTC),
     )
     assert accepted.paid_at is not None
     assert accepted.paid_at.utcoffset() is not None
