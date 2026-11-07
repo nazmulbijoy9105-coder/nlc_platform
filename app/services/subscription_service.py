@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company import Company, CompanyUserAccess
@@ -144,6 +144,10 @@ class SubscriptionService:
                 raise SubscriptionConflictError(f"Duplicate feature mapping: {code_value}")
             requested_features[code_value] = feature
 
+        await self.db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtextextended(:lock_key, 0))"),
+            {"lock_key": f"nlc:subscription-plan:{code}"},
+        )
         plan_result = await self.db.execute(
             select(SubscriptionPlan)
             .where(SubscriptionPlan.plan_code == code)
@@ -263,6 +267,7 @@ class SubscriptionService:
                 SubscriptionPlanPrice.billing_interval == interval,
                 SubscriptionPlanPrice.is_active.is_(True),
             )
+            .with_for_update()
         )
         row = plan_result.one_or_none()
         if row is None:
