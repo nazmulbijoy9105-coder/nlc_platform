@@ -18,11 +18,34 @@ def upgrade() -> None:
         "LOCK TABLE public.payment_submissions, public.payments IN SHARE ROW EXCLUSIVE MODE"
     )
 
-    # Do not silently bless an already-corrupt ledger. Require operators to
-    # reconcile any historical cross-table collisions before this guard lands.
+    # Link each approved offline receipt to the submission that justified it.
+    # The ledger is the historical source of truth; ambiguous links fail closed.
+    op.execute("ALTER TABLE public.payments ADD COLUMN source_submission_id uuid")
     op.execute("""
         DO $preflight$
         BEGIN
+            IF EXISTS (
+                SELECT p.id
+                  FROM public.payments p
+                  JOIN public.payment_ledger_events e
+                    ON e.payment_id = p.id
+                   AND e.event_type = 'PAYMENT_VERIFIED'
+                   AND e.submission_id IS NOT NULL
+                 GROUP BY p.id
+                HAVING count(DISTINCT e.submission_id) > 1
+            ) OR EXISTS (
+                SELECT e.submission_id
+                  FROM public.payment_ledger_events e
+                 WHERE e.event_type = 'PAYMENT_VERIFIED'
+                   AND e.submission_id IS NOT NULL
+                 GROUP BY e.submission_id
+                HAVING count(DISTINCT e.payment_id) > 1
+            ) THEN
+                RAISE EXCEPTION
+                    'ambiguous payment-to-submission ledger mapping; reconcile finance evidence before migration 0069'
+                    USING ERRCODE = '23514';
+            END IF;
+
             IF EXISTS (
                 SELECT 1
                   FROM public.payment_submissions ps
@@ -33,14 +56,41 @@ def upgrade() -> None:
                  WHERE ps.method IN ('BKASH_MANUAL', 'NAGAD_MANUAL')
                    AND NULLIF(BTRIM(ps.payer_reference), '') IS NOT NULL
                    AND NULLIF(BTRIM(p.payer_reference), '') IS NOT NULL
+                   AND NOT EXISTS (
+                       SELECT 1
+                         FROM public.payment_ledger_events e
+                        WHERE e.payment_id = p.id
+                          AND e.submission_id = ps.id
+                          AND e.event_type = 'PAYMENT_VERIFIED'
+                   )
             ) THEN
                 RAISE EXCEPTION
-                    'cross-table manual wallet reference collision exists; reconcile finance evidence before migration 0069'
+                    'unmatched cross-table manual wallet reference collision exists; reconcile finance evidence before migration 0069'
                     USING ERRCODE = '23505',
                           CONSTRAINT = 'uq_wallet_reference_across_finance_tables';
             END IF;
         END
         $preflight$
+    """)
+    op.execute("""
+        UPDATE public.payments p
+           SET source_submission_id = e.submission_id
+          FROM public.payment_ledger_events e
+         WHERE e.payment_id = p.id
+           AND e.event_type = 'PAYMENT_VERIFIED'
+           AND e.submission_id IS NOT NULL
+    """)
+    op.execute("""
+        ALTER TABLE public.payments
+        ADD CONSTRAINT fk_payments_source_submission_company
+        FOREIGN KEY (source_submission_id, company_id)
+        REFERENCES public.payment_submissions (id, company_id)
+        ON DELETE RESTRICT
+    """)
+    op.execute("""
+        CREATE UNIQUE INDEX uq_payments_source_submission
+        ON public.payments (source_submission_id)
+        WHERE source_submission_id IS NOT NULL
     """)
 
     # The per-table unique indexes in 0067 cannot prevent one reference from
@@ -78,6 +128,7 @@ def upgrade() -> None:
                     FROM public.payments p
                     WHERE p.method = NEW.method
                       AND lower(btrim(p.payer_reference)) = normalized_reference
+                      AND p.source_submission_id IS DISTINCT FROM NEW.id
                 ) INTO duplicate_exists;
             ELSIF TG_TABLE_NAME = 'payments' THEN
                 SELECT EXISTS (
@@ -85,6 +136,7 @@ def upgrade() -> None:
                     FROM public.payment_submissions ps
                     WHERE ps.method = NEW.method
                       AND lower(btrim(ps.payer_reference)) = normalized_reference
+                      AND ps.id IS DISTINCT FROM NEW.source_submission_id
                 ) INTO duplicate_exists;
             ELSE
                 RAISE EXCEPTION 'wallet-reference guard attached to unsupported table %',
