@@ -13,9 +13,13 @@ from __future__ import annotations
 import uuid
 import re
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import and_, not_, or_, select
+
+if TYPE_CHECKING:
+    from app.models.infrastructure import UserActivityLog
 
 from app.models.enums import NotificationChannel, NotificationStatus
 from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
@@ -449,7 +453,7 @@ class ActivityService:
         offset: int = 0,
         resource_type=None,
         resource_id=None
-    ) -> list[dict]:
+    ) -> list[UserActivityLog]:
         """
         Query audit logs with filters.
         _get_activity_logs stub implementation.
@@ -475,4 +479,4 @@ class ActivityService:
             .limit(limit)
             .offset(offset)
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
