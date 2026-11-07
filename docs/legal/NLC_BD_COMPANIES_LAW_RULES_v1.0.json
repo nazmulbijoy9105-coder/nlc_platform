@@ -561,7 +561,7 @@
     },
     {
       "rule_id": "CAP-001",
-      "rule_name": "Capital Alteration Without Proper Resolution",
+      "rule_name": "Capital Alteration Authority Requires Review",
       "statutory_basis": "Sections 53, 54 and 56, Companies Act 1994 (Bangladesh)",
       "engine_severity": "NOT_EVALUATED",
       "engine_score_impact": 0,
@@ -732,7 +732,7 @@
     },
     {
       "rule_id": "DIR-003",
-      "rule_name": "Major Director Filing Irregularity — Over 1 Year",
+      "rule_name": "Director Filing Delay — Internal 365-Day Escalation",
       "statutory_basis": "Section 115(2), Companies Act 1994 (Bangladesh); 365-day threshold is NLC policy only",
       "engine_severity": "NOT_EVALUATED",
       "engine_score_impact": 0,
@@ -979,7 +979,7 @@
     },
     {
       "rule_id": "INC-001",
-      "rule_name": "Memorandum and Articles Not Filed",
+      "rule_name": "MoA/AoA Registration Status Requires Verification",
       "statutory_basis": "Section 23, Companies Act 1994 (Bangladesh)",
       "engine_severity": "NOT_EVALUATED",
       "engine_score_impact": 0,
@@ -1473,7 +1473,7 @@
     },
     {
       "rule_id": "TR-001",
-      "rule_name": "No Share Transfer Instrument — Form 117",
+      "rule_name": "Share Transfer Instrument — Section 38(3) Evidence Review",
       "statutory_basis": "Section 38(3), Companies Act 1994 (Bangladesh)",
       "engine_severity": "NOT_EVALUATED",
       "engine_score_impact": 0,
@@ -1492,7 +1492,7 @@
     },
     {
       "rule_id": "TR-002",
-      "rule_name": "Stamp Duty Not Paid on Share Transfer",
+      "rule_name": "Share Transfer Stamp Duty Requires Verification",
       "statutory_basis": "Stamp Act 1899, current Schedule I and applicable amendments",
       "engine_severity": "NOT_EVALUATED",
       "engine_score_impact": 0,
@@ -1511,7 +1511,7 @@
     },
     {
       "rule_id": "TR-003",
-      "rule_name": "No Board Approval for Share Transfer",
+      "rule_name": "Articles-Based Transfer Restriction Review",
       "statutory_basis": "Section 38(7), Companies Act 1994 (Bangladesh), and the company's Articles",
       "engine_severity": "NOT_EVALUATED",
       "engine_score_impact": 0,
@@ -1530,7 +1530,7 @@
     },
     {
       "rule_id": "TR-004",
-      "rule_name": "Register of Members Not Updated After Transfer",
+      "rule_name": "Notice of Refusal to Register Transfer",
       "statutory_basis": "Section 38(4), Companies Act 1994 (Bangladesh)",
       "engine_severity": "NOT_EVALUATED",
       "engine_score_impact": 0,
@@ -1549,7 +1549,7 @@
     },
     {
       "rule_id": "TR-005",
-      "rule_name": "Share Transfer Violates AoA Restriction — BLACK OVERRIDE",
+      "rule_name": "Registered Transfer Despite Articles Restriction — Counsel Review",
       "statutory_basis": "Section 38(7), Companies Act 1994 (Bangladesh), and the company's Articles",
       "engine_severity": "NOT_EVALUATED",
       "engine_score_impact": 0,
@@ -1568,7 +1568,7 @@
     },
     {
       "rule_id": "TR-006",
-      "rule_name": "Composite Irregular Transfer",
+      "rule_name": "Composite Transfer Record Review",
       "statutory_basis": "Sections 34 and 38, Companies Act 1994 (Bangladesh), and applicable Articles",
       "engine_severity": "NOT_EVALUATED",
       "engine_score_impact": 0,
