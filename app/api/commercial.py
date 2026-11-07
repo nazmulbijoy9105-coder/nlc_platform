@@ -143,7 +143,7 @@ class TaskResponse(BaseModel):
     company_id: str
     title: str
     description: str | None
-    status: str
+    status: str | None
     priority: str
     due_date: str | None
     assigned_to: str | None
