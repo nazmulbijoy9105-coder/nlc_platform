@@ -12,6 +12,31 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Do not silently bless an already-corrupt ledger. Require operators to
+    # reconcile any historical cross-table collisions before this guard lands.
+    op.execute("""
+        DO $preflight$
+        BEGIN
+            IF EXISTS (
+                SELECT 1
+                  FROM public.payment_submissions ps
+                  JOIN public.payments p
+                    ON p.method = ps.method
+                   AND lower(btrim(p.payer_reference)) =
+                       lower(btrim(ps.payer_reference))
+                 WHERE ps.method IN ('BKASH_MANUAL', 'NAGAD_MANUAL')
+                   AND NULLIF(BTRIM(ps.payer_reference), '') IS NOT NULL
+                   AND NULLIF(BTRIM(p.payer_reference), '') IS NOT NULL
+            ) THEN
+                RAISE EXCEPTION
+                    'cross-table manual wallet reference collision exists; reconcile finance evidence before migration 0069'
+                    USING ERRCODE = '23505',
+                          CONSTRAINT = 'uq_wallet_reference_across_finance_tables';
+            END IF;
+        END
+        $preflight$
+    """)
+
     # The per-table unique indexes in 0067 cannot prevent one reference from
     # existing once in payment_submissions and once in payments. Serialize
     # writes to the normalized provider reference and check the opposite table
