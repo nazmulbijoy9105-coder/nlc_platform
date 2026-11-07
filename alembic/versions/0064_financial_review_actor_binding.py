@@ -14,7 +14,8 @@ depends_on = None
 def upgrade() -> None:
     # Evidence must prove not only that a payment exists, but that the
     # reviewer recorded on the submission is the same actor who verified
-    # the receipt and posted both immutable ledger events.
+    # the receipt and posted both immutable ledger events. Both ledger
+    # events must also identify the same invoice as the submission.
     op.execute("""
         CREATE OR REPLACE FUNCTION public.nlc_assert_payment_submission_ledger_integrity()
         RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
@@ -38,6 +39,7 @@ def upgrade() -> None:
                      WHERE verified.submission_id = NEW.id
                        AND verified.company_id = NEW.company_id
                        AND verified.invoice_id = NEW.invoice_id
+                       AND allocated.invoice_id = NEW.invoice_id
                        AND verified.event_type = 'PAYMENT_VERIFIED'
                        AND allocated.event_type = 'PAYMENT_ALLOCATED'
                        AND verified.amount_bdt = NEW.amount_bdt
@@ -57,7 +59,7 @@ def upgrade() -> None:
                        AND allocation.amount_bdt = NEW.amount_bdt
                 ) INTO evidence_exists;
                 IF NOT evidence_exists THEN
-                    RAISE EXCEPTION 'approved payment submission requires reviewer-bound verified payment, allocation and ledger evidence'
+                    RAISE EXCEPTION 'approved payment submission requires reviewer-bound verified payment, allocation and ledger evidence for the same invoice'
                         USING ERRCODE = '23514';
                 END IF;
             ELSIF NEW.status = 'REJECTED' THEN
