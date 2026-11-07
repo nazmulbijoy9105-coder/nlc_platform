@@ -32,11 +32,10 @@ async def _company_contexts(
                 CompanyUserAccess.company_id == company_id,
                 CompanyUserAccess.user_id == current_user.id,
                 CompanyUserAccess.is_active.is_(True),
-                CompanyUserAccess.can_view_financials.is_(True),
             ).limit(1)
         )
         if membership.scalar_one_or_none() is None:
-            raise HTTPException(status_code=403, detail="Active company financial access is required.")
+            raise HTTPException(status_code=403, detail="Active company membership is required.")
         return [company_id]
 
     raw_document_id = request.path_params.get("document_id")
@@ -62,17 +61,22 @@ async def _company_contexts(
             ).limit(1)
         )
         if membership.scalar_one_or_none() is None:
-            raise HTTPException(status_code=403, detail="Active company financial access is required.")
+            raise HTTPException(status_code=403, detail="Active company membership is required.")
         return [company_id]
 
     result = await db.execute(
         select(CompanyUserAccess.company_id).where(
             CompanyUserAccess.user_id == current_user.id,
             CompanyUserAccess.is_active.is_(True),
-            CompanyUserAccess.can_view_financials.is_(True),
         )
     )
-    return list(result.scalars().all())
+    company_ids = list(dict.fromkeys(result.scalars().all()))
+    if len(company_ids) > 1:
+        raise HTTPException(
+            status_code=400,
+            detail="A company context is required when the account belongs to multiple companies.",
+        )
+    return company_ids
 
 
 def require_entitlement(feature_name: str):
