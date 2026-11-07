@@ -259,7 +259,7 @@ class CompanyService(BaseService[Company]):
         company_ids_filter: used for client roles (from JWT).
         search: full-text search on company name or registration number.
         """
-        filters: list[ColumnElement[bool]] = [Company.is_active]
+        filters: list[ColumnElement[bool]] = [Company.is_active.is_(True)]
 
         if risk_band:
             filters.append(Company.current_risk_band == risk_band)  # type: ignore
