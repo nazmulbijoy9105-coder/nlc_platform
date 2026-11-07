@@ -656,6 +656,60 @@ class TestDocuments:
         assert resp.status_code == 403
 
     @pytest.mark.asyncio
+    async def test_client_document_detail_requires_entitlement(
+        self, api_client, db_client_user, db_company, db
+    ):
+        from app.core.security import create_access_token
+        from app.models.documents import Document
+        from app.models.enums import DocumentType
+
+        doc = Document(
+            id=uuid.uuid4(), company_id=db_company.id,
+            document_type=DocumentType.AGM_MINUTES, title="Client-visible document",
+            notes="Approved sample", human_approved=True, in_review_queue=False,
+            auto_sent_blocked=True, is_client_visible=True,
+        )
+        db.add(doc)
+        await db.flush()
+        client_tok = create_access_token({
+            "sub": str(db_client_user.id), "user_id": str(db_client_user.id),
+            "type": "access", "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email, "company_ids": [str(db_company.id)],
+        })
+        resp = await api_client.get(
+            f"/api/v1/documents/detail/{doc.id}", headers=_auth(client_tok)
+        )
+        assert resp.status_code == 503
+        assert resp.headers["retry-after"] == "3600"
+
+    @pytest.mark.asyncio
+    async def test_client_document_pdf_requires_entitlement(
+        self, api_client, db_client_user, db_company, db
+    ):
+        from app.core.security import create_access_token
+        from app.models.documents import Document
+        from app.models.enums import DocumentType
+
+        doc = Document(
+            id=uuid.uuid4(), company_id=db_company.id,
+            document_type=DocumentType.AGM_MINUTES, title="Client-visible PDF",
+            notes="Approved sample", human_approved=True, in_review_queue=False,
+            auto_sent_blocked=True, is_client_visible=True,
+        )
+        db.add(doc)
+        await db.flush()
+        client_tok = create_access_token({
+            "sub": str(db_client_user.id), "user_id": str(db_client_user.id),
+            "type": "access", "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email, "company_ids": [str(db_company.id)],
+        })
+        resp = await api_client.get(
+            f"/api/v1/documents/detail/{doc.id}/pdf", headers=_auth(client_tok)
+        )
+        assert resp.status_code == 503
+        assert resp.headers["retry-after"] == "3600"
+
+    @pytest.mark.asyncio
     async def test_release_requires_approval_first(self, api_client, legal_tok, db, db_company):
         """Cannot release an unapproved document."""
         from app.models.documents import Document
