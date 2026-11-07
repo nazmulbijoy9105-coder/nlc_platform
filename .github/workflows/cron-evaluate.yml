@@ -18,43 +18,39 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Validate credentials and trigger evaluation
+      - name: Validate cron secret and trigger evaluation
         shell: bash
         env:
-          NLC_EMAIL: ${{ secrets.NLC_EMAIL }}
-          NLC_PASSWORD: ${{ secrets.NLC_PASSWORD }}
+          NLC_CRON_SECRET: ${{ secrets.NLC_CRON_SECRET }}
         run: |
           set -Eeuo pipefail
 
-          : "${NLC_EMAIL:?Required GitHub Actions secret NLC_EMAIL is missing or empty}"
-          : "${NLC_PASSWORD:?Required GitHub Actions secret NLC_PASSWORD is missing or empty}"
-
-          login_response="$(curl --fail --silent --show-error \
-            --connect-timeout 10 --max-time 30 \
-            --retry 2 --retry-all-errors --retry-delay 2 \
-            --request POST "https://nlc-platform.onrender.com/api/v1/auth/login" \
-            --header "Content-Type: application/json" \
-            --data "$(jq -n --arg email "$NLC_EMAIL" --arg password "$NLC_PASSWORD" \
-              '{email: $email, password: $password}')")"
-
-          token="$(jq -er '.access_token | strings | select(length > 0)' <<<"$login_response")"
-          unset login_response
-          if [[ -z "$token" ]]; then
-            echo "::error::Authentication response did not contain a non-empty access_token."
-            exit 1
-          fi
-
-          curl --fail --silent --show-error \
-            --connect-timeout 10 --max-time 120 \
-            --request POST "https://nlc-platform.onrender.com/api/v1/cron/evaluate-all" \
-            --header "Authorization: Bearer $token" \
-            --output /dev/null
-
-          unset token
+          : "${NLC_CRON_SECRET:?Required GitHub Actions secret NLC_CRON_SECRET is missing or empty}"
 
           curl --fail --silent --show-error \
             --connect-timeout 10 --max-time 20 \
-            "https://nlc-platform.onrender.com/api/v1/health/live" \
+            "https://nlc-platform.onrender.com/api/v1/admin/cron/health" \
             --output /dev/null
 
-          echo "Evaluation endpoint accepted the request and the live health endpoint responded."
+          evaluation_response="$(curl --fail --silent --show-error \
+            --connect-timeout 10 --max-time 180 \
+            --request POST "https://nlc-platform.onrender.com/api/v1/admin/cron/evaluate-all" \
+            --header "X-Cron-Secret: $NLC_CRON_SECRET")"
+
+          jq -e '
+            .status == "complete"
+            and (.total_companies | type == "number")
+            and (.evaluated | type == "number")
+            and (.errors | type == "number")
+          ' <<<"$evaluation_response" >/dev/null
+
+          total="$(jq -r '.total_companies' <<<"$evaluation_response")"
+          evaluated="$(jq -r '.evaluated' <<<"$evaluation_response")"
+          errors="$(jq -r '.errors' <<<"$evaluation_response")"
+          unset evaluation_response NLC_CRON_SECRET
+
+          echo "Evaluation result: total=$total evaluated=$evaluated errors=$errors"
+          if [[ "$errors" != "0" ]]; then
+            echo "::error::One or more company evaluations failed; inspect the application logs."
+            exit 1
+          fi
