@@ -252,6 +252,7 @@ async def test_database_rejects_allocation_mutation_without_invoice_reconciliati
     db.add(allocation)
     invoice.paid_bdt = Decimal("25.00")
     invoice.balance_bdt = Decimal("75.00")
+    invoice.status = "PARTIALLY_PAID"
     await db.flush()
     await db.execute(text(
         "SET CONSTRAINTS payment_allocations_invoice_reconciliation IMMEDIATE"
