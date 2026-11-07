@@ -262,11 +262,6 @@ class QuotationService(BaseService[Quotation]):
             {"lock_key": f"nlc-quotation-{year}"},
         )
         prefix = f"NLC-{year}-"
-        # The start-position expression is an SQL integer literal derived
-        # only from the server-generated prefix. Binding it through a textual
-        # query lets PostgreSQL infer the shared placeholder as TEXT from the
-        # regex expression, while asyncpg supplies an int; keep the dynamic
-        # value out of the bind list and the user-controlled values bound.
         suffix_start = len(prefix) + 1
         result = await self.db.execute(
             text(
