@@ -16,9 +16,9 @@ async def test_platform_admin_can_bypass_customer_entitlement(role):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "role", ["CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "LEGAL_STAFF"]
+    "role", ["CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"]
 )
-async def test_unverified_entitlement_fails_closed_for_non_admin_roles(role):
+async def test_unverified_entitlement_fails_closed_for_customer_roles(role):
     dependency = require_entitlement("advanced_compliance")
 
     with pytest.raises(HTTPException) as exc:
@@ -27,6 +27,14 @@ async def test_unverified_entitlement_fails_closed_for_non_admin_roles(role):
     assert exc.value.status_code == 503
     assert "entitlement verification is not configured" in exc.value.detail
     assert exc.value.headers["Retry-After"] == "3600"
+
+
+@pytest.mark.asyncio
+async def test_legal_staff_bypass_is_not_a_substitute_for_route_authorization():
+    """Service staff may act only where the route separately authorizes them."""
+    dependency = require_entitlement("advanced_compliance")
+    result = await dependency(SimpleNamespace(role="LEGAL_STAFF"))
+    assert result is True
 
 
 @pytest.mark.asyncio
