@@ -288,6 +288,7 @@ async def list_templates(
     status_code=status.HTTP_202_ACCEPTED,
     dependencies=[
         Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")),
+        Depends(require_entitlement("document_management")),
     ],
     summary="Request AI document generation (asynchronous)",
     description=(
