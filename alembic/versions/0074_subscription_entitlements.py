@@ -307,7 +307,7 @@ def upgrade() -> None:
             OR (
                 public.nlc_can_submit_payment_company(company_id)
                 AND created_by = public.nlc_current_user_id()
-                AND status = 'ACTIVE'
+                AND status IN ('PENDING','ACTIVE')
             )
         )
         WITH CHECK (
@@ -315,8 +315,10 @@ def upgrade() -> None:
             OR (
                 public.nlc_can_submit_payment_company(company_id)
                 AND created_by = public.nlc_current_user_id()
-                AND status = 'ACTIVE'
-                AND cancel_at_period_end IS TRUE
+                AND (
+                    (status = 'ACTIVE' AND cancel_at_period_end IS TRUE)
+                    OR (status = 'CANCELLED' AND invoice_id IS NULL)
+                )
             )
         )
     """)
@@ -352,6 +354,19 @@ def upgrade() -> None:
                               AND s.status = 'ACTIVE'
                               AND s.cancel_at_period_end IS TRUE
                               AND s.invoice_id IS NOT DISTINCT FROM subscription_events.invoice_id
+                        )
+                    )
+                    OR (
+                        event_type = 'CANCELLED'
+                        AND invoice_id IS NULL
+                        AND payment_id IS NULL
+                        AND EXISTS (
+                            SELECT 1 FROM public.client_subscriptions s
+                            WHERE s.id = subscription_events.subscription_id
+                              AND s.company_id = subscription_events.company_id
+                              AND s.created_by = public.nlc_current_user_id()
+                              AND s.status = 'CANCELLED'
+                              AND s.invoice_id IS NULL
                         )
                     )
                 )
@@ -391,31 +406,42 @@ def upgrade() -> None:
                 RAISE EXCEPTION 'invalid subscription state transition: % -> %', OLD.status, NEW.status
                     USING ERRCODE = '55000';
             END IF;
-            IF NOT public.nlc_current_user_is_finance_staff() THEN
-                IF (
-                    NEW.company_id IS DISTINCT FROM OLD.company_id
-                    OR NEW.plan_code IS DISTINCT FROM OLD.plan_code
-                    OR NEW.plan_name IS DISTINCT FROM OLD.plan_name
-                    OR NEW.billing_interval IS DISTINCT FROM OLD.billing_interval
-                    OR NEW.amount_bdt IS DISTINCT FROM OLD.amount_bdt
-                    OR NEW.currency IS DISTINCT FROM OLD.currency
-                    OR NEW.invoice_id IS DISTINCT FROM OLD.invoice_id
-                    OR NEW.grace_days IS DISTINCT FROM OLD.grace_days
-                    OR NEW.status IS DISTINCT FROM OLD.status
-                    OR NEW.starts_at IS DISTINCT FROM OLD.starts_at
-                    OR NEW.ends_at IS DISTINCT FROM OLD.ends_at
-                    OR NEW.renews_at IS DISTINCT FROM OLD.renews_at
-                    OR NEW.grace_ends_at IS DISTINCT FROM OLD.grace_ends_at
-                    OR NEW.activated_by IS DISTINCT FROM OLD.activated_by
-                    OR NEW.cancelled_at IS DISTINCT FROM OLD.cancelled_at
-                    OR NEW.suspended_at IS DISTINCT FROM OLD.suspended_at
-                    OR NEW.suspension_reason IS DISTINCT FROM OLD.suspension_reason
-                    OR NEW.cancel_at_period_end IS NOT TRUE
-                    OR OLD.cancel_at_period_end IS TRUE
-                ) THEN
-                    RAISE EXCEPTION 'customer may only request cancellation at period end'
-                        USING ERRCODE = '42501';
-                END IF;
+            IF NOT public.nlc_current_user_is_finance_staff() AND NOT (
+                (
+                    OLD.status = 'ACTIVE'
+                    AND NEW.status = 'ACTIVE'
+                    AND NEW.cancel_at_period_end IS TRUE
+                    AND OLD.cancel_at_period_end IS FALSE
+                    AND NEW.auto_renew IS NOT DISTINCT FROM OLD.auto_renew
+                    AND NEW.starts_at IS NOT DISTINCT FROM OLD.starts_at
+                    AND NEW.ends_at IS NOT DISTINCT FROM OLD.ends_at
+                    AND NEW.renews_at IS NOT DISTINCT FROM OLD.renews_at
+                    AND NEW.grace_ends_at IS NOT DISTINCT FROM OLD.grace_ends_at
+                    AND NEW.activated_by IS NOT DISTINCT FROM OLD.activated_by
+                    AND NEW.cancelled_at IS NOT DISTINCT FROM OLD.cancelled_at
+                    AND NEW.suspended_at IS NOT DISTINCT FROM OLD.suspended_at
+                    AND NEW.suspension_reason IS NOT DISTINCT FROM OLD.suspension_reason
+                )
+                OR
+                (
+                    OLD.status = 'PENDING'
+                    AND NEW.status = 'CANCELLED'
+                    AND OLD.invoice_id IS NULL
+                    AND NEW.invoice_id IS NULL
+                    AND NEW.cancelled_at IS NOT NULL
+                    AND NEW.auto_renew IS NOT DISTINCT FROM OLD.auto_renew
+                    AND NEW.starts_at IS NOT DISTINCT FROM OLD.starts_at
+                    AND NEW.ends_at IS NOT DISTINCT FROM OLD.ends_at
+                    AND NEW.renews_at IS NOT DISTINCT FROM OLD.renews_at
+                    AND NEW.grace_ends_at IS NOT DISTINCT FROM OLD.grace_ends_at
+                    AND NEW.activated_by IS NOT DISTINCT FROM OLD.activated_by
+                    AND NEW.suspended_at IS NOT DISTINCT FROM OLD.suspended_at
+                    AND NEW.suspension_reason IS NOT DISTINCT FROM OLD.suspension_reason
+                    AND NEW.cancel_at_period_end IS NOT DISTINCT FROM OLD.cancel_at_period_end
+                )
+            ) THEN
+                RAISE EXCEPTION 'customer may only cancel an uninvoiced request or schedule cancellation at period end'
+                    USING ERRCODE = '42501';
             END IF;
             IF OLD.invoice_id IS NULL AND NEW.invoice_id IS NOT NULL AND NOT EXISTS (
                 SELECT 1 FROM public.invoices i
