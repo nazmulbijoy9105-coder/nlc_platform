@@ -35,7 +35,7 @@ async def test_articles_evidence_tables_have_signed_tenant_write_policies(db):
 
         read_policy = policies[f"{table}_company_read"]
         assert read_policy[1] == "SELECT"
-        assert "nlc_can_access_company" in (read_policy[2] or "")
+        assert "nlc_can_access_articles_company" in (read_policy[2] or "")
 
         insert_name = (
             "articles_verifications_member_submit"
@@ -56,7 +56,7 @@ async def test_articles_evidence_tables_have_signed_tenant_write_policies(db):
                 assert "current_setting" not in expression.lower()
                 assert "nlc_current_user_id" not in expression.lower() or (
                     "nlc_current_user_is_staff" in expression
-                    or "nlc_can_access_company" in expression
+                    or "nlc_can_access_articles_company" in expression
                     or "nlc_can_edit_company" in expression
                 )
 
@@ -77,6 +77,17 @@ async def test_articles_evidence_tables_have_signed_tenant_write_policies(db):
         enabled, forced = flags.one()
         assert enabled is True
         assert forced is True
+
+    helper = await db.execute(
+        text(
+            "SELECT pg_get_functiondef("
+            "'public.nlc_can_access_articles_company(uuid)'::regprocedure)"
+        )
+    )
+    helper_definition = helper.scalar_one()
+    assert "assigned_staff_id" in helper_definition
+    assert "LEGAL_STAFF" in helper_definition
+    assert "company_user_access" in helper_definition
 
     for table, privilege in (
         ("articles_verifications", "DELETE"),
