@@ -96,9 +96,9 @@ def test_billing_permissions_match_defined_client_roles():
     assert "CLIENT" not in CUSTOMER_BILLING_READ_ROLES
 
 
-def test_manual_wallet_reference_indexes_exist_on_claims_and_receipts():
+def test_manual_payment_reference_indexes_exist_on_claims_and_receipts():
     submission_indexes = {index.name for index in PaymentSubmission.__table__.indexes}
     payment_indexes = {index.name for index in Payment.__table__.indexes}
 
-    assert "uq_payment_submission_wallet_reference" in submission_indexes
-    assert "uq_payment_wallet_reference" in payment_indexes
+    assert "uq_payment_submission_manual_reference" in submission_indexes
+    assert "uq_payment_manual_reference" in payment_indexes
