@@ -74,7 +74,11 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
         verified_at=now,
         created_by=db_user.id,
     )
-    db.add_all([submission, payment])
+    # The source claim must exist before the receipt's composite FK can bind
+    # it. Explicit flush avoids relying on mapper/table ordering in add_all().
+    db.add(submission)
+    await db.flush()
+    db.add(payment)
     await db.flush()
 
     db.add(PaymentAllocation(
