@@ -136,7 +136,7 @@ async def test_customer_with_verified_company_entitlement_is_allowed(monkeypatch
 
 
 @pytest.mark.asyncio
-async def test_customer_without_live_financial_company_membership_is_denied():
+async def test_customer_without_live_company_membership_is_denied():
     result = MagicMock()
     result.scalars.return_value.all.return_value = []
     db = MagicMock()
@@ -163,7 +163,7 @@ async def test_unknown_account_role_does_not_receive_entitlement():
 
 
 @pytest.mark.asyncio
-async def test_known_company_id_without_financial_membership_is_denied(monkeypatch):
+async def test_known_company_id_without_active_membership_is_denied(monkeypatch):
     company_id = uuid.uuid4()
 
     class MustNotCheckEntitlement:
