@@ -114,3 +114,29 @@ async def test_direct_submission_insert_cannot_reuse_existing_payment_reference(
     assert getattr(exc_info.value.orig, "constraint_name", None) == (
         "uq_wallet_reference_across_finance_tables"
     )
+
+@pytest.mark.asyncio
+async def test_approval_links_receipt_to_its_own_submission(db, db_company, db_user):
+    await set_rls_context(db, str(db_user.id))
+    invoice = await _invoice(db, db_company, db_user)
+    service = FinanceService(db)
+    submission = await service.submit_offline_payment(
+        company_id=db_company.id,
+        invoice_id=invoice.id,
+        submitted_by=db_user.id,
+        method="BKASH_MANUAL",
+        amount_bdt=Decimal("25.00"),
+        payer_reference=f"Txn-Approve-{uuid.uuid4().hex}",
+        paid_at=None,
+        evidence_document_id=None,
+    )
+
+    payment = await service.approve_offline_payment(
+        submission_id=submission.id,
+        reviewer_id=db_user.id,
+        review_note="Verified against provider receipt",
+        cheque_cleared_at=None,
+    )
+
+    assert payment.source_submission_id == submission.id
+    assert submission.status == "APPROVED"
