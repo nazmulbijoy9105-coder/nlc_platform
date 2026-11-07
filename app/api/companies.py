@@ -349,7 +349,7 @@ async def list_companies(search: str | None = Query(None), risk_band: RiskBand |
         user_id=(
             None
             if current_user.role in (
-                UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRole.LEGAL_STAFF
+                UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF
             )
             else current_user.id
         ),
