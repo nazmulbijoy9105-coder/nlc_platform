@@ -202,9 +202,9 @@ class QuotationService(BaseService[Quotation]):
         engagement_id: uuid.UUID,
         company_id: uuid.UUID,
         *,
-        professional_fee_bdt: float,
-        government_fee_bdt: float = 0,
-        vat_bdt: float = 0,
+        professional_fee_bdt: Decimal,
+        government_fee_bdt: Decimal = Decimal("0.00"),
+        vat_bdt: Decimal = Decimal("0.00"),
         line_items: list[dict] | None = None,
         valid_days: int = 30,
         notes: str | None = None,
@@ -273,7 +273,7 @@ class QuotationService(BaseService[Quotation]):
             ),
             {"pattern": f"{prefix}%", "suffix_start": len(prefix) + 1},
         )
-        number = result.scalar_one()
+        number: int = result.scalar_one()
         return f"{prefix}{number:04d}"
 
     async def accept(
@@ -289,8 +289,8 @@ class QuotationService(BaseService[Quotation]):
             return None
         if q.status not in {"DRAFT", "SENT"}:
             raise CommercialConflictError(f"Cannot accept a quotation in {q.status} state.")
-        if q.valid_until < date.today():
-            raise CommercialConflictError("An expired quotation cannot be accepted; issue a renewed quotation.")
+        if q.valid_until is None or q.valid_until < date.today():
+            raise CommercialConflictError("A quotation without a valid expiry date or with an expired date cannot be accepted; issue a renewed quotation.")
         engagement_result = await self.db.execute(
             select(Engagement).where(
                 Engagement.id == q.engagement_id,
