@@ -156,9 +156,9 @@ async def list_all_documents(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    from sqlalchemy import select
+    from sqlalchemy import or_, select
 
-    from app.models.company import CompanyUserAccess
+    from app.models.company import Company, CompanyUserAccess
     from app.models.documents import Document
 
     client_roles = ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY")
@@ -167,13 +167,28 @@ async def list_all_documents(
     filters = [Document.is_active]
 
     if company_id:
+        if current_user.role == "LEGAL_STAFF":
+            await ensure_staff_company_scope(company_id, current_user, db)
         filters.append(Document.company_id == company_id)  # type: ignore
     if is_client:
         accessible = select(CompanyUserAccess.company_id).where(
             CompanyUserAccess.user_id == current_user.id,
-        CompanyUserAccess.is_active.is_(True),
+            CompanyUserAccess.is_active.is_(True),
         )
         filters.append(Document.company_id.in_(accessible))  # type: ignore
+    elif current_user.role == "LEGAL_STAFF":
+        assigned_or_accessible = select(Company.id).where(
+            or_(
+                Company.assigned_staff_id == current_user.id,
+                Company.id.in_(
+                    select(CompanyUserAccess.company_id).where(
+                        CompanyUserAccess.user_id == current_user.id,
+                        CompanyUserAccess.is_active.is_(True),
+                    )
+                ),
+            )
+        )
+        filters.append(Document.company_id.in_(assigned_or_accessible))  # type: ignore
 
     if document_type:
         filters.append(Document.document_type == document_type)  # type: ignore
