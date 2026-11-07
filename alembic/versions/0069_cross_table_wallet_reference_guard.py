@@ -116,7 +116,7 @@ def upgrade() -> None:
 
     # The per-table unique indexes in 0067 cannot prevent one reference from
     # existing once in payment_submissions and once in payments. Serialize
-    # writes to the normalized provider reference and check the opposite table
+    # writes to the normalized bank/instrument reference and check the opposite table
     # in a SECURITY DEFINER trigger, so direct SQL cannot bypass the invariant.
     op.execute("""
         CREATE OR REPLACE FUNCTION public.nlc_guard_cross_table_manual_reference()
@@ -185,7 +185,7 @@ def upgrade() -> None:
 
             IF duplicate_exists THEN
                 RAISE EXCEPTION
-                    'uq_manual_reference_across_finance_tables: manual manual payment reference already exists across finance claims and receipts'
+                    'uq_manual_reference_across_finance_tables: manual payment reference already exists across finance claims and receipts'
                     USING ERRCODE = '23505',
                           CONSTRAINT = 'uq_manual_reference_across_finance_tables';
             END IF;
@@ -214,6 +214,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Forward-only: dropping this guard would permit a provider transfer to be
+    # Forward-only: dropping this guard would permit a bank or cheque payment to be
     # claimed against one invoice and independently credited to another.
     pass
