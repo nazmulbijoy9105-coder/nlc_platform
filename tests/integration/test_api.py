@@ -612,6 +612,50 @@ class TestDocuments:
         assert isinstance(resp.json(), list)
 
     @pytest.mark.asyncio
+    async def test_client_document_list_requires_entitlement(
+        self, api_client, db_client_user, db_company
+    ):
+        """An active company membership does not bypass paid document entitlement."""
+        from app.core.security import create_access_token
+
+        client_tok = create_access_token({
+            "sub": str(db_client_user.id),
+            "user_id": str(db_client_user.id),
+            "type": "access",
+            "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email,
+            "company_ids": [str(db_company.id)],
+        })
+        resp = await api_client.get(
+            f"/api/v1/documents/{db_company.id}",
+            headers=_auth(client_tok),
+        )
+        assert resp.status_code == 503
+        assert "entitlement verification is not configured" in resp.json()["detail"]
+        assert resp.headers["retry-after"] == "3600"
+
+    @pytest.mark.asyncio
+    async def test_client_document_list_rejects_foreign_company(
+        self, api_client, db_client_user, db_other_company
+    ):
+        """Entitlement checks must not weaken the live tenant membership check."""
+        from app.core.security import create_access_token
+
+        client_tok = create_access_token({
+            "sub": str(db_client_user.id),
+            "user_id": str(db_client_user.id),
+            "type": "access",
+            "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email,
+            "company_ids": [],
+        })
+        resp = await api_client.get(
+            f"/api/v1/documents/{db_other_company.id}",
+            headers=_auth(client_tok),
+        )
+        assert resp.status_code == 403
+
+    @pytest.mark.asyncio
     async def test_release_requires_approval_first(self, api_client, legal_tok, db, db_company):
         """Cannot release an unapproved document."""
         from app.models.documents import Document
