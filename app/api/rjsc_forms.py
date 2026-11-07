@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.entitlement import require_entitlement
+from app.core.company_authorization import ensure_staff_company_scope
 from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
