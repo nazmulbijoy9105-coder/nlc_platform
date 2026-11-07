@@ -108,7 +108,6 @@ def upgrade() -> None:
         sa.Column("company_id", uuid, sa.ForeignKey("companies.id", ondelete="RESTRICT"), nullable=False),
         sa.Column("feature_code", sa.String(80), nullable=False),
         sa.Column("enabled", sa.Boolean(), nullable=False, server_default=sa.text("true")),
-        sa.Column("limits", postgresql.JSONB(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.UniqueConstraint("subscription_id", "feature_code", name="uq_client_subscription_feature"),
         sa.ForeignKeyConstraint(
