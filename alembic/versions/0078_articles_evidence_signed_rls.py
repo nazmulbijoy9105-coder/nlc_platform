@@ -175,13 +175,26 @@ def upgrade() -> None:
             """)
 
         if table.endswith("_events"):
+            # 0050 grants privileges only to tables that exist at that point in
+            # the graph. Articles tables are restored later, so grant the
+            # minimum required runtime privileges explicitly here.
+            op.execute(
+                f"GRANT SELECT, INSERT ON TABLE public.{table} TO nlc_app_role"
+            )
             # The append-only trigger remains in place. SQL privileges also
             # prohibit mutation even if a future policy is accidentally added.
             op.execute(
-                f"REVOKE UPDATE, DELETE, TRUNCATE ON TABLE public.{table} "
-                "FROM nlc_app_role"
+                f"REVOKE UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER "
+                f"ON TABLE public.{table} FROM nlc_app_role"
             )
         else:
+            op.execute(
+                f"GRANT SELECT, INSERT, UPDATE ON TABLE public.{table} TO nlc_app_role"
+            )
+            op.execute(
+                f"REVOKE DELETE, TRUNCATE, REFERENCES, TRIGGER "
+                f"ON TABLE public.{table} FROM nlc_app_role"
+            )
             op.execute(f"""
                 CREATE POLICY {table}_staff_update
                 ON public.{table}
