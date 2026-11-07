@@ -22,6 +22,7 @@ from app.core.dependencies import (
 )
 from app.models.finance import ClientSubscription, Invoice
 from app.models.user import User
+from app.services.notification_service import ActivityService
 from app.services.subscription_service import (
     SubscriptionConflictError,
     SubscriptionNotFoundError,
@@ -142,6 +143,7 @@ async def list_subscription_plans(
 async def upsert_subscription_plan(
     plan_code: str,
     body: SubscriptionPlanUpsertRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db_for_user),
     current_user: User = Depends(get_current_user),
     _role: None = Depends(require_roles(*FINANCE_ROLES)),
@@ -159,6 +161,29 @@ async def upsert_subscription_plan(
         )
     except (SubscriptionNotFoundError, SubscriptionConflictError) as exc:
         _raise_subscription_error(exc)
+    await ActivityService(db).log(
+        actor_user_id=current_user.id,
+        action="SUBSCRIPTION_PLAN_UPSERTED",
+        resource_type="subscription_plan",
+        description=f"Subscription plan {plan.plan_code} was created or updated",
+        ip_address=request.client.host if request.client else None,
+        detail={
+            "plan_code": plan.plan_code,
+            "plan_name": plan.plan_name,
+            "grace_days": plan.grace_days,
+            "is_active": plan.is_active,
+            "prices": [
+                {
+                    "billing_interval": item.billing_interval,
+                    "amount_bdt": str(item.amount_bdt),
+                    "tax_bdt": str(item.tax_bdt),
+                    "tax_policy_reference": item.tax_policy_reference,
+                }
+                for item in body.prices
+            ],
+            "features": [item.feature_code for item in body.features],
+        },
+    )
     return {
         "plan_code": plan.plan_code,
         "plan_name": plan.plan_name,
