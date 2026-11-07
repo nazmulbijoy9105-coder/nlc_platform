@@ -3,10 +3,12 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 from decimal import Decimal
+from uuid import UUID
 
 import pytest
 
 from app.core.security import create_access_token
+from app.models.commercial import Engagement, Quotation
 
 
 def _auth(token: str) -> dict[str, str]:
@@ -199,3 +201,48 @@ async def test_engagement_rejects_invalid_status_jump(
     )
     assert response.status_code == 409, response.text
 
+
+
+@pytest.mark.asyncio
+async def test_expired_quotation_cannot_be_accepted(
+    api_client, commercial_admin_token, db_company, db
+):
+    engagement = await _create_engagement(
+        api_client, commercial_admin_token, db_company.id
+    )
+    quotation = await _create_quotation(
+        api_client, commercial_admin_token, db_company.id, engagement["engagement_id"]
+    )
+    stored = await db.get(Quotation, UUID(quotation["quotation_id"]))
+    assert stored is not None
+    stored.valid_until = date.today() - timedelta(days=1)
+    await db.flush()
+
+    response = await api_client.patch(
+        f"/api/v1/commercial/quotations/{quotation['quotation_id']}/accept",
+        headers=_auth(commercial_admin_token),
+    )
+    assert response.status_code == 409, response.text
+    assert "expired" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_accepting_quotation_with_inactive_engagement_returns_not_found(
+    api_client, commercial_admin_token, db_company, db
+):
+    engagement = await _create_engagement(
+        api_client, commercial_admin_token, db_company.id
+    )
+    quotation = await _create_quotation(
+        api_client, commercial_admin_token, db_company.id, engagement["engagement_id"]
+    )
+    stored = await db.get(Engagement, UUID(engagement["engagement_id"]))
+    assert stored is not None
+    stored.is_active = False
+    await db.flush()
+
+    response = await api_client.patch(
+        f"/api/v1/commercial/quotations/{quotation['quotation_id']}/accept",
+        headers=_auth(commercial_admin_token),
+    )
+    assert response.status_code == 404, response.text
