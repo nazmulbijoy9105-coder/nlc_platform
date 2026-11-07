@@ -217,3 +217,71 @@ async def test_database_rejects_allocation_without_invoice_balance_reconciliatio
                 )
             )
 
+@pytest.mark.parametrize("mutation", ["UPDATE", "DELETE"])
+@pytest.mark.asyncio
+async def test_database_rejects_allocation_mutation_without_invoice_reconciliation(
+    db, db_company, db_user, mutation
+):
+    """Allocation amount edits and deletion cannot silently alter invoice balances."""
+    await set_rls_context(db, str(db_user.id))
+    invoice = await _issued_invoice(db, db_company, db_user)
+    now = datetime.now(UTC)
+    payment = Payment(
+        company_id=db_company.id,
+        payment_number=f"PAY-TEST-{invoice.id.hex[:12]}",
+        method="CASH",
+        channel="OFFLINE",
+        amount_bdt=Decimal("25.00"),
+        currency="BDT",
+        status="SETTLED",
+        received_at=now,
+        verified_by=db_user.id,
+        verified_at=now,
+        created_by=db_user.id,
+    )
+    db.add(payment)
+    await db.flush()
+    allocation = PaymentAllocation(
+        company_id=db_company.id,
+        payment_id=payment.id,
+        invoice_id=invoice.id,
+        amount_bdt=Decimal("25.00"),
+        currency="BDT",
+        created_by=db_user.id,
+    )
+    db.add(allocation)
+    invoice.paid_bdt = Decimal("25.00")
+    invoice.balance_bdt = Decimal("75.00")
+    await db.flush()
+    await db.execute(text(
+        "SET CONSTRAINTS payment_allocations_invoice_reconciliation IMMEDIATE"
+    ))
+    await db.execute(text(
+        "SET CONSTRAINTS payment_allocations_invoice_reconciliation DEFERRED"
+    ))
+
+    with pytest.raises(DBAPIError):
+        async with db.begin_nested():
+            if mutation == "UPDATE":
+                await db.execute(
+                    text("""
+                        UPDATE public.payment_allocations
+                           SET amount_bdt = 20.00
+                         WHERE payment_id = :payment_id
+                           AND invoice_id = :invoice_id
+                    """),
+                    {"payment_id": payment.id, "invoice_id": invoice.id},
+                )
+            else:
+                await db.execute(
+                    text("""
+                        DELETE FROM public.payment_allocations
+                         WHERE payment_id = :payment_id
+                           AND invoice_id = :invoice_id
+                    """),
+                    {"payment_id": payment.id, "invoice_id": invoice.id},
+                )
+            await db.execute(text(
+                "SET CONSTRAINTS payment_allocations_invoice_reconciliation IMMEDIATE"
+            ))
+
