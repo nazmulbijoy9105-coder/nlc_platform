@@ -599,8 +599,8 @@
     },
     {
       "rule_id": "CAP-003",
-      "rule_name": "Capital Reduction Without Court Order",
-      "statutory_basis": "Section 150, Companies Act 1994 (Bangladesh)",
+      "rule_name": "Capital Reduction — Court Confirmation Review",
+      "statutory_basis": "Sections 59-60, Companies Act 1994 (Bangladesh)",
       "engine_severity": "NOT_EVALUATED",
       "engine_score_impact": 0,
       "engine_black_override": false,
