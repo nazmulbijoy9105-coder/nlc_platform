@@ -360,3 +360,15 @@ def test_seed_statutory_basis_matches_engine_call_for_same_rule():
             })
 
     assert not mismatches, mismatches
+
+def test_inc005_imports_with_specific_foreign_investment_evidence():
+    """INC-005's multi-document evidence mapping must survive registry import."""
+    rule = STATUTORY_RULE_REGISTRY["INC-005"]
+    assert set(rule.evidence_required) == {
+        "INC-005:SUBSCRIPTION_OR_ALLOTMENT_RECORD",
+        "INC-005:AD_BANK_ENCASHMENT_CERTIFICATE_OR_PERMITTED_FC_ACCOUNT_EVIDENCE",
+        "INC-005:REMITTANCE_IDENTITY_AND_BANK_PROVENANCE",
+        "INC-005:CURRENT_BANGLADESH_BANK_CIRCULAR_VERSION",
+    }
+    assert rule.severity.value == "NOT_EVALUATED"
+    assert rule.score_impact == 0
