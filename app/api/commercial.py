@@ -40,7 +40,7 @@ from app.core.dependencies import (
 )
 from app.models.enums import EngagementStatus, RevenueTier, TaskPriority, TaskStatus
 from app.models.user import User
-from app.services.commercial_service import EngagementService, QuotationService, TaskService
+from app.services.commercial_service import CommercialConflictError, EngagementService, QuotationService, TaskService
 from app.models.commercial import InvalidEngagementTransitionError
 from app.services.notification_service import ActivityService
 
@@ -308,7 +308,7 @@ async def advance_engagement_status(
             engagement_id=engagement_id,
             new_status=body.new_status,
         )
-    except InvalidEngagementTransitionError as exc:
+    except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found.")
@@ -355,6 +355,8 @@ async def create_quotation(
             valid_days=body.valid_days,
             notes=body.notes,
         )
+    except CommercialConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         # Do not disclose whether an engagement exists in another tenant.
         raise HTTPException(status_code=404, detail="Engagement not found.") from exc
@@ -385,7 +387,10 @@ async def accept_quotation(
     svc = QuotationService(db)
     activity = ActivityService(db)
 
-    quotation = await svc.accept(quotation_id=quotation_id)
+    try:
+        quotation = await svc.accept(quotation_id=quotation_id)
+    except CommercialConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
 
