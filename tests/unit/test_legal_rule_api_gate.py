@@ -38,7 +38,7 @@ def test_public_rule_catalogue_masks_unapproved_legal_content(monkeypatch):
     assert response.score_impact == 0
     assert response.is_black_override is False
     assert response.is_active is False
-    assert response.verification_status == "PENDING_COUNSEL_REVIEW"
+    assert response.verification_status == "PENDING"
     assert response.verified_at is None
     assert response.statutory_effective_date is None
     assert "NOT VALIDATED" in response.statutory_basis
