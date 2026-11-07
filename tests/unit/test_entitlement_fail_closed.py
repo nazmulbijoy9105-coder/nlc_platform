@@ -49,6 +49,35 @@ async def test_legal_staff_does_not_receive_implicit_subscription_bypass():
 
 
 @pytest.mark.asyncio
+async def test_assigned_legal_staff_still_requires_company_subscription(monkeypatch):
+    company_id = uuid.uuid4()
+
+    async def allow_assigned_scope(company_id, current_user, db):
+        assert company_id == expected_company
+        assert current_user.role == "LEGAL_STAFF"
+
+    class FakeSubscriptionService:
+        def __init__(self, db):
+            pass
+
+        async def has_entitlement(self, *, company_id, feature_code):
+            return company_id == expected_company and feature_code == "compliance_package"
+
+    expected_company = company_id
+    from app.core import company_authorization
+
+    monkeypatch.setattr(company_authorization, "ensure_staff_company_scope", allow_assigned_scope)
+    monkeypatch.setattr(entitlement, "SubscriptionService", FakeSubscriptionService)
+    request = _request(company_id)
+    user = SimpleNamespace(id=uuid.uuid4(), role="LEGAL_STAFF")
+
+    assert await entitlement.require_entitlement("compliance_package")(
+        request=request, db=MagicMock(), current_user=user
+    ) is True
+    assert request.state.entitled_company_ids == [str(company_id)]
+
+
+@pytest.mark.asyncio
 async def test_customer_without_company_entitlement_receives_payment_required(monkeypatch):
     company_id = uuid.uuid4()
 
