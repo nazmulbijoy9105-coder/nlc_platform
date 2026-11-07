@@ -68,6 +68,7 @@ class SubscriptionPlanFeature(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("plan_code", "feature_code", name="uq_subscription_plan_feature"),
         CheckConstraint("length(feature_code) BETWEEN 2 AND 80", name="ck_subscription_feature_code_length"),
+        CheckConstraint("feature_code IN ('compliance_package','document_management','corporate_rescue')", name="ck_subscription_plan_feature_supported"),
     )
 
     plan_code: Mapped[str] = mapped_column(String(60), ForeignKey("subscription_plans.plan_code", ondelete="RESTRICT"), nullable=False)
@@ -88,6 +89,7 @@ class ClientSubscriptionFeature(UUIDPrimaryKeyMixin, Base):
             name="fk_client_subscription_features_subscription_company",
         ),
         CheckConstraint("length(feature_code) BETWEEN 2 AND 80", name="ck_client_subscription_feature_code_length"),
+        CheckConstraint("feature_code IN ('compliance_package','document_management','corporate_rescue')", name="ck_client_subscription_feature_supported"),
         Index("ix_client_subscription_features_lookup", "company_id", "subscription_id", "feature_code"),
     )
 
