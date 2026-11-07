@@ -253,6 +253,10 @@ def upgrade() -> None:
             "board_approval_verified", "registration_refusal_verified",
             "refusal_notice_verified", "register_update_verified",
         )),
+        ("companies", (
+            "business_commencement_declaration_verified",
+            "section150_applicability_verified",
+        )),
     ):
         for column in columns:
             op.alter_column(table, column, server_default=None, schema="public")
