@@ -124,9 +124,13 @@ class DirectorChange:
     director_id: str
     event_type: str
     event_date: date
-    form_filed: bool = False
+    # Form XII status and section 93(2) director-consent status are separate facts.
+    # None means not verified; absence of an upload is not proof of non-filing.
+    form_filed: bool | None = None
     form_filed_date: Optional[date] = None
     form_type: str = "XII"
+    consent_filed: bool | None = None
+    consent_filed_date: Optional[date] = None
 
 @dataclass
 class ShareTransfer:
@@ -1411,80 +1415,121 @@ class NLCRuleEngine:
     def _run_director_rules(self, c: CompanyProfile) -> None:
         for change in c.director_changes:
             delay = (self.today - change.event_date).days
+
             if change.form_filed is None:
                 self._add_flag(ComplianceFlag(
                     rule_id="DIR-001",
-                    flag_code="DIRECTOR_FILING_STATUS_UNKNOWN",
-                    severity=Severity.YELLOW,
+                    flag_code="DIRECTOR_FORM_XII_STATUS_UNKNOWN",
+                    severity=Severity.NOT_EVALUATED,
                     score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Director filing status unknown for {change.director_id}.",
-                    statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
+                    description=(
+                        "Director Form XII filing status is unknown. Obtain the "
+                        "authenticated RJSC filing record or registry response; "
+                        "non-production is not proof of non-filing."
+                    ),
+                    statutory_basis="Section 115(2), Companies Act 1994 (Bangladesh)",
                     detail={"director_id": change.director_id},
-                    state=RuleState.UNKNOWN
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
                 ))
                 continue
-            elif not change.form_filed and delay > DIRECTOR_FILING_DEADLINE_DAYS:
+
+            if change.form_filed is False and delay > DIRECTOR_FILING_DEADLINE_DAYS:
                 if change.event_type == "appointment":
-                    severity = Severity.RED if delay > 90 else Severity.YELLOW
-                    self._add_flag(ComplianceFlag(
-                        rule_id="DIR-001",
-                        flag_code="FORM_XII_APPOINTMENT_PENDING",
-                        severity=severity,
-                        score_impact=10 if delay > 90 else 5,
-                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"Director appointment not filed via Form XII. Section 115: 14-day deadline. Overdue by {delay} days.",
-                        statutory_basis="Section 90, Companies Act 1994 (Bangladesh)",
-                        detail={"director_id": change.director_id, "delay": delay}
-                    ))
+                    rule_id = "DIR-001"
+                    flag_code = "FORM_XII_APPOINTMENT_REQUIRES_REVIEW"
                 elif change.event_type in ("resignation", "removal", "death"):
-                    severity = Severity.RED if delay > 90 else Severity.YELLOW
+                    rule_id = "DIR-002"
+                    flag_code = "FORM_XII_CESSATION_REQUIRES_REVIEW"
+                else:
+                    rule_id = "DIR-001"
+                    flag_code = "FORM_XII_CHANGE_REQUIRES_REVIEW"
+
+                self._add_flag(ComplianceFlag(
+                    rule_id=rule_id,
+                    flag_code=flag_code,
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=(
+                        f"Reported Form XII filing is not verified {delay} days after "
+                        f"the {change.event_type} event. Section 115(2) provides a "
+                        "14-day filing period; verify the event, liable filer, actual "
+                        "RJSC record, extension/correction and current law before any "
+                        "default or penalty conclusion."
+                    ),
+                    statutory_basis="Section 115(2), Companies Act 1994 (Bangladesh)",
+                    detail={"director_id": change.director_id, "delay": delay, "type": change.event_type},
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                ))
+
+                # >365 days is an NLC internal escalation threshold, not a
+                # separate statutory deadline or a continuing-offence rule.
+                if delay > 365:
                     self._add_flag(ComplianceFlag(
-                        rule_id="DIR-002",
-                        flag_code="FORM_XII_DEPARTURE_PENDING",
-                        severity=severity,
-                        score_impact=10 if delay > 90 else 5,
-                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"Director {change.event_type} not filed via Form XII. Section 115: 14-day deadline. Overdue by {delay} days.",
-                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
-                        detail={"director_id": change.director_id, "delay": delay, "type": change.event_type}
+                        rule_id="DIR-003",
+                        flag_code="DIRECTOR_FILING_LONG_DELAY_INTERNAL_ESCALATION",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                        description=(
+                            f"NLC internal follow-up threshold exceeded ({delay} days). "
+                            "This is a commercial escalation policy, not an additional "
+                            "statutory offence or daily penalty. The underlying filing "
+                            "duty and any consequence require separate legal review."
+                        ),
+                        statutory_basis="Section 115(2), Companies Act 1994 (Bangladesh); 365-day threshold is NLC policy only",
+                        detail={"director_id": change.director_id, "delay": delay, "policy_threshold_days": 365},
+                        state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                        eval_state="UNKNOWN",
                     ))
+
+                if change.event_type in ("resignation", "removal", "death"):
                     self._add_flag(ComplianceFlag(
                         rule_id="DIR-004",
-                        flag_code="LATE_CESSATION_FILING_LEGAL_EFFECT_REVIEW",
+                        flag_code="DIRECTOR_CESSATION_LEGAL_EFFECT_REVIEW",
                         severity=Severity.NOT_EVALUATED,
                         score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description="Cessation particulars were filed late or remain unfiled. The legal effect on third-party reliance and any continuing liability requires case-specific legal review; non-filing alone does not automatically establish continuing director liability.",
+                        description=(
+                            "Cessation particulars are reported late or unfiled. The "
+                            "effect on third-party reliance and any continuing liability "
+                            "requires case-specific legal review; non-filing alone does "
+                            "not automatically establish continuing director liability."
+                        ),
                         statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "legal_review_required": True},
                         state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                         eval_state="UNKNOWN",
                     ))
 
-                if delay > 365:
-                    self._add_flag(ComplianceFlag(
-                        rule_id="DIR-003",
-                        flag_code="DIRECTOR_FILING_MAJOR_IRREGULARITY",
-                        severity=Severity.RED,
-                        score_impact=15,
-                        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                        description=f"Director filing overdue {delay} days. Exceeds 1 year — Major Irregularity.",
-                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
-                        detail={"director_id": change.director_id, "delay": delay}
-                    ))
-                # DIR-007: Director consent not filed within 30 days (Section 93)
-                if change.event_type == "appointment" and delay > 30:
-                    self._add_flag(ComplianceFlag(
-                        rule_id="DIR-007",
-                        flag_code="DIRECTOR_CONSENT_NOT_FILED",
-                        severity=Severity.YELLOW,
-                        score_impact=5,
-                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"Director consent not filed within 30 days. Section 93(2): overdue by {delay} days.",
-                        statutory_basis="Section 93, Companies Act 1994 (Bangladesh)",
-                        detail={"director_id": change.director_id, "delay": delay}
-                    ))
+            # Section 93(2) consent is a distinct filing from Form XII. Do not
+            # infer it from form_filed; require its own verified status.
+            if (
+                change.event_type == "appointment"
+                and change.consent_filed is False
+                and delay > 30
+            ):
+                self._add_flag(ComplianceFlag(
+                    rule_id="DIR-007",
+                    flag_code="DIRECTOR_CONSENT_FILING_REQUIRES_REVIEW",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=(
+                        f"Written director consent is reported unfiled {delay} days "
+                        "after appointment. Section 93(2) provides a 30-day filing "
+                        "period; reconcile the pre-appointment consent/form requirements "
+                        "under section 92 and current RJSC Form IX instructions. "
+                        "No default is determined without authenticated filing evidence."
+                    ),
+                    statutory_basis="Section 93(2), Companies Act 1994 (Bangladesh); section 92/Form IX mapping requires review",
+                    detail={"director_id": change.director_id, "delay": delay},
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                ))
 
     # ───────────────────────────────────────────────────────────────────
     # MODULE 5: SHAREHOLDING
