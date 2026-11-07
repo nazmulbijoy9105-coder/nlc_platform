@@ -16,7 +16,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models.company import Company
-from app.models.database import set_rls_context
+from app.models.database import set_admin_context, set_rls_context
 from app.models.enums import CompanyStatus, RiskBand, UserRole
 from app.models.finance import (
     Invoice,
@@ -61,9 +61,16 @@ async def _committed_finance_fixture(test_engine, *, with_submission: bool):
             is_active=True,
             totp_enabled=False,
         )
-        session.add_all([company, user])
+        # Bootstrap the test actor through the explicit trusted service
+        # principal, then switch to the actor's signed UUID before creating
+        # tenant data. This exercises the real companies INSERT RLS policy;
+        # it does not disable RLS or rely on an unsigned session setting.
+        await set_admin_context(session)
+        session.add(user)
         await session.flush()
         await set_rls_context(session, str(user_id))
+        session.add(company)
+        await session.flush()
 
         service = FinanceService(session)
         invoice = await service.create_invoice(
