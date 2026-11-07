@@ -1835,12 +1835,21 @@ class NLCRuleEngine:
         if c.capital_increase_date and c.capital_increase_resolution is False:
             self._add_flag(ComplianceFlag(
                 rule_id="CAP-001",
-                flag_code="CAPITAL_INCREASE_RESOLUTION_MISSING",
-                severity=Severity.YELLOW,
-                score_impact=5,
+                flag_code="CAPITAL_ALTERATION_AUTHORITY_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="Capital increase without shareholder resolution. Section 54: Ordinary/Special Resolution required.",
-                statutory_basis="Section 53, Companies Act 1994 (Bangladesh)",
+                description=(
+                    "Internal review signal only: verify the exact capital alteration "
+                    "type, Articles authority and resolution required by section 53. "
+                    "Section 54 addresses specified consolidation/conversion/subdivision "
+                    "notices; increase of registered share capital is separately governed "
+                    "by section 56. Do not assume a special resolution without the Act "
+                    "and the company's Articles."
+                ),
+                statutory_basis="Sections 53, 54 and 56, Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
             ))
 
         for charge in c.charges:
