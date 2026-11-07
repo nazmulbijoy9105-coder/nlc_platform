@@ -281,6 +281,7 @@ class ClientSubscription(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             name="fk_client_subscriptions_invoice_company",
         ),
         CheckConstraint("amount_bdt >= 0", name="ck_subscription_amount_nonnegative"),
+        CheckConstraint("grace_days BETWEEN 0 AND 30", name="ck_client_subscription_grace_days"),
         CheckConstraint("billing_interval IN ('MONTHLY','QUARTERLY','ANNUAL','ONE_TIME')", name="ck_subscription_billing_interval"),
         CheckConstraint("status IN ('PENDING','ACTIVE','PAST_DUE','CANCELLED','EXPIRED','SUSPENDED')", name="ck_subscription_status"),
         CheckConstraint("currency = 'BDT'", name="ck_subscription_currency_bdt"),
