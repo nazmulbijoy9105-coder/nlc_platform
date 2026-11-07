@@ -139,6 +139,7 @@ class ShareTransfer:
     # None means the evidence/status has not been verified; do not infer absence.
     instrument_recorded: bool | None = None
     stamp_duty_paid: bool | None = None
+    stamp_duty_applicability_verified: bool = False
     stamp_duty_amount: Optional[float] = None
     board_approval: bool | None = None
     share_register_updated: bool | None = None
@@ -1612,7 +1613,7 @@ class NLCRuleEngine:
 
             # Stamp duty depends on the instrument, execution facts and current
             # Schedule I. Never infer non-payment from a missing receipt alone.
-            if transfer.stamp_duty_paid is False:
+            if transfer.stamp_duty_applicability_verified and transfer.stamp_duty_paid is False:
                 flag = ComplianceFlag(
                     rule_id="TR-002",
                     flag_code="STAMP_DUTY_REQUIRES_INSTRUMENT_REVIEW",
