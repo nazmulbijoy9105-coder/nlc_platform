@@ -8,13 +8,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db_for_user
-from app.models.company import Company, CompanyUserAccess
+from app.models.company import CompanyUserAccess
 from app.models.user import User
 from app.services.subscription_service import SubscriptionService
-from app.core.company_authorization import ensure_staff_company_scope
 
 _PRIVILEGED_BYPASS_ROLES = frozenset({"SUPER_ADMIN", "ADMIN_STAFF"})
-_CUSTOMER_ROLES = frozenset({"CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "LEGAL_STAFF"})
+_CUSTOMER_ROLES = frozenset({"CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"})
 
 
 async def _company_contexts(
@@ -28,9 +27,6 @@ async def _company_contexts(
             company_id = uuid.UUID(str(raw_company_id))
         except (TypeError, ValueError) as exc:
             raise HTTPException(status_code=400, detail="Invalid company context") from exc
-        if str(getattr(current_user.role, "value", current_user.role)) == "LEGAL_STAFF":
-            await ensure_staff_company_scope(company_id, current_user, db)
-            return [company_id]
         membership = await db.execute(
             select(CompanyUserAccess.company_id).where(
                 CompanyUserAccess.company_id == company_id,
@@ -57,9 +53,6 @@ async def _company_contexts(
         company_id = result.scalar_one_or_none()
         if company_id is None:
             raise HTTPException(status_code=404, detail="Document not found")
-        if str(getattr(current_user.role, "value", current_user.role)) == "LEGAL_STAFF":
-            await ensure_staff_company_scope(company_id, current_user, db)
-            return [company_id]
         membership = await db.execute(
             select(CompanyUserAccess.company_id).where(
                 CompanyUserAccess.company_id == company_id,
@@ -72,17 +65,6 @@ async def _company_contexts(
             raise HTTPException(status_code=403, detail="Active company financial access is required.")
         return [company_id]
 
-    if str(getattr(current_user.role, "value", current_user.role)) == "LEGAL_STAFF":
-        assigned = await db.execute(
-            select(Company.id).where(Company.assigned_staff_id == current_user.id)
-        )
-        memberships = await db.execute(
-            select(CompanyUserAccess.company_id).where(
-                CompanyUserAccess.user_id == current_user.id,
-                CompanyUserAccess.is_active.is_(True),
-            )
-        )
-        return list(dict.fromkeys([*assigned.scalars().all(), *memberships.scalars().all()]))
     result = await db.execute(
         select(CompanyUserAccess.company_id).where(
             CompanyUserAccess.user_id == current_user.id,
