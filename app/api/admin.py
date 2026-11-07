@@ -379,7 +379,7 @@ async def cron_evaluate_all(
         )
 
     provided = request.headers.get("X-Cron-Secret", "")
-    if not hmac.compare_digest(provided, cron_secret):
+    if not hmac.compare_digest(provided.encode("utf-8"), cron_secret.encode("utf-8")):
         raise HTTPException(status_code=403, detail="Invalid cron secret")
 
     # The secret is verified before granting this background task ADMIN RLS context.
