@@ -206,7 +206,18 @@ class Company(FullMixin, Base):
     director_office_of_profit: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
     managing_director_appointment_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     member_count: Mapped[int | None] = mapped_column(Integer, server_default="0", nullable=True)
-    business_commencement_declaration_filed: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    # Section 150 applies only to qualifying public companies. These are
+    # evidence-bound facts; legacy defaults are not treated as proof.
+    business_commencement_declaration_filed: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
+    business_commencement_declaration_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    business_commencement_declaration_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    business_commencement_declaration_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    business_commencement_declaration_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    section150_prospectus_issued: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    section150_applicability_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    section150_applicability_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    section150_applicability_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    section150_applicability_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     tax_return_deadline_extended: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # ── Director Disqualification ────────────────────────────────

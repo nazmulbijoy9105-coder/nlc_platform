@@ -187,7 +187,12 @@ def _flag_to_response(flag) -> FlagResponse:
         rule_id=flag.rule_id,
         rule_name=(
             (getattr(flag, "description", flag.flag_code) or flag.flag_code)
-            if approved else f"Pending counsel review: {getattr(flag, 'description', flag.flag_code) or flag.flag_code}"
+            if approved
+            else (
+                "Pending counsel review: internal review signal only. This rule is not "
+                "approved for legal determinations. No breach, liability, penalty or "
+                "compliance status is determined; obtain independent Bangladesh-qualified counsel review."
+            )
         ),
         severity=str(severity) if approved else "NOT_EVALUATED",
         score_impact=int(flag.score_impact or 0) if approved else 0,

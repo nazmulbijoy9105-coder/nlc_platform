@@ -497,7 +497,8 @@ class TestRescue:
             f"/api/v1/rescue/plans/{db_company.id}/active",
             headers=_auth(super_admin_tok),
         )
-        assert resp.status_code == 404
+        assert resp.status_code == 503
+        assert "independent counsel approval" in resp.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_list_rescue_plans(self, api_client, super_admin_tok):
@@ -505,8 +506,8 @@ class TestRescue:
             "/api/v1/rescue/plans",
             headers=_auth(super_admin_tok),
         )
-        assert resp.status_code == 200
-        assert isinstance(resp.json(), list)
+        assert resp.status_code == 503
+        assert "independent counsel approval" in resp.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_rescue_requires_auth(self, api_client):
@@ -803,7 +804,8 @@ class TestRules:
         if resp.status_code == 200:
             # If rule doesn't exist in test DB (not seeded), 404 is also valid
             pytest.skip("Rules not seeded in test DB")
-        assert resp.status_code in (404, 422)
+        assert resp.status_code == 503
+        assert "legal release gate" in resp.json()["detail"]
 
 
 # =============================================================================

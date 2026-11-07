@@ -220,6 +220,28 @@ def test_seed_matches_engine_and_has_no_duplicates():
 
 
 
+def test_every_unapproved_seed_rule_is_fail_closed():
+    rows = _seed_rows()
+    assert len(rows) == EXPECTED
+    unsafe = [
+        {
+            "rule_id": row.get("rule_id"),
+            "default_severity": row.get("default_severity"),
+            "score_impact": row.get("score_impact"),
+            "is_black_override": row.get("is_black_override"),
+        }
+        for row in rows
+        if row.get("default_severity") != "NOT_EVALUATED"
+        or row.get("score_impact") != 0
+        or row.get("is_black_override") is not False
+    ]
+    assert not unsafe, (
+        "Unapproved legal rules must never seed severity, score impact, "
+        f"or BLACK overrides: {unsafe}"
+    )
+
+
+
 
 def test_rescue_registry_has_no_duplicate_trigger_ids():
     import ast
