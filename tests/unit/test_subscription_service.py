@@ -40,6 +40,8 @@ async def test_request_subscription_snapshots_price_and_enabled_features():
     )
     price = SimpleNamespace(
         amount_bdt=Decimal("12000.00"),
+        tax_bdt=Decimal("1800.00"),
+        tax_policy_reference="BD VAT policy review reference",
         billing_interval="MONTHLY",
     )
     feature = SimpleNamespace(
@@ -74,6 +76,8 @@ async def test_request_subscription_snapshots_price_and_enabled_features():
     assert subscription.company_id == company_id
     assert subscription.plan_code == "COMPLIANCE_PRO"
     assert subscription.amount_bdt == Decimal("12000.00")
+    assert subscription.tax_bdt == Decimal("1800.00")
+    assert subscription.tax_policy_reference == "BD VAT policy review reference"
     assert subscription.status == "PENDING"
     assert subscription.grace_days == 5
     added = [call.args[0] for call in db.add.call_args_list]
