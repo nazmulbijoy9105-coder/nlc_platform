@@ -132,14 +132,16 @@ class DirectorChange:
 class ShareTransfer:
     transfer_id: str
     transfer_date: date
-    instrument_recorded: bool = False
-    stamp_duty_paid: bool = False
+    # None means the evidence/status has not been verified; do not infer absence.
+    instrument_recorded: bool | None = None
+    stamp_duty_paid: bool | None = None
     stamp_duty_amount: Optional[float] = None
-    board_approval: bool = False
-    share_register_updated: bool = False
-    aoa_restriction_apply: bool = False
-    board_approval_obtained: bool = False
-    form_117_filed: bool = False
+    board_approval: bool | None = None
+    share_register_updated: bool | None = None
+    aoa_restriction_apply: bool | None = None
+    board_approval_obtained: bool | None = None
+    form_117_filed: bool | None = None
+    transfer_registered: bool | None = None
 
 @dataclass
 class ChargeEvent:
@@ -1535,89 +1537,145 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     def _run_transfer_rules(self, c: CompanyProfile) -> None:
         for transfer in c.share_transfers:
-            transfer_is_void = (
-                transfer.aoa_restriction_apply
-                and not transfer.board_approval_obtained
-            )
+            transfer_review_flags = []
 
-            if not transfer.instrument_recorded or not transfer.form_117_filed:
-                self._add_flag(ComplianceFlag(
+            # Section 38(3): verify a duly executed/stamped transfer instrument.
+            # Missing or unproduced records are review prompts, not proof of absence.
+            if transfer.instrument_recorded is False or transfer.form_117_filed is False:
+                flag = ComplianceFlag(
                     rule_id="TR-001",
-                    flag_code="TRANSFER_NO_INSTRUMENT_FORM_117",
-                    severity=Severity.YELLOW,
-                    score_impact=5,
+                    flag_code="TRANSFER_INSTRUMENT_REQUIRES_VERIFICATION",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Share transfer without Form 117 instrument. Section 38: proper instrument required.",
-                    statutory_basis="Section 38, Companies Act 1994 (Bangladesh)",
-                    detail={"transfer_id": transfer.transfer_id}
-                ))
+                    description=(
+                        "Internal review signal only: verify the prescribed transfer "
+                        "instrument, signatures, stamping, share certificate and any "
+                        "statutory exception under section 38(3). A missing upload is "
+                        "not proof that no valid instrument exists."
+                    ),
+                    statutory_basis="Section 38(3), Companies Act 1994 (Bangladesh)",
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                    detail={"transfer_id": transfer.transfer_id},
+                )
+                self._add_flag(flag)
+                transfer_review_flags.append(flag)
 
-            if not transfer.stamp_duty_paid:
-                self._add_flag(ComplianceFlag(
+            # Stamp duty depends on the instrument, execution facts and current
+            # Schedule I. Never infer non-payment from a missing receipt alone.
+            if transfer.stamp_duty_paid is False:
+                flag = ComplianceFlag(
                     rule_id="TR-002",
-                    flag_code="STAMP_DUTY_NOT_CONFIRMED",
-                    severity=Severity.YELLOW,
-                    score_impact=5,
+                    flag_code="STAMP_DUTY_REQUIRES_INSTRUMENT_REVIEW",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Stamp duty not confirmed on transfer. Stamp Act 1899, Schedule I, Item 62: unstamped instruments inadmissible.",
-                    statutory_basis="Stamp Act 1899, Schedule I, Item 62",
-                    detail={"transfer_id": transfer.transfer_id}
-                ))
+                    description=(
+                        "Internal review signal only: verify instrument category, "
+                        "execution/registration facts, current Stamp Act Schedule I "
+                        "rate, exemption/adjudication and authenticated payment evidence. "
+                        "No inadmissibility or invalidity is determined."
+                    ),
+                    statutory_basis="Stamp Act 1899, current Schedule I and applicable amendments",
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                    detail={"transfer_id": transfer.transfer_id},
+                )
+                self._add_flag(flag)
+                transfer_review_flags.append(flag)
 
-            if not transfer.board_approval_obtained and not transfer_is_void:
-                self._add_flag(ComplianceFlag(
+            # Board approval is not universal. It is relevant only where the
+            # company's actual Articles impose a valid restriction.
+            restriction_applies = transfer.aoa_restriction_apply is True
+            board_approval_missing = (
+                restriction_applies and transfer.board_approval_obtained is False
+            )
+            if board_approval_missing:
+                flag = ComplianceFlag(
                     rule_id="TR-003",
-                    flag_code="TRANSFER_NO_BOARD_APPROVAL",
-                    severity=Severity.YELLOW,
-                    score_impact=8,
+                    flag_code="ARTICLES_TRANSFER_RESTRICTION_REQUIRES_REVIEW",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Share transfer without board approval. Section 38 + AoA: approval required where restricted.",
-                    statutory_basis="Section 38; AoA, Companies Act 1994 (Bangladesh)",
-                    detail={"transfer_id": transfer.transfer_id}
-                ))
+                    description=(
+                        "Internal review signal only: an Articles transfer restriction "
+                        "is reported and board approval is not verified. Review the "
+                        "operative Articles, transfer class, notice, board powers and "
+                        "section 38(7). Board approval is not a universal statutory requirement."
+                    ),
+                    statutory_basis="Section 38(7), Companies Act 1994 (Bangladesh), and the company's Articles",
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                    detail={"transfer_id": transfer.transfer_id},
+                )
+                self._add_flag(flag)
+                transfer_review_flags.append(flag)
 
-            if not transfer.share_register_updated and not transfer_is_void:
-                self._add_flag(ComplianceFlag(
+            # The register update duty is considered only after registration
+            # of the transfer is itself verified.
+            if transfer.transfer_registered is True and transfer.share_register_updated is False:
+                flag = ComplianceFlag(
                     rule_id="TR-004",
-                    flag_code="TRANSFER_REGISTER_NOT_UPDATED",
-                    severity=Severity.YELLOW,
-                    score_impact=5,
+                    flag_code="REGISTER_OF_MEMBERS_UPDATE_REQUIRES_VERIFICATION",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Register of Members not updated after transfer. Section 34: register is legal record of ownership.",
+                    description=(
+                        "Internal review signal only: a transfer is reported as "
+                        "registered but the register of members is not verified as "
+                        "updated. Check the registration date, register entries and "
+                        "any rectification/court order under section 34."
+                    ),
                     statutory_basis="Section 34, Companies Act 1994 (Bangladesh)",
-                    detail={"transfer_id": transfer.transfer_id}
-                ))
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                    detail={"transfer_id": transfer.transfer_id},
+                )
+                self._add_flag(flag)
+                transfer_review_flags.append(flag)
 
-            if transfer_is_void:
-                self._add_flag(ComplianceFlag(
+            # Section 38(7) preserves the company's power under its Articles
+            # to refuse registration; it does not make every restricted transfer
+            # automatically void. Require proof it was registered despite the restriction.
+            if transfer.transfer_registered is True and board_approval_missing:
+                flag = ComplianceFlag(
                     rule_id="TR-005",
-                    flag_code="AOA_TRANSFER_RESTRICTION_VIOLATED",
-                    severity=Severity.BLACK,
-                    score_impact=15,
+                    flag_code="REGISTERED_TRANSFER_DESPITE_REPORTED_ARTICLES_RESTRICTION",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                    description="Transfer violated AoA restriction. Section 38: such transfer is void. BLACK override.",
-                    statutory_basis="Section 38; AoA, Companies Act 1994 (Bangladesh)",
-                    detail={"transfer_id": transfer.transfer_id, "override": True},
-                    is_black_override=True,
-                ))
+                    description=(
+                        "Internal review signal only: a transfer is reported registered "
+                        "despite an Articles restriction and missing board approval. "
+                        "Section 38(7) concerns the company's power to refuse registration; "
+                        "do not declare the transfer void or title absent without counsel "
+                        "review of the Articles, registration, notices and remedies."
+                    ),
+                    statutory_basis="Section 38(7), Companies Act 1994 (Bangladesh), and the company's Articles",
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                    detail={"transfer_id": transfer.transfer_id},
+                )
+                self._add_flag(flag)
+                transfer_review_flags.append(flag)
 
-            tr_flags = [f for f in self._flags
-                       if f.detail.get("transfer_id") == transfer.transfer_id
-                       and f.rule_id.startswith("TR-")
-                       and f.rule_id not in ("TR-005", "TR-006")]
-                       
-            if len(tr_flags) >= 2:
-                # TR-006: composite flag — no additional score impact
-                # Constituent rules already penalized; this exists for exposure_band and rescue sequencing
+            if len(transfer_review_flags) >= 2:
                 self._add_flag(ComplianceFlag(
                     rule_id="TR-006",
-                    flag_code="TRANSFER_IRREGULAR_COMPOSITE",
-                    severity=Severity.RED,
+                    flag_code="TRANSFER_RECORD_REVIEW_COMPOSITE",
+                    severity=Severity.NOT_EVALUATED,
                     score_impact=0,
                     revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description=f"Transfer has {len(tr_flags)} deficiencies. Composite irregularity requiring structured remediation.",
-                    statutory_basis="Sections 34, 47, 108, Companies Act 1994 (Bangladesh)",
-                    detail={"transfer_id": transfer.transfer_id, "count": len(tr_flags)}
+                    description=(
+                        f"{len(transfer_review_flags)} transfer-record review signals "
+                        "require document and Articles reconciliation. This composite "
+                        "is not a statutory breach or invalidity finding."
+                    ),
+                    statutory_basis="Sections 34 and 38, Companies Act 1994 (Bangladesh), and applicable Articles",
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                    detail={"transfer_id": transfer.transfer_id, "count": len(transfer_review_flags)},
                 ))
 
     # ───────────────────────────────────────────────────────────────────
