@@ -78,6 +78,17 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
     # it. Explicit flush avoids relying on mapper/table ordering in add_all().
     db.add(submission)
     await db.flush()
+
+    # The receipt's BEFORE INSERT guard requires the exact source claim to be
+    # approved first. The deferred ledger constraint validates the complete
+    # payment/allocation/event chain when forced below.
+    await set_rls_context(db, str(db_user.id))
+    submission.status = "APPROVED"
+    submission.reviewed_by = db_user.id
+    submission.reviewed_at = now
+    submission.review_note = "Regression test approval"
+    await db.flush()
+
     db.add(payment)
     await db.flush()
 
