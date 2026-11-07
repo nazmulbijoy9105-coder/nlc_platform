@@ -109,7 +109,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
-async def get_catalog_db() -> AsyncSession:  # type: ignore
+async def get_catalog_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Public read-only catalogue session. RLS permits CATALOG context only on
     authenticated/public legal-reference tables; tenant tables remain denied.
