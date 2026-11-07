@@ -58,7 +58,7 @@ This matrix is a technical inventory of candidate legal anchors and internal rul
 | DIR-004 | Departed Director Still Active on RJSC Register | Section 109, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | DIR-005 | Director Interest Disclosure/Register Requires Review | Section 130, Companies Act 1994 (Bangladesh) — disclosure of interest in contracts/arrangements, not a generic register duty | NOT_EVALUATED | 0 | no | REVIEW ONLY — rule title/trigger and any separate register duty require legal reconciliation |
 | DIR-006 | Register of Contracts Requires Review | Companies Act 1994 and applicable Articles — exact provision not established | NOT_EVALUATED | 0 | no | REVIEW ONLY — no universal register duty assumed |
-| DIR-007 | Director Consent Not Filed Within 30 Days | Section 92, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DIR-007 | Director Consent Not Filed Within 30 Days | Section 93(2), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | DIR-008 | Office of Profit Status Requires Verification | Section 104, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | REVIEW ONLY — statutory exclusions and general-meeting consent must be checked |
 | DIR-010 | Managing Director Term Requires Verification | Section 110, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | REVIEW ONLY — verify current appointment term, reappointment and continuity |
 | ESC-001 | Strike-Off Process Status Requires Verification | Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required | NOT_EVALUATED | 0 | no | REVIEW ONLY — backlog is not proof of Registrar strike-off action |
@@ -82,7 +82,7 @@ This matrix is a technical inventory of candidate legal anchors and internal rul
 | REG-002 | Core Statutory Registers Missing | Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | REG-003 | Registers Not Kept at Registered Office | Section 34(2), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | SH-001 | Share Allotment Not Filed — Form XV | Section 151, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| SH-002 | Share Certificates Not Issued Within 60 Days | Section 158, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| SH-002 | Share Certificates Not Issued Within 90 Days | Section 158, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | SH-003 | Capital Increase Not Filed — Form IV | Section 56, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | STR-001 | Name Change Not Filed | Sections 11 and 88(1), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | STR-002 | Object Clause Change Not Filed | Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
