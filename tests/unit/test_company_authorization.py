@@ -71,3 +71,27 @@ async def test_non_staff_cannot_use_staff_company_scope_guard():
 
     assert exc.value.status_code == 403
     db.execute.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_company_portfolio_query_uses_assignment_only_for_legal_staff():
+    from sqlalchemy.dialects import postgresql
+
+    from app.services.company_service import CompanyService
+
+    user_id = uuid.uuid4()
+    count_result = MagicMock()
+    count_result.scalar_one.return_value = 1
+    rows_result = MagicMock()
+    rows_result.scalars.return_value.all.return_value = []
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=[count_result, rows_result])
+
+    await CompanyService(db).list_companies(
+        user_id=user_id, include_assigned_staff=True
+    )
+
+    statements = [call.args[0] for call in db.execute.await_args_list]
+    sql = str(statements[0].compile(dialect=postgresql.dialect()))
+    assert "assigned_staff_id" in sql
+    assert "company_user_access" in sql
