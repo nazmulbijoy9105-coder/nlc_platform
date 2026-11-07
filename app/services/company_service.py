@@ -972,7 +972,38 @@ class CompanyService(BaseService[Company]):
             "director_office_of_profit": company.director_office_of_profit,
             "managing_director_appointment_date": company.managing_director_appointment_date,
             "member_count": company.member_count or 0,
-            "business_commencement_declaration_filed": company.business_commencement_declaration_filed,
+            "business_commencement_declaration_filed": (
+                company.business_commencement_declaration_filed
+                if (
+                    company.business_commencement_declaration_verified
+                    and company.business_commencement_declaration_evidence_ref
+                    and company.business_commencement_declaration_verified_at
+                    and company.business_commencement_declaration_verified_by
+                ) else None
+            ),
+            "business_commencement_declaration_verified": bool(
+                company.business_commencement_declaration_verified
+                and company.business_commencement_declaration_evidence_ref
+                and company.business_commencement_declaration_verified_at
+                and company.business_commencement_declaration_verified_by
+            ),
+            "business_commencement_declaration_evidence_ref": company.business_commencement_declaration_evidence_ref,
+            "section150_prospectus_issued": (
+                company.section150_prospectus_issued
+                if (
+                    company.section150_applicability_verified
+                    and company.section150_applicability_evidence_ref
+                    and company.section150_applicability_verified_at
+                    and company.section150_applicability_verified_by
+                ) else None
+            ),
+            "section150_applicability_verified": bool(
+                company.section150_applicability_verified
+                and company.section150_applicability_evidence_ref
+                and company.section150_applicability_verified_at
+                and company.section150_applicability_verified_by
+            ),
+            "section150_applicability_evidence_ref": company.section150_applicability_evidence_ref,
         })
 
         return profile
