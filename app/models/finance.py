@@ -16,13 +16,13 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
+    func,
     Index,
     Integer,
     Numeric,
     String,
     Text,
     UniqueConstraint,
-    func,
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
