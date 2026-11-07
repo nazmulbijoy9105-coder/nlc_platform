@@ -533,6 +533,7 @@ class SubscriptionService:
             select(CompanyUserAccess.company_id).where(
                 CompanyUserAccess.user_id == user_id,
                 CompanyUserAccess.is_active.is_(True),
+                CompanyUserAccess.can_view_financials.is_(True),
             )
         )
         company_ids = list(result.scalars().all())
