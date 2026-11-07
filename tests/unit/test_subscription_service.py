@@ -354,3 +354,56 @@ async def test_finance_cannot_void_subscription_invoice_with_pending_payment_cla
     assert invoice.status == "ISSUED"
     assert subscription.status == "PENDING"
     db.add.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_subscription_activates_only_after_full_settled_allocation_reconciliation():
+    company_id = __import__("uuid").uuid4()
+    subscription = SimpleNamespace(
+        id=__import__("uuid").uuid4(),
+        company_id=company_id,
+        status="PENDING",
+        invoice_id=__import__("uuid").uuid4(),
+        billing_interval="MONTHLY",
+        grace_days=5,
+        starts_at=None,
+        ends_at=None,
+        renews_at=None,
+        grace_ends_at=None,
+        activated_by=None,
+    )
+    invoice = SimpleNamespace(
+        id=subscription.invoice_id,
+        company_id=company_id,
+        status="PAID",
+        balance_bdt=Decimal("0.00"),
+        paid_bdt=Decimal("1180.00"),
+        total_bdt=Decimal("1180.00"),
+    )
+    subscription_result = MagicMock()
+    subscription_result.scalar_one_or_none.return_value = subscription
+    allocation_total = MagicMock()
+    allocation_total.scalar_one.return_value = Decimal("1180.00")
+    payment_allocation = MagicMock()
+    payment_allocation.scalar_one_or_none.return_value = __import__("uuid").uuid4()
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=[subscription_result, allocation_total, payment_allocation])
+    db.get = AsyncMock(return_value=invoice)
+    db.add = MagicMock()
+    db.flush = AsyncMock()
+    payment_id = __import__("uuid").uuid4()
+
+    activated = await SubscriptionService(db).activate_for_paid_invoice(
+        invoice_id=invoice.id,
+        payment_id=payment_id,
+        actor_id=__import__("uuid").uuid4(),
+    )
+
+    assert activated.status == "ACTIVE"
+    assert activated.starts_at is not None
+    assert activated.ends_at is not None
+    assert activated.grace_ends_at == activated.ends_at + timedelta(days=5)
+    event = db.add.call_args.args[0]
+    assert event.event_type == "ACTIVATED"
+    assert event.payment_id == payment_id
+    db.flush.assert_awaited()
