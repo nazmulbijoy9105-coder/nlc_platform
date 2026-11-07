@@ -36,6 +36,7 @@ human_approved=False and in_review_queue=True.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import sys
@@ -256,6 +257,19 @@ def configure_worker(sender: str | None = None, conf: Any = None, **kwargs: Any)
         )
     except ImportError:
         pass  # structlog optional
+
+    # Do not let a worker accept privileged background tasks unless its
+    # actual PostgreSQL runtime identity satisfies the same fail-closed
+    # checks as the API process (role attributes, memberships, and HMAC key).
+    try:
+        from app.models.database import verify_runtime_database_role
+
+        asyncio.run(verify_runtime_database_role())
+    except Exception:
+        logger.exception(
+            "[Worker] Runtime database role verification failed; refusing startup"
+        )
+        raise
 
     logger.info(
         f"[Worker] Initialised: {sender} | "
