@@ -78,8 +78,16 @@ def upgrade() -> None:
                    ),
                    updated_at = NOW()
              WHERE notification_status = 'PENDING'
-               AND notification_type !~ (
-                   '^(BILLING_|PAYMENT_|SUBSCRIPTION_|ACCOUNT_SECURITY_)'
+               AND NOT (
+                   notification_type IN ('SYSTEM', 'AI_REVIEW_QUEUE_ALERT')
+                   OR (
+                       notification_type ~ '^(BILLING_|PAYMENT_|SUBSCRIPTION_|ACCOUNT_SECURITY_)'
+                       AND notification_type !~ (
+                           '(COMPLIANCE|LEGAL|RISK|RULE_ALERT|TAX_|VAT_|AGM_|BSEC_|LABOUR_|LABOR_|TRADE_LICENCE_|TRADE_LICENSE_)'
+                       )
+                       AND notification_type NOT LIKE '%_DEADLINE_WARNING'
+                       AND notification_type NOT LIKE 'DEADLINE_%'
+                   )
                );
             GET DIAGNOSTICS notification_count = ROW_COUNT;
 
