@@ -113,7 +113,7 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
             amount_bdt=amount,
             currency="BDT",
             reference=submission.payer_reference,
-            actor_id=db_user.id,
+            actor_id=db_super_admin.id,
             event_metadata={"method": "BANK_TRANSFER", "channel": "OFFLINE"},
         ),
         PaymentLedgerEvent(
@@ -125,14 +125,14 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
             amount_bdt=amount,
             currency="BDT",
             reference=submission_invoice.invoice_number,
-            actor_id=db_user.id,
+            actor_id=db_super_admin.id,
             event_metadata={"allocation": "FULL_SUBMISSION"},
         ),
     ])
     await db.flush()
 
     # The trigger checks the signed actor, not an unsigned session GUC.
-    await set_rls_context(db, str(db_user.id))
+    await set_rls_context(db, str(db_super_admin.id))
 
     async def approve_and_force_deferred_constraint():
         await db.execute(
