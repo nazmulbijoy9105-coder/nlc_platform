@@ -35,6 +35,7 @@ from app.core.dependencies import (
     require_roles,
 )
 from app.core.entitlement import require_entitlement
+from app.core.company_authorization import ensure_staff_company_scope
 from app.models.enums import DocumentType
 from app.models.user import User
 from app.services.document_service import DocumentService, PromptTemplateService
@@ -254,6 +255,7 @@ async def generate_document(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     activity = ActivityService(db)
+    await ensure_staff_company_scope(body.company_id, current_user, db)
 
     # Validate template exists
     template_svc = PromptTemplateService(db)
@@ -381,7 +383,10 @@ async def _assert_document_company_access(
     """
     role = current_user.role
     role_val = role.value if hasattr(role, "value") else str(role)
-    if role_val in ("SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF"):
+    if role_val in ("SUPER_ADMIN", "ADMIN_STAFF"):
+        return
+    if role_val == "LEGAL_STAFF":
+        await ensure_staff_company_scope(doc.company_id, current_user, db)
         return
     from sqlalchemy import select
 
@@ -463,6 +468,8 @@ async def approve_document(
     svc = DocumentService(db)
     activity = ActivityService(db)
 
+    doc_check = await svc.get_by_id_or_404(document_id)
+    await _assert_document_company_access(doc_check, current_user, db)
     doc = await svc.approve_document(  # type: ignore
         document_id=document_id,
         approved_by=current_user.id,
@@ -510,6 +517,7 @@ async def release_document(
     activity = ActivityService(db)
 
     doc = await svc.get_by_id_or_404(document_id)
+    await _assert_document_company_access(doc, current_user, db)
     if not doc.human_approved:
         raise HTTPException(
             status_code=422,
