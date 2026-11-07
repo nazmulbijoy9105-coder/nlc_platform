@@ -91,6 +91,39 @@ def require_entitlement(feature_name: str):
         role_value = str(getattr(role, "value", role))
         if role_value in _PRIVILEGED_BYPASS_ROLES:
             return True
+        if role_value == "LEGAL_STAFF":
+            # Internal staff are authorized by the route's role/company-access
+            # dependencies, not by a customer's subscription. Still bind
+            # resource-specific requests to the staff member's assigned scope.
+            raw_company_id = request.path_params.get("company_id") or request.query_params.get("company_id")
+            raw_document_id = request.path_params.get("document_id")
+            if raw_company_id:
+                try:
+                    company_id = uuid.UUID(str(raw_company_id))
+                except (TypeError, ValueError) as exc:
+                    raise HTTPException(status_code=400, detail="Invalid company context") from exc
+                from app.core.company_authorization import ensure_staff_company_scope
+                await ensure_staff_company_scope(company_id, current_user, db)
+            elif raw_document_id:
+                try:
+                    document_id = uuid.UUID(str(raw_document_id))
+                except (TypeError, ValueError) as exc:
+                    raise HTTPException(status_code=400, detail="Invalid document context") from exc
+                from app.models.documents import Document
+                result = await db.execute(
+                    select(Document.company_id).where(Document.id == document_id).limit(1)
+                )
+                company_id = result.scalar_one_or_none()
+                if company_id is None:
+                    raise HTTPException(status_code=404, detail="Document not found")
+                from app.core.company_authorization import ensure_staff_company_scope
+                await ensure_staff_company_scope(company_id, current_user, db)
+            elif not (
+                request.url.path.rstrip("/").endswith("/documents")
+                or request.url.path.rstrip("/").endswith("/documents/templates")
+            ):
+                raise HTTPException(status_code=403, detail="An assigned company context is required.")
+            return True
         if role_value not in _CUSTOMER_ROLES:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
