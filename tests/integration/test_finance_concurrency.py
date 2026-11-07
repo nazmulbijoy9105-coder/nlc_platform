@@ -175,7 +175,7 @@ async def test_concurrent_approval_posts_one_payment_and_one_allocation(test_eng
             await start.wait()
             payment = await FinanceService(session).approve_offline_payment(
                 submission_id=submission_id,
-                reviewer_id=finance_user_id,
+                reviewer_id=user_id,
                 review_note="Concurrent approval regression test",
                 cheque_cleared_at=None,
             )
