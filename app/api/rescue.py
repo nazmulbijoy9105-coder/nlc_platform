@@ -271,6 +271,7 @@ async def list_rescue_plans(
 
     query = select(RescuePlan).options(selectinload(RescuePlan.steps))
     if company_id is not None:
+        if current_user.role == "LEGAL_STAFF":
         await ensure_staff_company_scope(company_id, current_user, db)
         query = query.where(RescuePlan.company_id == company_id)
     elif current_user.role not in ("SUPER_ADMIN", "ADMIN_STAFF"):
@@ -300,7 +301,8 @@ async def get_active_plan(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    await ensure_staff_company_scope(company_id, current_user, db)
+    if current_user.role == "LEGAL_STAFF":
+        await ensure_staff_company_scope(company_id, current_user, db)
     rescue_svc = RescueService(db)
     company_svc = CompanyService(db)
 
