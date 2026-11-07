@@ -42,7 +42,7 @@ async def _create_quote(api_client, token: str, company_id):
 async def test_expired_quotation_cannot_be_accepted(
     api_client, admin_token, db_company, db
 ):
-    engagement, quotation = await _create_quote(
+    _engagement, quotation = await _create_quote(
         api_client, admin_token, db_company.id
     )
     stored = await db.get(Quotation, UUID(quotation["quotation_id"]))
