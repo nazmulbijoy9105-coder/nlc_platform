@@ -53,7 +53,7 @@ def _integrity_constraint_name(error: IntegrityError) -> str | None:
         or getattr(original, "constraint_name", None)
     )
     if constraint_name:
-        return constraint_name
+        return str(constraint_name)
     # asyncpg's UniqueViolationError omits PostgreSQL's constraint_name
     # diagnostic from its public attributes; the trigger includes a stable
     # constraint token in its message so service errors remain deterministic.
