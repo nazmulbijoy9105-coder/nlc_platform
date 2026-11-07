@@ -1003,6 +1003,16 @@ class TestSection150Applicability:
         )
         assert_flag_not_triggered(rule_engine.evaluate(profile), "INC-007")
 
+    def test_section_150_missing_declaration_evidence_does_not_trigger(self, rule_engine, build_profile):
+        profile = build_profile(
+            company_type="PUBLIC_LIMITED",
+            section150_prospectus_issued=True,
+            section150_applicability_verified=True,
+            section150_applicability_evidence_ref="evidence://section150/applicability",
+            business_commencement_declaration_filed=False,
+        )
+        assert_flag_not_triggered(rule_engine.evaluate(profile), "INC-007")
+
     def test_verified_section_150_case_is_review_only(self, rule_engine, build_profile):
         profile = build_profile(
             company_type="PUBLIC_LIMITED",
