@@ -169,6 +169,82 @@ def upgrade() -> None:
     for name, expression in constraints:
         op.create_check_constraint(name, "share_transfers", expression, schema="public")
 
+    # Form XII filing date is distinct from the appointment/cessation event date.
+    op.add_column("directors", sa.Column("form_xii_filed_date", sa.Date(), nullable=True), schema="public")
+
+    # Section 150 applicability and declaration status are not universal. Snapshot
+    # legacy company boolean values before clearing them because they had no
+    # evidence/reviewer provenance and defaulted to True.
+    op.execute(
+        """
+        CREATE TABLE IF NOT EXISTS audit.section150_legacy_status_snapshot (
+            id BIGSERIAL PRIMARY KEY,
+            company_id UUID NOT NULL,
+            captured_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            business_commencement_declaration_filed BOOLEAN
+        )
+        """
+    )
+    op.execute(
+        """
+        INSERT INTO audit.section150_legacy_status_snapshot (
+            company_id, business_commencement_declaration_filed
+        )
+        SELECT id, business_commencement_declaration_filed
+          FROM public.companies
+        """
+    )
+    op.alter_column(
+        "companies",
+        "business_commencement_declaration_filed",
+        existing_type=sa.Boolean(),
+        nullable=True,
+        server_default=None,
+        schema="public",
+    )
+    op.execute(
+        "UPDATE public.companies SET business_commencement_declaration_filed = NULL"
+    )
+    company_columns = [
+        sa.Column("business_commencement_declaration_verified", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.Column("business_commencement_declaration_evidence_ref", sa.Text(), nullable=True),
+        sa.Column("business_commencement_declaration_verified_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("business_commencement_declaration_verified_by", sa.UUID(), nullable=True),
+        sa.Column("section150_prospectus_issued", sa.Boolean(), nullable=True),
+        sa.Column("section150_applicability_verified", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.Column("section150_applicability_evidence_ref", sa.Text(), nullable=True),
+        sa.Column("section150_applicability_verified_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("section150_applicability_verified_by", sa.UUID(), nullable=True),
+    ]
+    for column in company_columns:
+        op.add_column("companies", column, schema="public")
+    op.create_foreign_key(
+        "fk_companies_section150_verified_by_users",
+        "companies", "users", ["section150_applicability_verified_by"], ["id"],
+        source_schema="public", referent_schema="public",
+    )
+    op.create_foreign_key(
+        "fk_companies_commencement_verified_by_users",
+        "companies", "users", ["business_commencement_declaration_verified_by"], ["id"],
+        source_schema="public", referent_schema="public",
+    )
+    op.create_check_constraint(
+        "ck_companies_section150_applicability_verified_has_provenance",
+        "companies",
+        "NOT section150_applicability_verified OR "
+        "(section150_prospectus_issued IS NOT NULL AND section150_applicability_evidence_ref IS NOT NULL "
+        "AND section150_applicability_verified_at IS NOT NULL AND section150_applicability_verified_by IS NOT NULL)",
+        schema="public",
+    )
+    op.create_check_constraint(
+        "ck_companies_commencement_status_verified_has_provenance",
+        "companies",
+        "NOT business_commencement_declaration_verified OR "
+        "(business_commencement_declaration_filed IS NOT NULL AND business_commencement_declaration_evidence_ref IS NOT NULL "
+        "AND business_commencement_declaration_verified_at IS NOT NULL AND business_commencement_declaration_verified_by IS NOT NULL)",
+        schema="public",
+    )
+
     # Keep defaults in the ORM only; DB rows must explicitly set verified fields.
     for table, columns in (
         ("directors", ("form_xii_status_verified", "consent_verified")),
