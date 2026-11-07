@@ -181,7 +181,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "INC-006": {
         "rule_id": "INC-006",
         "legal_domain": "Corporate",
-        "law": "BIDA Guidelines 2023 for foreign commercial offices and work permits; exact operative clause/version and current amendments require verification",
+        "law": "BIDA Guidelines for permission to establish foreign commercial offices and issue work permits in Bangladesh (2023); exact operative clause/version and current amendments require verification",
         "requirement": "A reported initial-establishment remittance below the USD 50,000 reference amount is a screening prompt only. Verify the operative BIDA guideline, applicant category, effective version, exceptions and bank evidence. Do not infer a statutory breach or automatic work-permit refusal.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
