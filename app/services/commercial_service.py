@@ -206,7 +206,7 @@ class QuotationService(BaseService[Quotation]):
                 Engagement.id == engagement_id,
                 Engagement.company_id == company_id,
                 Engagement.is_active.is_(True),
-            )
+            ).with_for_update()
         )
         engagement = engagement_result.scalar_one_or_none()
         if engagement is None:
@@ -282,7 +282,7 @@ class QuotationService(BaseService[Quotation]):
                 Engagement.id == q.engagement_id,
                 Engagement.company_id == q.company_id,
                 Engagement.is_active.is_(True),
-            )
+            ).with_for_update()
         )
         engagement = engagement_result.scalar_one_or_none()
         if engagement is None:
@@ -304,10 +304,20 @@ class QuotationService(BaseService[Quotation]):
         rejected_by: uuid.UUID | None = None,  # COM-002
     ) -> Quotation | None:
         """Mark quotation as rejected."""
-        q = await self.get_by_id(quotation_id)
+        quotation_result = await self.db.execute(
+            select(Quotation).where(Quotation.id == quotation_id).with_for_update()
+        )
+        q = quotation_result.scalar_one_or_none()
         if not q:
             return None
-        return await self.update_instance(q, status="REJECTED", rejection_reason=reason, rejected_by=rejected_by)  # COM-002
+        if q.status not in {"DRAFT", "SENT"}:
+            raise ValueError(f"Cannot reject a quotation in {q.status} state.")
+        return await self.update_instance(
+            q,
+            status="REJECTED",
+            rejection_reason=reason,
+            rejected_by=rejected_by,
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════
