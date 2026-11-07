@@ -797,8 +797,14 @@ class NLCRuleEngine:
                                  "foreign-currency-account retention rules and zone-specific exceptions."),
                     statutory_basis=("GFET-2018 Vol.1, Chapter 9, paragraph 2(A); FE Circular No.10 (21 June 2023); "
                                      "FEID Circular No.01 (27 January 2025) and subsequent applicable circulars"),
-                    detail={"foreign_pct": c.foreign_shareholding_pct},
-                    conditional_applies=True
+                    detail={
+                        "foreign_pct": c.foreign_shareholding_pct,
+                        "evidence_status": "NOT_VERIFIED",
+                        "breach_determined": False,
+                    },
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                    conditional_applies=True,
                 ))
             if (c.remittance_amount_usd is not None
                     and c.remittance_amount_usd < FOREIGN_WORK_PERMIT_THRESHOLD_USD
@@ -814,8 +820,15 @@ class NLCRuleEngine:
                                  "Verify the operative BIDA 2023 work-permit guideline, applicant category, date, exceptions and evidence."),
                     statutory_basis=("BIDA Guidelines for permission to establish foreign commercial offices and issue work permits in Bangladesh (2023); "
                                      "exact operative clause/version and current amendments require verification"),
-                    detail={"remittance_usd": c.remittance_amount_usd, "threshold": FOREIGN_WORK_PERMIT_THRESHOLD_USD},
-                    conditional_applies=True
+                    detail={
+                        "remittance_usd": c.remittance_amount_usd,
+                        "threshold": FOREIGN_WORK_PERMIT_THRESHOLD_USD,
+                        "guideline_applicability_verified": False,
+                        "breach_determined": False,
+                    },
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                    conditional_applies=True,
                 ))
 
         # MEM-001: Company operating with fewer than minimum members (Section 222)
