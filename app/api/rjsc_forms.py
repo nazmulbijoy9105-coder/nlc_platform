@@ -17,6 +17,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.entitlement import require_entitlement
+from app.core.company_authorization import ensure_staff_company_scope
 from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
@@ -64,9 +66,11 @@ async def get_form_reference():
 
 
 @router.get("/{company_id}", response_model=list[FormFilingResponse],
-            dependencies=[Depends(require_company_access("company_id"))],
+            dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
             summary="List all RJSC form filings for a company")
-async def list_forms(company_id: str, db: AsyncSession = Depends(get_db_for_user)):
+async def list_forms(company_id: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
+    if current_user.role == "LEGAL_STAFF":
+        await ensure_staff_company_scope(uuid.UUID(company_id), current_user, db)
     svc = RJSCFormService(db)
     forms = await svc.get_forms_for_company(company_id)
     return [FormFilingResponse(
@@ -81,9 +85,11 @@ async def list_forms(company_id: str, db: AsyncSession = Depends(get_db_for_user
 
 
 @router.get("/{company_id}/pending", response_model=list[FormFilingResponse],
-            dependencies=[Depends(require_company_access("company_id"))],
+            dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
             summary="List pending RJSC forms")
-async def list_pending_forms(company_id: str, db: AsyncSession = Depends(get_db_for_user)):
+async def list_pending_forms(company_id: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
+    if current_user.role == "LEGAL_STAFF":
+        await ensure_staff_company_scope(uuid.UUID(company_id), current_user, db)
     svc = RJSCFormService(db)
     await svc.update_overdue_status(company_id)
     forms = await svc.get_pending_forms(company_id)
@@ -99,9 +105,11 @@ async def list_pending_forms(company_id: str, db: AsyncSession = Depends(get_db_
 
 
 @router.get("/{company_id}/overdue", response_model=list[FormFilingResponse],
-            dependencies=[Depends(require_company_access("company_id"))],
+            dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
             summary="List overdue RJSC forms")
-async def list_overdue_forms(company_id: str, db: AsyncSession = Depends(get_db_for_user)):
+async def list_overdue_forms(company_id: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
+    if current_user.role == "LEGAL_STAFF":
+        await ensure_staff_company_scope(uuid.UUID(company_id), current_user, db)
     svc = RJSCFormService(db)
     forms = await svc.get_overdue_forms(company_id)
     return [FormFilingResponse(
@@ -122,8 +130,11 @@ async def list_overdue_forms(company_id: str, db: AsyncSession = Depends(get_db_
 async def create_form_filing(
     company_id: str,
     body: CreateFormFilingRequest,
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    if current_user.role == "LEGAL_STAFF":
+        await ensure_staff_company_scope(uuid.UUID(company_id), current_user, db)
     svc = RJSCFormService(db)
     try:
         filing = await svc.create_form_filing(
@@ -158,6 +169,8 @@ async def mark_form_filed(
     filing_check = await svc.get_by_id(form_id)
     if not filing_check:
         raise HTTPException(status_code=404, detail="Form filing not found")
+    if current_user.role == "LEGAL_STAFF":
+        await ensure_staff_company_scope(filing_check.company_id, current_user, db)
     # RJSC-001: verify user has access to this company's filing
     if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):
         from sqlalchemy import select as _sel
