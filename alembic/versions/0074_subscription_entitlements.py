@@ -42,6 +42,8 @@ def upgrade() -> None:
         sa.Column("plan_code", sa.String(60), sa.ForeignKey("subscription_plans.plan_code", ondelete="RESTRICT"), nullable=False),
         sa.Column("billing_interval", sa.String(16), nullable=False),
         sa.Column("amount_bdt", sa.Numeric(15, 2), nullable=False),
+        sa.Column("tax_bdt", sa.Numeric(15, 2), nullable=False),
+        sa.Column("tax_policy_reference", sa.Text(), nullable=False),
         sa.Column("currency", sa.String(3), nullable=False, server_default="BDT"),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
@@ -49,6 +51,8 @@ def upgrade() -> None:
         sa.UniqueConstraint("plan_code", "billing_interval", name="uq_subscription_plan_price_interval"),
         sa.CheckConstraint("billing_interval IN ('MONTHLY','QUARTERLY','ANNUAL','ONE_TIME')", name="ck_subscription_plan_price_interval"),
         sa.CheckConstraint("amount_bdt >= 0", name="ck_subscription_plan_price_amount"),
+        sa.CheckConstraint("tax_bdt >= 0", name="ck_subscription_plan_price_tax"),
+        sa.CheckConstraint("length(trim(tax_policy_reference)) BETWEEN 3 AND 500", name="ck_subscription_plan_price_tax_reference"),
         sa.CheckConstraint("currency = 'BDT'", name="ck_subscription_plan_price_currency"),
     )
     op.create_index("ix_subscription_plan_prices_active", "subscription_plan_prices", ["plan_code", "is_active"])
@@ -66,6 +70,8 @@ def upgrade() -> None:
         sa.CheckConstraint("length(feature_code) BETWEEN 2 AND 80", name="ck_subscription_feature_code_length"),
     )
 
+    op.add_column("client_subscriptions", sa.Column("tax_bdt", sa.Numeric(15, 2), nullable=False, server_default="0"))
+    op.add_column("client_subscriptions", sa.Column("tax_policy_reference", sa.Text(), nullable=True))
     op.add_column("client_subscriptions", sa.Column("invoice_id", uuid, nullable=True))
     op.add_column("client_subscriptions", sa.Column("grace_days", sa.Integer(), nullable=False, server_default="0"))
     op.add_column("client_subscriptions", sa.Column("cancel_at_period_end", sa.Boolean(), nullable=False, server_default=sa.text("false")))
@@ -76,6 +82,7 @@ def upgrade() -> None:
     op.add_column("client_subscriptions", sa.Column("activated_by", uuid, sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True))
     op.create_unique_constraint("uq_client_subscriptions_id_company", "client_subscriptions", ["id", "company_id"])
     op.create_check_constraint("ck_client_subscription_grace_days", "client_subscriptions", "grace_days BETWEEN 0 AND 30")
+    op.create_check_constraint("ck_client_subscription_tax_nonnegative", "client_subscriptions", "tax_bdt >= 0")
     op.create_foreign_key(
         "fk_client_subscriptions_invoice_company",
         "client_subscriptions", "invoices",
@@ -238,7 +245,10 @@ def upgrade() -> None:
                   AND pp.is_active IS TRUE
                   AND pp.billing_interval = client_subscriptions.billing_interval
                   AND pp.amount_bdt = client_subscriptions.amount_bdt
+                  AND pp.tax_bdt = client_subscriptions.tax_bdt
+                  AND pp.tax_policy_reference = client_subscriptions.tax_policy_reference
                   AND pp.currency = client_subscriptions.currency
+                  AND length(trim(client_subscriptions.tax_policy_reference)) >= 3
             )
             AND EXISTS (
                 SELECT 1 FROM public.subscription_plan_features pf
@@ -365,6 +375,8 @@ def upgrade() -> None:
                 OR NEW.plan_name IS DISTINCT FROM OLD.plan_name
                 OR NEW.billing_interval IS DISTINCT FROM OLD.billing_interval
                 OR NEW.amount_bdt IS DISTINCT FROM OLD.amount_bdt
+                OR NEW.tax_bdt IS DISTINCT FROM OLD.tax_bdt
+                OR NEW.tax_policy_reference IS DISTINCT FROM OLD.tax_policy_reference
                 OR NEW.currency IS DISTINCT FROM OLD.currency
                 OR NEW.grace_days IS DISTINCT FROM OLD.grace_days
                 OR NEW.created_by IS DISTINCT FROM OLD.created_by
@@ -413,7 +425,9 @@ def upgrade() -> None:
                 WHERE i.id = NEW.invoice_id
                   AND i.company_id = NEW.company_id
                   AND i.status = 'ISSUED'
-                  AND i.total_bdt = NEW.amount_bdt
+                  AND i.subtotal_bdt = NEW.amount_bdt
+                  AND i.tax_bdt = NEW.tax_bdt
+                  AND i.total_bdt = NEW.amount_bdt + NEW.tax_bdt
             ) THEN
                 RAISE EXCEPTION 'subscription invoice must be an issued invoice for the exact subscription amount'
                     USING ERRCODE = '55000';
