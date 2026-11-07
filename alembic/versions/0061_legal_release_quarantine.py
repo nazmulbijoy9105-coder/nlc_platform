@@ -127,7 +127,7 @@ def downgrade() -> None:
                    '^(BILLING_|PAYMENT_|SUBSCRIPTION_|ACCOUNT_SECURITY_)'
                )
                AND notification_type !~ (
-                   '(COMPLIANCE|LEGAL|RISK|RULE_ALERT|TAX_|VAT_|AGM_|BSEC_|LABOUR_|LABOR_|TRADE_LICENCE_|TRADE_LICENSE_)'
+                   '(COMPLIANCE|LEGAL|RISK|RULE_ALERT|TAX_|VAT_|AGM_|BSEC_|LABOUR_|LABOR_|TRADE_LICENCE_|TRADE_LICENSE_|SRO_)'
                );
             GET DIAGNOSTICS legal_notification_count = ROW_COUNT;
 
