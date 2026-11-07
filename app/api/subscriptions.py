@@ -37,6 +37,8 @@ CUSTOMER_READ_ROLES = ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "SUPER_ADMIN", "AD
 class SubscriptionPriceInput(BaseModel):
     billing_interval: Literal["MONTHLY", "QUARTERLY", "ANNUAL", "ONE_TIME"]
     amount_bdt: Decimal = Field(gt=0, max_digits=15, decimal_places=2, allow_inf_nan=False)
+    tax_bdt: Decimal = Field(ge=0, max_digits=15, decimal_places=2, allow_inf_nan=False)
+    tax_policy_reference: str = Field(min_length=3, max_length=500)
 
 
 class SubscriptionFeatureInput(BaseModel):
@@ -69,6 +71,8 @@ class SubscriptionResponse(BaseModel):
     plan_name: str
     billing_interval: str
     amount_bdt: Decimal
+    tax_bdt: Decimal
+    tax_policy_reference: str | None
     currency: str
     status: str
     starts_at: str | None
@@ -100,6 +104,8 @@ def _subscription_response(item: ClientSubscription) -> SubscriptionResponse:
         plan_name=item.plan_name,
         billing_interval=item.billing_interval,
         amount_bdt=item.amount_bdt,
+        tax_bdt=item.tax_bdt,
+        tax_policy_reference=item.tax_policy_reference,
         currency=item.currency,
         status=item.status,
         starts_at=item.starts_at.isoformat() if item.starts_at else None,
