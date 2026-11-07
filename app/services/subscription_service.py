@@ -176,8 +176,8 @@ class SubscriptionService:
             select(SubscriptionPlanPrice).where(SubscriptionPlanPrice.plan_code == code)
         )
         existing_prices = {item.billing_interval: item for item in existing_prices_result.scalars().all()}
-        for interval, price_item in existing_prices.items():
-            price_item.is_active = interval in intervals
+        for interval, existing_price_item in existing_prices.items():
+            existing_price_item.is_active = interval in intervals
         for price in prices:
             interval = str(price["billing_interval"]).upper()
             amount = Decimal(str(price["amount_bdt"])).quantize(Decimal("0.01"))
