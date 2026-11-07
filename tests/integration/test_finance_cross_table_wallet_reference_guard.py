@@ -140,3 +140,13 @@ async def test_approval_links_receipt_to_its_own_submission(db, db_company, db_u
 
     assert payment.source_submission_id == submission.id
     assert submission.status == "APPROVED"
+
+    with pytest.raises(DBAPIError) as exc_info:
+        async with db.begin_nested():
+            await db.execute(
+                text("UPDATE public.payments SET source_submission_id = NULL WHERE id = :id"),
+                {"id": payment.id},
+            )
+    assert getattr(exc_info.value.orig, "constraint_name", None) == (
+        "uq_wallet_reference_across_finance_tables"
+    )
