@@ -29,6 +29,10 @@ from app.services.base import BaseService
 if TYPE_CHECKING:
     import uuid
 
+
+class CommercialConflictError(ValueError):
+    """Raised when a commercial action conflicts with the current workflow state."""
+
 # ═══════════════════════════════════════════════════════════════════════
 # ENGAGEMENT SERVICE
 # ═══════════════════════════════════════════════════════════════════════
@@ -140,7 +144,7 @@ class EngagementService(BaseService[Engagement]):
                 )
             )
             if quotation_count.scalar_one() < 1:
-                raise ValueError("An issued quotation is required before moving an engagement to QUOTED.")
+                raise CommercialConflictError("An issued quotation is required before moving an engagement to QUOTED.")
         if new_status == EngagementStatus.CONFIRMED:
             accepted_count = await self.db.execute(
                 select(func.count()).select_from(Quotation).where(
@@ -149,7 +153,7 @@ class EngagementService(BaseService[Engagement]):
                 )
             )
             if accepted_count.scalar_one() < 1:
-                raise ValueError("An accepted quotation is required before confirming an engagement.")
+                raise CommercialConflictError("An accepted quotation is required before confirming an engagement.")
         updates: dict = {"engagement_status": new_status}
         status_date_map = {
             EngagementStatus.QUOTED:      "quoted_date",
@@ -215,7 +219,7 @@ class QuotationService(BaseService[Quotation]):
             EngagementStatus.IDENTIFIED,
             EngagementStatus.QUOTED,
         }:
-            raise ValueError("A quotation can only be created for an identified or quoted engagement.")
+            raise CommercialConflictError("A quotation can only be created for an identified or quoted engagement.")
         from decimal import Decimal
         professional_fee = Decimal(str(professional_fee_bdt)).quantize(Decimal("0.01"))
         government_fee = Decimal(str(government_fee_bdt)).quantize(Decimal("0.01"))
@@ -276,7 +280,7 @@ class QuotationService(BaseService[Quotation]):
         if not q:
             return None
         if q.status not in {"DRAFT", "SENT"}:
-            raise ValueError(f"Cannot accept a quotation in {q.status} state.")
+            raise CommercialConflictError(f"Cannot accept a quotation in {q.status} state.")
         engagement_result = await self.db.execute(
             select(Engagement).where(
                 Engagement.id == q.engagement_id,
@@ -288,7 +292,7 @@ class QuotationService(BaseService[Quotation]):
         if engagement is None:
             raise ValueError("Quotation engagement is missing, inactive, or belongs to another company.")
         if engagement.engagement_status != EngagementStatus.QUOTED:
-            raise ValueError("Only a quotation for a QUOTED engagement can be accepted.")
+            raise CommercialConflictError("Only a quotation for a QUOTED engagement can be accepted.")
         accepted = await self.update_instance(q, status="ACCEPTED", accepted_date=date.today())
         await EngagementService(self.db).advance_status(
             engagement.id,
