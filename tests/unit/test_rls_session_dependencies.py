@@ -74,7 +74,6 @@ async def test_client_session_sets_verified_user_rls_context(monkeypatch):
 
 @pytest.mark.parametrize("role", [UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF])
 @pytest.mark.asyncio
-async def test_admin_session_keeps_verified_user_identity_context(monkeypatch):
 async def test_human_admin_sessions_keep_signed_user_identity(monkeypatch, role):
     user_id = uuid.uuid4()
     session = _Session(SimpleNamespace(role=role, is_active=True))
@@ -126,9 +125,6 @@ async def test_stale_token_role_is_rejected_before_session_is_yielded(monkeypatc
     assert exc.value.status_code == 401
     assert session.rolled_back is True
     assert session.closed is True
-
-@pytest.mark.asyncio
-async def test_legal_staff_session_keeps_verified_user_identity_context(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_legal_staff_keeps_signed_user_identity(monkeypatch):
