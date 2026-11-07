@@ -98,7 +98,7 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
         invoice_id=submission_invoice.id,
         amount_bdt=amount,
         currency="BDT",
-        created_by=db_user.id,
+        created_by=db_super_admin.id,
     ))
     allocation_event_invoice_id = (
         submission_invoice.id if allocation_event_matches_invoice else other_invoice.id
