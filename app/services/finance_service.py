@@ -48,10 +48,18 @@ def _require_aware_datetime(value: datetime | None, field_name: str) -> None:
 def _integrity_constraint_name(error: IntegrityError) -> str | None:
     original = error.orig
     diagnostic = getattr(original, "diag", None)
-    return (
+    constraint_name = (
         getattr(diagnostic, "constraint_name", None)
         or getattr(original, "constraint_name", None)
     )
+    if constraint_name:
+        return constraint_name
+    # asyncpg's UniqueViolationError omits PostgreSQL's constraint_name
+    # diagnostic from its public attributes; the trigger includes a stable
+    # constraint token in its message so service errors remain deterministic.
+    if "uq_wallet_reference_across_finance_tables" in str(original):
+        return "uq_wallet_reference_across_finance_tables"
+    return None
 
 
 def _money(value: Decimal | int | str) -> Decimal:
