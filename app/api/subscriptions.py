@@ -43,7 +43,6 @@ class SubscriptionPriceInput(BaseModel):
 
 class SubscriptionFeatureInput(BaseModel):
     feature_code: str = Field(min_length=2, max_length=80)
-    limits: dict | None = None
 
 
 class SubscriptionPlanUpsertRequest(BaseModel):
