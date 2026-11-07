@@ -340,16 +340,20 @@ async def create_quotation(
     svc = QuotationService(db)
     activity = ActivityService(db)
 
-    quotation = await svc.create_quotation(  # type: ignore
-        engagement_id=body.engagement_id,
-        company_id=body.company_id,
-        professional_fee_bdt=body.professional_fee_bdt,
-        government_fee_bdt=body.government_fee_bdt,
-        vat_bdt=body.vat_bdt,
-        line_items=body.line_items,
-        valid_days=body.valid_days,
-        notes=body.notes,
-    )
+    try:
+        quotation = await svc.create_quotation(
+            engagement_id=body.engagement_id,
+            company_id=body.company_id,
+            professional_fee_bdt=body.professional_fee_bdt,
+            government_fee_bdt=body.government_fee_bdt,
+            vat_bdt=body.vat_bdt,
+            line_items=body.line_items,
+            valid_days=body.valid_days,
+            notes=body.notes,
+        )
+    except ValueError as exc:
+        # Do not disclose whether an engagement exists in another tenant.
+        raise HTTPException(status_code=404, detail="Engagement not found.") from exc
 
     await activity.log(
         action="QUOTATION_CREATED",
