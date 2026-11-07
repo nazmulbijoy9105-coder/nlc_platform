@@ -676,7 +676,7 @@ class TestDocuments:
             "email": db_client_user.email, "company_ids": [],
         })
         resp = await api_client.get(
-            "/api/v1/documents/", headers=_auth(client_tok)
+            "/api/v1/documents", headers=_auth(client_tok)
         )
         assert resp.status_code == 503
         assert resp.headers["retry-after"] == "3600"
