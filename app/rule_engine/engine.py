@@ -2698,7 +2698,7 @@ class NLCRuleEngine:
         # Legacy path: disqualification_details (free-text) without structured grounds
         # → treat as unverified allegations, NOT as BLACK override
         if not c.disqualification_grounds and c.disqualification_details:
-            unverified_allegations = c.disqualification_details
+            unverified_allegations.extend(c.disqualification_details)
 
         if disputed_grounds:
             self._add_flag(ComplianceFlag(
@@ -3275,8 +3275,9 @@ class NLCRuleEngine:
             if c.last_agm_date is None:
                 return 0
             deadline = self._subsequent_agm_deadline(c)
-            if deadline is None:
-                return 0
+            deadline = self._subsequent_agm_deadline(c)
+        if deadline is None:
+            return 0
         if self.today > deadline:
             return (self.today - deadline).days // 365
         return 0
