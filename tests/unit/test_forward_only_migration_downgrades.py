@@ -47,8 +47,16 @@ def test_sensitive_migration_downgrades_are_noop_and_data_preserving():
                 and isinstance(node.value.value, str)
             )
         ]
-        assert len(statements) == 1, f"{relative_path} downgrade must remain a no-op"
-        assert isinstance(statements[0], ast.Pass), (
+        assert len(statements) == 1, f"{relative_path} downgrade must be a no-op or explicit refusal"
+        statement = statements[0]
+        is_noop = isinstance(statement, ast.Pass)
+        is_refusal = (
+            isinstance(statement, ast.Raise)
+            and isinstance(statement.exc, ast.Call)
+            and isinstance(statement.exc.func, ast.Name)
+            and statement.exc.func.id == "RuntimeError"
+        )
+        assert is_noop or is_refusal, (
             f"{relative_path} downgrade must not remove security controls "
-            "or destroy legal evidence"
+            "or destroy legal evidence; use pass or raise RuntimeError"
         )
