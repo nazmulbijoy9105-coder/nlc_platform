@@ -247,6 +247,35 @@ async def issue_subscription_invoice(
     )
 
 
+@router.get(
+    "/companies/{company_id}/{subscription_id}/events",
+    response_model=list[dict],
+)
+async def get_company_subscription_events(
+    company_id: uuid.UUID,
+    subscription_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db_for_user),
+    _access: uuid.UUID = Depends(require_company_access()),
+    _role: None = Depends(require_roles(*CUSTOMER_READ_ROLES)),
+):
+    events = await SubscriptionService(db).list_events(
+        company_id=company_id,
+        subscription_id=subscription_id,
+    )
+    return [
+        {
+            "event_id": str(item.id),
+            "event_type": item.event_type,
+            "actor_id": str(item.actor_id) if item.actor_id else None,
+            "invoice_id": str(item.invoice_id) if item.invoice_id else None,
+            "payment_id": str(item.payment_id) if item.payment_id else None,
+            "metadata": item.event_metadata,
+            "created_at": item.created_at.isoformat(),
+        }
+        for item in events
+    ]
+
+
 @router.post(
     "/companies/{company_id}/{subscription_id}/cancel",
     response_model=SubscriptionResponse,
