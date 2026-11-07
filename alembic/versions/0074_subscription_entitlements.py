@@ -287,6 +287,39 @@ def upgrade() -> None:
         CREATE POLICY subscription_events_read ON public.subscription_events
         FOR SELECT USING (public.nlc_can_view_billing_company(company_id))
     """)
+    # FinanceService accepts overdue invoices for payment; keep the RLS
+    # boundary aligned so customers can actually renew after the due date.
+    op.execute("DROP POLICY payment_submissions_submit_insert ON public.payment_submissions")
+    op.execute("""
+        CREATE POLICY payment_submissions_submit_insert ON public.payment_submissions
+        FOR INSERT WITH CHECK (
+            public.nlc_can_submit_payment_company(company_id)
+            AND (
+                public.nlc_current_user_is_finance_staff()
+                OR submitted_by = public.nlc_current_user_id()
+            )
+            AND status = 'PENDING_REVIEW'
+            AND reviewed_by IS NULL
+            AND reviewed_at IS NULL
+            AND review_note IS NULL
+            AND cheque_cleared_at IS NULL
+            AND (
+                evidence_document_id IS NULL
+                OR EXISTS (
+                    SELECT 1 FROM public.documents d
+                    WHERE d.id = payment_submissions.evidence_document_id
+                      AND d.company_id = payment_submissions.company_id
+                )
+            )
+            AND EXISTS (
+                SELECT 1 FROM public.invoices i
+                WHERE i.id = payment_submissions.invoice_id
+                  AND i.company_id = payment_submissions.company_id
+                  AND i.status IN ('ISSUED','PARTIALLY_PAID','OVERDUE')
+                  AND payment_submissions.amount_bdt <= i.balance_bdt
+            )
+        )
+    """)
     op.execute("""
         CREATE POLICY subscription_events_insert ON public.subscription_events
         FOR INSERT WITH CHECK (
