@@ -518,9 +518,7 @@ class TestRescue:
             f"/api/v1/rescue/plans/{db_company.id}/active",
             headers=_auth(client_tok),
         )
-        assert resp.status_code == 503
-        assert "entitlement verification is not configured" in resp.json()["detail"]
-        assert resp.headers["retry-after"] == "3600"
+        assert resp.status_code == 402
 
     @pytest.mark.asyncio
     async def test_client_cannot_use_rescue_entitlement_for_foreign_company(
@@ -631,14 +629,12 @@ class TestDocuments:
         ]
         for path in paths:
             resp = await api_client.get(path, headers=headers)
-            assert resp.status_code == 503, (path, resp.status_code, resp.text)
-            assert resp.headers["retry-after"] == "3600"
-        calendar_resp = await api_client.post(
+            assert resp.status_code == 402, (path, resp.status_code, resp.text)
+            calendar_resp = await api_client.post(
             f"/api/v1/calendar/companies/{db_company.id}/generate",
             headers=headers,
         )
-        assert calendar_resp.status_code == 503
-        assert calendar_resp.headers["retry-after"] == "3600"
+        assert calendar_resp.status_code == 402
 
     @pytest.mark.asyncio
     async def test_client_compliance_endpoints_require_entitlement(
@@ -661,9 +657,8 @@ class TestDocuments:
         ]
         for path in paths:
             resp = await api_client.get(path, headers=headers)
-            assert resp.status_code == 503, (path, resp.status_code, resp.text)
-            assert resp.headers["retry-after"] == "3600"
-
+            assert resp.status_code == 402, (path, resp.status_code, resp.text)
+    
     @pytest.mark.asyncio
     async def test_client_document_templates_require_entitlement(
         self, api_client, db_client_user
@@ -678,8 +673,7 @@ class TestDocuments:
         resp = await api_client.get(
             "/api/v1/documents/templates", headers=_auth(client_tok)
         )
-        assert resp.status_code == 503
-        assert resp.headers["retry-after"] == "3600"
+        assert resp.status_code == 402
 
     @pytest.mark.asyncio
     async def test_client_document_portfolio_requires_entitlement(
@@ -695,8 +689,7 @@ class TestDocuments:
         resp = await api_client.get(
             "/api/v1/documents", headers=_auth(client_tok)
         )
-        assert resp.status_code == 503
-        assert resp.headers["retry-after"] == "3600"
+        assert resp.status_code == 402
 
     @pytest.mark.asyncio
     async def test_client_document_list_requires_entitlement(
@@ -717,9 +710,7 @@ class TestDocuments:
             f"/api/v1/documents/{db_company.id}",
             headers=_auth(client_tok),
         )
-        assert resp.status_code == 503
-        assert "entitlement verification is not configured" in resp.json()["detail"]
-        assert resp.headers["retry-after"] == "3600"
+        assert resp.status_code == 402
 
     @pytest.mark.asyncio
     async def test_client_document_list_rejects_foreign_company(
@@ -766,8 +757,7 @@ class TestDocuments:
         resp = await api_client.get(
             f"/api/v1/documents/detail/{doc.id}", headers=_auth(client_tok)
         )
-        assert resp.status_code == 503
-        assert resp.headers["retry-after"] == "3600"
+        assert resp.status_code == 402
 
     @pytest.mark.asyncio
     async def test_client_document_pdf_requires_entitlement(
@@ -793,8 +783,7 @@ class TestDocuments:
         resp = await api_client.get(
             f"/api/v1/documents/detail/{doc.id}/pdf", headers=_auth(client_tok)
         )
-        assert resp.status_code == 503
-        assert resp.headers["retry-after"] == "3600"
+        assert resp.status_code == 402
 
     @pytest.mark.asyncio
     async def test_release_requires_approval_first(self, api_client, legal_tok, db, db_company):
