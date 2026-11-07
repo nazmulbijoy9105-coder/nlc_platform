@@ -17,6 +17,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    op.execute("CREATE SCHEMA IF NOT EXISTS audit")
     # risk_band may already contain this value in branches that carried the
     # earlier release gate. Keep this idempotent for the canonical chain.
     with op.get_context().autocommit_block():
