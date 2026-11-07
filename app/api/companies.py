@@ -494,7 +494,7 @@ async def acknowledge_flag(company_id: uuid.UUID, flag_id: uuid.UUID, current_us
 
 @router.get(
     "/{company_id}/compliance-pdf",
-    dependencies=[Depends(require_company_access("company_id"))],
+    dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
     summary="Download Branded PDF Compliance Report"
 )
 async def download_compliance_pdf(company_id: uuid.UUID, db: AsyncSession = Depends(get_db_for_user)):
