@@ -15,7 +15,6 @@ Legal basis: Companies Act 1994 (Bangladesh)
   - Section 210(6): First auditor within one calendar month of registration
   - Section 23: MoA/AoA required for registration
 """
-from __future__ import annotations
 
 from datetime import date, timedelta
 

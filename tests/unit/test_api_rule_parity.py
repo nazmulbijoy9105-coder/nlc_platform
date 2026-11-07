@@ -10,7 +10,6 @@ Static parity test (no HTTP request needed). Verifies that:
 For the full HTTP parity test (GET /api/v1/rules with auth), see
 tests/integration/test_api_rule_parity.py (requires running server).
 """
-from __future__ import annotations
 
 import inspect
 import re
