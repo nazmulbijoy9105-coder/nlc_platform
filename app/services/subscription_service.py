@@ -335,8 +335,8 @@ class SubscriptionService:
             raise SubscriptionNotFoundError("Subscription not found")
         if subscription.invoice_id is not None:
             invoice = await self.db.get(Invoice, subscription.invoice_id)
-            if invoice is None:
-                raise SubscriptionConflictError("Linked subscription invoice is missing")
+            if invoice is None or invoice.company_id != subscription.company_id:
+                raise SubscriptionConflictError("Linked subscription invoice is missing or belongs to another company")
             return invoice
         if subscription.status != "PENDING":
             raise SubscriptionConflictError("Only a pending subscription can be invoiced")
