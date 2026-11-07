@@ -225,7 +225,7 @@ def _dispatch_reevaluation(company_id: uuid.UUID, trigger: str) -> None:
     "",
     dependencies=[Depends(require_entitlement("compliance_package"))],
     summary="List all filings across portfolio",
-
+)
 async def list_all_filings(
     request: Request,
     company_id: uuid.UUID | None = None,
