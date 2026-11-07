@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.entitlement import require_entitlement
 from app.core.dependencies import (
     Pagination,
     get_current_user,
@@ -375,10 +376,11 @@ async def list_companies(search: str | None = Query(None), risk_band: RiskBand |
         user_id=(
             None
             if current_user.role in (
-                UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRole.LEGAL_STAFF
+                UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF
             )
             else current_user.id
         ),
+        include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF,
     )
     financial_ids = await _financial_access_ids(
         db, current_user, [company.id for company in companies]
@@ -450,7 +452,7 @@ async def evaluate_company(company_id: uuid.UUID, request: Request, current_user
     return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=result["score"] if LEGAL_SCORE_RELEASED else None, pre_override_score=result.get("raw_total") if LEGAL_SCORE_RELEASED else None, risk_band=result["risk_band"] if LEGAL_SCORE_RELEASED else "NOT_EVALUATED", active_flags=flag_summary.get("total_active", 0) if LEGAL_SCORE_RELEASED else 0, black_flags=flag_summary.get("black", 0) if LEGAL_SCORE_RELEASED else 0, red_flags=flag_summary.get("red", 0) if LEGAL_SCORE_RELEASED else 0, yellow_flags=flag_summary.get("yellow", 0) if LEGAL_SCORE_RELEASED else 0, last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, evaluation_triggered=True, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
 
 
-@router.get("/{company_id}/compliance", response_model=ComplianceSummaryResponse, dependencies=[Depends(require_company_access("company_id"))], summary="Get compliance state")
+@router.get("/{company_id}/compliance", response_model=ComplianceSummaryResponse, dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))], summary="Get compliance state")
 async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_db_for_user)):
     company_svc = CompanyService(db)
     compliance_svc = ComplianceService(db)
@@ -463,7 +465,7 @@ async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_d
     return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=current_score, pre_override_score=None, risk_band=risk_band, active_flags=flag_summary.get("total_active", 0), pending_review_flags=flag_summary.get("pending_review", 0), black_flags=flag_summary.get("black", 0) if LEGAL_SCORE_RELEASED else 0, red_flags=flag_summary.get("red", 0) if LEGAL_SCORE_RELEASED else 0, yellow_flags=flag_summary.get("yellow", 0) if LEGAL_SCORE_RELEASED else 0, last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
 
 
-@router.get("/{company_id}/flags", response_model=list[FlagResponse], dependencies=[Depends(require_company_access("company_id"))], summary="Get active flags")
+@router.get("/{company_id}/flags", response_model=list[FlagResponse], dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))], summary="Get active flags")
 async def get_flags(company_id: uuid.UUID, db: AsyncSession = Depends(get_db_for_user)):
     svc = ComplianceService(db)
     flags = await svc.get_active_flags(company_id)
@@ -481,7 +483,7 @@ async def resolve_flag(company_id: uuid.UUID, flag_id: uuid.UUID, body: FlagReso
     return MessageResponse(message=f"Flag resolved.")
 
 
-@router.post("/{company_id}/flags/{flag_id}/acknowledge", response_model=MessageResponse, dependencies=[Depends(require_company_access("company_id"))], summary="Acknowledge flag")
+@router.post("/{company_id}/flags/{flag_id}/acknowledge", response_model=MessageResponse, dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))], summary="Acknowledge flag")
 async def acknowledge_flag(company_id: uuid.UUID, flag_id: uuid.UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     svc = ComplianceService(db)
     flag = await svc.acknowledge_flag(flag_id=flag_id, acknowledged_by=current_user.id)
@@ -492,14 +494,14 @@ async def acknowledge_flag(company_id: uuid.UUID, flag_id: uuid.UUID, current_us
 
 @router.get(
     "/{company_id}/compliance-pdf",
-    dependencies=[Depends(require_company_access("company_id"))],
+    dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
     summary="Download Branded PDF Compliance Report"
 )
 async def download_compliance_pdf(company_id: uuid.UUID, db: AsyncSession = Depends(get_db_for_user)):
     pdf_svc = PDFReportService(db)
     return await pdf_svc.generate_company_compliance_pdf(str(company_id))
 
-@router.get("/{company_id}/score-history", response_model=list[ScoreHistoryEntry], dependencies=[Depends(require_company_access("company_id"))], summary="Score history")
+@router.get("/{company_id}/score-history", response_model=list[ScoreHistoryEntry], dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))], summary="Score history")
 async def get_score_history(company_id: uuid.UUID, months: int = Query(default=12, ge=1, le=60), db: AsyncSession = Depends(get_db_for_user)):
     svc = ComplianceService(db)
     history = await svc.get_score_history(company_id=company_id, months=months)
@@ -517,11 +519,18 @@ async def get_dashboard_kpis(current_user: User = Depends(get_current_user), db:
 async def get_upcoming_deadlines(days_ahead: int = Query(default=30, ge=7, le=90), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     _require_legal_dashboard_release(deadlines=True)
     svc = CompanyService(db)
-    return await svc.get_upcoming_deadlines(days_ahead=days_ahead, user_id=current_user.id)
+    return await svc.get_upcoming_deadlines(
+        days_ahead=days_ahead,
+        user_id=current_user.id,
+        include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF,
+    )
 
 
 @router.get("/dashboard/risk", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Risk distribution")
 async def get_risk_distribution(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     _require_legal_dashboard_release()
     svc = CompanyService(db)
-    return await svc.get_risk_distribution(user_id=current_user.id)
+    return await svc.get_risk_distribution(
+        user_id=current_user.id,
+        include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF,
+    )
