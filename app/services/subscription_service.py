@@ -526,6 +526,31 @@ class SubscriptionService:
                 entitled.append(company_id)
         return entitled
 
+    async def list_admin_subscriptions(
+        self,
+        *,
+        status_filter: str | None = None,
+        company_id: uuid.UUID | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[ClientSubscription]:
+        allowed = {"PENDING", "ACTIVE", "PAST_DUE", "CANCELLED", "EXPIRED", "SUSPENDED"}
+        if status_filter is not None and status_filter not in allowed:
+            raise SubscriptionConflictError("Unsupported subscription status filter")
+        if not 1 <= limit <= 200 or offset < 0:
+            raise SubscriptionConflictError("Invalid subscription pagination")
+        query = select(ClientSubscription)
+        if status_filter is not None:
+            query = query.where(ClientSubscription.status == status_filter)
+        if company_id is not None:
+            query = query.where(ClientSubscription.company_id == company_id)
+        result = await self.db.execute(
+            query.order_by(ClientSubscription.created_at.desc(), ClientSubscription.id.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(result.scalars().all())
+
     async def get_current(self, company_id: uuid.UUID) -> ClientSubscription | None:
         result = await self.db.execute(
             select(ClientSubscription)
