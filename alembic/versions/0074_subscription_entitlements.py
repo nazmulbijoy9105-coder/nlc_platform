@@ -63,7 +63,6 @@ def upgrade() -> None:
         sa.Column("plan_code", sa.String(60), sa.ForeignKey("subscription_plans.plan_code", ondelete="RESTRICT"), nullable=False),
         sa.Column("feature_code", sa.String(80), nullable=False),
         sa.Column("enabled", sa.Boolean(), nullable=False, server_default=sa.text("true")),
-        sa.Column("limits", postgresql.JSONB(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.UniqueConstraint("plan_code", "feature_code", name="uq_subscription_plan_feature"),
@@ -280,7 +279,6 @@ def upgrade() -> None:
                       AND s.status = 'PENDING'
                       AND s.created_by = public.nlc_current_user_id()
                       AND pf.enabled IS TRUE
-                      AND pf.limits IS NOT DISTINCT FROM client_subscription_features.limits
                 )
             )
         )
