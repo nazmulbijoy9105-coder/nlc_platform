@@ -48,6 +48,26 @@ def upgrade() -> None:
 
             IF EXISTS (
                 SELECT 1
+                  FROM public.payment_ledger_events e
+                  JOIN public.payments p ON p.id = e.payment_id
+                  JOIN public.payment_submissions ps ON ps.id = e.submission_id
+                 WHERE e.event_type = 'PAYMENT_VERIFIED'
+                   AND e.payment_id IS NOT NULL
+                   AND e.submission_id IS NOT NULL
+                   AND (
+                       p.company_id IS DISTINCT FROM ps.company_id
+                       OR p.method IS DISTINCT FROM ps.method
+                       OR lower(btrim(p.payer_reference)) IS DISTINCT FROM
+                          lower(btrim(ps.payer_reference))
+                   )
+            ) THEN
+                RAISE EXCEPTION
+                    'payment-to-submission ledger evidence does not match receipt identity; reconcile finance evidence before migration 0069'
+                    USING ERRCODE = '23514';
+            END IF;
+
+            IF EXISTS (
+                SELECT 1
                   FROM public.payment_submissions ps
                   JOIN public.payments p
                     ON p.method = ps.method
