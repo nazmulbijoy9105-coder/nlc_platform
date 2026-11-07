@@ -14,6 +14,8 @@ FORWARD_ONLY_MIGRATIONS = (
     "alembic/versions/0050_signed_rls_identity_hardening.py",
     "alembic/versions/0053_agm_minutes_unknown_default.py",
     "alembic/versions/0058_suppress_unreleased_rule_notifications.py",
+    "alembic/versions/0074_legal_release_quarantine.py",
+    "alembic/versions/0075_director_transfer_evidence.py",
 )
 
 
