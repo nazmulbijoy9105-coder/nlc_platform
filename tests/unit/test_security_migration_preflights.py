@@ -50,6 +50,6 @@ def test_signed_rls_inventory_preflight_runs_before_schema_mutations():
     assert "to_regclass(:qualified_name)" in source
     assert "RLS migration preflight found missing expected public tables:" in source
     assert "RLS migration preflight found missing expected public views:" in source
-    assert "This migration will not recreate empty tables" in _migration(
+    assert "will not recreate empty tables" in _migration(
         "0044_webhook_schema_reconcile.py"
     )
