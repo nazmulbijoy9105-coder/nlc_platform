@@ -571,7 +571,7 @@
       "effective_from": null,
       "effective_to": null,
       "company_types": [
-        "VERIFY_RULE_SPECIFIC_SCOPE"
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
       ],
       "applicability_conditions": "Identify the exact capital alteration type and Articles authority under s.53; s.54 covers specified consolidation/conversion/subdivision notices; increase of registered capital is separately under s.56.",
       "evidence_requirements": "Obtain current Articles, shareholder resolution, capital structure before/after, relevant notice/forms, RJSC receipt and effective-date record.",
@@ -742,7 +742,7 @@
       "effective_from": null,
       "effective_to": null,
       "company_types": [
-        "VERIFY_RULE_SPECIFIC_SCOPE"
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
       ],
       "applicability_conditions": "Form XII particulars due within 14 days under s.115(2). A 365-day escalation is internal NLC policy, not a separate continuing offence or daily penalty.",
       "evidence_requirements": "Verify event type/date, duty-holder, Form XII filing receipt, RJSC registry response, extensions/corrections and applicable statutory penalty text.",
@@ -818,7 +818,7 @@
       "effective_from": null,
       "effective_to": null,
       "company_types": [
-        "VERIFY_RULE_SPECIFIC_SCOPE"
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
       ],
       "applicability_conditions": "Written director consent is a separate filing from Form XII; verify appointment date and consent filing within 30 days under s.93(2), and reconcile s.92/Form IX instructions.",
       "evidence_requirements": "Obtain signed consent, appointment resolution, Registrar filing receipt, current Form IX/Form X version and RJSC record.",
@@ -989,7 +989,7 @@
       "effective_from": null,
       "effective_to": null,
       "company_types": [
-        "VERIFY_RULE_SPECIFIC_SCOPE"
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
       ],
       "applicability_conditions": "Verify the RJSC registration record, certified MoA/AoA copies, incorporation date and subsequent amendments. Non-production in NLC records is not proof of non-registration or invalidity.",
       "evidence_requirements": "Obtain authenticated RJSC registry search, certified incorporation documents, filing/registration receipts and amendment history.",
@@ -1483,7 +1483,7 @@
       "effective_from": null,
       "effective_to": null,
       "company_types": [
-        "VERIFY_RULE_SPECIFIC_SCOPE"
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
       ],
       "applicability_conditions": "Verify proper transfer instrument duly stamped and executed by transferor/transferee and relevant certificate; account for statutory lost-instrument/indemnity exception.",
       "evidence_requirements": "Obtain original/certified instrument, signatures, stamp verification, share certificate, lodgement record and any lost-instrument indemnity.",
@@ -1502,7 +1502,7 @@
       "effective_from": null,
       "effective_to": null,
       "company_types": [
-        "VERIFY_RULE_SPECIFIC_SCOPE"
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
       ],
       "applicability_conditions": "Verify instrument category, execution facts, current Schedule I rate, exemptions/adjudication and whether duty was paid; do not infer non-payment from a missing receipt.",
       "evidence_requirements": "Obtain executed instrument, stamp certificate/e-stamp record, payment receipt, adjudication/exemption order and current schedule.",
@@ -1521,7 +1521,7 @@
       "effective_from": null,
       "effective_to": null,
       "company_types": [
-        "VERIFY_RULE_SPECIFIC_SCOPE"
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
       ],
       "applicability_conditions": "Only if the operative Articles restriction and its applicability to this transfer are verified; board approval is not a universal statutory requirement.",
       "evidence_requirements": "Obtain current Articles, share class/transfer instrument, notice to company, board decision, refusal/registration record and relevant shareholder agreements.",
@@ -1540,7 +1540,7 @@
       "effective_from": null,
       "effective_to": null,
       "company_types": [
-        "VERIFY_RULE_SPECIFIC_SCOPE"
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
       ],
       "applicability_conditions": "Only where refusal to register is verified; company must notify both transferor and transferee within 30 days after the instrument is lodged.",
       "evidence_requirements": "Obtain instrument lodgement receipt/date, board/refusal decision, notices to both parties, dispatch and delivery proof.",
@@ -1559,7 +1559,7 @@
       "effective_from": null,
       "effective_to": null,
       "company_types": [
-        "VERIFY_RULE_SPECIFIC_SCOPE"
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
       ],
       "applicability_conditions": "Only where transfer registration is verified despite a specific operative Articles restriction and absence of required approval; no automatic voidness conclusion.",
       "evidence_requirements": "Obtain operative Articles clause, transfer instrument, approval/refusal record, register entry, notices and any court/rectification order.",
@@ -1578,7 +1578,7 @@
       "effective_from": null,
       "effective_to": null,
       "company_types": [
-        "VERIFY_RULE_SPECIFIC_SCOPE"
+        "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
       ],
       "applicability_conditions": "Composite internal review only when two or more independently verified transfer-record signals exist; no automatic breach, invalidity or title conclusion.",
       "evidence_requirements": "Link each constituent signal to its own authenticated evidence, provenance, date, current status and counsel disposition.",
