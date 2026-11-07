@@ -235,6 +235,7 @@ async def test_plan_upsert_rejects_unimplemented_feature_before_database_write()
         )
 
     db.get.assert_not_awaited()
+    db.execute.assert_not_awaited()
 
 
 @pytest.mark.asyncio
