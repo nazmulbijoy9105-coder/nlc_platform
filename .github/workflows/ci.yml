@@ -110,8 +110,8 @@ jobs:
         run: |
           set -euo pipefail
           HEADS="$(alembic heads)"
-          printf '%s\\n' "$HEADS"
-          HEAD_COUNT="$(printf '%s\\n' "$HEADS" | grep -c '(head)')"
+          printf '%s\n' "$HEADS"
+          HEAD_COUNT="$(printf '%s\n' "$HEADS" | grep -c '(head)')"
           test "$HEAD_COUNT" -eq 1
 
           # Roles are cluster-level objects: provision them before Alembic.
