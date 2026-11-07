@@ -130,7 +130,7 @@ def _is_rescue_required(output) -> bool:
     """Whether the company NEEDS a rescue plan — based on flag presence,
     not on whether the engine happened to produce a sequence."""
     sb = output.score_breakdown
-    return (
+    return bool(
         sb.black_flag_count > 0
         or sb.red_flag_count > 0
         or sb.override_applied
