@@ -941,26 +941,79 @@ class TestScoreBanding:
 
 
 
+class TestSection150Applicability:
+    def test_private_company_is_excluded_from_section_150(self, rule_engine, build_profile):
+        profile = build_profile(
+            company_type="PRIVATE_LIMITED",
+            business_commencement_declaration_filed=False,
+        )
+        assert_flag_not_triggered(rule_engine.evaluate(profile), "INC-007")
+
+    def test_public_company_without_prospectus_is_excluded(self, rule_engine, build_profile):
+        profile = build_profile(
+            company_type="PUBLIC_LIMITED",
+            section150_prospectus_issued=False,
+            business_commencement_declaration_filed=False,
+        )
+        assert_flag_not_triggered(rule_engine.evaluate(profile), "INC-007")
+
+    def test_public_company_requires_verified_section_150_applicability(self, rule_engine, build_profile):
+        profile = build_profile(
+            company_type="PUBLIC_LIMITED",
+            section150_prospectus_issued=True,
+            business_commencement_declaration_filed=False,
+        )
+        assert_flag_not_triggered(rule_engine.evaluate(profile), "INC-007")
+
+    def test_verified_section_150_case_is_review_only(self, rule_engine, build_profile):
+        profile = build_profile(
+            company_type="PUBLIC_LIMITED",
+            section150_prospectus_issued=True,
+            section150_applicability_verified=True,
+            section150_applicability_evidence_ref="evidence://section150/applicability",
+            business_commencement_declaration_filed=False,
+        )
+        output = rule_engine.evaluate(profile)
+        assert_flag_triggered(output, "INC-007")
+        flag = next(f for f in output.flags if f.rule_id == "INC-007")
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
+        assert not flag.is_black_override
+
+
 class TestInsolvencyRules:
-    """Bankruptcy Act 1997 — BNK-001 to BNK-003."""
+    """Companies Act 1994 Part V winding-up status is review-only."""
 
     def test_BNK001_triggers_winding_up_petition(self, rule_engine, build_profile):
-        """Winding up petition filed → BNK-001 (BLACK)."""
+        """A reported petition creates a review signal, never an automatic BLACK finding."""
         profile = build_profile(winding_up_petition_filed=True)
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "BNK-001")
 
     def test_BNK002_triggers_liquidator_appointed(self, rule_engine, build_profile):
-        """Liquidator appointed → BNK-002 (BLACK)."""
+        """A reported liquidator appointment requires route-specific verification."""
         profile = build_profile(liquidator_appointed=True)
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "BNK-002")
 
     def test_BNK003_triggers_court_ordered_winding_up(self, rule_engine, build_profile):
-        """Court-ordered winding up → BNK-003 (BLACK)."""
+        """A reported court order requires authenticated case verification."""
         profile = build_profile(court_ordered_winding_up=True)
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "BNK-003")
+
+    def test_insolvency_signals_are_never_automatic_black_findings(self, rule_engine, build_profile):
+        for profile in (
+            build_profile(winding_up_petition_filed=True),
+            build_profile(liquidator_appointed=True),
+            build_profile(court_ordered_winding_up=True),
+        ):
+            output = rule_engine.evaluate(profile)
+            flags = [f for f in output.flags if f.rule_id.startswith("BNK-")]
+            assert flags
+            assert all(f.severity == Severity.NOT_EVALUATED for f in flags)
+            assert all(f.score_impact == 0 for f in flags)
+            assert all(not f.is_black_override for f in flags)
 
     def test_no_insolvency_flags_when_compliant(self, rule_engine, build_profile):
         """No insolvency flags when company is solvent."""
