@@ -508,9 +508,11 @@ class CompanyService(BaseService[Company]):
                 director_id=str(d.id),
                 event_type="appointment" if d.director_status.value == "ACTIVE" else "resignation",
                 event_date=d.appointment_date or d.departure_date or date.today(),
-                form_filed=bool(d.appointment_filed_date or d.departure_filed_date),
+                form_filed=True if (d.appointment_filed_date or d.departure_filed_date) else None,
                 form_filed_date=d.appointment_filed_date or d.departure_filed_date,
                 form_type="XII",
+                form_filed_verified=False,
+                form_filed_evidence_ref=None,
             ))
 
         # ── Share Transfers ───────────────────────────────────────
