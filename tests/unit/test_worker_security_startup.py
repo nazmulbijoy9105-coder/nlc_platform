@@ -1,11 +1,12 @@
-"""Worker startup must enforce the same PostgreSQL identity gate as the API."""
+"""Worker startup and event-loop lifecycle must enforce DB safety."""
 
 import pytest
 
-from app.worker.celery_app import configure_worker
+from app.worker.celery_app import verify_worker_runtime_security
+from app.worker.tasks.core import run_async
 
 
-def test_worker_startup_verifies_runtime_database_role(monkeypatch):
+def test_worker_process_verifies_runtime_database_role(monkeypatch):
     import app.models.database as database
 
     calls = []
@@ -13,20 +14,45 @@ def test_worker_startup_verifies_runtime_database_role(monkeypatch):
     async def verify():
         calls.append("verified")
 
+    async def dispose():
+        calls.append("disposed")
+
     monkeypatch.setattr(database, "verify_runtime_database_role", verify)
+    monkeypatch.setattr(database, "dispose_engine", dispose)
 
-    configure_worker(sender="unit-test-worker")
+    verify_worker_runtime_security()
 
-    assert calls == ["verified"]
+    assert calls == ["verified", "disposed"]
 
 
-def test_worker_startup_fails_closed_when_runtime_role_is_unsafe(monkeypatch):
+def test_worker_process_fails_closed_when_runtime_role_is_unsafe(monkeypatch):
     import app.models.database as database
 
     async def reject():
         raise RuntimeError("unsafe runtime role")
 
+    async def dispose():
+        return None
+
     monkeypatch.setattr(database, "verify_runtime_database_role", reject)
+    monkeypatch.setattr(database, "dispose_engine", dispose)
 
     with pytest.raises(RuntimeError, match="unsafe runtime role"):
-        configure_worker(sender="unit-test-worker")
+        verify_worker_runtime_security()
+
+
+def test_worker_task_disposes_async_engine_before_closing_event_loop(monkeypatch):
+    import app.models.database as database
+
+    calls = []
+
+    async def dispose():
+        calls.append("disposed")
+
+    async def task_body():
+        return "task-result"
+
+    monkeypatch.setattr(database, "dispose_engine", dispose)
+
+    assert run_async(task_body()) == "task-result"
+    assert calls == ["disposed"]
