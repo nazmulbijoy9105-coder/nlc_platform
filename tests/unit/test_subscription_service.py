@@ -213,6 +213,8 @@ async def test_entitlement_requires_fully_reconciled_settled_allocations(settled
 @pytest.mark.asyncio
 async def test_plan_upsert_rejects_unimplemented_feature_before_database_write():
     db = MagicMock()
+    db.get = AsyncMock()
+    db.execute = AsyncMock()
     service = SubscriptionService(db)
 
     with pytest.raises(ValueError, match="Unsupported subscription feature"):
