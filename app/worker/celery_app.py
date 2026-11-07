@@ -208,6 +208,7 @@ celery_app.conf.update(
         "app.worker.tasks.cleanup_expired_notifications":   {"queue": "maintenance"},
         "app.worker.tasks.database_health_check":           {"queue": "maintenance"},
         "app.worker.tasks.sync_sro_registry":               {"queue": "maintenance"},
+        "app.worker.tasks.process_due_subscriptions":       {"queue": "maintenance"},
     },
 
     # ── Worker Configuration ──────────────────────────────────────
