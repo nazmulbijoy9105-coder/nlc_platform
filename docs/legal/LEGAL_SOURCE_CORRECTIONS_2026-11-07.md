@@ -78,3 +78,12 @@ Do not change `docs/legal/legal_approval_register.yaml` to approved. Preserve:
 - `LEGAL_SCORE_RELEASED = False`
 
 Any future activation requires a complete rule-specific source dossier, applicability and evidence model, exceptions/remedies analysis, independent signed counsel disposition and passing positive/negative regression tests.
+
+
+## CAP-003 — capital reduction citation correction (7 November 2026)
+
+- Previous catalogue anchor: Companies Act 1994 section 150(1)/(6).
+- Correct source anchor: Companies Act 1994 sections 59–60. Section 59 addresses reduction of share capital by special resolution subject to court approval; section 60 addresses the application to court for confirmation.
+- Section 150 is the separate business-commencement provision and belongs to the INC-007 review, not CAP-003.
+- The rule remains NOT_EVALUATED, score impact 0, BLACK override false, and counsel review open. Exact Articles authority, creditor-notice procedure, court order, registration and consequences remain to be validated individually.
+- Official primary source: https://bdlaws.minlaw.gov.bd/act-788/part-354.html
