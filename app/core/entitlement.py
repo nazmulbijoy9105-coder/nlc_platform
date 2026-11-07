@@ -12,7 +12,7 @@ from app.models.company import CompanyUserAccess
 from app.models.user import User
 from app.services.subscription_service import SubscriptionService
 
-_PRIVILEGED_BYPASS_ROLES = frozenset({"SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF"})
+_PRIVILEGED_BYPASS_ROLES = frozenset({"SUPER_ADMIN", "ADMIN_STAFF"})
 _CUSTOMER_ROLES = frozenset({"CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"})
 
 
