@@ -31,6 +31,8 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
+from app.core.entitlement import require_entitlement
+from app.core.company_authorization import ensure_staff_company_scope
 from app.models.enums import RiskBand
 from app.services.company_service import CompanyService
 from app.services.notification_service import ActivityService
@@ -188,7 +190,8 @@ async def create_rescue_plan(
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
-    # Verify company exists and fetch
+    # Verify company exists and enforce assigned legal-staff scope.
+    await ensure_staff_company_scope(body.company_id, current_user, db)
     company = await company_svc.get_by_id_or_404(body.company_id)
 
     # Enforce: rescue plans only for RED or BLACK companies
@@ -268,6 +271,7 @@ async def create_rescue_plan(
 )
 async def list_rescue_plans(
     company_id: uuid.UUID | None = None,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
     """Issue 5: support optional company_id filter.
@@ -282,7 +286,11 @@ async def list_rescue_plans(
 
     query = select(RescuePlan).options(selectinload(RescuePlan.steps))
     if company_id is not None:
+        if current_user.role == "LEGAL_STAFF":
+            await ensure_staff_company_scope(company_id, current_user, db)
         query = query.where(RescuePlan.company_id == company_id)
+    elif current_user.role not in ("SUPER_ADMIN", "ADMIN_STAFF"):
+        raise HTTPException(status_code=403, detail="Portfolio-wide rescue plan access is restricted to platform administrators.")
     query = query.order_by(RescuePlan.created_at.desc())
 
     result = await db.execute(query)
@@ -297,13 +305,19 @@ async def list_rescue_plans(
 @router.get(
     "/plans/{company_id}/active",
     response_model=RescuePlanResponse,
-    dependencies=[Depends(require_company_access("company_id"))],
+    dependencies=[
+        Depends(require_company_access("company_id")),
+        Depends(require_entitlement("corporate_rescue")),
+    ],
     summary="Get the active rescue plan for a company",
 )
 async def get_active_plan(
     company_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    if current_user.role == "LEGAL_STAFF":
+        await ensure_staff_company_scope(company_id, current_user, db)
     _require_legal_release()
     rescue_svc = RescueService(db)
     company_svc = CompanyService(db)
@@ -331,6 +345,7 @@ async def get_active_plan(
 )
 async def get_rescue_plan(
     plan_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
     _require_legal_release()
@@ -347,6 +362,7 @@ async def get_rescue_plan(
     plan = result.scalar_one_or_none()
     if not plan:
         raise HTTPException(status_code=404, detail="Rescue plan not found.")
+    await ensure_staff_company_scope(plan.company_id, current_user, db, additional_staff_id=plan.assigned_staff_id)
     return _plan_to_response(plan)
 
 
@@ -385,6 +401,7 @@ async def update_rescue_step(
 
     from app.models.enums import RescueStepStatus
     plan = await rescue_svc.get_by_id_or_404(plan_id)
+    await ensure_staff_company_scope(plan.company_id, current_user, db, additional_staff_id=plan.assigned_staff_id)
     step = next((st for st in plan.steps if st.step_number == step_number), None)
     if step is None:
         raise HTTPException(status_code=404, detail="Rescue plan or step not found.")
