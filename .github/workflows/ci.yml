@@ -228,7 +228,7 @@ jobs:
           DATABASE_URL="$BASELINE_DATABASE_URL" alembic upgrade head
           CURRENT="$(DATABASE_URL="$BASELINE_DATABASE_URL" alembic current)"
           printf '%s\n' "$CURRENT"
-          grep -q "0078_articles_evidence_signed_rls" <<< "$CURRENT"
+          grep -q "0079_reconcile_legacy_agm_evidence_types" <<< "$CURRENT"
 
           # Export the resulting schema snapshot for independent review.
           PGPASSWORD=nlc_test pg_dump -h localhost -U nlc_test \
