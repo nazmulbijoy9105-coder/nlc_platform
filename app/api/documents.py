@@ -34,6 +34,7 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
+from app.core.entitlement import require_entitlement
 from app.models.enums import DocumentType
 from app.models.user import User
 from app.services.document_service import DocumentService, PromptTemplateService
@@ -333,7 +334,10 @@ async def generate_document(
 @router.get(
     "/{company_id}",
     response_model=list[DocumentResponse],
-    dependencies=[Depends(require_company_access("company_id"))],
+    dependencies=[
+        Depends(require_company_access("company_id")),
+        Depends(require_entitlement("document_management")),
+    ],
     summary="List all documents for a company",
 )
 async def list_documents(
