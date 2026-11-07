@@ -250,6 +250,7 @@ class CompanyService(BaseService[Company]):
         search: str | None = None,
         company_ids_filter: list[str] | None = None,
         user_id: uuid.UUID | None = None,
+        include_assigned_staff: bool = False,
     ) -> tuple[list[Company], int]:
         """
         List companies with filters, search, and pagination.
@@ -278,12 +279,15 @@ class CompanyService(BaseService[Company]):
                 CompanyUserAccess.user_id == user_id,
                 CompanyUserAccess.is_active.is_(True),
             )
-            filters.append(
-                or_(
-                    Company.assigned_staff_id == user_id,
-                    Company.id.in_(accessible_company_ids),
-                )
-            )  # type: ignore
+            if include_assigned_staff:
+                filters.append(
+                    or_(
+                        Company.assigned_staff_id == user_id,
+                        Company.id.in_(accessible_company_ids),
+                    )
+                )  # type: ignore
+            else:
+                filters.append(Company.id.in_(accessible_company_ids))  # type: ignore
         if search and search.strip():
             # Use PostgreSQL full-text search on company_name_search vector
             search_term = search.strip()
@@ -341,7 +345,9 @@ class CompanyService(BaseService[Company]):
             }
         return dict(row)
 
-    async def get_risk_distribution(self, user_id: uuid.UUID) -> list[dict]:
+    async def get_risk_distribution(
+        self, user_id: uuid.UUID, *, include_assigned_staff: bool = False
+    ) -> list[dict]:
         """Return risk distribution for companies the user can currently access.
 
         The global materialized/view aggregate is deliberately not used here:
@@ -361,12 +367,15 @@ class CompanyService(BaseService[Company]):
                     ) AS percentage
                 FROM companies c
                 WHERE c.is_active = TRUE
-                  AND EXISTS (
-                      SELECT 1
-                      FROM company_user_access cua
-                      WHERE cua.company_id = c.id
-                        AND cua.user_id = :user_id
-                        AND cua.is_active = TRUE
+                  AND (
+                      (:include_assigned_staff IS TRUE AND c.assigned_staff_id = :user_id)
+                      OR EXISTS (
+                          SELECT 1
+                          FROM company_user_access cua
+                          WHERE cua.company_id = c.id
+                            AND cua.user_id = :user_id
+                            AND cua.is_active = TRUE
+                      )
                   )
                 GROUP BY c.current_risk_band
                 ORDER BY CASE c.current_risk_band
@@ -378,12 +387,13 @@ class CompanyService(BaseService[Company]):
                 END
                 """
             ),
-            {"user_id": str(user_id)},
+            {"user_id": str(user_id), "include_assigned_staff": include_assigned_staff},
         )
         return [dict(row) for row in result.mappings().all()]
 
     async def get_upcoming_deadlines(
-        self, days_ahead: int = 30, user_id: uuid.UUID | None = None
+        self, days_ahead: int = 30, user_id: uuid.UUID | None = None,
+        *, include_assigned_staff: bool = False,
     ) -> list[dict]:
         """Return deadlines scoped to active memberships; no implicit global mode."""
         if user_id is None:
@@ -396,17 +406,24 @@ class CompanyService(BaseService[Company]):
                 SELECT d.*
                 FROM vw_upcoming_deadlines d
                 WHERE d.days_remaining <= :days
-                  AND EXISTS (
-                      SELECT 1
-                      FROM company_user_access cua
-                      WHERE cua.company_id = d.company_id
-                        AND cua.user_id = :user_id
-                        AND cua.is_active = TRUE
+                  AND (
+                      (:include_assigned_staff IS TRUE AND EXISTS (
+                          SELECT 1 FROM companies c
+                          WHERE c.id = d.company_id
+                            AND c.assigned_staff_id = :user_id
+                      ))
+                      OR EXISTS (
+                          SELECT 1
+                          FROM company_user_access cua
+                          WHERE cua.company_id = d.company_id
+                            AND cua.user_id = :user_id
+                            AND cua.is_active = TRUE
+                      )
                   )
                 ORDER BY d.days_remaining
                 """
             ),
-            {"days": days_ahead, "user_id": str(user_id)},
+            {"days": days_ahead, "user_id": str(user_id), "include_assigned_staff": include_assigned_staff},
         )
         return [dict(row) for row in result.mappings().all()]
 
