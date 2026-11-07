@@ -104,6 +104,32 @@ def _get_celery_backend() -> str:
                               os.environ.get("REDIS_URL", "redis://localhost:6379/0"))
 
 
+def _resolve_task_always_eager() -> bool:
+    """Allow eager task execution only outside deployment-grade runtimes."""
+    environment = os.environ.get("ENVIRONMENT", "development").strip().lower()
+    production_runtime = (
+        environment in {"prod", "production"}
+        or os.environ.get("RENDER", "").strip().lower() == "true"
+    )
+    configured = os.environ.get("CELERY_TASK_ALWAYS_EAGER")
+    if configured is None:
+        # Keep the lightweight synchronous default for local/free-tier
+        # development, but require a real worker in production.
+        return not production_runtime
+
+    value = configured.strip().lower()
+    if value not in {"true", "false"}:
+        raise RuntimeError(
+            "CELERY_TASK_ALWAYS_EAGER must be explicitly 'true' or 'false'"
+        )
+    if production_runtime and value == "true":
+        raise RuntimeError(
+            "CELERY_TASK_ALWAYS_EAGER=true is forbidden in production; "
+            "background jobs must execute in a dedicated Celery worker"
+        )
+    return value == "true"
+
+
 # Create Celery application
 celery_app = Celery(
     "nlc_worker",
@@ -229,8 +255,7 @@ celery_app.conf.update(
     task_send_sent_event=True,     # Send 'sent' event for each task
 
     # ── Security ─────────────────────────────────────────────────
-    task_always_eager=os.environ.get("CELERY_TASK_ALWAYS_EAGER", "true").lower() == "true",  # true = sync (free tier), false = needs workers       # Never run tasks synchronously in production
-                                   # Override in tests: task_always_eager=True
+    task_always_eager=_resolve_task_always_eager(),
 )
 
 # ── Import beat schedule (must come after celery_app is created) ──────
