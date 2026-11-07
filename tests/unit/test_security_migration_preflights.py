@@ -24,7 +24,7 @@ def test_webhook_and_rescue_reconciliation_refuses_to_replace_missing_evidence()
     assert "CREATE TABLE IF NOT EXISTS" not in source.upper()
 
 
-def test_signed_rls_migration_rejects_unsafe_roles_and_memberships_in_both_directions():
+def test_signed_rls_migration_restricts_memberships_to_trusted_admins():
     source = _migration("0050_signed_rls_identity_hardening.py")
 
     assert "nlc_app_role" in source
