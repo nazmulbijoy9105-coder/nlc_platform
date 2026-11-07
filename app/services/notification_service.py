@@ -15,7 +15,7 @@ import re
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, not_, or_, select
 
 from app.models.enums import NotificationChannel, NotificationStatus
 from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
@@ -344,7 +344,7 @@ class NotificationService(BaseService[Notification]):
         )
         eligible_operational = and_(
             Notification.related_flag_id.is_(None),
-            ~legal_type_pattern,
+            not_(legal_type_pattern),
             or_(
                 Notification.notification_type.in_(NON_LEGAL_OPERATIONAL_NOTIFICATION_TYPES),
                 operational_prefix,
