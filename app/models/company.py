@@ -385,7 +385,7 @@ class Company(FullMixin, Base):
         order_by="ComplianceScoreHistory.calculated_at.desc()"
     )
     evaluation_runs: Mapped[list["ComplianceEvaluationRun"]] = relationship(
-        "ComplianceEvaluationRun", back_populates="company", lazy="noload",
+        "ComplianceEvaluationRun", back_populates="company", lazy="raise",
         order_by="ComplianceEvaluationRun.calculated_at.desc()"
     )
     rescue_plans: Mapped[list[RescuePlan]] = relationship(
