@@ -36,9 +36,9 @@ CUSTOMER_READ_ROLES = ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "SUPER_ADMIN", "AD
 
 class SubscriptionPriceInput(BaseModel):
     billing_interval: Literal["MONTHLY", "QUARTERLY", "ANNUAL", "ONE_TIME"]
-    amount_bdt: Decimal = Field(gt=0, max_digits=15, decimal_places=2, allow_inf_nan=False)
-    tax_bdt: Decimal = Field(ge=0, max_digits=15, decimal_places=2, allow_inf_nan=False)
-    tax_policy_reference: str = Field(min_length=3, max_length=500)
+    amount_bdt: Decimal = Field(gt=0, max_digits=15, decimal_places=2, allow_inf_nan=False, description="Subscription fee before the separately configured tax amount.")
+    tax_bdt: Decimal = Field(ge=0, max_digits=15, decimal_places=2, allow_inf_nan=False, description="Explicit fixed tax amount for this billing interval; not automatically calculated.")
+    tax_policy_reference: str = Field(min_length=3, max_length=500, description="Reference to the approved tax/VAT treatment or exemption basis for this price.")
 
 
 class SubscriptionFeatureInput(BaseModel):
