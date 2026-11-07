@@ -12,6 +12,12 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Serialize writes while checking historical data and installing triggers;
+    # otherwise a concurrent insert could slip between preflight and DDL.
+    op.execute(
+        "LOCK TABLE public.payment_submissions, public.payments IN SHARE ROW EXCLUSIVE MODE"
+    )
+
     # Do not silently bless an already-corrupt ledger. Require operators to
     # reconcile any historical cross-table collisions before this guard lands.
     op.execute("""
