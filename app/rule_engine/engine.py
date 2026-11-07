@@ -762,7 +762,7 @@ class NLCRuleEngine:
                 is_black_override=True,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description="Private company has insufficient directors. Section 90(2) requires minimum 2 directors.",
-                statutory_basis="Section 90(2), Companies Act 1994 (Bangladesh)",
+                statutory_basis="Sections 90(1) and 90(2), Companies Act 1994 (Bangladesh)",
                 detail={"current_count": c.current_director_count, "required": 2}
             ))
 
@@ -1305,7 +1305,7 @@ class NLCRuleEngine:
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="Attendance is verified, but the applicable quorum has not been verified against the Articles and Section 85(2)(b).",
-                statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh), read with the Articles",
                 state=RuleState.UNKNOWN,
                 eval_state="UNKNOWN",
             ))
