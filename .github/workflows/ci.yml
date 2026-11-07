@@ -182,6 +182,21 @@ jobs:
           DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
           DATABASE_URL="$SECOND_DATABASE_URL" alembic current
 
+      - name: Generate SQL from production migration baseline 0042
+        run: |
+          set -euo pipefail
+          alembic upgrade 0042_dedup_key:head --sql > /tmp/nlc_0042_to_head.sql
+          test -s /tmp/nlc_0042_to_head.sql
+          grep -q "0074_legal_release_quarantine" /tmp/nlc_0042_to_head.sql
+          grep -q "0075_director_transfer_evidence" /tmp/nlc_0042_to_head.sql
+
+      - name: Upload isolated migration rehearsal SQL
+        uses: actions/upload-artifact@v4
+        with:
+          name: nlc-legal-migration-0042-to-head
+          path: /tmp/nlc_0042_to_head.sql
+          retention-days: 1
+
       - name: Run integration tests
         run: python -m pytest tests/integration -q --tb=short
 
