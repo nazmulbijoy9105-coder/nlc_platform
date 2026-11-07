@@ -94,7 +94,7 @@ class SubscriptionService:
                     for item in prices.scalars().all()
                 ],
                 "features": [
-                    {"feature_code": item.feature_code, "limits": item.limits}
+                    {"feature_code": item.feature_code}
                     for item in features.scalars().all()
                 ],
             })
@@ -198,15 +198,12 @@ class SubscriptionService:
         existing_features = {item.feature_code: item for item in existing_features_result.scalars().all()}
         for feature_code, item in existing_features.items():
             item.enabled = feature_code in requested_features
-            if feature_code in requested_features:
-                item.limits = requested_features[feature_code].get("limits")
         for feature_code, feature in requested_features.items():
             if feature_code not in existing_features:
                 self.db.add(SubscriptionPlanFeature(
                     plan_code=code,
                     feature_code=feature_code,
                     enabled=True,
-                    limits=feature.get("limits"),
                 ))
         await self.db.flush()
         return plan
@@ -302,7 +299,6 @@ class SubscriptionService:
                 company_id=company_id,
                 feature_code=feature.feature_code,
                 enabled=True,
-                limits=feature.limits,
             ))
         self.db.add(SubscriptionEvent(
             subscription_id=subscription.id,
