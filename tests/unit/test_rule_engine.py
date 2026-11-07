@@ -1454,3 +1454,38 @@ class TestVerdictRegression:
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "AR-002")
         assert output.score_breakdown.risk_band.value not in ("RED", "BLACK")
+
+def test_black_override_requires_separate_authorization(
+    monkeypatch, build_profile
+):
+    """A BLACK severity/flag marker alone cannot force a BLACK score."""
+    import app.rule_engine.engine as engine_module
+
+    profile = build_profile()
+    flag = ComplianceFlag(
+        rule_id="INC-003",
+        flag_code="MINIMUM_DIRECTORS_NOT_MET",
+        severity=Severity.BLACK,
+        score_impact=15,
+        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+        description="Test-only verified violation",
+        statutory_basis="Test-only basis",
+        is_black_override=True,
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+    )
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(
+        engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset()
+    )
+    denied = engine_module.NLCRuleEngine()._calculate_score([flag], profile)
+    assert denied.override_applied is False
+    assert denied.final_score > 0
+
+    monkeypatch.setattr(
+        engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"INC-003"})
+    )
+    authorized = engine_module.NLCRuleEngine()._calculate_score([flag], profile)
+    assert authorized.override_applied is True
+    assert authorized.final_score == 0
