@@ -48,6 +48,8 @@ class SubscriptionPlanPrice(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         UniqueConstraint("plan_code", "billing_interval", name="uq_subscription_plan_price_interval"),
         CheckConstraint("billing_interval IN ('MONTHLY','QUARTERLY','ANNUAL','ONE_TIME')", name="ck_subscription_plan_price_interval"),
         CheckConstraint("amount_bdt >= 0", name="ck_subscription_plan_price_amount"),
+        CheckConstraint("tax_bdt >= 0", name="ck_subscription_plan_price_tax"),
+        CheckConstraint("length(trim(tax_policy_reference)) BETWEEN 3 AND 500", name="ck_subscription_plan_price_tax_reference"),
         CheckConstraint("currency = 'BDT'", name="ck_subscription_plan_price_currency"),
         Index("ix_subscription_plan_prices_active", "plan_code", "is_active"),
     )
