@@ -65,6 +65,54 @@ def upgrade() -> None:
             "Articles evidence RLS migration requires the nlc_app_role runtime role"
         )
 
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_can_access_articles_company(
+            p_company_id uuid
+        )
+        RETURNS boolean
+        LANGUAGE sql
+        STABLE
+        SECURITY DEFINER
+        SET search_path = pg_catalog, public
+        AS $function$
+            SELECT
+                public.nlc_current_user_principal() = 'ADMIN'
+                OR EXISTS (
+                    SELECT 1
+                    FROM public.users u
+                    WHERE u.id = public.nlc_current_user_id()
+                      AND u.is_active IS TRUE
+                      AND u.role::text IN ('SUPER_ADMIN', 'ADMIN_STAFF')
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM public.users u
+                    JOIN public.companies c
+                      ON c.assigned_staff_id = u.id
+                    WHERE c.id = p_company_id
+                      AND u.id = public.nlc_current_user_id()
+                      AND u.is_active IS TRUE
+                      AND u.role::text = 'LEGAL_STAFF'
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM public.users u
+                    JOIN public.company_user_access cua
+                      ON cua.user_id = u.id
+                    WHERE cua.company_id = p_company_id
+                      AND u.id = public.nlc_current_user_id()
+                      AND u.is_active IS TRUE
+                      AND cua.is_active IS TRUE
+                )
+        $function$
+    """)
+    op.execute(
+        "REVOKE ALL ON FUNCTION public.nlc_can_access_articles_company(uuid) FROM PUBLIC"
+    )
+    op.execute(
+        "GRANT EXECUTE ON FUNCTION public.nlc_can_access_articles_company(uuid) TO nlc_app_role"
+    )
+
     for table in EVIDENCE_TABLES:
         # FORCE ensures the table owner does not accidentally bypass the
         # tenant policy. The production runtime role must also remain
@@ -98,7 +146,7 @@ def upgrade() -> None:
             CREATE POLICY {table}_company_read
             ON public.{table}
             FOR SELECT
-            USING (public.nlc_can_access_company(company_id))
+            USING (public.nlc_can_access_articles_company(company_id))
         """)
         if table == "articles_verifications":
             # Company editors may submit evidence; the signed principal must
@@ -110,6 +158,7 @@ def upgrade() -> None:
                 WITH CHECK (
                     submitted_by = public.nlc_current_user_id()
                     AND public.nlc_can_edit_company(company_id)
+                    AND public.nlc_can_access_articles_company(company_id)
                 )
             """)
         else:
@@ -138,7 +187,7 @@ def upgrade() -> None:
                 FOR UPDATE
                 USING (
                     public.nlc_current_user_is_staff()
-                    AND public.nlc_can_access_company(company_id)
+                    AND public.nlc_can_access_articles_company(company_id)
                 )
                 WITH CHECK (
                     public.nlc_current_user_is_staff()
