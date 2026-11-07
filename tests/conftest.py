@@ -506,14 +506,18 @@ def make_share_transfer():
 
     def _make(
         days_ago: int = 30,
-        instrument_recorded: bool = True,
-        stamp_duty_paid: bool = True,
-        board_approval: bool = True,
-        share_register_updated: bool = True,
-        aoa_restriction_apply: bool = False,
-        board_approval_obtained: bool = True,
-        stamp_duty_amount: float | None = 1000.0,
-        form_117_filed: bool = True,
+        instrument_recorded: bool | None = None,
+        stamp_duty_paid: bool | None = None,
+        board_approval: bool | None = None,
+        share_register_updated: bool | None = None,
+        aoa_restriction_apply: bool | None = None,
+        board_approval_obtained: bool | None = None,
+        stamp_duty_amount: float | None = None,
+        form_117_filed: bool | None = None,
+        transfer_registered: bool | None = None,
+        registration_refused: bool | None = None,
+        refusal_notice_sent: bool | None = None,
+        instrument_lodged_date: date | None = None,
     ) -> ShareTransfer:
         return ShareTransfer(
             transfer_id=str(uuid.uuid4()),
@@ -526,6 +530,10 @@ def make_share_transfer():
             aoa_restriction_apply=aoa_restriction_apply,
             board_approval_obtained=board_approval_obtained,
             form_117_filed=form_117_filed,
+            transfer_registered=transfer_registered,
+            registration_refused=registration_refused,
+            refusal_notice_sent=refusal_notice_sent,
+            instrument_lodged_date=instrument_lodged_date,
         )
 
     return _make
