@@ -7,6 +7,7 @@ creating a filing task.
 from __future__ import annotations
 
 from datetime import date
+from typing import TypedDict
 
 from sqlalchemy import Date, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -42,11 +43,20 @@ class RJSCFormFiling(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         return f"<RJSCFormFiling {self.form_code} company={self.company_id} status={self.filing_status}>"
 
 
+class RJSCFormReference(TypedDict):
+    form_code: str
+    form_number: str
+    form_name: str
+    section: str
+    rule_id: str | None
+    deadline_days: int | None
+
+
 # RJSC's current public forms/FAQ and the prescribed forms were checked.
 # This is a reference catalogue, not independent legal approval. "deadline_days"
 # is a statutory period only where stated;
 # 0 means event-driven/no fixed day count, and None means do not auto-schedule.
-RJSC_FORMS_REFERENCE = [
+RJSC_FORMS_REFERENCE: list[RJSCFormReference] = [
     {"form_code": "FORM_I", "form_number": "I", "form_name": "Declaration on Registration of Company", "section": "Section 25", "rule_id": None, "deadline_days": 0},
     {"form_code": "FORM_III", "form_number": "III", "form_name": "Notice of Consolidation/Division of Share Capital", "section": "Sections 53-54", "rule_id": "CAP-001", "deadline_days": 15},
     {"form_code": "FORM_IV", "form_number": "IV", "form_name": "Notice of Increase in Share Capital", "section": "Section 56", "rule_id": "SH-003", "deadline_days": 15},

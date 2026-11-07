@@ -160,6 +160,53 @@ def _engine_rule_data():
             else:
                 result.setdefault(rule_id, set()).add(basis)
 
+    # Director Form XII evaluation selects DIR-001 or DIR-002 through a
+    # literal branch assignment before a shared ComplianceFlag constructor.
+    # Resolve those literal alternatives explicitly rather than silently
+    # dropping the cessation rule from the canonical ID set.
+    director_function = next(
+        (node for node in ast.walk(tree)
+         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+         and node.name == "_run_director_rules"),
+        None,
+    )
+    if director_function is not None:
+        director_rule_ids = set()
+        for child in ast.walk(director_function):
+            if not isinstance(child, ast.Assign):
+                continue
+            if not any(isinstance(target, ast.Name) and target.id == "rule_id"
+                       for target in child.targets):
+                continue
+            if (isinstance(child.value, ast.Constant)
+                    and isinstance(child.value.value, str)
+                    and _is_rule_id(child.value.value)):
+                director_rule_ids.add(child.value.value)
+
+        director_bases = set()
+        for child in ast.walk(director_function):
+            if not isinstance(child, ast.Call) or _call_name(child.func) != "ComplianceFlag":
+                continue
+            keywords = {kw.arg: kw.value for kw in child.keywords if kw.arg is not None}
+            if (isinstance(keywords.get("rule_id"), ast.Name)
+                    and keywords["rule_id"].id == "rule_id"):
+                basis_node = keywords.get("statutory_basis")
+                if isinstance(basis_node, ast.Constant) and isinstance(basis_node.value, str):
+                    director_bases.add(basis_node.value.strip())
+                else:
+                    errors.append("_run_director_rules: dynamic rule IDs require a literal statutory_basis")
+
+        if director_rule_ids:
+            if len(director_bases) != 1:
+                errors.append(
+                    "_run_director_rules: expected one shared literal statutory_basis "
+                    f"for dynamic rule IDs {sorted(director_rule_ids)}; found {sorted(director_bases)}"
+                )
+            else:
+                basis = next(iter(director_bases))
+                for rule_id in director_rule_ids:
+                    result.setdefault(rule_id, set()).add(basis)
+
     return result, errors
 
 
@@ -185,6 +232,7 @@ def test_engine_rule_calls_are_structurally_parseable():
     data, errors = _engine_rule_data()
     assert not errors, errors
     assert data, "No ComplianceFlag rule definitions were found"
+    assert "DIR-002" in data, "Director cessation rule must be included in engine parity"
 
 
 def test_counts():
@@ -217,6 +265,28 @@ def test_seed_matches_engine_and_has_no_duplicates():
         "seed_only": sorted(seed_set - engine_set),
         "engine_only": sorted(engine_set - seed_set),
     }
+
+
+
+def test_every_unapproved_seed_rule_is_fail_closed():
+    rows = _seed_rows()
+    assert len(rows) == EXPECTED
+    unsafe = [
+        {
+            "rule_id": row.get("rule_id"),
+            "default_severity": row.get("default_severity"),
+            "score_impact": row.get("score_impact"),
+            "is_black_override": row.get("is_black_override"),
+        }
+        for row in rows
+        if row.get("default_severity") != "NOT_EVALUATED"
+        or row.get("score_impact") != 0
+        or row.get("is_black_override") is not False
+    ]
+    assert not unsafe, (
+        "Unapproved legal rules must never seed severity, score impact, "
+        f"or BLACK overrides: {unsafe}"
+    )
 
 
 
@@ -290,3 +360,15 @@ def test_seed_statutory_basis_matches_engine_call_for_same_rule():
             })
 
     assert not mismatches, mismatches
+
+def test_inc005_imports_with_specific_foreign_investment_evidence():
+    """INC-005's multi-document evidence mapping must survive registry import."""
+    rule = STATUTORY_RULE_REGISTRY["INC-005"]
+    assert set(rule.evidence_required) == {
+        "INC-005:SUBSCRIPTION_OR_ALLOTMENT_RECORD",
+        "INC-005:AD_BANK_ENCASHMENT_CERTIFICATE_OR_PERMITTED_FC_ACCOUNT_EVIDENCE",
+        "INC-005:REMITTANCE_IDENTITY_AND_BANK_PROVENANCE",
+        "INC-005:CURRENT_BANGLADESH_BANK_CIRCULAR_VERSION",
+    }
+    assert rule.severity.value == "NOT_EVALUATED"
+    assert rule.score_impact == 0

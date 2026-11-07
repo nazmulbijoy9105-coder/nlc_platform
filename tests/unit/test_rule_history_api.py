@@ -119,4 +119,4 @@ def test_public_rule_response_discloses_pending_legal_verification():
 
     assert response.verification_status == "PENDING"
     assert response.verified_at is None
-    assert response.statutory_effective_date == "1994-02-12"
+    assert response.statutory_effective_date is None

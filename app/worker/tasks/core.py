@@ -96,8 +96,19 @@ def run_async(coro):
     try:
         return loop.run_until_complete(coro)
     finally:
-        loop.close()
-        asyncio.set_event_loop(None)
+        # SQLAlchemy async pooled connections are bound to the event loop
+        # that created them. This worker deliberately creates a new loop for
+        # every task, so dispose the pool before closing that loop; otherwise
+        # a later task can reuse an asyncpg connection from a closed loop.
+        try:
+            from app.models.database import dispose_engine
+
+            loop.run_until_complete(dispose_engine())
+        except Exception:
+            logger.exception("worker_async_engine_dispose_failed")
+        finally:
+            loop.close()
+            asyncio.set_event_loop(None)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -538,6 +549,25 @@ def queue_deadline_warning_notifications(
     """
     if warning_days is None:
         warning_days = [30, 15, 7, 3, 1]
+    if not warning_days or any(day < 0 for day in warning_days):
+        raise ValueError("warning_days must contain non-negative day thresholds")
+
+    # Do not send customer-facing statutory deadline alerts while the legal
+    # calendar is quarantined. The privileged worker scanner is intentionally
+    # global, so this release check must happen before opening its admin session.
+    from app.services.compliance_calendar import (
+        LEGAL_CALENDAR_RELEASED,
+        VERIFIED_CALENDAR_EVENT_TYPES,
+    )
+    if not LEGAL_CALENDAR_RELEASED or not VERIFIED_CALENDAR_EVENT_TYPES:
+        logger.warning(
+            "[Deadlines] Withheld: statutory calendar has not been independently released"
+        )
+        return {
+            "queued": 0,
+            "deadlines_checked": 0,
+            "status": "WITHHELD_LEGAL_CALENDAR_NOT_RELEASED",
+        }
 
     logger.info(
         f"[Deadlines] Checking upcoming deadlines for days: {warning_days}"

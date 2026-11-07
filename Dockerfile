@@ -6,7 +6,7 @@ WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc libffi-dev libssl-dev libpq-dev \
     libmagic1 libmagic-dev libpango-1.0-0 libpangoft2-1.0-0 \
-    libharfbuzz0b libharfbuzz-icu0 libfontconfig1 libcairo2 \
+    libharfbuzz0b libharfbuzz-icu0 libharfbuzz-subset0 libfontconfig1 libcairo2 \
     libgdk-pixbuf2.0-0 libxml2-dev libxslt1-dev shared-mime-info \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -62,4 +62,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
   CMD curl -fsS http://127.0.0.1:8000/api/v1/health/live || exit 1
 
-CMD alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
