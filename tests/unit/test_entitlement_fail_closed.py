@@ -114,7 +114,7 @@ async def test_customer_without_live_financial_company_membership_is_denied():
         await dependency(request=_request(), db=db, current_user=user)
 
     assert exc.value.status_code == 403
-    assert "active company membership" in exc.value.detail
+    assert "financial access" in exc.value.detail
 
 
 @pytest.mark.asyncio
@@ -155,40 +155,26 @@ async def test_known_company_id_without_financial_membership_is_denied(monkeypat
 
 
 @pytest.mark.asyncio
-async def test_active_company_member_without_financial_permission_can_use_paid_feature(monkeypatch):
+async def test_active_company_member_without_financial_permission_is_denied(monkeypatch):
     company_id = uuid.uuid4()
 
-    class PaidSubscription:
+    class MustNotCheckEntitlement:
         def __init__(self, db):
             pass
 
         async def has_entitlement(self, *, company_id, feature_code):
-            return feature_code == "document_management"
+            raise AssertionError("Billing visibility must be checked before reading paid entitlement")
 
-    monkeypatch.setattr(entitlement, "SubscriptionService", PaidSubscription)
+    monkeypatch.setattr(entitlement, "SubscriptionService", MustNotCheckEntitlement)
     membership = MagicMock()
-    membership.scalar_one_or_none.return_value = company_id
+    membership.scalar_one_or_none.return_value = None
     db = MagicMock()
     db.execute = AsyncMock(return_value=membership)
-    request = _request(company_id)
     dependency = entitlement.require_entitlement("document_management")
     user = SimpleNamespace(id=uuid.uuid4(), role="CLIENT_VIEW_ONLY")
 
-    assert await dependency(request=request, db=db, current_user=user) is True
-    assert request.state.entitled_company_ids == [str(company_id)]
-
-
-@pytest.mark.asyncio
-async def test_multi_company_account_requires_explicit_company_context():
-    result = MagicMock()
-    result.scalars.return_value.all.return_value = [uuid.uuid4(), uuid.uuid4()]
-    db = MagicMock()
-    db.execute = AsyncMock(return_value=result)
-    dependency = entitlement.require_entitlement("document_management")
-    user = SimpleNamespace(id=uuid.uuid4(), role="CLIENT_DIRECTOR")
-
     with pytest.raises(HTTPException) as exc:
-        await dependency(request=_request(), db=db, current_user=user)
+        await dependency(request=_request(company_id), db=db, current_user=user)
 
-    assert exc.value.status_code == 400
-    assert "company context is required" in exc.value.detail.lower()
+    assert exc.value.status_code == 403
+    assert "financial access" in exc.value.detail
