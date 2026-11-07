@@ -388,8 +388,10 @@ def require_company_access(company_id_param: str = "company_id"):
     Dependency factory that validates the requesting user has access
     to the company specified in the path parameter.
 
-    Admin/Staff: always granted (RLS policy handles data).
-    Client roles: must have company_id in their JWT company_ids list.
+    Platform admins: portfolio-wide access.
+    Legal staff: must be assigned to the company or hold an active company
+    access row. Client roles: must hold a live active company membership;
+    JWT company_ids are informational and are never trusted for authorization.
 
     Usage:
         @router.get("/companies/{company_id}/compliance")
