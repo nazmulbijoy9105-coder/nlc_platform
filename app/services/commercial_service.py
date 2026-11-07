@@ -269,7 +269,11 @@ class QuotationService(BaseService[Quotation]):
                 "), 0) + 1 "
                 "FROM quotations "
                 "WHERE quotation_number LIKE :pattern "
-                "AND SUBSTRING(quotation_number FROM :suffix_start) ~ '^[0-9]+        number = result.scalar_one()
+                "AND SUBSTRING(quotation_number FROM :suffix_start) ~ '^[0-9]+$'"
+            ),
+            {"pattern": f"{prefix}%", "suffix_start": len(prefix) + 1},
+        )
+        number = result.scalar_one()
         return f"{prefix}{number:04d}"
 
     async def accept(
