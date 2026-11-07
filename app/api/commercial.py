@@ -40,7 +40,12 @@ from app.core.dependencies import (
 )
 from app.models.enums import EngagementStatus, RevenueTier, TaskPriority, TaskStatus
 from app.models.user import User
-from app.services.commercial_service import CommercialConflictError, EngagementService, QuotationService, TaskService
+from app.services.commercial_service import (
+    CommercialConflictError,
+    EngagementService,
+    QuotationService,
+    TaskService,
+)
 from app.services.notification_service import ActivityService
 
 logger = structlog.get_logger(__name__)
