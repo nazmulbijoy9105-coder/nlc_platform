@@ -384,26 +384,33 @@ def on_task_failure(
             async def _log_failure() -> None:
                 from datetime import datetime
 
-                from app.models.database import AsyncSessionLocal, set_admin_context
+                from app.models.database import (
+                    AsyncSessionLocal,
+                    dispose_engine,
+                    set_admin_context,
+                )
                 from app.models.infrastructure import UserActivityLog
-                async with AsyncSessionLocal() as db, db.begin():
-                    await set_admin_context(db)
-                    log = UserActivityLog(
-                        action="TASK_FAILURE",
-                        resource_type="CeleryTask",
-                        description=(
-                            f"Task {sender.name if sender else 'unknown'} "
-                            f"failed: {exception!r:.200}"
-                        ),
-                        detail={
-                            "task_id":    task_id,
-                            "task_name":  sender.name if sender else None,
-                            "company_id": str(kwargs.get("company_id", "")),
-                            "error":      repr(exception)[:500],
-                        },
-                        logged_at=datetime.now(UTC),
-                    )
-                    db.add(log)
+                try:
+                    async with AsyncSessionLocal() as db, db.begin():
+                        await set_admin_context(db)
+                        log = UserActivityLog(
+                            action="TASK_FAILURE",
+                            resource_type="CeleryTask",
+                            description=(
+                                f"Task {sender.name if sender else 'unknown'} "
+                                f"failed: {exception!r:.200}"
+                            ),
+                            detail={
+                                "task_id":    task_id,
+                                "task_name":  sender.name if sender else None,
+                                "company_id": str(kwargs.get("company_id", "")),
+                                "error":      repr(exception)[:500],
+                            },
+                            logged_at=datetime.now(UTC),
+                        )
+                        db.add(log)
+                finally:
+                    await dispose_engine()
 
             asyncio.run(_log_failure())
         except Exception as log_err:
