@@ -213,19 +213,37 @@ def upgrade() -> None:
             status = 'PENDING'
             AND invoice_id IS NULL
             AND starts_at IS NULL
+            AND ends_at IS NULL
+            AND renews_at IS NULL
+            AND grace_ends_at IS NULL
+            AND cancelled_at IS NULL
+            AND suspended_at IS NULL
+            AND suspension_reason IS NULL
             AND activated_by IS NULL
+            AND auto_renew IS FALSE
+            AND cancel_at_period_end IS FALSE
             AND public.nlc_can_submit_payment_company(company_id)
+            AND (
+                public.nlc_current_user_is_finance_staff()
+                OR created_by = public.nlc_current_user_id()
+            )
             AND EXISTS (
                 SELECT 1
                 FROM public.subscription_plans p
                 JOIN public.subscription_plan_prices pp ON pp.plan_code = p.plan_code
                 WHERE p.plan_code = client_subscriptions.plan_code
                   AND p.plan_name = client_subscriptions.plan_name
+                  AND p.grace_days = client_subscriptions.grace_days
                   AND p.is_active IS TRUE
                   AND pp.is_active IS TRUE
                   AND pp.billing_interval = client_subscriptions.billing_interval
                   AND pp.amount_bdt = client_subscriptions.amount_bdt
                   AND pp.currency = client_subscriptions.currency
+            )
+            AND EXISTS (
+                SELECT 1 FROM public.subscription_plan_features pf
+                WHERE pf.plan_code = client_subscriptions.plan_code
+                  AND pf.enabled IS TRUE
             )
         )
     """)
@@ -240,12 +258,19 @@ def upgrade() -> None:
             public.nlc_current_user_is_finance_staff()
             OR (
                 public.nlc_can_submit_payment_company(company_id)
+                AND client_subscription_features.enabled IS TRUE
                 AND EXISTS (
-                    SELECT 1 FROM public.client_subscriptions s
+                    SELECT 1
+                    FROM public.client_subscriptions s
+                    JOIN public.subscription_plan_features pf
+                      ON pf.plan_code = s.plan_code
+                     AND pf.feature_code = client_subscription_features.feature_code
                     WHERE s.id = client_subscription_features.subscription_id
                       AND s.company_id = client_subscription_features.company_id
                       AND s.status = 'PENDING'
                       AND s.created_by = public.nlc_current_user_id()
+                      AND pf.enabled IS TRUE
+                      AND pf.limits IS NOT DISTINCT FROM client_subscription_features.limits
                 )
             )
         )
@@ -294,9 +319,35 @@ def upgrade() -> None:
         FOR INSERT WITH CHECK (
             public.nlc_current_user_is_finance_staff()
             OR (
-                event_type IN ('REQUESTED','CANCEL_AT_PERIOD_END')
-                AND actor_id = public.nlc_current_user_id()
+                actor_id = public.nlc_current_user_id()
                 AND public.nlc_can_submit_payment_company(company_id)
+                AND (
+                    (
+                        event_type = 'REQUESTED'
+                        AND invoice_id IS NULL
+                        AND payment_id IS NULL
+                        AND EXISTS (
+                            SELECT 1 FROM public.client_subscriptions s
+                            WHERE s.id = subscription_events.subscription_id
+                              AND s.company_id = subscription_events.company_id
+                              AND s.created_by = public.nlc_current_user_id()
+                              AND s.status = 'PENDING'
+                        )
+                    )
+                    OR (
+                        event_type = 'CANCEL_AT_PERIOD_END'
+                        AND payment_id IS NULL
+                        AND EXISTS (
+                            SELECT 1 FROM public.client_subscriptions s
+                            WHERE s.id = subscription_events.subscription_id
+                              AND s.company_id = subscription_events.company_id
+                              AND s.created_by = public.nlc_current_user_id()
+                              AND s.status = 'ACTIVE'
+                              AND s.cancel_at_period_end IS TRUE
+                              AND s.invoice_id IS NOT DISTINCT FROM subscription_events.invoice_id
+                        )
+                    )
+                )
             )
         )
     """)
