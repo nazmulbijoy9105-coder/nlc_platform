@@ -14,14 +14,15 @@ from app.core.dependencies import get_current_user
 
 # Keep this allowlist narrow and subject to route-level authorization. This
 # dependency is not a substitute for require_admin/require_staff.
-_PRIVILEGED_BYPASS_ROLES = frozenset({"SUPER_ADMIN", "ADMIN_STAFF"})
+_PRIVILEGED_BYPASS_ROLES = frozenset({"SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF"})
 
 
 def require_entitlement(feature_name: str):
     """Require verified entitlement for a premium customer feature.
 
     Until subscription records and company-membership resolution are available,
-    non-platform-admin access fails closed with 503. A 503 accurately reports
+    customer-role access fails closed with 503. Explicit staff roles remain subject
+    to each route's independent RBAC and company-access controls. A 503 accurately reports
     that entitlement verification is unavailable; it does not assert that a
     subscription was checked and found inactive.
     """
