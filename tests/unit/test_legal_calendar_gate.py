@@ -3,7 +3,6 @@
 from fastapi import HTTPException
 
 import app.api.calendar as calendar_api
-
 from app.services.compliance_calendar import (
     LEGAL_CALENDAR_RELEASED,
     VERIFIED_CALENDAR_EVENT_TYPES,
@@ -14,13 +13,13 @@ from app.services.compliance_calendar import (
 
 
 def test_statutory_calendar_is_fail_closed():
-    assert LEGAL_CALENDAR_RELEASED is False
-    assert VERIFIED_CALENDAR_EVENT_TYPES == frozenset()
+    assert not LEGAL_CALENDAR_RELEASED
+    assert not VERIFIED_CALENDAR_EVENT_TYPES
     assert _generate_calendar(None) == []
 
 
 def test_unapproved_statutory_penalties_are_never_estimated():
-    assert VERIFIED_PENALTY_EVENT_TYPES == frozenset()
+    assert not VERIFIED_PENALTY_EVENT_TYPES
     assert calculate_penalty("agm", 30) is None
     assert calculate_penalty("corporate_tax_return", 30) is None
     assert calculate_penalty("vat_return", 30) is None
