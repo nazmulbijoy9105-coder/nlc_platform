@@ -28,7 +28,7 @@ from app.models.finance import (
 )
 
 CENT = Decimal("0.01")
-OFFLINE_METHODS = {"BANK_TRANSFER", "CASH", "CHEQUE", "BKASH_MANUAL", "NAGAD_MANUAL"}
+OFFLINE_METHODS = {"BANK_TRANSFER", "CASH", "CHEQUE"}
 PAYMENTABLE_INVOICE_STATES = {"ISSUED", "PARTIALLY_PAID", "OVERDUE"}
 
 
@@ -201,7 +201,7 @@ class FinanceService:
         if method not in OFFLINE_METHODS:
             raise FinanceConflictError("Unsupported offline payment method")
         _require_aware_datetime(paid_at, "paid_at")
-        if method in {"BANK_TRANSFER", "CHEQUE", "BKASH_MANUAL", "NAGAD_MANUAL"} and not (payer_reference and payer_reference.strip()):
+        if method in {"BANK_TRANSFER", "CHEQUE"} and not (payer_reference and payer_reference.strip()):
             raise FinanceConflictError("A transaction or instrument reference is required for this payment method")
         if paid_at is not None and paid_at > datetime.now(UTC):
             raise FinanceConflictError("Payment date cannot be in the future")
