@@ -48,7 +48,6 @@ from app.api import (
     webhooks,
 )
 from app.core.config import get_settings
-from app.tasks.scheduler import start_scheduler, stop_scheduler
 
 if TYPE_CHECKING:
     from collections.abc import Callable
