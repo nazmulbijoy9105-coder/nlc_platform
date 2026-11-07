@@ -629,7 +629,7 @@ class TestDocuments:
         # Verify via API
         resp = await api_client.get(
             f"/api/v1/documents/detail/{doc.id}",
-            headers=_auth(legal_tok),
+            headers=_auth(admin_token),
         )
         assert resp.status_code == 200
         data = resp.json()
