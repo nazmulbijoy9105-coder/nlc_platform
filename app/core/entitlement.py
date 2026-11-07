@@ -101,7 +101,7 @@ def require_entitlement(feature_name: str):
         if not company_ids:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="An active company financial membership is required.",
+                detail="An active company financial access membership is required.",
             )
         service = SubscriptionService(db)
         entitled_company_ids = []
