@@ -51,6 +51,7 @@ from celery.signals import (
     task_prerun,
     task_retry,
     task_success,
+    worker_process_init,
     worker_ready,
     worker_shutdown,
 )
@@ -258,23 +259,35 @@ def configure_worker(sender: str | None = None, conf: Any = None, **kwargs: Any)
     except ImportError:
         pass  # structlog optional
 
-    # Do not let a worker accept privileged background tasks unless its
-    # actual PostgreSQL runtime identity satisfies the same fail-closed
-    # checks as the API process (role attributes, memberships, and HMAC key).
-    try:
-        from app.models.database import verify_runtime_database_role
+    logger.info(
+        f"[Worker] Initialised: {sender} | "
+        f"Queues: compliance, notifications, documents, maintenance"
+    )
 
-        asyncio.run(verify_runtime_database_role())
+
+@worker_process_init.connect
+def verify_worker_runtime_security(**kwargs: Any) -> None:
+    """Verify the database identity inside each forked worker process."""
+    async def _verify_and_dispose() -> None:
+        from app.models.database import (
+            dispose_engine,
+            verify_runtime_database_role,
+        )
+
+        try:
+            await verify_runtime_database_role()
+        finally:
+            # The verification connection must not be inherited by later
+            # task event loops or retained across their lifecycle.
+            await dispose_engine()
+
+    try:
+        asyncio.run(_verify_and_dispose())
     except Exception:
         logger.exception(
             "[Worker] Runtime database role verification failed; refusing startup"
         )
         raise
-
-    logger.info(
-        f"[Worker] Initialised: {sender} | "
-        f"Queues: compliance, notifications, documents, maintenance"
-    )
 
 
 @worker_ready.connect
