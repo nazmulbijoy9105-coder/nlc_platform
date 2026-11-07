@@ -17,8 +17,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import (
 from app.core.entitlement import require_entitlement
+from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
     require_company_access,
