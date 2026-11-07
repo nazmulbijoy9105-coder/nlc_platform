@@ -1,9 +1,9 @@
-# NLC legal approval gate — snapshot 2026-11-04
+# NLC legal approval gate — snapshot 2026-11-07
 # No entry is production-approved by this file. Add an approval only after
 # source-version review, applicability/exception analysis, evidence design,
 # independent Bangladesh-lawyer sign-off and regression validation.
 jurisdiction: BD
-snapshot_date: 2026-11-04
+snapshot_date: 2026-11-07
 approval_policy: fail_closed
 approved_rule_ids: []
 rules:

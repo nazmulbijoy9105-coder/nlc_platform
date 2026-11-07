@@ -549,6 +549,25 @@ def queue_deadline_warning_notifications(
     """
     if warning_days is None:
         warning_days = [30, 15, 7, 3, 1]
+    if not warning_days or any(day < 0 for day in warning_days):
+        raise ValueError("warning_days must contain non-negative day thresholds")
+
+    # Do not send customer-facing statutory deadline alerts while the legal
+    # calendar is quarantined. The privileged worker scanner is intentionally
+    # global, so this release check must happen before opening its admin session.
+    from app.services.compliance_calendar import (
+        LEGAL_CALENDAR_RELEASED,
+        VERIFIED_CALENDAR_EVENT_TYPES,
+    )
+    if not LEGAL_CALENDAR_RELEASED or not VERIFIED_CALENDAR_EVENT_TYPES:
+        logger.warning(
+            "[Deadlines] Withheld: statutory calendar has not been independently released"
+        )
+        return {
+            "queued": 0,
+            "deadlines_checked": 0,
+            "status": "WITHHELD_LEGAL_CALENDAR_NOT_RELEASED",
+        }
 
     logger.info(
         f"[Deadlines] Checking upcoming deadlines for days: {warning_days}"
