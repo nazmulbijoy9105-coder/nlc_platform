@@ -229,13 +229,15 @@ class SubscriptionService:
             select(ClientSubscription)
             .where(
                 ClientSubscription.company_id == company_id,
-                ClientSubscription.status.in_(("PENDING", "ACTIVE", "PAST_DUE")),
+                ClientSubscription.status.in_(("PENDING", "ACTIVE", "PAST_DUE", "SUSPENDED")),
             )
             .with_for_update()
         )
         for existing in existing_result.scalars().all():
             if existing.status == "PENDING":
                 raise SubscriptionConflictError("This company already has a pending subscription request")
+            if existing.status == "SUSPENDED":
+                raise SubscriptionConflictError("This company has a suspended subscription that must be resolved by NLC finance staff")
             if (
                 existing.ends_at is None
                 or existing.ends_at > now
@@ -535,8 +537,10 @@ class SubscriptionService:
         offset: int = 0,
     ) -> list[ClientSubscription]:
         allowed = {"PENDING", "ACTIVE", "PAST_DUE", "CANCELLED", "EXPIRED", "SUSPENDED"}
-        if status_filter is not None and status_filter not in allowed:
-            raise SubscriptionConflictError("Unsupported subscription status filter")
+        if status_filter is not None:
+            status_filter = status_filter.upper()
+            if status_filter not in allowed:
+                raise SubscriptionConflictError("Unsupported subscription status filter")
         if not 1 <= limit <= 200 or offset < 0:
             raise SubscriptionConflictError("Invalid subscription pagination")
         query = select(ClientSubscription)
@@ -600,8 +604,12 @@ class SubscriptionService:
             raise SubscriptionNotFoundError("Subscription not found for this company")
         if subscription.created_by != actor_id:
             raise SubscriptionNotFoundError("Subscription not found for this company")
-        if subscription.status != "ACTIVE" or subscription.ends_at is None:
-            raise SubscriptionConflictError("Only an active recurring subscription can be cancelled at period end")
+        if (
+            subscription.status != "ACTIVE"
+            or subscription.ends_at is None
+            or subscription.ends_at <= datetime.now(UTC)
+        ):
+            raise SubscriptionConflictError("Only a recurring subscription before its period end can be cancelled at period end")
         if subscription.cancel_at_period_end:
             return subscription
         subscription.cancel_at_period_end = True
@@ -674,6 +682,36 @@ class SubscriptionService:
                 event_metadata={"grace_expired_at": now.isoformat()},
             ))
             counts["expired"] += 1
+        suspended_result = await self.db.execute(
+            select(ClientSubscription)
+            .where(
+                ClientSubscription.status == "SUSPENDED",
+                ClientSubscription.ends_at.is_not(None),
+                ClientSubscription.ends_at <= now,
+            )
+            .order_by(ClientSubscription.company_id, ClientSubscription.id)
+            .with_for_update(skip_locked=True)
+        )
+        for subscription in suspended_result.scalars().all():
+            if subscription.cancel_at_period_end:
+                subscription.status = "CANCELLED"
+                subscription.cancelled_at = subscription.ends_at or now
+                event_type = "CANCELLED"
+                counts["cancelled"] += 1
+            elif subscription.grace_ends_at is None or subscription.grace_ends_at <= now:
+                subscription.status = "EXPIRED"
+                event_type = "EXPIRED"
+                counts["expired"] += 1
+            else:
+                continue
+            self.db.add(SubscriptionEvent(
+                subscription_id=subscription.id,
+                company_id=subscription.company_id,
+                event_type=event_type,
+                actor_id=actor_id,
+                invoice_id=subscription.invoice_id,
+                event_metadata={"processed_at": now.isoformat(), "while_suspended": True},
+            ))
         await self.db.flush()
         return counts
 
