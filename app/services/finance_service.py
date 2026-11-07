@@ -296,6 +296,15 @@ class FinanceService:
                 raise FinanceConflictError(
                     "This manual payment reference has already been submitted or credited"
                 ) from exc
+            database_message = str(exc).lower()
+            if "pending payment submissions exceed the invoice outstanding balance" in database_message:
+                raise FinanceConflictError(
+                    "Pending payment submissions already reserve the remaining invoice balance"
+                ) from exc
+            if "invoice is not open for payment submissions" in database_message:
+                raise FinanceConflictError(
+                    "Invoice is no longer open for payment submissions"
+                ) from exc
             raise
         return submission
 
