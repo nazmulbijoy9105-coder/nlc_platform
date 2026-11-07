@@ -31,9 +31,6 @@ async def _company_contexts(
         if str(getattr(current_user.role, "value", current_user.role)) == "LEGAL_STAFF":
             await ensure_staff_company_scope(company_id, current_user, db)
             return [company_id]
-        if str(getattr(current_user.role, "value", current_user.role)) == "LEGAL_STAFF":
-            await ensure_staff_company_scope(company_id, current_user, db)
-            return [company_id]
         membership = await db.execute(
             select(CompanyUserAccess.company_id).where(
                 CompanyUserAccess.company_id == company_id,
@@ -60,6 +57,9 @@ async def _company_contexts(
         company_id = result.scalar_one_or_none()
         if company_id is None:
             raise HTTPException(status_code=404, detail="Document not found")
+        if str(getattr(current_user.role, "value", current_user.role)) == "LEGAL_STAFF":
+            await ensure_staff_company_scope(company_id, current_user, db)
+            return [company_id]
         membership = await db.execute(
             select(CompanyUserAccess.company_id).where(
                 CompanyUserAccess.company_id == company_id,
