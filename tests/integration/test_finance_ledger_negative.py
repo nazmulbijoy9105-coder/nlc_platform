@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
+from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
 from app.models.database import set_rls_context
@@ -211,7 +212,7 @@ async def test_database_rejects_allocation_without_invoice_balance_reconciliatio
             ))
             await db.flush()
             await db.execute(
-                __import__("sqlalchemy").text(
+                text(
                     "SET CONSTRAINTS payment_allocations_invoice_reconciliation IMMEDIATE"
                 )
             )
