@@ -144,7 +144,12 @@ class SubscriptionService:
                 raise SubscriptionConflictError(f"Duplicate feature mapping: {code_value}")
             requested_features[code_value] = feature
 
-        plan = await self.db.get(SubscriptionPlan, code)
+        plan_result = await self.db.execute(
+            select(SubscriptionPlan)
+            .where(SubscriptionPlan.plan_code == code)
+            .with_for_update()
+        )
+        plan = plan_result.scalar_one_or_none()
         if plan is None:
             plan = SubscriptionPlan(
                 plan_code=code,
