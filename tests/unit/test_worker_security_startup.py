@@ -80,6 +80,7 @@ def test_first_task_gates_non_prefork_worker_pools(monkeypatch):
 
     assert calls == ["verified"]
 
+
 def test_eager_tasks_default_off_in_production(monkeypatch):
     import app.worker.celery_app as celery_app
 
@@ -108,3 +109,14 @@ def test_eager_tasks_remain_available_for_development(monkeypatch):
     monkeypatch.delenv("CELERY_TASK_ALWAYS_EAGER", raising=False)
 
     assert celery_app._resolve_task_always_eager() is True
+
+
+
+def test_render_runtime_forbids_eager_tasks_even_without_environment_label(monkeypatch):
+    import app.worker.celery_app as celery_app
+
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    monkeypatch.setenv("RENDER", "true")
+    monkeypatch.delenv("CELERY_TASK_ALWAYS_EAGER", raising=False)
+
+    assert celery_app._resolve_task_always_eager() is False
