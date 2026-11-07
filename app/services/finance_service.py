@@ -389,6 +389,7 @@ class FinanceService:
             amount_bdt=amount,
             currency="BDT",
             payer_reference=submission.payer_reference,
+            source_submission_id=submission.id,
             status="SETTLED",
             received_at=submission.paid_at or now,
             verified_by=reviewer_id,
