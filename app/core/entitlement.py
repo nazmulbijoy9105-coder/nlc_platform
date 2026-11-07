@@ -57,11 +57,10 @@ async def _company_contexts(
                 CompanyUserAccess.company_id == company_id,
                 CompanyUserAccess.user_id == current_user.id,
                 CompanyUserAccess.is_active.is_(True),
-                CompanyUserAccess.can_view_financials.is_(True),
             ).limit(1)
         )
         if membership.scalar_one_or_none() is None:
-            raise HTTPException(status_code=403, detail="Active company financial access is required.")
+            raise HTTPException(status_code=403, detail="Active company membership is required.")
         return [company_id]
 
     result = await db.execute(
