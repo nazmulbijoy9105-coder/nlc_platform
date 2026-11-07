@@ -575,7 +575,7 @@ class TestTransferRules:
         no_restriction = make_share_transfer(aoa_restriction_apply=False, board_approval_obtained=False)
         assert_flag_not_triggered(rule_engine.evaluate(build_profile(share_transfers=[no_restriction])), "TR-003")
 
-        restricted = make_share_transfer(aoa_restriction_apply=True, board_approval_obtained=False)
+        restricted = make_share_transfer(aoa_restriction_apply=True, board_approval_obtained=False, articles_clause_evidence_ref='evidence://articles/clause')
         output = rule_engine.evaluate(build_profile(share_transfers=[restricted]))
         assert_flag_triggered(output, "TR-003")
         flag = next(f for f in output.flags if f.rule_id == "TR-003")
@@ -590,6 +590,7 @@ class TestTransferRules:
             registration_refused=True,
             refusal_notice_sent=False,
             instrument_lodged_date=date.today() - timedelta(days=31),
+            refusal_decision_evidence_ref='evidence://rjsc/refusal',
         )
         output = rule_engine.evaluate(build_profile(share_transfers=[refused]))
         assert_flag_triggered(output, "TR-004")
@@ -602,6 +603,8 @@ class TestTransferRules:
             aoa_restriction_apply=True,
             board_approval_obtained=False,
             transfer_registered=True,
+            articles_clause_evidence_ref='evidence://articles/clause',
+            transfer_registration_evidence_ref='evidence://rjsc/transfer-registration',
         )
         output = rule_engine.evaluate(build_profile(share_transfers=[transfer]))
         assert_flag_triggered(output, "TR-005")
@@ -632,6 +635,7 @@ class TestTransferRules:
             transfer_registered=True,
             registration_refused=False,
             refusal_notice_sent=True,
+            transfer_registration_evidence_ref='evidence://rjsc/transfer-registration',
         )
         output = rule_engine.evaluate(build_profile(share_transfers=[transfer]))
         for rule_id in ["TR-001", "TR-002", "TR-003", "TR-004", "TR-005", "TR-006"]:
