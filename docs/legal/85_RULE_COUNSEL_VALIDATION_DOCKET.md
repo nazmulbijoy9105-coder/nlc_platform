@@ -36,7 +36,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### ACC-001 — Financial Statements Not Presented at AGM
 
 - **Catalogue anchor:** Section 183, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** RED / 15 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -53,7 +53,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### ACC-002 — Financial Statements Not Filed with Registrar
 
 - **Catalogue anchor:** Section 190, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** RED / 15 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -70,7 +70,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### ACC-003 — Books of Account Not Kept
 
 - **Catalogue anchor:** Section 181, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** RED / 15 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -87,7 +87,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### AGM-001 — First AGM Default
 
 - **Catalogue anchor:** Section 81(1), Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -104,7 +104,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### AGM-002 — Subsequent AGM Default
 
 - **Catalogue anchor:** Section 81(1), Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -121,7 +121,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### AGM-003 — AGM Short Notice — Consent Verification
 
 - **Catalogue anchor:** Section 85(1)(a), Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 5 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -138,7 +138,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### AGM-004 — AGM Notice or Short-Notice Consent Missing
 
 - **Catalogue anchor:** Section 85(1)(a), Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** RED / 15 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -155,7 +155,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### AGM-005 — AGM Quorum Not Met
 
 - **Catalogue anchor:** Section 85(2)(b), Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** RED / 15 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -172,7 +172,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### AGM-006 — AGM Minutes Status Requires Verification
 
 - **Catalogue anchor:** Section 89, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -189,7 +189,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### AGM-007 — AGM Adjourned Without Proper Notice
 
 - **Catalogue anchor:** Section 85, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 5 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -206,7 +206,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### AR-001 — Annual Return Default — Single Year
 
 - **Catalogue anchor:** Section 36 (Schedule X), Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 10 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -223,7 +223,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### AR-002 — Annual Return Backlog — Review Required
 
 - **Catalogue anchor:** Section 36 and Schedule X (annual-return duty); Section 346 (separate Registrar strike-off process)
-- **Seed default severity / score impact / BLACK override:** RED / 20 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -240,7 +240,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### AR-003 — Annual Return Backlog — Extended Review Required
 
 - **Catalogue anchor:** Section 36 and Schedule X (annual-return duty); Section 346 (separate Registrar strike-off process)
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -257,7 +257,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### AR-004 — Annual Return Filed But Incomplete
 
 - **Catalogue anchor:** Section 36, Schedule X, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 8 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -274,7 +274,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### AUD-001 — First Auditor Not Appointed Within One Calendar Month
 
 - **Catalogue anchor:** Section 210(6), Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 10 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -291,7 +291,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### AUD-002 — Audit Not Completed Before AGM
 
 - **Catalogue anchor:** Section 183, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** RED / 12 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -308,7 +308,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### AUD-003 — AGM Held Without Completed Audit
 
 - **Catalogue anchor:** Sections 183 and 210, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** RED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -325,7 +325,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### AUD-004 — Auditor Not Reappointed at AGM
 
 - **Catalogue anchor:** Section 210(3), Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -342,7 +342,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### AUD-005 — Subsequent Auditor Reappointment Status Unknown
 
 - **Catalogue anchor:** Section 210(3), Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -359,7 +359,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### BNK-001 — Winding Up Petition Filed
 
 - **Catalogue anchor:** Bankruptcy Act 1997 (Bangladesh), Section 12
-- **Seed default severity / score impact / BLACK override:** BLACK / 25 / true
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -376,7 +376,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### BNK-002 — Liquidator Appointed
 
 - **Catalogue anchor:** Bankruptcy Act 1997 (Bangladesh), Section 14
-- **Seed default severity / score impact / BLACK override:** BLACK / 25 / true
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -393,7 +393,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### BNK-003 — Court-Ordered Winding Up
 
 - **Catalogue anchor:** Bankruptcy Act 1997 (Bangladesh), Section 18
-- **Seed default severity / score impact / BLACK override:** BLACK / 35 / true
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -410,7 +410,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### BOD-001 — Board Meeting Not Held Within Quarter
 
 - **Catalogue anchor:** Section 96, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 5 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -427,7 +427,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### BOD-002 — Board Meeting Notice Not Given
 
 - **Catalogue anchor:** Section 95, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 3 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -444,7 +444,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### BOD-003 — Board Meeting Minutes Not Prepared
 
 - **Catalogue anchor:** Section 89, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 5 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -461,7 +461,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### BSEC-001 — Quarterly Report Status Requires Verification
 
 - **Catalogue anchor:** Applicable BSEC financial-reporting instrument; exact notification, issuer class, reporting period and due date require verification
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -478,7 +478,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### BSEC-002 — CG Certificate Status Requires Verification
 
 - **Catalogue anchor:** BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -495,7 +495,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### BSEC-003 — Board Composition Status Requires Verification
 
 - **Catalogue anchor:** BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -512,7 +512,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### BSEC-004 — Audit Committee Status Requires Verification
 
 - **Catalogue anchor:** BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -529,7 +529,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### CAP-001 — Capital Alteration Without Proper Resolution
 
 - **Catalogue anchor:** Section 53, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 5 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -546,7 +546,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### CAP-002 — Charge Not Registered With RJSC Within 21 Days
 
 - **Catalogue anchor:** Section 159(1), Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 5 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -563,7 +563,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### CAP-003 — Capital Reduction — Court Confirmation Review
 
 - **Catalogue anchor:** Sections 59-60, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -580,7 +580,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### CAP-004 — Special Resolution Not Filed With RJSC
 
 - **Catalogue anchor:** Section 88(1), Companies Act 1994 (Bangladesh) — 15 days
-- **Seed default severity / score impact / BLACK override:** YELLOW / 8 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -597,7 +597,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### CHG-001 — Charge Satisfaction Not Filed
 
 - **Catalogue anchor:** Section 172, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 3 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -614,7 +614,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### DEF-001 — Director Disqualified
 
 - **Catalogue anchor:** Section 94, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** RED / 10 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -631,7 +631,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### DEF-002 — Unresolved Penalty Notices
 
 - **Catalogue anchor:** Case-specific enabling provision required; not a universal section
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -648,7 +648,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### DIR-001 — Director Appointment Not Filed Within 14 Days
 
 - **Catalogue anchor:** Section 115, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 10 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -665,7 +665,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### DIR-002 — Director Departure Not Filed Within 14 Days
 
 - **Catalogue anchor:** Section 115, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 10 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -682,7 +682,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### DIR-003 — Major Director Filing Irregularity — Over 1 Year
 
 - **Catalogue anchor:** Section 115, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** RED / 15 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -699,7 +699,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### DIR-004 — Late Director Cessation Filing - Legal Effect Review
 
 - **Catalogue anchor:** Section 115, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -716,7 +716,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### DIR-005 — Register of Directors Interests Missing
 
 - **Catalogue anchor:** Section 130, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 5 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -733,7 +733,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### DIR-006 — Register of Contracts Missing
 
 - **Catalogue anchor:** Section 130, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 5 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -749,8 +749,11 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### DIR-007 — Director Consent Not Filed Within 30 Days
 
+- **Source reconciliation (7 Nov 2026):** The Companies Act text distinguishes s.92 pre-appointment consent/eligibility requirements from s.93(2), which requires the signed consent to be filed with the Registrar within 30 days after appointment. The RJSC eBRS FAQ/Form IX materials label Form IX with s.92 while also describing a 30-day post-appointment filing. Do not collapse the form reference and statutory trigger into one unqualified citation. The current 30-day engine rule is provisionally anchored to s.93(2); counsel must confirm the applicable form mapping and any transitional/current RJSC instructions before approval.
+
+
 - **Catalogue anchor:** Section 93, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 5 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -767,7 +770,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### DIR-008 — Director Holding Office of Profit Without Consent
 
 - **Catalogue anchor:** Section 104, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 8 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -784,7 +787,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### DIR-010 — Managing Director Appointed for More Than 5 Years
 
 - **Catalogue anchor:** Section 110, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 5 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -801,7 +804,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### ESC-001 — Strike-Off Risk Elevated
 
 - **Catalogue anchor:** Section 346, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** RED / 15 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -818,7 +821,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### ESC-002 — Strike-Off Status Requires Verification
 
 - **Catalogue anchor:** Section 346, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -835,7 +838,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### ESC-003 — Corporate Rescue Mandatory — Systemic Failure
 
 - **Catalogue anchor:** NLC internal risk policy; not a statutory risk band under the Companies Act 1994.
-- **Seed default severity / score impact / BLACK override:** BLACK / 10 / true
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -852,7 +855,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### ESC-004 — Voluntary Winding Up
 
 - **Catalogue anchor:** Section 286, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** BLACK / 30 / true
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -869,7 +872,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### ESC-005 — Investigation Order Pending
 
 - **Catalogue anchor:** Section 195, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** RED / 20 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -886,7 +889,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### FX-001 — Foreign Exchange Violation
 
 - **Catalogue anchor:** Foreign Exchange Regulation Act 1947 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** RED / 15 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -903,7 +906,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### INC-001 — Memorandum and Articles Not Filed
 
 - **Catalogue anchor:** Section 23, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** RED / 15 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -920,7 +923,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### INC-003 — Minimum Directors Not Appointed
 
 - **Catalogue anchor:** Sections 90(1) and 90(2), Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** BLACK / 15 / true
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -937,7 +940,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### INC-004 — Paid-Up / Authorized Capital Mismatch — Legal Review
 
 - **Catalogue anchor:** Section 56, Companies Act 1994 (Bangladesh) — applicability and consequences require lawyer review
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -954,7 +957,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### INC-005 — Encashment Certificate Missing — Foreign Shareholding
 
 - **Catalogue anchor:** BIDA Foreign Investment Act 1980; Bangladesh Bank FDI Circular
-- **Seed default severity / score impact / BLACK override:** YELLOW / 8 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -971,7 +974,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### INC-006 — Remittance Below Work Permit Threshold
 
 - **Catalogue anchor:** BIDA Foreign Investment Act 1980
-- **Seed default severity / score impact / BLACK override:** YELLOW / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -988,7 +991,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### INC-007 — Business Commenced Without Section 150 Declaration
 
 - **Catalogue anchor:** Sections 59-60, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** RED / 10 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1005,7 +1008,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### LBR-001 — Factory License Missing
 
 - **Catalogue anchor:** Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1022,7 +1025,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### LBR-002 — Factory License Expired
 
 - **Catalogue anchor:** Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1039,7 +1042,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### LBR-003 — Labour Court Order Pending
 
 - **Catalogue anchor:** Bangladesh Labour Act 2006 and the specific Labour Court order; enabling provision and operative status require case-specific verification
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Fail-closed control:** A profile boolean is not the order. Require certified order, party identity, service, operative terms, current status, appeal/revision and stay evidence before any adverse finding. Keep NOT_EVALUATED.
@@ -1057,7 +1060,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### MEM-001 — Company Operating with Fewer than Minimum Members
 
 - **Catalogue anchor:** Section 222, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** RED / 10 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1074,7 +1077,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### OFF-001 — Change of Registered Office Not Filed Within 28 Days
 
 - **Catalogue anchor:** Section 77, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 3 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1091,7 +1094,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### REG-001 — Statutory Registers Incomplete
 
 - **Catalogue anchor:** Section 34, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 5 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1108,7 +1111,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### REG-002 — Core Statutory Registers Missing
 
 - **Catalogue anchor:** Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** RED / 12 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1125,7 +1128,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### REG-003 — Registers Not Kept at Registered Office
 
 - **Catalogue anchor:** Section 34(2), Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 3 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1141,8 +1144,11 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### SH-001 — Share Allotment Not Filed — Form XV
 
+- **Source correction (7 Nov 2026):** Companies Act 1994, s.151 requires the return of allotment and prescribed supporting documents within 60 days after allotment; the section also permits a Registrar extension on timely application. The earlier seed text stating 30 days and citing s.50 was incorrect. Official RJSC eBRS guidance independently lists Form XV within 60 days under s.151. Engine/seed deadline is now 60 days, but the rule remains NOT_EVALUATED and counsel approval is still required.
+
+
 - **Catalogue anchor:** Section 151, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 8 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1159,7 +1165,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### SH-002 — Share Certificates Not Issued Within 90 Days
 
 - **Catalogue anchor:** Section 158, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 5 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1175,8 +1181,11 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### SH-003 — Capital Increase Not Filed — Form IV
 
+- **Source correction (7 Nov 2026):** Companies Act 1994, s.56 requires notice of an increase in registered share capital within 15 days of the decision to increase the share capital. Official BDLaws text and RJSC eBRS guidance support the 15-day period. The prior engine used the 60-day allotment constant and the seed described a 30-day/s.52 period; this was incorrect. Engine/seed now use 15 days, but the exact event-date field must represent the resolution/decision date and the rule remains NOT_EVALUATED pending counsel review.
+
+
 - **Catalogue anchor:** Section 56, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 8 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1193,7 +1202,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### STR-001 — Name Change Not Filed
 
 - **Catalogue anchor:** Sections 11 and 88(1), Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 8 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1210,7 +1219,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### STR-002 — Object Clause Change Not Filed
 
 - **Catalogue anchor:** Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 8 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1227,7 +1236,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### STR-003 — AoA Alteration Not Filed
 
 - **Catalogue anchor:** Sections 20 and 88(1), Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 8 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1244,7 +1253,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### TAX-001 — TIN Status Requires Verification
 
 - **Catalogue anchor:** Income Tax Act 2023, sections 166, 261 and 264; company-specific duty and evidence require verification
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Fail-closed control:** A profile boolean is not authenticated proof of TIN absence or the company's exact duty. Verify legal entity/taxpayer identity, s.166 return duty, s.261 registration trigger, s.264 proof-of-return requirement, exceptions and operative period. Keep NOT_EVALUATED until independently evidenced.
@@ -1262,7 +1271,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### TAX-002 — VAT Registration or Turnover-Tax Enlistment Status Requires Verification
 
 - **Catalogue anchor:** Value Added Tax and Supplementary Duty Act 2012, as amended by Act No. 77 of 2026; exact current section and taxpayer-specific instruments require counsel verification
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1279,7 +1288,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### TAX-003 — Annual Tax Return Overdue
 
 - **Catalogue anchor:** Income Tax Act 2023, Sections 170(2) and 171, as amended by Finance Act 2026 (Act No. 96 of 2026)
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1296,7 +1305,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### TAX-004 — Advance Tax Missed
 
 - **Catalogue anchor:** Income Tax Act 2023, sections 154-157, as amended by Finance Act 2026 (Act 96/2026), sections 87-88
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Current-law correction:** Finance Act 2026 s.87 raises s.154(1) threshold to BDT 10 lakh; s.88 amends s.155(2) and (5). s.156 retains a separately stated BDT 6 lakh new-assessee threshold in the current Act text. Verify A-B computation, source deductions, exclusions, estimates, four instalments and holiday roll-forward. Keep NOT_EVALUATED.
@@ -1314,7 +1323,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### TL-001 — Trade License Not Obtained
 
 - **Catalogue anchor:** Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009
-- **Seed default severity / score impact / BLACK override:** YELLOW / 5 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1331,7 +1340,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### TL-002 — Trade License Expired
 
 - **Catalogue anchor:** Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009
-- **Seed default severity / score impact / BLACK override:** YELLOW / 5 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1348,7 +1357,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### TR-001 — No Share Transfer Instrument — Form 117
 
 - **Catalogue anchor:** Section 38, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 5 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1365,7 +1374,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### TR-002 — Stamp Duty Not Paid on Share Transfer
 
 - **Catalogue anchor:** Stamp Act 1899, Schedule I, Item 62
-- **Seed default severity / score impact / BLACK override:** YELLOW / 5 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1382,7 +1391,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### TR-003 — No Board Approval for Share Transfer
 
 - **Catalogue anchor:** Section 38; AoA, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 8 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1399,7 +1408,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### TR-004 — Register of Members Not Updated After Transfer
 
 - **Catalogue anchor:** Section 34, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** YELLOW / 5 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1416,7 +1425,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### TR-005 — Share Transfer Violates AoA Restriction — BLACK OVERRIDE
 
 - **Catalogue anchor:** Section 38; AoA, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** BLACK / 15 / true
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1433,7 +1442,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### TR-006 — Composite Irregular Transfer
 
 - **Catalogue anchor:** Sections 34, 47, 108, Companies Act 1994 (Bangladesh)
-- **Seed default severity / score impact / BLACK override:** RED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
@@ -1450,7 +1459,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### VAT-002 — VAT Return Period Requires Verification
 
 - **Catalogue anchor:** Value Added Tax and Supplementary Duty Act 2012, section 64 as amended by Finance Act 2026 and VAT Amendment Ordinance 2026, with applicable VAT Rules/SROs
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Current s.64 rule:** The current consolidated VAT Act text requires filing within 15 days after each tax period; if day 15 is a government holiday, the next working day applies. Government, semi-government and autonomous bodies, banks, insurance and zero-return filers have a 20-day window. Board extensions and taxpayer-specific classification must be checked. This replaced the 1 July 2026 three-tax-period cycle; no overdue calculation is enabled.
@@ -1468,7 +1477,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### VAT-003 — VAT Annual Return Status Requires Verification
 
 - **Catalogue anchor:** Value Added Tax Act 2012 (Bangladesh); specific annual-return obligation and due date require current-law verification
-- **Seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false
+- **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
 - **Legal proposition:** NOT YET SIGNED — counsel must state the exact duty, duty-holder, statutory trigger, breach elements and legal consequence in a single testable proposition.
