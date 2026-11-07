@@ -55,6 +55,8 @@ class SubscriptionPlanPrice(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     plan_code: Mapped[str] = mapped_column(String(60), ForeignKey("subscription_plans.plan_code", ondelete="RESTRICT"), nullable=False)
     billing_interval: Mapped[str] = mapped_column(String(16), nullable=False)
     amount_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    tax_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    tax_policy_reference: Mapped[str] = mapped_column(Text, nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="BDT", server_default="BDT")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
 
