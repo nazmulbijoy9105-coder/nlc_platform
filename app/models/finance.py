@@ -91,19 +91,19 @@ class PaymentSubmission(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("id", "company_id", name="uq_payment_submissions_id_company"),
         CheckConstraint("amount_bdt > 0", name="ck_payment_submission_amount_positive"),
-        CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL')", name="ck_payment_submission_method"),
-        CheckConstraint("method NOT IN ('BANK_TRANSFER','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL') OR NULLIF(BTRIM(payer_reference), '') IS NOT NULL", name="ck_payment_submission_reference_required"),
+        CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE')", name="ck_payment_submission_method"),
+        CheckConstraint("method NOT IN ('BANK_TRANSFER','CHEQUE') OR NULLIF(BTRIM(payer_reference), '') IS NOT NULL", name="ck_payment_submission_reference_required"),
         CheckConstraint("status IN ('PENDING_REVIEW','APPROVED','REJECTED')", name="ck_payment_submission_status"),
         CheckConstraint("currency = 'BDT'", name="ck_payment_submission_currency_bdt"),
         Index("ix_payment_submissions_company_status", "company_id", "status"),
         Index("ix_payment_submissions_invoice", "invoice_id"),
         Index(
-            "uq_payment_submission_wallet_reference",
+            "uq_payment_submission_manual_reference",
             "method",
             text("lower(btrim(payer_reference))"),
             unique=True,
             postgresql_where=text(
-                "payer_reference IS NOT NULL AND method IN ('BKASH_MANUAL','NAGAD_MANUAL')"
+                "payer_reference IS NOT NULL AND method IN ('BANK_TRANSFER','CHEQUE')"
             ),
         ),
         ForeignKeyConstraint(["invoice_id", "company_id"], ["invoices.id", "invoices.company_id"], ondelete="RESTRICT", name="fk_payment_submissions_invoice_company"),
@@ -144,19 +144,19 @@ class Payment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             postgresql_where=text("source_submission_id IS NOT NULL"),
         ),
         CheckConstraint("amount_bdt > 0", name="ck_payment_amount_positive"),
-        CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL','BKASH_ONLINE','NAGAD_ONLINE','SSLCOMMERZ')", name="ck_payment_method"),
-        CheckConstraint("method NOT IN ('BANK_TRANSFER','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL') OR NULLIF(BTRIM(payer_reference), '') IS NOT NULL", name="ck_payment_reference_required"),
+        CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE','SSLCOMMERZ')", name="ck_payment_method"),
+        CheckConstraint("method NOT IN ('BANK_TRANSFER','CHEQUE') OR NULLIF(BTRIM(payer_reference), '') IS NOT NULL", name="ck_payment_reference_required"),
         CheckConstraint("channel IN ('ONLINE','OFFLINE')", name="ck_payment_channel"),
         CheckConstraint("status IN ('SETTLED','REVERSED','REFUNDED','DISPUTED')", name="ck_payment_status"),
         CheckConstraint("currency = 'BDT'", name="ck_payment_currency_bdt"),
         Index("ix_payments_company_received", "company_id", "received_at"),
         Index(
-            "uq_payment_wallet_reference",
+            "uq_payment_manual_reference",
             "method",
             text("lower(btrim(payer_reference))"),
             unique=True,
             postgresql_where=text(
-                "payer_reference IS NOT NULL AND method IN ('BKASH_MANUAL','NAGAD_MANUAL')"
+                "payer_reference IS NOT NULL AND method IN ('BANK_TRANSFER','CHEQUE')"
             ),
         ),
     )
@@ -229,7 +229,7 @@ class PaymentIntent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         UniqueConstraint("provider_order_id", name="uq_payment_intent_provider_order"),
         UniqueConstraint("provider_transaction_id", name="uq_payment_intent_provider_transaction"),
         CheckConstraint("amount_bdt > 0", name="ck_payment_intent_amount_positive"),
-        CheckConstraint("provider_name IN ('SSLCOMMERZ','BKASH','NAGAD')", name="ck_payment_intent_provider"),
+        CheckConstraint("provider_name IN ('SSLCOMMERZ')", name="ck_payment_intent_provider"),
         CheckConstraint("status IN ('CREATED','PENDING','SUCCEEDED','FAILED','EXPIRED','CANCELLED')", name="ck_payment_intent_status"),
         CheckConstraint("currency = 'BDT'", name="ck_payment_intent_currency_bdt"),
         Index("ix_payment_intents_company_status", "company_id", "status"),
