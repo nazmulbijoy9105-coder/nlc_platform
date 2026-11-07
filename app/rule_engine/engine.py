@@ -808,8 +808,8 @@ class NLCRuleEngine:
                     description=("Reported initial-establishment remittance is below the USD 50,000 reference amount. "
                                  "This is a screening prompt only, not a statutory breach or automatic work-permit refusal. "
                                  "Verify the operative BIDA 2023 work-permit guideline, applicant category, date, exceptions and evidence."),
-                    statutory_basis=("BIDA Guidelines for permission to establish foreign commercial offices and issue work permits (2023); "
-                                     "operative clause/version and current amendments require counsel verification"),
+                    statutory_basis=("BIDA Guidelines for permission to establish foreign commercial offices and issue work permits in Bangladesh (2023); "
+                                     "exact operative clause/version and current amendments require verification"),
                     detail={"remittance_usd": c.remittance_amount_usd, "threshold": FOREIGN_WORK_PERMIT_THRESHOLD_USD},
                     conditional_applies=True
                 ))
