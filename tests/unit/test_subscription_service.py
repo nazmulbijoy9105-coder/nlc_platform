@@ -177,3 +177,59 @@ async def test_due_subscription_processing_records_terminal_and_grace_transition
     assert event_types.count("PAST_DUE") == 1
     assert event_types.count("EXPIRED") == 3
     db.flush.assert_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("settled_amount", "expected"),
+    [
+        (Decimal("1000.00"), True),
+        (Decimal("999.99"), False),
+        (Decimal("0.00"), False),
+    ],
+)
+async def test_entitlement_requires_fully_reconciled_settled_allocations(settled_amount, expected):
+    company_id = __import__("uuid").uuid4()
+    invoice = SimpleNamespace(
+        id=__import__("uuid").uuid4(),
+        total_bdt=Decimal("1000.00"),
+    )
+    subscription = SimpleNamespace(id=__import__("uuid").uuid4())
+    candidates = MagicMock()
+    candidates.all.return_value = [(subscription, invoice)]
+    allocation = MagicMock()
+    allocation.scalar_one.return_value = settled_amount
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=[candidates, allocation])
+
+    allowed = await SubscriptionService(db).has_entitlement(
+        company_id=company_id,
+        feature_code="document_management",
+    )
+
+    assert allowed is expected
+
+
+@pytest.mark.asyncio
+async def test_plan_upsert_rejects_unimplemented_feature_before_database_write():
+    db = MagicMock()
+    service = SubscriptionService(db)
+
+    with pytest.raises(ValueError, match="Unsupported subscription feature"):
+        await service.upsert_plan(
+            plan_code="CUSTOM",
+            plan_name="Custom",
+            description=None,
+            grace_days=0,
+            is_active=True,
+            prices=[{
+                "billing_interval": "MONTHLY",
+                "amount_bdt": Decimal("1000.00"),
+                "tax_bdt": Decimal("150.00"),
+                "tax_policy_reference": "BD tax review reference",
+            }],
+            features=[{"feature_code": "unimplemented_feature"}],
+            actor_id=__import__("uuid").uuid4(),
+        )
+
+    db.get.assert_not_awaited()
