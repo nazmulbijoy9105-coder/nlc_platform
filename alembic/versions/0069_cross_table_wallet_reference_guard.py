@@ -185,7 +185,7 @@ def upgrade() -> None:
     """)
     op.execute("""
         CREATE TRIGGER payments_cross_table_wallet_reference
-        BEFORE INSERT OR UPDATE OF method, payer_reference
+        BEFORE INSERT OR UPDATE OF method, payer_reference, source_submission_id
         ON public.payments
         FOR EACH ROW
         EXECUTE FUNCTION public.nlc_guard_cross_table_wallet_reference()
