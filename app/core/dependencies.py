@@ -28,6 +28,7 @@ Usage:
 from __future__ import annotations
 
 import uuid
+from collections.abc import AsyncGenerator
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, Security, status
@@ -87,7 +88,7 @@ class TokenData(BaseModel):
 # DATABASE SESSION
 # ═══════════════════════════════════════════════════════════════════════
 
-async def get_db() -> AsyncSession:  # type: ignore
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Yield an async database session.
     Commits on success, rolls back on exception, always closes.
@@ -108,7 +109,7 @@ async def get_db() -> AsyncSession:  # type: ignore
             await session.close()
 
 
-async def get_catalog_db() -> AsyncSession:  # type: ignore
+async def get_catalog_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Public read-only catalogue session. RLS permits CATALOG context only on
     authenticated/public legal-reference tables; tenant tables remain denied.
@@ -125,7 +126,7 @@ async def get_catalog_db() -> AsyncSession:  # type: ignore
             await session.close()
 
 
-async def get_auth_db() -> AsyncSession:  # type: ignore
+async def get_auth_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Yield a least-privilege session for login/signup only.
     AUTH context is permitted by RLS on users, not tenant or company tables.
@@ -326,7 +327,7 @@ require_staff = require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRo
 
 async def get_admin_db(
     token: TokenData = Depends(require_super_admin),
-) -> AsyncSession:  # type: ignore
+) -> AsyncGenerator[AsyncSession, None]:
     """
     Yield an ADMIN-context session only after live database-backed
     SUPER_ADMIN authorization. Background workers must use their separately
@@ -557,7 +558,7 @@ def get_rule_engine():
 
 async def get_db_for_user(
     token: TokenData = Depends(verify_access_token),
-) -> AsyncSession:  # type: ignore
+) -> AsyncGenerator[AsyncSession, None]:
     """
     Yield an authenticated database session with identity-bound RLS context.
 

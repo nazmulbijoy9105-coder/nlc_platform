@@ -25,10 +25,32 @@ from app.models.user import User
 from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
+from app.services.compliance_calendar import LEGAL_CALENDAR_RELEASED
 from app.services.notification_service import ActivityService
 from app.services.pdf_report_service import PDFReportService
 
 logger = structlog.get_logger(__name__)
+
+
+def _require_legal_dashboard_release(*, deadlines: bool = False) -> None:
+    """Do not expose cached statutory risk or deadline aggregates before release."""
+    if deadlines and not LEGAL_CALENDAR_RELEASED:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Statutory deadlines are unavailable pending rule-level legal "
+                "validation, company-specific applicability and independent counsel approval."
+            ),
+        )
+    if not deadlines and not LEGAL_SCORE_RELEASED:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Compliance risk aggregates are unavailable while statutory score "
+                "release is disabled pending independent legal approval."
+            ),
+        )
+
 router = APIRouter()
 
 
@@ -187,7 +209,12 @@ def _flag_to_response(flag) -> FlagResponse:
         rule_id=flag.rule_id,
         rule_name=(
             (getattr(flag, "description", flag.flag_code) or flag.flag_code)
-            if approved else f"Pending counsel review: {getattr(flag, 'description', flag.flag_code) or flag.flag_code}"
+            if approved
+            else (
+                "Pending counsel review: internal review signal only. This rule is not "
+                "approved for legal determinations. No breach, liability, penalty or "
+                "compliance status is determined; obtain independent Bangladesh-qualified counsel review."
+            )
         ),
         severity=str(severity) if approved else "NOT_EVALUATED",
         score_impact=int(flag.score_impact or 0) if approved else 0,
@@ -481,17 +508,20 @@ async def get_score_history(company_id: uuid.UUID, months: int = Query(default=1
 
 @router.get("/dashboard/kpis", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Portfolio KPIs")
 async def get_dashboard_kpis(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
+    _require_legal_dashboard_release()
     svc = ComplianceService(db)
     return await svc.get_dashboard_kpis(user_id=current_user.id)
 
 
 @router.get("/dashboard/deadlines", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Upcoming deadlines")
 async def get_upcoming_deadlines(days_ahead: int = Query(default=30, ge=7, le=90), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
+    _require_legal_dashboard_release(deadlines=True)
     svc = CompanyService(db)
     return await svc.get_upcoming_deadlines(days_ahead=days_ahead, user_id=current_user.id)
 
 
 @router.get("/dashboard/risk", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Risk distribution")
 async def get_risk_distribution(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
+    _require_legal_dashboard_release()
     svc = CompanyService(db)
     return await svc.get_risk_distribution(user_id=current_user.id)

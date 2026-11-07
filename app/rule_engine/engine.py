@@ -124,22 +124,39 @@ class DirectorChange:
     director_id: str
     event_type: str
     event_date: date
-    form_filed: bool = False
+    # Form XII status and section 93(2) director-consent status are separate facts.
+    # None means not verified; absence of an upload is not proof of non-filing.
+    form_filed: bool | None = None
     form_filed_date: Optional[date] = None
     form_type: str = "XII"
+    form_filed_verified: bool = False
+    form_filed_evidence_ref: str | None = None
+    consent_filed: bool | None = None
+    consent_filed_date: Optional[date] = None
+    consent_verified: bool = False
+    consent_evidence_ref: str | None = None
 
 @dataclass
 class ShareTransfer:
     transfer_id: str
     transfer_date: date
-    instrument_recorded: bool = False
-    stamp_duty_paid: bool = False
+    # None means the evidence/status has not been verified; do not infer absence.
+    instrument_recorded: bool | None = None
+    stamp_duty_paid: bool | None = None
+    stamp_duty_applicability_verified: bool = False
     stamp_duty_amount: Optional[float] = None
-    board_approval: bool = False
-    share_register_updated: bool = False
-    aoa_restriction_apply: bool = False
-    board_approval_obtained: bool = False
-    form_117_filed: bool = False
+    board_approval: bool | None = None
+    share_register_updated: bool | None = None
+    aoa_restriction_apply: bool | None = None
+    board_approval_obtained: bool | None = None
+    form_117_filed: bool | None = None
+    transfer_registered: bool | None = None
+    registration_refused: bool | None = None
+    refusal_notice_sent: bool | None = None
+    instrument_lodged_date: Optional[date] = None
+    articles_clause_evidence_ref: str | None = None
+    refusal_decision_evidence_ref: str | None = None
+    transfer_registration_evidence_ref: str | None = None
 
 @dataclass
 class ChargeEvent:
@@ -290,6 +307,11 @@ class CompanyProfile:
     member_count: int | None = None
     # ── Business commencement (Section 150) ──
     business_commencement_declaration_filed: bool | None = None
+    section150_prospectus_issued: bool | None = None
+    section150_applicability_verified: bool = False
+    section150_applicability_evidence_ref: str | None = None
+    business_commencement_declaration_verified: bool = False
+    business_commencement_declaration_evidence_ref: str | None = None
     charges: List[ChargeEvent] = field(default_factory=list)
     special_resolution_date: Optional[date] = None
     special_resolution_filed: bool = False
@@ -444,7 +466,8 @@ REGISTERED_OFFICE_DEADLINE_DAYS = 28
 # deadline by adding one calendar month to the incorporation date.
 FIRST_AUDITOR_DEADLINE_DAYS = 30  # DEPRECATED: kept for backward compat, use _add_one_month()
 CHARGE_REGISTRATION_DEADLINE_DAYS = 21  # Section 159(1): charge registration within 21 days of creation
-ALLOTMENT_FILING_DEADLINE_DAYS = 60
+ALLOTMENT_FILING_DEADLINE_DAYS = 60  # Section 151: return of allotment
+CAPITAL_INCREASE_NOTICE_DEADLINE_DAYS = 15  # Section 56: notice of increase
 SPECIAL_RESOLUTION_DEADLINE_DAYS = 15  # Companies Act 1994, Section 88 (15 days)
 
 REQUIRED_REGISTERS = [
@@ -453,9 +476,13 @@ REQUIRED_REGISTERS = [
 ]
 CORE_REGISTERS = ["members", "directors", "charges", "minutes_agm"]
 
-# Legacy set — retained for rule_ids that should be override but may not have
-# is_black_override=True set correctly. Currently empty; all overrides use
-# inline is_black_override=True on the flag itself.
+# Explicit counsel-authorized BLACK override allowlist. A rule being
+# marked BLACK in engine code is not sufficient authority to force a BLACK
+# score. Keep this empty until each rule has independent approval recorded
+# in the signed legal approval register and the release process authorizes it.
+AUTHORIZED_BLACK_OVERRIDE_RULE_IDS: frozenset[str] = frozenset()
+
+# Backward-compatible alias; never use this set to grant authorization.
 BLACK_OVERRIDE_RULES: set[str] = set()
 
 # 100-point scoring model v2 - per-category deduction caps.
@@ -739,7 +766,7 @@ class NLCRuleEngine:
                 is_black_override=True,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description="Private company has insufficient directors. Section 90(2) requires minimum 2 directors.",
-                statutory_basis="Section 90(2), Companies Act 1994 (Bangladesh)",
+                statutory_basis="Sections 90(1) and 90(2), Companies Act 1994 (Bangladesh)",
                 detail={"current_count": c.current_director_count, "required": 2}
             ))
 
@@ -762,25 +789,46 @@ class NLCRuleEngine:
                 self._add_flag(ComplianceFlag(
                     rule_id="INC-005",
                     flag_code="ENCASHMENT_CERTIFICATE_MISSING",
-                    severity=Severity.YELLOW,
-                    score_impact=8,
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Foreign shareholding but Encashment Certificate from AD bank not uploaded. BIDA requirement.",
-                    statutory_basis="BIDA Foreign Investment Act 1980; Bangladesh Bank FDI Circular",
-                    detail={"foreign_pct": c.foreign_shareholding_pct},
-                    conditional_applies=True
+                    description=("No AD-bank encashment-certificate record is present. This is an internal evidence-review signal only; "
+                                 "it does not prove a breach. Verify the applicable GFET paragraph, current Bangladesh Bank circulars, "
+                                 "foreign-currency-account retention rules and zone-specific exceptions."),
+                    statutory_basis=("GFET-2018 Vol.1, Chapter 9, paragraph 2(A); FE Circular No.10 (21 June 2023); "
+                                     "FEID Circular No.01 (27 January 2025) and subsequent applicable circulars"),
+                    detail={
+                        "foreign_pct": c.foreign_shareholding_pct,
+                        "evidence_status": "NOT_VERIFIED",
+                        "breach_determined": False,
+                    },
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                    conditional_applies=True,
                 ))
-            if c.remittance_amount_usd < FOREIGN_WORK_PERMIT_THRESHOLD_USD and c.bida_registered:
+            if (c.remittance_amount_usd is not None
+                    and c.remittance_amount_usd < FOREIGN_WORK_PERMIT_THRESHOLD_USD
+                    and c.bida_registered):
                 self._add_flag(ComplianceFlag(
                     rule_id="INC-006",
                     flag_code="REMITTANCE_BELOW_WORK_PERMIT_THRESHOLD",
-                    severity=Severity.YELLOW,
+                    severity=Severity.NOT_EVALUATED,
                     score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Advisory: Remittance USD {c.remittance_amount_usd:,.2f} below USD {FOREIGN_WORK_PERMIT_THRESHOLD_USD:,} work permit threshold.",
-                    statutory_basis="BIDA Foreign Investment Act 1980",
-                    detail={"remittance_usd": c.remittance_amount_usd, "threshold": FOREIGN_WORK_PERMIT_THRESHOLD_USD},
-                    conditional_applies=True
+                    description=("Reported initial-establishment remittance is below the USD 50,000 reference amount. "
+                                 "This is a screening prompt only, not a statutory breach or automatic work-permit refusal. "
+                                 "Verify the operative BIDA 2023 work-permit guideline, applicant category, date, exceptions and evidence."),
+                    statutory_basis=("BIDA Guidelines for permission to establish foreign commercial offices and issue work permits in Bangladesh (2023); "
+                                     "exact operative clause/version and current amendments require verification"),
+                    detail={
+                        "remittance_usd": c.remittance_amount_usd,
+                        "threshold": FOREIGN_WORK_PERMIT_THRESHOLD_USD,
+                        "guideline_applicability_verified": False,
+                        "breach_determined": False,
+                    },
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                    conditional_applies=True,
                 ))
 
         # MEM-001: Company operating with fewer than minimum members (Section 222)
@@ -799,16 +847,34 @@ class NLCRuleEngine:
                     detail={"member_count": member_count, "minimum": min_members}
                 ))
 
-        # INC-007: Business commenced without Section 150 declaration (Section 150)
-        if c.business_commencement_declaration_filed is False:
+        # INC-007: Section 150 is not universal. It does not apply to
+        # private companies or to companies that do not issue a prospectus
+        # inviting public subscription (s.150(6)). Require verified scope.
+        if (
+            c.company_type == "PUBLIC_LIMITED"
+            and c.section150_prospectus_issued is True
+            and c.section150_applicability_verified
+            and bool(c.section150_applicability_evidence_ref)
+            and c.business_commencement_declaration_verified
+            and bool(c.business_commencement_declaration_evidence_ref)
+            and c.business_commencement_declaration_filed is False
+        ):
             self._add_flag(ComplianceFlag(
                 rule_id="INC-007",
-                flag_code="BUSINESS_COMMENCED_WITHOUT_DECLARATION",
-                severity=Severity.RED,
-                score_impact=10,
+                flag_code="SECTION_150_COMMENCEMENT_DECLARATION_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="Business commenced without Section 150 declaration filed with Registrar.",
-                statutory_basis="Sections 59-60, Companies Act 1994 (Bangladesh)",
+                description=(
+                    "Internal review signal only: verified Section 150 applicability "
+                    "and a reported missing commencement declaration require counsel "
+                    "review of every statutory condition, exemption and filing record. "
+                    "No legal breach is determined."
+                ),
+                statutory_basis="Section 150(1) and (6), Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={"applicability_evidence_ref": c.section150_applicability_evidence_ref},
             ))
 
         if c.trade_license_obtained is False:
@@ -1264,7 +1330,7 @@ class NLCRuleEngine:
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description="Attendance is verified, but the applicable quorum has not been verified against the Articles and Section 85(2)(b).",
-                statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh)",
+                statutory_basis="Section 85(2)(b), Companies Act 1994 (Bangladesh), read with the Articles",
                 state=RuleState.UNKNOWN,
                 eval_state="UNKNOWN",
             ))
@@ -1273,6 +1339,7 @@ class NLCRuleEngine:
             and c.members_present_at_agm is not None
             and attendance_verified
             and quorum_basis_verified
+            and c.agm_quorum_required is not None
             and c.members_present_at_agm < c.agm_quorum_required
         ):
             self._add_flag(ComplianceFlag(
@@ -1389,80 +1456,131 @@ class NLCRuleEngine:
     def _run_director_rules(self, c: CompanyProfile) -> None:
         for change in c.director_changes:
             delay = (self.today - change.event_date).days
-            if change.form_filed is None:
+
+            if (
+                change.form_filed is None
+                or not change.form_filed_verified
+                or not change.form_filed_evidence_ref
+            ):
                 self._add_flag(ComplianceFlag(
                     rule_id="DIR-001",
-                    flag_code="DIRECTOR_FILING_STATUS_UNKNOWN",
-                    severity=Severity.YELLOW,
+                    flag_code="DIRECTOR_FORM_XII_STATUS_UNKNOWN",
+                    severity=Severity.NOT_EVALUATED,
                     score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Director filing status unknown for {change.director_id}.",
-                    statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
+                    description=(
+                        "Director Form XII filing status is unknown. Obtain the "
+                        "authenticated RJSC filing record or registry response; "
+                        "non-production is not proof of non-filing."
+                    ),
+                    statutory_basis="Section 115(2), Companies Act 1994 (Bangladesh)",
                     detail={"director_id": change.director_id},
-                    state=RuleState.UNKNOWN
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
                 ))
-                continue
-            elif not change.form_filed and delay > DIRECTOR_FILING_DEADLINE_DAYS:
+
+            if (
+                change.form_filed is False
+                and change.form_filed_verified
+                and bool(change.form_filed_evidence_ref)
+                and delay > DIRECTOR_FILING_DEADLINE_DAYS
+            ):
                 if change.event_type == "appointment":
-                    severity = Severity.RED if delay > 90 else Severity.YELLOW
-                    self._add_flag(ComplianceFlag(
-                        rule_id="DIR-001",
-                        flag_code="FORM_XII_APPOINTMENT_PENDING",
-                        severity=severity,
-                        score_impact=10 if delay > 90 else 5,
-                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"Director appointment not filed via Form XII. Section 115: 14-day deadline. Overdue by {delay} days.",
-                        statutory_basis="Section 90, Companies Act 1994 (Bangladesh)",
-                        detail={"director_id": change.director_id, "delay": delay}
-                    ))
+                    rule_id = "DIR-001"
+                    flag_code = "FORM_XII_APPOINTMENT_REQUIRES_REVIEW"
                 elif change.event_type in ("resignation", "removal", "death"):
-                    severity = Severity.RED if delay > 90 else Severity.YELLOW
+                    rule_id = "DIR-002"
+                    flag_code = "FORM_XII_CESSATION_REQUIRES_REVIEW"
+                else:
+                    rule_id = "DIR-001"
+                    flag_code = "FORM_XII_CHANGE_REQUIRES_REVIEW"
+
+                self._add_flag(ComplianceFlag(
+                    rule_id=rule_id,
+                    flag_code=flag_code,
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=(
+                        f"Reported Form XII filing is not verified {delay} days after "
+                        f"the {change.event_type} event. Section 115(2) provides a "
+                        "14-day filing period; verify the event, liable filer, actual "
+                        "RJSC record, extension/correction and current law before any "
+                        "default or penalty conclusion."
+                    ),
+                    statutory_basis="Section 115(2), Companies Act 1994 (Bangladesh)",
+                    detail={"director_id": change.director_id, "delay": delay, "type": change.event_type},
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                ))
+
+                # >365 days is an NLC internal escalation threshold, not a
+                # separate statutory deadline or a continuing-offence rule.
+                if delay > 365:
                     self._add_flag(ComplianceFlag(
-                        rule_id="DIR-002",
-                        flag_code="FORM_XII_DEPARTURE_PENDING",
-                        severity=severity,
-                        score_impact=10 if delay > 90 else 5,
-                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"Director {change.event_type} not filed via Form XII. Section 115: 14-day deadline. Overdue by {delay} days.",
-                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
-                        detail={"director_id": change.director_id, "delay": delay, "type": change.event_type}
+                        rule_id="DIR-003",
+                        flag_code="DIRECTOR_FILING_LONG_DELAY_INTERNAL_ESCALATION",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                        description=(
+                            f"NLC internal follow-up threshold exceeded ({delay} days). "
+                            "This is a commercial escalation policy, not an additional "
+                            "statutory offence or daily penalty. The underlying filing "
+                            "duty and any consequence require separate legal review."
+                        ),
+                        statutory_basis="Section 115(2), Companies Act 1994 (Bangladesh); 365-day threshold is NLC policy only",
+                        detail={"director_id": change.director_id, "delay": delay, "policy_threshold_days": 365},
+                        state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                        eval_state="UNKNOWN",
                     ))
+
+                if change.event_type in ("resignation", "removal", "death"):
                     self._add_flag(ComplianceFlag(
                         rule_id="DIR-004",
-                        flag_code="LATE_CESSATION_FILING_LEGAL_EFFECT_REVIEW",
+                        flag_code="DIRECTOR_CESSATION_LEGAL_EFFECT_REVIEW",
                         severity=Severity.NOT_EVALUATED,
                         score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description="Cessation particulars were filed late or remain unfiled. The legal effect on third-party reliance and any continuing liability requires case-specific legal review; non-filing alone does not automatically establish continuing director liability.",
+                        description=(
+                            "Cessation particulars are reported late or unfiled. The "
+                            "effect on third-party reliance and any continuing liability "
+                            "requires case-specific legal review; non-filing alone does "
+                            "not automatically establish continuing director liability."
+                        ),
                         statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
                         detail={"director_id": change.director_id, "legal_review_required": True},
                         state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                         eval_state="UNKNOWN",
                     ))
 
-                if delay > 365:
-                    self._add_flag(ComplianceFlag(
-                        rule_id="DIR-003",
-                        flag_code="DIRECTOR_FILING_MAJOR_IRREGULARITY",
-                        severity=Severity.RED,
-                        score_impact=15,
-                        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                        description=f"Director filing overdue {delay} days. Exceeds 1 year — Major Irregularity.",
-                        statutory_basis="Section 115, Companies Act 1994 (Bangladesh)",
-                        detail={"director_id": change.director_id, "delay": delay}
-                    ))
-                # DIR-007: Director consent not filed within 30 days (Section 93)
-                if change.event_type == "appointment" and delay > 30:
-                    self._add_flag(ComplianceFlag(
-                        rule_id="DIR-007",
-                        flag_code="DIRECTOR_CONSENT_NOT_FILED",
-                        severity=Severity.YELLOW,
-                        score_impact=5,
-                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"Director consent not filed within 30 days. Section 93(2): overdue by {delay} days.",
-                        statutory_basis="Section 93, Companies Act 1994 (Bangladesh)",
-                        detail={"director_id": change.director_id, "delay": delay}
-                    ))
+            # Section 93(2) consent is a distinct filing from Form XII. Do not
+            # infer it from form_filed; require its own verified status.
+            if (
+                change.event_type == "appointment"
+                and change.consent_filed is False
+                and change.consent_verified
+                and bool(change.consent_evidence_ref)
+                and delay > 30
+            ):
+                self._add_flag(ComplianceFlag(
+                    rule_id="DIR-007",
+                    flag_code="DIRECTOR_CONSENT_FILING_REQUIRES_REVIEW",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=(
+                        f"Written director consent is reported unfiled {delay} days "
+                        "after appointment. Section 93(2) provides a 30-day filing "
+                        "period; reconcile the pre-appointment consent/form requirements "
+                        "under section 92 and current RJSC Form IX instructions. "
+                        "No default is determined without authenticated filing evidence."
+                    ),
+                    statutory_basis="Section 93(2), Companies Act 1994 (Bangladesh); section 92/Form IX mapping requires review",
+                    detail={"director_id": change.director_id, "delay": delay},
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                ))
 
     # ───────────────────────────────────────────────────────────────────
     # MODULE 5: SHAREHOLDING
@@ -1498,14 +1616,14 @@ class NLCRuleEngine:
 
         if c.capital_increase_date and c.form_iv_filed is False:
             delay = (self.today - c.capital_increase_date).days
-            if delay > ALLOTMENT_FILING_DEADLINE_DAYS:
+            if delay > CAPITAL_INCREASE_NOTICE_DEADLINE_DAYS:
                 self._add_flag(ComplianceFlag(
                     rule_id="SH-003",
                     flag_code="FORM_IV_CAPITAL_INCREASE_NOT_FILED",
                     severity=Severity.YELLOW if delay < 90 else Severity.RED,
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Capital increase not filed via Form IV. Section 52: 30-day deadline. Overdue by {delay} days.",
+                    description=f"Capital increase not filed via Form IV within 15 days under Section 56. Overdue by {delay} days.",
                     statutory_basis="Section 56, Companies Act 1994 (Bangladesh)",
                     detail={"delay": delay}
                 ))
@@ -1515,89 +1633,161 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     def _run_transfer_rules(self, c: CompanyProfile) -> None:
         for transfer in c.share_transfers:
-            transfer_is_void = (
-                transfer.aoa_restriction_apply
-                and not transfer.board_approval_obtained
-            )
+            transfer_review_flags = []
 
-            if not transfer.instrument_recorded or not transfer.form_117_filed:
-                self._add_flag(ComplianceFlag(
+            # Section 38(3): verify a duly executed/stamped transfer instrument.
+            # Missing or unproduced records are review prompts, not proof of absence.
+            if transfer.instrument_recorded is False or transfer.form_117_filed is False:
+                flag = ComplianceFlag(
                     rule_id="TR-001",
-                    flag_code="TRANSFER_NO_INSTRUMENT_FORM_117",
-                    severity=Severity.YELLOW,
-                    score_impact=5,
+                    flag_code="TRANSFER_INSTRUMENT_REQUIRES_VERIFICATION",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Share transfer without Form 117 instrument. Section 38: proper instrument required.",
-                    statutory_basis="Section 38, Companies Act 1994 (Bangladesh)",
-                    detail={"transfer_id": transfer.transfer_id}
-                ))
+                    description=(
+                        "Internal review signal only: verify the prescribed transfer "
+                        "instrument, signatures, stamping, share certificate and any "
+                        "statutory exception under section 38(3). A missing upload is "
+                        "not proof that no valid instrument exists."
+                    ),
+                    statutory_basis="Section 38(3), Companies Act 1994 (Bangladesh)",
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                    detail={"transfer_id": transfer.transfer_id},
+                )
+                self._add_flag(flag)
+                transfer_review_flags.append(flag)
 
-            if not transfer.stamp_duty_paid:
-                self._add_flag(ComplianceFlag(
+            # Stamp duty depends on the instrument, execution facts and current
+            # Schedule I. Never infer non-payment from a missing receipt alone.
+            if transfer.stamp_duty_applicability_verified and transfer.stamp_duty_paid is False:
+                flag = ComplianceFlag(
                     rule_id="TR-002",
-                    flag_code="STAMP_DUTY_NOT_CONFIRMED",
-                    severity=Severity.YELLOW,
-                    score_impact=5,
+                    flag_code="STAMP_DUTY_REQUIRES_INSTRUMENT_REVIEW",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Stamp duty not confirmed on transfer. Stamp Act 1899, Schedule I, Item 62: unstamped instruments inadmissible.",
-                    statutory_basis="Stamp Act 1899, Schedule I, Item 62",
-                    detail={"transfer_id": transfer.transfer_id}
-                ))
+                    description=(
+                        "Internal review signal only: verify instrument category, "
+                        "execution/registration facts, current Stamp Act Schedule I "
+                        "rate, exemption/adjudication and authenticated payment evidence. "
+                        "No inadmissibility or invalidity is determined."
+                    ),
+                    statutory_basis="Stamp Act 1899, current Schedule I and applicable amendments",
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                    detail={"transfer_id": transfer.transfer_id},
+                )
+                self._add_flag(flag)
+                transfer_review_flags.append(flag)
 
-            if not transfer.board_approval_obtained and not transfer_is_void:
-                self._add_flag(ComplianceFlag(
+            # Board approval is not universal. It is relevant only where the
+            # company's actual Articles impose a valid restriction.
+            restriction_applies = (
+                transfer.aoa_restriction_apply is True
+                and bool(transfer.articles_clause_evidence_ref)
+            )
+            board_approval_missing = (
+                restriction_applies and transfer.board_approval_obtained is False
+            )
+            if board_approval_missing:
+                flag = ComplianceFlag(
                     rule_id="TR-003",
-                    flag_code="TRANSFER_NO_BOARD_APPROVAL",
-                    severity=Severity.YELLOW,
-                    score_impact=8,
+                    flag_code="ARTICLES_TRANSFER_RESTRICTION_REQUIRES_REVIEW",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Share transfer without board approval. Section 38 + AoA: approval required where restricted.",
-                    statutory_basis="Section 38; AoA, Companies Act 1994 (Bangladesh)",
-                    detail={"transfer_id": transfer.transfer_id}
-                ))
+                    description=(
+                        "Internal review signal only: an Articles transfer restriction "
+                        "is reported and board approval is not verified. Review the "
+                        "operative Articles, transfer class, notice, board powers and "
+                        "section 38(7). Board approval is not a universal statutory requirement."
+                    ),
+                    statutory_basis="Section 38(7), Companies Act 1994 (Bangladesh), and the company's Articles",
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                    detail={"transfer_id": transfer.transfer_id},
+                )
+                self._add_flag(flag)
+                transfer_review_flags.append(flag)
 
-            if not transfer.share_register_updated and not transfer_is_void:
-                self._add_flag(ComplianceFlag(
-                    rule_id="TR-004",
-                    flag_code="TRANSFER_REGISTER_NOT_UPDATED",
-                    severity=Severity.YELLOW,
-                    score_impact=5,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Register of Members not updated after transfer. Section 34: register is legal record of ownership.",
-                    statutory_basis="Section 34, Companies Act 1994 (Bangladesh)",
-                    detail={"transfer_id": transfer.transfer_id}
-                ))
+            # Section 38(4): where registration is refused, the company
+            # must notify both transferor and transferee within 30 days of
+            # lodgement. Do not infer refusal or non-notice from missing data.
+            if (
+                transfer.registration_refused is True
+                and transfer.refusal_notice_sent is False
+                and transfer.instrument_lodged_date is not None
+                and bool(transfer.refusal_decision_evidence_ref)
+            ):
+                refusal_delay = (self.today - transfer.instrument_lodged_date).days
+                if refusal_delay > 30:
+                    flag = ComplianceFlag(
+                        rule_id="TR-004",
+                        flag_code="TRANSFER_REFUSAL_NOTICE_REQUIRES_REVIEW",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            f"A refusal to register is reported but notice to both "
+                            f"parties is not verified {refusal_delay} days after the "
+                            "instrument was lodged. Section 38(4) requires notice "
+                            "within 30 days; verify lodgement, refusal, dispatch and "
+                            "receipt evidence before any default conclusion."
+                        ),
+                        statutory_basis="Section 38(4), Companies Act 1994 (Bangladesh)",
+                        state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                        eval_state="UNKNOWN",
+                        detail={"transfer_id": transfer.transfer_id, "delay": refusal_delay},
+                    )
+                    self._add_flag(flag)
+                    transfer_review_flags.append(flag)
 
-            if transfer_is_void:
-                self._add_flag(ComplianceFlag(
+            # Section 38(7) preserves the company's power under its Articles
+            # to refuse registration; it does not make every restricted transfer
+            # automatically void. Require proof it was registered despite the restriction.
+            if (
+                transfer.transfer_registered is True
+                and bool(transfer.transfer_registration_evidence_ref)
+                and board_approval_missing
+            ):
+                flag = ComplianceFlag(
                     rule_id="TR-005",
-                    flag_code="AOA_TRANSFER_RESTRICTION_VIOLATED",
-                    severity=Severity.BLACK,
-                    score_impact=15,
+                    flag_code="REGISTERED_TRANSFER_DESPITE_REPORTED_ARTICLES_RESTRICTION",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                    description="Transfer violated AoA restriction. Section 38: such transfer is void. BLACK override.",
-                    statutory_basis="Section 38; AoA, Companies Act 1994 (Bangladesh)",
-                    detail={"transfer_id": transfer.transfer_id, "override": True},
-                    is_black_override=True,
-                ))
+                    description=(
+                        "Internal review signal only: a transfer is reported registered "
+                        "despite an Articles restriction and missing board approval. "
+                        "Section 38(7) concerns the company's power to refuse registration; "
+                        "do not declare the transfer void or title absent without counsel "
+                        "review of the Articles, registration, notices and remedies."
+                    ),
+                    statutory_basis="Section 38(7), Companies Act 1994 (Bangladesh), and the company's Articles",
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                    detail={"transfer_id": transfer.transfer_id},
+                )
+                self._add_flag(flag)
+                transfer_review_flags.append(flag)
 
-            tr_flags = [f for f in self._flags
-                       if f.detail.get("transfer_id") == transfer.transfer_id
-                       and f.rule_id.startswith("TR-")
-                       and f.rule_id not in ("TR-005", "TR-006")]
-                       
-            if len(tr_flags) >= 2:
-                # TR-006: composite flag — no additional score impact
-                # Constituent rules already penalized; this exists for exposure_band and rescue sequencing
+            if len(transfer_review_flags) >= 2:
                 self._add_flag(ComplianceFlag(
                     rule_id="TR-006",
-                    flag_code="TRANSFER_IRREGULAR_COMPOSITE",
-                    severity=Severity.RED,
+                    flag_code="TRANSFER_RECORD_REVIEW_COMPOSITE",
+                    severity=Severity.NOT_EVALUATED,
                     score_impact=0,
                     revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description=f"Transfer has {len(tr_flags)} deficiencies. Composite irregularity requiring structured remediation.",
-                    statutory_basis="Sections 34, 47, 108, Companies Act 1994 (Bangladesh)",
-                    detail={"transfer_id": transfer.transfer_id, "count": len(tr_flags)}
+                    description=(
+                        f"{len(transfer_review_flags)} transfer-record review signals "
+                        "require document and Articles reconciliation. This composite "
+                        "is not a statutory breach or invalidity finding."
+                    ),
+                    statutory_basis="Sections 34 and 38, Companies Act 1994 (Bangladesh), and applicable Articles",
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                    detail={"transfer_id": transfer.transfer_id, "count": len(transfer_review_flags)},
                 ))
 
     # ───────────────────────────────────────────────────────────────────
@@ -1712,12 +1902,21 @@ class NLCRuleEngine:
         if c.capital_increase_date and c.capital_increase_resolution is False:
             self._add_flag(ComplianceFlag(
                 rule_id="CAP-001",
-                flag_code="CAPITAL_INCREASE_RESOLUTION_MISSING",
-                severity=Severity.YELLOW,
-                score_impact=5,
+                flag_code="CAPITAL_ALTERATION_AUTHORITY_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="Capital increase without shareholder resolution. Section 54: Ordinary/Special Resolution required.",
-                statutory_basis="Section 53, Companies Act 1994 (Bangladesh)",
+                description=(
+                    "Internal review signal only: verify the exact capital alteration "
+                    "type, Articles authority and resolution required by section 53. "
+                    "Section 54 addresses specified consolidation/conversion/subdivision "
+                    "notices; increase of registered share capital is separately governed "
+                    "by section 56. Do not assume a special resolution without the Act "
+                    "and the company's Articles."
+                ),
+                statutory_basis="Sections 53, 54 and 56, Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
             ))
 
         for charge in c.charges:
@@ -1773,7 +1972,10 @@ class NLCRuleEngine:
                         state=RuleState.UNKNOWN,
                         eval_state="UNKNOWN",
                     ))
-                elif charge.satisfaction_filed is False:
+                elif (
+                    charge.satisfaction_filed is False
+                    and charge.satisfaction_date is not None
+                ):
                     satisfaction_delay = (self.today - charge.satisfaction_date).days
                     if satisfaction_delay > 21:
                         self._add_flag(ComplianceFlag(
@@ -2031,45 +2233,65 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     # MODULE 12: ESCALATION
     # ───────────────────────────────────────────────────────────────────
-    # MODULE 12: INSOLVENCY (Bankruptcy Act 1997)
+    # MODULE 12: COMPANY WINDING-UP PROCEEDINGS (Companies Act 1994).
+    # Do not conflate corporate winding-up with personal bankruptcy.
+    # These booleans are reported facts only; each requires authenticated
+    # court/RJSC records and route-specific counsel classification.
     def _run_insolvency_rules(self, c: CompanyProfile) -> None:
         if c.winding_up_petition_filed:
             self._add_flag(ComplianceFlag(
                 rule_id="BNK-001",
-                flag_code="WINDING_UP_PETITION_FILED",
-                severity=Severity.BLACK,
-                score_impact=25,
+                flag_code="WINDING_UP_PETITION_REQUIRES_CASE_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Winding up petition filed against company. Bankruptcy Act 1997, Section 12. Company under court supervision.",
-                statutory_basis="Bankruptcy Act 1997 (Bangladesh), Section 12",
-                is_black_override=True,
-                detail={"petition_filed": True}
+                description=(
+                    "Reported company winding-up petition. Verify the Companies Act "
+                    "1994 petition, grounds, court, case number, service, current status, "
+                    "withdrawal/dismissal/stay and authenticated court record. "
+                    "This is not a Bankruptcy Act finding or an automatic liability conclusion."
+                ),
+                statutory_basis="Companies Act 1994 (Bangladesh), Part V, including sections 241–244; exact petition provision requires case review",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={"petition_filed": True},
             ))
 
         if c.liquidator_appointed:
             self._add_flag(ComplianceFlag(
                 rule_id="BNK-002",
-                flag_code="LIQUIDATOR_APPOINTED",
-                severity=Severity.BLACK,
-                score_impact=25,
+                flag_code="LIQUIDATOR_APPOINTMENT_REQUIRES_ROUTE_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Liquidator appointed. Bankruptcy Act 1997, Section 14. Company under liquidation proceedings.",
-                statutory_basis="Bankruptcy Act 1997 (Bangladesh), Section 14",
-                is_black_override=True,
-                detail={"liquidator_appointed": True}
+                description=(
+                    "Reported liquidator appointment. Verify whether the appointment "
+                    "arises from a court winding-up order, voluntary winding-up or "
+                    "another statutory route; obtain the appointment instrument and "
+                    "confirm the appointee's authority and current status."
+                ),
+                statutory_basis="Companies Act 1994 (Bangladesh), Part V; section 255 applies to court-appointed Official Liquidators; route-specific provision requires review",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={"liquidator_appointed": True},
             ))
 
         if c.court_ordered_winding_up:
             self._add_flag(ComplianceFlag(
                 rule_id="BNK-003",
-                flag_code="COURT_ORDERED_WINDING_UP",
-                severity=Severity.BLACK,
-                score_impact=35,
+                flag_code="COURT_WINDING_UP_ORDER_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Court-ordered winding up. Bankruptcy Act 1997, Section 18. Company being wound up by court order.",
-                statutory_basis="Bankruptcy Act 1997 (Bangladesh), Section 18",
-                is_black_override=True,
-                detail={"court_ordered": True}
+                description=(
+                    "Reported court winding-up order. Verify the authenticated order, "
+                    "operative date, court jurisdiction, appeal/stay, correction, "
+                    "suspension or discharge, and current liquidation status."
+                ),
+                statutory_basis="Companies Act 1994 (Bangladesh), Part V, including sections 241–246; exact order provision requires case review",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={"court_ordered": True},
             ))
 
     # MODULE 13: LABOUR COMPLIANCE (Labour Act 2006)
@@ -2176,19 +2398,30 @@ class NLCRuleEngine:
                 state=RuleState.REQUIRES_LAWYER_JUDGMENT, eval_state="UNKNOWN"))
         if c.voluntary_winding_up:
             self._add_flag(ComplianceFlag(
-                rule_id="ESC-004", flag_code="VOLUNTARY_WINDING_UP",
-                severity=Severity.BLACK, score_impact=30,
+                rule_id="ESC-004", flag_code="VOLUNTARY_WINDING_UP_REQUIRES_STATUS_VERIFICATION",
+                severity=Severity.NOT_EVALUATED, score_impact=0,
                 revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="Voluntary winding up. Section 286.",
-                statutory_basis="Section 286, Companies Act 1994 (Bangladesh)",
-                is_black_override=True))
+                description=(
+                    "Reported voluntary winding-up resolution. Verify the statutory "
+                    "ground, special/extraordinary resolution, solvency declaration "
+                    "where applicable, liquidator appointment, creditor process and "
+                    "current status under Part V. No automatic BLACK classification."
+                ),
+                statutory_basis="Section 286 and following provisions, Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT, eval_state="UNKNOWN"))
         if c.investigation_order:
             self._add_flag(ComplianceFlag(
-                rule_id="ESC-005", flag_code="INVESTIGATION_ORDER_PENDING",
-                severity=Severity.RED, score_impact=20,
+                rule_id="ESC-005", flag_code="INVESTIGATION_APPOINTMENT_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED, score_impact=0,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="Investigation order pending. Section 195.",
-                statutory_basis="Section 195, Companies Act 1994 (Bangladesh)"))
+                description=(
+                    "Reported company investigation. Verify the Government inspector "
+                    "appointment under section 195 or 197, the scope of any section 199 "
+                    "related-entity investigation, authenticated order, parties, status "
+                    "and any resulting proceedings. A report or inquiry is not itself a finding of liability."
+                ),
+                statutory_basis="Sections 195 and 197; section 199 where related entities are included, Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT, eval_state="UNKNOWN"))
 
         # DIR-008: Section 104 contains role-specific exclusions. A bare
         # profile boolean does not establish the office category or absence of
@@ -2354,8 +2587,9 @@ class NLCRuleEngine:
         # ACC-002: Section 190 allows 30 days after the AGM, or if no AGM
         # was held, 30 days after the latest date on which it should have been held.
         if c.financial_statements_filed is False and self._agm_history_is_verified(c):
-            filing_deadline = None
-            deadline_basis = None
+            filing_deadline: date | None = None
+            deadline_basis: str | None = None
+            agm_due: date | None = None
             if c.agm_held_this_cycle is True and c.last_agm_date is not None:
                 filing_deadline = c.last_agm_date + timedelta(days=30)
                 deadline_basis = "30 days after AGM"
@@ -2364,8 +2598,6 @@ class NLCRuleEngine:
                     agm_due = self._add_months(c.incorporation_date, 18)
                 elif c.agm_count is not None and c.agm_count > 0 and c.last_agm_date is not None:
                     agm_due = self._subsequent_agm_deadline(c)
-                else:
-                    agm_due = None
                 if agm_due is not None:
                     filing_deadline = agm_due + timedelta(days=30)
                     deadline_basis = "30 days after latest date AGM should have been held"
@@ -2428,7 +2660,7 @@ class NLCRuleEngine:
 
         # Check for verified, structured disqualification grounds
         verified_grounds = []
-        unverified_allegations = []
+        unverified_allegations: list[dict[str, Any] | str] = []
         disputed_grounds = []
 
         if c.disqualification_grounds:
@@ -2466,7 +2698,7 @@ class NLCRuleEngine:
         # Legacy path: disqualification_details (free-text) without structured grounds
         # → treat as unverified allegations, NOT as BLACK override
         if not c.disqualification_grounds and c.disqualification_details:
-            unverified_allegations = c.disqualification_details
+            unverified_allegations.extend(c.disqualification_details)
 
         if disputed_grounds:
             self._add_flag(ComplianceFlag(
@@ -2577,14 +2809,24 @@ class NLCRuleEngine:
         pre_score = self._calculate_raw_score(self._flags)
         has_black_override = any(
             f.rule_id in VERIFIED_RULE_IDS
+            and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
             and f.is_black_override
             and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and f.eval_state == "VIOLATION"
             for f in self._flags if not f.resolved and f.conditional_applies
         )
-        
+
         if LEGAL_SCORE_RELEASED and (pre_score <= 29 or has_black_override):
-            black_count = len([f for f in self._flags if f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION" and not f.resolved and f.conditional_applies and f.rule_id not in self._ESC_RULE_IDS])
+            black_count = len([
+                f for f in self._flags
+                if f.rule_id in VERIFIED_RULE_IDS
+                and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+                and f.is_black_override
+                and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+                and f.eval_state == "VIOLATION"
+                and not f.resolved and f.conditional_applies
+                and f.rule_id not in self._ESC_RULE_IDS
+            ])
             esc003_impact = 10 if black_count <= 2 else (25 if black_count == 3 else 35)
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-003",
@@ -2722,7 +2964,8 @@ class NLCRuleEngine:
             critical = [
                 f for f in active
                 if f.rule_id in VERIFIED_RULE_IDS
-                and (f.is_black_override or f.severity == Severity.BLACK)
+                and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+                and f.is_black_override
                 and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
                 and f.eval_state == "VIOLATION"
             ]
@@ -2745,11 +2988,19 @@ class NLCRuleEngine:
             severity_rank = {Severity.GREEN: 0, Severity.YELLOW: 1, Severity.RED: 2, Severity.BLACK: 3}
             max_flag_severity = Severity.GREEN
             for f in active:
-                if (f.rule_id in VERIFIED_RULE_IDS
-                        and f.severity in severity_rank
-                        and f.severity in (Severity.RED, Severity.BLACK)
-                        and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
-                        and f.eval_state == "VIOLATION"):
+                if (
+                    f.rule_id in VERIFIED_RULE_IDS
+                    and (
+                        f.severity == Severity.RED
+                        or (
+                            f.severity == Severity.BLACK
+                            and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+                            and f.is_black_override
+                        )
+                    )
+                    and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+                    and f.eval_state == "VIOLATION"
+                ):
                     if severity_rank[f.severity] > severity_rank.get(max_flag_severity, 0):
                         max_flag_severity = f.severity
             band_rank = severity_rank.get(score_band, 0)
@@ -3019,13 +3270,14 @@ class NLCRuleEngine:
         if c.agm_count == 0:
             if c.incorporation_date is None:
                 return 0
-            deadline = self._add_months(c.incorporation_date, 18)
+            deadline: date | None = self._add_months(c.incorporation_date, 18)
         else:
             if c.last_agm_date is None:
                 return 0
             deadline = self._subsequent_agm_deadline(c)
-            if deadline is None:
-                return 0
+            deadline = self._subsequent_agm_deadline(c)
+        if deadline is None:
+            return 0
         if self.today > deadline:
             return (self.today - deadline).days // 365
         return 0

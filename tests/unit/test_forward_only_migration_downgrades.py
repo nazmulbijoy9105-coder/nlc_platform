@@ -25,6 +25,8 @@ FORWARD_ONLY_MIGRATIONS = (
     "alembic/versions/0071_immutable_payment_submission_link.py",
     "alembic/versions/0072_allocation_mutation_reconciliation.py",
     "alembic/versions/0073_payment_allocations_append_only.py",
+    "alembic/versions/0074_legal_release_quarantine.py",
+    "alembic/versions/0075_director_transfer_evidence.py",
 )
 
 
@@ -45,8 +47,16 @@ def test_sensitive_migration_downgrades_are_noop_and_data_preserving():
                 and isinstance(node.value.value, str)
             )
         ]
-        assert len(statements) == 1, f"{relative_path} downgrade must remain a no-op"
-        assert isinstance(statements[0], ast.Pass), (
+        assert len(statements) == 1, f"{relative_path} downgrade must be a no-op or explicit refusal"
+        statement = statements[0]
+        is_noop = isinstance(statement, ast.Pass)
+        is_refusal = (
+            isinstance(statement, ast.Raise)
+            and isinstance(statement.exc, ast.Call)
+            and isinstance(statement.exc.func, ast.Name)
+            and statement.exc.func.id == "RuntimeError"
+        )
+        assert is_noop or is_refusal, (
             f"{relative_path} downgrade must not remove security controls "
-            "or destroy legal evidence"
+            "or destroy legal evidence; use pass or raise RuntimeError"
         )

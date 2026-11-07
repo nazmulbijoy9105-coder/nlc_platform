@@ -16,7 +16,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models.company import Company
-from app.models.database import set_rls_context
+from app.models.database import set_admin_context, set_rls_context
 from app.models.enums import CompanyStatus, RiskBand, UserRole
 from app.models.finance import (
     Invoice,
@@ -61,7 +61,13 @@ async def _committed_finance_fixture(test_engine, *, with_submission: bool):
             is_active=True,
             totp_enabled=False,
         )
-        session.add_all([company, user])
+        # Bootstrap fixtures under the signed service principal. A newly
+        # created company has no membership row yet, so a tenant principal
+        # cannot legitimately INSERT it through companies_tenant_insert.
+        # Switch to the actor's signed UUID only after trusted fixture setup;
+        # all finance operations below then run under the normal RLS identity.
+        await set_admin_context(session)
+        session.add_all([user, company])
         await session.flush()
         await set_rls_context(session, str(user_id))
 

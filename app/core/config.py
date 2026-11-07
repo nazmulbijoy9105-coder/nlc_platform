@@ -2,10 +2,16 @@ import os
 from typing import List
 
 from pydantic import model_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra="ignore",
+    )
+
     aws_key_id: str | None = None
     aws_secret: str | None = None
     ses_region: str | None = None
@@ -128,10 +134,6 @@ class Settings(BaseSettings):
     max_login_attempts: int = 5
     lockout_minutes: int = 30
     max_page_size: int = 100
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-        extra = "ignore"
 
 from functools import lru_cache
 
