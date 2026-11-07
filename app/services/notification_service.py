@@ -330,28 +330,28 @@ class NotificationService(BaseService[Notification]):
         filters = [Notification.notification_status == NotificationStatus.PENDING]
         if channel:
             filters.append(Notification.channel == channel)
-        # Filter at SQL level before LIMIT so a large legacy legal-alert backlog
-        # cannot starve unrelated payment, subscription or operational notices.
+        # Apply the same closed operational allowlist in SQL before LIMIT.
+        # Otherwise legacy deadline/unknown legal notices can consume the batch
+        # and starve unrelated payment, subscription or operational notices.
         rule_id_type = Notification.notification_type.op("~")(r"^[A-Z]{2,5}-[0-9]{3}$")
-        non_rule_id_type = Notification.notification_type.op("!~")(r"^[A-Z]{2,5}-[0-9]{3}$")
-        generic_legal_type = Notification.notification_type.in_(GENERIC_LEGAL_ALERT_TYPES)
+        operational_prefix = Notification.notification_type.op("~")(
+            r"^(BILLING_|PAYMENT_|SUBSCRIPTION_|ACCOUNT_SECURITY_)"
+        )
+        eligible_operational = and_(
+            Notification.related_flag_id.is_(None),
+            or_(
+                Notification.notification_type.in_(NON_LEGAL_OPERATIONAL_NOTIFICATION_TYPES),
+                operational_prefix,
+            ),
+        )
         if LEGAL_SCORE_RELEASED:
             eligible_rule = and_(
                 rule_id_type,
                 Notification.notification_type.in_(VERIFIED_RULE_IDS),
             )
-            eligible_operational = and_(
-                non_rule_id_type,
-                ~generic_legal_type,
-                Notification.related_flag_id.is_(None),
-            )
             filters.append(or_(eligible_rule, eligible_operational))
         else:
-            filters.append(and_(
-                non_rule_id_type,
-                ~generic_legal_type,
-                Notification.related_flag_id.is_(None),
-            ))
+            filters.append(eligible_operational)
         result = await self.db.execute(
             select(Notification)
             .where(*filters)
