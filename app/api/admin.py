@@ -366,7 +366,7 @@ async def cron_evaluate_all(
     Example: curl -X POST URL/api/v1/admin/cron/evaluate-all -H "X-Cron-Secret: your_secret"
     """
     import os
-    # CRON_SECRET is optional — if not set, endpoint is open (for free tier)
+    # Fail closed: without CRON_SECRET the scheduled-evaluation endpoint is disabled.
     cron_secret = os.environ.get("CRON_SECRET")
     if not cron_secret:
         raise HTTPException(status_code=403, detail="CRON_SECRET is not configured. Endpoint disabled.")
