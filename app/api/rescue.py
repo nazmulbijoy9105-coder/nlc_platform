@@ -31,6 +31,7 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
+from app.core.entitlement import require_entitlement
 from app.models.enums import RiskBand
 from app.services.company_service import CompanyService
 from app.services.notification_service import ActivityService
@@ -282,7 +283,10 @@ async def list_rescue_plans(
 @router.get(
     "/plans/{company_id}/active",
     response_model=RescuePlanResponse,
-    dependencies=[Depends(require_company_access("company_id"))],
+    dependencies=[
+        Depends(require_company_access("company_id")),
+        Depends(require_entitlement("corporate_rescue")),
+    ],
     summary="Get the active rescue plan for a company",
 )
 async def get_active_plan(
