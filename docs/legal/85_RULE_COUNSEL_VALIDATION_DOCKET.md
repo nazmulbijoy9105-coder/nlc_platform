@@ -567,8 +567,8 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### CAP-003 — Capital Reduction — Court Confirmation Review
 
-- **Catalogue anchor:** Section 150(1) and (6), Companies Act 1994 (Bangladesh)
-- **Source correction (7 Nov 2026):** Section 150(6) excludes private companies and companies that do not issue a prospectus inviting public subscription. This rule cannot apply to every company. The engine now requires verified public-company/prospectus applicability and an evidence reference before creating an internal review signal.
+- **Catalogue anchor:** Sections 59-60, Companies Act 1994 (Bangladesh)
+- **Source correction (7 Nov 2026):** The earlier Section 150(1)/(6) citation was a category error: Section 150 concerns commencement of business, not reduction of share capital. The official Companies Act places reduction of share capital in Section 59 and the application for court confirmation in Section 60. The rule remains NOT_COUNSEL_VALIDATED; the exact Articles authority, special-resolution, creditor-notice, court-order and registration steps require rule-level counsel review.
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
