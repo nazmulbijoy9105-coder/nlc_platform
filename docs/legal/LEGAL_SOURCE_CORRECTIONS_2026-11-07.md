@@ -87,3 +87,10 @@ Any future activation requires a complete rule-specific source dossier, applicab
 - Section 150 is the separate business-commencement provision and belongs to the INC-007 review, not CAP-003.
 - The rule remains NOT_EVALUATED, score impact 0, BLACK override false, and counsel review open. Exact Articles authority, creditor-notice procedure, court order, registration and consequences remain to be validated individually.
 - Official primary source: https://bdlaws.minlaw.gov.bd/act-788/part-354.html
+
+
+## INC-005 and INC-006 — foreign investment source corrections (7 November 2026)
+
+- INC-005 must not cite a nonexistent “BIDA Foreign Investment Act 1980”. The official Act is the Foreign Private Investment (Promotion and Protection) Act, 1980 (Act No. XI of 1980), but it is not the operative source for the AD-bank encashment certificate workflow. Primary source anchors identified are GFET-2018 Vol.1 Chapter 9 paragraph 2(A), Bangladesh Bank FE Circular No.10 dated 21 June 2023 (foreign-currency account retention) and FEID Circular No.01 dated 27 January 2025 (share issuance to non-residents). Later FEID circulars, including 8 March 2026 and 3 November 2026, must be considered where relevant. Zone and FC-account retention exceptions must be modelled.
+- INC-006 is not a Companies Act statutory breach rule. The USD 50,000 amount appears in BIDA's investment handbook as an initial-establishment-cost reference for work-permit applications. The operative BIDA 2023 work-permit guideline, exact clause, current version, applicant category and exceptions must be obtained before treating the threshold as binding. The rule is renamed as an evidence-review prompt and remains NOT_EVALUATED / 0 / no BLACK override.
+- Official sources: https://www.bb.org.bd/feidportal/circulars.php ; https://www.bb.org.bd/feidportal/fdi.php ; https://www.bb.org.bd/mediaroom/circulars/feid/jan272025feid01e.pdf ; https://www.bb.org.bd/mediaroom/circulars/fepd/jun212023fepd10e.pdf ; https://www.bida.gov.bd/resources
