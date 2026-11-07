@@ -22,6 +22,7 @@ FORWARD_ONLY_MIGRATIONS = (
     "alembic/versions/0068_repair_aggregate_view_and_revenue_rls.py",
     "alembic/versions/0069_cross_table_wallet_reference_guard.py",
     "alembic/versions/0070_deferred_invoice_allocation_reconciliation.py",
+    "alembic/versions/0071_immutable_payment_submission_link.py",
 )
 
 
