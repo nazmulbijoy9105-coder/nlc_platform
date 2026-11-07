@@ -36,6 +36,23 @@ from app.core.dependencies import (
 from app.models.enums import RiskBand
 from app.services.company_service import CompanyService
 from app.services.notification_service import ActivityService
+
+
+async def _assert_rescue_entitlement(company_id: uuid.UUID, current_user: User, db: AsyncSession) -> None:
+    role = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    if role in ("SUPER_ADMIN", "ADMIN_STAFF"):
+        return
+    await ensure_staff_company_scope(company_id, current_user, db)
+    from app.services.subscription_service import SubscriptionService
+
+    if not await SubscriptionService(db).has_entitlement(
+        company_id=company_id,
+        feature_code="corporate_rescue",
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="This company does not have an active corporate-rescue entitlement.",
+        )
 from app.services.rescue_service import RescueService
 
 router = APIRouter()
@@ -170,7 +187,7 @@ def _plan_to_response(plan, company=None) -> RescuePlanResponse:
     "/plans",
     response_model=RescuePlanResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("corporate_rescue"))],
     summary="Generate a corporate rescue plan for a BLACK or RED band company",
 )
 async def create_rescue_plan(
@@ -266,7 +283,7 @@ async def create_rescue_plan(
 @router.get(
     "/plans",
     response_model=list[RescuePlanResponse],
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("corporate_rescue"))],
     summary="List rescue plans, optionally filtered by company_id",
 )
 async def list_rescue_plans(
@@ -359,7 +376,7 @@ async def get_rescue_plan(
     plan = result.scalar_one_or_none()
     if not plan:
         raise HTTPException(status_code=404, detail="Rescue plan not found.")
-    await ensure_staff_company_scope(plan.company_id, current_user, db, additional_staff_id=plan.assigned_staff_id)
+    await _assert_rescue_entitlement(plan.company_id, current_user, db)
     return _plan_to_response(plan)
 
 
@@ -398,7 +415,7 @@ async def update_rescue_step(
 
     from app.models.enums import RescueStepStatus
     plan = await rescue_svc.get_by_id_or_404(plan_id)
-    await ensure_staff_company_scope(plan.company_id, current_user, db, additional_staff_id=plan.assigned_staff_id)
+    await _assert_rescue_entitlement(plan.company_id, current_user, db)
     step = next((st for st in plan.steps if st.step_number == step_number), None)
     if step is None:
         raise HTTPException(status_code=404, detail="Rescue plan or step not found.")
