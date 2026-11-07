@@ -15,7 +15,7 @@ import pytest
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.models.company import Company
+from app.models.company import Company, CompanyUserAccess
 from app.models.database import set_rls_context
 from app.models.enums import CompanyStatus, RiskBand, UserRole
 from app.models.finance import (
@@ -65,7 +65,7 @@ async def _committed_finance_fixture(test_engine, *, with_submission: bool):
         )
         session.add_all([company, user])
         await session.flush()
-        await set_rls_context(session, str(user_id))
+        await set_rls_context(session, str(finance_user_id))
 
         service = FinanceService(session)
         invoice = await service.create_invoice(
@@ -89,7 +89,7 @@ async def _committed_finance_fixture(test_engine, *, with_submission: bool):
             submission = await service.submit_offline_payment(
                 company_id=company_id,
                 invoice_id=invoice_id,
-                submitted_by=user_id,
+                submitted_by=client_user_id,
                 method="CASH",
                 amount_bdt=Decimal("100.00"),
                 payer_reference=None,
@@ -167,7 +167,7 @@ async def test_concurrent_approval_posts_one_payment_and_one_allocation(test_eng
             await start.wait()
             payment = await FinanceService(session).approve_offline_payment(
                 submission_id=submission_id,
-                reviewer_id=user_id,
+                reviewer_id=finance_user_id,
                 review_note="Concurrent approval regression test",
                 cheque_cleared_at=None,
             )
@@ -214,7 +214,8 @@ async def _committed_active_subscription(
     """Create a real PostgreSQL subscription, issue its invoice and settle it."""
     sessions = async_sessionmaker(test_engine, expire_on_commit=False)
     company_id = uuid.uuid4()
-    user_id = uuid.uuid4()
+    client_user_id = uuid.uuid4()
+    finance_user_id = uuid.uuid4()
     plan_code = f"PG{uuid.uuid4().hex[:10].upper()}"
 
     async with sessions() as session:
@@ -234,18 +235,35 @@ async def _committed_active_subscription(
             is_dormant=False,
             is_fdi_registered=False,
         )
-        user = User(
-            id=user_id,
-            email=f"subscription-{user_id.hex}@nlctest.com",
-            full_name="Subscription Lifecycle Test",
+        client_user = User(
+            id=client_user_id,
+            email=f"subscription-client-{client_user_id.hex}@nlctest.com",
+            full_name="Subscription Client Director Test",
+            password_hash="!test-only-no-login",
+            role=UserRole.CLIENT_DIRECTOR,
+            is_active=True,
+            totp_enabled=False,
+        )
+        finance_user = User(
+            id=finance_user_id,
+            email=f"subscription-finance-{finance_user_id.hex}@nlctest.com",
+            full_name="Subscription Finance Test",
             password_hash="!test-only-no-login",
             role=UserRole.ADMIN_STAFF,
             is_active=True,
             totp_enabled=False,
         )
-        session.add_all([company, user])
+        access = CompanyUserAccess(
+            company_id=company_id,
+            user_id=client_user_id,
+            can_edit=True,
+            can_view_financials=True,
+            is_active=True,
+            granted_by=finance_user_id,
+        )
+        session.add_all([company, client_user, finance_user, access])
         await session.flush()
-        await set_rls_context(session, str(user_id))
+        await set_rls_context(session, str(finance_user_id))
 
         subscriptions = SubscriptionService(session)
         await subscriptions.upsert_plan(
@@ -283,7 +301,7 @@ async def _committed_active_subscription(
             paid_at=None,
             evidence_document_id=None,
         )
-        await FinanceService(session).approve_offline_payment(
+        await set_rls_context(session, str(finance_user_id))\n        await FinanceService(session).approve_offline_payment(
             submission_id=claim.id,
             reviewer_id=user_id,
             review_note="PostgreSQL subscription activation integration test",
@@ -298,13 +316,13 @@ async def _committed_active_subscription(
         subscription_id = subscription.id
         await session.commit()
 
-    return sessions, company_id, user_id, subscription_id
+    return sessions, company_id, client_user_id, finance_user_id, subscription_id
 
 
 @pytest.mark.asyncio
 async def test_postgres_period_end_cancellation_is_processed_once(test_engine):
     """A paid recurring term scheduled for cancellation ends as CANCELLED in PostgreSQL."""
-    sessions, company_id, user_id, subscription_id = await _committed_active_subscription(
+    sessions, company_id, _, finance_user_id, subscription_id = await _committed_active_subscription(
         test_engine, cancel_at_period_end=True
     )
 
@@ -320,7 +338,7 @@ async def test_postgres_period_end_cancellation_is_processed_once(test_engine):
 
     async with sessions() as session:
         await set_rls_context(session, str(user_id))
-        counts = await SubscriptionService(session).process_due_subscriptions(actor_id=user_id)
+        counts = await SubscriptionService(session).process_due_subscriptions(actor_id=finance_user_id)
         await session.commit()
         subscription = await session.get(ClientSubscription, subscription_id)
         assert counts == {"past_due": 0, "expired": 0, "cancelled": 1}
@@ -337,7 +355,7 @@ async def test_postgres_period_end_cancellation_is_processed_once(test_engine):
 @pytest.mark.asyncio
 async def test_postgres_subscription_grace_period_then_expiry(test_engine):
     """A paid term enters PAST_DUE during grace, then EXPIRED after grace ends."""
-    sessions, _, user_id, subscription_id = await _committed_active_subscription(
+    sessions, _, _, finance_user_id, subscription_id = await _committed_active_subscription(
         test_engine, grace_days=5
     )
 
