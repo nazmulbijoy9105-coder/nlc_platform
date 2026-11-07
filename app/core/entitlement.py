@@ -32,10 +32,11 @@ async def _company_contexts(
                 CompanyUserAccess.company_id == company_id,
                 CompanyUserAccess.user_id == current_user.id,
                 CompanyUserAccess.is_active.is_(True),
+                CompanyUserAccess.can_view_financials.is_(True),
             ).limit(1)
         )
         if membership.scalar_one_or_none() is None:
-            raise HTTPException(status_code=403, detail="Active company membership is required.")
+            raise HTTPException(status_code=403, detail="Active company financial access is required.")
         return [company_id]
 
     raw_document_id = request.path_params.get("document_id")
@@ -67,6 +68,7 @@ async def _company_contexts(
         select(CompanyUserAccess.company_id).where(
             CompanyUserAccess.user_id == current_user.id,
             CompanyUserAccess.is_active.is_(True),
+            CompanyUserAccess.can_view_financials.is_(True),
         )
     )
     return list(result.scalars().all())
@@ -76,7 +78,7 @@ def require_entitlement(feature_name: str):
     """Require a paid feature on the exact tenant being accessed.
 
     The dependency resolves company context from a company path/query parameter,
-    a document resource ID, or the caller's live company memberships.
+    a document resource ID, or the caller's live financial company memberships.
     It never trusts a client-supplied JWT company_ids claim.
     """
     async def _check(
@@ -98,7 +100,7 @@ def require_entitlement(feature_name: str):
         if not company_ids:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="An active company membership is required.",
+                detail="An active company financial membership is required.",
             )
         service = SubscriptionService(db)
         entitled_company_ids = []
