@@ -42,6 +42,10 @@ async def test_articles_evidence_tables_have_signed_staff_write_policies(db):
         assert insert_policy[1] == "INSERT"
         assert "nlc_current_user_id" in (insert_policy[3] or "")
         assert "nlc_can_edit_company" in (insert_policy[3] or "")
+        if table == "articles_verifications":
+            assert "submitted_by" in (insert_policy[3] or "")
+        else:
+            assert "actor_id" in (insert_policy[3] or "")
 
         for policy in policies.values():
             for expression in (policy[2] or "", policy[3] or ""):
@@ -49,6 +53,7 @@ async def test_articles_evidence_tables_have_signed_staff_write_policies(db):
                 assert "nlc_current_user_id" not in expression.lower() or (
                     "nlc_current_user_is_staff" in expression
                     or "nlc_can_access_company" in expression
+                    or "nlc_can_edit_company" in expression
                 )
 
         if table == "articles_verifications":
