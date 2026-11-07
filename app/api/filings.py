@@ -234,7 +234,6 @@ async def list_all_filings(
 ):
     from sqlalchemy import select
 
-    from app.models.company import Company
     from app.models.filings import AGM, AnnualReturn, Audit
 
     # Customer and legal-staff portfolio views are restricted to the exact
@@ -245,7 +244,7 @@ async def list_all_filings(
         for value in getattr(request.state, "entitled_company_ids", [])
     ]
     if role_value in {"CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "LEGAL_STAFF"}:
-        company_filter = Company.id.in_(entitled_company_ids)
+        company_filter = entitled_company_ids
     else:
         company_filter = None
 
@@ -256,7 +255,7 @@ async def list_all_filings(
     if company_id:
         stmt = stmt.where(AGM.company_id == company_id)
     if company_filter is not None:
-        stmt = stmt.where(AGM.company_id.in_(accessible))
+        stmt = stmt.where(AGM.company_id.in_(company_filter))
     agms = (await db.execute(stmt.order_by(getattr(AGM, "agm_due_date", None).desc()).limit(50))).scalars().all()  # type: ignore
     results["agms"] = [_agm_to_response(a) for a in agms]
 
@@ -265,7 +264,7 @@ async def list_all_filings(
     if company_id:
         stmt = stmt.where(Audit.company_id == company_id)
     if company_filter is not None:
-        stmt = stmt.where(Audit.company_id.in_(accessible))
+        stmt = stmt.where(Audit.company_id.in_(company_filter))
     audits = (await db.execute(stmt.order_by(Audit.financial_year.desc()).limit(50))).scalars().all()
     results["audits"] = [_audit_to_response(a) for a in audits]
 
@@ -274,7 +273,7 @@ async def list_all_filings(
     if company_id:
         stmt = stmt.where(AnnualReturn.company_id == company_id)
     if company_filter is not None:
-        stmt = stmt.where(AnnualReturn.company_id.in_(accessible))
+        stmt = stmt.where(AnnualReturn.company_id.in_(company_filter))
     returns = (await db.execute(stmt.order_by(AnnualReturn.financial_year.desc()).limit(50))).scalars().all()
     results["annual_returns"] = [_return_to_response(r) for r in returns]
 
