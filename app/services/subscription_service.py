@@ -351,7 +351,7 @@ class SubscriptionService:
                 "unit_price_bdt": subscription.amount_bdt,
             }],
             tax_bdt=subscription.tax_bdt,
-            due_at=None,
+            due_at=datetime.now(UTC).date() + timedelta(days=7),
             notes=f"Subscription ID: {subscription.id}",
             actor_id=actor_id,
         )
@@ -595,7 +595,7 @@ class SubscriptionService:
         await self.db.flush()
         return subscription
 
-    async def process_due_subscriptions(self, *, actor_id: uuid.UUID) -> dict[str, int]:
+    async def process_due_subscriptions(self, *, actor_id: uuid.UUID | None) -> dict[str, int]:
         """Advance expired terms and cancellation/grace transitions in a daily staff job."""
         now = datetime.now(UTC)
         active_result = await self.db.execute(
