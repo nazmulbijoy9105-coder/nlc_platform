@@ -12,7 +12,7 @@ AI Constitution Article 2.2:
 """
 from __future__ import annotations
 
-from datetime import UTC, date
+from datetime import UTC, date, timedelta
 from typing import TYPE_CHECKING
 
 from sqlalchemy import func, select, text
@@ -45,9 +45,9 @@ class EngagementService(BaseService[Engagement]):
 
         # Structure by revenue tier
         pipeline = {
-            "COMPLIANCE_PACKAGE":        {"stages": {}, "total_estimated": 0, "total_confirmed": 0, "total_collected": 0},
-            "STRUCTURED_REGULARIZATION": {"stages": {}, "total_estimated": 0, "total_confirmed": 0, "total_collected": 0},
-            "CORPORATE_RESCUE":          {"stages": {}, "total_estimated": 0, "total_confirmed": 0, "total_collected": 0},
+            "COMPLIANCE_PACKAGE":        {"stages": {}, "total_estimated": 0, "total_confirmed": 0, "total_invoiced": 0, "total_collected": 0},
+            "STRUCTURED_REGULARIZATION": {"stages": {}, "total_estimated": 0, "total_confirmed": 0, "total_invoiced": 0, "total_collected": 0},
+            "CORPORATE_RESCUE":          {"stages": {}, "total_estimated": 0, "total_confirmed": 0, "total_invoiced": 0, "total_collected": 0},
         }
         for row in rows:
             tier = row.get("revenue_tier", "")
@@ -63,17 +63,20 @@ class EngagementService(BaseService[Engagement]):
                 }
                 pipeline[tier]["total_estimated"] += float(row.get("total_estimated_bdt") or 0)  # type: ignore
                 pipeline[tier]["total_confirmed"]  += float(row.get("total_confirmed_bdt") or 0)  # type: ignore
+                pipeline[tier]["total_invoiced"]   += float(row.get("total_invoiced_bdt") or 0)  # type: ignore
                 pipeline[tier]["total_collected"]  += float(row.get("total_collected_bdt") or 0)  # type: ignore
 
         # Grand totals
         grand_total_estimated  = sum(v["total_estimated"]  for v in pipeline.values())  # type: ignore
         grand_total_confirmed  = sum(v["total_confirmed"]  for v in pipeline.values())  # type: ignore
+        grand_total_invoiced   = sum(v["total_invoiced"]   for v in pipeline.values())  # type: ignore
         grand_total_collected  = sum(v["total_collected"]  for v in pipeline.values())  # type: ignore
 
         return {
             "by_tier":              pipeline,
             "grand_total_estimated_bdt":  grand_total_estimated,
             "grand_total_confirmed_bdt":  grand_total_confirmed,
+            "grand_total_invoiced_bdt":   grand_total_invoiced,
             "grand_total_collected_bdt":  grand_total_collected,
             "collection_rate":      (
                 round(grand_total_collected / grand_total_confirmed * 100, 1)
@@ -122,9 +125,12 @@ class EngagementService(BaseService[Engagement]):
         fee_bdt: float | None = None,
     ) -> Engagement | None:
         """Advance engagement through the pipeline stages."""
+        from app.models.commercial import validate_engagement_transition, InvalidEngagementTransitionError
         eng = await self.get_by_id(engagement_id)
         if not eng:
             return None
+        if not validate_engagement_transition(eng.engagement_status, new_status):
+            raise InvalidEngagementTransitionError(str(eng.engagement_status), str(new_status))
         updates: dict = {"engagement_status": new_status}
         status_date_map = {
             EngagementStatus.QUOTED:      "quoted_date",
@@ -170,14 +176,26 @@ class QuotationService(BaseService[Quotation]):
         *,
         professional_fee_bdt: float,
         government_fee_bdt: float = 0,
-        vat_rate: float = 0.15,
+        vat_bdt: float = 0,
         line_items: list[dict] | None = None,
         valid_days: int = 30,
         notes: str | None = None,
     ) -> Quotation:
-        """Create a quotation for an engagement."""
-        vat_bdt = round(professional_fee_bdt * vat_rate, 2)
-        total_bdt = professional_fee_bdt + government_fee_bdt + vat_bdt
+        """Create a quotation for an engagement after validating company ownership."""
+        engagement = await self.db.execute(
+            select(Engagement.id).where(
+                Engagement.id == engagement_id,
+                Engagement.company_id == company_id,
+                Engagement.is_active,
+            )
+        )
+        if engagement.scalar_one_or_none() is None:
+            raise ValueError("Engagement does not belong to the supplied company or is inactive.")
+        from decimal import Decimal
+        professional_fee = Decimal(str(professional_fee_bdt)).quantize(Decimal("0.01"))
+        government_fee = Decimal(str(government_fee_bdt)).quantize(Decimal("0.01"))
+        vat_amount = Decimal(str(vat_bdt)).quantize(Decimal("0.01"))
+        total_bdt = professional_fee + government_fee + vat_amount
         quotation_number = await self._next_quotation_number()
 
         return await self.create(
@@ -185,10 +203,10 @@ class QuotationService(BaseService[Quotation]):
             company_id=company_id,
             quotation_number=quotation_number,
             quotation_date=date.today(),
-            valid_until=date.today().replace(day=date.today().day) if valid_days else None,
-            professional_fee_bdt=professional_fee_bdt,
-            government_fee_bdt=government_fee_bdt,
-            vat_bdt=vat_bdt,
+            valid_until=date.today() + timedelta(days=valid_days),
+            professional_fee_bdt=professional_fee,
+            government_fee_bdt=government_fee,
+            vat_bdt=vat_amount,
             total_bdt=total_bdt,
             status="DRAFT",
             line_items=line_items,
@@ -199,6 +217,11 @@ class QuotationService(BaseService[Quotation]):
         """Generate next sequential quotation number NLC-YYYY-NNNN."""
         from sqlalchemy import text
         year = date.today().year
+        # Serialize number allocation within this database transaction.
+        await self.db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtext(:lock_key))"),
+            {"lock_key": f"nlc-quotation-{year}"},
+        )
         result = await self.db.execute(
             text(
                 "SELECT COUNT(*) FROM quotations "
@@ -222,7 +245,7 @@ class QuotationService(BaseService[Quotation]):
     async def reject(
         self,
         quotation_id: uuid.UUID,
-        reason: str,
+        reason: str | None = None,
         rejected_by: uuid.UUID | None = None,  # COM-002
     ) -> Quotation | None:
         """Mark quotation as rejected."""
