@@ -243,6 +243,7 @@ async def list_all_documents(
 )
 async def list_templates(
     document_type: DocumentType | None = None,
+    company_id: uuid.UUID | None = None,
     db: AsyncSession = Depends(get_db_for_user),
     current_user: User = Depends(get_current_user),
 ):
