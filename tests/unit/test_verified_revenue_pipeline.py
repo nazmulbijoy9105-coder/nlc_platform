@@ -20,7 +20,7 @@ def test_revenue_pipeline_uses_verified_invoice_allocations():
 
 def test_manual_payment_reference_migration_preflights_duplicates_and_adds_unique_indexes():
     migration = (
-        ROOT / "alembic" / "versions" / "0067_unique_manual_payment_references.py"
+        ROOT / "alembic" / "versions" / "0067_unique_manual_wallet_references.py"
     ).read_text(encoding="utf-8")
 
     assert "payment_submissions" in migration
@@ -41,7 +41,7 @@ def test_forward_repair_enforces_invoker_views_and_admin_only_revenue_rls():
         / "0068_repair_aggregate_view_and_revenue_rls.py"
     ).read_text(encoding="utf-8")
 
-    assert 'down_revision = "0067_unique_manual_payment_references"' in migration
+    assert 'down_revision = "0067_unique_manual_wallet_references"' in migration
     assert "security_invoker = true" in migration
     assert "nlc_current_user_is_revenue_staff" in migration
     assert "engagements_revenue_staff_only" in migration
