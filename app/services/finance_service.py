@@ -390,6 +390,7 @@ class FinanceService:
         submission.review_note = review_note
         if submission.method == "CHEQUE":
             submission.cheque_cleared_at = cheque_cleared_at
+        await self.db.flush()
 
         payment_number = await self._next_number("PAY", "payments", "payment_number")
         payment = Payment(
