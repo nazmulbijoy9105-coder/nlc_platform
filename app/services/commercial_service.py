@@ -182,15 +182,21 @@ class QuotationService(BaseService[Quotation]):
         notes: str | None = None,
     ) -> Quotation:
         """Create a quotation for an engagement after validating company ownership."""
-        engagement = await self.db.execute(
-            select(Engagement.id).where(
+        engagement_result = await self.db.execute(
+            select(Engagement).where(
                 Engagement.id == engagement_id,
                 Engagement.company_id == company_id,
-                Engagement.is_active,
+                Engagement.is_active.is_(True),
             )
         )
-        if engagement.scalar_one_or_none() is None:
+        engagement = engagement_result.scalar_one_or_none()
+        if engagement is None:
             raise ValueError("Engagement does not belong to the supplied company or is inactive.")
+        if engagement.engagement_status not in {
+            EngagementStatus.IDENTIFIED,
+            EngagementStatus.QUOTED,
+        }:
+            raise ValueError("A quotation can only be created for an identified or quoted engagement.")
         from decimal import Decimal
         professional_fee = Decimal(str(professional_fee_bdt)).quantize(Decimal("0.01"))
         government_fee = Decimal(str(government_fee_bdt)).quantize(Decimal("0.01"))
@@ -198,7 +204,7 @@ class QuotationService(BaseService[Quotation]):
         total_bdt = professional_fee + government_fee + vat_amount
         quotation_number = await self._next_quotation_number()
 
-        return await self.create(
+        quotation = await self.create(
             engagement_id=engagement_id,
             company_id=company_id,
             quotation_number=quotation_number,
@@ -212,6 +218,13 @@ class QuotationService(BaseService[Quotation]):
             line_items=line_items,
             notes=notes,
         )
+        if engagement.engagement_status == EngagementStatus.IDENTIFIED:
+            await EngagementService(self.db).advance_status(
+                engagement_id,
+                EngagementStatus.QUOTED,
+                fee_bdt=float(total_bdt),
+            )
+        return quotation
 
     async def _next_quotation_number(self) -> str:
         """Generate next sequential quotation number NLC-YYYY-NNNN."""
@@ -240,7 +253,25 @@ class QuotationService(BaseService[Quotation]):
         q = await self.get_by_id(quotation_id)
         if not q:
             return None
-        return await self.update_instance(q, status="ACCEPTED", accepted_date=date.today())
+        engagement_result = await self.db.execute(
+            select(Engagement).where(
+                Engagement.id == q.engagement_id,
+                Engagement.company_id == q.company_id,
+                Engagement.is_active.is_(True),
+            )
+        )
+        engagement = engagement_result.scalar_one_or_none()
+        if engagement is None:
+            raise ValueError("Quotation engagement is missing, inactive, or belongs to another company.")
+        if engagement.engagement_status != EngagementStatus.QUOTED:
+            raise ValueError("Only a quotation for a QUOTED engagement can be accepted.")
+        accepted = await self.update_instance(q, status="ACCEPTED", accepted_date=date.today())
+        await EngagementService(self.db).advance_status(
+            engagement.id,
+            EngagementStatus.CONFIRMED,
+            fee_bdt=float(q.total_bdt),
+        )
+        return accepted
 
     async def reject(
         self,
