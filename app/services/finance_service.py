@@ -338,6 +338,15 @@ class FinanceService:
             payment = payment_result.scalar_one_or_none()
             if payment is None:
                 raise FinanceConflictError("Approved submission payment record is missing")
+            try:
+                from app.services.subscription_service import SubscriptionService
+                await SubscriptionService(self.db).activate_for_paid_invoice(
+                    invoice_id=submission.invoice_id,
+                    payment_id=payment.id,
+                    actor_id=reviewer_id,
+                )
+            except ValueError as exc:
+                raise FinanceConflictError(str(exc)) from exc
             return payment
 
         if submission.status != "PENDING_REVIEW":
@@ -477,6 +486,15 @@ class FinanceService:
             ),
         ])
         await self.db.flush()
+        try:
+            from app.services.subscription_service import SubscriptionService
+            await SubscriptionService(self.db).activate_for_paid_invoice(
+                invoice_id=invoice.id,
+                payment_id=payment.id,
+                actor_id=reviewer_id,
+            )
+        except ValueError as exc:
+            raise FinanceConflictError(str(exc)) from exc
         return payment
 
     async def reject_offline_payment(
