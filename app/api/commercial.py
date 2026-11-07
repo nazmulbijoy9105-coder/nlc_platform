@@ -267,6 +267,7 @@ async def create_engagement(
         description=f"Engagement created: {body.engagement_type} for company {body.company_id}",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
+        company_id=engagement.company_id,
     )
     return _engagement_to_response(engagement)
 
@@ -413,9 +414,25 @@ async def reject_quotation(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = QuotationService(db)
-    quotation = await svc.reject(quotation_id=quotation_id, reason=body.reason, rejected_by=current_user.id)
+    try:
+        quotation = await svc.reject(
+            quotation_id=quotation_id,
+            reason=body.reason or "Rejected by authorized staff",
+            rejected_by=current_user.id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
+    await ActivityService(db).log(
+        action="QUOTATION_REJECTED",
+        resource_type="quotation",
+        resource_id=str(quotation_id),
+        description=f"Quotation {quotation.quotation_number} rejected: {body.reason or 'No reason supplied'}",
+        ip_address=request.client.host if request.client else None,
+        actor_user_id=current_user.id,
+        company_id=quotation.company_id,
+    )
     return _quotation_to_response(quotation)
 
 
