@@ -46,6 +46,8 @@ from app.services.filing_service import (
     StatutoryRegisterService,
 )
 from app.services.notification_service import ActivityService
+from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+from app.services.compliance_calendar import LEGAL_CALENDAR_RELEASED
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -96,7 +98,7 @@ class AGMResponse(BaseModel):
     accounts_adopted: bool | None
     agm_held_without_audit: bool | None
     minutes_prepared: bool | None
-    is_default: bool
+    is_default: bool | None
     created_at: str
 
 
@@ -153,6 +155,9 @@ class AnnualReturnResponse(BaseModel):
     company_id: str
     financial_year: int
     is_filed: bool
+    filing_evidence_status: str
+    filing_deadline: str | None
+    is_default: bool | None
     filed_date: str | None
     rjsc_acknowledgment_number: str | None
     late_fee_paid: bool
@@ -682,7 +687,7 @@ def _agm_to_response(agm) -> AGMResponse:
         agm_id=str(agm.id),
         company_id=str(agm.company_id),
         financial_year=agm.financial_year,
-        agm_due_date=agm.agm_deadline.isoformat() if agm.agm_deadline else None,
+        agm_due_date=(agm.agm_deadline.isoformat() if LEGAL_CALENDAR_RELEASED and agm.agm_deadline else None),
         held_date=agm.agm_date.isoformat() if agm.agm_date else None,
         filed_date=agm.rjsc_filing_date.isoformat() if agm.rjsc_filing_date else None,
         quorum_met=(
@@ -740,7 +745,7 @@ def _agm_to_response(agm) -> AGMResponse:
         accounts_adopted=None,
         agm_held_without_audit=None,
         minutes_prepared=None,
-        is_default=agm.is_default,
+        is_default=(agm.is_default if LEGAL_SCORE_RELEASED else None),
         created_at=agm.created_at.isoformat() if hasattr(agm, 'created_at') and agm.created_at else '',
     )
 
@@ -762,11 +767,24 @@ def _audit_to_response(audit) -> AuditResponse:
 
 
 def _return_to_response(r) -> AnnualReturnResponse:
+    filing_evidence_status = (
+        "RECEIPT_REFERENCE_RECORDED_UNVERIFIED"
+        if r.filed_date and r.rjsc_receipt_number
+        else "DATE_RECORDED_UNVERIFIED"
+        if r.filed_date
+        else "NO_FILING_EVIDENCE_RECORDED"
+    )
     return AnnualReturnResponse(
         return_id=str(r.id),
         company_id=str(r.company_id),
         financial_year=r.financial_year,
         is_filed=r.filed_date is not None,
+        filing_evidence_status=filing_evidence_status,
+        filing_deadline=(
+            r.filing_deadline.isoformat()
+            if LEGAL_CALENDAR_RELEASED and r.filing_deadline else None
+        ),
+        is_default=(r.is_default if LEGAL_SCORE_RELEASED else None),
         filed_date=r.filed_date.isoformat() if r.filed_date else None,
         rjsc_acknowledgment_number=r.rjsc_receipt_number,
         late_fee_paid=bool(r.late_fee_paid_bdt),
