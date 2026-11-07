@@ -93,6 +93,7 @@ class ClientSubscriptionFeature(UUIDPrimaryKeyMixin, Base):
     feature_code: Mapped[str] = mapped_column(String(80), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
     limits: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
 
 
 class SubscriptionEvent(UUIDPrimaryKeyMixin, Base):
