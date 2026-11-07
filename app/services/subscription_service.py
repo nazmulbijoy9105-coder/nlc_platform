@@ -183,7 +183,7 @@ class SubscriptionService:
             amount = Decimal(str(price["amount_bdt"])).quantize(Decimal("0.01"))
             tax = Decimal(str(price["tax_bdt"])).quantize(Decimal("0.01"))
             tax_reference = str(price["tax_policy_reference"]).strip()
-            price_item = existing_prices.get(interval)
+            price_item: SubscriptionPlanPrice | None = existing_prices.get(interval)
             if price_item is None:
                 self.db.add(SubscriptionPlanPrice(
                     plan_code=code, billing_interval=interval,
