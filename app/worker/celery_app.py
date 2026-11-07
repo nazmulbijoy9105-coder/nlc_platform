@@ -68,6 +68,8 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+_worker_runtime_verified = False
+
 
 # ═══════════════════════════════════════════════════════════════════════
 # CELERY APPLICATION
@@ -267,7 +269,9 @@ def configure_worker(sender: str | None = None, conf: Any = None, **kwargs: Any)
 
 @worker_process_init.connect
 def verify_worker_runtime_security(**kwargs: Any) -> None:
-    """Verify the database identity inside each forked worker process."""
+    """Verify the database identity inside a worker process."""
+    global _worker_runtime_verified
+
     async def _verify_and_dispose() -> None:
         from app.models.database import (
             dispose_engine,
@@ -283,6 +287,7 @@ def verify_worker_runtime_security(**kwargs: Any) -> None:
 
     try:
         asyncio.run(_verify_and_dispose())
+        _worker_runtime_verified = True
     except Exception:
         logger.exception(
             "[Worker] Runtime database role verification failed; refusing startup"
@@ -310,7 +315,12 @@ def on_task_prerun(
     kwargs: dict | None = None,
     **extra: Any,
 ) -> None:
-    """Log task start with structured context."""
+    """Verify fallback worker pools, then log task start."""
+    # worker_process_init covers prefork workers. The first task also gates
+    # solo/threads pools where no forked child initialization signal exists.
+    if not _worker_runtime_verified:
+        verify_worker_runtime_security()
+
     logger.info(
         f"[Task] START  task={task.name} id={task_id} "
         f"args={args!r:.200} kwargs={kwargs!r:.200}"
