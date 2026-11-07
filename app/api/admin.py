@@ -365,15 +365,22 @@ async def cron_evaluate_all(
     Protected by CRON_SECRET env var. Use with cron-job.org or GitHub Actions.
     Example: curl -X POST URL/api/v1/admin/cron/evaluate-all -H "X-Cron-Secret: your_secret"
     """
+    import hmac
     import os
-    # Fail closed: without CRON_SECRET the scheduled-evaluation endpoint is disabled.
-    cron_secret = os.environ.get("CRON_SECRET")
+
+    # Fail closed: this endpoint grants portfolio-wide evaluation authority.
+    cron_secret = os.environ.get("CRON_SECRET", "")
     if not cron_secret:
         raise HTTPException(status_code=403, detail="CRON_SECRET is not configured. Endpoint disabled.")
-    if cron_secret:
-        provided = request.headers.get("X-Cron-Secret", "")
-        if provided != cron_secret:
-            raise HTTPException(status_code=403, detail="Invalid cron secret")
+    if len(cron_secret) < 32:
+        raise HTTPException(
+            status_code=503,
+            detail="CRON_SECRET must contain at least 32 characters. Endpoint disabled.",
+        )
+
+    provided = request.headers.get("X-Cron-Secret", "")
+    if not hmac.compare_digest(provided, cron_secret):
+        raise HTTPException(status_code=403, detail="Invalid cron secret")
 
     # The secret is verified before granting this background task ADMIN RLS context.
     await set_admin_context(db)
