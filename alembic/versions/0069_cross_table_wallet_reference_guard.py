@@ -53,6 +53,7 @@ def upgrade() -> None:
         LANGUAGE plpgsql
         SECURITY DEFINER
         SET search_path = pg_catalog, public
+        SET row_security = off
         AS $function$
         DECLARE
             normalized_reference text;
