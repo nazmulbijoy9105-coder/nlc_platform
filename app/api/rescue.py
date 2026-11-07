@@ -272,7 +272,7 @@ async def list_rescue_plans(
     query = select(RescuePlan).options(selectinload(RescuePlan.steps))
     if company_id is not None:
         if current_user.role == "LEGAL_STAFF":
-        await ensure_staff_company_scope(company_id, current_user, db)
+            await ensure_staff_company_scope(company_id, current_user, db)
         query = query.where(RescuePlan.company_id == company_id)
     elif current_user.role not in ("SUPER_ADMIN", "ADMIN_STAFF"):
         raise HTTPException(status_code=403, detail="Portfolio-wide rescue plan access is restricted to platform administrators.")
