@@ -460,7 +460,10 @@ class SubscriptionService:
                 or_(
                     ClientSubscription.ends_at.is_(None),
                     ClientSubscription.ends_at > now,
-                    ClientSubscription.grace_ends_at > now,
+                    and_(
+                        ClientSubscription.cancel_at_period_end.is_(False),
+                        ClientSubscription.grace_ends_at > now,
+                    ),
                 ),
                 or_(
                     ClientSubscription.status == "ACTIVE",
