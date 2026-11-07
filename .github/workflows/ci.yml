@@ -9,6 +9,7 @@ on:
       - fix/0050-role-provisioning-preflight-20261106
       - fix/canonical-migration-chain-20261106
       - feat/finance-ledger-integrated-on-canonical-chain-20261106
+      - feat/subscriptions-on-canonical-20261108b
 
 jobs:
   unit-tests:
