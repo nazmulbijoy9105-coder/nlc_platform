@@ -263,7 +263,8 @@ def upgrade() -> None:
     op.execute("""
         CREATE POLICY client_subscription_features_insert ON public.client_subscription_features
         FOR INSERT WITH CHECK (
-            public.nlc_can_submit_payment_company(company_id)
+            NOT public.nlc_current_user_is_finance_staff()
+            AND public.nlc_can_submit_payment_company(company_id)
             AND client_subscription_features.enabled IS TRUE
                 AND EXISTS (
                     SELECT 1
