@@ -1448,9 +1448,13 @@ class NLCRuleEngine:
                     state=RuleState.UNKNOWN,
                     eval_state="UNKNOWN",
                 ))
-                continue
 
-            if change.form_filed is False and delay > DIRECTOR_FILING_DEADLINE_DAYS:
+            if (
+                change.form_filed is False
+                and change.form_filed_verified
+                and bool(change.form_filed_evidence_ref)
+                and delay > DIRECTOR_FILING_DEADLINE_DAYS
+            ):
                 if change.event_type == "appointment":
                     rule_id = "DIR-001"
                     flag_code = "FORM_XII_APPOINTMENT_REQUIRES_REVIEW"
