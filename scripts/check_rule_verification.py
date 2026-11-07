@@ -44,6 +44,23 @@ def _seed_rule_ids(source: str) -> set[str]:
     return ids
 
 
+
+def _seed_rule_rows(source: str) -> list[dict]:
+    """Return literal seed rule dictionaries for release-policy validation."""
+    tree = ast.parse(source)
+    rows: list[dict] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Dict):
+            continue
+        try:
+            value = ast.literal_eval(node)
+        except (ValueError, TypeError, SyntaxError):
+            continue
+        if isinstance(value, dict) and isinstance(value.get("rule_id"), str):
+            rows.append(value)
+    return rows
+
+
 def main() -> int:
     engine_path = Path("app/rule_engine/engine.py")
     seed_path = Path("scripts/seed_rules.py")
@@ -87,6 +104,28 @@ def main() -> int:
         return 1
     if review_required != len(seed) or score_ineligible != len(seed):
         print(f"FAIL: expected every rule REVIEW_REQUIRED and score_eligible=false; got {review_required}/{len(seed)} and {score_ineligible}/{len(seed)}")
+        return 1
+
+    # Fail closed at the data source too: an empty engine allowlist is not
+    # sufficient if the seeder can write scored or BLACK-override rule rows.
+    seed_rows = _seed_rule_rows(seed_path.read_text(encoding="utf-8"))
+    if len(seed_rows) != len(seed):
+        print(f"FAIL: expected {len(seed)} literal seed rows, found {len(seed_rows)}")
+        return 1
+    unsafe_seed_rows = [
+        {
+            "rule_id": row.get("rule_id"),
+            "default_severity": row.get("default_severity"),
+            "score_impact": row.get("score_impact"),
+            "is_black_override": row.get("is_black_override"),
+        }
+        for row in seed_rows
+        if row.get("default_severity") != "NOT_EVALUATED"
+        or row.get("score_impact") != 0
+        or row.get("is_black_override") is not False
+    ]
+    if unsafe_seed_rows:
+        print(f"FAIL: unapproved seed rules must be NOT_EVALUATED / 0 / false: {unsafe_seed_rows}")
         return 1
 
     engine_source = engine_path.read_text(encoding="utf-8")
