@@ -199,3 +199,19 @@ async def test_active_company_member_without_financial_permission_is_denied(monk
 
     assert exc.value.status_code == 403
     assert "financial access" in exc.value.detail
+
+
+@pytest.mark.asyncio
+async def test_legal_staff_without_assigned_company_context_is_denied():
+    dependency = entitlement.require_entitlement("compliance_package")
+    user = SimpleNamespace(id=uuid.uuid4(), role="LEGAL_STAFF")
+
+    with pytest.raises(HTTPException) as exc:
+        await dependency(
+            request=_request(path="/api/v1/companies"),
+            db=MagicMock(),
+            current_user=user,
+        )
+
+    assert exc.value.status_code == 403
+    assert "assigned company context" in exc.value.detail
