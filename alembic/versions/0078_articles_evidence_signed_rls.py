@@ -3,9 +3,10 @@
 Revision ID: 0078_articles_evidence_signed_rls
 Revises: 0077_merge_legacy_articles_head
 
-Company members may read their own company's Articles evidence. Only a
-verified signed staff principal may submit or update verification records.
-Events remain append-only; verification source/decision triggers are preserved.
+Company members may read and submit their own company's Articles evidence.
+Only a verified signed staff principal may review or update verification
+records. Event actors are bound to the signed principal; event history remains
+append-only and source/decision triggers are preserved.
 """
 from alembic import op
 import sqlalchemy as sa
@@ -43,6 +44,7 @@ def upgrade() -> None:
         for signature in (
             "public.nlc_can_access_company(uuid)",
             "public.nlc_current_user_is_staff()",
+            "public.nlc_can_edit_company(uuid)",
         )
         if bind.execute(
             sa.text("SELECT to_regprocedure(:signature)"),
