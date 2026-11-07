@@ -16,8 +16,6 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models.company import Company, CompanyUserAccess
-from app.models.database import set_rls_context
-from app.models.company import Company
 from app.models.database import set_admin_context, set_rls_context
 from app.models.enums import CompanyStatus, RiskBand, UserRole
 from app.models.finance import (
