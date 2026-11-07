@@ -38,7 +38,7 @@ class SubscriptionPriceInput(BaseModel):
     billing_interval: Literal["MONTHLY", "QUARTERLY", "ANNUAL", "ONE_TIME"]
     amount_bdt: Decimal = Field(gt=0, max_digits=15, decimal_places=2, allow_inf_nan=False, description="Subscription fee before the separately configured tax amount.")
     tax_bdt: Decimal = Field(ge=0, max_digits=15, decimal_places=2, allow_inf_nan=False, description="Explicit fixed tax amount for this billing interval; not automatically calculated.")
-    tax_policy_reference: str = Field(min_length=3, max_length=500, description="Reference to the approved tax/VAT treatment or exemption basis for this price.")
+    tax_policy_reference: str = Field(min_length=3, max_length=500, description="Reference to the applicable tax/VAT treatment or exemption basis; this service stores but does not legally validate it.")
 
 
 class SubscriptionFeatureInput(BaseModel):
