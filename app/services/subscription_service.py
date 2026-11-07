@@ -369,14 +369,14 @@ class SubscriptionService:
             raise SubscriptionConflictError("Only a pending subscription can be activated")
 
         invoice = await self.db.get(Invoice, invoice_id)
-        if (
-            invoice is None
-            or invoice.company_id != subscription.company_id
-            or invoice.status != "PAID"
-            or invoice.balance_bdt != 0
-            or invoice.paid_bdt != invoice.total_bdt
-        ):
-            raise SubscriptionConflictError("Subscription invoice is not fully settled")
+        if invoice is None or invoice.company_id != subscription.company_id:
+            raise SubscriptionConflictError("Subscription invoice is missing or belongs to another company")
+        # Partial settlement is valid finance workflow, but it never activates
+        # paid features. The final verified allocation will call this again.
+        if invoice.status != "PAID" or invoice.balance_bdt != 0:
+            return None
+        if invoice.paid_bdt != invoice.total_bdt:
+            raise SubscriptionConflictError("Paid subscription invoice does not reconcile to its total")
 
         allocation_total_result = await self.db.execute(
             select(func.coalesce(func.sum(PaymentAllocation.amount_bdt), 0))
