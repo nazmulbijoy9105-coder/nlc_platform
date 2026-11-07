@@ -430,7 +430,7 @@ def upgrade() -> None:
                 RAISE EXCEPTION 'subscription invoice must be an issued invoice for the exact subscription amount'
                     USING ERRCODE = '55000';
             END IF;
-            IF NEW.status = 'ACTIVE' AND (
+            IF NEW.status = 'ACTIVE' AND OLD.status IS DISTINCT FROM 'ACTIVE' AND (
                 NEW.invoice_id IS NULL OR NEW.starts_at IS NULL
                 OR (NEW.billing_interval <> 'ONE_TIME' AND NEW.ends_at IS NULL)
                 OR NOT EXISTS (
