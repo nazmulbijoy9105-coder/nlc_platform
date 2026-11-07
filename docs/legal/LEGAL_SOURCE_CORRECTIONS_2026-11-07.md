@@ -37,7 +37,7 @@
    The FAQ lists Form XV within 60 days under s.151; Form IV within 15 days under s.56; Form IX/Form X with s.92; Form XII particulars within 14 days under s.115; and the 30-day post-appointment consent filing. The FAQ is administrative guidance and must not override the Act text where a citation mapping is inconsistent.
 
 5. **Companies Act 1994 — official BDLaws Part V winding-up provisions (includes s.241 grounds and the Part V process):**  
-   https://bdlaws.minlaw.gov.bd/act-788/section-33986.html?lang=bn  
+   https://bdlaws.minlaw.gov.bd/act-print-788.html  
    Also consult the official consolidated Act: https://bdlaws.minlaw.gov.bd/act-print-788.html
 
 6. **Companies Act 1994 — official BDLaws management/inspection provisions (includes ss.150 and 195–201):**  
