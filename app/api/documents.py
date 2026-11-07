@@ -531,6 +531,8 @@ async def approve_document(
 ):
     svc = DocumentService(db)
     activity = ActivityService(db)
+    doc_check = await svc.get_by_id_or_404(document_id)
+    await ensure_staff_company_scope(doc_check.company_id, current_user, db)
 
     doc = await svc.approve_document(  # type: ignore
         document_id=document_id,
@@ -579,6 +581,7 @@ async def release_document(
     activity = ActivityService(db)
 
     doc = await svc.get_by_id_or_404(document_id)
+    await ensure_staff_company_scope(doc.company_id, current_user, db)
     _require_document_legal_release(doc.document_type)
     if not doc.human_approved:
         raise HTTPException(
