@@ -22,6 +22,13 @@ async def _company_contexts(
     current_user: User,
 ) -> list[uuid.UUID]:
     raw_company_id = request.path_params.get("company_id") or request.query_params.get("company_id")
+    if raw_company_id is None and request.method not in {"GET", "HEAD"}:
+        try:
+            payload = await request.json()
+        except (ValueError, TypeError):
+            payload = None
+        if isinstance(payload, dict):
+            raw_company_id = payload.get("company_id")
     if raw_company_id:
         try:
             company_id = uuid.UUID(str(raw_company_id))
