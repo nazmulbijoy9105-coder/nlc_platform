@@ -64,6 +64,10 @@ class SuspensionRequest(BaseModel):
     reason: str = Field(min_length=3, max_length=2000)
 
 
+class CancellationRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=2000)
+
+
 class SubscriptionResponse(BaseModel):
     subscription_id: str
     company_id: str
@@ -344,6 +348,25 @@ async def cancel_company_subscription(
             company_id=company_id,
             subscription_id=subscription_id,
             actor_id=current_user.id,
+        )
+    except (SubscriptionNotFoundError, SubscriptionConflictError) as exc:
+        _raise_subscription_error(exc)
+    return _subscription_response(item)
+
+
+@router.post("/{subscription_id}/cancel-pending", response_model=SubscriptionResponse)
+async def cancel_pending_subscription(
+    subscription_id: uuid.UUID,
+    body: CancellationRequest,
+    db: AsyncSession = Depends(get_db_for_user),
+    current_user: User = Depends(get_current_user),
+    _role: None = Depends(require_roles(*FINANCE_ROLES)),
+):
+    try:
+        item = await SubscriptionService(db).cancel_pending_by_staff(
+            subscription_id=subscription_id,
+            actor_id=current_user.id,
+            reason=body.reason,
         )
     except (SubscriptionNotFoundError, SubscriptionConflictError) as exc:
         _raise_subscription_error(exc)
