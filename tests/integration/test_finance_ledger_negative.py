@@ -293,3 +293,73 @@ async def test_app_role_cannot_mutate_posted_allocations(
     # Migration 0073 separately protects owner-level SQL with its BEFORE trigger.
     assert getattr(exc_info.value.orig, "sqlstate", None) == "42501"
 
+@pytest.mark.parametrize("mutation", ["UPDATE", "DELETE"])
+@pytest.mark.asyncio
+async def test_allocation_append_only_trigger_rejects_owner_mutation(
+    db, db_company, db_user, mutation
+):
+    """Exercise migration 0073's trigger as table owner, beyond app-role ACL denial."""
+    await set_rls_context(db, str(db_user.id))
+    invoice = await _issued_invoice(db, db_company, db_user)
+    now = datetime.now(UTC)
+    payment = Payment(
+        company_id=db_company.id,
+        payment_number=f"PAY-OWNER-TEST-{invoice.id.hex[:12]}",
+        method="CASH",
+        channel="OFFLINE",
+        amount_bdt=Decimal("25.00"),
+        currency="BDT",
+        status="SETTLED",
+        received_at=now,
+        verified_by=db_user.id,
+        verified_at=now,
+        created_by=db_user.id,
+    )
+    db.add(payment)
+    await db.flush()
+    allocation = PaymentAllocation(
+        company_id=db_company.id,
+        payment_id=payment.id,
+        invoice_id=invoice.id,
+        amount_bdt=Decimal("25.00"),
+        currency="BDT",
+        created_by=db_user.id,
+    )
+    db.add(allocation)
+    await db.flush()
+    invoice.paid_bdt = Decimal("25.00")
+    invoice.balance_bdt = Decimal("75.00")
+    invoice.status = "PARTIALLY_PAID"
+    await db.flush()
+
+    # set_rls_context() switches to nlc_app_role. Reset to the connection's
+    # authenticated session role so the ACL no longer masks the BEFORE trigger.
+    await db.execute(text("RESET ROLE"))
+    ownership = (await db.execute(text("""
+        SELECT current_user = pg_get_userbyid(c.relowner)
+          FROM pg_class c
+         WHERE c.oid = 'public.payment_allocations'::regclass
+    """))).scalar_one()
+    assert ownership, "test connection must own payment_allocations to exercise the owner-level trigger"
+
+    with pytest.raises(DBAPIError) as exc_info:
+        async with db.begin_nested():
+            if mutation == "UPDATE":
+                await db.execute(
+                    text("""
+                        UPDATE public.payment_allocations
+                           SET amount_bdt = 20.00
+                         WHERE id = :allocation_id
+                    """),
+                    {"allocation_id": allocation.id},
+                )
+            else:
+                await db.execute(
+                    text("""
+                        DELETE FROM public.payment_allocations
+                         WHERE id = :allocation_id
+                    """),
+                    {"allocation_id": allocation.id},
+                )
+    assert getattr(exc_info.value.orig, "sqlstate", None) == "55000"
+    assert "append-only" in str(exc_info.value.orig).lower()
