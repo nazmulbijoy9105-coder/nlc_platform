@@ -1,5 +1,9 @@
 """Statutory calendar must remain unavailable until legal approval is real."""
 
+from fastapi import HTTPException
+
+import app.api.calendar as calendar_api
+
 from app.services.compliance_calendar import (
     LEGAL_CALENDAR_RELEASED,
     VERIFIED_CALENDAR_EVENT_TYPES,
@@ -21,3 +25,16 @@ def test_unapproved_statutory_penalties_are_never_estimated():
     assert calculate_penalty("corporate_tax_return", 30) is None
     assert calculate_penalty("vat_return", 30) is None
     assert calculate_penalty("bsec_q1_report", 30) is None
+
+
+
+def test_calendar_api_returns_unavailable_not_an_empty_no_deadline_claim(monkeypatch):
+    monkeypatch.setattr(calendar_api, "LEGAL_CALENDAR_RELEASED", False)
+    monkeypatch.setattr(calendar_api, "VERIFIED_CALENDAR_EVENT_TYPES", frozenset())
+    try:
+        calendar_api._require_calendar_release()
+    except HTTPException as exc:
+        assert exc.status_code == 503
+        assert "pending rule-level legal validation" in exc.detail
+    else:
+        raise AssertionError("calendar endpoint must fail closed before legal approval")
