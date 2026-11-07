@@ -4,7 +4,6 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import text
 
-from app.models.database import set_rls_context
 
 pytestmark = [pytest.mark.integration]
 
@@ -14,12 +13,12 @@ async def test_articles_evidence_tables_have_signed_staff_write_policies(db):
     expected = {
         "articles_verifications": {
             "articles_verifications_company_read",
-            "articles_verifications_staff_insert",
+            "articles_verifications_member_submit",
             "articles_verifications_staff_update",
         },
         "articles_verification_events": {
             "articles_verification_events_company_read",
-            "articles_verification_events_staff_insert",
+            "articles_verification_events_actor_insert",
         },
     }
 
@@ -41,8 +40,8 @@ async def test_articles_evidence_tables_have_signed_staff_write_policies(db):
 
         insert_policy = policies[f"{table}_staff_insert"]
         assert insert_policy[1] == "INSERT"
-        assert "nlc_current_user_is_staff" in (insert_policy[3] or "")
-        assert "nlc_can_access_company" in (insert_policy[3] or "")
+        assert "nlc_current_user_id" in (insert_policy[3] or "")
+        assert "nlc_can_edit_company" in (insert_policy[3] or "")
 
         for policy in policies.values():
             for expression in (policy[2] or "", policy[3] or ""):
@@ -106,24 +105,22 @@ async def test_articles_evidence_tables_have_signed_staff_write_policies(db):
 
 
 @pytest.mark.asyncio
-async def test_unsigned_admin_guc_cannot_authorize_articles_staff_write(
-    db, db_client_user
-):
-    await set_rls_context(db, str(db_client_user.id))
-    await db.execute(
+async def test_unsigned_admin_guc_cannot_authorize_articles_staff_write(db_for_user):
+    # db_for_user starts with a valid signed tenant UUID principal.
+    # Replacing only the GUC must invalidate the HMAC-bound principal.
+    await db_for_user.execute(
         text("SELECT set_config('app.current_user_id', 'ADMIN', true)")
     )
 
-    principal = await db.execute(
+    principal = await db_for_user.execute(
         text("SELECT public.nlc_current_user_principal()")
     )
     assert principal.scalar_one_or_none() is None
 
-    staff = await db.execute(
+    staff = await db_for_user.execute(
         text("SELECT public.nlc_current_user_is_staff()")
     )
     assert staff.scalar_one() is False
-
 
 @pytest.mark.asyncio
 async def test_legacy_agm_evidence_reference_uses_canonical_text_type(db):
