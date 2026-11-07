@@ -59,16 +59,19 @@ def is_notification_eligible(
         return LEGAL_SCORE_RELEASED and normalized_type in VERIFIED_RULE_IDS
     if normalized_type in GENERIC_LEGAL_ALERT_TYPES:
         return False
-    if normalized_type.endswith("_DEADLINE_WARNING") or normalized_type.startswith("DEADLINE_"):
-        return False
-    if any(token in normalized_type for token in (
+    legal_tokens = (
         "COMPLIANCE", "LEGAL", "RISK", "RULE_ALERT", "TAX_", "VAT_",
         "AGM_", "BSEC_", "LABOUR_", "LABOR_", "TRADE_LICENCE_", "TRADE_LICENSE_",
-    )):
+    )
+    if any(token in normalized_type for token in legal_tokens):
         return False
     if normalized_type in NON_LEGAL_OPERATIONAL_NOTIFICATION_TYPES:
         return True
-    return normalized_type.startswith(NON_LEGAL_OPERATIONAL_PREFIXES)
+    if normalized_type.startswith(NON_LEGAL_OPERATIONAL_PREFIXES):
+        return True
+    if normalized_type.endswith("_DEADLINE_WARNING") or normalized_type.startswith("DEADLINE_"):
+        return False
+    return False
 
 
 class NotificationService(BaseService[Notification]):
@@ -337,8 +340,12 @@ class NotificationService(BaseService[Notification]):
         operational_prefix = Notification.notification_type.op("~")(
             r"^(BILLING_|PAYMENT_|SUBSCRIPTION_|ACCOUNT_SECURITY_)"
         )
+        legal_type_pattern = Notification.notification_type.op("~")(
+            r"(COMPLIANCE|LEGAL|RISK|RULE_ALERT|TAX_|VAT_|AGM_|BSEC_|LABOUR_|LABOR_|TRADE_LICENCE_|TRADE_LICENSE_)"
+        )
         eligible_operational = and_(
             Notification.related_flag_id.is_(None),
+            ~legal_type_pattern,
             or_(
                 Notification.notification_type.in_(NON_LEGAL_OPERATIONAL_NOTIFICATION_TYPES),
                 operational_prefix,
