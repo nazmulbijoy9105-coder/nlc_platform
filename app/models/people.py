@@ -69,6 +69,7 @@ class Director(FullMixin, Base):
 
     # ── Evidence-bound statutory filing states ────────────────────
     form_xii_filed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    form_xii_filed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     form_xii_status_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     form_xii_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     form_xii_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
