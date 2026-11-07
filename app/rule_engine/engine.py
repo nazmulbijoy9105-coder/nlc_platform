@@ -150,6 +150,9 @@ class ShareTransfer:
     registration_refused: bool | None = None
     refusal_notice_sent: bool | None = None
     instrument_lodged_date: Optional[date] = None
+    articles_clause_evidence_ref: str | None = None
+    refusal_decision_evidence_ref: str | None = None
+    transfer_registration_evidence_ref: str | None = None
 
 @dataclass
 class ChargeEvent:
@@ -1636,7 +1639,10 @@ class NLCRuleEngine:
 
             # Board approval is not universal. It is relevant only where the
             # company's actual Articles impose a valid restriction.
-            restriction_applies = transfer.aoa_restriction_apply is True
+            restriction_applies = (
+                transfer.aoa_restriction_apply is True
+                and bool(transfer.articles_clause_evidence_ref)
+            )
             board_approval_missing = (
                 restriction_applies and transfer.board_approval_obtained is False
             )
@@ -1668,6 +1674,7 @@ class NLCRuleEngine:
                 transfer.registration_refused is True
                 and transfer.refusal_notice_sent is False
                 and transfer.instrument_lodged_date is not None
+                and bool(transfer.refusal_decision_evidence_ref)
             ):
                 refusal_delay = (self.today - transfer.instrument_lodged_date).days
                 if refusal_delay > 30:
@@ -1695,7 +1702,11 @@ class NLCRuleEngine:
             # Section 38(7) preserves the company's power under its Articles
             # to refuse registration; it does not make every restricted transfer
             # automatically void. Require proof it was registered despite the restriction.
-            if transfer.transfer_registered is True and board_approval_missing:
+            if (
+                transfer.transfer_registered is True
+                and bool(transfer.transfer_registration_evidence_ref)
+                and board_approval_missing
+            ):
                 flag = ComplianceFlag(
                     rule_id="TR-005",
                     flag_code="REGISTERED_TRANSFER_DESPITE_REPORTED_ARTICLES_RESTRICTION",
