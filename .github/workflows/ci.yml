@@ -206,7 +206,7 @@ jobs:
           fi
           CURRENT_REVISION="$(DATABASE_URL="$SECOND_DATABASE_URL" alembic current)"
           printf '%s\\n' "$CURRENT_REVISION"
-          printf '%s\\n' "$CURRENT_REVISION" | grep -q '0074_subscription_entitlements'
+          printf '%s\\n' "$CURRENT_REVISION" | grep -q '0076_subscription_entitlements'
           DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
           DATABASE_URL="$SECOND_DATABASE_URL" alembic current
       - name: Rehearse production baseline 0042 through head
