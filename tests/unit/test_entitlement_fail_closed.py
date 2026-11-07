@@ -140,7 +140,7 @@ async def test_known_company_id_without_financial_membership_is_denied(monkeypat
         await dependency(request=_request(company_id), db=db, current_user=user)
 
     assert exc.value.status_code == 403
-    assert "active company membership" in exc.value.detail
+    assert "financial access" in exc.value.detail
 
 
 @pytest.mark.asyncio
