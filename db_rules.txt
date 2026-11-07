@@ -24,7 +24,7 @@ BSEC-003|Board Composition Non-Compliant|BSEC Corporate Governance Code 2023, Pa
 BSEC-004|Audit Committee Not Established|BSEC Corporate Governance Code 2023, Para 6|YELLOW|5|f|t
 CAP-001|Capital Alteration Without Board Resolution|Section 54, Companies Act 1994 (Bangladesh)|YELLOW|10|f|t
 CAP-002|Charge Not Filed with RJSC|Section 107, Companies Act 1994 (Bangladesh)|YELLOW|10|f|t
-CAP-003|Capital Reduction — Court Confirmation Review|Companies Act 1994, Sections 59-60|NOT_EVALUATED|0|f|t
+CAP-003|Capital Reduction Without Court Order|Companies Act 1994, Section 100|BLACK|15|t|t
 CAP-004|Special Resolution Not Filed|Companies Act 1994, Section 87|YELLOW|8|f|t
 CHG-001|Charge Satisfaction Not Filed|Companies Act 1994, Section 87|YELLOW|3|f|t
 DEF-001|Director Disqualification Risk|Companies Act 1994, Section 297|BLACK|15|t|t
@@ -45,8 +45,8 @@ INC-001|Memorandum and Articles Not Filed|Companies Act 1994, Section 11|RED|15|
 INC-002|Form III Not Filed|Companies Act 1994, Section 81|BLACK|5|t|t
 INC-003|Minimum Directors Not Appointed|Companies Act 1994, Section 90(2)|BLACK|15|t|t
 INC-004|Paid-Up Capital Exceeds Authorized|Companies Act 1994, Section 150|BLACK|20|t|t
-INC-005|Encashment Certificate Missing — Foreign Shareholding|GFET-2018 Chapter 9 para 2(A); Bangladesh Bank FE Circulars|NOT_EVALUATED|0|f|t
-INC-006|Initial Establishment Remittance Evidence — Work Permit Review|BIDA Work Permit Guidelines 2023 (operative clause pending)|NOT_EVALUATED|0|f|t
+INC-005|Encashment Certificate Missing|BIDA Foreign Investment Act 1980; Bangladesh Bank FDI Circular|YELLOW|8|f|t
+INC-006|Remittance Below Work Permit Threshold|BIDA Foreign Investment Act 1980|YELLOW|5|f|t
 LBR-001|Factory License Missing|Labour Act 2006 (Bangladesh), Section 35|RED|10|f|t
 LBR-002|Factory License Expired|Labour Act 2006 (Bangladesh), Section 35|YELLOW|5|f|t
 LBR-003|Labour Court Order Pending|Labour Act 2006 (Bangladesh), Section 209|RED|15|f|t
