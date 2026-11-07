@@ -56,3 +56,32 @@ def test_any_notification_linked_to_a_compliance_flag_is_suppressed():
     from uuid import uuid4
 
     assert is_notification_eligible("SYSTEM", related_flag_id=uuid4()) is False
+
+def test_deadline_worker_withholds_global_scan_until_calendar_release(monkeypatch):
+    import app.services.compliance_calendar as calendar_module
+    import app.worker.tasks.core as worker_core
+
+    monkeypatch.setattr(calendar_module, "LEGAL_CALENDAR_RELEASED", False)
+    monkeypatch.setattr(calendar_module, "VERIFIED_CALENDAR_EVENT_TYPES", frozenset())
+    monkeypatch.setattr(
+        worker_core,
+        "run_async",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("worker must not open a privileged global scan")
+        ),
+    )
+
+    result = worker_core.queue_deadline_warning_notifications.run(warning_days=[30])
+
+    assert result == {
+        "queued": 0,
+        "deadlines_checked": 0,
+        "status": "WITHHELD_LEGAL_CALENDAR_NOT_RELEASED",
+    }
+
+
+def test_deadline_worker_rejects_invalid_warning_thresholds():
+    import app.worker.tasks.core as worker_core
+
+    with pytest.raises(ValueError, match="non-negative"):
+        worker_core.queue_deadline_warning_notifications.run(warning_days=[30, -1])
