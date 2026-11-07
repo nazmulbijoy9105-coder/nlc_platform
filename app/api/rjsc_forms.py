@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
+from app.core.entitlement import require_entitlement
     get_current_user,
     get_db_for_user,
     require_company_access,
@@ -64,7 +65,7 @@ async def get_form_reference():
 
 
 @router.get("/{company_id}", response_model=list[FormFilingResponse],
-            dependencies=[Depends(require_company_access("company_id"))],
+            dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
             summary="List all RJSC form filings for a company")
 async def list_forms(company_id: str, db: AsyncSession = Depends(get_db_for_user)):
     svc = RJSCFormService(db)
@@ -81,7 +82,7 @@ async def list_forms(company_id: str, db: AsyncSession = Depends(get_db_for_user
 
 
 @router.get("/{company_id}/pending", response_model=list[FormFilingResponse],
-            dependencies=[Depends(require_company_access("company_id"))],
+            dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
             summary="List pending RJSC forms")
 async def list_pending_forms(company_id: str, db: AsyncSession = Depends(get_db_for_user)):
     svc = RJSCFormService(db)
@@ -99,7 +100,7 @@ async def list_pending_forms(company_id: str, db: AsyncSession = Depends(get_db_
 
 
 @router.get("/{company_id}/overdue", response_model=list[FormFilingResponse],
-            dependencies=[Depends(require_company_access("company_id"))],
+            dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
             summary="List overdue RJSC forms")
 async def list_overdue_forms(company_id: str, db: AsyncSession = Depends(get_db_for_user)):
     svc = RJSCFormService(db)
