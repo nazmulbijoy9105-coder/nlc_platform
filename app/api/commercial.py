@@ -21,8 +21,6 @@ Endpoints:
   PATCH /commercial/tasks/{id}/complete   Mark task complete
 """
 
-
-
 import uuid
 from datetime import date
 from decimal import Decimal
