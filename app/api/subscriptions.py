@@ -10,7 +10,7 @@ import uuid
 from decimal import Decimal
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -218,6 +218,27 @@ async def get_company_subscription_history(
     _role: None = Depends(require_roles(*CUSTOMER_READ_ROLES)),
 ):
     items = await SubscriptionService(db).list_history(company_id)
+    return [_subscription_response(item) for item in items]
+
+
+@router.get("/admin", response_model=list[SubscriptionResponse])
+async def list_subscriptions_for_finance(
+    status_filter: str | None = Query(default=None, alias="status"),
+    company_id: uuid.UUID | None = None,
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    db: AsyncSession = Depends(get_db_for_user),
+    _role: None = Depends(require_roles(*FINANCE_ROLES)),
+):
+    try:
+        items = await SubscriptionService(db).list_admin_subscriptions(
+            status_filter=status_filter,
+            company_id=company_id,
+            limit=limit,
+            offset=offset,
+        )
+    except SubscriptionConflictError as exc:
+        _raise_subscription_error(exc)
     return [_subscription_response(item) for item in items]
 
 
