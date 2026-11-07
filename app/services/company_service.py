@@ -504,40 +504,79 @@ class CompanyService(BaseService[Company]):
         director_changes = []
         for d in company.directors:
             from app.rule_engine import DirectorChange
+            form_xii_verified = bool(
+                d.form_xii_status_verified
+                and d.form_xii_filed is not None
+                and d.form_xii_evidence_ref
+                and d.form_xii_verified_at
+                and d.form_xii_verified_by
+            )
+            consent_verified = bool(
+                d.consent_verified
+                and d.consent_filed is not None
+                and d.consent_evidence_ref
+                and d.consent_verified_at
+                and d.consent_verified_by
+            )
             director_changes.append(DirectorChange(
                 director_id=str(d.id),
                 event_type="appointment" if d.director_status.value == "ACTIVE" else "resignation",
                 event_date=d.appointment_date or d.departure_date or date.today(),
-                form_filed=True if (d.appointment_filed_date or d.departure_filed_date) else None,
-                form_filed_date=d.appointment_filed_date or d.departure_filed_date,
+                form_filed=d.form_xii_filed if form_xii_verified else None,
+                form_filed_date=d.form_xii_filed_date if form_xii_verified else None,
                 form_type="XII",
-                form_filed_verified=False,
-                form_filed_evidence_ref=None,
+                form_filed_verified=form_xii_verified,
+                form_filed_evidence_ref=d.form_xii_evidence_ref if form_xii_verified else None,
+                consent_filed=d.consent_filed if consent_verified else None,
+                consent_filed_date=d.consent_filed_date if consent_verified else None,
+                consent_verified=consent_verified,
+                consent_evidence_ref=d.consent_evidence_ref if consent_verified else None,
             ))
 
         # ── Share Transfers ───────────────────────────────────────
-        # Legacy ShareTransfer booleans have no verification/provenance fields
-        # and historically defaulted to True. Do not treat those defaults as
-        # proof of filing, payment, approval or registration.
+        # Only evidence-bound statuses are passed to the deterministic engine.
         share_transfers = []
         for t in company.share_transfers:
             from app.rule_engine import ShareTransfer as EngineTransfer
+            instrument_verified = bool(
+                t.transfer_instrument_verified and t.transfer_instrument_evidence_ref
+            )
+            stamp_verified = bool(
+                t.stamp_duty_applicability_verified and t.stamp_duty_evidence_ref
+            )
+            board_verified = bool(t.board_approval_verified and t.board_approval_evidence_ref)
+            registration_verified = bool(
+                t.transfer_registered is not None and t.transfer_registration_evidence_ref
+            )
+            refusal_verified = bool(
+                t.registration_refusal_verified and t.refusal_decision_evidence_ref
+            )
+            refusal_notice_verified = bool(
+                t.refusal_notice_verified and t.refusal_notice_evidence_ref
+            )
+            lodgement_verified = bool(
+                t.instrument_lodged_date and t.instrument_lodgement_evidence_ref
+            )
+            articles_verified = bool(t.aoa_restriction_apply is not None and t.articles_clause_evidence_ref)
             share_transfers.append(EngineTransfer(
                 transfer_id=str(t.id),
                 transfer_date=t.transfer_date,  # type: ignore
-                instrument_recorded=None,
-                form_117_filed=None,
-                stamp_duty_paid=None,
-                stamp_duty_applicability_verified=False,
+                instrument_recorded=t.has_transfer_instrument if instrument_verified else None,
+                form_117_filed=t.form_117_filed if instrument_verified and t.form_117_evidence_ref else None,
+                stamp_duty_paid=t.stamp_duty_paid if stamp_verified else None,
+                stamp_duty_applicability_verified=stamp_verified,
                 stamp_duty_amount=float(t.stamp_duty_amount_bdt) if t.stamp_duty_amount_bdt else None,
-                board_approval=None,
-                board_approval_obtained=None,
-                share_register_updated=None,
-                aoa_restriction_apply=None,
-                transfer_registered=None,
-                registration_refused=None,
-                refusal_notice_sent=None,
-                instrument_lodged_date=None,
+                board_approval=t.board_approval_obtained if board_verified else None,
+                board_approval_obtained=t.board_approval_obtained if board_verified else None,
+                share_register_updated=t.register_updated if t.register_update_verified and t.register_update_evidence_ref else None,
+                aoa_restriction_apply=t.aoa_restriction_apply if articles_verified else None,
+                transfer_registered=t.transfer_registered if registration_verified else None,
+                registration_refused=t.registration_refused if refusal_verified else None,
+                refusal_notice_sent=t.refusal_notice_sent if refusal_notice_verified else None,
+                instrument_lodged_date=t.instrument_lodged_date if lodgement_verified else None,
+                articles_clause_evidence_ref=t.articles_clause_evidence_ref if articles_verified else None,
+                refusal_decision_evidence_ref=t.refusal_decision_evidence_ref if refusal_verified else None,
+                transfer_registration_evidence_ref=t.transfer_registration_evidence_ref if registration_verified else None,
             ))
 
         # ── Statutory Registers ───────────────────────────────────
