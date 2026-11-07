@@ -263,10 +263,8 @@ def upgrade() -> None:
     op.execute("""
         CREATE POLICY client_subscription_features_insert ON public.client_subscription_features
         FOR INSERT WITH CHECK (
-            public.nlc_current_user_is_finance_staff()
-            OR (
-                public.nlc_can_submit_payment_company(company_id)
-                AND client_subscription_features.enabled IS TRUE
+            public.nlc_can_submit_payment_company(company_id)
+            AND client_subscription_features.enabled IS TRUE
                 AND EXISTS (
                     SELECT 1
                     FROM public.client_subscriptions s
@@ -279,7 +277,6 @@ def upgrade() -> None:
                       AND s.created_by = public.nlc_current_user_id()
                       AND pf.enabled IS TRUE
                 )
-            )
         )
     """)
 
@@ -422,6 +419,7 @@ def upgrade() -> None:
                 WHERE i.id = NEW.invoice_id
                   AND i.company_id = NEW.company_id
                   AND i.status = 'ISSUED'
+                  AND i.notes LIKE ('%Subscription ID: ' || NEW.id::text || '%')
                   AND i.subtotal_bdt = NEW.amount_bdt
                   AND i.tax_bdt = NEW.tax_bdt
                   AND i.total_bdt = NEW.amount_bdt + NEW.tax_bdt
