@@ -213,6 +213,7 @@ async def list_all_documents(
 @router.get(
     "/templates",
     response_model=list[TemplateResponse],
+    dependencies=[Depends(require_entitlement("document_management"))],
     summary="List all available AI document templates",
 )
 async def list_templates(
