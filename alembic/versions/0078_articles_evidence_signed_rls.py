@@ -98,15 +98,29 @@ def upgrade() -> None:
             FOR SELECT
             USING (public.nlc_can_access_company(company_id))
         """)
-        op.execute(f"""
-            CREATE POLICY {table}_staff_insert
-            ON public.{table}
-            FOR INSERT
-            WITH CHECK (
-                public.nlc_current_user_is_staff()
-                AND public.nlc_can_access_company(company_id)
-            )
-        """)
+        if table == "articles_verifications":
+            # Company editors may submit evidence; the signed principal must
+            # match the submitter identity recorded in the evidence row.
+            op.execute("""
+                CREATE POLICY articles_verifications_member_submit
+                ON public.articles_verifications
+                FOR INSERT
+                WITH CHECK (
+                    submitted_by = public.nlc_current_user_id()
+                    AND public.nlc_can_edit_company(company_id)
+                )
+            """)
+        else:
+            # Every event actor is bound to the authenticated signed principal.
+            op.execute("""
+                CREATE POLICY articles_verification_events_actor_insert
+                ON public.articles_verification_events
+                FOR INSERT
+                WITH CHECK (
+                    actor_id = public.nlc_current_user_id()
+                    AND public.nlc_can_edit_company(company_id)
+                )
+            """)
 
         if table.endswith("_events"):
             # The append-only trigger remains in place. SQL privileges also
