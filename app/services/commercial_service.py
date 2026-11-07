@@ -18,7 +18,13 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import func, select, text
 
-from app.models.commercial import Engagement, Quotation, Task
+from app.models.commercial import (
+    Engagement,
+    InvalidEngagementTransitionError,
+    Quotation,
+    Task,
+    validate_engagement_transition,
+)
 from app.models.enums import (
     EngagementStatus,
     TaskPriority,
@@ -130,7 +136,6 @@ class EngagementService(BaseService[Engagement]):
         fee_bdt: Decimal | None = None,
     ) -> Engagement | None:
         """Advance engagement through the pipeline stages."""
-        from app.models.commercial import InvalidEngagementTransitionError, validate_engagement_transition
         eng = await self.get_by_id(engagement_id)
         if not eng:
             return None
@@ -220,7 +225,6 @@ class QuotationService(BaseService[Quotation]):
             EngagementStatus.QUOTED,
         }:
             raise CommercialConflictError("A quotation can only be created for an identified or quoted engagement.")
-        from decimal import Decimal
         professional_fee = Decimal(str(professional_fee_bdt)).quantize(Decimal("0.01"))
         government_fee = Decimal(str(government_fee_bdt)).quantize(Decimal("0.01"))
         vat_amount = Decimal(str(vat_bdt)).quantize(Decimal("0.01"))
@@ -251,7 +255,6 @@ class QuotationService(BaseService[Quotation]):
 
     async def _next_quotation_number(self) -> str:
         """Generate next sequential quotation number NLC-YYYY-NNNN."""
-        from sqlalchemy import text
         year = date.today().year
         # Serialize number allocation within this database transaction.
         await self.db.execute(
@@ -264,7 +267,139 @@ class QuotationService(BaseService[Quotation]):
                 "SELECT COALESCE(MAX("
                 "CAST(SUBSTRING(quotation_number FROM :suffix_start) AS INTEGER)"
                 "), 0) + 1 "
-                "FROM quotations WHERE quotation_number LIKE :pattern"
+                "FROM quotations "
+                "WHERE quotation_number LIKE :pattern "
+                "AND SUBSTRING(quotation_number FROM :suffix_start) ~ '^[0-9]+        )
+        number = result.scalar_one()
+        return f"{prefix}{number:04d}"
+
+    async def accept(
+        self,
+        quotation_id: uuid.UUID,
+    ) -> Quotation | None:
+        """Mark quotation as accepted."""
+        quotation_result = await self.db.execute(
+            select(Quotation).where(Quotation.id == quotation_id).with_for_update()
+        )
+        q = quotation_result.scalar_one_or_none()
+        if not q:
+            return None
+        if q.status not in {"DRAFT", "SENT"}:
+            raise CommercialConflictError(f"Cannot accept a quotation in {q.status} state.")
+        if q.valid_until < date.today():
+            raise CommercialConflictError("An expired quotation cannot be accepted; issue a renewed quotation.")
+        engagement_result = await self.db.execute(
+            select(Engagement).where(
+                Engagement.id == q.engagement_id,
+                Engagement.company_id == q.company_id,
+                Engagement.is_active.is_(True),
+            ).with_for_update()
+        )
+        engagement = engagement_result.scalar_one_or_none()
+        if engagement is None:
+            raise ValueError("Quotation engagement is missing, inactive, or belongs to another company.")
+        if engagement.engagement_status != EngagementStatus.QUOTED:
+            raise CommercialConflictError("Only a quotation for a QUOTED engagement can be accepted.")
+        accepted = await self.update_instance(q, status="ACCEPTED", accepted_date=date.today())
+        await EngagementService(self.db).advance_status(
+            engagement.id,
+            EngagementStatus.CONFIRMED,
+            fee_bdt=q.total_bdt,
+        )
+        return accepted
+
+    async def reject(
+        self,
+        quotation_id: uuid.UUID,
+        reason: str | None = None,
+        rejected_by: uuid.UUID | None = None,  # COM-002
+    ) -> Quotation | None:
+        """Mark quotation as rejected."""
+        quotation_result = await self.db.execute(
+            select(Quotation).where(Quotation.id == quotation_id).with_for_update()
+        )
+        q = quotation_result.scalar_one_or_none()
+        if not q:
+            return None
+        if q.status not in {"DRAFT", "SENT"}:
+            raise ValueError(f"Cannot reject a quotation in {q.status} state.")
+        return await self.update_instance(
+            q,
+            status="REJECTED",
+            rejection_reason=reason,
+            rejected_by=rejected_by,
+        )
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# TASK SERVICE
+# ═══════════════════════════════════════════════════════════════════════
+
+class TaskService(BaseService[Task]):
+    model = Task
+
+    async def create_task(
+        self,
+        company_id: uuid.UUID,
+        title: str,
+        *,
+        description: str | None = None,
+        priority: TaskPriority = TaskPriority.MEDIUM,
+        due_date: date | None = None,
+        assigned_to: uuid.UUID | None = None,
+        created_by: uuid.UUID | None = None,
+        source_flag_id: uuid.UUID | None = None,
+        source_rescue_step_id: uuid.UUID | None = None,
+    ) -> Task:
+        """Create a task for a company."""
+        return await self.create(
+            company_id=company_id,
+            title=title,
+            description=description,
+            task_status=TaskStatus.PENDING,
+            priority=priority,
+            due_date=due_date,
+            assigned_to=assigned_to,
+            created_by=created_by,
+            source_flag_id=source_flag_id,
+            source_rescue_step_id=source_rescue_step_id,
+        )
+
+    async def get_for_company(
+        self,
+        company_id: uuid.UUID,
+        *,
+        status: TaskStatus | None = None,
+        assigned_to: uuid.UUID | None = None,
+    ) -> list[Task]:
+        """Get tasks for a company with optional filters."""
+        filters = [Task.company_id == company_id, Task.is_active]
+        if status:
+            filters.append(Task.task_status == status)
+        if assigned_to:
+            filters.append(Task.assigned_to == assigned_to)
+        result = await self.db.execute(
+            select(Task)
+            .where(*filters)
+            .order_by(Task.priority.desc(), Task.due_date)
+        )
+        return list(result.scalars().all())
+
+    async def complete_task(
+        self,
+        task_id: uuid.UUID,
+    ) -> Task | None:
+        """Mark a task as completed."""
+        from datetime import datetime
+        task = await self.get_by_id(task_id)
+        if not task:
+            return None
+        return await self.update_instance(
+            task,
+            task_status=TaskStatus.COMPLETED,
+            completed_at=datetime.now(UTC),
+        )
+"
             ),
             {"suffix_start": len(prefix) + 1, "pattern": f"{prefix}%"},
         )
