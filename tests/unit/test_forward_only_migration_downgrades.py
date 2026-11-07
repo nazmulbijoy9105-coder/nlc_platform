@@ -25,6 +25,8 @@ FORWARD_ONLY_MIGRATIONS = (
     "alembic/versions/0071_immutable_payment_submission_link.py",
     "alembic/versions/0072_allocation_mutation_reconciliation.py",
     "alembic/versions/0073_payment_allocations_append_only.py",
+    "alembic/versions/0074_legal_release_quarantine.py",
+    "alembic/versions/0075_director_transfer_evidence.py",
 )
 
 
