@@ -13,6 +13,7 @@ AI Constitution Article 2.2:
 from __future__ import annotations
 
 from datetime import UTC, date, timedelta
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import func, select, text
@@ -240,7 +241,7 @@ class QuotationService(BaseService[Quotation]):
             await EngagementService(self.db).advance_status(
                 engagement_id,
                 EngagementStatus.QUOTED,
-                fee_bdt=float(total_bdt),
+                fee_bdt=total_bdt,
             )
         return quotation
 
@@ -292,7 +293,7 @@ class QuotationService(BaseService[Quotation]):
         await EngagementService(self.db).advance_status(
             engagement.id,
             EngagementStatus.CONFIRMED,
-            fee_bdt=float(q.total_bdt),
+            fee_bdt=q.total_bdt,
         )
         return accepted
 
