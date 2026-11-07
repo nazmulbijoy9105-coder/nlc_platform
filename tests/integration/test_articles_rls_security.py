@@ -92,6 +92,11 @@ async def test_articles_evidence_tables_have_signed_tenant_write_policies(db):
     assert "company_user_access" in helper_definition
 
     for table, privilege in (
+        ("articles_verifications", "SELECT"),
+        ("articles_verifications", "INSERT"),
+        ("articles_verifications", "UPDATE"),
+        ("articles_verification_events", "SELECT"),
+        ("articles_verification_events", "INSERT"),
         ("articles_verifications", "DELETE"),
         ("articles_verifications", "TRUNCATE"),
         ("articles_verification_events", "UPDATE"),
@@ -105,7 +110,10 @@ async def test_articles_evidence_tables_have_signed_tenant_write_policies(db):
             ),
             {"table": f"public.{table}", "privilege": privilege},
         )
-        assert result.scalar_one() is False
+        allowed = privilege in {"SELECT", "INSERT", "UPDATE"} and table == "articles_verifications" or (
+            privilege in {"SELECT", "INSERT"} and table == "articles_verification_events"
+        )
+        assert result.scalar_one() is allowed
 
     trigger_rows = await db.execute(
         text(
