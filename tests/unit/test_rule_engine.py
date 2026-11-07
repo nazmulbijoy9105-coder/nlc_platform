@@ -1010,6 +1010,8 @@ class TestSection150Applicability:
             section150_applicability_verified=True,
             section150_applicability_evidence_ref="evidence://section150/applicability",
             business_commencement_declaration_filed=False,
+            business_commencement_declaration_verified=True,
+            business_commencement_declaration_evidence_ref="evidence://section150/declaration-status",
         )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "INC-007")
