@@ -534,6 +534,19 @@ class SubscriptionService:
         )
         return list(result.scalars().all())
 
+    async def list_events(
+        self, *, company_id: uuid.UUID, subscription_id: uuid.UUID
+    ) -> list[SubscriptionEvent]:
+        result = await self.db.execute(
+            select(SubscriptionEvent)
+            .where(
+                SubscriptionEvent.company_id == company_id,
+                SubscriptionEvent.subscription_id == subscription_id,
+            )
+            .order_by(SubscriptionEvent.created_at.asc(), SubscriptionEvent.id.asc())
+        )
+        return list(result.scalars().all())
+
     async def request_cancel_at_period_end(
         self, *, company_id: uuid.UUID, subscription_id: uuid.UUID, actor_id: uuid.UUID
     ) -> ClientSubscription:
