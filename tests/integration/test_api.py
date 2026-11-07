@@ -94,10 +94,22 @@ class TestCronEvaluation:
         assert "CRON_SECRET is not configured" in resp.json()["detail"]
 
     @pytest.mark.asyncio
+    async def test_cron_evaluation_disables_weak_secret(
+        self, api_client, monkeypatch
+    ):
+        monkeypatch.setenv("CRON_SECRET", "too-short")
+        resp = await api_client.post(
+            "/api/v1/admin/cron/evaluate-all",
+            headers={"X-Cron-Secret": "too-short"},
+        )
+        assert resp.status_code == 503
+        assert "at least 32 characters" in resp.json()["detail"]
+
+    @pytest.mark.asyncio
     async def test_cron_evaluation_rejects_wrong_secret(
         self, api_client, monkeypatch
     ):
-        monkeypatch.setenv("CRON_SECRET", "expected-test-only-cron-secret")
+        monkeypatch.setenv("CRON_SECRET", "expected-test-only-cron-secret-with-32-plus-characters")
         resp = await api_client.post(
             "/api/v1/admin/cron/evaluate-all",
             headers={"X-Cron-Secret": "wrong-test-secret"},
