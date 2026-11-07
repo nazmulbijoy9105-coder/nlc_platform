@@ -685,7 +685,7 @@ class CompanyService(BaseService[Company]):
             # Capital
             "authorized_capital_bdt":       float(company.authorized_capital_bdt) if company.authorized_capital_bdt else 0.0,
             "paid_up_capital_bdt":          float(company.paid_up_capital_bdt) if company.paid_up_capital_bdt else 0.0,
-            "capital_increase_date":       getattr(company, "capital_increase_date", None),
+            "capital_increase_date":       None,  # unverified event date; legal engine remains NOT_EVALUATED
             "capital_increase_resolution": getattr(company, "capital_increase_resolution", None),
             "charges":                     [],
             # form_viii_filed removed — not a CompanyProfile field
@@ -785,12 +785,12 @@ class CompanyService(BaseService[Company]):
             # RJSC Form Filings
             "form_iii_filed":               getattr(company, "form_iii_filed", False),
             "form_iii_filed_date":          getattr(company, "form_iii_filed_date", None),
-            "form_iv_filed":                getattr(company, "form_iv_filed", False),
-            "form_iv_filed_date":           getattr(company, "form_iv_filed_date", None),
+            "form_iv_filed":                None,  # no evidence-bound Form IV status yet
+            "form_iv_filed_date":           None,
             "form_vi_filed":                getattr(company, "form_vi_filed", None),
             "form_vi_filed_date":           getattr(company, "form_vi_filed_date", None),
-            "form_xv_filed":                getattr(company, "form_xv_filed", None),
-            "form_xv_filed_date":           getattr(company, "form_xv_filed_date", None),
+            "form_xv_filed":                None,  # no evidence-bound Form XV status yet
+            "form_xv_filed_date":           None,
 
             # Annual Return Attachments
             "balance_sheet_attached":       getattr(company, "balance_sheet_attached", False),
@@ -866,18 +866,18 @@ class CompanyService(BaseService[Company]):
             "last_tax_return_filed_year":   getattr(company, "last_tax_return_filed_year", None),
 
             # Shareholders
-            "share_certificates_issued":     getattr(company, "share_certificates_issued", False),
-            "share_certificates_issued_date": getattr(company, "share_certificates_issued_date", None),
+            "share_certificates_issued":     None,  # no evidence-bound certificate status yet
+            "share_certificates_issued_date": None,
 
             # Misc
             "is_dormant":                    getattr(company, "is_dormant", False),
             "aoa_transfer_restriction":       getattr(company, "aoa_transfer_restriction", False),
             "is_fdi_registered":              getattr(company, "is_fdi_registered", False),
-            "last_allotment_date":            getattr(company, "last_allotment_date", None),
+            "last_allotment_date":            None,  # no authenticated allotment event provenance yet
             "registered_office_change_date":  getattr(company, "registered_office_change_date", None),
             "shareholder_change_date":        getattr(company, "shareholder_change_date", None),
             "has_foreign_shareholder":       getattr(company, "has_foreign_shareholder", False),
-            "capital_increase_special_resolution": getattr(company, "capital_increase_special_resolution", False),
+            "capital_increase_special_resolution": None,  # legacy assertion; resolution type requires Articles/source review
             "minimum_directors_met":        getattr(company, "minimum_directors_met", False),
             "registered_office_address":    getattr(company, "registered_office_address", None),
 
@@ -938,8 +938,8 @@ class CompanyService(BaseService[Company]):
             "fdi_registration_date": company.fdi_registration_date,
             "remittance_amount_usd": float(company.remittance_amount_usd) if company.remittance_amount_usd else 0.0,
             # Form filing status
-            "form_iii_filed": company.form_iii_filed,
-            "form_iv_filed": company.form_iv_filed,
+            "form_iii_filed": None,
+            "form_iv_filed": None,
             # RJSC strike-off
             "rjsc_status": company.rjsc_status or "ACTIVE",
             "rjsc_strike_off_notice_date": company.rjsc_strike_off_notice_date,
