@@ -250,6 +250,9 @@ async def test_database_rejects_allocation_mutation_without_invoice_reconciliati
         created_by=db_user.id,
     )
     db.add(allocation)
+    # Persist the allocation before changing invoice totals: the immediate
+    # invoice guard validates against the currently posted allocation rows.
+    await db.flush()
     invoice.paid_bdt = Decimal("25.00")
     invoice.balance_bdt = Decimal("75.00")
     invoice.status = "PARTIALLY_PAID"
@@ -261,7 +264,7 @@ async def test_database_rejects_allocation_mutation_without_invoice_reconciliati
         "SET CONSTRAINTS payment_allocations_invoice_reconciliation DEFERRED"
     ))
 
-    with pytest.raises(DBAPIError):
+    with pytest.raises(DBAPIError) as exc_info:
         async with db.begin_nested():
             if mutation == "UPDATE":
                 await db.execute(
@@ -285,4 +288,7 @@ async def test_database_rejects_allocation_mutation_without_invoice_reconciliati
             await db.execute(text(
                 "SET CONSTRAINTS payment_allocations_invoice_reconciliation IMMEDIATE"
             ))
+    # Migration 0073 rejects posted allocation edits/deletes at the BEFORE
+    # trigger, before deferred reconciliation can be evaluated.
+    assert getattr(exc_info.value.orig, "sqlstate", None) == "55000"
 
