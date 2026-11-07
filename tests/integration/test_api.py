@@ -578,7 +578,7 @@ class TestDocuments:
         assert isinstance(templates, list)
 
     @pytest.mark.asyncio
-    async def test_generate_document_invalid_template(self, api_client, legal_tok, db_company):
+    async def test_generate_document_invalid_template(self, api_client, legal_tok, db_company, legal_staff_company_scope):
         resp = await api_client.post(
             "/api/v1/documents/generate",
             headers=_auth(legal_tok),
@@ -601,7 +601,7 @@ class TestDocuments:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_list_documents_for_company(self, api_client, legal_tok, db_company):
+    async def test_list_documents_for_company(self, api_client, legal_tok, db_company, legal_staff_company_scope):
         resp = await api_client.get(
             f"/api/v1/documents/{db_company.id}",
             headers=_auth(legal_tok),
@@ -786,7 +786,7 @@ class TestDocuments:
         assert resp.status_code == 402
 
     @pytest.mark.asyncio
-    async def test_release_requires_approval_first(self, api_client, legal_tok, db, db_company):
+    async def test_release_requires_approval_first(self, api_client, legal_tok, db, db_company, legal_staff_company_scope):
         """Cannot release an unapproved document."""
         from app.models.documents import Document
         from app.models.enums import DocumentType
@@ -815,7 +815,7 @@ class TestDocuments:
         assert "approved" in resp.json()["detail"].lower()
 
     @pytest.mark.asyncio
-    async def test_ai_constitution_article3_enforced(self, api_client, db, legal_tok, db_company):
+    async def test_ai_constitution_article3_enforced(self, api_client, db, legal_tok, db_company, legal_staff_company_scope):
         """
         AI Constitution Article 3: Documents must never be auto-sent.
         auto_sent_blocked must always be True on generated documents.
