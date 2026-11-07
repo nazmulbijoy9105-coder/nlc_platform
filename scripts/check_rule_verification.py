@@ -179,8 +179,8 @@ def main() -> int:
         return 1
 
     canonical_source = canonical_path.read_text(encoding="utf-8")
-    canonical_severities = re.findall(r'"severity":\\s*"([^"]+)"', canonical_source)
-    canonical_impacts = re.findall(r'"score_impact":\\s*(\\d+)', canonical_source)
+    canonical_severities = re.findall(r'"severity":\s*"([^"]+)"', canonical_source)
+    canonical_impacts = re.findall(r'"score_impact":\s*(\d+)', canonical_source)
     if any(value != "NOT_EVALUATED" for value in canonical_severities):
         print("FAIL: canonical statutory rule registry contains a publishable severity")
         return 1
@@ -190,7 +190,7 @@ def main() -> int:
 
     matrix_rows = [
         line for line in matrix_path.read_text(encoding="utf-8").splitlines()
-        if re.match(r"^\\| [A-Z]{2,5}-\\d{3} \\|", line)
+        if re.match(r"^\| [A-Z]{2,5}-\d{3} \|", line)
     ]
     if len(matrix_rows) != len(seed) or any(
         "| NOT_EVALUATED | 0 | no |" not in line for line in matrix_rows
