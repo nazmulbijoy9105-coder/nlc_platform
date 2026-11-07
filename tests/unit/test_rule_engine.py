@@ -548,94 +548,97 @@ class TestShareholderRules:
 # =============================================================================
 
 class TestTransferRules:
-    """Tests for TR-001 through TR-006. TR-005 is a BLACK override."""
+    """Transfer tests assert evidence-aware review signals, never automatic invalidity."""
 
-    def test_TR001_triggers_no_instrument(self, rule_engine, build_profile, make_share_transfer):
-        """Transfer with no written instrument → TR-001."""
+    def test_TR001_triggers_only_on_explicitly_verified_missing_instrument(self, rule_engine, build_profile, make_share_transfer):
         transfer = make_share_transfer(instrument_recorded=False)
-        profile = build_profile(share_transfers=[transfer])
-        output = rule_engine.evaluate(profile)
+        output = rule_engine.evaluate(build_profile(share_transfers=[transfer]))
         assert_flag_triggered(output, "TR-001")
+        flag = next(f for f in output.flags if f.rule_id == "TR-001")
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
 
-    def test_TR002_triggers_stamp_duty_not_paid(self, rule_engine, build_profile, make_share_transfer):
-        """Transfer without stamp duty payment → TR-002."""
+    def test_TR001_unknown_instrument_status_does_not_infer_absence(self, rule_engine, build_profile, make_share_transfer):
+        transfer = make_share_transfer()
+        output = rule_engine.evaluate(build_profile(share_transfers=[transfer]))
+        assert_flag_not_triggered(output, "TR-001")
+
+    def test_TR002_requires_explicit_unpaid_status(self, rule_engine, build_profile, make_share_transfer):
         transfer = make_share_transfer(stamp_duty_paid=False, stamp_duty_amount=0)
-        profile = build_profile(share_transfers=[transfer])
-        output = rule_engine.evaluate(profile)
+        output = rule_engine.evaluate(build_profile(share_transfers=[transfer]))
         assert_flag_triggered(output, "TR-002")
+        flag = next(f for f in output.flags if f.rule_id == "TR-002")
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
 
-    def test_TR005_triggers_void_transfer_no_approval(self, rule_engine, build_profile, make_share_transfer):
-        """Transfer without board approval under an applicable AoA restriction → TR-005."""
-        transfer = make_share_transfer(
-            aoa_restriction_apply=True,
-            board_approval=False,
-            board_approval_obtained=False,
+    def test_TR003_only_applies_when_articles_restriction_is_verified(self, rule_engine, build_profile, make_share_transfer):
+        no_restriction = make_share_transfer(aoa_restriction_apply=False, board_approval_obtained=False)
+        assert_flag_not_triggered(rule_engine.evaluate(build_profile(share_transfers=[no_restriction])), "TR-003")
+
+        restricted = make_share_transfer(aoa_restriction_apply=True, board_approval_obtained=False)
+        output = rule_engine.evaluate(build_profile(share_transfers=[restricted]))
+        assert_flag_triggered(output, "TR-003")
+        flag = next(f for f in output.flags if f.rule_id == "TR-003")
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
+
+    def test_TR004_only_checks_notice_after_verified_refusal(self, rule_engine, build_profile, make_share_transfer):
+        unrelated = make_share_transfer(share_register_updated=False)
+        assert_flag_not_triggered(rule_engine.evaluate(build_profile(share_transfers=[unrelated])), "TR-004")
+
+        refused = make_share_transfer(
+            registration_refused=True,
+            refusal_notice_sent=False,
+            instrument_lodged_date=date.today() - timedelta(days=31),
         )
-        profile = build_profile(share_transfers=[transfer])
-        output = rule_engine.evaluate(profile)
-        assert_flag_triggered(output, "TR-005")
-
-    def test_TR004_triggers_register_not_updated(self, rule_engine, build_profile, make_share_transfer):
-        """Transfer completed but share register not updated → TR-004."""
-        transfer = make_share_transfer(share_register_updated=False)
-        profile = build_profile(share_transfers=[transfer])
-        output = rule_engine.evaluate(profile)
+        output = rule_engine.evaluate(build_profile(share_transfers=[refused]))
         assert_flag_triggered(output, "TR-004")
+        flag = next(f for f in output.flags if f.rule_id == "TR-004")
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
 
-    @pytest.mark.black
-    def test_TR005_triggers_aoa_violation(self, rule_engine, build_profile, make_share_transfer):
-        """Transfer violating AoA restriction → TR-005 BLACK override."""
+    def test_TR005_is_review_only_not_automatic_void_or_black(self, rule_engine, build_profile, make_share_transfer):
         transfer = make_share_transfer(
             aoa_restriction_apply=True,
             board_approval_obtained=False,
+            transfer_registered=True,
         )
-        profile = build_profile(
-            share_transfers=[transfer],
-            aoa_transfer_restriction=True,
-        )
-        output = rule_engine.evaluate(profile)
+        output = rule_engine.evaluate(build_profile(share_transfers=[transfer]))
         assert_flag_triggered(output, "TR-005")
-
-    @pytest.mark.black
-    def test_TR005_unapproved_legal_mapping_does_not_force_black(self, rule_engine, build_profile, make_share_transfer):
-        """TR-005 remains visible but cannot force BLACK before independent legal approval."""
-        transfer = make_share_transfer(
-            aoa_restriction_apply=True,
-            board_approval_obtained=False,
-        )
-        profile = build_profile(share_transfers=[transfer], aoa_transfer_restriction=True)
-        output = rule_engine.evaluate(profile)
-        assert_flag_triggered(output, "TR-005")
+        flag = next(f for f in output.flags if f.rule_id == "TR-005")
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
+        assert flag.is_black_override is False
         assert output.score_breakdown.override_applied is False
-        assert output.score_breakdown.final_score == 100
 
-    def test_TR006_triggers_composite_irregular(self, rule_engine, build_profile, make_share_transfer):
-        """Multiple irregularities in one transfer → TR-006 RED."""
+    def test_TR006_composite_is_review_only(self, rule_engine, build_profile, make_share_transfer):
         transfer = make_share_transfer(
             instrument_recorded=False,
             stamp_duty_paid=False,
-            board_approval=False,
         )
-        profile = build_profile(share_transfers=[transfer])
-        output = rule_engine.evaluate(profile)
+        output = rule_engine.evaluate(build_profile(share_transfers=[transfer]))
         assert_flag_triggered(output, "TR-006")
+        flag = next(f for f in output.flags if f.rule_id == "TR-006")
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
 
-    def test_no_transfer_flags_when_compliant(self, rule_engine, build_profile, make_share_transfer):
+    def test_no_transfer_flags_when_all_relevant_facts_are_verified_clear(self, rule_engine, build_profile, make_share_transfer):
         transfer = make_share_transfer(
             instrument_recorded=True,
             stamp_duty_paid=True,
-            board_approval=True,
+            board_approval_obtained=True,
             share_register_updated=True,
             aoa_restriction_apply=False,
+            transfer_registered=True,
+            registration_refused=False,
+            refusal_notice_sent=True,
         )
-        profile = build_profile(share_transfers=[transfer])
-        output = rule_engine.evaluate(profile)
+        output = rule_engine.evaluate(build_profile(share_transfers=[transfer]))
         for rule_id in ["TR-001", "TR-002", "TR-003", "TR-004", "TR-005", "TR-006"]:
             assert_flag_not_triggered(output, rule_id)
 
     def test_no_transfer_flags_when_no_transfers(self, rule_engine, build_profile):
-        profile = build_profile(share_transfers=[])
-        output = rule_engine.evaluate(profile)
+        output = rule_engine.evaluate(build_profile(share_transfers=[]))
         for rule_id in ["TR-001", "TR-002", "TR-003", "TR-004", "TR-005", "TR-006"]:
             assert_flag_not_triggered(output, rule_id)
 
