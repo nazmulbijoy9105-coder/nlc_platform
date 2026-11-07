@@ -455,6 +455,32 @@ class TestAnnualReturnRules:
 # MODULE: DIRECTORS (4 rules)
 # =============================================================================
 
+class TestDirectorConsentEvidence:
+    def test_DIR007_is_separate_from_form_xii(self, rule_engine, build_profile, make_director_change):
+        change = make_director_change(
+            days_ago=45,
+            form_filed=True,
+            consent_filed=False,
+            consent_verified=True,
+            consent_evidence_ref="evidence://director/consent-check",
+        )
+        output = rule_engine.evaluate(build_profile(director_changes=[change]))
+        assert_flag_triggered(output, "DIR-007")
+        flag = next(f for f in output.flags if f.rule_id == "DIR-007")
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
+
+    def test_DIR007_does_not_infer_missing_consent_without_verified_evidence(self, rule_engine, build_profile, make_director_change):
+        change = make_director_change(
+            days_ago=45,
+            form_filed=True,
+            consent_filed=False,
+            consent_verified=False,
+            consent_evidence_ref=None,
+        )
+        assert_flag_not_triggered(rule_engine.evaluate(build_profile(director_changes=[change])), "DIR-007")
+
+
 class TestDirectorRules:
     """Tests for DIR-001 through DIR-004."""
 
