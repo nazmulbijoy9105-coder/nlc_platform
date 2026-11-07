@@ -480,17 +480,30 @@ def make_director_change():
     def _make(
         event_type: str = "appointment",
         days_ago: int = 400,
-        form_filed: bool = False,
+        form_filed: bool | None = False,
         form_filed_days_ago: int | None = None,
+        form_filed_verified: bool = True,
+        form_filed_evidence_ref: str | None = "evidence://test/form-xii",
+        consent_filed: bool | None = None,
+        consent_filed_days_ago: int | None = None,
+        consent_verified: bool = False,
+        consent_evidence_ref: str | None = None,
     ) -> DirectorChange:
         today = date.today()
         filed_date = today - timedelta(days=form_filed_days_ago) if form_filed and form_filed_days_ago else None
+        consent_date = today - timedelta(days=consent_filed_days_ago) if consent_filed and consent_filed_days_ago else None
         return DirectorChange(
             director_id=str(uuid.uuid4()),
             event_type=event_type,
             event_date=today - timedelta(days=days_ago),
             form_filed=form_filed,
             form_filed_date=filed_date,
+            form_filed_verified=form_filed_verified,
+            form_filed_evidence_ref=form_filed_evidence_ref,
+            consent_filed=consent_filed,
+            consent_filed_date=consent_date,
+            consent_verified=consent_verified,
+            consent_evidence_ref=consent_evidence_ref,
         )
 
     return _make
