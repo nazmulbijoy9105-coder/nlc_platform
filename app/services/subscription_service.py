@@ -17,6 +17,7 @@ from app.models.finance import (
     Invoice,
     Payment,
     PaymentAllocation,
+    PaymentSubmission,
 )
 from app.models.subscription import (
     ClientSubscriptionFeature,
@@ -735,6 +736,62 @@ class SubscriptionService:
             ))
         await self.db.flush()
         return counts
+
+    async def cancel_pending_by_staff(
+        self, *, subscription_id: uuid.UUID, actor_id: uuid.UUID, reason: str
+    ) -> ClientSubscription:
+        reason = reason.strip()
+        if not reason:
+            raise SubscriptionConflictError("A cancellation reason is required")
+        result = await self.db.execute(
+            select(ClientSubscription)
+            .where(ClientSubscription.id == subscription_id)
+            .with_for_update()
+        )
+        subscription = result.scalar_one_or_none()
+        if subscription is None:
+            raise SubscriptionNotFoundError("Subscription not found")
+        if subscription.status != "PENDING":
+            raise SubscriptionConflictError("Only a pending subscription request can be cancelled by finance")
+        if subscription.invoice_id is not None:
+            invoice = await self.db.execute(
+                select(Invoice)
+                .where(
+                    Invoice.id == subscription.invoice_id,
+                    Invoice.company_id == subscription.company_id,
+                )
+                .with_for_update()
+            )
+            invoice = invoice.scalar_one_or_none()
+            if invoice is None:
+                raise SubscriptionConflictError("Linked subscription invoice is missing")
+            if invoice.status not in ("ISSUED", "OVERDUE") or invoice.paid_bdt != 0 or invoice.balance_bdt != invoice.total_bdt:
+                raise SubscriptionConflictError("Subscription invoice has payment activity or is not voidable")
+            pending_claim = await self.db.execute(
+                select(PaymentSubmission.id)
+                .where(
+                    PaymentSubmission.invoice_id == invoice.id,
+                    PaymentSubmission.company_id == subscription.company_id,
+                    PaymentSubmission.status == "PENDING_REVIEW",
+                )
+                .limit(1)
+            )
+            if pending_claim.scalar_one_or_none() is not None:
+                raise SubscriptionConflictError("Reject or resolve pending payment submissions before voiding this subscription invoice")
+            invoice.status = "VOID"
+        now = datetime.now(UTC)
+        subscription.status = "CANCELLED"
+        subscription.cancelled_at = now
+        self.db.add(SubscriptionEvent(
+            subscription_id=subscription.id,
+            company_id=subscription.company_id,
+            event_type="CANCELLED",
+            actor_id=actor_id,
+            invoice_id=subscription.invoice_id,
+            event_metadata={"reason": reason, "cancelled_at": now.isoformat(), "voided_invoice": subscription.invoice_id is not None},
+        ))
+        await self.db.flush()
+        return subscription
 
     async def suspend(
         self, *, subscription_id: uuid.UUID, actor_id: uuid.UUID, reason: str
