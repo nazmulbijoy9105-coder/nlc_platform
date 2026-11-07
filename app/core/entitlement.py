@@ -108,21 +108,30 @@ async def _company_contexts(
         from app.models.filings import AGM, AnnualReturn, Audit
         from app.models.infrastructure import StatutoryRegister
 
-        resource_models = {
-            "agm_id": AGM,
-            "audit_id": Audit,
-            "return_id": AnnualReturn,
-            "register_id": StatutoryRegister,
-        }
-        resource_model = resource_models[resource_param]
-        result = await db.execute(
-            select(resource_model.company_id)
-            .where(resource_model.id == resource_id)
-            .limit(1)
-        )
-        company_id = result.scalar_one_or_none()
-        if company_id is None:
+        if resource_param == "agm_id":
+            result = await db.execute(
+                select(AGM.company_id).where(AGM.id == resource_id).limit(1)
+            )
+        elif resource_param == "audit_id":
+            result = await db.execute(
+                select(Audit.company_id).where(Audit.id == resource_id).limit(1)
+            )
+        elif resource_param == "return_id":
+            result = await db.execute(
+                select(AnnualReturn.company_id)
+                .where(AnnualReturn.id == resource_id)
+                .limit(1)
+            )
+        else:
+            result = await db.execute(
+                select(StatutoryRegister.company_id)
+                .where(StatutoryRegister.id == resource_id)
+                .limit(1)
+            )
+        resource_company_id = result.scalar_one_or_none()
+        if resource_company_id is None:
             raise HTTPException(status_code=404, detail="Filing record not found")
+        company_id = resource_company_id
 
         if role_value == "LEGAL_STAFF":
             from app.core.company_authorization import ensure_staff_company_scope
