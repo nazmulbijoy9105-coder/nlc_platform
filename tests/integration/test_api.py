@@ -1187,6 +1187,39 @@ class TestSubscriptionEntitlementRouteGates:
         assert response.status_code == 402
 
     @pytest.mark.asyncio
+    async def test_client_document_pdf_requires_paid_entitlement(
+        self, api_client, db_client_user, db_company, db
+    ):
+        from app.core.security import create_access_token
+        from app.models.documents import Document
+        from app.models.enums import DocumentType
+
+        document = Document(
+            company_id=db_company.id,
+            document_type=DocumentType.OTHER,
+            title="Entitlement gate regression",
+            s3_key="private/entitlement-gate-regression.pdf",
+            human_approved=True,
+            is_client_visible=True,
+        )
+        db.add(document)
+        await db.flush()
+
+        token = create_access_token({
+            "sub": str(db_client_user.id),
+            "user_id": str(db_client_user.id),
+            "type": "access",
+            "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email,
+            "company_ids": [str(db_company.id)],
+        })
+        response = await api_client.get(
+            f"/api/v1/documents/detail/{document.id}/pdf",
+            headers=_auth(token),
+        )
+        assert response.status_code == 402, (response.status_code, response.text)
+
+    @pytest.mark.asyncio
     async def test_client_filing_routes_require_paid_entitlement(
         self, api_client, db_client_user, db_company
     ):
