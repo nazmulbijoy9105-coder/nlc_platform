@@ -230,6 +230,10 @@ def main() -> int:
         print("FAIL: verified rule allowlist must remain empty until counsel approval")
         return 1
 
+    if not re.search(r"^BLACK_OVERRIDE_RULES:\s*set\[str\]\s*=\s*set\(\)\s*$", engine_source, re.MULTILINE):
+        print("FAIL: unapproved legal rule catalogue must not define BLACK overrides")
+        return 1
+
     print(f"PASS: all {len(seed)} rules remain REVIEW_REQUIRED and score-ineligible")
     print("PASS: statutory scoring release flag is disabled and verified allowlist is empty")
     return 0
