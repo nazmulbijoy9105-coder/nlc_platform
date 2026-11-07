@@ -24,7 +24,7 @@ BSEC-003|Board Composition Non-Compliant|BSEC Corporate Governance Code 2023, Pa
 BSEC-004|Audit Committee Not Established|BSEC Corporate Governance Code 2023, Para 6|YELLOW|5|f|t
 CAP-001|Capital Alteration Without Board Resolution|Section 54, Companies Act 1994 (Bangladesh)|YELLOW|10|f|t
 CAP-002|Charge Not Filed with RJSC|Section 107, Companies Act 1994 (Bangladesh)|YELLOW|10|f|t
-CAP-003|Capital Reduction Without Court Order|Companies Act 1994, Section 100|BLACK|15|t|t
+CAP-003|Capital Reduction — Court Confirmation Review|Companies Act 1994, Sections 59-60|NOT_EVALUATED|0|f|t
 CAP-004|Special Resolution Not Filed|Companies Act 1994, Section 87|YELLOW|8|f|t
 CHG-001|Charge Satisfaction Not Filed|Companies Act 1994, Section 87|YELLOW|3|f|t
 DEF-001|Director Disqualification Risk|Companies Act 1994, Section 297|BLACK|15|t|t
