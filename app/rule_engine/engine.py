@@ -476,9 +476,13 @@ REQUIRED_REGISTERS = [
 ]
 CORE_REGISTERS = ["members", "directors", "charges", "minutes_agm"]
 
-# Legacy set — retained for rule_ids that should be override but may not have
-# is_black_override=True set correctly. Currently empty; all overrides use
-# inline is_black_override=True on the flag itself.
+# Explicit counsel-authorized BLACK override allowlist. A rule being
+# marked BLACK in engine code is not sufficient authority to force a BLACK
+# score. Keep this empty until each rule has independent approval recorded
+# in the signed legal approval register and the release process authorizes it.
+AUTHORIZED_BLACK_OVERRIDE_RULE_IDS: frozenset[str] = frozenset()
+
+# Backward-compatible alias; never use this set to grant authorization.
 BLACK_OVERRIDE_RULES: set[str] = set()
 
 # 100-point scoring model v2 - per-category deduction caps.
@@ -2789,14 +2793,24 @@ class NLCRuleEngine:
         pre_score = self._calculate_raw_score(self._flags)
         has_black_override = any(
             f.rule_id in VERIFIED_RULE_IDS
+            and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
             and f.is_black_override
             and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and f.eval_state == "VIOLATION"
             for f in self._flags if not f.resolved and f.conditional_applies
         )
-        
+
         if LEGAL_SCORE_RELEASED and (pre_score <= 29 or has_black_override):
-            black_count = len([f for f in self._flags if f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION" and not f.resolved and f.conditional_applies and f.rule_id not in self._ESC_RULE_IDS])
+            black_count = len([
+                f for f in self._flags
+                if f.rule_id in VERIFIED_RULE_IDS
+                and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+                and f.is_black_override
+                and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+                and f.eval_state == "VIOLATION"
+                and not f.resolved and f.conditional_applies
+                and f.rule_id not in self._ESC_RULE_IDS
+            ])
             esc003_impact = 10 if black_count <= 2 else (25 if black_count == 3 else 35)
             self._add_flag(ComplianceFlag(
                 rule_id="ESC-003",
@@ -2934,7 +2948,8 @@ class NLCRuleEngine:
             critical = [
                 f for f in active
                 if f.rule_id in VERIFIED_RULE_IDS
-                and (f.is_black_override or f.severity == Severity.BLACK)
+                and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+                and f.is_black_override
                 and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
                 and f.eval_state == "VIOLATION"
             ]
@@ -2957,11 +2972,19 @@ class NLCRuleEngine:
             severity_rank = {Severity.GREEN: 0, Severity.YELLOW: 1, Severity.RED: 2, Severity.BLACK: 3}
             max_flag_severity = Severity.GREEN
             for f in active:
-                if (f.rule_id in VERIFIED_RULE_IDS
-                        and f.severity in severity_rank
-                        and f.severity in (Severity.RED, Severity.BLACK)
-                        and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
-                        and f.eval_state == "VIOLATION"):
+                if (
+                    f.rule_id in VERIFIED_RULE_IDS
+                    and (
+                        f.severity == Severity.RED
+                        or (
+                            f.severity == Severity.BLACK
+                            and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+                            and f.is_black_override
+                        )
+                    )
+                    and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+                    and f.eval_state == "VIOLATION"
+                ):
                     if severity_rank[f.severity] > severity_rank.get(max_flag_severity, 0):
                         max_flag_severity = f.severity
             band_rank = severity_rank.get(score_band, 0)
