@@ -136,7 +136,7 @@ def _rule_to_response(rule) -> RuleResponse:
         revenue_tier=str(rule.revenue_tier) if approved else "COMPLIANCE_PACKAGE",
         is_black_override=rule.is_black_override if approved else False,
         is_active=bool(rule.is_active and approved),
-        verification_status=rule.verification_status if approved else "PENDING_COUNSEL_REVIEW",
+        verification_status=rule.verification_status if approved else "PENDING",
         verified_at=rule.verified_at.isoformat() if approved and rule.verified_at else None,
         statutory_effective_date=(
             rule.statutory_effective_date.isoformat()
