@@ -151,6 +151,7 @@ def _doc_to_response(doc) -> DocumentResponse:
     summary="List all documents across portfolio",
 )
 async def list_all_documents(
+    request: Request,
     company_id: uuid.UUID | None = None,
     document_type: DocumentType | None = None,
     current_user: User = Depends(get_current_user),
@@ -171,11 +172,15 @@ async def list_all_documents(
             await ensure_staff_company_scope(company_id, current_user, db)
         filters.append(Document.company_id == company_id)  # type: ignore
     if is_client:
-        accessible = select(CompanyUserAccess.company_id).where(
-            CompanyUserAccess.user_id == current_user.id,
-            CompanyUserAccess.is_active.is_(True),
-        )
-        filters.append(Document.company_id.in_(accessible))  # type: ignore
+        entitled_ids = [
+            uuid.UUID(value)
+            for value in getattr(request.state, "entitled_company_ids", [])
+        ]
+        if company_id is not None:
+            entitled_ids = [company_id] if company_id in entitled_ids else []
+        if not entitled_ids:
+            raise HTTPException(status_code=402, detail="No company in this portfolio has an active document-management entitlement.")
+        filters.append(Document.company_id.in_(entitled_ids))  # type: ignore
     elif current_user.role == "LEGAL_STAFF":
         assigned_or_accessible = select(Company.id).where(
             or_(
@@ -382,9 +387,21 @@ async def list_documents(
 
 # ---------------------------------------------------------------------------
 
-async def _assert_document_entitlement(current_user: User) -> None:
-    """Fail closed for client document access until company subscriptions exist."""
-    await require_entitlement("document_management")(current_user)
+async def _assert_document_entitlement(doc, current_user: User, db: AsyncSession) -> None:
+    """Verify the entitlement against the document's actual owning company."""
+    role = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    if role in ("SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF"):
+        return
+    from app.services.subscription_service import SubscriptionService
+
+    if not await SubscriptionService(db).has_entitlement(
+        company_id=doc.company_id,
+        feature_code="document_management",
+    ):
+        raise HTTPException(
+            status_code=402,
+            detail="This company does not have an active document-management entitlement.",
+        )
 
 
 async def _assert_document_company_access(
@@ -438,7 +455,7 @@ async def get_document(
 
     # Explicit company-access check (IDOR defence — path has no company_id)
     await _assert_document_company_access(doc, current_user, db)
-    await _assert_document_entitlement(current_user)
+    await _assert_document_entitlement(doc, current_user, db)
 
     # SEC-010: Verify company ownership
     if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):
