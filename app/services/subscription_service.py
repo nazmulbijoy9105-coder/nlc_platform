@@ -228,7 +228,11 @@ class SubscriptionService:
             if (
                 existing.ends_at is None
                 or existing.ends_at > now
-                or (existing.grace_ends_at is not None and existing.grace_ends_at > now)
+                or (
+                    not existing.cancel_at_period_end
+                    and existing.grace_ends_at is not None
+                    and existing.grace_ends_at > now
+                )
             ):
                 raise SubscriptionConflictError("This company already has a current subscription term")
 
@@ -561,6 +565,67 @@ class SubscriptionService:
         ))
         await self.db.flush()
         return subscription
+
+    async def process_due_subscriptions(self, *, actor_id: uuid.UUID) -> dict[str, int]:
+        """Advance expired terms and cancellation/grace transitions in a daily staff job."""
+        now = datetime.now(UTC)
+        active_result = await self.db.execute(
+            select(ClientSubscription)
+            .where(
+                ClientSubscription.status == "ACTIVE",
+                ClientSubscription.ends_at.is_not(None),
+                ClientSubscription.ends_at <= now,
+            )
+            .order_by(ClientSubscription.company_id, ClientSubscription.id)
+            .with_for_update(skip_locked=True)
+        )
+        counts = {"past_due": 0, "expired": 0, "cancelled": 0}
+        for subscription in active_result.scalars().all():
+            if subscription.cancel_at_period_end:
+                subscription.status = "CANCELLED"
+                subscription.cancelled_at = subscription.ends_at or now
+                event_type = "CANCELLED"
+                counts["cancelled"] += 1
+            elif subscription.grace_ends_at is not None and subscription.grace_ends_at > now:
+                subscription.status = "PAST_DUE"
+                event_type = "PAST_DUE"
+                counts["past_due"] += 1
+            else:
+                subscription.status = "EXPIRED"
+                event_type = "EXPIRED"
+                counts["expired"] += 1
+            self.db.add(SubscriptionEvent(
+                subscription_id=subscription.id,
+                company_id=subscription.company_id,
+                event_type=event_type,
+                actor_id=actor_id,
+                invoice_id=subscription.invoice_id,
+                event_metadata={"processed_at": now.isoformat()},
+            ))
+
+        grace_result = await self.db.execute(
+            select(ClientSubscription)
+            .where(
+                ClientSubscription.status == "PAST_DUE",
+                ClientSubscription.grace_ends_at.is_not(None),
+                ClientSubscription.grace_ends_at <= now,
+            )
+            .order_by(ClientSubscription.company_id, ClientSubscription.id)
+            .with_for_update(skip_locked=True)
+        )
+        for subscription in grace_result.scalars().all():
+            subscription.status = "EXPIRED"
+            self.db.add(SubscriptionEvent(
+                subscription_id=subscription.id,
+                company_id=subscription.company_id,
+                event_type="EXPIRED",
+                actor_id=actor_id,
+                invoice_id=subscription.invoice_id,
+                event_metadata={"grace_expired_at": now.isoformat()},
+            ))
+            counts["expired"] += 1
+        await self.db.flush()
+        return counts
 
     async def suspend(
         self, *, subscription_id: uuid.UUID, actor_id: uuid.UUID, reason: str
