@@ -57,8 +57,8 @@ def _integrity_constraint_name(error: IntegrityError) -> str | None:
     # asyncpg's UniqueViolationError omits PostgreSQL's constraint_name
     # diagnostic from its public attributes; the trigger includes a stable
     # constraint token in its message so service errors remain deterministic.
-    if "uq_wallet_reference_across_finance_tables" in str(original):
-        return "uq_wallet_reference_across_finance_tables"
+    if "uq_manual_reference_across_finance_tables" in str(original):
+        return "uq_manual_reference_across_finance_tables"
     return None
 
 
@@ -210,10 +210,10 @@ class FinanceService:
         # submissions on the normalized provider reference, then check both
         # pending/approved claims and already-posted receipts. The unique
         # database indexes remain the final integrity boundary.
-        if method in {"BKASH_MANUAL", "NAGAD_MANUAL"}:
+        if method in {"BANK_TRANSFER", "CHEQUE"}:
             assert payer_reference is not None  # required by the method check above
             normalized_reference = payer_reference.strip().lower()
-            reference_lock_key = f"nlc:wallet-reference:{method}:{normalized_reference}"
+            reference_lock_key = f"nlc:manual-reference:{method}:{normalized_reference}"
             await self.db.execute(
                 text("SELECT pg_advisory_xact_lock(hashtextextended(:lock_key, 0))"),
                 {"lock_key": reference_lock_key},
@@ -239,7 +239,7 @@ class FinanceService:
                 or duplicate_payment.scalar_one_or_none() is not None
             ):
                 raise FinanceConflictError(
-                    "This manual wallet transaction reference has already been submitted or credited"
+                    "This manual payment reference has already been submitted or credited"
                 )
 
         invoice = await self._locked_invoice(invoice_id, company_id)
@@ -290,11 +290,11 @@ class FinanceService:
                 await self.db.flush()
         except IntegrityError as exc:
             if _integrity_constraint_name(exc) in {
-                "uq_payment_submission_wallet_reference",
-                "uq_wallet_reference_across_finance_tables",
+                "uq_payment_submission_manual_reference",
+                "uq_manual_reference_across_finance_tables",
             }:
                 raise FinanceConflictError(
-                    "This manual wallet transaction reference has already been submitted or credited"
+                    "This manual payment reference has already been submitted or credited"
                 ) from exc
             raise
         return submission
@@ -358,11 +358,11 @@ class FinanceService:
         ):
             raise FinanceConflictError("Cheque clearance time cannot precede the payment date")
 
-        if submission.method in {"BKASH_MANUAL", "NAGAD_MANUAL"}:
+        if submission.method in {"BANK_TRANSFER", "CHEQUE"}:
             assert submission.payer_reference is not None
             normalized_reference = submission.payer_reference.strip().lower()
             reference_lock_key = (
-                f"nlc:wallet-reference:{submission.method}:{normalized_reference}"
+                f"nlc:manual-reference:{submission.method}:{normalized_reference}"
             )
             await self.db.execute(
                 text("SELECT pg_advisory_xact_lock(hashtextextended(:lock_key, 0))"),
@@ -378,7 +378,7 @@ class FinanceService:
             )
             if existing_payment.scalar_one_or_none() is not None:
                 raise FinanceConflictError(
-                    "This manual wallet transaction reference has already been credited"
+                    "This manual payment reference has already been credited"
                 )
 
         invoice = await self._locked_invoice(submission.invoice_id, submission.company_id)
@@ -425,11 +425,11 @@ class FinanceService:
                 await self.db.flush()
         except IntegrityError as exc:
             if _integrity_constraint_name(exc) in {
-                "uq_payment_wallet_reference",
-                "uq_wallet_reference_across_finance_tables",
+                "uq_payment_manual_reference",
+                "uq_manual_reference_across_finance_tables",
             }:
                 raise FinanceConflictError(
-                    "This manual wallet transaction reference has already been credited"
+                    "This manual payment reference has already been credited"
                 ) from exc
             raise
 
