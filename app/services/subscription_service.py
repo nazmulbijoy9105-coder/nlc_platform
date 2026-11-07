@@ -608,12 +608,29 @@ class SubscriptionService:
             raise SubscriptionNotFoundError("Subscription not found for this company")
         if subscription.created_by != actor_id:
             raise SubscriptionNotFoundError("Subscription not found for this company")
+        if subscription.status == "CANCELLED" and subscription.invoice_id is None:
+            return subscription
+        if subscription.status == "PENDING":
+            if subscription.invoice_id is not None:
+                raise SubscriptionConflictError("A subscription invoice has already been issued; contact NLC finance staff to resolve it before cancellation")
+            now = datetime.now(UTC)
+            subscription.status = "CANCELLED"
+            subscription.cancelled_at = now
+            self.db.add(SubscriptionEvent(
+                subscription_id=subscription.id,
+                company_id=company_id,
+                event_type="CANCELLED",
+                actor_id=actor_id,
+                event_metadata={"reason": "customer_cancelled_before_invoice", "cancelled_at": now.isoformat()},
+            ))
+            await self.db.flush()
+            return subscription
         if (
             subscription.status != "ACTIVE"
             or subscription.ends_at is None
             or subscription.ends_at <= datetime.now(UTC)
         ):
-            raise SubscriptionConflictError("Only a recurring subscription before its period end can be cancelled at period end")
+            raise SubscriptionConflictError("Only an active recurring subscription before its period end can be cancelled at period end")
         if subscription.cancel_at_period_end:
             return subscription
         subscription.cancel_at_period_end = True
