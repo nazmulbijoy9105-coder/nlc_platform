@@ -123,3 +123,15 @@ async def test_unsigned_admin_guc_cannot_authorize_articles_staff_write(
         text("SELECT public.nlc_current_user_is_staff()")
     )
     assert staff.scalar_one() is False
+
+
+@pytest.mark.asyncio
+async def test_legacy_agm_evidence_reference_uses_canonical_text_type(db):
+    result = await db.execute(
+        text(
+            "SELECT data_type FROM information_schema.columns "
+            "WHERE table_schema = 'public' AND table_name = 'agms' "
+            "AND column_name = 'members_present_evidence_ref'"
+        )
+    )
+    assert result.scalar_one() == "text"
