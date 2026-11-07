@@ -73,9 +73,12 @@ async def test_direct_payment_insert_cannot_reuse_existing_submission_reference(
         evidence_document_id=None,
     )
 
-    with pytest.raises(DBAPIError, match="uq_wallet_reference_across_finance_tables"):
+    with pytest.raises(DBAPIError) as exc_info:
         async with db.begin_nested():
             await _insert_payment(db, db_company.id, db_user.id, " txn-cross-table-01 ")
+    assert getattr(exc_info.value.orig, "constraint_name", None) == (
+        "uq_wallet_reference_across_finance_tables"
+    )
 
 
 @pytest.mark.asyncio
@@ -87,7 +90,7 @@ async def test_direct_submission_insert_cannot_reuse_existing_payment_reference(
     reference = f"Txn-Cross-Table-{uuid.uuid4().hex}"
     await _insert_payment(db, db_company.id, db_user.id, reference)
 
-    with pytest.raises(DBAPIError, match="uq_wallet_reference_across_finance_tables"):
+    with pytest.raises(DBAPIError) as exc_info:
         async with db.begin_nested():
             await db.execute(
                 text("""
@@ -107,3 +110,7 @@ async def test_direct_submission_insert_cannot_reuse_existing_payment_reference(
                     "reference": reference.upper(),
                 },
             )
+
+    assert getattr(exc_info.value.orig, "constraint_name", None) == (
+        "uq_wallet_reference_across_finance_tables"
+    )
