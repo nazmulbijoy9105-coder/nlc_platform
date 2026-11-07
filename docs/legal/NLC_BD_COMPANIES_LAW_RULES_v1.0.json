@@ -611,8 +611,8 @@
       "company_types": [
         "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
       ],
-      "applicability_conditions": "Rule-specific company type, statutory trigger, effective date, exemptions, exceptions, extensions, orders and evidence must be verified; unknown or missing facts remain NOT_EVALUATED.",
-      "evidence_requirements": "Obtain the authoritative primary instrument, authentic event/filing evidence, identity and issuer verification, provenance, timestamps, current status, exceptions and extension records; independent counsel approval required.",
+      "applicability_conditions": "Only when a company proposes or has completed a reduction of share capital; verify the Articles, share classes, special resolution, court process, creditor protection and registration. A pending workflow is not proof of an unlawful completed reduction.",
+      "evidence_requirements": "Special resolution and meeting record; court application, order and sealed copy; creditor notices/objections; Registrar registration evidence; dated capital structure before and after reduction.",
       "reviewer": null,
       "review_date": null
     },
@@ -1048,8 +1048,8 @@
       "company_types": [
         "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
       ],
-      "applicability_conditions": "Rule-specific company type, statutory trigger, effective date, exemptions, exceptions, extensions, orders and evidence must be verified; unknown or missing facts remain NOT_EVALUATED.",
-      "evidence_requirements": "Obtain the authoritative primary instrument, authentic event/filing evidence, identity and issuer verification, provenance, timestamps, current status, exceptions and extension records; independent counsel approval required.",
+      "applicability_conditions": "Foreign-shareholder cases involving a relevant share issue or inward remittance only. Verify the applicable GFET route, current Bangladesh Bank circular, FC-account retention option, special-zone regime, transaction date and whether an encashment certificate is legally required. Missing upload is not proof of absence or breach.",
+      "evidence_requirements": "Share subscription/allotment documents; AD-bank encashment certificate or evidence of a permitted FC-account route; remittance/SWIFT record; bank identity, dates, source and custody; current circular version and zone approval.",
       "reviewer": null,
       "review_date": null
     },
@@ -1067,8 +1067,8 @@
       "company_types": [
         "UNCONFIRMED_REQUIRES_COUNSEL_MAPPING"
       ],
-      "applicability_conditions": "Rule-specific company type, statutory trigger, effective date, exemptions, exceptions, extensions, orders and evidence must be verified; unknown or missing facts remain NOT_EVALUATED.",
-      "evidence_requirements": "Obtain the authoritative primary instrument, authentic event/filing evidence, identity and issuer verification, provenance, timestamps, current status, exceptions and extension records; independent counsel approval required.",
+      "applicability_conditions": "BIDA-registered foreign-investment entities applying for a work permit only, and only if the operative 2023 guideline applies to that applicant category and application date. USD 50,000 is a reference amount pending verification of the exact clause, amendments, renewal scope and exceptions; no automatic breach or refusal.",
+      "evidence_requirements": "BIDA application and applicant category; current authenticated work-permit guideline; remittance/FX evidence; date and source of initial-establishment cost; any BIDA clarification, exemption or approval.",
       "reviewer": null,
       "review_date": null
     },
