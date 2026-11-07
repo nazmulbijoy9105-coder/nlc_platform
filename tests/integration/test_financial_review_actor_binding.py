@@ -19,7 +19,6 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
 ):
     """The deferred DB trigger rejects an allocation event naming another invoice."""
     from app.models.finance import (
-        Invoice,
         Payment,
         PaymentAllocation,
         PaymentLedgerEvent,
