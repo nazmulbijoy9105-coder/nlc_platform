@@ -67,6 +67,7 @@ def upgrade() -> None:
     )
 
     op.add_column("client_subscriptions", sa.Column("invoice_id", uuid, nullable=True))
+    op.add_column("client_subscriptions", sa.Column("grace_days", sa.Integer(), nullable=False, server_default="0"))
     op.add_column("client_subscriptions", sa.Column("cancel_at_period_end", sa.Boolean(), nullable=False, server_default=sa.text("false")))
     op.add_column("client_subscriptions", sa.Column("grace_ends_at", sa.DateTime(timezone=True), nullable=True))
     op.add_column("client_subscriptions", sa.Column("cancelled_at", sa.DateTime(timezone=True), nullable=True))
@@ -264,6 +265,40 @@ def upgrade() -> None:
             )
         )
     """)
+    op.execute("DROP POLICY subscriptions_finance_update ON public.client_subscriptions")
+    op.execute("""
+        CREATE POLICY subscriptions_lifecycle_update ON public.client_subscriptions
+        FOR UPDATE
+        USING (
+            public.nlc_current_user_is_finance_staff()
+            OR (
+                public.nlc_can_submit_payment_company(company_id)
+                AND created_by = public.nlc_current_user_id()
+                AND status = 'ACTIVE'
+            )
+        )
+        WITH CHECK (
+            public.nlc_current_user_is_finance_staff()
+            OR (
+                public.nlc_can_submit_payment_company(company_id)
+                AND created_by = public.nlc_current_user_id()
+                AND status = 'ACTIVE'
+                AND cancel_at_period_end IS TRUE
+            )
+        )
+    """)
+    op.execute("DROP POLICY subscription_events_insert ON public.subscription_events")
+    op.execute("""
+        CREATE POLICY subscription_events_insert ON public.subscription_events
+        FOR INSERT WITH CHECK (
+            public.nlc_current_user_is_finance_staff()
+            OR (
+                event_type IN ('REQUESTED','CANCEL_AT_PERIOD_END')
+                AND actor_id = public.nlc_current_user_id()
+                AND public.nlc_can_submit_payment_company(company_id)
+            )
+        )
+    """)
 
     # Subscription facts and snapshots cannot be rewritten after request;
     # only lifecycle fields and the one-time invoice link may advance.
@@ -294,11 +329,45 @@ def upgrade() -> None:
                 RAISE EXCEPTION 'invalid subscription state transition: % -> %', OLD.status, NEW.status
                     USING ERRCODE = '55000';
             END IF;
+            IF NOT public.nlc_current_user_is_finance_staff() THEN
+                IF (
+                    NEW.company_id IS DISTINCT FROM OLD.company_id
+                    OR NEW.plan_code IS DISTINCT FROM OLD.plan_code
+                    OR NEW.plan_name IS DISTINCT FROM OLD.plan_name
+                    OR NEW.billing_interval IS DISTINCT FROM OLD.billing_interval
+                    OR NEW.amount_bdt IS DISTINCT FROM OLD.amount_bdt
+                    OR NEW.currency IS DISTINCT FROM OLD.currency
+                    OR NEW.invoice_id IS DISTINCT FROM OLD.invoice_id
+                    OR NEW.grace_days IS DISTINCT FROM OLD.grace_days
+                    OR NEW.status IS DISTINCT FROM OLD.status
+                    OR NEW.starts_at IS DISTINCT FROM OLD.starts_at
+                    OR NEW.ends_at IS DISTINCT FROM OLD.ends_at
+                    OR NEW.renews_at IS DISTINCT FROM OLD.renews_at
+                    OR NEW.grace_ends_at IS DISTINCT FROM OLD.grace_ends_at
+                    OR NEW.activated_by IS DISTINCT FROM OLD.activated_by
+                    OR NEW.cancelled_at IS DISTINCT FROM OLD.cancelled_at
+                    OR NEW.suspended_at IS DISTINCT FROM OLD.suspended_at
+                    OR NEW.suspension_reason IS DISTINCT FROM OLD.suspension_reason
+                    OR NEW.cancel_at_period_end IS NOT TRUE
+                    OR OLD.cancel_at_period_end IS TRUE
+                ) THEN
+                    RAISE EXCEPTION 'customer may only request cancellation at period end'
+                        USING ERRCODE = '42501';
+                END IF;
+            END IF;
             IF NEW.status = 'ACTIVE' AND (
                 NEW.invoice_id IS NULL OR NEW.starts_at IS NULL
                 OR (NEW.billing_interval <> 'ONE_TIME' AND NEW.ends_at IS NULL)
+                OR NOT EXISTS (
+                    SELECT 1 FROM public.invoices i
+                    WHERE i.id = NEW.invoice_id
+                      AND i.company_id = NEW.company_id
+                      AND i.status = 'PAID'
+                      AND i.balance_bdt = 0
+                      AND i.paid_bdt = i.total_bdt
+                )
             ) THEN
-                RAISE EXCEPTION 'subscription cannot activate without a settled invoice and valid term'
+                RAISE EXCEPTION 'subscription cannot activate without a fully settled invoice and valid term'
                     USING ERRCODE = '55000';
             END IF;
             RETURN NEW;
