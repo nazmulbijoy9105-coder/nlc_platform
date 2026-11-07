@@ -129,8 +129,12 @@ class DirectorChange:
     form_filed: bool | None = None
     form_filed_date: Optional[date] = None
     form_type: str = "XII"
+    form_filed_verified: bool = False
+    form_filed_evidence_ref: str | None = None
     consent_filed: bool | None = None
     consent_filed_date: Optional[date] = None
+    consent_verified: bool = False
+    consent_evidence_ref: str | None = None
 
 @dataclass
 class ShareTransfer:
@@ -1423,7 +1427,11 @@ class NLCRuleEngine:
         for change in c.director_changes:
             delay = (self.today - change.event_date).days
 
-            if change.form_filed is None:
+            if (
+                change.form_filed is None
+                or not change.form_filed_verified
+                or not change.form_filed_evidence_ref
+            ):
                 self._add_flag(ComplianceFlag(
                     rule_id="DIR-001",
                     flag_code="DIRECTOR_FORM_XII_STATUS_UNKNOWN",
@@ -1517,6 +1525,8 @@ class NLCRuleEngine:
             if (
                 change.event_type == "appointment"
                 and change.consent_filed is False
+                and change.consent_verified
+                and bool(change.consent_evidence_ref)
                 and delay > 30
             ):
                 self._add_flag(ComplianceFlag(
