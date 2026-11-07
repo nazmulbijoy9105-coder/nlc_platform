@@ -1,47 +1,108 @@
+import uuid
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException
+from starlette.requests import Request
 
-from app.core.entitlement import require_entitlement
+import app.core.entitlement as entitlement
+
+
+def _request(company_id: uuid.UUID | None = None) -> Request:
+    path_params = {"company_id": str(company_id)} if company_id else {}
+    return Request({
+        "type": "http",
+        "http_version": "1.1",
+        "method": "GET",
+        "scheme": "https",
+        "path": "/api/v1/companies",
+        "raw_path": b"/api/v1/companies",
+        "query_string": b"",
+        "headers": [],
+        "client": ("127.0.0.1", 12345),
+        "server": ("testserver", 443),
+        "path_params": path_params,
+    })
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("role", ["SUPER_ADMIN", "ADMIN_STAFF"])
-async def test_platform_admin_can_bypass_customer_entitlement(role):
-    dependency = require_entitlement("advanced_compliance")
-    result = await dependency(SimpleNamespace(role=role))
-    assert result is True
+@pytest.mark.parametrize("role", ["SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF"])
+async def test_authorized_staff_roles_bypass_customer_subscription_lookup(role):
+    dependency = entitlement.require_entitlement("compliance_package")
+    db = MagicMock()
+    user = SimpleNamespace(id=uuid.uuid4(), role=role)
+
+    assert await dependency(request=_request(), db=db, current_user=user) is True
+    db.execute.assert_not_called()
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "role", ["CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"]
-)
-async def test_unverified_entitlement_fails_closed_for_customer_roles(role):
-    dependency = require_entitlement("advanced_compliance")
+async def test_customer_without_company_entitlement_receives_payment_required(monkeypatch):
+    company_id = uuid.uuid4()
+
+    class FakeSubscriptionService:
+        def __init__(self, db):
+            pass
+
+        async def has_entitlement(self, *, company_id, feature_code):
+            assert feature_code == "compliance_package"
+            return False
+
+    monkeypatch.setattr(entitlement, "SubscriptionService", FakeSubscriptionService)
+    dependency = entitlement.require_entitlement("compliance_package")
+    user = SimpleNamespace(id=uuid.uuid4(), role="CLIENT_DIRECTOR")
 
     with pytest.raises(HTTPException) as exc:
-        await dependency(SimpleNamespace(role=role))
+        await dependency(request=_request(company_id), db=MagicMock(), current_user=user)
 
-    assert exc.value.status_code == 503
-    assert "entitlement verification is not configured" in exc.value.detail
-    assert exc.value.headers["Retry-After"] == "3600"
-
-
-@pytest.mark.asyncio
-async def test_legal_staff_bypass_is_not_a_substitute_for_route_authorization():
-    """Service staff may act only where the route separately authorizes them."""
-    dependency = require_entitlement("advanced_compliance")
-    result = await dependency(SimpleNamespace(role="LEGAL_STAFF"))
-    assert result is True
+    assert exc.value.status_code == 402
+    assert "does not include" in exc.value.detail
 
 
 @pytest.mark.asyncio
-async def test_missing_role_does_not_grant_entitlement():
-    dependency = require_entitlement("advanced_compliance")
+async def test_customer_with_verified_company_entitlement_is_allowed(monkeypatch):
+    company_id = uuid.uuid4()
+
+    class FakeSubscriptionService:
+        def __init__(self, db):
+            pass
+
+        async def has_entitlement(self, *, company_id, feature_code):
+            return company_id == expected_company and feature_code == "document_management"
+
+    expected_company = company_id
+    monkeypatch.setattr(entitlement, "SubscriptionService", FakeSubscriptionService)
+    dependency = entitlement.require_entitlement("document_management")
+    user = SimpleNamespace(id=uuid.uuid4(), role="CLIENT_DIRECTOR")
+    request = _request(company_id)
+
+    assert await dependency(request=request, db=MagicMock(), current_user=user) is True
+    assert request.state.entitled_company_ids == [str(company_id)]
+
+
+@pytest.mark.asyncio
+async def test_customer_without_live_financial_company_membership_is_denied():
+    result = MagicMock()
+    result.scalars.return_value.all.return_value = []
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=result)
+    dependency = entitlement.require_entitlement("document_management")
+    user = SimpleNamespace(id=uuid.uuid4(), role="CLIENT_VIEW_ONLY")
 
     with pytest.raises(HTTPException) as exc:
-        await dependency(SimpleNamespace())
+        await dependency(request=_request(), db=db, current_user=user)
 
-    assert exc.value.status_code == 503
+    assert exc.value.status_code == 403
+    assert "active company billing membership" in exc.value.detail
+
+
+@pytest.mark.asyncio
+async def test_unknown_account_role_does_not_receive_entitlement():
+    dependency = entitlement.require_entitlement("compliance_package")
+    user = SimpleNamespace(id=uuid.uuid4(), role="AUDITOR")
+
+    with pytest.raises(HTTPException) as exc:
+        await dependency(request=_request(), db=MagicMock(), current_user=user)
+
+    assert exc.value.status_code == 403
