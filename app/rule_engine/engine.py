@@ -785,23 +785,31 @@ class NLCRuleEngine:
                 self._add_flag(ComplianceFlag(
                     rule_id="INC-005",
                     flag_code="ENCASHMENT_CERTIFICATE_MISSING",
-                    severity=Severity.YELLOW,
-                    score_impact=8,
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Foreign shareholding but Encashment Certificate from AD bank not uploaded. BIDA requirement.",
-                    statutory_basis="BIDA Foreign Investment Act 1980; Bangladesh Bank FDI Circular",
+                    description=("No AD-bank encashment-certificate record is present. This is an internal evidence-review signal only; "
+                                 "it does not prove a breach. Verify the applicable GFET paragraph, current Bangladesh Bank circulars, "
+                                 "foreign-currency-account retention rules and zone-specific exceptions."),
+                    statutory_basis=("GFET-2018 Vol.1, Chapter 9, paragraph 2(A); FE Circular No.10 (21 June 2023); "
+                                     "FEID Circular No.01 (27 January 2025) and subsequent applicable circulars"),
                     detail={"foreign_pct": c.foreign_shareholding_pct},
                     conditional_applies=True
                 ))
-            if c.remittance_amount_usd < FOREIGN_WORK_PERMIT_THRESHOLD_USD and c.bida_registered:
+            if (c.remittance_amount_usd is not None
+                    and c.remittance_amount_usd < FOREIGN_WORK_PERMIT_THRESHOLD_USD
+                    and c.bida_registered):
                 self._add_flag(ComplianceFlag(
                     rule_id="INC-006",
                     flag_code="REMITTANCE_BELOW_WORK_PERMIT_THRESHOLD",
-                    severity=Severity.YELLOW,
+                    severity=Severity.NOT_EVALUATED,
                     score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Advisory: Remittance USD {c.remittance_amount_usd:,.2f} below USD {FOREIGN_WORK_PERMIT_THRESHOLD_USD:,} work permit threshold.",
-                    statutory_basis="BIDA Foreign Investment Act 1980",
+                    description=("Reported initial-establishment remittance is below the USD 50,000 reference amount. "
+                                 "This is a screening prompt only, not a statutory breach or automatic work-permit refusal. "
+                                 "Verify the operative BIDA 2023 work-permit guideline, applicant category, date, exceptions and evidence."),
+                    statutory_basis=("BIDA Guidelines for permission to establish foreign commercial offices and issue work permits (2023); "
+                                     "operative clause/version and current amendments require counsel verification"),
                     detail={"remittance_usd": c.remittance_amount_usd, "threshold": FOREIGN_WORK_PERMIT_THRESHOLD_USD},
                     conditional_applies=True
                 ))
