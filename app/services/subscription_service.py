@@ -359,7 +359,13 @@ class SubscriptionService:
             event_type="INVOICE_ISSUED",
             actor_id=actor_id,
             invoice_id=invoice.id,
-            event_metadata={"invoice_number": invoice.invoice_number, "amount_bdt": str(invoice.total_bdt)},
+            event_metadata={
+                "invoice_number": invoice.invoice_number,
+                "subtotal_bdt": str(invoice.subtotal_bdt),
+                "tax_bdt": str(invoice.tax_bdt),
+                "total_bdt": str(invoice.total_bdt),
+                "tax_policy_reference": subscription.tax_policy_reference,
+            },
         ))
         await self.db.flush()
         return invoice
