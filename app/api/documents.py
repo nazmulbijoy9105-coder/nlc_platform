@@ -146,6 +146,7 @@ def _doc_to_response(doc) -> DocumentResponse:
 @router.get(
     "",
     response_model=list[DocumentResponse],
+    dependencies=[Depends(require_entitlement("document_management"))],
     summary="List all documents across portfolio",
 )
 async def list_all_documents(
@@ -363,6 +364,11 @@ async def list_documents(
 
 # ---------------------------------------------------------------------------
 
+async def _assert_document_entitlement(current_user: User) -> None:
+    """Fail closed for client document access until company subscriptions exist."""
+    await require_entitlement("document_management")(current_user)
+
+
 async def _assert_document_company_access(
     doc,
     current_user: User,
@@ -411,6 +417,7 @@ async def get_document(
 
     # Explicit company-access check (IDOR defence — path has no company_id)
     await _assert_document_company_access(doc, current_user, db)
+    await _assert_document_entitlement(current_user)
 
     # SEC-010: Verify company ownership
     if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):
@@ -555,6 +562,7 @@ async def get_pdf_url(
 
     # Explicit company-access check (IDOR defence — path has no company_id)
     await _assert_document_company_access(doc, current_user, db)
+    await _assert_document_entitlement(current_user)
 
     # SEC-010: Clients may only download approved documents from their company
     if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):
