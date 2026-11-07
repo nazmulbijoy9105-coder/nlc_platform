@@ -126,7 +126,7 @@ async def get_catalog_db() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
-async def get_auth_db() -> AsyncSession:  # type: ignore
+async def get_auth_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Yield a least-privilege session for login/signup only.
     AUTH context is permitted by RLS on users, not tenant or company tables.
