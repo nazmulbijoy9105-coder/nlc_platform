@@ -8,8 +8,8 @@ from app.core.dependencies import (
     get_db_for_user,
     require_company_access,
 )
-from app.services.compliance_calendar import ComplianceCalendarService
 from app.services.compliance_calendar import (
+    ComplianceCalendarService,
     LEGAL_CALENDAR_RELEASED,
     VERIFIED_CALENDAR_EVENT_TYPES,
 )
