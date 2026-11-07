@@ -413,7 +413,8 @@ class CompanyService(BaseService[Company]):
                 """
                 SELECT d.*
                 FROM vw_upcoming_deadlines d
-                WHERE d.days_remaining BETWEEN 0 AND :days
+                WHERE public.nlc_current_user_principal() = 'ADMIN'
+                  AND d.days_remaining BETWEEN 0 AND :days
                 ORDER BY d.days_remaining
                 """
             ),
