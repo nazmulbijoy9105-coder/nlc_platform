@@ -76,9 +76,8 @@ async def test_direct_payment_insert_cannot_reuse_existing_submission_reference(
     with pytest.raises(DBAPIError) as exc_info:
         async with db.begin_nested():
             await _insert_payment(db, db_company.id, db_user.id, " txn-cross-table-01 ")
-    assert getattr(exc_info.value.orig, "constraint_name", None) == (
-        "uq_wallet_reference_across_finance_tables"
-    )
+    assert getattr(exc_info.value.orig, "sqlstate", None) == "23505"
+    assert "uq_wallet_reference_across_finance_tables" in str(exc_info.value.orig)
 
 
 @pytest.mark.asyncio
@@ -111,9 +110,8 @@ async def test_direct_submission_insert_cannot_reuse_existing_payment_reference(
                 },
             )
 
-    assert getattr(exc_info.value.orig, "constraint_name", None) == (
-        "uq_wallet_reference_across_finance_tables"
-    )
+    assert getattr(exc_info.value.orig, "sqlstate", None) == "23505"
+    assert "uq_wallet_reference_across_finance_tables" in str(exc_info.value.orig)
 
 @pytest.mark.asyncio
 async def test_approval_links_receipt_to_its_own_submission(db, db_company, db_user):
@@ -147,6 +145,5 @@ async def test_approval_links_receipt_to_its_own_submission(db, db_company, db_u
                 text("UPDATE public.payments SET source_submission_id = NULL WHERE id = :id"),
                 {"id": payment.id},
             )
-    assert getattr(exc_info.value.orig, "constraint_name", None) == (
-        "uq_wallet_reference_across_finance_tables"
-    )
+    assert getattr(exc_info.value.orig, "sqlstate", None) == "23505"
+    assert "uq_wallet_reference_across_finance_tables" in str(exc_info.value.orig)
