@@ -64,3 +64,22 @@ def test_dashboard_risk_aggregates_fail_closed_until_score_release(monkeypatch):
         assert "Compliance risk aggregates are unavailable" in exc.detail
     else:
         raise AssertionError("dashboard must not expose unreleased legal risk aggregates")
+
+def test_legacy_calendar_generator_cannot_emit_unverified_deadlines():
+    import asyncio
+
+    from app.services.bd_calendar_generator import BDCalendarGenerator
+
+    generator = BDCalendarGenerator(db=None)
+    try:
+        asyncio.run(
+            generator.generate_for_company(
+                company_id="00000000-0000-0000-0000-000000000001",
+                incorporation_date=__import__("datetime").date(2020, 1, 1),
+                fye=__import__("datetime").date(2025, 12, 31),
+            )
+        )
+    except RuntimeError as exc:
+        assert "independently approved" in str(exc)
+    else:
+        raise AssertionError("legacy calendar generator must remain disabled")
