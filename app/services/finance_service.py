@@ -52,7 +52,7 @@ def _integrity_constraint_name(error: IntegrityError) -> str | None:
         getattr(diagnostic, "constraint_name", None)
         or getattr(original, "constraint_name", None)
     )
-    if constraint_name:
+    if isinstance(constraint_name, str) and constraint_name:
         return constraint_name
     # asyncpg's UniqueViolationError omits PostgreSQL's constraint_name
     # diagnostic from its public attributes; the trigger includes a stable
