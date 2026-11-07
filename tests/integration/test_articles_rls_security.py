@@ -1,25 +1,23 @@
-"""Regression coverage for historical Articles migration recovery and RLS."""
+"""Regression coverage for historical Articles migration recovery and signed RLS."""
 from __future__ import annotations
 
 import pytest
 from sqlalchemy import text
 
-from app.models.database import set_rls_context
-
 pytestmark = [pytest.mark.integration]
 
 
 @pytest.mark.asyncio
-async def test_articles_evidence_tables_have_signed_staff_write_policies(db):
+async def test_articles_evidence_tables_have_signed_tenant_write_policies(db):
     expected = {
         "articles_verifications": {
             "articles_verifications_company_read",
-            "articles_verifications_staff_insert",
+            "articles_verifications_member_submit",
             "articles_verifications_staff_update",
         },
         "articles_verification_events": {
             "articles_verification_events_company_read",
-            "articles_verification_events_staff_insert",
+            "articles_verification_events_actor_insert",
         },
     }
 
@@ -39,10 +37,19 @@ async def test_articles_evidence_tables_have_signed_staff_write_policies(db):
         assert read_policy[1] == "SELECT"
         assert "nlc_can_access_company" in (read_policy[2] or "")
 
-        insert_policy = policies[f"{table}_staff_insert"]
+        insert_name = (
+            "articles_verifications_member_submit"
+            if table == "articles_verifications"
+            else "articles_verification_events_actor_insert"
+        )
+        insert_policy = policies[insert_name]
         assert insert_policy[1] == "INSERT"
-        assert "nlc_current_user_is_staff" in (insert_policy[3] or "")
-        assert "nlc_can_access_company" in (insert_policy[3] or "")
+        assert "nlc_current_user_id" in (insert_policy[3] or "")
+        assert "nlc_can_edit_company" in (insert_policy[3] or "")
+        if table == "articles_verifications":
+            assert "submitted_by" in (insert_policy[3] or "")
+        else:
+            assert "actor_id" in (insert_policy[3] or "")
 
         for policy in policies.values():
             for expression in (policy[2] or "", policy[3] or ""):
@@ -50,6 +57,7 @@ async def test_articles_evidence_tables_have_signed_staff_write_policies(db):
                 assert "nlc_current_user_id" not in expression.lower() or (
                     "nlc_current_user_is_staff" in expression
                     or "nlc_can_access_company" in expression
+                    or "nlc_can_edit_company" in expression
                 )
 
         if table == "articles_verifications":
@@ -70,7 +78,6 @@ async def test_articles_evidence_tables_have_signed_staff_write_policies(db):
         assert enabled is True
         assert forced is True
 
-    # SQL grants independently prevent destructive operations on evidence.
     for table, privilege in (
         ("articles_verifications", "DELETE"),
         ("articles_verifications", "TRUNCATE"),
@@ -87,7 +94,6 @@ async def test_articles_evidence_tables_have_signed_staff_write_policies(db):
         )
         assert result.scalar_one() is False
 
-    # Preserve the historical evidence integrity triggers.
     trigger_rows = await db.execute(
         text(
             "SELECT tgname FROM pg_trigger "
@@ -106,20 +112,19 @@ async def test_articles_evidence_tables_have_signed_staff_write_policies(db):
 
 
 @pytest.mark.asyncio
-async def test_unsigned_admin_guc_cannot_authorize_articles_staff_write(
-    db, db_client_user
-):
-    await set_rls_context(db, str(db_client_user.id))
-    await db.execute(
+async def test_unsigned_admin_guc_cannot_authorize_articles_staff_write(db_for_user):
+    # db_for_user starts with a valid signed tenant UUID principal.
+    # Replacing only the GUC must invalidate the HMAC-bound principal.
+    await db_for_user.execute(
         text("SELECT set_config('app.current_user_id', 'ADMIN', true)")
     )
 
-    principal = await db.execute(
+    principal = await db_for_user.execute(
         text("SELECT public.nlc_current_user_principal()")
     )
     assert principal.scalar_one_or_none() is None
 
-    staff = await db.execute(
+    staff = await db_for_user.execute(
         text("SELECT public.nlc_current_user_is_staff()")
     )
     assert staff.scalar_one() is False
