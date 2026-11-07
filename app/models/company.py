@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from decimal import Decimal
 
     from .commercial import Engagement, Task
-    from .compliance import ComplianceFlag, ComplianceScoreHistory
+    from .compliance import ComplianceEvaluationRun, ComplianceFlag, ComplianceScoreHistory
     from .documents import AIOutputLog, Document
     from .filings import AGM, AnnualReturn, Audit
     from .infrastructure import Notification, RegisteredOfficeHistory, StatutoryRegister
