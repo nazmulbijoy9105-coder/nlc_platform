@@ -36,6 +36,14 @@ def is_rule_notification_type(notification_type: str | None) -> bool:
 GENERIC_LEGAL_ALERT_TYPES = frozenset({
     "COMPLIANCE_ALERT", "LEGAL_ALERT", "RISK_ALERT", "RULE_ALERT",
 })
+NON_LEGAL_OPERATIONAL_NOTIFICATION_TYPES = frozenset({
+    "SYSTEM",
+    "AI_REVIEW_QUEUE_ALERT",
+    "SRO_RULE_UPDATE_REQUIRED",
+})
+NON_LEGAL_OPERATIONAL_PREFIXES = (
+    "BILLING_", "PAYMENT_", "SUBSCRIPTION_", "ACCOUNT_SECURITY_",
+)
 
 
 def is_notification_eligible(
@@ -43,15 +51,24 @@ def is_notification_eligible(
     *,
     related_flag_id: uuid.UUID | None = None,
 ) -> bool:
-    """Fail closed for rule alerts and generic legal/compliance alert types."""
+    """Allow only known operational notifications; legal and unknown types fail closed."""
     normalized_type = str(notification_type or "").strip().upper()
-    if not normalized_type:
+    if not normalized_type or related_flag_id is not None:
         return False
     if is_rule_notification_type(normalized_type):
         return LEGAL_SCORE_RELEASED and normalized_type in VERIFIED_RULE_IDS
-    if normalized_type in GENERIC_LEGAL_ALERT_TYPES or related_flag_id is not None:
+    if normalized_type in GENERIC_LEGAL_ALERT_TYPES:
         return False
-    return True
+    if normalized_type.endswith("_DEADLINE_WARNING") or normalized_type.startswith("DEADLINE_"):
+        return False
+    if any(token in normalized_type for token in (
+        "COMPLIANCE", "LEGAL", "RISK", "RULE_ALERT", "TAX_", "VAT_",
+        "AGM_", "BSEC_", "LABOUR_", "LABOR_", "TRADE_LICENCE_", "TRADE_LICENSE_",
+    )):
+        return False
+    if normalized_type in NON_LEGAL_OPERATIONAL_NOTIFICATION_TYPES:
+        return True
+    return normalized_type.startswith(NON_LEGAL_OPERATIONAL_PREFIXES)
 
 
 class NotificationService(BaseService[Notification]):
@@ -170,9 +187,11 @@ class NotificationService(BaseService[Notification]):
         urgency = "URGENT: " if days_remaining <= 7 else ""
         title = f"{urgency}{deadline_type} Deadline in {days_remaining} days"
         body = (
-            f"{company_name}: {deadline_type} is due on {deadline_date}.\n"
-            f"You have {days_remaining} day{'s' if days_remaining != 1 else ''} remaining.\n"
-            f"Immediate action required to avoid compliance default."
+            f"{company_name}: an unverified internal reminder for {deadline_type} "
+            f"contains a provisional date of {deadline_date}.\n"
+            f"This is not a verified statutory deadline or a finding of default. "
+            f"Confirm the applicable law, company classification, event date, "
+            f"extensions and filing evidence with qualified counsel before relying on it."
         )
         await self.queue_notification(
             company_id=company_id,
