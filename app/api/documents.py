@@ -639,8 +639,10 @@ async def get_pdf_url(
 
     doc = await svc.get_by_id_or_404(document_id)
 
-    # Explicit company-access check (IDOR defence — path has no company_id)
+    # Explicit company-access and paid-entitlement checks (IDOR defence —
+    # the route carries document_id rather than its owning company_id).
     await _assert_document_company_access(doc, current_user, db)
+    await _assert_document_entitlement(doc, current_user, db)
 
     # SEC-010: Clients may only download approved documents from their company
     if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):
