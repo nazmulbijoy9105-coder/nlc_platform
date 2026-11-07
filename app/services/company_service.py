@@ -15,6 +15,7 @@ import uuid
 from datetime import UTC, date, datetime
 
 from sqlalchemy import func, or_, select, text, update
+from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.orm import selectinload
 
 from app.models.company import Company, CompanyUserAccess
@@ -258,7 +259,7 @@ class CompanyService(BaseService[Company]):
         company_ids_filter: used for client roles (from JWT).
         search: full-text search on company name or registration number.
         """
-        filters = [Company.is_active]
+        filters: list[ColumnElement[bool]] = [Company.is_active]
 
         if risk_band:
             filters.append(Company.current_risk_band == risk_band)  # type: ignore
