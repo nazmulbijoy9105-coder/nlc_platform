@@ -189,9 +189,9 @@ def _flag_to_response(flag) -> FlagResponse:
             (getattr(flag, "description", flag.flag_code) or flag.flag_code)
             if approved
             else (
-                "Internal review signal only. This rule is not approved for legal "
-                "determinations. No breach, liability, penalty or compliance status "
-                "is determined; obtain independent Bangladesh-qualified counsel review."
+                "Pending counsel review: internal review signal only. This rule is not "
+                "approved for legal determinations. No breach, liability, penalty or "
+                "compliance status is determined; obtain independent Bangladesh-qualified counsel review."
             )
         ),
         severity=str(severity) if approved else "NOT_EVALUATED",
