@@ -84,7 +84,7 @@ def test_finance_service_rejects_naive_timestamps_even_when_called_directly():
         _require_aware_datetime(datetime(2026, 11, 6, 12, 0, 0), "paid_at")
 
     _require_aware_datetime(
-        datetime(2026, 11, 6, 12, 0, 0, tzinfo=timezone.utc),
+        datetime(2026, 11, 6, 12, 0, 0, tzinfo=UTC),
         "paid_at",
     )
 
