@@ -1,7 +1,7 @@
 """Company-scoped subscription plans, immutable entitlement snapshots and audit history.
 
-Revision ID: 0074_subscription_entitlements
-Revises: 0073_payment_allocations_append_only
+Revision ID: 0076_subscription_entitlements
+Revises: 0075_director_transfer_evidence
 
 This migration extends the existing billing foundation. It does not seed prices:
 commercial plan pricing and feature grants must be explicitly configured by
