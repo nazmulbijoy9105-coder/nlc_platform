@@ -131,6 +131,18 @@ class Payment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         UniqueConstraint("payment_number", name="uq_payments_payment_number"),
         UniqueConstraint("provider_transaction_id", name="uq_payments_provider_transaction_id"),
         UniqueConstraint("id", "company_id", name="uq_payments_id_company"),
+        ForeignKeyConstraint(
+            ["source_submission_id", "company_id"],
+            ["payment_submissions.id", "payment_submissions.company_id"],
+            ondelete="RESTRICT",
+            name="fk_payments_source_submission_company",
+        ),
+        Index(
+            "uq_payments_source_submission",
+            "source_submission_id",
+            unique=True,
+            postgresql_where=text("source_submission_id IS NOT NULL"),
+        ),
         CheckConstraint("amount_bdt > 0", name="ck_payment_amount_positive"),
         CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL','BKASH_ONLINE','NAGAD_ONLINE','SSLCOMMERZ')", name="ck_payment_method"),
         CheckConstraint("method NOT IN ('BANK_TRANSFER','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL') OR NULLIF(BTRIM(payer_reference), '') IS NOT NULL", name="ck_payment_reference_required"),
