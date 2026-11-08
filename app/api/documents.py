@@ -399,7 +399,6 @@ async def generate_document(
         Depends(require_company_access("company_id")),
         Depends(require_entitlement("document_management")),
     ],
-    dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("document_management"))],
     summary="List all documents for a company",
 )
 async def list_documents(
