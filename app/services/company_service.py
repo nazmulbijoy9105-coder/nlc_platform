@@ -462,6 +462,75 @@ class CompanyService(BaseService[Company]):
             }
         return dict(row)
 
+    async def get_risk_distribution(self, user_id: uuid.UUID) -> list[dict]:
+        """Return risk distribution for companies the user can currently access.
+
+        The global materialized/view aggregate is deliberately not used here:
+        aggregation must happen *after* membership filtering.
+        """
+        if user_id is None:
+            raise ValueError("user_id is required for tenant-scoped risk distribution")
+        result = await self.db.execute(
+            text(
+                """
+                SELECT
+                    c.current_risk_band AS risk_band,
+                    COUNT(*) AS company_count,
+                    ROUND(
+                        COUNT(*) * 100.0 / NULLIF(SUM(COUNT(*)) OVER (), 0),
+                        1
+                    ) AS percentage
+                FROM companies c
+                WHERE c.is_active = TRUE
+                  AND EXISTS (
+                      SELECT 1
+                      FROM company_user_access cua
+                      WHERE cua.company_id = c.id
+                        AND cua.user_id = :user_id
+                        AND cua.is_active = TRUE
+                  )
+                GROUP BY c.current_risk_band
+                ORDER BY CASE c.current_risk_band
+                    WHEN 'BLACK' THEN 1
+                    WHEN 'RED' THEN 2
+                    WHEN 'YELLOW' THEN 3
+                    WHEN 'GREEN' THEN 4
+                    ELSE 5
+                END
+                """
+            ),
+            {"user_id": str(user_id)},
+        )
+        return [dict(row) for row in result.mappings().all()]
+
+    async def get_upcoming_deadlines(
+        self, days_ahead: int = 30, user_id: uuid.UUID | None = None
+    ) -> list[dict]:
+        """Return deadlines scoped to active memberships; no implicit global mode."""
+        if user_id is None:
+            raise ValueError(
+                "user_id is required; use get_upcoming_deadlines_for_system for worker scans"
+            )
+        result = await self.db.execute(
+            text(
+                """
+                SELECT d.*
+                FROM vw_upcoming_deadlines d
+                WHERE d.days_remaining <= :days
+                  AND EXISTS (
+                      SELECT 1
+                      FROM company_user_access cua
+                      WHERE cua.company_id = d.company_id
+                        AND cua.user_id = :user_id
+                        AND cua.is_active = TRUE
+                  )
+                ORDER BY d.days_remaining
+                """
+            ),
+            {"days": days_ahead, "user_id": str(user_id)},
+        )
+        return [dict(row) for row in result.mappings().all()]
+
     async def get_risk_distribution(
         self, user_id: uuid.UUID, *, include_assigned_staff: bool = False
     ) -> list[dict]:
@@ -856,25 +925,7 @@ class CompanyService(BaseService[Company]):
             "agm_held_this_cycle": (
                 current_cycle_agm.agm_held if current_cycle_verified else None
             ),
-            "agm_scheduled_date": (
-                current_cycle_agm.agm_deadline if current_cycle_agm is not None else None
-            ),
-            "notice_sent_date": agm_profile_evidence["notice_sent_date"],
-            "short_notice_consent_obtained": agm_profile_evidence["short_notice_consent_obtained"],
-            "short_notice_consent_verified": agm_profile_evidence["short_notice_consent_verified"],
-            "short_notice_consent_evidence_ref": agm_profile_evidence["short_notice_consent_evidence_ref"],
-            "members_present_at_agm": agm_profile_evidence["members_present_at_agm"],
-            "agm_attendance_verified": agm_profile_evidence["agm_attendance_verified"],
-            "agm_attendance_evidence_ref": agm_profile_evidence["agm_attendance_evidence_ref"],
-            "agm_quorum_required": agm_profile_evidence["agm_quorum_required"],
-            "agm_quorum_basis_verified": agm_profile_evidence["agm_quorum_basis_verified"],
-            "agm_quorum_evidence_ref": agm_profile_evidence["agm_quorum_evidence_ref"],
-            "auditor_reappointed_at_agm": agm_profile_evidence["auditor_reappointed_at_agm"],
-            "auditor_reappointment_verified": agm_profile_evidence["auditor_reappointment_verified"],
-            "auditor_reappointment_evidence_ref": agm_profile_evidence["auditor_reappointment_evidence_ref"],
-            "accounts_adopted_at_agm": agm_profile_evidence["accounts_adopted_at_agm"],
-            "agm_held_without_audit": agm_profile_evidence["agm_held_without_audit"],
-            "agm_minutes_prepared": agm_profile_evidence["agm_minutes_prepared"],
+            "agm_minutes_prepared":       agm_profile_evidence["agm_minutes_prepared"],
 
             # Audit State
             "first_auditor_appointed": (
