@@ -178,6 +178,23 @@ def test_html_builder_handles_empty_flags_and_missing_values():
     assert "<img" not in page  # no logo_uri given -> no logo markup
 
 
+def test_html_builder_suppresses_stale_score_flags_and_rescue_while_release_closed(monkeypatch):
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
+    stale_rescue = SimpleNamespace(steps=[SimpleNamespace(title="Sensitive rescue step")])
+
+    page = build_compliance_report_html(
+        COMPANY, FLAGS, WHEN, rescue_plan=stale_rescue
+    )
+
+    assert "NOT EVALUATED" in page
+    assert "85 / 100" not in page
+    assert "AGM-001" not in page
+    assert "AGM overdue" not in page
+    assert "Sensitive rescue step" not in page
+    assert "Score reconciliation" not in page
+
+
 def test_html_builder_includes_logo_only_when_given():
     page = build_compliance_report_html(COMPANY, FLAGS, WHEN, logo_uri="file:///x/logo.png")
     assert '<img class="logo" src="file:///x/logo.png"' in page
