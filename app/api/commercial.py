@@ -108,7 +108,7 @@ class QuotationResponse(BaseModel):
     vat_bdt: Decimal
     total_fee_bdt: Decimal
     status: str
-    valid_until: str
+    valid_until: str | None
     created_at: str
 
 
@@ -184,7 +184,7 @@ def _quotation_to_response(q) -> QuotationResponse:
         vat_bdt=q.vat_bdt or Decimal('0.00'),
         total_fee_bdt=q.total_bdt,
         status=q.status,
-        valid_until=q.valid_until.isoformat(),
+        valid_until=q.valid_until.isoformat() if q.valid_until else None,
         created_at=q.created_at.isoformat(),
     )
 
@@ -392,6 +392,8 @@ async def accept_quotation(
         quotation = await svc.accept(quotation_id=quotation_id)
     except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
 
@@ -514,7 +516,10 @@ async def complete_task(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = TaskService(db)
-    task = await svc.complete_task(task_id=task_id)
+    try:
+        task = await svc.complete_task(task_id=task_id)
+    except CommercialConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
     await ActivityService(db).log(
