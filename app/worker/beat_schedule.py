@@ -201,6 +201,15 @@ BEAT_SCHEDULE = {
         "description": "7-year retention enforcement — archive old activity logs to S3",
     },
 
+    # ── SUBSCRIPTION LIFECYCLE ────────────────────────────────────────
+    # Process expired terms and scheduled period-end cancellations.
+    "daily-subscription-lifecycle": {
+        "task": "app.worker.tasks.process_due_subscriptions",
+        "schedule": crontab(hour=0, minute=30),
+        "options": {"queue": "maintenance", "expires": 3600},
+        "description": "Daily subscription expiry, grace-period and cancellation processing",
+    },
+
     # ── DATABASE HEALTH CHECK ─────────────────────────────────────────
     # Lightweight DB connectivity check every 5 minutes.
     # If this fails, it means DB is unreachable — triggers an alert.

@@ -37,6 +37,7 @@ human_approved=False and in_review_queue=True.
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC
 import logging
 import os
 import sys
@@ -208,6 +209,7 @@ celery_app.conf.update(
         "app.worker.tasks.cleanup_expired_notifications":   {"queue": "maintenance"},
         "app.worker.tasks.database_health_check":           {"queue": "maintenance"},
         "app.worker.tasks.sync_sro_registry":               {"queue": "maintenance"},
+        "app.worker.tasks.process_due_subscriptions":       {"queue": "maintenance"},
     },
 
     # ── Worker Configuration ──────────────────────────────────────
@@ -258,10 +260,8 @@ celery_app.conf.update(
     task_always_eager=_resolve_task_always_eager(),
 )
 
-# ── Import beat schedule (must come after celery_app is created) ──────
-from datetime import UTC
-
-from app.worker.beat_schedule import BEAT_SCHEDULE
+# ── Import beat schedule after celery_app creation to avoid a cycle. ──
+from app.worker.beat_schedule import BEAT_SCHEDULE  # noqa: E402
 
 celery_app.conf.beat_schedule = BEAT_SCHEDULE
 

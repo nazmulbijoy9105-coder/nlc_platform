@@ -54,7 +54,7 @@ class Invoice(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     invoice_number: Mapped[str] = mapped_column(String(40), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="BDT")
     subtotal_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
-    tax_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False, default=Decimal("0.00"))
+    tax_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False, default=Decimal("0.00"), server_default="0")
     total_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
     paid_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False, default=Decimal("0.00"))
     balance_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
@@ -91,8 +91,8 @@ class PaymentSubmission(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("id", "company_id", name="uq_payment_submissions_id_company"),
         CheckConstraint("amount_bdt > 0", name="ck_payment_submission_amount_positive"),
-        CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE')", name="ck_payment_submission_method"),
-        CheckConstraint("method NOT IN ('BANK_TRANSFER','CHEQUE') OR NULLIF(BTRIM(payer_reference), '') IS NOT NULL", name="ck_payment_submission_reference_required"),
+        CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL')", name="ck_payment_submission_method"),
+        CheckConstraint("method NOT IN ('BANK_TRANSFER','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL') OR NULLIF(BTRIM(payer_reference), '') IS NOT NULL", name="ck_payment_submission_reference_required"),
         CheckConstraint("status IN ('PENDING_REVIEW','APPROVED','REJECTED')", name="ck_payment_submission_status"),
         CheckConstraint("currency = 'BDT'", name="ck_payment_submission_currency_bdt"),
         Index("ix_payment_submissions_company_status", "company_id", "status"),
@@ -103,7 +103,7 @@ class PaymentSubmission(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             text("lower(btrim(payer_reference))"),
             unique=True,
             postgresql_where=text(
-                "payer_reference IS NOT NULL AND method IN ('BANK_TRANSFER','CHEQUE')"
+                "payer_reference IS NOT NULL AND method IN ('BANK_TRANSFER','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL')"
             ),
         ),
         ForeignKeyConstraint(["invoice_id", "company_id"], ["invoices.id", "invoices.company_id"], ondelete="RESTRICT", name="fk_payment_submissions_invoice_company"),
@@ -144,8 +144,8 @@ class Payment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             postgresql_where=text("source_submission_id IS NOT NULL"),
         ),
         CheckConstraint("amount_bdt > 0", name="ck_payment_amount_positive"),
-        CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE','SSLCOMMERZ')", name="ck_payment_method"),
-        CheckConstraint("method NOT IN ('BANK_TRANSFER','CHEQUE') OR NULLIF(BTRIM(payer_reference), '') IS NOT NULL", name="ck_payment_reference_required"),
+        CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE','SSLCOMMERZ','BKASH_MANUAL','NAGAD_MANUAL')", name="ck_payment_method"),
+        CheckConstraint("method NOT IN ('BANK_TRANSFER','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL') OR NULLIF(BTRIM(payer_reference), '') IS NOT NULL", name="ck_payment_reference_required"),
         CheckConstraint("channel IN ('ONLINE','OFFLINE')", name="ck_payment_channel"),
         CheckConstraint("status IN ('SETTLED','REVERSED','REFUNDED','DISPUTED')", name="ck_payment_status"),
         CheckConstraint("currency = 'BDT'", name="ck_payment_currency_bdt"),
@@ -156,7 +156,7 @@ class Payment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             text("lower(btrim(payer_reference))"),
             unique=True,
             postgresql_where=text(
-                "payer_reference IS NOT NULL AND method IN ('BANK_TRANSFER','CHEQUE')"
+                "payer_reference IS NOT NULL AND method IN ('BANK_TRANSFER','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL')"
             ),
         ),
     )
@@ -277,7 +277,23 @@ class ClientSubscription(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         CheckConstraint("billing_interval IN ('MONTHLY','QUARTERLY','ANNUAL','ONE_TIME')", name="ck_subscription_billing_interval"),
         CheckConstraint("status IN ('PENDING','ACTIVE','PAST_DUE','CANCELLED','EXPIRED','SUSPENDED')", name="ck_subscription_status"),
         CheckConstraint("currency = 'BDT'", name="ck_subscription_currency_bdt"),
+        CheckConstraint("grace_days BETWEEN 0 AND 30", name="ck_client_subscription_grace_days"),
+        CheckConstraint("tax_bdt >= 0", name="ck_client_subscription_tax_nonnegative"),
+        UniqueConstraint("id", "company_id", name="uq_client_subscriptions_id_company"),
+        ForeignKeyConstraint(
+            ["invoice_id", "company_id"],
+            ["invoices.id", "invoices.company_id"],
+            ondelete="RESTRICT",
+            name="fk_client_subscriptions_invoice_company",
+        ),
         Index("ix_client_subscriptions_company_status", "company_id", "status"),
+        Index(
+            "uq_client_subscriptions_invoice",
+            "invoice_id",
+            unique=True,
+            postgresql_where=text("invoice_id IS NOT NULL"),
+        ),
+        Index("ix_client_subscriptions_period", "status", "ends_at", "grace_ends_at"),
     )
 
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="RESTRICT"), nullable=False)
@@ -285,6 +301,16 @@ class ClientSubscription(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     plan_name: Mapped[str] = mapped_column(String(120), nullable=False)
     billing_interval: Mapped[str] = mapped_column(String(16), nullable=False)
     amount_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    tax_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False, default=Decimal("0.00"))
+    tax_policy_reference: Mapped[str | None] = mapped_column(Text, nullable=True)
+    invoice_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    grace_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    grace_ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    suspension_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    activated_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="BDT")
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="PENDING")
     starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

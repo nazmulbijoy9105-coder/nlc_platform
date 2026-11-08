@@ -65,15 +65,15 @@ if _PRODUCTION_WORKER:
 elif _os.environ.get("CELERY_BROKER_URL") or _os.environ.get("CELERY_BROKER"):
     if not (_APP_DATABASE_URL or _DATABASE_URL):
         raise RuntimeError("SEC-009: runtime database URL not configured — refusing to run worker tasks")
-import logging
-import uuid
-from datetime import UTC, date, datetime, timedelta
-from typing import Any, cast
+import logging  # noqa: E402
+import uuid  # noqa: E402
+from datetime import UTC, date, datetime, timedelta  # noqa: E402
+from typing import Any, cast  # noqa: E402
 
-from celery import Task
-from celery.exceptions import SoftTimeLimitExceeded
+from celery import Task  # noqa: E402
+from celery.exceptions import SoftTimeLimitExceeded  # noqa: E402
 
-from app.worker.celery_app import celery_app
+from app.worker.celery_app import celery_app  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -868,6 +868,36 @@ def process_ai_review_queue(
 # ═══════════════════════════════════════════════════════════════════════
 # MAINTENANCE TASKS
 # ═══════════════════════════════════════════════════════════════════════
+
+@celery_app.task(
+    bind=True,
+    base=NLCBaseTask,
+    name="app.worker.tasks.process_due_subscriptions",
+    queue="maintenance",
+    max_retries=3,
+    default_retry_delay=120,
+    time_limit=600,
+)
+def process_due_subscriptions(self: Task) -> dict[str, Any]:
+    """Advance subscription expiry, grace and scheduled-cancellation states daily."""
+    async def _process():
+        from app.models.database import AsyncSessionLocal, set_admin_context
+        from app.services.subscription_service import SubscriptionService
+
+        async with AsyncSessionLocal() as db, db.begin():
+            await set_admin_context(db)
+            return await SubscriptionService(db).process_due_subscriptions(actor_id=None)
+
+    try:
+        result = run_async(_process())
+        logger.info("[Subscriptions] Daily lifecycle processing: %s", result)
+        return cast("dict[str, Any]", result)
+    except Exception as exc:
+        if _is_transient_error(exc):
+            raise self.retry(exc=exc)
+        raise
+
+
 
 @celery_app.task(
     bind=True,
