@@ -20,7 +20,8 @@ def test_webhook_and_rescue_reconciliation_is_explicitly_schema_only():
     assert "SCHEMA-ONLY RECONSTRUCTION" in source
     assert "Historical endpoint rows were not restored" in source
     assert "Historical rescue audit rows were not restored" in source
-    assert "ON DELETE RESTRICT" in source
+    # SQLAlchemy renders this FK option into PostgreSQL DDL during migration.
+    assert 'sa.ForeignKey("rescue_plans.id", ondelete="RESTRICT")' in source
     assert "ENABLE ROW LEVEL SECURITY" in source
     assert "FORCE ROW LEVEL SECURITY" in source
 
