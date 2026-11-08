@@ -241,16 +241,16 @@ def validate_production_migration_role(connection: Connection) -> None:
         text(
             """
             SELECT current_user,
-                   role.rolsuper,
-                   role.rolbypassrls,
+                   r.rolsuper,
+                   r.rolbypassrls,
                    CASE
                        WHEN audit_table.oid IS NULL THEN NULL
-                       ELSE audit_table.relowner = role.oid
+                       ELSE audit_table.relowner = r.oid
                    END AS owns_rescue_audit_log
-              FROM pg_roles AS role
+              FROM pg_roles AS r
               LEFT JOIN pg_class AS audit_table
                 ON audit_table.oid = to_regclass('public.rescue_audit_log')
-             WHERE role.rolname = current_user
+             WHERE r.rolname = current_user
             """
         )
     ).one_or_none()
