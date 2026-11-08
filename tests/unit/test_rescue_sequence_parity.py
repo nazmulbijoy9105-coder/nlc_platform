@@ -167,6 +167,14 @@ def test_black_findings_sort_before_red_findings():
     assert all(step["priority"] == "HIGH" for step in steps[1:])
 
 
-def test_missing_mapping_for_actionable_finding_is_explicit():
+def test_missing_mapping_for_actionable_finding_is_explicit(monkeypatch):
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module,
+        "VERIFIED_RULE_IDS",
+        frozenset({"NO-SUCH-RULE"}),
+    )
     with pytest.raises(ValueError, match="Missing statutory rescue mapping"):
         _seq([_flag("NO-SUCH-RULE")])
