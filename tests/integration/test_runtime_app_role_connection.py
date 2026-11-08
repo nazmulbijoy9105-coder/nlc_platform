@@ -44,8 +44,7 @@ async def test_runtime_database_pool_uses_nlc_app_role_and_rejects_unsigned_admi
         anonymous = await session.execute(text("""
             SELECT public.nlc_current_user_principal() AS principal,
                    public.nlc_current_user_id() AS user_id,
-                   count(c.id) AS visible_companies
-              FROM public.companies c
+                   (SELECT count(*) FROM public.companies) AS visible_companies
         """))
         anonymous_row = anonymous.one()
         assert anonymous_row.principal is None
@@ -59,8 +58,7 @@ async def test_runtime_database_pool_uses_nlc_app_role_and_rejects_unsigned_admi
         forged = await session.execute(text("""
             SELECT public.nlc_current_user_principal() AS principal,
                    public.nlc_current_user_is_staff() AS is_staff,
-                   count(c.id) AS visible_companies
-              FROM public.companies c
+                   (SELECT count(*) FROM public.companies) AS visible_companies
         """))
         forged_row = forged.one()
         assert forged_row.principal is None
