@@ -351,14 +351,6 @@ LEGAL_RECONCILIATION: Dict[str, Dict[str, Any]] = {
         "source": None,
         "notes": "Awaiting legal source reconciliation."
     },
-    "OFF-001": {
-        "rule_id": "OFF-001",
-        "verified": False,
-        "verified_by": None,
-        "verified_at": None,
-        "source": None,
-        "notes": "Awaiting legal source reconciliation."
-    },
     "INC-003": {
         "rule_id": "INC-003",
         "verified": False,
@@ -607,9 +599,140 @@ LEGAL_RECONCILIATION: Dict[str, Dict[str, Any]] = {
         "source": None,
         "notes": "Awaiting legal source reconciliation."
     },
+    "ACC-001": {
+        "rule_id": "ACC-001",
+        "verified": False,
+        "verified_by": None,
+        "verified_at": None,
+        "source": None,
+        "notes": "Awaiting independent Bangladesh-law review and primary-source citation."
+    },
+    "ACC-002": {
+        "rule_id": "ACC-002",
+        "verified": False,
+        "verified_by": None,
+        "verified_at": None,
+        "source": None,
+        "notes": "Awaiting independent Bangladesh-law review and primary-source citation."
+    },
+    "ACC-003": {
+        "rule_id": "ACC-003",
+        "verified": False,
+        "verified_by": None,
+        "verified_at": None,
+        "source": None,
+        "notes": "Awaiting independent Bangladesh-law review and primary-source citation."
+    },
+    "BOD-001": {
+        "rule_id": "BOD-001",
+        "verified": False,
+        "verified_by": None,
+        "verified_at": None,
+        "source": None,
+        "notes": "Awaiting independent Bangladesh-law review and primary-source citation."
+    },
+    "BOD-002": {
+        "rule_id": "BOD-002",
+        "verified": False,
+        "verified_by": None,
+        "verified_at": None,
+        "source": None,
+        "notes": "Awaiting independent Bangladesh-law review and primary-source citation."
+    },
+    "BOD-003": {
+        "rule_id": "BOD-003",
+        "verified": False,
+        "verified_by": None,
+        "verified_at": None,
+        "source": None,
+        "notes": "Awaiting independent Bangladesh-law review and primary-source citation."
+    },
+    "DIR-007": {
+        "rule_id": "DIR-007",
+        "verified": False,
+        "verified_by": None,
+        "verified_at": None,
+        "source": None,
+        "notes": "Awaiting independent Bangladesh-law review and primary-source citation."
+    },
+    "DIR-008": {
+        "rule_id": "DIR-008",
+        "verified": False,
+        "verified_by": None,
+        "verified_at": None,
+        "source": None,
+        "notes": "Awaiting independent Bangladesh-law review and primary-source citation."
+    },
+    "DIR-010": {
+        "rule_id": "DIR-010",
+        "verified": False,
+        "verified_by": None,
+        "verified_at": None,
+        "source": None,
+        "notes": "Awaiting independent Bangladesh-law review and primary-source citation."
+    },
+    "INC-007": {
+        "rule_id": "INC-007",
+        "verified": False,
+        "verified_by": None,
+        "verified_at": None,
+        "source": None,
+        "notes": "Awaiting independent Bangladesh-law review and primary-source citation."
+    },
+    "MEM-001": {
+        "rule_id": "MEM-001",
+        "verified": False,
+        "verified_by": None,
+        "verified_at": None,
+        "source": None,
+        "notes": "Awaiting independent Bangladesh-law review and primary-source citation."
+    },
 }
 
+
+def _validate_reconciliation_registry() -> None:
+    expected = set(STATUTORY_RULE_REGISTRY)
+    actual = set(LEGAL_RECONCILIATION)
+    if actual != expected:
+        raise RuntimeError(
+            "legal reconciliation registry parity failure: "
+            f"missing={sorted(expected - actual)} extra={sorted(actual - expected)}"
+        )
+    for rule_id, record in LEGAL_RECONCILIATION.items():
+        if record.get("rule_id") != rule_id:
+            raise RuntimeError(f"{rule_id}: reconciliation inner rule_id mismatch")
+        rule = STATUTORY_RULE_REGISTRY[rule_id]
+        verified = record.get("verified") is True
+        status_verified = rule.provision_status is ProvisionStatus.VERIFIED
+        if verified != status_verified:
+            raise RuntimeError(f"{rule_id}: legal reconciliation and rule status disagree")
+        if verified and not all(record.get(field) for field in ("verified_by", "verified_at", "source")):
+            raise RuntimeError(f"{rule_id}: verified rule lacks reviewer, timestamp, or source")
+
+
+_validate_reconciliation_registry()
+
+
 def get_reconciliation_status(rule_id: str) -> str:
+    """Return the reviewed status; unknown rule IDs are programming errors."""
+    if rule_id not in LEGAL_RECONCILIATION:
+        raise KeyError(f"unknown statutory rule: {rule_id}")
+    if LEGAL_RECONCILIATION[rule_id].get("verified") is True:
+        return ProvisionStatus.VERIFIED.value
+    return ProvisionStatus.RECONCILE.value
+
+
+def verify_provision(rule_id: str, verified_by: str, source: str) -> bool:
+    """Deprecated fail-closed API.
+
+    A free-form runtime call cannot establish independent legal verification.
+    Legal status changes must be made in a reviewed source-control change that
+    includes the primary-source citation, reviewer identity, review timestamp,
+    and matching canonical rule provenance. This function intentionally does
+    not mutate either registry.
+    """
+    return False
+(rule_id: str) -> str:
     """Returns the provision status based on reconciliation."""
     recon = LEGAL_RECONCILIATION.get(rule_id)
     if recon and recon.get("verified"):
