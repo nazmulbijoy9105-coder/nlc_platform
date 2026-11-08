@@ -2149,6 +2149,7 @@ class NLCRuleEngine:
                                 "statutory_deadline": satisfaction_deadline.isoformat(),
                                 "statutory_period_days": 21,
                                 "elapsed_days": satisfaction_delay,
+                                "delay_days": satisfaction_delay,
                                 "days_overdue": days_overdue,
                                 "form": "Form XXVIII",
                                 "statutory_basis": "Section 172(1), read with Section 159",
