@@ -37,12 +37,11 @@ def upgrade() -> None:
                   FROM pg_auth_members membership
                   JOIN pg_roles granted_role ON granted_role.oid = membership.roleid
                   JOIN pg_roles member_role ON member_role.oid = membership.member
-                 WHERE member_role.rolname = ANY(:restricted_roles)
-                    OR granted_role.rolname = ANY(:restricted_roles)
+                 WHERE member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
+                    OR granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
             )
             """
-        ),
-        {"restricted_roles": list(RESTRICTED_ROLES)},
+        )
     ).scalar_one()
     if membership_exists:
         raise RuntimeError(
