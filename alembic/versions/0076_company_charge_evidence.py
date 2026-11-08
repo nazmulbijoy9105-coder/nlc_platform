@@ -55,6 +55,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
+        sa.UniqueConstraint("company_id", "charge_reference", name="uq_company_charge_reference"),
         sa.CheckConstraint("amount_bdt >= 0", name="ck_company_charges_amount_nonnegative"),
         sa.CheckConstraint(
             "NOT creation_date_verified OR (creation_date_evidence_ref IS NOT NULL AND creation_date_verified_at IS NOT NULL AND creation_date_verified_by IS NOT NULL)",
