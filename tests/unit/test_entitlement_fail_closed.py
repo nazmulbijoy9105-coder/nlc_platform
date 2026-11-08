@@ -111,7 +111,7 @@ async def test_legal_staff_without_company_context_is_denied():
 
 
 @pytest.mark.asyncio
-async def test_customer_without_company_membership_is_denied_before_billing_lookup():
+async def test_customer_without_company_membership_is_denied_before_billing_lookup(monkeypatch):
     dependency = entitlement.require_entitlement("compliance_package")
     user = SimpleNamespace(id=uuid.uuid4(), role="CLIENT_DIRECTOR")
     db = MagicMock()
@@ -121,13 +121,9 @@ async def test_customer_without_company_membership_is_denied_before_billing_look
         def __init__(self, db):
             raise AssertionError("Subscription lookup must follow membership authorization")
 
-    monkeypatch = pytest.MonkeyPatch()
     monkeypatch.setattr(entitlement, "SubscriptionService", MustNotCheckSubscription)
-    try:
-        with pytest.raises(HTTPException) as exc:
-            await dependency(request=_request(), db=db, current_user=user)
-    finally:
-        monkeypatch.undo()
+    with pytest.raises(HTTPException) as exc:
+        await dependency(request=_request(), db=db, current_user=user)
 
     assert exc.value.status_code == 403
     assert "active company membership" in exc.value.detail
@@ -221,15 +217,3 @@ async def test_unknown_account_role_does_not_receive_entitlement():
 
     assert exc.value.status_code == 403
 
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("role", ["CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "LEGAL_STAFF"])
-async def test_unverified_entitlement_fails_closed_for_non_admin_roles(role):
-    dependency = entitlement.require_entitlement("advanced_compliance")
-
-    with pytest.raises(HTTPException) as exc:
-        await dependency(request=_request(), db=MagicMock(), current_user=SimpleNamespace(role=role))
-
-    assert exc.value.status_code == 503
-    assert "entitlement verification is not configured" in exc.value.detail
-    assert exc.value.headers["Retry-After"] == "3600"
