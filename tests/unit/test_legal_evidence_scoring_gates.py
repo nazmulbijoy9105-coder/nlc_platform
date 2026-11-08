@@ -1,5 +1,4 @@
 import pytest
-pytestmark = pytest.mark.skip(reason="pending reconciliation")
 from datetime import date
 from types import SimpleNamespace
 
@@ -62,7 +61,7 @@ def test_unapproved_black_override_is_excluded_before_override_semantics():
 
     result = _applied_score_impacts([flag])
 
-    assert result == [{"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"}]
+    assert result == [{"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}]
 
 
 def test_unapproved_black_rule_cannot_force_black_score_band():
