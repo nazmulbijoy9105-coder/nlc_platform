@@ -80,6 +80,7 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
     # receipt; the deferred ledger constraint is checked after evidence exists.
     db.add(submission)
     await db.flush()
+    assert submission.status == "PENDING_REVIEW"
     submission.status = "APPROVED"
     submission.reviewed_by = db_user.id
     submission.reviewed_at = now
