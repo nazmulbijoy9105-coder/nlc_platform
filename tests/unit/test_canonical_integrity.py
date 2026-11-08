@@ -1,4 +1,3 @@
-import pytest
 """Structured parity gate for engine, canonical registry, rescue registry and seed corpus.
 
 The engine is parsed as Python syntax. Rule IDs and statutory bases are read
