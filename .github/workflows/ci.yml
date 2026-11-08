@@ -282,19 +282,67 @@ jobs:
           DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
           DATABASE_URL="$SECOND_DATABASE_URL" alembic current
 
-          # Move to the revision immediately after the forward-only legal-evidence
-          # migration. The guard must reject crossing 0076 without deleting evidence.
-          DATABASE_URL="$SECOND_DATABASE_URL" alembic downgrade 0076_company_charge_evidence
-          BEFORE_DOWNGRADE="$(DATABASE_URL="$SECOND_DATABASE_URL" alembic current)"
-          if DATABASE_URL="$SECOND_DATABASE_URL" alembic downgrade 0075_director_transfer_evidence; then
-            echo "ERROR: forward-only legal-evidence migration unexpectedly downgraded"
-            exit 1
-          fi
-          AFTER_DOWNGRADE="$(DATABASE_URL="$SECOND_DATABASE_URL" alembic current)"
-          test "$BEFORE_DOWNGRADE" = "$AFTER_DOWNGRADE"
           # Re-apply the merged head to prove idempotent upgrade behavior.
           DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
           DATABASE_URL="$SECOND_DATABASE_URL" alembic current
+
+          # Test the forward-only legal-evidence guard on its own isolated
+          # revision path. Downgrading a multi-branch merged head to 0076 is
+          # not a valid way to position this database: Alembic must traverse
+          # unrelated release branches and can cross the guarded revision.
+          createdb -h localhost -U nlc_test nlc_test_forward_only_0076
+          FORWARD_ONLY_DATABASE_URL="postgresql+asyncpg://nlc_test@localhost:5432/nlc_test_forward_only_0076"
+          DATABASE_URL="$FORWARD_ONLY_DATABASE_URL" alembic upgrade 0076_company_charge_evidence
+
+          # Capture the actual version-table rows, not formatted CLI output.
+          VERSION_BEFORE="$(DATABASE_URL="$FORWARD_ONLY_DATABASE_URL" python - <<'PY'
+          import asyncio
+          import os
+          import asyncpg
+
+          async def main():
+              url = os.environ["DATABASE_URL"].replace(
+                  "postgresql+asyncpg://", "postgresql://", 1
+              )
+              conn = await asyncpg.connect(url)
+              try:
+                  rows = await conn.fetch(
+                      "SELECT version_num FROM alembic_version ORDER BY version_num"
+                  )
+                  print("|".join(row["version_num"] for row in rows))
+              finally:
+                  await conn.close()
+
+          asyncio.run(main())
+          PY
+          )"
+          test "$VERSION_BEFORE" = "0076_company_charge_evidence"
+          if DATABASE_URL="$FORWARD_ONLY_DATABASE_URL" alembic downgrade 0075_director_transfer_evidence; then
+            echo "ERROR: forward-only legal-evidence migration unexpectedly downgraded"
+            exit 1
+          fi
+          VERSION_AFTER="$(DATABASE_URL="$FORWARD_ONLY_DATABASE_URL" python - <<'PY'
+          import asyncio
+          import os
+          import asyncpg
+
+          async def main():
+              url = os.environ["DATABASE_URL"].replace(
+                  "postgresql+asyncpg://", "postgresql://", 1
+              )
+              conn = await asyncpg.connect(url)
+              try:
+                  rows = await conn.fetch(
+                      "SELECT version_num FROM alembic_version ORDER BY version_num"
+                  )
+                  print("|".join(row["version_num"] for row in rows))
+              finally:
+                  await conn.close()
+
+          asyncio.run(main())
+          PY
+          )"
+          test "$VERSION_BEFORE" = "$VERSION_AFTER"
       - name: Migrate a fresh database from revision 0042 through head
         run: |
           set -euo pipefail
