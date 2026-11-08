@@ -286,14 +286,6 @@ class ClientSubscription(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         CheckConstraint("billing_interval IN ('MONTHLY','QUARTERLY','ANNUAL','ONE_TIME')", name="ck_subscription_billing_interval"),
         CheckConstraint("status IN ('PENDING','ACTIVE','PAST_DUE','CANCELLED','EXPIRED','SUSPENDED')", name="ck_subscription_status"),
         CheckConstraint("currency = 'BDT'", name="ck_subscription_currency_bdt"),
-        CheckConstraint("tax_bdt >= 0", name="ck_client_subscription_tax_nonnegative"),
-        UniqueConstraint("id", "company_id", name="uq_client_subscriptions_id_company"),
-        ForeignKeyConstraint(
-            ["invoice_id", "company_id"],
-            ["invoices.id", "invoices.company_id"],
-            ondelete="RESTRICT",
-            name="fk_client_subscriptions_invoice_company",
-        ),
         Index("ix_client_subscriptions_company_status", "company_id", "status"),
         Index(
             "uq_client_subscriptions_invoice",
