@@ -224,7 +224,6 @@ class CompanyProfile:
     agm_extension_verified_at: date | None = None
     agm_extension_verified_by: str | None = None
     agm_held_this_cycle: bool | None = None
-    agm_held_without_audit: bool = False
     agm_held_without_audit: bool | None = None
     agm_scheduled_date: Optional[date] = None
     notice_sent_date: Optional[date] = None
