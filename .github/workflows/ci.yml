@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches: [main, fix/nlc-canonical-release-gates-20261105, fix/commercial-lifecycle-locks-and-ci-secret-20261108]
     branches: [main, fix/nlc-canonical-release-gates-20261105, fix/commercial-lifecycle-concurrency-main-20261108]
     branches: [main, fix/nlc-canonical-release-gates-20261105, fix/commercial-lock-order-on-160-20261108]
     branches: [main, fix/nlc-canonical-release-gates-20261105, fix/commercial-lifecycle-concurrency-main-20261108, feat/manual-mobile-wallet-payments-20261108]
@@ -138,6 +139,9 @@ jobs:
       DATABASE_URL: postgresql+asyncpg://nlc_test@localhost:5432/nlc_test
       DATABASE_URL_TEST: postgresql+asyncpg://nlc_test@localhost:5432/nlc_test
       REDIS_URL: redis://localhost:6379/0
+      JWT_SECRET_KEY: test-secret-key-not-for-production
+      NLC_RLS_HMAC_SECRET: ci-only-rls-hmac-secret-not-for-production-2026
+      APP_DATABASE_URL: postgresql+asyncpg://nlc_app_role@localhost:5432/nlc_test
       REQUIRE_RLS_APP_ROLE: "true"
       ENVIRONMENT: test
 
@@ -224,8 +228,8 @@ jobs:
           alembic upgrade head
           alembic current
 
-          # Provision a CI-only credential for the runtime role. The app pool
-          # must connect as nlc_app_role itself, not as the migration owner.
+          # Ensure the runtime role can log in. The app pool must connect as
+          # nlc_app_role itself, not as the migration owner; CI uses local trust auth.
           python - <<'PY'
           import asyncio
           import os
@@ -237,6 +241,8 @@ jobs:
               )
               conn = await asyncpg.connect(url)
               try:
+                  await conn.execute(
+                      "ALTER ROLE nlc_app_role WITH LOGIN"
                   password = os.environ["APP_DATABASE_PASSWORD"]
                   alter_role = await conn.fetchval(
                       "SELECT format('ALTER ROLE nlc_app_role WITH PASSWORD %L', $1::text)",
