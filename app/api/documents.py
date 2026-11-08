@@ -173,7 +173,6 @@ def _doc_to_response(doc) -> DocumentResponse:
         Depends(require_roles("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN")),
         Depends(require_entitlement("document_management")),
     ],
-    dependencies=[Depends(require_entitlement("document_management"))],
     summary="List all documents across portfolio",
 )
 async def list_all_documents(
@@ -252,13 +251,10 @@ async def list_all_documents(
 @router.get(
     "/templates",
     response_model=list[TemplateResponse],
-    dependencies=[Depends(require_entitlement("document_management"))],
     dependencies=[
-        Depends(require_roles("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN")),
+        Depends(require_roles("LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN")),
         Depends(require_entitlement("document_management")),
     ],
-    summary="List all available AI document templates",
-    dependencies=[Depends(require_roles("LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN"))],
     summary="List the non-company-specific AI document template catalogue",
 )
 async def list_templates(
@@ -403,7 +399,6 @@ async def generate_document(
         Depends(require_company_access("company_id")),
         Depends(require_entitlement("document_management")),
     ],
-    dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("document_management"))],
     summary="List all documents for a company",
 )
 async def list_documents(
