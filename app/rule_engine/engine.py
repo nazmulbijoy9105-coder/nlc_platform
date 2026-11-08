@@ -543,6 +543,11 @@ LEGAL_SCORE_RELEASED: bool = False
 # Only after counsel approves current law, applicability, exceptions, evidence
 # standards and effective dates may this flag be changed to True.
 
+def legal_score_is_released() -> bool:
+    """The global switch and a non-empty counsel-approved rule set are both required."""
+    return LEGAL_SCORE_RELEASED is True and bool(VERIFIED_RULE_IDS)
+
+
 
 REVENUE_TIER_MAP = {
     Severity.GREEN: RevenueTier.COMPLIANCE_PACKAGE,
@@ -2878,7 +2883,7 @@ class NLCRuleEngine:
             for f in self._flags if not f.resolved and f.conditional_applies
         )
 
-        if LEGAL_SCORE_RELEASED and (pre_score <= 29 or has_black_override):
+        if legal_score_is_released() and (pre_score <= 29 or has_black_override):
             black_count = len([
                 f for f in self._flags
                 if f.rule_id in VERIFIED_RULE_IDS
@@ -2943,7 +2948,7 @@ class NLCRuleEngine:
         ]
         scored = [
             f for f in violations
-            if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS
+            if legal_score_is_released() and f.rule_id in VERIFIED_RULE_IDS
         ]
 
         deductions = {
@@ -2981,7 +2986,7 @@ class NLCRuleEngine:
         # score_impact is excluded from deductions.
         scored = [
             f for f in violations
-            if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS
+            if legal_score_is_released() and f.rule_id in VERIFIED_RULE_IDS
         ]
 
         tax_ded = sum(f.score_impact for f in scored if f.rule_id.startswith(("TAX-", "VAT-")))
@@ -3021,9 +3026,9 @@ class NLCRuleEngine:
         
         override = False
         reason = None
-        final = raw if LEGAL_SCORE_RELEASED else 100
+        final = raw if legal_score_is_released() else 100
         critical = []
-        if LEGAL_SCORE_RELEASED:
+        if legal_score_is_released():
             critical = [
                 f for f in active
                 if f.rule_id in VERIFIED_RULE_IDS
@@ -3043,12 +3048,12 @@ class NLCRuleEngine:
         # Keep the band NOT_EVALUATED until the full legal corpus is independently approved.
         score_band = (
             Severity(self._score_to_band(final, force_black=bool(critical), coverage=coverage))
-            if LEGAL_SCORE_RELEASED else Severity.NOT_EVALUATED
+            if legal_score_is_released() else Severity.NOT_EVALUATED
         )
 
         # Band = worst of (score-based band, highest active flag severity)
         # Prevents false GREEN when a RED-severity rule fires (BLACK handled above)'t override
-        if LEGAL_SCORE_RELEASED and not critical:
+        if legal_score_is_released() and not critical:
             severity_rank = {Severity.GREEN: 0, Severity.YELLOW: 1, Severity.RED: 2, Severity.BLACK: 3}
             max_flag_severity = Severity.GREEN
             for f in active:
@@ -3090,7 +3095,8 @@ class NLCRuleEngine:
             "engine_version": RULE_ENGINE_VERSION,
             "ilrmf_version": ILRMF_VERSION,
             "verified_rule_ids": sorted(VERIFIED_RULE_IDS),
-            "legal_score_released": LEGAL_SCORE_RELEASED,
+            "legal_score_release_switch": LEGAL_SCORE_RELEASED,
+            "legal_score_released": legal_score_is_released(),
             "flags": flag_signatures,
             "final_score": final,
         }
@@ -3119,8 +3125,8 @@ class NLCRuleEngine:
             revenue_tier=REVENUE_TIER_MAP[band],
             active_flag_count=len(active),
             coverage=coverage,
-            black_flag_count=len([f for f in active if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS and f.is_black_override and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
-            red_flag_count=len([f for f in active if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.RED and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            black_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in VERIFIED_RULE_IDS and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS and f.is_black_override and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            red_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.RED and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             yellow_flag_count=len([f for f in active if f.severity == Severity.YELLOW and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             green_flag_count=len([f for f in active if f.severity == Severity.GREEN and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             bankruptcy_score=max(0, 5 - bnk_ded),
