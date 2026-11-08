@@ -43,7 +43,8 @@ def upgrade() -> None:
         "agms",
         "NOT agm_held_verified OR "
         "(agm_held_evidence_ref IS NOT NULL AND btrim(agm_held_evidence_ref) <> '' "
-        "AND agm_held_verified_at IS NOT NULL AND agm_held_verified_by IS NOT NULL)",
+        "AND agm_held_verified_at IS NOT NULL AND agm_held_verified_by IS NOT NULL "
+        "AND (agm_held IS FALSE OR agm_date IS NOT NULL))",
     )
     op.create_check_constraint(
         "ck_agms_member_register_provenance",
@@ -97,6 +98,7 @@ def upgrade() -> None:
             "AND entitlement_verified_by IS NOT NULL)",
             name="ck_agm_notice_entitlement_provenance",
         ),
+        sa.CheckConstraint("NOT entitled_member_verified OR entitlement_verified_by <> submitted_by", name="ck_agm_notice_entitlement_four_eyes"),
         sa.CheckConstraint(
             "NOT notice_verified OR "
             "(notice_evidence_ref IS NOT NULL AND btrim(notice_evidence_ref) <> '' "
@@ -104,6 +106,7 @@ def upgrade() -> None:
             "AND notice_verified_by IS NOT NULL)",
             name="ck_agm_notice_service_provenance",
         ),
+        sa.CheckConstraint("NOT notice_verified OR notice_verified_by <> submitted_by", name="ck_agm_notice_service_four_eyes"),
         sa.CheckConstraint(
             "NOT consent_verified OR "
             "(consent_given IS NOT NULL AND consent_evidence_ref IS NOT NULL "
@@ -111,6 +114,7 @@ def upgrade() -> None:
             "AND consent_verified_by IS NOT NULL)",
             name="ck_agm_notice_consent_provenance",
         ),
+        sa.CheckConstraint("NOT consent_verified OR consent_verified_by <> submitted_by", name="ck_agm_notice_consent_four_eyes"),
         sa.CheckConstraint(
             "NOT omission_verified OR "
             "(omission_accidental IS NOT NULL AND omission_evidence_ref IS NOT NULL "
@@ -118,6 +122,7 @@ def upgrade() -> None:
             "AND omission_verified_by IS NOT NULL)",
             name="ck_agm_notice_omission_provenance",
         ),
+        sa.CheckConstraint("NOT omission_verified OR omission_verified_by <> submitted_by", name="ck_agm_notice_omission_four_eyes"),
     )
     op.create_index("ix_agm_notice_evidence_company_id", "agm_notice_evidence", ["company_id"])
     op.create_index("ix_agm_notice_evidence_agm_id", "agm_notice_evidence", ["agm_id"])
@@ -171,12 +176,14 @@ def upgrade() -> None:
         ),
         sa.CheckConstraint(
             "NOT filing_status_verified OR (filing_status IS NOT NULL AND filing_evidence_ref IS NOT NULL "
-            "AND btrim(filing_evidence_ref) <> '' AND filing_verified_at IS NOT NULL AND filing_verified_by IS NOT NULL)",
+            "AND btrim(filing_evidence_ref) <> '' AND filing_verified_at IS NOT NULL AND filing_verified_by IS NOT NULL "
+            "AND filing_verified_by <> submitted_by)",
             name="ck_share_event_filing_provenance",
         ),
         sa.CheckConstraint(
             "NOT certificate_status_verified OR (certificate_issued IS NOT NULL AND certificate_evidence_ref IS NOT NULL "
-            "AND btrim(certificate_evidence_ref) <> '' AND certificate_verified_at IS NOT NULL AND certificate_verified_by IS NOT NULL)",
+            "AND btrim(certificate_evidence_ref) <> '' AND certificate_verified_at IS NOT NULL AND certificate_verified_by IS NOT NULL "
+            "AND certificate_verified_by <> submitted_by)",
             name="ck_share_event_certificate_provenance",
         ),
         sa.CheckConstraint("certificate_issued IS DISTINCT FROM TRUE OR certificate_issue_date IS NOT NULL", name="ck_share_event_certificate_date"),
@@ -184,6 +191,59 @@ def upgrade() -> None:
     )
     op.create_index("ix_share_compliance_events_company_id", "share_compliance_events", ["company_id"])
     op.create_index("ix_share_compliance_events_company_event_date", "share_compliance_events", ["company_id", "event_type", "event_date"])
+
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_validate_agm_notice_company()
+        RETURNS trigger LANGUAGE plpgsql
+        SET search_path = pg_catalog, public
+        AS $function$
+        DECLARE parent_company uuid;
+        BEGIN
+            SELECT a.company_id INTO parent_company
+            FROM public.agms a WHERE a.id = NEW.agm_id;
+            IF parent_company IS NULL OR parent_company <> NEW.company_id THEN
+                RAISE EXCEPTION 'AGM notice evidence company must match its AGM';
+            END IF;
+            RETURN NEW;
+        END;
+        $function$
+    """)
+    op.execute("""
+        CREATE TRIGGER trg_agm_notice_company_match
+        BEFORE INSERT OR UPDATE OF agm_id, company_id ON public.agm_notice_evidence
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_validate_agm_notice_company()
+    """)
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_validate_share_event_company()
+        RETURNS trigger LANGUAGE plpgsql
+        SET search_path = pg_catalog, public
+        AS $function$
+        DECLARE related_company uuid;
+        BEGIN
+            IF NEW.share_transfer_id IS NOT NULL THEN
+                SELECT t.company_id INTO related_company
+                FROM public.share_transfers t WHERE t.id = NEW.share_transfer_id;
+                IF related_company IS NULL OR related_company <> NEW.company_id THEN
+                    RAISE EXCEPTION 'Share transfer event must reference a transfer in the same company';
+                END IF;
+            END IF;
+            IF NEW.shareholder_id IS NOT NULL THEN
+                SELECT s.company_id INTO related_company
+                FROM public.shareholders s WHERE s.id = NEW.shareholder_id;
+                IF related_company IS NULL OR related_company <> NEW.company_id THEN
+                    RAISE EXCEPTION 'Share event shareholder must belong to the same company';
+                END IF;
+            END IF;
+            RETURN NEW;
+        END;
+        $function$
+    """)
+    op.execute("""
+        CREATE TRIGGER trg_share_event_company_match
+        BEFORE INSERT OR UPDATE OF company_id, share_transfer_id, shareholder_id
+        ON public.share_compliance_events
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_validate_share_event_company()
+    """)
 
     for table in ("agm_notice_evidence", "share_compliance_events"):
         op.execute(f"ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY")
