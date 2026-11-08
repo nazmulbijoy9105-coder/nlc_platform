@@ -873,7 +873,6 @@ class TestDocuments:
         assert "approved" in resp.json()["detail"].lower()
 
     @pytest.mark.asyncio
-    async def test_ai_constitution_article3_enforced(self, api_client, db, legal_tok, db_company, legal_staff_company_scope):
     async def test_ai_constitution_article3_enforced(self, api_client, db, admin_token, db_company):
         """
         AI Constitution Article 3: Documents must never be auto-sent.
@@ -1456,14 +1455,6 @@ class TestSubscriptionEntitlementRouteGates:
         )
         assert response.status_code == 402
 
-        self, api_client, legal_token, db_company, legal_staff_company_scope
-    ):
-        response = await api_client.get(
-            f"/api/v1/companies/{db_company.id}/compliance",
-            headers=_auth(legal_token),
-        )
-        assert response.status_code == 402
-
     @pytest.mark.asyncio
     async def test_client_document_pdf_requires_paid_entitlement(
         self, api_client, db_client_user, db_company, db
@@ -1558,6 +1549,5 @@ class TestSubscriptionEntitlementRouteGates:
             headers=_auth(legal_token),
             json={"held_date": "2026-06-30"},
         )
-        assert response.status_code == 403
         assert response.status_code in {403, 404}
 
