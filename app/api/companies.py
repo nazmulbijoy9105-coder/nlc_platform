@@ -23,6 +23,11 @@ from app.models.company import CompanyUserAccess
 from app.models.enums import CompanyStatus, CompanyType, RevenueTier, RiskBand, UserRole
 from app.models.user import User
 from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
+
+def _legal_score_is_released() -> bool:
+    """Require both the release switch and a non-empty approved rule set."""
+    return LEGAL_SCORE_RELEASED is True and bool(VERIFIED_RULE_IDS)
+
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
 from app.services.compliance_calendar import LEGAL_CALENDAR_RELEASED
@@ -42,7 +47,7 @@ def _require_legal_dashboard_release(*, deadlines: bool = False) -> None:
                 "validation, company-specific applicability and independent counsel approval."
             ),
         )
-    if not deadlines and not LEGAL_SCORE_RELEASED:
+    if not deadlines and not _legal_score_is_released():
         raise HTTPException(
             status_code=503,
             detail=(
@@ -202,7 +207,7 @@ class MessageResponse(BaseModel):
 
 
 def _flag_to_response(flag) -> FlagResponse:
-    approved = LEGAL_SCORE_RELEASED and flag.rule_id in VERIFIED_RULE_IDS
+    approved = _legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS
     severity = getattr(flag.severity, "value", flag.severity)
     return FlagResponse(
         flag_id=str(flag.id),
@@ -229,7 +234,7 @@ def _flag_to_response(flag) -> FlagResponse:
 
 def _score_history_to_response(item: dict) -> ScoreHistoryEntry:
     source_band = getattr(item["risk_band"], "value", item["risk_band"])
-    released = LEGAL_SCORE_RELEASED and source_band != "NOT_EVALUATED"
+    released = _legal_score_is_released() and source_band != "NOT_EVALUATED"
     return ScoreHistoryEntry(
         snapshot_month=item["month"],
         score=item["score"] if released else None,
@@ -279,10 +284,10 @@ def _company_to_response(company, *, can_view_financials: bool = True) -> Compan
         return str(val.value if hasattr(val, "value") else val)
 
     risk_band = _s(company.current_risk_band)
-    if not LEGAL_SCORE_RELEASED:
+    if not _legal_score_is_released():
         risk_band = "NOT_EVALUATED"
     compliance_score = (
-        None if (not LEGAL_SCORE_RELEASED or risk_band == "NOT_EVALUATED")
+        None if (not _legal_score_is_released() or risk_band == "NOT_EVALUATED")
         else company.current_compliance_score
     )
 
@@ -298,7 +303,7 @@ def _company_to_response(company, *, can_view_financials: bool = True) -> Compan
             if getattr(company, "last_evaluated_at", None) else None
         ),
         director_count=director_count,
-        violation_count=violation_count if LEGAL_SCORE_RELEASED else 0,
+        violation_count=violation_count if _legal_score_is_released() else 0,
         company_type=_s(getattr(company, "company_type", None)),
         company_status=_s(getattr(company, "company_status", None)),
         financial_year_end=company.financial_year_end.isoformat() if getattr(company, "financial_year_end", None) else None,
@@ -307,10 +312,10 @@ def _company_to_response(company, *, can_view_financials: bool = True) -> Compan
         is_fdi_registered=getattr(company, "is_fdi_registered", None),
         is_dormant=getattr(company, "is_dormant", None),
         created_at=company.created_at.isoformat() if getattr(company, "created_at", None) else None,
-        active_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE")]) if LEGAL_SCORE_RELEASED else 0),
-        black_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("BLACK", "Severity.BLACK")]) if LEGAL_SCORE_RELEASED else 0),
-        red_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("RED", "Severity.RED")]) if LEGAL_SCORE_RELEASED else 0),
-        yellow_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("YELLOW", "Severity.YELLOW")]) if LEGAL_SCORE_RELEASED else 0),
+        active_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE")]) if _legal_score_is_released() else 0),
+        black_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("BLACK", "Severity.BLACK")]) if _legal_score_is_released() else 0),
+        red_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("RED", "Severity.RED")]) if _legal_score_is_released() else 0),
+        yellow_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("YELLOW", "Severity.YELLOW")]) if _legal_score_is_released() else 0),
         is_manufacturing=getattr(company, "is_manufacturing", None),
         tax_return_filed_for_current_fy=(
             getattr(company, "tax_return_filed_for_current_fy", None)
@@ -366,7 +371,7 @@ async def list_companies(search: str | None = Query(None), risk_band: RiskBand |
         )
     companies, _total = await svc.list_companies(
         search=search,
-        risk_band=risk_band if LEGAL_SCORE_RELEASED else None,
+        risk_band=risk_band if _legal_score_is_released() else None,
         company_status=company_status,
         revenue_tier=revenue_tier,
         is_dormant=is_dormant,
@@ -447,7 +452,7 @@ async def evaluate_company(company_id: uuid.UUID, request: Request, current_user
     await db.refresh(company)
     await activity.log(action="COMPLIANCE_EVALUATED", resource_type="company", resource_id=str(company_id), description=f"Evaluation: Score={result['score']}, Band={result['risk_band']}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     flag_summary = await compliance_svc.get_flag_summary(company_id)
-    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=result["score"] if LEGAL_SCORE_RELEASED else None, pre_override_score=result.get("raw_total") if LEGAL_SCORE_RELEASED else None, risk_band=result["risk_band"] if LEGAL_SCORE_RELEASED else "NOT_EVALUATED", active_flags=flag_summary.get("total_active", 0) if LEGAL_SCORE_RELEASED else 0, black_flags=flag_summary.get("black", 0) if LEGAL_SCORE_RELEASED else 0, red_flags=flag_summary.get("red", 0) if LEGAL_SCORE_RELEASED else 0, yellow_flags=flag_summary.get("yellow", 0) if LEGAL_SCORE_RELEASED else 0, last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, evaluation_triggered=True, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
+    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=result["score"] if _legal_score_is_released() else None, pre_override_score=result.get("raw_total") if _legal_score_is_released() else None, risk_band=result["risk_band"] if _legal_score_is_released() else "NOT_EVALUATED", active_flags=flag_summary.get("total_active", 0) if _legal_score_is_released() else 0, black_flags=flag_summary.get("black", 0) if _legal_score_is_released() else 0, red_flags=flag_summary.get("red", 0) if _legal_score_is_released() else 0, yellow_flags=flag_summary.get("yellow", 0) if _legal_score_is_released() else 0, last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, evaluation_triggered=True, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
 
 
 @router.get("/{company_id}/compliance", response_model=ComplianceSummaryResponse, dependencies=[Depends(require_company_access("company_id"))], summary="Get compliance state")
@@ -457,10 +462,10 @@ async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_d
     company = await company_svc.get_by_id_or_404(company_id)
     flag_summary = await compliance_svc.get_flag_summary(company_id)
     risk_band = getattr(company.current_risk_band, "value", company.current_risk_band)
-    if not LEGAL_SCORE_RELEASED:
+    if not _legal_score_is_released():
         risk_band = "NOT_EVALUATED"
-    current_score = None if (not LEGAL_SCORE_RELEASED or risk_band == "NOT_EVALUATED") else company.current_compliance_score
-    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=current_score, pre_override_score=None, risk_band=risk_band, active_flags=flag_summary.get("total_active", 0), pending_review_flags=flag_summary.get("pending_review", 0), black_flags=flag_summary.get("black", 0) if LEGAL_SCORE_RELEASED else 0, red_flags=flag_summary.get("red", 0) if LEGAL_SCORE_RELEASED else 0, yellow_flags=flag_summary.get("yellow", 0) if LEGAL_SCORE_RELEASED else 0, last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
+    current_score = None if (not _legal_score_is_released() or risk_band == "NOT_EVALUATED") else company.current_compliance_score
+    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=current_score, pre_override_score=None, risk_band=risk_band, active_flags=flag_summary.get("total_active", 0), pending_review_flags=flag_summary.get("pending_review", 0), black_flags=flag_summary.get("black", 0) if _legal_score_is_released() else 0, red_flags=flag_summary.get("red", 0) if _legal_score_is_released() else 0, yellow_flags=flag_summary.get("yellow", 0) if _legal_score_is_released() else 0, last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
 
 
 @router.get("/{company_id}/flags", response_model=list[FlagResponse], dependencies=[Depends(require_company_access("company_id"))], summary="Get active flags")
