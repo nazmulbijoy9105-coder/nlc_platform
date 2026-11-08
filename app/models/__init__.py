@@ -1,6 +1,6 @@
 """
 NEUM LEX COUNSEL — ORM LAYER
-models/__init__.py — Single import point for all 28 ORM models.
+models/__init__.py — Single import point for all 29 ORM models.
 
 Usage:
     from app.models import User, Company, ComplianceFlag, ...
@@ -102,7 +102,7 @@ from .rules import LegalRule, LegalRuleVersion
 # ── Users ────────────────────────────────────────────────────────────
 from .user import User
 
-# ── All models (28 tables) for reference ─────────────────────────────
+# ── All models (29 tables) for reference ─────────────────────────────
 __all__ = [
     "AGM",
     "AIOutputLog",
