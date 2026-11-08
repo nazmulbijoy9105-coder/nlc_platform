@@ -90,16 +90,24 @@ async def main() -> None:
                     f"{table} unexpectedly contains rows after schema-only reconstruction"
                 )
 
-        fk = await conn.fetchrow("""
-            SELECT conname, confdeltype
+        foreign_keys = await conn.fetch("""
+            SELECT conname, confdeltype, pg_get_constraintdef(oid) AS definition,
+                   conrelid::regclass::text AS source_table,
+                   confrelid::regclass::text AS target_table
             FROM pg_constraint
             WHERE conrelid = 'public.rescue_audit_log'::regclass
-              AND confrelid = 'public.rescue_plans'::regclass
               AND contype = 'f'
+            ORDER BY conname
         """)
-        if not fk or fk["confdeltype"] != "r":
+        plan_fk = [
+            row for row in foreign_keys
+            if row["target_table"] == "rescue_plans"
+        ]
+        if len(plan_fk) != 1 or plan_fk[0]["confdeltype"] != "r":
             raise AssertionError(
-                "rescue_audit_log -> rescue_plans must use ON DELETE RESTRICT"
+                "rescue_audit_log -> rescue_plans must have exactly one "
+                "ON DELETE RESTRICT FK; observed: "
+                f"{[dict(row) for row in foreign_keys]!r}"
             )
 
         expected_indexes = {
