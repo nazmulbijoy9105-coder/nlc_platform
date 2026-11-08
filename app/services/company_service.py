@@ -15,7 +15,6 @@ import uuid
 from datetime import UTC, date, datetime
 
 from sqlalchemy import func, or_, select, text, update
-from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -27,34 +26,38 @@ from app.services.base import BaseService
 
 
 def _agm_profile_evidence(latest_agm) -> dict:
-    """Expose only AGM facts supported by explicit evidence provenance.
-
-    Raw form values are not automatically verified legal facts. In particular,
-    default zero attendance, default booleans, and a client-entered quorum
-    conclusion must not become a statutory finding.
-    """
+    """Expose AGM facts only when the underlying evidence and reviewer are verified."""
+    empty = {
+        "agm_held_this_cycle": None,
+        "agm_held_this_cycle_verified": False,
+        "members_present_at_agm": None,
+        "agm_attendance_verified": False,
+        "agm_attendance_evidence_ref": None,
+        "agm_quorum_required": None,
+        "agm_quorum_basis_verified": False,
+        "agm_quorum_evidence_ref": None,
+        "agm_quorum_met": None,
+        "auditor_reappointed_at_agm": None,
+        "auditor_reappointment_verified": False,
+        "auditor_reappointment_evidence_ref": None,
+        "agm_minutes_prepared": None,
+        "notice_sent_date": None,
+        "agm_notice_verified_absent": None,
+        "agm_held_without_audit": None,
+        "accounts_adopted_at_agm": None,
+        "short_notice_consent_obtained": None,
+        "short_notice_consent_verified": False,
+        "short_notice_consent_evidence_ref": None,
+    }
     if latest_agm is None:
-        return {
-            "members_present_at_agm": None,
-            "agm_attendance_verified": False,
-            "agm_attendance_evidence_ref": None,
-            "agm_quorum_required": None,
-            "agm_quorum_basis_verified": False,
-            "agm_quorum_evidence_ref": None,
-            "agm_quorum_met": None,
-            "auditor_reappointed_at_agm": None,
-            "auditor_reappointment_verified": False,
-            "auditor_reappointment_evidence_ref": None,
-            "agm_minutes_prepared": None,
-            "notice_sent_date": None,
-            "agm_notice_verified_absent": None,
-            "agm_held_without_audit": None,
-            "accounts_adopted_at_agm": None,
-            "short_notice_consent_obtained": None,
-            "short_notice_consent_verified": False,
-            "short_notice_consent_evidence_ref": None,
-        }
+        return empty
 
+    held_verified = (
+        getattr(latest_agm, "agm_held_verified", False) is True
+        and bool(getattr(latest_agm, "agm_held_evidence_ref", None))
+        and getattr(latest_agm, "agm_held_verified_at", None) is not None
+        and getattr(latest_agm, "agm_held_verified_by", None) is not None
+    )
     attendance_verified = (
         getattr(latest_agm, "members_present_verified", False) is True
         and bool(getattr(latest_agm, "members_present_evidence_ref", None))
@@ -69,8 +72,8 @@ def _agm_profile_evidence(latest_agm) -> dict:
         and getattr(latest_agm, "quorum_required", None) is not None
     )
     quorum_result_verified = (
-        attendance_verified
-        and quorum_basis_verified
+        held_verified and latest_agm.agm_held is True
+        and attendance_verified and quorum_basis_verified
         and getattr(latest_agm, "quorum_met", None) is not None
     )
     auditor_reappointment_verified = (
@@ -79,53 +82,110 @@ def _agm_profile_evidence(latest_agm) -> dict:
         and getattr(latest_agm, "auditor_reappointment_verified_at", None) is not None
         and getattr(latest_agm, "auditor_reappointment_verified_by", None) is not None
     )
-    short_notice_consent_verified = (
-        getattr(latest_agm, "short_notice_consent_verified", False) is True
-        and bool(getattr(latest_agm, "short_notice_consent_evidence_ref", None))
-        and getattr(latest_agm, "short_notice_consent_verified_at", None) is not None
-        and getattr(latest_agm, "short_notice_consent_verified_by", None) is not None
+
+    notice_rows = [row for row in getattr(latest_agm, "notice_evidence", []) if row.is_active]
+    roster_verified = (
+        getattr(latest_agm, "member_register_snapshot_verified", False) is True
+        and bool(getattr(latest_agm, "member_register_evidence_ref", None))
+        and getattr(latest_agm, "member_register_verified_at", None) is not None
+        and getattr(latest_agm, "member_register_verified_by", None) is not None
+        and getattr(latest_agm, "entitled_members_count", None) is not None
+        and latest_agm.entitled_members_count >= 1
     )
-    # No independent minutes-review metadata exists yet; a raw boolean or
-    # attached document ID alone is not a verified finding.
-    minutes_prepared = None
+    recipients_complete = (
+        roster_verified
+        and len(notice_rows) == latest_agm.entitled_members_count
+        and all(
+            row.entitled_member_verified is True
+            and bool(row.entitlement_evidence_ref)
+            and row.entitlement_verified_at is not None
+            and row.entitlement_verified_by is not None
+            for row in notice_rows
+        )
+    )
+    service_verified = (
+        recipients_complete
+        and all(
+            row.notice_verified is True
+            and bool(row.notice_evidence_ref)
+            and row.notice_verified_at is not None
+            and row.notice_verified_by is not None
+            for row in notice_rows
+        )
+    )
+    short_notice_consent_verified = (
+        recipients_complete
+        and all(
+            row.consent_verified is True
+            and row.consent_given is not None
+            and bool(row.consent_evidence_ref)
+            and row.consent_verified_at is not None
+            and row.consent_verified_by is not None
+            for row in notice_rows
+        )
+    )
+    short_notice_consent_obtained = (
+        all(row.consent_given is True for row in notice_rows)
+        if short_notice_consent_verified else None
+    )
+    service_exception_valid = service_verified and all(
+        row.notice_delivery_status in {"SERVED", "NOT_RECEIVED"}
+        or (
+            row.notice_delivery_status == "NOT_SERVED"
+            and row.omission_verified is True
+            and row.omission_accidental is True
+            and bool(row.omission_evidence_ref)
+            and row.omission_verified_at is not None
+            and row.omission_verified_by is not None
+        )
+        for row in notice_rows
+    )
+    verified_notice_dates = [
+        row.notice_sent_date for row in notice_rows
+        if row.notice_delivery_status == "SERVED" and row.notice_sent_date is not None
+    ]
+    notice_sent_date = (
+        max(verified_notice_dates)
+        if service_exception_valid and verified_notice_dates else None
+    )
+    notice_absent = (
+        service_verified
+        and any(
+            row.notice_delivery_status == "NOT_SERVED"
+            and not (
+                row.omission_verified is True
+                and row.omission_accidental is True
+                and bool(row.omission_evidence_ref)
+                and row.omission_verified_at is not None
+                and row.omission_verified_by is not None
+            )
+            for row in notice_rows
+        )
+    )
 
     return {
-        "members_present_at_agm": (
-            getattr(latest_agm, "members_present", None) if attendance_verified else None
-        ),
+        "agm_held_this_cycle": latest_agm.agm_held if held_verified else None,
+        "agm_held_this_cycle_verified": held_verified,
+        "members_present_at_agm": getattr(latest_agm, "members_present", None) if attendance_verified else None,
         "agm_attendance_verified": attendance_verified,
         "agm_attendance_evidence_ref": getattr(latest_agm, "members_present_evidence_ref", None),
-        "agm_quorum_required": (
-            getattr(latest_agm, "quorum_required", None) if quorum_basis_verified else None
-        ),
+        "agm_quorum_required": getattr(latest_agm, "quorum_required", None) if quorum_basis_verified else None,
         "agm_quorum_basis_verified": quorum_basis_verified,
         "agm_quorum_evidence_ref": getattr(latest_agm, "quorum_evidence_ref", None),
-        "agm_quorum_met": (
-            getattr(latest_agm, "quorum_met", None) if quorum_result_verified else None
-        ),
-        "auditor_reappointed_at_agm": (
-            getattr(latest_agm, "auditor_reappointed", None)
-            if auditor_reappointment_verified else None
-        ),
+        "agm_quorum_met": getattr(latest_agm, "quorum_met", None) if quorum_result_verified else None,
+        "auditor_reappointed_at_agm": getattr(latest_agm, "auditor_reappointed", None) if auditor_reappointment_verified else None,
         "auditor_reappointment_verified": auditor_reappointment_verified,
-        "auditor_reappointment_evidence_ref": getattr(
-            latest_agm, "auditor_reappointment_evidence_ref", None
-        ),
-        "agm_minutes_prepared": minutes_prepared,
-        "notice_sent_date": getattr(latest_agm, "notice_sent_date", None),
-        # The legacy notice_missing boolean has no reviewer/evidence metadata.
-        # It is therefore never promoted to verified absence.
-        "agm_notice_verified_absent": None,
-        # These legacy booleans also lack independent verification metadata.
+        "auditor_reappointment_evidence_ref": getattr(latest_agm, "auditor_reappointment_evidence_ref", None),
+        "agm_minutes_prepared": None,
+        "notice_sent_date": notice_sent_date,
+        "agm_notice_verified_absent": notice_absent if service_verified else None,
         "agm_held_without_audit": None,
         "accounts_adopted_at_agm": None,
-        "short_notice_consent_obtained": (
-            getattr(latest_agm, "short_notice_consent_obtained", None)
-            if short_notice_consent_verified else None
-        ),
+        "short_notice_consent_obtained": short_notice_consent_obtained,
         "short_notice_consent_verified": short_notice_consent_verified,
-        "short_notice_consent_evidence_ref": getattr(
-            latest_agm, "short_notice_consent_evidence_ref", None
+        "short_notice_consent_evidence_ref": (
+            ";".join(row.consent_evidence_ref for row in notice_rows)
+            if short_notice_consent_verified else None
         ),
     }
 
@@ -261,13 +321,16 @@ class CompanyService(BaseService[Company]):
         audits, annual returns, and active compliance flags loaded.
         Used to build the company dashboard view.
         """
+        from app.models.filings import AGM
+
         result = await self.db.execute(
             select(Company)
             .options(
                 selectinload(Company.directors),
                 selectinload(Company.shareholders),
                 selectinload(Company.charges),
-                selectinload(Company.agms),
+                selectinload(Company.agms).selectinload(AGM.notice_evidence),
+                selectinload(Company.share_compliance_events),
                 selectinload(Company.audits),
                 selectinload(Company.annual_returns),
                 selectinload(Company.compliance_flags),
@@ -399,87 +462,10 @@ class CompanyService(BaseService[Company]):
             }
         return dict(row)
 
-    async def get_risk_distribution(self, user_id: uuid.UUID) -> list[dict]:
-        """Return risk distribution for companies the user can currently access.
-
-        The global materialized/view aggregate is deliberately not used here:
-        aggregation must happen *after* membership filtering.
-        """
-        if user_id is None:
-            raise ValueError("user_id is required for tenant-scoped risk distribution")
-        result = await self.db.execute(
-            text(
-                """
-                SELECT
-                    c.current_risk_band AS risk_band,
-                    COUNT(*) AS company_count,
-                    ROUND(
-                        COUNT(*) * 100.0 / NULLIF(SUM(COUNT(*)) OVER (), 0),
-                        1
-                    ) AS percentage
-                FROM companies c
-                WHERE c.is_active = TRUE
-                  AND EXISTS (
-                      SELECT 1
-                      FROM company_user_access cua
-                      WHERE cua.company_id = c.id
-                        AND cua.user_id = :user_id
-                        AND cua.is_active = TRUE
-                  )
-                GROUP BY c.current_risk_band
-                ORDER BY CASE c.current_risk_band
-                    WHEN 'BLACK' THEN 1
-                    WHEN 'RED' THEN 2
-                    WHEN 'YELLOW' THEN 3
-                    WHEN 'GREEN' THEN 4
-                    ELSE 5
-                END
-                """
-            ),
-            {"user_id": str(user_id)},
-        )
-        return [dict(row) for row in result.mappings().all()]
-
-    async def get_upcoming_deadlines(
-        self, days_ahead: int = 30, user_id: uuid.UUID | None = None
-    ) -> list[dict]:
-        """Return deadlines scoped to active memberships; no implicit global mode."""
-        if user_id is None:
-            raise ValueError(
-                "user_id is required; use get_upcoming_deadlines_for_system for worker scans"
-            )
-        result = await self.db.execute(
-            text(
-                """
-                SELECT d.*
-                FROM vw_upcoming_deadlines d
-                WHERE d.days_remaining <= :days
-                  AND EXISTS (
-                      SELECT 1
-                      FROM company_user_access cua
-                      WHERE cua.company_id = d.company_id
-                        AND cua.user_id = :user_id
-                        AND cua.is_active = TRUE
-                  )
-                ORDER BY d.days_remaining
-                """
-            ),
-            {"days": days_ahead, "user_id": str(user_id)},
-        )
-        return [dict(row) for row in result.mappings().all()]
-
-    async def get_upcoming_deadlines_for_system(self, days_ahead: int = 30) -> list[dict]:
-        """Privileged worker-only global deadline scan; never expose via user API."""
-    async def get_risk_distribution(self, user_id: uuid.UUID | None = None) -> list[dict]:
-        """Return risk aggregates for the caller's active company memberships only.
     async def get_risk_distribution(
         self, user_id: uuid.UUID, *, include_assigned_staff: bool = False
     ) -> list[dict]:
-        """Return risk distribution for companies the user can currently access.
-
-        The global materialized/view aggregate is deliberately not used here:
-        aggregation must happen *after* membership filtering.
-        """
+        """Return risk aggregates after filtering to the caller's company scope."""
         if user_id is None:
             raise ValueError("user_id is required for tenant-scoped risk distribution")
         result = await self.db.execute(
@@ -493,7 +479,7 @@ class CompanyService(BaseService[Company]):
                         1
                     ) AS percentage
                 FROM companies c
-                WHERE c.is_active = TRUE
+                WHERE c.is_active IS TRUE
                   AND (
                       (:include_assigned_staff IS TRUE AND c.assigned_staff_id = :user_id)
                       OR EXISTS (
@@ -501,7 +487,7 @@ class CompanyService(BaseService[Company]):
                           FROM company_user_access cua
                           WHERE cua.company_id = c.id
                             AND cua.user_id = :user_id
-                            AND cua.is_active = TRUE
+                            AND cua.is_active IS TRUE
                       )
                   )
                 GROUP BY c.current_risk_band
@@ -519,10 +505,13 @@ class CompanyService(BaseService[Company]):
         return [dict(row) for row in result.mappings().all()]
 
     async def get_upcoming_deadlines(
-        self, days_ahead: int = 30, user_id: uuid.UUID | None = None,
-        *, include_assigned_staff: bool = False,
+        self,
+        days_ahead: int = 30,
+        user_id: uuid.UUID | None = None,
+        *,
+        include_assigned_staff: bool = False,
     ) -> list[dict]:
-        """Return deadlines scoped to active memberships; no implicit global mode."""
+        """Return deadlines scoped to active company memberships."""
         if user_id is None:
             raise ValueError(
                 "user_id is required; use get_upcoming_deadlines_for_system for worker scans"
@@ -544,17 +533,23 @@ class CompanyService(BaseService[Company]):
                           FROM company_user_access cua
                           WHERE cua.company_id = d.company_id
                             AND cua.user_id = :user_id
-                            AND cua.is_active = TRUE
+                            AND cua.is_active IS TRUE
                       )
                   )
                 ORDER BY d.days_remaining
                 """
             ),
-            {"days": days_ahead, "user_id": str(user_id), "include_assigned_staff": include_assigned_staff},
+            {
+                "days": days_ahead,
+                "user_id": str(user_id),
+                "include_assigned_staff": include_assigned_staff,
+            },
         )
         return [dict(row) for row in result.mappings().all()]
 
-    async def get_upcoming_deadlines_for_system(self, days_ahead: int = 30) -> list[dict]:
+    async def get_upcoming_deadlines_for_system(
+        self, days_ahead: int = 30
+    ) -> list[dict]:
         """Privileged worker-only global deadline scan; never expose via user API."""
         if days_ahead < 0:
             raise ValueError("days_ahead must be non-negative")
@@ -571,7 +566,6 @@ class CompanyService(BaseService[Company]):
             {"days": days_ahead},
         )
         return [dict(row) for row in result.mappings().all()]
-    # ── UPDATE ────────────────────────────────────────────────────
 
     async def update_compliance_state(
         self,
@@ -633,10 +627,54 @@ class CompanyService(BaseService[Company]):
             return None
 
         # ── AGM State ─────────────────────────────────────────────
-        agms_sorted = sorted(company.agms, key=lambda a: a.financial_year, reverse=True)
-        latest_agm = agms_sorted[0] if agms_sorted else None
-        has_agm_records = bool(company.agms) or company.last_agm_date is not None
-        agm_count = (len([a for a in company.agms if a.agm_held]) or (1 if company.last_agm_date else 0)) if has_agm_records else None
+        active_agms = [row for row in company.agms if row.is_active]
+        history_marker_verified = (
+            company.agm_history_verified is True
+            and bool(company.agm_history_evidence_ref)
+            and company.agm_history_verified_at is not None
+            and company.agm_history_verified_by is not None
+        )
+        all_cycle_statuses_verified = all(
+            row.agm_held_verified is True
+            and bool(row.agm_held_evidence_ref)
+            and row.agm_held_verified_at is not None
+            and row.agm_held_verified_by is not None
+            for row in active_agms
+        )
+        agm_history_verified = history_marker_verified and all_cycle_statuses_verified
+        verified_held_agms = [
+            row for row in active_agms
+            if row.agm_held is True
+            and row.agm_held_verified is True
+            and bool(row.agm_held_evidence_ref)
+            and row.agm_held_verified_at is not None
+            and row.agm_held_verified_by is not None
+            and row.agm_date is not None
+        ]
+        agm_count = len(verified_held_agms) if agm_history_verified else None
+        last_verified_agm_date = (
+            max((row.agm_date for row in verified_held_agms if row.agm_date is not None), default=None)
+            if agm_history_verified else None
+        )
+
+        annual_agms = [row for row in active_agms if row.agm_type in {"ANNUAL", "FIRST"}]
+        latest_financial_year = max((row.financial_year for row in annual_agms), default=None)
+        latest_year_rows = [
+            row for row in annual_agms if row.financial_year == latest_financial_year
+        ]
+        latest_agm = latest_year_rows[0] if len(latest_year_rows) == 1 else None
+        current_year_rows = [
+            row for row in annual_agms
+            if row.financial_year == date.today().year and row.agm_type == "ANNUAL"
+        ]
+        current_cycle_agm = current_year_rows[0] if len(current_year_rows) == 1 else None
+        current_cycle_verified = bool(
+            current_cycle_agm is not None
+            and current_cycle_agm.agm_held_verified is True
+            and current_cycle_agm.agm_held_evidence_ref
+            and current_cycle_agm.agm_held_verified_at is not None
+            and current_cycle_agm.agm_held_verified_by is not None
+        )
 
         # ── Audit State ───────────────────────────────────────────
         audits_sorted = sorted(company.audits, key=lambda a: a.financial_year, reverse=True)
@@ -682,6 +720,52 @@ class CompanyService(BaseService[Company]):
                 consent_filed_date=d.consent_filed_date if consent_verified else None,
                 consent_verified=consent_verified,
                 consent_evidence_ref=d.consent_evidence_ref if consent_verified else None,
+            ))
+
+        # ── Share Compliance Events ───────────────────────────────
+        from app.rule_engine.engine import ShareComplianceEventEvidence
+
+        share_compliance_events = []
+        for event in company.share_compliance_events:
+            if not event.is_active:
+                continue
+            event_verified = bool(
+                event.event_verified
+                and event.event_evidence_ref
+                and event.event_verified_at
+                and event.event_verified_by
+            )
+            filing_verified = bool(
+                event_verified
+                and event.filing_status_verified
+                and event.filing_status is not None
+                and event.filing_evidence_ref
+                and event.filing_verified_at
+                and event.filing_verified_by
+            )
+            certificate_verified = bool(
+                event_verified
+                and event.certificate_status_verified
+                and event.certificate_issued is not None
+                and event.certificate_evidence_ref
+                and event.certificate_verified_at
+                and event.certificate_verified_by
+            )
+            share_compliance_events.append(ShareComplianceEventEvidence(
+                event_reference=event.event_reference,
+                event_type=event.event_type,
+                event_date=event.event_date,
+                event_verified=event_verified,
+                event_evidence_ref=event.event_evidence_ref if event_verified else None,
+                filing_form=event.filing_form if filing_verified else None,
+                filing_status=event.filing_status if filing_verified else None,
+                filing_status_verified=filing_verified,
+                filing_date=event.filing_date if filing_verified else None,
+                filing_evidence_ref=event.filing_evidence_ref if filing_verified else None,
+                certificate_issued=event.certificate_issued if certificate_verified else None,
+                certificate_status_verified=certificate_verified,
+                certificate_issue_date=event.certificate_issue_date if certificate_verified else None,
+                certificate_evidence_ref=event.certificate_evidence_ref if certificate_verified else None,
             ))
 
         # ── Share Transfers ───────────────────────────────────────
@@ -754,17 +838,16 @@ class CompanyService(BaseService[Company]):
             "financial_year_end":  company.financial_year_end,
 
             # AGM State
-            "agm_count":                  agm_count,
-            "last_agm_date":              company.last_agm_date,
-            "agm_history_verified": (
-                company.agm_history_verified is True
-                and bool(company.agm_history_evidence_ref)
-                and company.agm_history_verified_at is not None
-                and company.agm_history_verified_by is not None
+            "agm_count": agm_count,
+            "last_agm_date": last_verified_agm_date,
+            "agm_history_verified": agm_history_verified,
+            "agm_history_evidence_ref": company.agm_history_evidence_ref if agm_history_verified else None,
+            "agm_history_verified_at": (
+                company.agm_history_verified_at.date()
+                if agm_history_verified and company.agm_history_verified_at is not None
+                else None
             ),
-            "agm_history_evidence_ref": company.agm_history_evidence_ref,
-            "agm_history_verified_at": company.agm_history_verified_at.date() if company.agm_history_verified_at else None,
-            "agm_history_verified_by": str(company.agm_history_verified_by) if company.agm_history_verified_by else None,
+            "agm_history_verified_by": str(company.agm_history_verified_by) if agm_history_verified else None,
             "agm_extension_granted_until": company.agm_extension_granted_until,
             "agm_extension_application_date": company.agm_extension_application_date,
             "agm_extension_verified": (
@@ -777,15 +860,9 @@ class CompanyService(BaseService[Company]):
             "agm_extension_verified_at": company.agm_extension_verified_at.date() if company.agm_extension_verified_at else None,
             "agm_extension_verified_by": str(company.agm_extension_verified_by) if company.agm_extension_verified_by else None,
             "agm_held_this_cycle": (
-                latest_agm.agm_held
-                if (
-                    latest_agm is not None
-                    and company.agm_history_verified is True
-                    and bool(company.agm_history_evidence_ref)
-                    and company.agm_history_verified_at is not None
-                    and company.agm_history_verified_by is not None
-                    and latest_agm.agm_date is not None
-                ) else None
+                current_cycle_agm.agm_held
+                if current_cycle_verified and current_cycle_agm is not None
+                else None
             ),
             "agm_minutes_prepared":       agm_profile_evidence["agm_minutes_prepared"],
 
@@ -843,6 +920,7 @@ class CompanyService(BaseService[Company]):
 
             # Share Transfers
             "share_transfers": share_transfers,
+            "share_compliance_events": share_compliance_events,
 
             # Office
 
@@ -856,7 +934,6 @@ class CompanyService(BaseService[Company]):
             "paid_up_capital_bdt":          float(company.paid_up_capital_bdt) if company.paid_up_capital_bdt else 0.0,
             "capital_increase_date":       None,  # unverified event date; legal engine remains NOT_EVALUATED
             "capital_increase_resolution": getattr(company, "capital_increase_resolution", None),
-            "charges":                     [],
             # form_viii_filed removed — not a CompanyProfile field
 
             # Tax & director fields — prevent false positives
@@ -1007,22 +1084,8 @@ class CompanyService(BaseService[Company]):
             "minutes_book_board_maintained": getattr(company, "minutes_book_board_maintained", True),
 
             # AGM Details
-            "agm_adjourned_without_notice":  getattr(company, "agm_adjourned_without_notice", False),
-            "agm_scheduled_date":            getattr(company, "agm_scheduled_date", None),
-            "notice_sent_date":              agm_profile_evidence["notice_sent_date"],
-            "short_notice_consent_obtained": agm_profile_evidence.get("short_notice_consent_obtained"),
-            "short_notice_consent_verified": agm_profile_evidence.get("short_notice_consent_verified", False),
-            "short_notice_consent_evidence_ref": agm_profile_evidence.get("short_notice_consent_evidence_ref"),
-            "members_present_at_agm":        agm_profile_evidence["members_present_at_agm"],
-            "agm_attendance_verified":       agm_profile_evidence.get("agm_attendance_verified", False),
-            "agm_attendance_evidence_ref":   agm_profile_evidence.get("agm_attendance_evidence_ref"),
-            "agm_quorum_required":           agm_profile_evidence.get("agm_quorum_required"),
-            "agm_quorum_basis_verified":     agm_profile_evidence.get("agm_quorum_basis_verified", False),
-            "agm_quorum_evidence_ref":       agm_profile_evidence.get("agm_quorum_evidence_ref"),
-            "auditor_reappointed_at_agm":    agm_profile_evidence["auditor_reappointed_at_agm"],
-            "auditor_reappointment_verified": agm_profile_evidence.get("auditor_reappointment_verified", False),
-            "auditor_reappointment_evidence_ref": agm_profile_evidence.get("auditor_reappointment_evidence_ref"),
-            "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", None),
+            # Legacy company-level assertions are intentionally not promoted.
+            "agm_adjourned_without_notice": None,
 
             # Audit Details
             "audit_in_progress":             getattr(company, "audit_in_progress", False),

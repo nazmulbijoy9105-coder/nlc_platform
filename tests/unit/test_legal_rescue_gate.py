@@ -15,6 +15,7 @@ def test_rescue_workflow_is_blocked_without_independent_legal_release(monkeypatc
     assert "independent counsel approval" in exc.value.detail
 
 
-def test_rescue_workflow_gate_opens_only_when_release_flag_is_true(monkeypatch):
+def test_rescue_workflow_gate_opens_only_when_release_flag_and_verified_rules_exist(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     _require_legal_release()

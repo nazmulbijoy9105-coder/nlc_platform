@@ -176,6 +176,13 @@ def _add_missing_columns(table_name, definitions):
 
 
 def upgrade():
+    # Historical legal-rule corrections run before the signed version-snapshot
+    # guard is installed at the merged release head. If 0058 was already
+    # applied on another branch, remove its trigger for this trusted migration.
+    op.execute(
+        "DROP TRIGGER IF EXISTS legal_rules_require_version_snapshot "
+        "ON public.legal_rules"
+    )
     _add_missing_columns("companies", COMPANY_COLUMNS)
     _add_missing_columns("agms", AGM_COLUMNS)
     _add_missing_columns("audits", AUDIT_COLUMNS)

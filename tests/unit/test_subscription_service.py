@@ -54,9 +54,13 @@ async def test_request_subscription_snapshots_price_and_enabled_features():
     feature_result = _result_with_rows([feature])
 
     db = MagicMock()
+    # request_subscription first serializes the company and plan catalogue
+    # with transaction-scoped advisory locks.
     db.execute = AsyncMock(side_effect=[
+        MagicMock(),  # company advisory lock
         company_result,
         existing_result,
+        MagicMock(),  # plan catalogue advisory lock
         plan_result,
         feature_result,
     ])

@@ -10,6 +10,7 @@ on:
       - fix/commercial-lock-order-on-160-20261108
       - feat/manual-mobile-wallet-payments-20261108
       - repair/current-head-commercial-subscription-20261108
+      - fix/scoring-release-boundary-20261108
       - fix/canonical-scoring-release-head-20261108
   pull_request:
     branches:
@@ -48,6 +49,7 @@ jobs:
       - name: Compile check
         run: python -m compileall app/
 
+      - name: Lint scoring release-boundary changes
       - name: Lint scoring and migration release changes
         run: |
           ruff check --select E4,E7,E9,F \
@@ -55,7 +57,17 @@ jobs:
             app/services/pdf_report_service.py \
             app/services/rescue_service.py \
             app/services/commercial_service.py
+            tests/unit/test_pdf_report_service.py \
+            tests/unit/test_rescue_engagement_contract.py
+
+      - name: Type-check scoring release-boundary services
+        run: |
+          mypy app/services/company_service.py \
+            app/services/pdf_report_service.py \
+            app/services/rescue_service.py
           ruff check --select E,F app/services/bd_calendar_generator.py \
+            app/services/commercial_service.py
+          ruff check --select E4,E7,E9,F app/services/bd_calendar_generator.py \
             app/api/commercial.py app/models/commercial.py app/services/commercial_service.py \
             app/api/finance.py app/models/finance.py app/services/finance_service.py \
             app/api/subscriptions.py app/models/subscription.py app/services/subscription_service.py \
@@ -82,6 +94,7 @@ jobs:
             app/models/company.py app/models/__init__.py app/rule_engine/engine.py \
             app/services/filing_service.py \
             alembic/versions/0081_merge_release_and_articles_wallet_heads.py \
+            alembic/versions/0086_runtime_role_membership_preflight.py \
             alembic/versions/0082_agm_share_event_provenance.py
 
       - name: Type-check scoring release services
@@ -267,6 +280,14 @@ jobs:
           DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
           DATABASE_URL="$SECOND_DATABASE_URL" alembic current
 
+          # Verify a failed downgrade leaves the database at exactly the same revision.
+          BEFORE_DOWNGRADE="$(DATABASE_URL="$SECOND_DATABASE_URL" alembic current)"
+          if DATABASE_URL="$SECOND_DATABASE_URL" alembic downgrade 0073_payment_allocations_append_only; then
+            echo "ERROR: forward-only quarantine migration unexpectedly downgraded"
+            exit 1
+          fi
+          AFTER_DOWNGRADE="$(DATABASE_URL="$SECOND_DATABASE_URL" alembic current)"
+          test "$BEFORE_DOWNGRADE" = "$AFTER_DOWNGRADE"
           # Re-apply the merged head to prove idempotent upgrade behavior.
           DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
           DATABASE_URL="$SECOND_DATABASE_URL" alembic current
@@ -284,6 +305,9 @@ jobs:
           CURRENT="$(DATABASE_URL="$BASELINE_DATABASE_URL" alembic current)"
           printf '%s\n' "$CURRENT"
           grep -q "0081_merge_release_and_articles_wallet_heads" <<< "$CURRENT"
+          HEAD_REVISION="$(alembic heads | awk 'NR == 1 {print $1}')"
+          grep -q "$HEAD_REVISION" <<< "$CURRENT"
+          grep -q "0086_runtime_role_membership_preflight" <<< "$CURRENT"
 
           # Export the resulting schema snapshot for independent review.
           pg_dump -h localhost -U nlc_test \
@@ -325,6 +349,9 @@ jobs:
           FINAL_MARKER="$(DATABASE_URL="$LEGACY_DATABASE_URL" alembic current)"
           printf '%s\n' "$FINAL_MARKER"
           grep -q "0081_merge_release_and_articles_wallet_heads" <<< "$FINAL_MARKER"
+          HEAD_REVISION="$(alembic heads | awk 'NR == 1 {print $1}')"
+          grep -q "$HEAD_REVISION" <<< "$FINAL_MARKER"
+          grep -q "0086_runtime_role_membership_preflight" <<< "$FINAL_MARKER"
 
       - name: Upload isolated migration rehearsal schema
         uses: actions/upload-artifact@v4

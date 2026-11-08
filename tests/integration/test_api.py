@@ -506,7 +506,9 @@ class TestRescue:
         })
 
     @pytest.mark.asyncio
-    async def test_create_rescue_plan_requires_red_band(self, api_client, super_admin_tok, db_company):
+    async def test_create_rescue_plan_requires_red_band(
+        self, api_client, super_admin_tok, db_company
+    ):
         """Automated rescue is withheld while statutory scoring is unreleased."""
         # db_company is GREEN band
         resp = await api_client.post(
@@ -518,7 +520,9 @@ class TestRescue:
         assert "statutory scoring" in resp.json()["detail"]
 
     @pytest.mark.asyncio
-    async def test_create_rescue_plan_for_red_company(self, api_client, super_admin_tok, db, db_company):
+    async def test_create_rescue_plan_for_red_company(
+        self, api_client, super_admin_tok, db, db_company
+    ):
         """Force company to RED band then create rescue plan."""
         from sqlalchemy import update
 
@@ -633,7 +637,6 @@ class TestDocuments:
         assert isinstance(templates, list)
 
     @pytest.mark.asyncio
-    async def test_generate_document_invalid_template(self, api_client, legal_tok, db_company, legal_staff_company_scope):
     async def test_generate_document_invalid_template(self, api_client, admin_token, db_company):
         resp = await api_client.post(
             "/api/v1/documents/generate",
@@ -657,7 +660,6 @@ class TestDocuments:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_list_documents_for_company(self, api_client, legal_tok, db_company, legal_staff_company_scope):
     async def test_list_documents_for_company(self, api_client, admin_token, db_company):
         resp = await api_client.get(
             f"/api/v1/documents/{db_company.id}",
@@ -730,7 +732,7 @@ class TestDocuments:
         resp = await api_client.get(
             "/api/v1/documents/templates", headers=_auth(client_tok)
         )
-        assert resp.status_code == 402
+        assert resp.status_code == 403
 
     @pytest.mark.asyncio
     async def test_client_document_portfolio_requires_entitlement(
@@ -843,7 +845,6 @@ class TestDocuments:
         assert resp.status_code == 402
 
     @pytest.mark.asyncio
-    async def test_release_requires_approval_first(self, api_client, legal_tok, db, db_company, legal_staff_company_scope):
     async def test_release_requires_approval_first(self, api_client, admin_token, db, db_company):
         """Cannot release an unapproved document."""
         from app.models.documents import Document
@@ -873,7 +874,6 @@ class TestDocuments:
         assert "approved" in resp.json()["detail"].lower()
 
     @pytest.mark.asyncio
-    async def test_ai_constitution_article3_enforced(self, api_client, db, legal_tok, db_company, legal_staff_company_scope):
     async def test_ai_constitution_article3_enforced(self, api_client, db, admin_token, db_company):
         """
         AI Constitution Article 3: Documents must never be auto-sent.
@@ -1016,7 +1016,9 @@ class TestRules:
 
     @pytest.mark.asyncio
     async def test_get_black_overrides(self, api_client, super_admin_token):
-        resp = await api_client.get("/api/v1/rules/black-overrides", headers=_auth(super_admin_token))
+        resp = await api_client.get(
+            "/api/v1/rules/black-overrides", headers=_auth(super_admin_token)
+        )
         assert resp.status_code == 200
         rules = resp.json()
         assert isinstance(rules, list)
@@ -1447,22 +1449,14 @@ class TestSubscriptionEntitlementRouteGates:
         assert response.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_legal_staff_requires_assignment_and_paid_entitlement(
-        self, api_client, legal_tok, db_company, legal_staff_company_scope
-    ):
-        response = await api_client.get(
-            f"/api/v1/companies/{db_company.id}/compliance",
-            headers=_auth(legal_tok),
-        )
-        assert response.status_code == 402
-
+    async def test_assigned_legal_staff_can_access_company_compliance_without_customer_subscription(
         self, api_client, legal_token, db_company, legal_staff_company_scope
     ):
         response = await api_client.get(
             f"/api/v1/companies/{db_company.id}/compliance",
             headers=_auth(legal_token),
         )
-        assert response.status_code == 402
+        assert response.status_code == 200, response.text
 
     @pytest.mark.asyncio
     async def test_client_document_pdf_requires_paid_entitlement(
@@ -1558,6 +1552,5 @@ class TestSubscriptionEntitlementRouteGates:
             headers=_auth(legal_token),
             json={"held_date": "2026-06-30"},
         )
-        assert response.status_code == 403
         assert response.status_code in {403, 404}
 

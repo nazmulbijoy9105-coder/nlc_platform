@@ -159,6 +159,24 @@ class ShareTransfer:
     transfer_registration_evidence_ref: str | None = None
 
 @dataclass
+class ShareComplianceEventEvidence:
+    event_reference: str
+    event_type: str
+    event_date: date
+    event_verified: bool = False
+    event_evidence_ref: str | None = None
+    filing_form: str | None = None
+    filing_status: bool | None = None
+    filing_status_verified: bool = False
+    filing_date: date | None = None
+    filing_evidence_ref: str | None = None
+    certificate_issued: bool | None = None
+    certificate_status_verified: bool = False
+    certificate_issue_date: date | None = None
+    certificate_evidence_ref: str | None = None
+
+
+@dataclass
 class ChargeEvent:
     charge_id: str
     creation_date: date
@@ -206,7 +224,6 @@ class CompanyProfile:
     agm_extension_verified_at: date | None = None
     agm_extension_verified_by: str | None = None
     agm_held_this_cycle: bool | None = None
-    agm_held_without_audit: bool = False
     agm_held_without_audit: bool | None = None
     agm_scheduled_date: Optional[date] = None
     notice_sent_date: Optional[date] = None
@@ -272,6 +289,7 @@ class CompanyProfile:
     paid_up_capital_bdt: float = 0.0
     paid_up_ge_authorized: bool | None = None
     share_transfers: List[ShareTransfer] = field(default_factory=list)
+    share_compliance_events: List[ShareComplianceEventEvidence] = field(default_factory=list)
     registered_office_address: str = ""
     registered_office_change_date: Optional[date] = None
     form_vi_filed: bool = False
@@ -761,12 +779,6 @@ class NLCRuleEngine:
         if (c.company_type == "PRIVATE_LIMITED" and c.directors_verified
                 and c.current_director_count is not None
                 and c.current_director_count < 2):  # RULE-001: only fire when verified against RJSC
-            inc003_impact = 15
-            inc003_desc = (
-                "Private company has NO directors. Section 90(2) requires minimum 2. Director records require verification - absence in NLC database does not confirm actual absence."
-                if c.current_director_count == 0
-                else "Private company has only 1 director. Section 90(2) requires minimum 2."
-            )
             self._add_flag(ComplianceFlag(
                 rule_id="INC-003",
                 flag_code="MINIMUM_DIRECTORS_NOT_MET",
@@ -1535,11 +1547,16 @@ class NLCRuleEngine:
 
         if c.annual_return_filed and c.annual_return_content_complete is False:
             missing = []
-            if c.schedule_x_attached is False: missing.append("Schedule X")
-            if c.balance_sheet_attached is False: missing.append("Balance Sheet")
-            if c.profit_loss_attached is False: missing.append("P&L Account")
-            if c.directors_list_attached is False: missing.append("Directors List")
-            if c.shareholders_list_attached is False: missing.append("Shareholders List")
+            if c.schedule_x_attached is False:
+                missing.append("Schedule X")
+            if c.balance_sheet_attached is False:
+                missing.append("Balance Sheet")
+            if c.profit_loss_attached is False:
+                missing.append("P&L Account")
+            if c.directors_list_attached is False:
+                missing.append("Directors List")
+            if c.shareholders_list_attached is False:
+                missing.append("Shareholders List")
             self._add_flag(ComplianceFlag(
                 rule_id="AR-004",
                 flag_code="ANNUAL_RETURN_INCOMPLETE",
@@ -1687,47 +1704,116 @@ class NLCRuleEngine:
     # MODULE 5: SHAREHOLDING
     # ───────────────────────────────────────────────────────────────────
     def _run_shareholder_rules(self, c: CompanyProfile) -> None:
-        if c.last_allotment_date and c.form_xv_filed is False:
-            delay = (self.today - c.last_allotment_date).days
-            if delay > ALLOTMENT_FILING_DEADLINE_DAYS:
-                self._add_flag(ComplianceFlag(
-                    rule_id="SH-001",
-                    flag_code="FORM_XV_ALLOTMENT_NOT_FILED",
-                    severity=Severity.YELLOW if delay < 90 else Severity.RED,
-                    score_impact=8,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Share allotment not filed via Form XV. Section 151: 60-day deadline. Overdue by {delay} days.",
-                    statutory_basis="Section 151, Companies Act 1994 (Bangladesh)",
-                    detail={"delay": delay}
-                ))
+        # SH-001: every verified allotment has its own Form XV filing clock.
+        # SH-002: section 158 is triggered by both allotment and registered transfer.
+        # SH-003: Form IV clock starts from a verified capital-increase resolution.
+        # Unverified events or filing/certificate states remain UNKNOWN, never FAIL.
+        events = [
+            event for event in c.share_compliance_events
+            if event.event_verified and event.event_evidence_ref
+        ]
 
-        if c.last_allotment_date and c.share_certificates_issued is False:
-            delay = (self.today - c.last_allotment_date).days
-            if delay > SHARE_CERTIFICATE_DEADLINE_DAYS:
-                self._add_flag(ComplianceFlag(
-                    rule_id="SH-002",
-                    flag_code="SHARE_CERTIFICATES_NOT_ISSUED",
-                    severity=Severity.YELLOW if delay < 90 else Severity.RED,
-                    score_impact=5,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Share certificates not issued within 90 days. Section 158: overdue by {delay - SHARE_CERTIFICATE_DEADLINE_DAYS} days.",
-                    statutory_basis="Section 158, Companies Act 1994 (Bangladesh)",
-                    detail={"delay": delay}
-                ))
+        overdue_allotments = []
+        overdue_certificates = []
+        overdue_capital_increases = []
+        for event in events:
+            delay = (self.today - event.event_date).days
+            if delay < 0:
+                continue
 
-        if c.capital_increase_date and c.form_iv_filed is False:
-            delay = (self.today - c.capital_increase_date).days
-            if delay > CAPITAL_INCREASE_NOTICE_DEADLINE_DAYS:
-                self._add_flag(ComplianceFlag(
-                    rule_id="SH-003",
-                    flag_code="FORM_IV_CAPITAL_INCREASE_NOT_FILED",
-                    severity=Severity.YELLOW if delay < 90 else Severity.RED,
-                    score_impact=8,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Capital increase not filed via Form IV within 15 days under Section 56. Overdue by {delay} days.",
-                    statutory_basis="Section 56, Companies Act 1994 (Bangladesh)",
-                    detail={"delay": delay}
-                ))
+            if (
+                event.event_type == "ALLOTMENT"
+                and event.filing_form == "FORM_XV"
+                and event.filing_status_verified
+                and event.filing_status is False
+                and delay > ALLOTMENT_FILING_DEADLINE_DAYS
+            ):
+                overdue_allotments.append((event, delay))
+
+            if (
+                event.event_type in {"ALLOTMENT", "TRANSFER_REGISTERED"}
+                and event.certificate_status_verified
+                and event.certificate_issued is False
+                and delay > SHARE_CERTIFICATE_DEADLINE_DAYS
+            ):
+                overdue_certificates.append((event, delay))
+
+            if (
+                event.event_type == "CAPITAL_INCREASE_RESOLUTION"
+                and event.filing_form == "FORM_IV"
+                and event.filing_status_verified
+                and event.filing_status is False
+                and delay > CAPITAL_INCREASE_NOTICE_DEADLINE_DAYS
+            ):
+                overdue_capital_increases.append((event, delay))
+
+        if overdue_allotments:
+            event, delay = max(overdue_allotments, key=lambda item: item[1])
+            self._add_flag(ComplianceFlag(
+                rule_id="SH-001",
+                flag_code="FORM_XV_ALLOTMENT_NOT_FILED",
+                severity=Severity.YELLOW if delay < 90 else Severity.RED,
+                score_impact=8,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    f"Verified allotment event {event.event_reference} has no verified "
+                    f"Form XV filing after the 60-day section 151 period; {delay} days elapsed."
+                ),
+                statutory_basis="Section 151, Companies Act 1994 (Bangladesh)",
+                detail={
+                    "event_reference": event.event_reference,
+                    "event_date": event.event_date.isoformat(),
+                    "delay_days": delay,
+                    "filing_evidence_ref": event.filing_evidence_ref,
+                    "overdue_event_count": len(overdue_allotments),
+                },
+            ))
+
+        if overdue_certificates:
+            event, delay = max(overdue_certificates, key=lambda item: item[1])
+            self._add_flag(ComplianceFlag(
+                rule_id="SH-002",
+                flag_code="SHARE_CERTIFICATES_NOT_ISSUED",
+                severity=Severity.YELLOW if delay <= 120 else Severity.RED,
+                score_impact=5,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    f"Verified {event.event_type.lower()} event {event.event_reference} "
+                    f"has no verified share-certificate issue within 90 days under section 158; "
+                    f"{delay - SHARE_CERTIFICATE_DEADLINE_DAYS} days overdue."
+                ),
+                statutory_basis="Section 158, Companies Act 1994 (Bangladesh)",
+                detail={
+                    "event_reference": event.event_reference,
+                    "event_type": event.event_type,
+                    "event_date": event.event_date.isoformat(),
+                    "delay_days": delay,
+                    "certificate_evidence_ref": event.certificate_evidence_ref,
+                    "overdue_event_count": len(overdue_certificates),
+                },
+            ))
+
+        if overdue_capital_increases:
+            event, delay = max(overdue_capital_increases, key=lambda item: item[1])
+            self._add_flag(ComplianceFlag(
+                rule_id="SH-003",
+                flag_code="FORM_IV_CAPITAL_INCREASE_NOT_FILED",
+                severity=Severity.YELLOW if delay < 90 else Severity.RED,
+                score_impact=8,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    f"Verified capital-increase resolution {event.event_reference} has no "
+                    f"verified Form IV filing within 15 days under section 56; {delay - CAPITAL_INCREASE_NOTICE_DEADLINE_DAYS} days overdue."
+                ),
+                statutory_basis="Section 56, Companies Act 1994 (Bangladesh)",
+                detail={
+                    "event_reference": event.event_reference,
+                    "event_date": event.event_date.isoformat(),
+                    "delay_days": delay,
+                    "filing_evidence_ref": event.filing_evidence_ref,
+                    "overdue_event_count": len(overdue_capital_increases),
+                },
+            ))
 
     # ───────────────────────────────────────────────────────────────────
     # MODULE 6: SHARE TRANSFERS
@@ -2241,7 +2327,7 @@ class NLCRuleEngine:
                     severity=Severity.YELLOW if delay < 90 else Severity.RED,
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Special resolution filing not evidenced within 15 days. Section 88(1); determine the resolution date and filing receipt.",
+                    description="Special resolution filing not evidenced within 15 days. Section 88(1); determine the resolution date and filing receipt.",
                     statutory_basis="Section 88(1), Companies Act 1994 (Bangladesh) — 15 days",
                     detail={"delay": delay}
                 ))
@@ -2303,12 +2389,6 @@ class NLCRuleEngine:
             # not yet verified; keep this as a non-scoring review prompt.
             if self.today > deadline:
                 delay = (self.today - deadline).days
-                if delay <= 90:
-                    t3_sev, t3_imp = Severity.YELLOW, 3
-                elif delay <= 180:
-                    t3_sev, t3_imp = Severity.RED, 5
-                else:
-                    t3_sev, t3_imp = Severity.RED, 8
                 self._add_flag(ComplianceFlag(
                     rule_id="TAX-003",
                     flag_code="ANNUAL_TAX_RETURN_OVERDUE",
@@ -2340,10 +2420,14 @@ class NLCRuleEngine:
                 q3_deadline = date(t.year, 3, 15)
                 q4_deadline = date(t.year, 6, 15)
                 
-            if t > q1_deadline and c.advance_tax_q1_paid is False: missed.append("Q1")
-            if t > q2_deadline and c.advance_tax_q2_paid is False: missed.append("Q2")
-            if t > q3_deadline and c.advance_tax_q3_paid is False: missed.append("Q3")
-            if t > q4_deadline and c.advance_tax_q4_paid is False: missed.append("Q4")
+            if t > q1_deadline and c.advance_tax_q1_paid is False:
+                missed.append("Q1")
+            if t > q2_deadline and c.advance_tax_q2_paid is False:
+                missed.append("Q2")
+            if t > q3_deadline and c.advance_tax_q3_paid is False:
+                missed.append("Q3")
+            if t > q4_deadline and c.advance_tax_q4_paid is False:
+                missed.append("Q4")
             
             if missed:
                 self._add_flag(ComplianceFlag(
@@ -2977,11 +3061,11 @@ class NLCRuleEngine:
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description=(
-                    f"Disqualification allegation(s) received for director(s) "
-                    f"but evidence NOT verified. Section 94 requires a "
-                    f"competent court declaration, insolvency certificate, "
-                    f"or other authoritative determination. Cannot determine "
-                    f"compliance status until evidence is reviewed."
+                    "Disqualification allegation(s) received for director(s) "
+                    "but evidence NOT verified. Section 94 requires a "
+                    "competent court declaration, insolvency certificate, "
+                    "or other authoritative determination. Cannot determine "
+                    "compliance status until evidence is reviewed."
                 ),
                 statutory_basis="Section 94, Companies Act 1994 (Bangladesh)",
                 detail={
@@ -3464,23 +3548,31 @@ class NLCRuleEngine:
     def _fiscal_quarter(self) -> int:
         """Return current fiscal quarter (1-4) for Bangladesh FY (Jul-Jun)."""
         m = self.today.month
-        if m <= 3:   return 3  # Jan-Mar = Q3
-        if m <= 6:   return 4  # Apr-Jun = Q4
-        if m <= 9:   return 1  # Jul-Sep = Q1
+        if m <= 3:
+            return 3  # Jan-Mar = Q3
+        if m <= 6:
+            return 4  # Apr-Jun = Q4
+        if m <= 9:
+            return 1  # Jul-Sep = Q1
         return 2              # Oct-Dec = Q2
 
     def _add_flag(self, flag: ComplianceFlag) -> None:
         self._flags.append(flag)
 
     def _graduated_agm_deduction(self, delay: int) -> int:
-        if delay <= 90: return 5
-        if delay <= 180: return 10
-        if delay <= 365: return 15
+        if delay <= 90:
+            return 5
+        if delay <= 180:
+            return 10
+        if delay <= 365:
+            return 15
         return 20
 
     def _graduated_ar_deduction(self, delay: int) -> int:
-        if delay <= 60: return 3
-        if delay <= 180: return 5
+        if delay <= 60:
+            return 3
+        if delay <= 180:
+            return 5
         return 10
 
     def _get_fy_end_deadline(self, c: CompanyProfile) -> date:

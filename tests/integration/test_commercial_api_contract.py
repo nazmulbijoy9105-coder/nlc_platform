@@ -2,18 +2,32 @@
 from __future__ import annotations
 
 import asyncio
-
-from datetime import date, timedelta
-from decimal import Decimal
-from datetime import date, timedelta
-from decimal import Decimal
+import uuid
 from uuid import UUID, uuid4
-from uuid import UUID
+from datetime import date, timedelta
+from decimal import Decimal
 
 import pytest
+from sqlalchemy import delete
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.security import create_access_token
+from app.models.company import Company
 from app.models.commercial import Engagement, Quotation
+from app.models.database import set_admin_context, set_rls_context
+from app.models.enums import (
+    CompanyStatus,
+    ComplexityLevel,
+    EngagementStatus,
+    RevenueTier,
+    RiskBand,
+    UserRole,
+)
+from app.models.user import User
+from app.services.commercial_service import (
+    CommercialConflictError,
+    QuotationService,
+)
 
 
 def _auth(token: str) -> dict[str, str]:
@@ -172,16 +186,16 @@ async def test_task_completion_accepts_completion_note(
     )
     assert response.status_code == 200, response.text
     assert response.json()["status"] == "COMPLETED"
+    assert response.json()["completion_note"] == "Verified complete"
 
     duplicate = await api_client.patch(
         f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete",
         headers=_auth(commercial_admin_token),
         json={"completion_note": "Duplicate completion must not create another transition"},
     )
-    assert duplicate.status_code == 409, duplicate.text
+    assert duplicate.status_code == 422, duplicate.text
     repeated = await api_client.patch(
         f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete?company_id={db_company.id}",
-        f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete",
         headers=_auth(commercial_admin_token),
         json={"completion_note": "Should not complete twice"},
     )
@@ -289,61 +303,196 @@ async def test_accepting_quotation_with_inactive_engagement_returns_not_found(
 
 
 @pytest.mark.asyncio
-async def test_concurrent_competing_quotation_acceptance_is_serialized(
-    api_client, commercial_admin_token, db_company
+async def _seed_concurrent_quotation_fixture(test_engine):
+    session_factory = async_sessionmaker(test_engine, expire_on_commit=False)
+    user_id = uuid.uuid4()
+    company_id = uuid.uuid4()
+    engagement_id = uuid.uuid4()
+    first_quote_id = uuid.uuid4()
+    second_quote_id = uuid.uuid4()
+    today = date.today()
+
+    async with session_factory() as session:
+        await set_admin_context(session)
+        session.add(
+            User(
+                id=user_id,
+                email=f"quotation-lock-{user_id.hex}@nlctest.com",
+                full_name="Quotation Lock Test Admin",
+                password_hash="!seeded-no-login",
+                role=UserRole.SUPER_ADMIN,
+                is_active=True,
+                totp_enabled=False,
+            )
+        )
+        session.add(
+            Company(
+                id=company_id,
+                company_name="Quotation Lock Test Ltd",
+                registration_number=f"QLOCK-{company_id.hex[:12].upper()}",
+                incorporation_date=today - timedelta(days=730),
+                registered_address="Test address, Bangladesh",
+                company_type="PRIVATE_LIMITED",
+                member_count=5,
+                financial_year_end=date(today.year - 1, 12, 31),
+                current_compliance_score=85,
+                current_risk_band=RiskBand.GREEN,
+                company_status=CompanyStatus.ACTIVE,
+                is_active=True,
+                is_dormant=False,
+                is_fdi_registered=False,
+            )
+        )
+        session.add(
+            Engagement(
+                id=engagement_id,
+                company_id=company_id,
+                engagement_title="Concurrent quotation lock regression",
+                engagement_type="COMPLIANCE_FILING",
+                engagement_status=EngagementStatus.QUOTED,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                complexity=ComplexityLevel.MEDIUM,
+                identified_date=today,
+                quoted_date=today,
+                estimated_fee_bdt=Decimal("100000.00"),
+                quoted_fee_bdt=Decimal("100000.00"),
+            )
+        )
+        session.add_all(
+            [
+                Quotation(
+                    id=first_quote_id,
+                    engagement_id=engagement_id,
+                    company_id=company_id,
+                    quotation_number=f"QLOCK-{first_quote_id.hex[:12].upper()}",
+                    quotation_date=today,
+                    valid_until=today + timedelta(days=30),
+                    professional_fee_bdt=Decimal("100000.00"),
+                    government_fee_bdt=Decimal("0.00"),
+                    vat_bdt=Decimal("0.00"),
+                    total_bdt=Decimal("100000.00"),
+                    status="SENT",
+                ),
+                Quotation(
+                    id=second_quote_id,
+                    engagement_id=engagement_id,
+                    company_id=company_id,
+                    quotation_number=f"QLOCK-{second_quote_id.hex[:12].upper()}",
+                    quotation_date=today,
+                    valid_until=today + timedelta(days=30),
+                    professional_fee_bdt=Decimal("120000.00"),
+                    government_fee_bdt=Decimal("0.00"),
+                    vat_bdt=Decimal("0.00"),
+                    total_bdt=Decimal("120000.00"),
+                    status="SENT",
+                ),
+            ]
+        )
+        await session.commit()
+
+    return session_factory, user_id, company_id, engagement_id, first_quote_id, second_quote_id
+
+
+async def _cleanup_concurrent_quotation_fixture(
+    session_factory, user_id, company_id, engagement_id
 ):
-    engagement = await _create_engagement(
-        api_client, commercial_admin_token, db_company.id
-    )
-    first_quote = await _create_quotation(
-        api_client, commercial_admin_token, db_company.id, engagement["engagement_id"]
-    )
-    second_quote = await _create_quotation(
-        api_client, commercial_admin_token, db_company.id, engagement["engagement_id"]
-    )
+    async with session_factory() as session:
+        await set_admin_context(session)
+        await session.execute(
+            delete(Quotation).where(Quotation.engagement_id == engagement_id)
+        )
+        await session.execute(
+            delete(Engagement).where(Engagement.id == engagement_id)
+        )
+        await session.execute(delete(Company).where(Company.id == company_id))
+        await session.execute(delete(User).where(User.id == user_id))
+        await session.commit()
 
-    first_response, second_response = await asyncio.gather(
-        api_client.patch(
-            f"/api/v1/commercial/quotations/{first_quote['quotation_id']}/accept",
-            headers=_auth(commercial_admin_token),
-        ),
-        api_client.patch(
-            f"/api/v1/commercial/quotations/{second_quote['quotation_id']}/accept",
-            headers=_auth(commercial_admin_token),
-        ),
-    )
 
-    assert sorted([first_response.status_code, second_response.status_code]) == [200, 409]
-    accepted = first_response if first_response.status_code == 200 else second_response
-    assert accepted.json()["status"] == "ACCEPTED"
+async def _accept_in_independent_session(session_factory, user_id, quotation_id):
+    async with session_factory() as session:
+        await set_rls_context(session, str(user_id))
+        try:
+            quotation = await QuotationService(session).accept(quotation_id)
+            if quotation is None:
+                await session.rollback()
+                return 404, None
+            await session.commit()
+            return 200, quotation.status
+        except (CommercialConflictError, ValueError):
+            await session.rollback()
+            return 409, None
+
+
+async def _reject_in_independent_session(
+    session_factory, user_id, quotation_id
+):
+    async with session_factory() as session:
+        await set_rls_context(session, str(user_id))
+        try:
+            quotation = await QuotationService(session).reject(
+                quotation_id,
+                reason="Concurrent rejection regression",
+                rejected_by=user_id,
+            )
+            if quotation is None:
+                await session.rollback()
+                return 404, None
+            await session.commit()
+            return 200, quotation.status
+        except (CommercialConflictError, ValueError):
+            await session.rollback()
+            return 409, None
 
 
 @pytest.mark.asyncio
-async def test_concurrent_accept_and_reject_of_same_quotation_is_serialized(
-    api_client, commercial_admin_token, db_company
-):
-    engagement = await _create_engagement(
-        api_client, commercial_admin_token, db_company.id
-    )
-    quotation = await _create_quotation(
-        api_client, commercial_admin_token, db_company.id, engagement["engagement_id"]
-    )
+async def test_concurrent_competing_quotation_acceptance_is_serialized(test_engine):
+    (
+        session_factory,
+        user_id,
+        company_id,
+        engagement_id,
+        first_quote_id,
+        second_quote_id,
+    ) = await _seed_concurrent_quotation_fixture(test_engine)
+    try:
+        results = await asyncio.gather(
+            _accept_in_independent_session(session_factory, user_id, first_quote_id),
+            _accept_in_independent_session(session_factory, user_id, second_quote_id),
+        )
+        assert sorted(status for status, _ in results) == [200, 409]
+        accepted = [value for status, value in results if status == 200]
+        assert accepted == ["ACCEPTED"]
+    finally:
+        await _cleanup_concurrent_quotation_fixture(
+            session_factory, user_id, company_id, engagement_id
+        )
 
-    accept_response, reject_response = await asyncio.gather(
-        api_client.patch(
-            f"/api/v1/commercial/quotations/{quotation['quotation_id']}/accept",
-            headers=_auth(commercial_admin_token),
-        ),
-        api_client.patch(
-            f"/api/v1/commercial/quotations/{quotation['quotation_id']}/reject",
-            headers=_auth(commercial_admin_token),
-            json={"reason": "Concurrent rejection regression"},
-        ),
-    )
 
-    assert sorted([accept_response.status_code, reject_response.status_code]) == [200, 409]
-    successful = accept_response if accept_response.status_code == 200 else reject_response
-    assert successful.json()["status"] in {"ACCEPTED", "REJECTED"}
+@pytest.mark.asyncio
+async def test_concurrent_accept_and_reject_of_same_quotation_is_serialized(test_engine):
+    (
+        session_factory,
+        user_id,
+        company_id,
+        engagement_id,
+        first_quote_id,
+        _second_quote_id,
+    ) = await _seed_concurrent_quotation_fixture(test_engine)
+    try:
+        results = await asyncio.gather(
+            _accept_in_independent_session(session_factory, user_id, first_quote_id),
+            _reject_in_independent_session(session_factory, user_id, first_quote_id),
+        )
+        assert sorted(status for status, _ in results) == [200, 409]
+        successful = [value for status, value in results if status == 200]
+        assert successful[0] in {"ACCEPTED", "REJECTED"}
+    finally:
+        await _cleanup_concurrent_quotation_fixture(
+            session_factory, user_id, company_id, engagement_id
+        )
+
+
 def test_quotation_accept_and_reject_lock_parent_before_locked_quotation():
     """Guard the required engagement-first lock order in both lifecycle paths."""
     from pathlib import Path

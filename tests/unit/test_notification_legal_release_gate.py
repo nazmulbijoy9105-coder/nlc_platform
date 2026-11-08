@@ -63,7 +63,7 @@ async def test_released_approved_red_flag_queues_dashboard_alert(monkeypatch):
     assert service.queue_notification.await_args.kwargs["notification_type"] == "AGM-001"
 
 def test_unreleased_rule_notifications_are_not_eligible(monkeypatch):
-    monkeypatch.setattr(notification_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(notification_module, "legal_score_is_released", lambda: False)
     monkeypatch.setattr(notification_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
 
     assert is_notification_eligible("PAYMENT_RECEIVED") is True
@@ -72,7 +72,7 @@ def test_unreleased_rule_notifications_are_not_eligible(monkeypatch):
 
 
 def test_only_approved_rule_notifications_are_eligible_after_release(monkeypatch):
-    monkeypatch.setattr(notification_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(notification_module, "legal_score_is_released", lambda: True)
     monkeypatch.setattr(notification_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
 
     assert is_notification_eligible("PAYMENT_RECEIVED") is True
@@ -97,7 +97,7 @@ async def test_mark_suppressed_persists_terminal_status():
 
 @pytest.mark.asyncio
 async def test_user_notification_list_hides_unapproved_rule_alerts(monkeypatch):
-    monkeypatch.setattr(notification_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(notification_module, "legal_score_is_released", lambda: False)
     legal_alert = SimpleNamespace(notification_type="TAX-001", notification_status=NotificationStatus.PENDING)
     payment_notice = SimpleNamespace(notification_type="PAYMENT_RECEIVED", notification_status=NotificationStatus.PENDING)
     result = SimpleNamespace(
@@ -113,7 +113,7 @@ async def test_user_notification_list_hides_unapproved_rule_alerts(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_suppressed_rule_notifications_stay_hidden_after_release(monkeypatch):
-    monkeypatch.setattr(notification_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(notification_module, "legal_score_is_released", lambda: True)
     monkeypatch.setattr(notification_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     suppressed = SimpleNamespace(
         notification_type="AGM-001",
@@ -132,7 +132,7 @@ async def test_suppressed_rule_notifications_stay_hidden_after_release(monkeypat
 
 @pytest.mark.asyncio
 async def test_queue_notification_stores_unapproved_rule_alert_as_suppressed(monkeypatch):
-    monkeypatch.setattr(notification_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(notification_module, "legal_score_is_released", lambda: False)
     service = NotificationService(MagicMock())
     service.create = AsyncMock(return_value=SimpleNamespace())
 
@@ -149,7 +149,7 @@ async def test_queue_notification_stores_unapproved_rule_alert_as_suppressed(mon
 
 @pytest.mark.asyncio
 async def test_company_notification_list_hides_unapproved_rule_alerts(monkeypatch):
-    monkeypatch.setattr(notification_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(notification_module, "legal_score_is_released", lambda: False)
     legal_alert = SimpleNamespace(
         notification_type="AGM-001",
         notification_status=NotificationStatus.PENDING,
@@ -173,7 +173,7 @@ async def test_company_notification_list_hides_unapproved_rule_alerts(monkeypatc
 
 @pytest.mark.asyncio
 async def test_pending_worker_queue_rechecks_release_gate_for_legacy_rows(monkeypatch):
-    monkeypatch.setattr(notification_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(notification_module, "legal_score_is_released", lambda: False)
     legacy_legal_alert = SimpleNamespace(
         notification_type="AGM-001",
         related_flag_id=None,
@@ -196,7 +196,7 @@ async def test_pending_worker_queue_rechecks_release_gate_for_legacy_rows(monkey
 
 @pytest.mark.asyncio
 async def test_flag_linked_generic_notification_fails_closed(monkeypatch):
-    monkeypatch.setattr(notification_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(notification_module, "legal_score_is_released", lambda: False)
     service = NotificationService(MagicMock())
     service.create = AsyncMock(return_value=SimpleNamespace())
 
@@ -213,7 +213,7 @@ async def test_flag_linked_generic_notification_fails_closed(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_generic_legal_alert_is_suppressed_even_without_flag_link(monkeypatch):
-    monkeypatch.setattr(notification_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(notification_module, "legal_score_is_released", lambda: False)
     service = NotificationService(MagicMock())
     service.create = AsyncMock(return_value=SimpleNamespace())
 
@@ -228,7 +228,7 @@ async def test_generic_legal_alert_is_suppressed_even_without_flag_link(monkeypa
 
 
 def test_related_flag_notification_is_never_eligible_even_after_rule_release(monkeypatch):
-    monkeypatch.setattr(notification_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(notification_module, "legal_score_is_released", lambda: True)
     monkeypatch.setattr(notification_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
 
     assert is_notification_eligible("CUSTOM_ALERT", related_flag_id=uuid4()) is False

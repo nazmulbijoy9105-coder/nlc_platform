@@ -223,6 +223,10 @@ class AGMService(BaseService[AGM]):
                 minutes_document_id
                 if minutes_document_id is not None else agm.minutes_document_id
             ),
+            agm_held_verified=False,
+            agm_held_evidence_ref=None,
+            agm_held_verified_at=None,
+            agm_held_verified_by=None,
             members_present_verified=False,
             members_present_evidence_ref=None,
             members_present_verified_at=None,
