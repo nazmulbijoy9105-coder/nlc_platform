@@ -270,12 +270,14 @@ class ShareComplianceEvent(FullMixin, Base):
         CheckConstraint("NOT event_verified OR (event_verified_at IS NOT NULL AND event_verified_by IS NOT NULL AND event_verified_by <> submitted_by)", name="ck_share_event_verification_provenance"),
         CheckConstraint(
             "NOT filing_status_verified OR (filing_status IS NOT NULL AND filing_evidence_ref IS NOT NULL "
-            "AND btrim(filing_evidence_ref) <> '' AND filing_verified_at IS NOT NULL AND filing_verified_by IS NOT NULL)",
+            "AND btrim(filing_evidence_ref) <> '' AND filing_verified_at IS NOT NULL AND filing_verified_by IS NOT NULL "
+            "AND filing_verified_by <> submitted_by)",
             name="ck_share_event_filing_provenance",
         ),
         CheckConstraint(
             "NOT certificate_status_verified OR (certificate_issued IS NOT NULL AND certificate_evidence_ref IS NOT NULL "
-            "AND btrim(certificate_evidence_ref) <> '' AND certificate_verified_at IS NOT NULL AND certificate_verified_by IS NOT NULL)",
+            "AND btrim(certificate_evidence_ref) <> '' AND certificate_verified_at IS NOT NULL AND certificate_verified_by IS NOT NULL "
+            "AND certificate_verified_by <> submitted_by)",
             name="ck_share_event_certificate_provenance",
         ),
         CheckConstraint("certificate_issued IS DISTINCT FROM TRUE OR certificate_issue_date IS NOT NULL", name="ck_share_event_certificate_date"),
