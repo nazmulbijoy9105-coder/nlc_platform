@@ -28,6 +28,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.entitlement import require_entitlement
+from app.core.company_authorization import ensure_staff_company_scope
 from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
@@ -171,6 +173,7 @@ def _doc_to_response(doc) -> DocumentResponse:
         Depends(require_roles("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN")),
         Depends(require_entitlement("document_management")),
     ],
+    dependencies=[Depends(require_entitlement("document_management"))],
     summary="List all documents across portfolio",
 )
 async def list_all_documents(
@@ -205,6 +208,13 @@ async def list_all_documents(
             raise HTTPException(status_code=402, detail="No company in this portfolio has an active document-management entitlement.")
         filters.append(Document.company_id.in_(entitled_ids))  # type: ignore
     elif current_user.role == "LEGAL_STAFF":
+        from sqlalchemy import or_
+        from app.models.company import Company
+
+        entitled_ids = [
+            uuid.UUID(value)
+            for value in getattr(request.state, "entitled_company_ids", [])
+        ]
         assigned_or_accessible = select(Company.id).where(
             or_(
                 Company.assigned_staff_id == current_user.id,
@@ -217,6 +227,7 @@ async def list_all_documents(
             )
         )
         filters.append(Document.company_id.in_(assigned_or_accessible))  # type: ignore
+        filters.append(Document.company_id.in_(entitled_ids))  # type: ignore
 
     if document_type:
         filters.append(Document.document_type == document_type)  # type: ignore
@@ -246,6 +257,8 @@ async def list_all_documents(
         Depends(require_entitlement("document_management")),
     ],
     summary="List all available AI document templates",
+    dependencies=[Depends(require_roles("LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN"))],
+    summary="List the non-company-specific AI document template catalogue",
 )
 async def list_templates(
     document_type: DocumentType | None = None,
@@ -286,6 +299,7 @@ async def list_templates(
     status_code=status.HTTP_202_ACCEPTED,
     dependencies=[
         Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")),
+        Depends(require_entitlement("document_management")),
     ],
     summary="Request AI document generation (asynchronous)",
     description=(
@@ -388,6 +402,7 @@ async def generate_document(
         Depends(require_company_access("company_id")),
         Depends(require_entitlement("document_management")),
     ],
+    dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("document_management"))],
     summary="List all documents for a company",
 )
 async def list_documents(
@@ -434,6 +449,26 @@ async def _assert_document_entitlement(doc, current_user: User, db: AsyncSession
     if membership.scalar_one_or_none() is None:
         raise HTTPException(status_code=403, detail="Active company financial access is required.")
 
+    """Verify entitlement against the document's actual owning company."""
+    role = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    if role in ("SUPER_ADMIN", "ADMIN_STAFF"):
+        return
+    from sqlalchemy import select
+    from app.models.company import CompanyUserAccess
+    from app.services.subscription_service import SubscriptionService
+
+    if role == "LEGAL_STAFF":
+        await ensure_staff_company_scope(doc.company_id, current_user, db)
+    else:
+        membership = await db.execute(
+            select(CompanyUserAccess.company_id).where(
+                CompanyUserAccess.user_id == current_user.id,
+                CompanyUserAccess.company_id == doc.company_id,
+                CompanyUserAccess.is_active.is_(True),
+            ).limit(1)
+        )
+        if membership.scalar_one_or_none() is None:
+            raise HTTPException(status_code=403, detail="Active company membership is required.")
     if not await SubscriptionService(db).has_entitlement(
         company_id=doc.company_id,
         feature_code="document_management",
@@ -442,6 +477,7 @@ async def _assert_document_entitlement(doc, current_user: User, db: AsyncSession
             status_code=402,
             detail="This company does not have an active document-management entitlement.",
         )
+        raise HTTPException(status_code=402, detail="This company does not have an active document-management entitlement.")
 
 
 async def _assert_document_company_access(
@@ -540,6 +576,8 @@ async def approve_document(
 ):
     svc = DocumentService(db)
     activity = ActivityService(db)
+    doc_check = await svc.get_by_id_or_404(document_id)
+    await ensure_staff_company_scope(doc_check.company_id, current_user, db)
 
     doc_check = await svc.get_by_id_or_404(document_id)
     await _assert_document_company_access(doc_check, current_user, db)
@@ -591,6 +629,7 @@ async def release_document(
 
     doc = await svc.get_by_id_or_404(document_id)
     await _assert_document_company_access(doc, current_user, db)
+    await ensure_staff_company_scope(doc.company_id, current_user, db)
     _require_document_legal_release(doc.document_type)
     if not doc.human_approved:
         raise HTTPException(
@@ -642,7 +681,8 @@ async def get_pdf_url(
 
     doc = await svc.get_by_id_or_404(document_id)
 
-    # Explicit company-access check (IDOR defence — path has no company_id)
+    # Explicit company-access and paid-entitlement checks (IDOR defence —
+    # the route carries document_id rather than its owning company_id).
     await _assert_document_company_access(doc, current_user, db)
     await _assert_document_entitlement(doc, current_user, db)
 

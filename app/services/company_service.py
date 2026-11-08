@@ -15,10 +15,12 @@ import uuid
 from datetime import UTC, date, datetime
 
 from sqlalchemy import func, or_, select, text, update
+from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.models.company import Company, CompanyUserAccess
+from app.models.charges import CompanyCharge
 from app.models.enums import CompanyStatus, CompanyType, LifecycleStage, RevenueTier, RiskBand
 from app.models.people import Director, Shareholder
 from app.services.base import BaseService
@@ -127,6 +129,56 @@ def _agm_profile_evidence(latest_agm) -> dict:
         ),
     }
 
+
+def _charge_event_from_record(charge: CompanyCharge):
+    """Map a persisted charge to the engine without promoting unverified reports."""
+    from app.rule_engine.engine import ChargeEvent
+
+    creation_verified = bool(
+        charge.creation_date_verified and charge.creation_date_evidence_ref
+        and charge.creation_date_verified_at and charge.creation_date_verified_by
+    )
+    form_xviii_verified = bool(
+        charge.form_xviii_filing_status_verified and charge.form_xviii_filing_evidence_ref
+        and charge.form_xviii_verified_at and charge.form_xviii_verified_by
+    )
+    registrability_verified = bool(
+        charge.registrability_verified and charge.registrability_evidence_ref
+        and charge.registrability_verified_at and charge.registrability_verified_by
+    )
+    satisfaction_verified = bool(
+        charge.satisfaction_verified and charge.satisfaction_evidence_ref
+        and charge.satisfaction_verified_at and charge.satisfaction_verified_by
+    )
+    satisfaction_filing_verified = bool(
+        charge.satisfaction_filing_status_verified and charge.satisfaction_filing_evidence_ref
+        and charge.satisfaction_filing_verified_at and charge.satisfaction_filing_verified_by
+    )
+    return ChargeEvent(
+        charge_id=str(charge.id),
+        creation_date=charge.creation_date,
+        charge_type=charge.charge_type,
+        amount_bdt=float(charge.amount_bdt),
+        charge_holder=charge.charge_holder,
+        form_xviii_filed=charge.form_xviii_filed if form_xviii_verified else None,
+        form_xviii_filed_date=charge.form_xviii_filed_date if form_xviii_verified else None,
+        creation_date_verified=creation_verified,
+        creation_date_evidence_ref=charge.creation_date_evidence_ref if creation_verified else None,
+        form_xviii_filing_status_verified=form_xviii_verified,
+        form_xviii_filing_evidence_ref=charge.form_xviii_filing_evidence_ref if form_xviii_verified else None,
+        satisfied=charge.satisfied if satisfaction_verified else None,
+        satisfaction_date=charge.satisfaction_date if satisfaction_verified else None,
+        satisfaction_filed=charge.satisfaction_filed if satisfaction_filing_verified else None,
+        satisfaction_filed_date=charge.satisfaction_filed_date if satisfaction_filing_verified else None,
+        registrable_under_s159=charge.registrable_under_s159 if registrability_verified else None,
+        registrability_verified=registrability_verified,
+        registrability_evidence_ref=charge.registrability_evidence_ref if registrability_verified else None,
+        satisfaction_verified=satisfaction_verified,
+        satisfaction_evidence_ref=charge.satisfaction_evidence_ref if satisfaction_verified else None,
+        satisfaction_filing_status_verified=satisfaction_filing_verified,
+        satisfaction_filing_evidence_ref=charge.satisfaction_filing_evidence_ref if satisfaction_filing_verified else None,
+    )
+
 class CompanyService(BaseService[Company]):
     model = Company
 
@@ -214,6 +266,7 @@ class CompanyService(BaseService[Company]):
             .options(
                 selectinload(Company.directors),
                 selectinload(Company.shareholders),
+                selectinload(Company.charges),
                 selectinload(Company.agms),
                 selectinload(Company.audits),
                 selectinload(Company.annual_returns),
@@ -604,6 +657,13 @@ class CompanyService(BaseService[Company]):
                 transfer_registration_evidence_ref=t.transfer_registration_evidence_ref if registration_verified else None,
             ))
 
+        # ── Mortgage / charge evidence ─────────────────────────────
+        charge_events = [
+            _charge_event_from_record(charge)
+            for charge in company.charges
+            if charge.is_active
+        ]
+
         # ── Statutory Registers ───────────────────────────────────
         maintained_registers = [
             r.register_type for r in company.statutory_registers if r.is_maintained
@@ -614,6 +674,7 @@ class CompanyService(BaseService[Company]):
             "company_id":   str(company.id),
             "company_name": company.company_name,
             "company_type": company.company_type,
+            "charges": charge_events,
 
             # Dates
             "incorporation_date":  company.incorporation_date,
@@ -642,7 +703,18 @@ class CompanyService(BaseService[Company]):
             "agm_extension_evidence_ref": company.agm_extension_evidence_ref,
             "agm_extension_verified_at": company.agm_extension_verified_at.date() if company.agm_extension_verified_at else None,
             "agm_extension_verified_by": str(company.agm_extension_verified_by) if company.agm_extension_verified_by else None,
-            "agm_held_this_cycle":        latest_agm.agm_held if latest_agm else False,
+            "agm_held_this_cycle":        latest_agm.agm_held if latest_agm else None,
+            "agm_held_this_cycle": (
+                latest_agm.agm_held
+                if (
+                    latest_agm is not None
+                    and company.agm_history_verified is True
+                    and bool(company.agm_history_evidence_ref)
+                    and company.agm_history_verified_at is not None
+                    and company.agm_history_verified_by is not None
+                    and latest_agm.agm_date is not None
+                ) else None
+            ),
             "agm_minutes_prepared":       agm_profile_evidence["agm_minutes_prepared"],
 
             # Audit State
@@ -878,7 +950,7 @@ class CompanyService(BaseService[Company]):
             "auditor_reappointed_at_agm":    agm_profile_evidence["auditor_reappointed_at_agm"],
             "auditor_reappointment_verified": agm_profile_evidence.get("auditor_reappointment_verified", False),
             "auditor_reappointment_evidence_ref": agm_profile_evidence.get("auditor_reappointment_evidence_ref"),
-            "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", False),
+            "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", None),
 
             # Audit Details
             "audit_in_progress":             getattr(company, "audit_in_progress", False),

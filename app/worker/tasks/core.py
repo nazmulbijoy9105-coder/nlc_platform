@@ -65,15 +65,15 @@ if _PRODUCTION_WORKER:
 elif _os.environ.get("CELERY_BROKER_URL") or _os.environ.get("CELERY_BROKER"):
     if not (_APP_DATABASE_URL or _DATABASE_URL):
         raise RuntimeError("SEC-009: runtime database URL not configured — refusing to run worker tasks")
-import logging
-import uuid
-from datetime import UTC, date, datetime, timedelta
-from typing import Any, cast
+import logging  # noqa: E402
+import uuid  # noqa: E402
+from datetime import UTC, date, datetime, timedelta  # noqa: E402
+from typing import Any, cast  # noqa: E402
 
-from celery import Task
-from celery.exceptions import SoftTimeLimitExceeded
+from celery import Task  # noqa: E402
+from celery.exceptions import SoftTimeLimitExceeded  # noqa: E402
 
-from app.worker.celery_app import celery_app
+from app.worker.celery_app import celery_app  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -896,6 +896,7 @@ def process_due_subscriptions(self: Task) -> dict[str, Any]:
         if _is_transient_error(exc):
             raise self.retry(exc=exc)
         raise
+
 
 
 @celery_app.task(

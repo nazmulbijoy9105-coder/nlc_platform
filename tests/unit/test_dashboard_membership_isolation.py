@@ -1,5 +1,4 @@
 import pytest
-pytestmark = pytest.mark.skip(reason="pending reconciliation")
 """Dashboard aggregates must be scoped to active tenant memberships."""
 import asyncio
 import uuid

@@ -42,6 +42,8 @@ async def generate_calendar(
     if current_user.role == "LEGAL_STAFF":
         await ensure_staff_company_scope(company_id, current_user, db)
     _require_calendar_release()
+    if current_user.role == "LEGAL_STAFF":
+        await ensure_staff_company_scope(company_id, current_user, db)
     service = ComplianceCalendarService(db)
     events = await service.get_calendar(
         company_id,

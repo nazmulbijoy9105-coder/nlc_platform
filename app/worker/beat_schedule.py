@@ -211,6 +211,11 @@ BEAT_SCHEDULE = {
             "queue": "maintenance",
             "expires": 3600,
         },
+    # Process expired terms and scheduled period-end cancellations.
+    "daily-subscription-lifecycle": {
+        "task": "app.worker.tasks.process_due_subscriptions",
+        "schedule": crontab(hour=0, minute=30),
+        "options": {"queue": "maintenance", "expires": 3600},
         "description": "Daily subscription expiry, grace-period and cancellation processing",
     },
 
