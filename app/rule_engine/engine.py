@@ -2038,7 +2038,12 @@ class NLCRuleEngine:
             if charge.form_xviii_filed is True and charge.form_xviii_filed_date is None:
                 registration_unknown.append("FORM_XVIII_FILING_DATE_UNKNOWN")
 
-            if charge.registrable_under_s159 is True and registration_unknown:
+            registrability_verified_not_applicable = (
+                charge.registrable_under_s159 is False
+                and charge.registrability_verified
+                and bool(charge.registrability_evidence_ref)
+            )
+            if registration_unknown and not registrability_verified_not_applicable:
                 self._add_flag(ComplianceFlag(
                     rule_id="CAP-002",
                     flag_code="CHARGE_REGISTRATION_REQUIRES_EVIDENCE_REVIEW",
