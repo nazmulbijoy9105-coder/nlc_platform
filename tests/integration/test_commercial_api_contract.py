@@ -8,12 +8,13 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.security import create_access_token
 from app.models.company import Company
 from app.models.commercial import Engagement, Quotation
+from app.models.infrastructure import UserActivityLog
 from app.models.database import set_admin_context, set_rls_context
 from app.models.enums import (
     CompanyStatus,
@@ -558,4 +559,110 @@ async def test_task_completion_requires_company_scope_and_runs_once(
         json={"completion_note": "Wrong company must not find this task"},
     )
     assert wrong_company.status_code == 404, wrong_company.text
+
+@pytest.mark.asyncio
+async def test_quotation_acceptance_and_rejection_persist_actor_attribution(
+    api_client, commercial_admin_token, db_company, db_user, db
+):
+    # Acceptance has no accepted_by column: its durable actor record is the
+    # append-only activity log. Rejection stores rejected_by and also logs it.
+    accepted_engagement = await _create_engagement(
+        api_client, commercial_admin_token, db_company.id
+    )
+    accepted_quote = await _create_quotation(
+        api_client,
+        commercial_admin_token,
+        db_company.id,
+        accepted_engagement["engagement_id"],
+    )
+    accept_response = await api_client.patch(
+        f"/api/v1/commercial/quotations/{accepted_quote['quotation_id']}/accept",
+        headers=_auth(commercial_admin_token),
+    )
+    assert accept_response.status_code == 200, accept_response.text
+
+    rejected_engagement = await _create_engagement(
+        api_client, commercial_admin_token, db_company.id
+    )
+    rejected_quote = await _create_quotation(
+        api_client,
+        commercial_admin_token,
+        db_company.id,
+        rejected_engagement["engagement_id"],
+    )
+    reject_response = await api_client.patch(
+        f"/api/v1/commercial/quotations/{rejected_quote['quotation_id']}/reject",
+        headers=_auth(commercial_admin_token),
+        json={"reason": "Actor attribution regression"},
+    )
+    assert reject_response.status_code == 200, reject_response.text
+
+    stored_rejection = await db.get(Quotation, UUID(rejected_quote["quotation_id"]))
+    assert stored_rejection is not None
+    assert stored_rejection.rejected_by == db_user.id
+
+    expected = {
+        ("QUOTATION_ACCEPTED", UUID(accepted_quote["quotation_id"])),
+        ("QUOTATION_REJECTED", UUID(rejected_quote["quotation_id"])),
+    }
+    result = await db.execute(
+        select(UserActivityLog).where(
+            UserActivityLog.company_id == db_company.id,
+            UserActivityLog.action.in_(
+                ["QUOTATION_ACCEPTED", "QUOTATION_REJECTED"]
+            ),
+            UserActivityLog.resource_id.in_(
+                [quote_id for _, quote_id in expected]
+            ),
+        )
+    )
+    observed = {
+        (entry.action, entry.resource_id, entry.user_id)
+        for entry in result.scalars().all()
+    }
+    assert {
+        (action, quote_id, db_user.id) for action, quote_id in expected
+    }.issubset(observed)
+
+@pytest.mark.asyncio
+async def test_client_company_member_cannot_use_staff_commercial_mutations(
+    api_client, commercial_admin_token, db_company, db_client_user
+):
+    # A live company membership does not grant access to internal commercial
+    # pipeline operations; these endpoints are explicitly staff-role restricted.
+    engagement = await _create_engagement(
+        api_client, commercial_admin_token, db_company.id
+    )
+    quotation = await _create_quotation(
+        api_client,
+        commercial_admin_token,
+        db_company.id,
+        engagement["engagement_id"],
+    )
+    client_token = create_access_token({
+        "sub": str(db_client_user.id),
+        "user_id": str(db_client_user.id),
+        "type": "access",
+        "role": "CLIENT_DIRECTOR",
+        "email": db_client_user.email,
+        "company_ids": [str(db_company.id)],
+    })
+
+    attempts = [
+        await api_client.patch(
+            f"/api/v1/commercial/engagements/{engagement['engagement_id']}/status",
+            headers=_auth(client_token),
+            json={"new_status": "CANCELLED"},
+        ),
+        await api_client.patch(
+            f"/api/v1/commercial/quotations/{quotation['quotation_id']}/accept",
+            headers=_auth(client_token),
+        ),
+        await api_client.patch(
+            f"/api/v1/commercial/quotations/{quotation['quotation_id']}/reject",
+            headers=_auth(client_token),
+            json={"reason": "Unauthorized client attempt"},
+        ),
+    ]
+    assert [response.status_code for response in attempts] == [403, 403, 403]
 
