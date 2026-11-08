@@ -946,7 +946,6 @@ class CompanyService(BaseService[Company]):
             "paid_up_capital_bdt":          float(company.paid_up_capital_bdt) if company.paid_up_capital_bdt else 0.0,
             "capital_increase_date":       None,  # unverified event date; legal engine remains NOT_EVALUATED
             "capital_increase_resolution": getattr(company, "capital_increase_resolution", None),
-            "charges":                     [],
             # form_viii_filed removed — not a CompanyProfile field
 
             # Tax & director fields — prevent false positives
