@@ -339,15 +339,40 @@ class QuotationService(BaseService[Quotation]):
         reason: str | None = None,
         rejected_by: uuid.UUID | None = None,  # COM-002
     ) -> Quotation | None:
-        """Mark quotation as rejected."""
+        """Reject a quotation while serializing against parent lifecycle writes."""
+        quotation_ref_result = await self.db.execute(
+            select(Quotation.engagement_id, Quotation.company_id).where(
+                Quotation.id == quotation_id
+            )
+        )
+        quotation_ref = quotation_ref_result.one_or_none()
+        if quotation_ref is None:
+            return None
+
+        engagement_result = await self.db.execute(
+            select(Engagement)
+            .where(
+                Engagement.id == quotation_ref.engagement_id,
+                Engagement.company_id == quotation_ref.company_id,
+                Engagement.is_active.is_(True),
+            )
+            .with_for_update()
+        )
+        engagement = engagement_result.scalar_one_or_none()
+        if engagement is None:
+            raise ValueError("Quotation engagement is missing, inactive, or belongs to another company.")
+
         quotation_result = await self.db.execute(
             select(Quotation).where(Quotation.id == quotation_id).with_for_update()
         )
         q = quotation_result.scalar_one_or_none()
-        if not q:
+        if q is None:
             return None
+        if q.engagement_id != engagement.id or q.company_id != engagement.company_id:
+            raise ValueError("Quotation parent changed while the rejection was being processed.")
         if q.status not in {"DRAFT", "SENT"}:
-            raise ValueError(f"Cannot reject a quotation in {q.status} state.")
+            raise CommercialConflictError(f"Cannot reject a quotation in {q.status} state.")
+
         return await self.update_instance(
             q,
             status="REJECTED",
