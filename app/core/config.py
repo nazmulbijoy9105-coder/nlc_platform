@@ -4,6 +4,10 @@ from typing import List
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.db_url import is_render_runtime
+
+_RENDER_RUNTIME = is_render_runtime(os.environ)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -39,7 +43,7 @@ class Settings(BaseSettings):
     # enforcement for an API or worker running on Render.
     REQUIRE_RLS_APP_ROLE: bool = (
         True
-        if os.getenv("RENDER", "").strip().lower() == "true"
+        if _RENDER_RUNTIME
         or os.getenv("ENVIRONMENT", "production").strip().lower() in {"prod", "production"}
         else os.getenv("REQUIRE_RLS_APP_ROLE", "false").strip().lower() == "true"
     )
@@ -49,7 +53,7 @@ class Settings(BaseSettings):
         # BaseSettings may load REQUIRE_RLS_APP_ROLE from the environment and
         # override its class default. Reassert the invariant after env parsing.
         if (
-            os.getenv("RENDER", "").strip().lower() == "true"
+            _RENDER_RUNTIME
             or self.ENVIRONMENT.strip().lower() in {"prod", "production"}
         ):
             self.REQUIRE_RLS_APP_ROLE = True
