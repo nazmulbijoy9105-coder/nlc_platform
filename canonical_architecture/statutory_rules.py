@@ -272,7 +272,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "AGM-002",
         "legal_domain": "Corporate",
         "law": "Section 81(1), Companies Act 1994 (Bangladesh)",
-        "requirement": "A subsequent AGM must be held in each Gregorian calendar year and no more than 15 months may elapse between consecutive AGMs. The Registrar may, on an application made within 30 days after expiry of the statutory period, extend a subsequent AGM by up to 90 days or to 31 December of the relevant calendar year, whichever is earlier.",
+        "requirement": "A subsequent AGM must be held in each Gregorian calendar year and no more than 15 months may elapse between consecutive AGMs, subject to the first-AGM proviso where the first AGM is held in the incorporation year (no AGM is required in the incorporation year or following year). The Registrar may, on an application made within 30 days after expiry of the statutory period, extend a subsequent AGM by up to 90 days or to 31 December of the relevant calendar year, whichever is earlier.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
