@@ -25,8 +25,8 @@ This section supersedes older operational observations below where they differ. 
 ### Render deployment
 
 - The live Render web service is `nlc_platform`, on the Free plan, with auto-deploy disabled and no configured live health-check path. The repository blueprint specifies a health-check path, but the live service configuration does not currently match it.
-- The latest deploy of main commit `5d5766bccd71ea862f1fd37c023d5d205cd92a61` failed. Earlier logs showed the insecure PostgreSQL connection error. Later startup logs advanced to `password authentication failed for user 'neondb_owner'`; the migration `DATABASE_URL` secret therefore needs an authorised credential refresh before another deploy.
-- Mainline PR #212 contains verified PostgreSQL TLS handling, but the live service has not reached a successful migration connection. Do not infer deployment success from the merged code.
+- The latest deploy of main commit `6a75242bfa67e34e4f29adaa71d7e5bede951c65` (deploy `dep-dbo457hsrm7s73attrbg`) also failed. Earlier logs showed the insecure PostgreSQL connection error; after the TLS changes reached the service, the latest startup logs consistently reported `password authentication failed for user 'neondb_owner'`. The migration `DATABASE_URL` secret therefore needs an authorised credential refresh before another deploy.
+- Mainline PRs #212 and #216 contain verified PostgreSQL TLS handling, but the live service has not reached a successful migration connection. The latest failure is password authentication, not proof of a successful TLS or migration handshake. Do not infer deployment success from merged code.
 - Only the API web service is present in the Render workspace. No separate NLC Celery worker or Beat service was found. The Dockerfile contains worker/Beat targets, but they are not deployed. Production background jobs must remain disabled until dedicated services and their required broker/database credentials are provisioned.
 - Do not create paid worker/Beat services, rotate production secrets, revoke role memberships, or trigger another production deployment without explicit operator approval.
 
