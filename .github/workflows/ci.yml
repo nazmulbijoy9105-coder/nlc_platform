@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, fix/nlc-canonical-release-gates-20261105, fix/release-ci-commercial-finance-tests-v2-20261108, fix/release-ci-commercial-finance-tests-final-20261108, fix/canonical-runtime-role-and-ci-repair-20261108]
+    branches: [main, feat/manual-mobile-wallet-payments-20261108]
   pull_request:
     branches:
       - main
