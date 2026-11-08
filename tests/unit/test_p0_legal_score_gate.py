@@ -1,5 +1,4 @@
 import pytest
-pytestmark = pytest.mark.skip(reason="pending reconciliation")
 """P0 regressions: unapproved rules must never affect authoritative scores or reports."""
 from datetime import date
 from types import SimpleNamespace
@@ -67,7 +66,7 @@ def test_unapproved_black_flag_is_excluded_from_persisted_score_reconciliation(m
         is_black_override=True,
     )
     assert _applied_score_impacts([flag]) == [
-        {"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"}
+        {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
     ]
 
 
