@@ -151,6 +151,7 @@ class TaskResponse(BaseModel):
     due_date: str | None
     assigned_to: str | None
     completed_at: str | None
+    completion_note: str | None
     created_at: str
 
 
@@ -206,6 +207,7 @@ def _task_to_response(t) -> TaskResponse:
         due_date=str(t.due_date) if t.due_date else None,
         assigned_to=str(t.assigned_to) if t.assigned_to else None,
         completed_at=t.completed_at.isoformat() if t.completed_at else None,
+        completion_note=t.completion_note,
         created_at=t.created_at.isoformat(),
     )
 
@@ -535,7 +537,11 @@ async def complete_task(
     await ensure_staff_company_scope(company_id, current_user, db)
     svc = TaskService(db)
     try:
-        task = await svc.complete_task(task_id=task_id, company_id=company_id)
+        task = await svc.complete_task(
+            task_id=task_id,
+            company_id=company_id,
+            completion_note=body.completion_note,
+        )
     except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not task:
