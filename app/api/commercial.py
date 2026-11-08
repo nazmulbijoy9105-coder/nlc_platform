@@ -132,7 +132,6 @@ class TaskCreateRequest(BaseModel):
     linked_flag_id: uuid.UUID | None = None
     source_rescue_step_id: uuid.UUID | None = None
     priority: TaskPriority = Field(default=TaskPriority.MEDIUM, description="LOW | MEDIUM | HIGH | CRITICAL")
-    priority: TaskPriority = TaskPriority.MEDIUM
 
 
 class TaskCompleteRequest(BaseModel):
