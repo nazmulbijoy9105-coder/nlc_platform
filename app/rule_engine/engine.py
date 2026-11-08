@@ -1262,7 +1262,11 @@ class NLCRuleEngine:
                     elif self.today > agm_deadline:
                         delay = (self.today - agm_deadline).days
                         severity = Severity.BLACK if delay > 365 else Severity.RED
-                        basis = "VALIDATED_EXTENSION" if c.agm_extension_granted_until else deadline_basis
+                        basis = (
+                            "VALIDATED_EXTENSION"
+                            if c.agm_extension_granted_until == agm_deadline
+                            else deadline_basis
+                        )
                         self._add_flag(ComplianceFlag(
                             rule_id="AGM-002", flag_code="SUBSEQUENT_AGM_DEFAULT",
                             severity=severity,
