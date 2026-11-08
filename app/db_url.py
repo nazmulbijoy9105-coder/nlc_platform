@@ -13,9 +13,9 @@ def normalize_asyncpg_url(
 ) -> tuple[str, ssl.SSLContext | None]:
     """Return an asyncpg URL and a verified TLS context when required.
 
-    asyncpg does not accept libpq sslmode query parameters. Remove sslmode/ssl
-    from the URL and express the policy through asyncpg's ssl connect argument.
-    Production callers always require TLS.
+    asyncpg does not accept several libpq-only URL parameters. Remove
+    sslmode/ssl and channel_binding from the URL; express TLS policy through
+    asyncpg's ssl connect argument. Production callers always require TLS.
     """
     if not raw_url or not raw_url.strip():
         raise ValueError("PostgreSQL connection URL must not be empty")
@@ -31,6 +31,8 @@ def normalize_asyncpg_url(
     query = dict(url.query)
     sslmode = str(query.pop("sslmode", "")).strip().lower()
     ssl_option = str(query.pop("ssl", "")).strip().lower()
+    # channel_binding is a libpq option, not an asyncpg.connect() argument.
+    query.pop("channel_binding", None)
 
     explicitly_disabled = sslmode in {"disable", "false", "0"} or ssl_option in {
         "disable",
