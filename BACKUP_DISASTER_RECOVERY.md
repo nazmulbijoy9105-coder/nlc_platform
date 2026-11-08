@@ -61,29 +61,31 @@ Only then may an authorized operator update the Render connection string and per
 The current backup script is scripts/backup_to_s3.sh. It uses pg_dump custom format against a direct Neon PostgreSQL endpoint and uploads an archive plus SHA-256 sidecar.
 
 Required environment:
-- NLC_BACKUP_DATABASE_URL: direct Neon URL using postgresql:// or postgres://, with TLS required. Do not use a transaction-pooler endpoint.
+- NLC_BACKUP_DATABASE_URL: direct Neon URL using postgresql:// or postgres://, with sslmode=require, verify-ca, or verify-full. Do not use a transaction-pooler endpoint.
 - S3_BACKUP_BUCKET: bucket name, not an s3:// URL.
 - AWS_REGION: explicit bucket region.
 - Optional S3_BACKUP_PREFIX (defaults to database).
 
 The script requires pg_dump, pg_restore, aws, and sha256sum. It:
-- creates a full custom-format logical dump;
+- creates a full custom-format logical dump, preserving database ACL statements while omitting source ownership;
 - verifies the archive TOC locally;
 - calculates SHA-256;
 - uploads the dump and checksum with server-side encryption;
 - checks the remote object's byte size and checksum metadata.
 
+PostgreSQL logical dumps do not include cluster-level role definitions. The target Neon project must have the required roles provisioned before restoring ACLs. Keep role provisioning in reviewed infrastructure/migration configuration; do not export passwords into the backup artifact.
+
 It does NOT prove that the database can be restored. Do not report a successful restore based only on an S3 upload or pg_restore --list.
 
 ### GitHub Actions
 
-.github/workflows/backup-neon-to-s3.yml is manual-dispatch only. Configure:
+.github/workflows/backup-neon-to-s3.yml validates backup-tool syntax on pull requests and runs the upload only through manual dispatch. Configure:
 - GitHub Actions variable AWS_REGION;
 - GitHub Actions variable S3_BACKUP_BUCKET;
 - GitHub Actions secret AWS_BACKUP_ROLE_ARN for an AWS IAM role trusted through GitHub OIDC;
 - GitHub Actions secret NLC_BACKUP_DATABASE_URL containing a direct Neon URL.
 
-Use least-privilege AWS permissions restricted to the designated bucket/prefix. Do not create long-lived AWS access keys if OIDC is available. Do not enable a scheduled run until a manual backup has succeeded and an isolated restore rehearsal has passed.
+Use least-privilege AWS permissions restricted to the designated bucket/prefix. The workflow needs object upload and HEAD/read access for the uploaded objects; large multipart uploads may also require the corresponding multipart permissions. Restrict the OIDC trust policy to this repository and the intended branch. Do not create long-lived AWS access keys if OIDC is available. Do not enable a scheduled run until a manual backup has succeeded and an isolated restore rehearsal has passed.
 
 ## 5. Archive checks versus restore tests
 
@@ -91,7 +93,7 @@ Run an archive check on a downloaded backup:
 
     python3 scripts/verify_backup.py ./nlc-postgres-YYYYMMDDTHHMMSSZ.dump
 
-This checks the SHA-256 sidecar when present, archive TOC readability, and whether the three required historical table definitions appear in the archive. It does not check table row counts or execute a restore.
+This checks the SHA-256 sidecar when present, archive TOC readability, and whether both table-definition and table-data entries exist for the three required historical evidence tables. It does not check row counts or execute a restore. A TABLE DATA entry does not prove that the table contained non-zero rows.
 
 A proper restore drill must use a disposable Neon branch/database and a direct connection URL for that isolated target. Restore with pg_restore only after confirming the target is not production. Verify:
 - all expected schemas, tables, sequences, constraints, indexes, functions, and extensions;
