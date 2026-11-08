@@ -82,3 +82,18 @@ def test_pdf_score_reconciliation_counts_only_approved_rules(monkeypatch):
     approved = SimpleNamespace(rule_id="AGM-001", severity="RED", score_impact=15)
     unapproved = SimpleNamespace(rule_id="AUD-003", severity="BLACK", score_impact=25)
     assert _verified_flag_score([approved, unapproved]) == (85, False)
+
+
+def test_release_switch_without_any_approved_rules_does_not_release_a_score(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    result = NLCRuleEngine(today=date(2026, 11, 5))._calculate_score(
+        [_engine_flag()], CompanyProfile(company_id="x", company_name="Test")
+    )
+    assert engine_module.legal_score_is_released() is False
+    assert result.final_score == 100  # non-authoritative arithmetic placeholder
+    assert result.risk_band == Severity.NOT_EVALUATED
+    assert result.override_applied is False
+    assert _applied_score_impacts([_engine_flag()]) == [
+        {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
+    ]
