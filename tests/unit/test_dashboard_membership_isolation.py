@@ -1,4 +1,3 @@
-import pytest
 """Dashboard aggregates must be scoped to active tenant memberships."""
 import asyncio
 import uuid
