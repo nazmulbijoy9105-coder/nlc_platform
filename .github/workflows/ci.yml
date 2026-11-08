@@ -3,6 +3,9 @@ name: CI
 on:
   push:
     branches: [main, fix/nlc-canonical-release-gates-20261105, fix/commercial-lifecycle-locks-and-ci-secret-20261108]
+    branches: [main, fix/nlc-canonical-release-gates-20261105, fix/commercial-lifecycle-concurrency-main-20261108]
+    branches: [main, fix/nlc-canonical-release-gates-20261105, fix/commercial-lock-order-on-160-20261108]
+    branches: [main, fix/nlc-canonical-release-gates-20261105, fix/commercial-lifecycle-concurrency-main-20261108, feat/manual-mobile-wallet-payments-20261108]
   pull_request:
     branches:
       - main
@@ -10,6 +13,7 @@ on:
       - fix/canonical-migration-chain-20261106
       - feat/finance-ledger-integrated-on-canonical-chain-20261106
       - feat/subscriptions-on-canonical-20261108b
+      - repair/nlc-canonical-release-20261108b
 
 jobs:
   unit-tests:
@@ -42,6 +46,7 @@ jobs:
       - name: Lint changed backend, finance, commercial, subscription and calendar files
         run: |
           ruff check --select E,F --ignore E501 app/services/bd_calendar_generator.py \
+          ruff check --select E4,E7,E9,F app/services/bd_calendar_generator.py \
             app/api/commercial.py app/models/commercial.py app/services/commercial_service.py \
             app/api/finance.py app/models/finance.py app/services/finance_service.py \
             app/api/subscriptions.py app/models/subscription.py app/services/subscription_service.py \
@@ -140,6 +145,26 @@ jobs:
       - name: Compile check
         run: python -m compileall app/
 
+      - name: Generate ephemeral CI security credentials
+        run: |
+          python - <<'PY'
+          import os
+          import secrets
+
+          password = secrets.token_urlsafe(32)
+          values = {
+              "APP_DATABASE_PASSWORD": password,
+              "APP_DATABASE_URL": f"postgresql+asyncpg://nlc_app_role:{password}@localhost:5432/nlc_test",
+              "JWT_SECRET_KEY": secrets.token_urlsafe(48),
+              "NLC_RLS_HMAC_SECRET": secrets.token_hex(32),
+          }
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
+              for key, value in values.items():
+                  env.write(f"{key}={value}\n")
+          for value in values.values():
+              print(f"::add-mask::{value}")
+          PY
+
       - name: Verify single Alembic head and two fresh PostgreSQL upgrades
         run: |
           set -euo pipefail
@@ -201,7 +226,12 @@ jobs:
               try:
                   await conn.execute(
                       "ALTER ROLE nlc_app_role WITH LOGIN"
+                  password = os.environ["APP_DATABASE_PASSWORD"]
+                  alter_role = await conn.fetchval(
+                      "SELECT format('ALTER ROLE nlc_app_role WITH PASSWORD %L', $1::text)",
+                      password,
                   )
+                  await conn.execute(alter_role)
               finally:
                   await conn.close()
 
@@ -216,20 +246,21 @@ jobs:
           DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
           DATABASE_URL="$SECOND_DATABASE_URL" alembic current
 
-      - name: Rehearse production baseline 0042 through head
+      - name: Migrate a fresh database from revision 0042 through head
         run: |
           set -euo pipefail
           createdb -h localhost -U nlc_test nlc_test_baseline_0042
           BASELINE_DATABASE_URL="postgresql+asyncpg://nlc_test@localhost:5432/nlc_test_baseline_0042"
 
-          # Apply the real online migrations to an isolated database restored
-          # at the declared production baseline. This exercises migrations
-          # that intentionally require live catalog/role/secret preflights.
+          # Apply migrations to a fresh isolated database, first advancing it to
+          # revision 0042 and then through head. This validates the forward
+          # chain from that revision; it is NOT a restored production snapshot.
           DATABASE_URL="$BASELINE_DATABASE_URL" alembic upgrade 0042_dedup_key
           DATABASE_URL="$BASELINE_DATABASE_URL" alembic upgrade head
           CURRENT="$(DATABASE_URL="$BASELINE_DATABASE_URL" alembic current)"
           printf '%s\n' "$CURRENT"
-          grep -q "0079_reconcile_legacy_agm_evidence_types" <<< "$CURRENT"
+          grep -q "0080_manual_mobile_wallet_methods" <<< "$CURRENT"
+          grep -q "0076_manual_mobile_wallet_methods" <<< "$CURRENT"
 
           # Export the resulting schema snapshot for independent review.
           pg_dump -h localhost -U nlc_test \
@@ -270,7 +301,7 @@ jobs:
           DATABASE_URL="$LEGACY_DATABASE_URL" alembic upgrade head
           FINAL_MARKER="$(DATABASE_URL="$LEGACY_DATABASE_URL" alembic current)"
           printf '%s\n' "$FINAL_MARKER"
-          grep -q "0079_reconcile_legacy_agm_evidence_types" <<< "$FINAL_MARKER"
+          grep -q "0080_manual_mobile_wallet_methods" <<< "$FINAL_MARKER"
 
       - name: Upload isolated migration rehearsal schema
         uses: actions/upload-artifact@v4
@@ -284,6 +315,9 @@ jobs:
 
       - name: Run finance concurrency regression tests explicitly
         run: python -m pytest tests/integration/test_finance_concurrency.py -q --tb=short
+
+      - name: Run commercial concurrency regression tests explicitly
+        run: python -m pytest tests/integration/test_commercial_concurrency.py -q --tb=short
 
       - name: Run canonical integrity tests
         run: python -m pytest tests/unit/test_canonical_integrity.py -q --tb=short

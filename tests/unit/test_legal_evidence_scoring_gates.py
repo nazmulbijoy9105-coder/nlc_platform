@@ -1,5 +1,3 @@
-import pytest
-pytestmark = pytest.mark.skip(reason="pending reconciliation")
 from datetime import date
 from types import SimpleNamespace
 
