@@ -16,28 +16,28 @@ This matrix is a technical inventory of candidate legal anchors and internal rul
 
 | Rule ID | Rule Name | Statutory Basis (engine) | Severity | Score | Black | Status |
 |---------|-----------|--------------------------|----------|-------|-------|--------|
-| ACC-001 | Financial Statements Not Presented at AGM | Section 183, Companies Act 1994 (Bangladesh) | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| ACC-002 | Financial Statements Not Filed with Registrar | Section 190, Companies Act 1994 (Bangladesh) | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| ACC-003 | Books of Account Not Kept | Section 181, Companies Act 1994 (Bangladesh) | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| AGM-001 | First AGM Default | Section 81, Companies Act 1994 (Bangladesh) | RED | 20 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| AGM-002 | Subsequent AGM Default | Section 81, Companies Act 1994 (Bangladesh) | RED | 20 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| AGM-003 | AGM Notice Defective — Insufficient Days | Section 85, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| AGM-004 | AGM Notice Missing | Section 85, Companies Act 1994 (Bangladesh) | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| AGM-005 | AGM Quorum Not Met | Section 85(2)(b), Companies Act 1994 (Bangladesh), subject to the company’s Articles | RED | 15 | no | INTERNAL TRIAGE — verify Articles, member count and attendance evidence |
-| AGM-006 | AGM Minutes Not Prepared | Section 89, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| ACC-001 | Financial Statements Not Presented at AGM | Section 183, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| ACC-002 | Financial Statements Not Filed with Registrar | Section 190, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| ACC-003 | Books of Account Not Kept | Section 181, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AGM-001 | First AGM Default | Section 81, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AGM-002 | Subsequent AGM Default | Section 81, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AGM-003 | AGM Notice Defective — Insufficient Days | Section 85, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AGM-004 | AGM Notice Missing | Section 85, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AGM-005 | AGM Quorum Not Met | Section 85(2)(b), Companies Act 1994 (Bangladesh), subject to the company’s Articles | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — verify Articles, member count and attendance evidence |
+| AGM-006 | AGM Minutes Not Prepared | Section 89, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | AGM-007 | AGM Adjourned Without Proper Notice | Section 85 and applicable Articles; exact adjournment provision requires counsel mapping | NOT_EVALUATED | 0 | no | REVIEW ONLY — no automatic default |
-| AR-001 | Annual Return Default — Single Year | Section 36 (Schedule X), Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AR-001 | Annual Return Default — Single Year | Section 36 (Schedule X), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | AR-002 | Annual Return Backlog — Review Required | Section 36 and Schedule X; Section 346 governs a separate Registrar strike-off process | NOT_EVALUATED | 0 | no | REVIEW ONLY — backlog alone is not proof of strike-off or director liability |
 | AR-003 | Annual Return Backlog — Extended Review Required | Section 36 and Schedule X; Section 346 requires separate Registrar grounds and notice steps | NOT_EVALUATED | 0 | no | REVIEW ONLY — no automatic strike-off, dissolution or rescue conclusion |
-| AR-004 | Annual Return Filed But Incomplete | Section 36, Schedule X, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| AUD-001 | First Auditor Not Appointed Within One Calendar Month | Section 210(6), Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| AUD-002 | Audit Not Completed Before AGM | Section 183, Companies Act 1994 (Bangladesh) | RED | 12 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AR-004 | Annual Return Filed But Incomplete | Section 36, Schedule X, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AUD-001 | First Auditor Not Appointed Within One Calendar Month | Section 210(6), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AUD-002 | Audit Not Completed Before AGM | Section 183, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | AUD-003 | AGM Audit Status Requires Legal Review | Section 183, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | Audit/account evidence and legal consequences require case-specific review; no automatic BLACK override |
 | AUD-004 | Auditor Reappointment Requires Legal Review | Section 210(3), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | Verify statutory exceptions and notice requirements before determining non-compliance |
 | AUD-005 | Subsequent Auditor Reappointment Status Unknown | Section 210(3), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | Evidence-status only; no 120-day deadline; exceptions require legal review |
-| BNK-001 | Winding Up Petition Filed | Bankruptcy Act 1997 (Bangladesh), Section 12 | BLACK | 10 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| BNK-002 | Liquidator Appointed | Bankruptcy Act 1997 (Bangladesh), Section 14 | BLACK | 10 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| BNK-003 | Court-Ordered Winding Up | Bankruptcy Act 1997 (Bangladesh), Section 18 | BLACK | 35 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| BNK-001 | Winding Up Petition Filed — Companies Act route verification | Companies Act 1994, Part V, sections 241–244; exact petition provision and case status require review | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| BNK-002 | Liquidator Appointment — route verification | Companies Act 1994, Part V; section 255 for court-appointed Official Liquidators; voluntary route requires separate mapping | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| BNK-003 | Court-Ordered Winding Up — authenticated order verification | Companies Act 1994, Part V, sections 241–246; exact order and status require review | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | BOD-001 | Board Meeting History Requires Verification | Section 96, Companies Act 1994 (Bangladesh) — at least one meeting every three months and four per year | NOT_EVALUATED | 0 | no | REVIEW ONLY — full verified meeting history required; no breach inferred from a single date |
 | BOD-002 | Board Meeting Notice Status Requires Verification | Section 95, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | REVIEW ONLY — verify notice to each director then in Bangladesh and service evidence |
 | BOD-003 | Board Minutes Status Requires Verification | Section 89, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | REVIEW ONLY — verify minute book and custody; missing upload is not proof of non-creation |
@@ -45,60 +45,60 @@ This matrix is a technical inventory of candidate legal anchors and internal rul
 | BSEC-002 | CG Certificate Not Obtained | BSEC Corporate Governance Code 2018, Condition 9, as amended; listed-issuer scope only | NOT_EVALUATED | 0 | no | REVIEW ONLY — certifier, AGM appointment and evidence required |
 | BSEC-003 | Board Composition Non-Compliant | BSEC Corporate Governance Code 2018, Condition 1, as amended; listed-issuer scope only | NOT_EVALUATED | 0 | no | REVIEW ONLY — current amendment and director eligibility required |
 | BSEC-004 | Audit Committee Not Established | BSEC Corporate Governance Code 2018, Condition 5, as amended; listed-issuer scope only | NOT_EVALUATED | 0 | no | REVIEW ONLY — committee composition and duties required |
-| CAP-001 | Capital Alteration Without Proper Resolution | Section 53, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| CAP-002 | Charge Not Registered With RJSC Within 21 Days | Section 159(1), Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| CAP-003 | Capital Reduction Without Court Order | Sections 59-60, Companies Act 1994 (Bangladesh) | BLACK | 15 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| CAP-004 | Special Resolution Not Filed With RJSC within 15 days | Section 88(1), Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| CAP-001 | Capital Alteration Authority Requires Review | Sections 53, 54 and 56, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| CAP-002 | Charge Not Registered With RJSC Within 21 Days | Section 159(1), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| CAP-003 | Capital Reduction — Court Confirmation Review | Sections 59-60, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| CAP-004 | Special Resolution Not Filed With RJSC within 15 days | Section 88(1), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | CHG-001 | Charge satisfaction — evidence review only | Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | Require verified s.159 registrability, satisfaction date and RJSC filing-status evidence; no inference from missing data |
-| DEF-001 | Director Disqualified | Section 94, Companies Act 1994 (Bangladesh) | BLACK | 20 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| DEF-002 | Unresolved Penalty Notices | Case-specific enabling provision; no universal section | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| DIR-001 | Director Appointment Particulars Not Filed Within 14 Days | Section 115, Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| DIR-002 | Director Cessation Particulars Not Filed Within 14 Days | Section 115, Companies Act 1994 (Bangladesh) | YELLOW | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| DIR-003 | Major Director Filing Irregularity — Over 1 Year | Section 115, Companies Act 1994 (Bangladesh) | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| DIR-004 | Departed Director Still Active on RJSC Register | Section 109, Companies Act 1994 (Bangladesh) | RED | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DEF-001 | Director Disqualified | Section 94, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DEF-002 | Unresolved Penalty Notices | Case-specific enabling provision; no universal section | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DIR-001 | Director Appointment Particulars Not Filed Within 14 Days | Section 115, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DIR-002 | Director Cessation Particulars Not Filed Within 14 Days | Section 115, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DIR-003 | Director Filing Delay — Internal 365-Day Escalation | Section 115, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DIR-004 | Departed Director Still Active on RJSC Register | Section 109, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | DIR-005 | Director Interest Disclosure/Register Requires Review | Section 130, Companies Act 1994 (Bangladesh) — disclosure of interest in contracts/arrangements, not a generic register duty | NOT_EVALUATED | 0 | no | REVIEW ONLY — rule title/trigger and any separate register duty require legal reconciliation |
 | DIR-006 | Register of Contracts Requires Review | Companies Act 1994 and applicable Articles — exact provision not established | NOT_EVALUATED | 0 | no | REVIEW ONLY — no universal register duty assumed |
-| DIR-007 | Director Consent Not Filed Within 30 Days | Section 92, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| DIR-007 | Director Consent Not Filed Within 30 Days | Section 93(2), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | DIR-008 | Office of Profit Status Requires Verification | Section 104, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | REVIEW ONLY — statutory exclusions and general-meeting consent must be checked |
 | DIR-010 | Managing Director Term Requires Verification | Section 110, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | REVIEW ONLY — verify current appointment term, reappointment and continuity |
 | ESC-001 | Strike-Off Process Status Requires Verification | Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required | NOT_EVALUATED | 0 | no | REVIEW ONLY — backlog is not proof of Registrar strike-off action |
 | ESC-002 | Strike-Off Status Requires Verification | Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required | NOT_EVALUATED | 0 | no | REVIEW ONLY — filing backlog or unverified list indicator is not proof of strike-off |
-| ESC-003 | Corporate Rescue Mandatory — Systemic Failure | NLC internal risk policy; not a statutory Companies Act consequence | BLACK | 10 | YES | POLICY OWNER APPROVAL PENDING — no statutory BLACK classification |
-| ESC-004 | Voluntary Winding Up | Section 130, Companies Act 1994 (Bangladesh) | BLACK | 30 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| ESC-005 | Investigation Order Pending | Section 104, Companies Act 1994 (Bangladesh) | RED | 20 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| FX-001 | Foreign Exchange Violation | Foreign Exchange Regulation Act 1947 (Bangladesh) | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| INC-001 | Memorandum and Articles Not Filed | Section 23, Companies Act 1994 (Bangladesh) | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| INC-003 | Minimum Directors Not Appointed | Section 90(2), Companies Act 1994 (Bangladesh) | BLACK | 15 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| INC-004 | Paid-Up / Authorised Capital Mismatch — Legal Review | Section 56, Companies Act 1994 (Bangladesh), subject to review | YELLOW | 0 | no | REVIEW_REQUIRED — not a void-allotment conclusion |
-| INC-005 | Encashment Certificate Missing — Foreign Shareholding | BIDA Foreign Investment Act 1980; Bangladesh Bank FDI Circular | YELLOW | 8 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| INC-006 | Remittance Below Work Permit Threshold | BIDA Foreign Investment Act 1980 | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| INC-007 | Business Commenced Without Section 150 Declaration | Sections 59-60, Companies Act 1994 (Bangladesh) | RED | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| ESC-003 | Corporate Rescue Mandatory — Systemic Failure | NLC internal risk policy; not a statutory Companies Act consequence | NOT_EVALUATED | 0 | no | POLICY OWNER APPROVAL PENDING — no statutory BLACK classification |
+| ESC-004 | Voluntary Winding Up | Section 286 and following provisions, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| ESC-005 | Investigation Appointment — evidence review only | Sections 195 and 197; section 199 where related entities are included, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| FX-001 | Foreign Exchange Violation | Foreign Exchange Regulation Act 1947 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| INC-001 | MoA/AoA Registration Status Requires Verification | Section 23, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| INC-003 | Minimum Directors Not Appointed | Section 90(2), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| INC-004 | Paid-Up / Authorised Capital Mismatch — Legal Review | Section 56, Companies Act 1994 (Bangladesh), subject to review | NOT_EVALUATED | 0 | no | REVIEW_REQUIRED — not a void-allotment conclusion |
+| INC-005 | Encashment Certificate Missing — Foreign Shareholding | GFET-2018 Vol.1 Ch.9 para 2(A); FE Circular 10/2023; FEID Circular 01/2025 and subsequent circulars | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| INC-006 | Initial Establishment Remittance Evidence — Work Permit Review | BIDA Guidelines for permission to establish foreign commercial offices and issue work permits in Bangladesh (2023); exact operative clause/version and current amendments require verification | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| INC-007 | Section 150 Commencement Declaration — limited applicability review | Section 150(1) and (6), Companies Act 1994 (Bangladesh); private companies and companies not issuing a public-subscription prospectus are excluded | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | LBR-001 | Factory License Missing | Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026; only where an applicable Government direction covers the establishment/class | NOT_EVALUATED | 0 | no | REVIEW ONLY — Government direction and establishment class required |
 | LBR-002 | Factory License Expired | Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026; licence term/renewal depends on applicable direction and licence class | NOT_EVALUATED | 0 | no | REVIEW ONLY — licence, renewal and extension evidence required |
-| LBR-003 | Labour Court Order Pending | Labour Act 2006 (Bangladesh), Section 209 | RED | 15 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| MEM-001 | Company Operating with Fewer than Minimum Members | Section 222, Companies Act 1994 (Bangladesh) | RED | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| OFF-001 | Change of Registered Office Not Filed Within 28 Days | Section 77, Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| REG-001 | Statutory Registers Incomplete | Section 34, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| REG-002 | Core Statutory Registers Missing | Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh) | RED | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| REG-003 | Registers Not Kept at Registered Office | Section 34(2), Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| SH-001 | Share Allotment Not Filed — Form XV | Section 151, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| SH-002 | Share Certificates Not Issued Within 60 Days | Section 158, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| SH-003 | Capital Increase Not Filed — Form IV | Section 56, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| STR-001 | Name Change Not Filed | Sections 11 and 88(1), Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| STR-002 | Object Clause Change Not Filed | Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| STR-003 | AoA Alteration Not Filed | Sections 20 and 88(1), Companies Act 1994 (Bangladesh) | YELLOW | 3 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| LBR-003 | Labour Court Order Pending | Labour Act 2006 (Bangladesh), Section 209 | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| MEM-001 | Company Operating with Fewer than Minimum Members | Section 222, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| OFF-001 | Change of Registered Office Not Filed Within 28 Days | Section 77, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| REG-001 | Statutory Registers Incomplete | Section 34, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| REG-002 | Core Statutory Registers Missing | Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| REG-003 | Registers Not Kept at Registered Office | Section 34(2), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| SH-001 | Share Allotment Not Filed — Form XV | Section 151, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| SH-002 | Share Certificates Not Issued Within 90 Days | Section 158, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| SH-003 | Capital Increase Not Filed — Form IV | Section 56, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| STR-001 | Name Change Not Filed | Sections 11 and 88(1), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| STR-002 | Object Clause Change Not Filed | Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| STR-003 | AoA Alteration Not Filed | Sections 20 and 88(1), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | TAX-001 | Tax Identification Number (TIN) Not Obtained | Income Tax Act 2023, Sections 166, 261 and 264; company-specific duty, identity and evidence require verification | NOT_EVALUATED | 0 | no | REVIEW ONLY — profile boolean is not proof of breach |
 | TAX-002 | VAT registration / turnover-tax enlistment status — review only | VAT & SD Act 2012, ss.2(48), 2(57), 4 and 10; Act 77/2026 and Finance Act 96/2026. BDT 30 lakh enlistment / BDT 50 lakh registration thresholds; statutory 12-month turnover, exclusions and s.4(2) categories govern | NOT_EVALUATED | 0 | no | REVIEW ONLY — no breach finding from annual-turnover estimate; taxpayer-specific evidence and counsel review required |
 | TAX-003 | Annual Tax Return Overdue | Income Tax Act 2023, Sections 170(2) and 171, as substituted by Finance Act 2026 (Act No. 96 of 2026) | NOT_EVALUATED | 0 | no | REVIEW ONLY — income-year, taxpayer class, holiday and extension checks required |
 | TAX-004 | Advance Tax Missed | Income Tax Act 2023, Sections 154–157, as amended by Finance Act 2026 (Act No. 96 of 2026) | NOT_EVALUATED | 0 | no | REVIEW ONLY — liability, s.156 class, A-B computation and payment evidence required |
-| TL-001 | Trade License Not Obtained | Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009 | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| TL-002 | Trade License Expired | Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009 | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| TR-001 | No Share Transfer Instrument — Form 117 | Section 38, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| TR-002 | Stamp Duty Not Paid on Share Transfer | Stamp Act 1899, Schedule I, Item 62 | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| TR-003 | No Board Approval for Share Transfer | Section 38; AoA, Companies Act 1994 (Bangladesh) | YELLOW | 8 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| TR-004 | Register of Members Not Updated After Transfer | Section 34, Companies Act 1994 (Bangladesh) | YELLOW | 5 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| TR-005 | Share Transfer Violates AoA Restriction — BLACK OVERRIDE | Section 38; AoA, Companies Act 1994 (Bangladesh) | BLACK | 15 | YES | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| TR-006 | Composite Irregular Transfer | Sections 34, 47, 108, Companies Act 1994 (Bangladesh) | RED | 10 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| TL-001 | Trade License Not Obtained | Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009 | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| TL-002 | Trade License Expired | Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009 | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| TR-001 | Share Transfer Instrument — Section 38(3) Evidence Review | Section 38(3), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| TR-002 | Share Transfer Stamp Duty Requires Verification | Stamp Act 1899, Schedule I, Item 62 | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| TR-003 | Articles-Based Transfer Restriction Review | Section 38(7), Companies Act 1994 (Bangladesh); Articles of Association | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| TR-004 | Notice of Refusal to Register Transfer | Section 38(4), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| TR-005 | Registered Transfer Despite Articles Restriction — Counsel Review | Section 38(7), Companies Act 1994 (Bangladesh); Articles of Association | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| TR-006 | Composite Transfer Record Review | Sections 34 and 38, Companies Act 1994 (Bangladesh), and applicable Articles | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | VAT-002 | Monthly VAT Return Overdue | VAT Act 2012, Section 64, as substituted by VAT Amendment Ordinance 2026 (Ordinance No. 38 of 2026, dated 14 October 2026); each tax period, 15/20-day class rules and Board extensions | NOT_EVALUATED | 0 | no | REVIEW ONLY — do not use superseded three-tax-period cycle |
 | VAT-003 | VAT Annual Return Overdue | No universal annual VAT return duty identified; exact applicable Act/Rule/SRO/order must be established | NOT_EVALUATED | 0 | no | REVIEW ONLY — no automatic annual-return default |
 

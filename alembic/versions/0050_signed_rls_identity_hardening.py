@@ -153,23 +153,19 @@ def upgrade() -> None:
                     'nlc_ci_audit_role has unsafe attributes; require LOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, NOREPLICATION and NOBYPASSRLS';
             END IF;
 
-            -- NOINHERIT does not prevent SET ROLE. Restricted runtime roles
-            -- must never be members of another role. Only trusted database
-            -- administrators with SUPERUSER or BYPASSRLS may hold memberships
-            -- in these restricted roles.
+            -- NOINHERIT does not prevent SET ROLE. Reject memberships in
+            -- either direction so neither principal can inherit or assume
+            -- another role, and no other role can assume these principals.
             IF EXISTS (
                 SELECT 1
                   FROM pg_auth_members membership
                   JOIN pg_roles granted_role ON granted_role.oid = membership.roleid
                   JOIN pg_roles member_role ON member_role.oid = membership.member
-                 WHERE member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
-                    OR (
-                        granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
-                        AND NOT (member_role.rolsuper OR member_role.rolbypassrls)
-                    )
+                 WHERE granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
+                    OR member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
             ) THEN
                 RAISE EXCEPTION
-                    'restricted NLC roles may only be granted to trusted SUPERUSER/BYPASSRLS administrators and must not inherit other roles';
+                    'nlc_app_role and nlc_ci_audit_role must have no role memberships in either direction';
             END IF;
         END
         $role_preflight$;

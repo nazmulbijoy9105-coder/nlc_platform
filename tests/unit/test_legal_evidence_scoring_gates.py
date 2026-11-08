@@ -91,6 +91,9 @@ def test_counsel_approved_black_override_is_honoured_by_engine(monkeypatch):
     # Simulate a separately approved rule and an explicitly authorised release.
     # The production default remains LEGAL_SCORE_RELEASED=False.
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AUD-003"}))
+    monkeypatch.setattr(
+        engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"AUD-003"})
+    )
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     approved_black = ComplianceFlag(
         rule_id="AUD-003",
@@ -663,3 +666,14 @@ def test_unapproved_black_override_cannot_force_zero_score():
     score = NLCRuleEngine()._calculate_score([unapproved_black], profile)
     assert score.final_score == 100
     assert score.override_applied is False
+
+def test_tin_profile_absence_is_review_only_not_a_confirmed_tax_breach():
+    result = NLCRuleEngine().evaluate(
+        _profile(tin_obtained=False),
+        today=date(2026, 11, 4),
+    )
+    flag = _flag(result, "TAX-001")
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.score_impact == 0

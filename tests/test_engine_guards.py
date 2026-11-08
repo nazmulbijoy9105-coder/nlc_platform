@@ -30,7 +30,7 @@ EXPECTED_VERIFIED_COUNT = 0       # fail-closed until independent current-law ap
 FORBIDDEN_RULE_IDS = ("AR-001", "SH-002", "ESC-003")   # unscored: AR/SH informational, ESC-003 is the surcharge itself
 LIFECYCLE_ALLOWED = 1             # one lifecycle site is un-gated by design
 
-GUARD = 'f.eval_state == "VIOLATION"'
+GUARD = 'f.eval_state != "UNKNOWN"'
 F30_TAIL = "not f.resolved and f.conditional_applies and f.rule_id not in self._ESC_RULE_IDS])"
 F30_RESIDUE = "Severity.BLACK and f.rule_id not in"
 F3_RESIDUE = ") != 'UNKNOWN'] # F3"
