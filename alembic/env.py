@@ -34,7 +34,7 @@ from sqlalchemy import (
     pool,
     text,
 )
-from sqlalchemy.engine import Connection, make_url
+from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 
@@ -135,23 +135,30 @@ if config.config_file_name is not None:
 # Read from environment — never hardcode credentials
 def get_database_url() -> str:
     """
-    Resolve DATABASE_URL from environment.
-    Converts postgres:// → postgresql+asyncpg:// for async engine.
+    Resolve the privileged migration URL from the environment.
+    Prefer MIGRATION_DATABASE_URL (direct Neon endpoint); retain DATABASE_URL
+    as a backward-compatible fallback. Convert postgres:// for asyncpg.
     """
-    url = os.environ.get("DATABASE_URL", "")
+    url = (
+        os.environ.get("MIGRATION_DATABASE_URL", "").strip()
+        or os.environ.get("DATABASE_URL", "").strip()
+    )
     if not url:
-        # Try loading from .env file
+        # Try loading from .env file, preferring the direct migration URL.
         env_file = PROJECT_ROOT / ".env"
         if env_file.exists():
+            values = {}
             for line in env_file.read_text().splitlines():
-                if line.startswith("DATABASE_URL="):
-                    url = line.split("=", 1)[1].strip().strip('"').strip("'")
-                    break
+                if line.startswith(("MIGRATION_DATABASE_URL=", "DATABASE_URL=")):
+                    key, value = line.split("=", 1)
+                    values[key] = value.strip().strip('"').strip("'")
+            url = values.get("MIGRATION_DATABASE_URL") or values.get("DATABASE_URL", "")
 
     if not url:
         raise RuntimeError(
-            "DATABASE_URL environment variable not set. "
-            "Copy .env.template to .env and fill in credentials."
+            "MIGRATION_DATABASE_URL or DATABASE_URL environment variable not set. "
+            "Set MIGRATION_DATABASE_URL to the direct privileged PostgreSQL URL "
+            "for migrations, or configure DATABASE_URL as a backward-compatible fallback."
         )
 
     # Ensure asyncpg driver for async operations
@@ -323,6 +330,10 @@ async def run_async_migrations() -> None:
     is_render = is_render_runtime(os.environ)
     environment = os.environ.get("ENVIRONMENT", "").strip().lower()
     require_tls = is_render or environment in {"prod", "production"}
+
+    # Keep Alembic's connection policy identical to the API's policy:
+    # normalize asyncpg-incompatible libpq URL parameters and pass a verified
+    # SSLContext explicitly. Render and production must never connect in cleartext.
     db_url, ssl_context = normalize_asyncpg_url(
         get_database_url(),
         require_tls=require_tls,
