@@ -99,6 +99,7 @@ def upgrade() -> None:
         CREATE POLICY company_charges_tenant_delete ON public.company_charges
         FOR DELETE USING (public.nlc_can_manage_financials_company(company_id))
     """)
+    op.execute("REVOKE ALL ON TABLE public.company_charges FROM PUBLIC, nlc_app_role")
     op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON public.company_charges TO nlc_app_role")
 
 
