@@ -101,8 +101,6 @@ ignore = [
     "ANN001",   # Missing function argument annotation
     "ANN002",   # Missing *args annotation
     "ANN003",   # Missing **kwargs annotation
-    "ANN101",   # Missing self annotation (removed rule)
-    "ANN102",   # Missing cls annotation (removed rule)
     "ANN201",   # Missing return type annotation for public function
     "ANN202",   # Missing return type annotation for private function
     "ANN204",   # Missing return type annotation for special method

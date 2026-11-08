@@ -1,6 +1,6 @@
 """Regression tests for legal-rule history response serialization."""
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -92,3 +92,31 @@ async def test_rule_history_returns_empty_list_when_no_versions(monkeypatch):
     )
 
     assert result == []
+
+
+def test_public_rule_response_discloses_pending_legal_verification():
+    created_at = datetime(2026, 11, 6, 12, 0, tzinfo=UTC)
+    rule = SimpleNamespace(
+        rule_id="AGM-001",
+        rule_name="AGM held within statutory period",
+        rule_type="DEADLINE",
+        statutory_basis="Section 81, Companies Act 1994",
+        statutory_effective_date=date(1994, 2, 12),
+        description="Illustrative rule description",
+        default_severity="YELLOW",
+        score_impact=5,
+        revenue_tier="COMPLIANCE_PACKAGE",
+        is_black_override=False,
+        is_active=True,
+        verification_status="PENDING",
+        verified_at=None,
+        rule_version="1.0",
+        created_at=created_at,
+        updated_at=None,
+    )
+
+    response = rules_api._rule_to_response(rule)
+
+    assert response.verification_status == "PENDING"
+    assert response.verified_at is None
+    assert response.statutory_effective_date is None

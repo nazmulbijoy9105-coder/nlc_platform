@@ -118,7 +118,7 @@ class Document(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         "Company", back_populates="documents"
     )
     access_logs: Mapped[list[DocumentAccessLog]] = relationship(
-        "DocumentAccessLog", back_populates="document", lazy="noload"
+        "DocumentAccessLog", back_populates="document", lazy="raise"
     )
 
     def __repr__(self) -> str:

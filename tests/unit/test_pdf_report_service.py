@@ -148,6 +148,16 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
     assert "AGM-001" in page and "RED" in page and "-15 pts" in page
 
 
+def test_endpoint_withholds_pdf_when_legal_score_release_is_disabled(monkeypatch):
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", False)
+
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(PDFReportService(db=None).generate_company_compliance_pdf("any-id"))
+
+    assert exc.value.status_code == 409
+    assert "statutory score release is disabled" in exc.value.detail
+
+
 # --------------------------------------------------------------------------- HTML builder
 
 

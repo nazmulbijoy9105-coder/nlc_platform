@@ -6,7 +6,7 @@ AI Constitution Article 1: Only Super Admin may modify rules.
 Every change creates an immutable legal_rule_versions snapshot.
 
 Endpoints:
-  GET   /rules                    List all 86 ILRMF rules
+  GET   /rules                    List all ILRMF rules
   GET   /rules/{rule_id}          Get single rule with version history
   PATCH /rules/{rule_id}          Update a rule (SUPER_ADMIN only — creates version snapshot)
   GET   /rules/{rule_id}/history  Rule version history
@@ -34,6 +34,7 @@ from app.core.dependencies import (
     require_roles,
 )
 from app.models.enums import SeverityLevel
+from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
 from app.models.user import User
 from app.services.notification_service import ActivityService
 from app.services.rules_service import RulesService
@@ -75,6 +76,9 @@ class RuleResponse(BaseModel):
     revenue_tier: str
     is_black_override: bool
     is_active: bool
+    verification_status: str = Field(description="Citation review status only; not a legal opinion or confirmation of company-specific applicability.")
+    verified_at: str | None = Field(description="Date the citation review status was recorded, if applicable.")
+    statutory_effective_date: str | None = Field(description="Recorded statutory effective date; applicability must still be assessed for the relevant company and period.")
     version: str
     created_at: str
     updated_at: str | None
@@ -113,17 +117,31 @@ class MessageResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 def _rule_to_response(rule) -> RuleResponse:
+    approved = LEGAL_SCORE_RELEASED and rule.rule_id in VERIFIED_RULE_IDS
     return RuleResponse(
         rule_id=rule.rule_id,
         rule_name=rule.rule_name,
         rule_type=str(rule.rule_type),
-        statutory_basis=rule.statutory_basis,
-        description=rule.description,
-        default_severity=str(rule.default_severity),
-        score_impact=rule.score_impact,
-        revenue_tier=str(rule.revenue_tier),
-        is_black_override=rule.is_black_override,
-        is_active=rule.is_active,
+        statutory_basis=(
+            rule.statutory_basis if approved
+            else "NOT VALIDATED — independent Bangladesh-qualified counsel review required"
+        ),
+        description=(
+            rule.description if approved
+            else "Review prompt only. This rule is not approved for legal determinations. "
+                 "No breach, liability, penalty or compliance status is determined."
+        ),
+        default_severity=str(rule.default_severity) if approved else "NOT_EVALUATED",
+        score_impact=rule.score_impact if approved else 0,
+        revenue_tier=str(rule.revenue_tier) if approved else "COMPLIANCE_PACKAGE",
+        is_black_override=rule.is_black_override if approved else False,
+        is_active=bool(rule.is_active and approved),
+        verification_status=rule.verification_status if approved else "PENDING",
+        verified_at=rule.verified_at.isoformat() if approved and rule.verified_at else None,
+        statutory_effective_date=(
+            rule.statutory_effective_date.isoformat()
+            if approved and rule.statutory_effective_date else None
+        ),
         version=rule.rule_version,
         created_at=rule.created_at.isoformat(),
         updated_at=rule.updated_at.isoformat() if rule.updated_at else None,
@@ -138,7 +156,7 @@ def _rule_to_response(rule) -> RuleResponse:
     "",
     response_model=list[RuleResponse],
     summary="List all ILRMF legal rules",
-    description="Returns public legal-rule metadata; tenant and user data are not exposed.",
+    description="Returns public legal-rule metadata and citation-review status. Citation verification is not a legal opinion or confirmation of company-specific applicability; tenant and user data are not exposed.",
 )
 async def list_rules(
     rule_type: str | None = None,
@@ -174,6 +192,20 @@ async def get_rule_summary(
     svc = RulesService(db)
     rules = await svc.get_all()
 
+    if not LEGAL_SCORE_RELEASED:
+        return RuleSummaryResponse(
+            total_rules=len(rules),
+            active_rules=0,
+            inactive_rules=len(rules),
+            black_override_rules=0,
+            by_module={
+                module: sum(1 for item in rules if item.rule_id.split("-")[0] == module)
+                for module in {rule.rule_id.split("-")[0] for rule in rules}
+            },
+            by_severity={"NOT_EVALUATED": len(rules)},
+            total_max_deduction=0,
+        )
+
     by_module: dict[str, int] = {}
     by_severity: dict[str, int] = {}
     total_max_deduction = 0
@@ -203,20 +235,22 @@ async def get_rule_summary(
 
 
 # ---------------------------------------------------------------------------
-# GET /rules/black-overrides — The 4 BLACK override rules
+# GET /rules/black-overrides — BLACK override rules
 # ---------------------------------------------------------------------------
 
 @router.get(
     "/black-overrides",
     response_model=list[RuleResponse],
     summary="List all BLACK override rules",
-    description="Returns rules where is_black_override=True (INC-003, AUD-003, TR-005, ESC-002, ESC-003, DEF-001, CAP-003, INC-004).",
+    description="Returns all rules where is_black_override=True; the set is data-driven and may change through governed rule updates.",
     dependencies=[Depends(require_roles("SUPER_ADMIN"))],
 )
 async def get_black_overrides(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    if not LEGAL_SCORE_RELEASED:
+        return []
     svc = RulesService(db)
     rules = await svc.get_black_override_rules()
     return [_rule_to_response(r) for r in rules]
@@ -266,6 +300,14 @@ async def update_rule(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    if not LEGAL_SCORE_RELEASED:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Rule activation or modification is withheld until the rule-level "
+                "counsel approval workflow and legal release gate are complete."
+            ),
+        )
     svc = RulesService(db)
     activity = ActivityService(db)
 

@@ -1,0 +1,62 @@
+"""Security/evidence migrations must never undo controls or erase provenance."""
+from __future__ import annotations
+
+import ast
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[2]
+FORWARD_ONLY_MIGRATIONS = (
+    "alembic/versions/0037_add_webhook_tables.py",
+    "alembic/versions/0038_add_rescue_audit_log.py",
+    "alembic/versions/0044_webhook_schema_reconcile.py",
+    "alembic/versions/0046_legal_evidence_provenance.py",
+    "alembic/versions/0050_signed_rls_identity_hardening.py",
+    "alembic/versions/0053_agm_minutes_unknown_default.py",
+    "alembic/versions/0058_suppress_unreleased_rule_notifications.py",
+    "alembic/versions/0059_finance_role_separation.py",
+    "alembic/versions/0060_financial_billing_core.py",
+    "alembic/versions/0065_rescue_audit_log_restrict_delete.py",
+    "alembic/versions/0066_verified_revenue_pipeline.py",
+    "alembic/versions/0067_unique_manual_wallet_references.py",
+    "alembic/versions/0068_repair_aggregate_view_and_revenue_rls.py",
+    "alembic/versions/0069_cross_table_wallet_reference_guard.py",
+    "alembic/versions/0070_deferred_invoice_allocation_reconciliation.py",
+    "alembic/versions/0071_immutable_payment_submission_link.py",
+    "alembic/versions/0072_allocation_mutation_reconciliation.py",
+    "alembic/versions/0073_payment_allocations_append_only.py",
+    "alembic/versions/0074_legal_release_quarantine.py",
+    "alembic/versions/0075_director_transfer_evidence.py",
+)
+
+
+def test_sensitive_migration_downgrades_are_noop_and_data_preserving():
+    for relative_path in FORWARD_ONLY_MIGRATIONS:
+        source = (ROOT / relative_path).read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=relative_path)
+        downgrade = next(
+            node for node in tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name == "downgrade"
+        )
+        statements = [
+            node for node in downgrade.body
+            if not (
+                isinstance(node, ast.Expr)
+                and isinstance(node.value, ast.Constant)
+                and isinstance(node.value.value, str)
+            )
+        ]
+        assert len(statements) == 1, f"{relative_path} downgrade must be a no-op or explicit refusal"
+        statement = statements[0]
+        is_noop = isinstance(statement, ast.Pass)
+        is_refusal = (
+            isinstance(statement, ast.Raise)
+            and isinstance(statement.exc, ast.Call)
+            and isinstance(statement.exc.func, ast.Name)
+            and statement.exc.func.id == "RuntimeError"
+        )
+        assert is_noop or is_refusal, (
+            f"{relative_path} downgrade must not remove security controls "
+            "or destroy legal evidence; use pass or raise RuntimeError"
+        )

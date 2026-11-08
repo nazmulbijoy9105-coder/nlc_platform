@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
@@ -8,7 +8,23 @@ from app.core.dependencies import (
     get_db_for_user,
     require_company_access,
 )
-from app.services.compliance_calendar import ComplianceCalendarService
+from app.services.compliance_calendar import (
+    ComplianceCalendarService,
+    LEGAL_CALENDAR_RELEASED,
+    VERIFIED_CALENDAR_EVENT_TYPES,
+)
+
+
+def _require_calendar_release() -> None:
+    if not LEGAL_CALENDAR_RELEASED or not VERIFIED_CALENDAR_EVENT_TYPES:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Statutory calendar is unavailable pending rule-level legal "
+                "validation, company-specific applicability and independent counsel approval."
+            ),
+        )
+
 
 router = APIRouter(prefix="/calendar", tags=["Compliance Calendar"])
 
@@ -21,8 +37,13 @@ async def generate_calendar(
     db: AsyncSession = Depends(get_db_for_user),
     current_user=Depends(get_current_user),
 ):
+    _require_calendar_release()
     service = ComplianceCalendarService(db)
-    events = await service.get_calendar(company_id, years_ahead=years_ahead)
+    events = await service.get_calendar(
+        company_id,
+        include_past_days=0,
+        include_future_days=years_ahead * 366,
+    )
     return {"message": f"Generated {len(events)} events", "count": len(events)}
 
 
@@ -36,6 +57,7 @@ async def get_calendar(
     db: AsyncSession = Depends(get_db_for_user),
     current_user=Depends(get_current_user),
 ):
+    _require_calendar_release()
     service = ComplianceCalendarService(db)
     events = await service.get_upcoming(company_id, days_ahead=days_ahead)
     return {"company_id": str(company_id), "events": events}

@@ -96,7 +96,7 @@ class Notification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     # ── Relationships ─────────────────────────────────────────────
     company: Mapped[Company] = relationship(
-        "Company", back_populates="notifications", lazy="noload"
+        "Company", back_populates="notifications", lazy="raise"
     )
 
     def __repr__(self) -> str:
@@ -277,7 +277,7 @@ class UserActivityLog(AuditMixin, Base):
     )
 
     # ── Relationships ─────────────────────────────────────────────
-    user = relationship("User", back_populates="activity_logs", lazy="noload")
+    user = relationship("User", back_populates="activity_logs", lazy="raise")
 
     def __repr__(self) -> str:
         return (
