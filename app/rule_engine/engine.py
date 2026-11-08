@@ -2880,6 +2880,7 @@ class NLCRuleEngine:
                 if f.rule_id in VERIFIED_RULE_IDS
                 and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
                 and f.is_black_override
+                and f.severity == Severity.BLACK
                 and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
                 and f.eval_state == "VIOLATION"
                 and not f.resolved and f.conditional_applies
@@ -3024,6 +3025,7 @@ class NLCRuleEngine:
                 if f.rule_id in VERIFIED_RULE_IDS
                 and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
                 and f.is_black_override
+                and f.severity == Severity.BLACK
                 and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
                 and f.eval_state == "VIOLATION"
             ]
