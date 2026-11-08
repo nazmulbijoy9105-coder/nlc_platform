@@ -15,7 +15,6 @@ import uuid
 from datetime import UTC, date, datetime
 
 from sqlalchemy import func, or_, select, text, update
-from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql.elements import ColumnElement
 
