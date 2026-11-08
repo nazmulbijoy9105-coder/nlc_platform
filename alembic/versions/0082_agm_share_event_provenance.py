@@ -152,7 +152,7 @@ def upgrade() -> None:
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.UniqueConstraint("company_id", "event_type", "event_reference", name="uq_share_event_company_reference"),
         sa.CheckConstraint("event_type IN ('ALLOTMENT','CAPITAL_INCREASE_RESOLUTION','TRANSFER_REGISTERED')", name="ck_share_event_type"),
-        sa.CheckConstraint("share_transfer_id IS NOT NULL = (event_type = 'TRANSFER_REGISTERED')", name="ck_share_event_transfer_link"),
+        sa.CheckConstraint("(share_transfer_id IS NOT NULL) = (event_type = 'TRANSFER_REGISTERED')", name="ck_share_event_transfer_link"),
         sa.CheckConstraint(
             "(event_type = 'ALLOTMENT' AND (filing_form IS NULL OR filing_form = 'FORM_XV')) OR "
             "(event_type = 'CAPITAL_INCREASE_RESOLUTION' AND (filing_form IS NULL OR filing_form = 'FORM_IV')) OR "
@@ -193,6 +193,8 @@ def upgrade() -> None:
             FOR INSERT WITH CHECK (
                 public.nlc_can_edit_company(company_id)
                 AND event_verified IS FALSE
+                AND filing_status_verified IS FALSE
+                AND certificate_status_verified IS FALSE
             )
         """ if table == "share_compliance_events" else f"""
             CREATE POLICY {table}_member_submit ON public.{table}
