@@ -26,6 +26,11 @@ def test_missing_agm_record_keeps_attendance_and_auditor_status_unknown():
 
 def test_agm_profile_evidence_comes_from_the_latest_agm_record():
     meeting = SimpleNamespace(
+        agm_held=True,
+        agm_held_verified=True,
+        agm_held_evidence_ref="AGM-HELD-001",
+        agm_held_verified_at=date(2026, 1, 2),
+        agm_held_verified_by="reviewer-001",
         members_present=3,
         auditor_reappointed=False,
         minutes_prepared=True,
