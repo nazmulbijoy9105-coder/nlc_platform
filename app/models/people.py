@@ -245,3 +245,55 @@ class ShareTransfer(FullMixin, Base):
             f"<ShareTransfer {self.transferor_name} → {self.transferee_name} "
             f"({self.shares_transferred} shares)>"
         )
+
+
+# ═══════════════════════════════════════════════════════════════════
+# SHARE COMPLIANCE EVENTS — evidence-bound statutory triggers
+# ═══════════════════════════════════════════════════════════════════
+class ShareComplianceEvent(FullMixin, Base):
+    """Verified allotment, capital-increase or transfer-registration event.
+
+    A row is not a legal fact unless its event provenance is verified.
+    Filing and certificate statuses have independent verification evidence.
+    """
+    __tablename__ = "share_compliance_events"
+
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    share_transfer_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("share_transfers.id", ondelete="RESTRICT"),
+        nullable=True, index=True,
+    )
+    event_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    event_date: Mapped[date] = mapped_column(Date, nullable=False)
+    event_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    event_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    event_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    event_verified_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
+    )
+
+    filing_form: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    filing_status: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    filing_status_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    filing_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    filing_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    filing_verified_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
+    )
+    filing_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    certificate_issued: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    certificate_status_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    certificate_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    certificate_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    certificate_verified_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
+    )
+    certificate_issue_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    company: Mapped[Company] = relationship(
+        "Company", back_populates="share_compliance_events"
+    )

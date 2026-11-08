@@ -38,6 +38,7 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
+from app.core.entitlement import require_entitlement
 from app.models.user import User
 from app.services.filing_service import (
     AGMService,
@@ -222,24 +223,30 @@ def _dispatch_reevaluation(company_id: uuid.UUID, trigger: str) -> None:
 
 @router.get(
     "",
+    dependencies=[Depends(require_entitlement("compliance_package"))],
     summary="List all filings across portfolio",
 )
 async def list_all_filings(
+    request: Request,
     company_id: uuid.UUID | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
     from sqlalchemy import select
 
-    from app.models.company import Company, CompanyUserAccess
+    from app.models.company import Company
     from app.models.filings import AGM, AnnualReturn, Audit
 
-    # Role-based company filter
-    if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):
-        accessible = select(CompanyUserAccess.company_id).where(
-            CompanyUserAccess.user_id == current_user.id
-        )
-        company_filter = Company.id.in_(accessible)
+    # Customer and legal-staff portfolio views are restricted to the exact
+    # companies for which the entitlement dependency verified an active plan.
+    role_value = str(getattr(current_user.role, "value", current_user.role))
+    entitled_company_ids = [
+        uuid.UUID(str(value))
+        for value in getattr(request.state, "entitled_company_ids", [])
+    ]
+    if role_value in {"CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "LEGAL_STAFF"}:
+        company_filter = Company.id.in_(entitled_company_ids)
+        company_filter = entitled_company_ids
     else:
         company_filter = None
 
@@ -250,7 +257,7 @@ async def list_all_filings(
     if company_id:
         stmt = stmt.where(AGM.company_id == company_id)
     if company_filter is not None:
-        stmt = stmt.where(AGM.company_id.in_(accessible))
+        stmt = stmt.where(AGM.company_id.in_(company_filter))
     agms = (await db.execute(stmt.order_by(getattr(AGM, "agm_due_date", None).desc()).limit(50))).scalars().all()  # type: ignore
     results["agms"] = [_agm_to_response(a) for a in agms]
 
@@ -259,7 +266,7 @@ async def list_all_filings(
     if company_id:
         stmt = stmt.where(Audit.company_id == company_id)
     if company_filter is not None:
-        stmt = stmt.where(Audit.company_id.in_(accessible))
+        stmt = stmt.where(Audit.company_id.in_(company_filter))
     audits = (await db.execute(stmt.order_by(Audit.financial_year.desc()).limit(50))).scalars().all()
     results["audits"] = [_audit_to_response(a) for a in audits]
 
@@ -268,7 +275,7 @@ async def list_all_filings(
     if company_id:
         stmt = stmt.where(AnnualReturn.company_id == company_id)
     if company_filter is not None:
-        stmt = stmt.where(AnnualReturn.company_id.in_(accessible))
+        stmt = stmt.where(AnnualReturn.company_id.in_(company_filter))
     returns = (await db.execute(stmt.order_by(AnnualReturn.financial_year.desc()).limit(50))).scalars().all()
     results["annual_returns"] = [_return_to_response(r) for r in returns]
 
@@ -283,7 +290,7 @@ async def list_all_filings(
     "/agm",
     response_model=AGMResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("compliance_package"))],
     summary="Create an AGM record for a company",
 )
 async def create_agm(
@@ -324,7 +331,7 @@ async def create_agm(
 @router.get(
     "/agm/{company_id}",
     response_model=list[AGMResponse],
-    dependencies=[Depends(require_company_access("company_id"))],
+    dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
     summary="List all AGM records for a company",
 )
 async def list_agms(
@@ -341,7 +348,7 @@ async def list_agms(
 @router.patch(
     "/agm/{agm_id}/held",
     response_model=AGMResponse,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("compliance_package"))],
     summary="Mark an AGM as held with meeting details",
 )
 async def mark_agm_held(
@@ -383,7 +390,7 @@ async def mark_agm_held(
 @router.patch(
     "/agm/{agm_id}/filed",
     response_model=AGMResponse,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("compliance_package"))],
     summary="Mark AGM filing as submitted to RJSC",
 )
 async def mark_agm_filed(
@@ -422,7 +429,7 @@ async def mark_agm_filed(
     "/audit",
     response_model=AuditResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("compliance_package"))],
     summary="Create an audit engagement record",
 )
 async def create_audit(
@@ -444,7 +451,7 @@ async def create_audit(
 @router.get(
     "/audit/{company_id}",
     response_model=list[AuditResponse],
-    dependencies=[Depends(require_company_access("company_id"))],
+    dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
     summary="List all audit records for a company",
 )
 async def list_audits(
@@ -459,7 +466,7 @@ async def list_audits(
 @router.patch(
     "/audit/{audit_id}/complete",
     response_model=AuditResponse,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("compliance_package"))],
     summary="Mark an audit as complete with signed date",
 )
 async def mark_audit_complete(
@@ -503,7 +510,7 @@ async def mark_audit_complete(
     "/annual-return",
     response_model=AnnualReturnResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("compliance_package"))],
     summary="Create an annual return record",
 )
 async def create_annual_return(
@@ -523,7 +530,7 @@ async def create_annual_return(
 @router.get(
     "/annual-return/{company_id}",
     response_model=list[AnnualReturnResponse],
-    dependencies=[Depends(require_company_access("company_id"))],
+    dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
     summary="List all annual return records for a company",
 )
 async def list_annual_returns(
@@ -540,7 +547,7 @@ async def list_annual_returns(
 @router.patch(
     "/annual-return/{return_id}/filed",
     response_model=AnnualReturnResponse,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("compliance_package"))],
     summary="Mark an annual return as filed with RJSC",
 )
 async def mark_return_filed(
@@ -594,7 +601,7 @@ async def mark_return_filed(
     "/statutory-register",
     response_model=StatutoryRegisterResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("compliance_package"))],
     summary="Create a statutory register record",
 )
 async def create_statutory_register(
@@ -630,7 +637,7 @@ async def create_statutory_register(
 @router.get(
     "/statutory-register/{company_id}",
     response_model=list[StatutoryRegisterResponse],
-    dependencies=[Depends(require_company_access("company_id"))],
+    dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
     summary="List statutory register entries for a company",
 )
 async def list_statutory_registers(
@@ -645,7 +652,7 @@ async def list_statutory_registers(
 @router.patch(
     "/statutory-register/{register_id}",
     response_model=StatutoryRegisterResponse,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("compliance_package"))],
     summary="Update a statutory register entry",
 )
 async def update_statutory_register(
