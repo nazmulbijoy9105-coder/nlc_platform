@@ -1141,7 +1141,7 @@ class NLCRuleEngine:
             and c.last_agm_date.year == c.incorporation_date.year
             and c.last_agm_date <= self._add_months(c.incorporation_date, 18)
         )
-        if first_agm_in_incorporation_year:
+        if first_agm_in_incorporation_year and c.incorporation_date is not None:
             calendar_year_deadline = date(c.incorporation_date.year + 2, 12, 31)
             # The first-AGM proviso removes the need for another meeting in
             # the incorporation year or the following year. If the 15-month
@@ -1310,6 +1310,7 @@ class NLCRuleEngine:
                                 c.agm_extension_granted_until is not None
                                 and c.agm_extension_granted_until == agm_deadline
                                 and base_deadline is not None
+                                and agm_deadline is not None
                                 and agm_deadline > base_deadline
                             )
                             else deadline_basis
