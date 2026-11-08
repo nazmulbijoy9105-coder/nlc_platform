@@ -1,6 +1,8 @@
 """Regression tests for the existing commercial API/service contract."""
 from __future__ import annotations
 
+import asyncio
+
 from datetime import date, timedelta
 from decimal import Decimal
 
