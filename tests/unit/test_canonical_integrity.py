@@ -505,7 +505,7 @@ def test_legal_reconciliation_checklist_covers_all_85_unverified_rules():
 def test_counsel_docket_covers_all_85_rules_and_matches_unverified_candidates():
     path = ROOT / "docs" / "legal" / "85_RULE_COUNSEL_VALIDATION_DOCKET.md"
     content = path.read_text(encoding="utf-8")
-    headings = list(re.finditer(r"^### ([A-Z]{2,5}-\\d{3}) —", content, re.MULTILINE))
+    headings = list(re.finditer(r"^### ([A-Z]{2,5}-\d{3}) —", content, re.MULTILINE))
     ids = [match.group(1) for match in headings]
     assert len(ids) == EXPECTED
     assert set(ids) == set(STATUTORY_RULE_REGISTRY)
