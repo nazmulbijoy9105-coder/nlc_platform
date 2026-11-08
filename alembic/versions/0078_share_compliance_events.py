@@ -80,7 +80,9 @@ def upgrade() -> None:
             name="ck_share_compliance_event_certificate_provenance",
         ),
         sa.CheckConstraint(
-            "filing_form IS NULL OR filing_form IN ('XV','IV')",
+            "filing_form IS NULL OR "
+            "(event_type = 'ALLOTMENT' AND filing_form = 'XV') OR "
+            "(event_type = 'CAPITAL_INCREASE' AND filing_form = 'IV')",
             name="ck_share_compliance_event_filing_form",
         ),
         schema="public",
@@ -97,12 +99,6 @@ def upgrade() -> None:
         "ix_share_compliance_events_company_type_date",
         "share_compliance_events", ["company_id", "event_type", "event_date"],
         schema="public",
-    )
-    op.create_index(
-        "ix_share_compliance_events_transfer",
-        "share_compliance_events", ["share_transfer_id"],
-        schema="public",
-        postgresql_where=sa.text("share_transfer_id IS NOT NULL"),
     )
 
     # Match the signed-identity tenant boundary introduced in 0050.
@@ -133,6 +129,20 @@ def upgrade() -> None:
             ) THEN
                 RAISE EXCEPTION 'share event transfer must belong to the same company'
                     USING ERRCODE = '23514';
+            END IF;
+            IF (
+                NEW.event_verified OR NEW.filing_status_verified OR NEW.certificate_status_verified
+            ) AND (
+                NOT public.nlc_current_user_is_staff()
+                OR NEW.event_verified_by IS DISTINCT FROM public.nlc_current_user_id()
+                    AND NEW.event_verified
+                OR NEW.filing_verified_by IS DISTINCT FROM public.nlc_current_user_id()
+                    AND NEW.filing_status_verified
+                OR NEW.certificate_verified_by IS DISTINCT FROM public.nlc_current_user_id()
+                    AND NEW.certificate_status_verified
+            ) THEN
+                RAISE EXCEPTION 'share event verification requires a signed staff reviewer identity'
+                    USING ERRCODE = '42501';
             END IF;
             RETURN NEW;
         END
