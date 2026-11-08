@@ -676,7 +676,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "CAP-002": {
         "rule_id": "CAP-002",
         "legal_domain": "Corporate",
-        "law": "Section 159, Companies Act 1994 (Bangladesh)",
+        "law": "Section 159(1), Companies Act 1994 (Bangladesh)",
         "requirement": "A charge registrable under Section 159 must be registered within 21 days of creation using Form XVIII. A default may be concluded only after the executed instrument, creation date, Section 159 registrability and RJSC filing status are independently evidenced; missing evidence is UNKNOWN.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
