@@ -287,7 +287,6 @@ class SubscriptionService:
             )
             .with_for_update()
         )
-        )
         # Do not SELECT FOR UPDATE the customer-visible catalogue. PostgreSQL
         # applies UPDATE RLS to row-locking reads, hiding prices from customers.
         # The INSERT policy revalidates the exact active price snapshot.
