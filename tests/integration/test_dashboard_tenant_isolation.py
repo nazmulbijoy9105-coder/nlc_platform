@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.models.database import set_rls_context
+from app.models.database import set_admin_context, set_rls_context
 from app.services.company_service import CompanyService
 
 
