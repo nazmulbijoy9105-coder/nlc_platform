@@ -908,3 +908,25 @@ def test_subsequent_agm_violation_reports_statutory_deadline_and_basis_metadata(
     assert flag.detail["calendar_year_deadline"] == "2026-12-31"
     assert flag.detail["statutory_base_deadline"] == "2026-09-01"
     assert flag.detail["extension_statutory_limit"] == "2026-11-30"
+
+
+def test_verified_black_severity_without_override_authority_does_not_force_zero(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
+    flag = ComplianceFlag(
+        rule_id="AGM-001",
+        flag_code="AGM-001",
+        severity=Severity.BLACK,
+        score_impact=9,
+        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+        description="Verified severe finding, but no override authorisation.",
+        statutory_basis="Test only.",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+        is_black_override=True,
+    )
+    result = NLCRuleEngine()._calculate_score([flag], _profile())
+    assert result.override_applied is False
+    assert result.final_score == 91
+    assert result.black_flag_count == 1
