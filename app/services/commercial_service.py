@@ -183,6 +183,7 @@ class EngagementService(BaseService[Engagement]):
         locked_engagement: Engagement | None = None,
     ) -> Engagement | None:
         """Advance an engagement only through the canonical lifecycle."""
+        engagement: Engagement | None
         if locked_engagement is not None:
             if locked_engagement.id != engagement_id or not locked_engagement.is_active:
                 return None
