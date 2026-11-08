@@ -280,7 +280,12 @@ class ShareComplianceEvent(FullMixin, Base):
             "NOT certificate_status_verified OR (certificate_issued IS NOT NULL AND certificate_evidence_ref IS NOT NULL AND certificate_verified_at IS NOT NULL AND certificate_verified_by IS NOT NULL)",
             name="ck_share_compliance_event_certificate_provenance",
         ),
-        CheckConstraint("filing_form IS NULL OR filing_form IN ('XV','IV')", name="ck_share_compliance_event_filing_form"),
+        CheckConstraint(
+            "filing_form IS NULL OR "
+            "(event_type = 'ALLOTMENT' AND filing_form = 'XV') OR "
+            "(event_type = 'CAPITAL_INCREASE' AND filing_form = 'IV')",
+            name="ck_share_compliance_event_filing_form",
+        ),
         Index("ix_share_compliance_events_company_id", "company_id"),
         Index("ix_share_compliance_events_share_transfer_id", "share_transfer_id"),
         Index("ix_share_compliance_events_company_type_date", "company_id", "event_type", "event_date"),
