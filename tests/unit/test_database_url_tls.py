@@ -50,3 +50,12 @@ def test_development_can_keep_tls_disabled_without_ssl_connect_argument():
 
     assert "sslmode" not in url
     assert context is None
+
+@pytest.mark.parametrize(
+    "raw_url",
+    ["", "mysql://user:secret@db.example.com/nlc"],
+)
+def test_rejects_empty_or_non_postgresql_connection_urls(raw_url):
+    with pytest.raises(ValueError):
+        normalize_asyncpg_url(raw_url, require_tls=True)
+
