@@ -175,11 +175,13 @@ class SubscriptionService:
         existing_prices_result = await self.db.execute(
             select(SubscriptionPlanPrice).where(SubscriptionPlanPrice.plan_code == code)
         )
-        existing_prices = {item.billing_interval: item for item in existing_prices_result.scalars().all()}
-        for interval, existing_price_item in existing_prices.items():
-            existing_price_item.is_active = interval in intervals
-        for interval, item in existing_prices.items():
-            item.is_active = interval in intervals
+        existing_prices = {
+            item.billing_interval: item
+            for item in existing_prices_result.scalars().all()
+        }
+        for interval, price_item in existing_prices.items():
+            price_item.is_active = interval in intervals
+
         for price in prices:
             interval = str(price["billing_interval"]).upper()
             amount = Decimal(str(price["amount_bdt"])).quantize(Decimal("0.01"))
@@ -187,13 +189,14 @@ class SubscriptionService:
             tax_reference = str(price["tax_policy_reference"]).strip()
             price_item: SubscriptionPlanPrice | None = existing_prices.get(interval)
             if price_item is None:
-            item = existing_prices.get(interval)
-            if item is None:
                 self.db.add(SubscriptionPlanPrice(
-                    plan_code=code, billing_interval=interval,
-                    amount_bdt=amount, tax_bdt=tax,
+                    plan_code=code,
+                    billing_interval=interval,
+                    amount_bdt=amount,
+                    tax_bdt=tax,
                     tax_policy_reference=tax_reference,
-                    currency="BDT", is_active=True,
+                    currency="BDT",
+                    is_active=True,
                 ))
             else:
                 price_item.amount_bdt = amount
@@ -201,11 +204,6 @@ class SubscriptionService:
                 price_item.tax_policy_reference = tax_reference
                 price_item.currency = "BDT"
                 price_item.is_active = True
-                item.amount_bdt = amount
-                item.tax_bdt = tax
-                item.tax_policy_reference = tax_reference
-                item.currency = "BDT"
-                item.is_active = True
 
         existing_features_result = await self.db.execute(
             select(SubscriptionPlanFeature).where(SubscriptionPlanFeature.plan_code == code)
