@@ -26,12 +26,36 @@ async def main() -> None:
     url = raw_url.replace("postgresql+asyncpg://", "postgresql://", 1)
     conn = await asyncpg.connect(url)
     try:
+        identity = await conn.fetchrow("""
+            SELECT current_database() AS database_name,
+                   (SELECT version_num FROM alembic_version LIMIT 1) AS revision
+        """)
+        if identity["database_name"] != "nlc_test_baseline_0042":
+            raise SystemExit("Refusing: connected database name is not the CI fixture")
+        if identity["revision"] != "0042_dedup_key":
+            raise SystemExit(
+                "Refusing: expected fixture revision 0042_dedup_key, "
+                f"found {identity['revision']!r}"
+            )
+
+        existing = await conn.fetch("""
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+              AND table_name = ANY($1::text[])
+        """, ["webhook_endpoints", "webhook_deliveries", "rescue_audit_log"])
+        if {row["table_name"] for row in existing} != {
+            "webhook_endpoints", "webhook_deliveries", "rescue_audit_log"
+        }:
+            raise AssertionError(
+                "The 0042 fixture does not contain all three original tables"
+            )
+
+        # Drop only the three disposable fixture tables, without CASCADE.
         await conn.execute("""
-            DROP TABLE IF EXISTS
-                public.webhook_deliveries,
-                public.webhook_endpoints,
-                public.rescue_audit_log
-            CASCADE
+            DROP TABLE public.webhook_deliveries,
+                       public.webhook_endpoints,
+                       public.rescue_audit_log
         """)
     finally:
         await conn.close()
