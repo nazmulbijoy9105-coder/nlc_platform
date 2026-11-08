@@ -30,6 +30,7 @@ from sqlalchemy import (
     PrimaryKeyConstraint,
     String,
     Table,
+    inspect,
     pool,
     text,
 )
@@ -207,6 +208,39 @@ def run_migrations_offline() -> None:
 
 
 # ── ONLINE MODE (ASYNC) ───────────────────────────────────────────────
+def ensure_alembic_version_column_capacity(connection: Connection) -> None:
+    """Widen an existing Alembic version column before long revision IDs are written.
+
+    version_table_impl controls only newly-created version tables. Databases
+    upgraded from older releases may still have VARCHAR(32), which cannot store
+    current revision identifiers. This additive, idempotent preflight preserves
+    the existing revision value and is committed before migration execution.
+    """
+    inspector = inspect(connection)
+    if not inspector.has_table("alembic_version"):
+        return
+
+    columns = {
+        column["name"]: column["type"]
+        for column in inspector.get_columns("alembic_version")
+    }
+    version_type = columns.get("version_num")
+    if version_type is None:
+        raise RuntimeError(
+            "Existing alembic_version table has no version_num column; "
+            "refusing to run migrations."
+        )
+
+    current_length = getattr(version_type, "length", None)
+    if current_length is not None and current_length < 255:
+        connection.execute(
+            text(
+                "ALTER TABLE alembic_version "
+                "ALTER COLUMN version_num TYPE VARCHAR(255)"
+            )
+        )
+
+
 def do_run_migrations(connection: Connection) -> None:
     """Configure and run migrations using live connection."""
     context.configure(
@@ -308,6 +342,8 @@ async def run_async_migrations() -> None:
         await connection.execute(text("SET timezone = 'UTC'"))
         await connection.commit()
         await connection.run_sync(validate_production_migration_role)
+        await connection.run_sync(ensure_alembic_version_column_capacity)
+        await connection.commit()
         await connection.run_sync(do_run_migrations)
         await connection.commit()
 
