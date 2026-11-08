@@ -466,3 +466,24 @@ def test_unreconciled_canonical_rules_cannot_affect_score():
         and (rule.severity.value != "NOT_EVALUATED" or rule.score_impact != 0)
     ]
     assert not unsafe, unsafe
+
+
+def test_every_provision_is_explicitly_unverified_until_counsel_signoff():
+    """No TBD placeholder or implied legal approval; all candidates remain non-scoring."""
+    unsafe = []
+    for rule_id, rule in STATUTORY_RULE_REGISTRY.items():
+        if (
+            not rule.provision.startswith("UNVERIFIED CANDIDATE — ")
+            or "TBD" in rule.provision.upper()
+            or rule.provision_status.value != "RECONCILE"
+            or rule.severity.value != "NOT_EVALUATED"
+            or rule.score_impact != 0
+        ):
+            unsafe.append({
+                "rule_id": rule_id,
+                "provision": rule.provision,
+                "status": rule.provision_status.value,
+                "severity": rule.severity.value,
+                "score_impact": rule.score_impact,
+            })
+    assert not unsafe, unsafe
