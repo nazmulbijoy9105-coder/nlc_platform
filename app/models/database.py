@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException, Request
 
-from app.core.db_url import normalize_asyncpg_url
+from app.db_url import normalize_asyncpg_url
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
