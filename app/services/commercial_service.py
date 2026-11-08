@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, timedelta
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import func, select, text
 
@@ -56,7 +56,7 @@ class EngagementService(BaseService[Engagement]):
         rows = [dict(r) for r in result.mappings().all()]
 
         # Structure by revenue tier
-        pipeline = {
+        pipeline: dict[str, dict[str, Any]] = {
             tier: {
                 "stages": {},
                 "total_estimated": Decimal("0.00"),
