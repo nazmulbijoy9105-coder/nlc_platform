@@ -623,6 +623,8 @@ class CompanyService(BaseService[Company]):
         from app.rule_engine.engine import ShareComplianceEvent as EngineShareComplianceEvent
         share_compliance_events = []
         for event in company.share_compliance_events:
+            if event.is_active is not True:
+                continue
             share_compliance_events.append(EngineShareComplianceEvent(
                 event_id=str(event.id),
                 event_type=event.event_type,
