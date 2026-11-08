@@ -53,7 +53,7 @@ def _integrity_constraint_name(error: IntegrityError) -> str | None:
         or getattr(original, "constraint_name", None)
     )
     if constraint_name:
-        return constraint_name
+        return str(constraint_name)
     # asyncpg's UniqueViolationError omits PostgreSQL's constraint_name
     # diagnostic from its public attributes; the trigger includes a stable
     # constraint token in its message so service errors remain deterministic.
@@ -206,8 +206,8 @@ class FinanceService:
         if paid_at is not None and paid_at > datetime.now(UTC):
             raise FinanceConflictError("Payment date cannot be in the future")
 
-        # bKash/Nagad transaction IDs identify a single transfer. Serialize
-        # submissions on the normalized provider reference, then check both
+        # Bank-transfer and cheque references identify a single instrument. Serialize
+        # submissions on the normalized reference, then check both
         # pending/approved claims and already-posted receipts. The unique
         # database indexes remain the final integrity boundary.
         if method in {"BANK_TRANSFER", "CHEQUE"}:

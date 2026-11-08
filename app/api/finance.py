@@ -15,10 +15,19 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_user, get_db_for_user, require_company_access, require_roles
+from app.core.dependencies import (
+    get_current_user,
+    get_db_for_user,
+    require_company_access,
+    require_roles,
+)
 from app.models.finance import Invoice, Payment, PaymentSubmission
 from app.models.user import User
-from app.services.finance_service import FinanceConflictError, FinanceNotFoundError, FinanceService
+from app.services.finance_service import (
+    FinanceConflictError,
+    FinanceNotFoundError,
+    FinanceService,
+)
 from app.services.notification_service import ActivityService
 
 logger = structlog.get_logger(__name__)
@@ -31,7 +40,7 @@ CUSTOMER_BILLING_READ_ROLES = [
 CUSTOMER_BILLING_WRITE_ROLES = [
     "CLIENT_DIRECTOR", "ADMIN_STAFF", "SUPER_ADMIN"
 ]
-OFFLINE_METHOD = Literal["BANK_TRANSFER", "CASH", "CHEQUE", "BKASH_MANUAL", "NAGAD_MANUAL"]
+OFFLINE_METHOD = Literal["BANK_TRANSFER", "CASH", "CHEQUE"]
 
 
 def _require_timezone_offset(value: datetime | None, field_name: str) -> datetime | None:

@@ -21,8 +21,6 @@ Endpoints:
   PATCH /commercial/tasks/{id}/complete   Mark task complete
 """
 
-
-
 import uuid
 from datetime import date
 from decimal import Decimal
@@ -41,6 +39,12 @@ from app.core.dependencies import (
 from app.models.enums import EngagementStatus, RevenueTier, TaskPriority, TaskStatus
 from app.models.user import User
 from app.services.commercial_service import CommercialConflictError, EngagementService, QuotationService, TaskService
+from app.services.commercial_service import (
+    CommercialConflictError,
+    EngagementService,
+    QuotationService,
+    TaskService,
+)
 from app.services.notification_service import ActivityService
 
 logger = structlog.get_logger(__name__)
@@ -74,7 +78,7 @@ class EngagementResponse(BaseModel):
     company_id: str
     engagement_type: str
     revenue_tier: str
-    status: str
+    status: str | None
     description: str | None
     estimated_fee_bdt: Decimal | None
     confirmed_fee_bdt: Decimal | None
@@ -140,7 +144,7 @@ class TaskResponse(BaseModel):
     company_id: str
     title: str
     description: str | None
-    status: str
+    status: str | None
     priority: str
     due_date: str | None
     assigned_to: str | None
@@ -392,6 +396,7 @@ async def accept_quotation(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         # Keep inaccessible or inactive engagement details tenant-safe.
+        # Preserve tenant-safe not-found semantics for a missing or inaccessible engagement.
         raise HTTPException(status_code=404, detail="Quotation not found.") from exc
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")

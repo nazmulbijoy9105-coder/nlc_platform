@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -18,7 +17,7 @@ def test_revenue_pipeline_uses_verified_invoice_allocations():
     assert "e.collected_bdt" not in migration
 
 
-def test_manual_wallet_reference_migration_preflights_duplicates_and_adds_unique_indexes():
+def test_manual_payment_reference_migration_preflights_duplicates_and_adds_unique_indexes():
     migration = (
         ROOT / "alembic" / "versions" / "0067_unique_manual_wallet_references.py"
     ).read_text(encoding="utf-8")
@@ -28,9 +27,9 @@ def test_manual_wallet_reference_migration_preflights_duplicates_and_adds_unique
     assert "lower(btrim(payer_reference))" in migration
     assert "status <> 'REJECTED'" not in migration
     model = (ROOT / "app" / "models" / "finance.py").read_text(encoding="utf-8")
-    assert "payer_reference IS NOT NULL AND method IN ('BKASH_MANUAL','NAGAD_MANUAL') AND status <> 'REJECTED'" not in model
-    assert "CREATE UNIQUE INDEX uq_payment_submission_wallet_reference" in migration
-    assert "CREATE UNIQUE INDEX uq_payment_wallet_reference" in migration
+    assert "payer_reference IS NOT NULL AND method IN ('BANK_TRANSFER','CHEQUE') AND status <> 'REJECTED'" not in model
+    assert "CREATE UNIQUE INDEX uq_payment_submission_manual_reference" in migration
+    assert "CREATE UNIQUE INDEX uq_payment_manual_reference" in migration
     assert "ck_payment_submission_reference_required" in migration
     assert "ck_payment_reference_required" in migration
 

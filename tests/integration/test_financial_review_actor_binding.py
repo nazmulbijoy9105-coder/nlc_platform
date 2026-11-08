@@ -26,6 +26,7 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
     )
     from app.services.finance_service import FinanceService
 
+    await set_rls_context(db, str(db_user.id))
     service = FinanceService(db)
     invoices = []
     for description in ("Primary payment invoice", "Other valid company invoice"):
@@ -74,8 +75,13 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
         verified_at=now,
         created_by=db_user.id,
     )
-    # The source claim must exist before the receipt's composite FK can bind
-    # it. Explicit flush avoids relying on mapper/table ordering in add_all().
+    # The production approval path marks the source claim approved and
+    # reviewer-bound before inserting its linked receipt. The deferred ledger
+    # constraint is checked only after the matching evidence events are added.
+    submission.status = "APPROVED"
+    submission.reviewed_by = db_user.id
+    submission.reviewed_at = now
+    submission.review_note = "Regression test approval"
     db.add(submission)
     await db.flush()
     db.add(payment)
@@ -124,21 +130,6 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
     await set_rls_context(db, str(db_user.id))
 
     async def approve_and_force_deferred_constraint():
-        await db.execute(
-            text("""
-                UPDATE public.payment_submissions
-                   SET status = 'APPROVED',
-                       reviewed_by = :reviewer_id,
-                       reviewed_at = :reviewed_at,
-                       review_note = 'Regression test approval'
-                 WHERE id = :submission_id
-            """),
-            {
-                "reviewer_id": db_user.id,
-                "reviewed_at": now,
-                "submission_id": submission.id,
-            },
-        )
         await db.execute(
             text("SET CONSTRAINTS payment_submissions_ledger_integrity IMMEDIATE")
         )

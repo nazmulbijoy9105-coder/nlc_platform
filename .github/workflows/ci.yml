@@ -64,6 +64,7 @@ jobs:
             app/services/commercial_service.py app/api/commercial.py \
             app/services/finance_service.py app/core/entitlement.py \
             app/services/subscription_service.py
+            app/services/finance_service.py
 
       - name: Verify single Alembic head
         run: |

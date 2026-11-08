@@ -202,9 +202,9 @@ class QuotationService(BaseService[Quotation]):
         engagement_id: uuid.UUID,
         company_id: uuid.UUID,
         *,
-        professional_fee_bdt: float,
-        government_fee_bdt: float = 0,
-        vat_bdt: float = 0,
+        professional_fee_bdt: Decimal,
+        government_fee_bdt: Decimal = Decimal("0.00"),
+        vat_bdt: Decimal = Decimal("0.00"),
         line_items: list[dict] | None = None,
         valid_days: int = 30,
         notes: str | None = None,
@@ -256,7 +256,6 @@ class QuotationService(BaseService[Quotation]):
 
     async def _next_quotation_number(self) -> str:
         """Generate next sequential quotation number NLC-YYYY-NNNN."""
-        from sqlalchemy import text
         year = date.today().year
         # Serialize number allocation within this database transaction.
         await self.db.execute(
@@ -272,6 +271,13 @@ class QuotationService(BaseService[Quotation]):
                 "FROM quotations "
                 "WHERE quotation_number LIKE :pattern "
                 "AND SUBSTRING(quotation_number FROM :suffix_start) ~ '^[0-9]+
+                "AND SUBSTRING(quotation_number FROM :suffix_start) ~ '^[0-9]+$'"
+            ),
+            {"pattern": f"{prefix}%", "suffix_start": len(prefix) + 1},
+        )
+        number: int = result.scalar_one()
+        return f"{prefix}{number:04d}"
+
     async def accept(
         self,
         quotation_id: uuid.UUID,
@@ -287,6 +293,8 @@ class QuotationService(BaseService[Quotation]):
             raise CommercialConflictError(f"Cannot accept a quotation in {q.status} state.")
         if q.valid_until < date.today():
             raise CommercialConflictError("An expired quotation cannot be accepted; issue a renewed quotation.")
+        if q.valid_until is None or q.valid_until < date.today():
+            raise CommercialConflictError("A quotation without a valid expiry date or with an expired date cannot be accepted; issue a renewed quotation.")
         engagement_result = await self.db.execute(
             select(Engagement).where(
                 Engagement.id == q.engagement_id,

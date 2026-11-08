@@ -1,4 +1,4 @@
-"""Enforce manual wallet-reference uniqueness across claims and receipts.
+"""Enforce normalized manual payment-reference uniqueness across claims and receipts.
 
 Revision ID: 0069_cross_table_wallet_reference_guard
 Revises: 0068_repair_aggregate_view_and_revenue_rls
@@ -74,7 +74,7 @@ def upgrade() -> None:
                     ON p.method = ps.method
                    AND lower(btrim(p.payer_reference)) =
                        lower(btrim(ps.payer_reference))
-                 WHERE ps.method IN ('BKASH_MANUAL', 'NAGAD_MANUAL')
+                 WHERE ps.method IN ('BANK_TRANSFER', 'CHEQUE')
                    AND NULLIF(BTRIM(ps.payer_reference), '') IS NOT NULL
                    AND NULLIF(BTRIM(p.payer_reference), '') IS NOT NULL
                    AND NOT EXISTS (
@@ -86,9 +86,9 @@ def upgrade() -> None:
                    )
             ) THEN
                 RAISE EXCEPTION
-                    'unmatched cross-table manual wallet reference collision exists; reconcile finance evidence before migration 0069'
+                    'unmatched cross-table manual payment reference collision exists; reconcile finance evidence before migration 0069'
                     USING ERRCODE = '23505',
-                          CONSTRAINT = 'uq_wallet_reference_across_finance_tables';
+                          CONSTRAINT = 'uq_manual_reference_across_finance_tables';
             END IF;
         END
         $preflight$
@@ -116,10 +116,10 @@ def upgrade() -> None:
 
     # The per-table unique indexes in 0067 cannot prevent one reference from
     # existing once in payment_submissions and once in payments. Serialize
-    # writes to the normalized provider reference and check the opposite table
+    # writes to the normalized bank/instrument reference and check the opposite table
     # in a SECURITY DEFINER trigger, so direct SQL cannot bypass the invariant.
     op.execute("""
-        CREATE OR REPLACE FUNCTION public.nlc_guard_cross_table_wallet_reference()
+        CREATE OR REPLACE FUNCTION public.nlc_guard_cross_table_manual_reference()
         RETURNS trigger
         LANGUAGE plpgsql
         SECURITY DEFINER
@@ -131,13 +131,13 @@ def upgrade() -> None:
             lock_key text;
             duplicate_exists boolean;
         BEGIN
-            IF NEW.method NOT IN ('BKASH_MANUAL', 'NAGAD_MANUAL')
+            IF NEW.method NOT IN ('BANK_TRANSFER', 'CHEQUE')
                OR NULLIF(BTRIM(NEW.payer_reference), '') IS NULL THEN
                 RETURN NEW;
             END IF;
 
             normalized_reference := lower(btrim(NEW.payer_reference));
-            lock_key := 'nlc:wallet-reference:' || NEW.method || ':' || normalized_reference;
+            lock_key := 'nlc:manual-reference:' || NEW.method || ':' || normalized_reference;
 
             -- This is intentionally the same transaction-scoped lock key used
             -- by FinanceService.submit_offline_payment/approve_offline_payment.
@@ -164,30 +164,40 @@ def upgrade() -> None:
                       )
                 ) INTO duplicate_exists;
             ELSIF TG_TABLE_NAME = 'payments' THEN
+                -- A receipt may reuse the reference of exactly one source
+                -- claim, but only when that claim is approved and every
+                -- tenant/payment identity field matches the receipt.
+                IF NEW.source_submission_id IS NOT NULL AND NOT EXISTS (
+                    SELECT 1
+                    FROM public.payment_submissions source
+                    WHERE source.id = NEW.source_submission_id
+                      AND source.company_id = NEW.company_id
+                      AND source.status = 'APPROVED'
+                      AND source.method = NEW.method
+                      AND lower(btrim(source.payer_reference)) = normalized_reference
+                ) THEN
+                    RAISE EXCEPTION
+                        'linked payment source must be an approved matching claim'
+                        USING ERRCODE = '23514';
+                END IF;
+
                 SELECT EXISTS (
                     SELECT 1
                     FROM public.payment_submissions ps
                     WHERE ps.method = NEW.method
                       AND lower(btrim(ps.payer_reference)) = normalized_reference
-                      AND (
-                          ps.id IS DISTINCT FROM NEW.source_submission_id
-                          OR ps.status <> 'APPROVED'
-                          OR ps.company_id <> NEW.company_id
-                          OR ps.method <> NEW.method
-                          OR lower(btrim(ps.payer_reference)) <>
-                             lower(btrim(NEW.payer_reference))
-                      )
+                      AND ps.id IS DISTINCT FROM NEW.source_submission_id
                 ) INTO duplicate_exists;
             ELSE
-                RAISE EXCEPTION 'wallet-reference guard attached to unsupported table %',
+                RAISE EXCEPTION 'manual-reference guard attached to unsupported table %',
                     TG_TABLE_NAME USING ERRCODE = '55000';
             END IF;
 
             IF duplicate_exists THEN
                 RAISE EXCEPTION
-                    'uq_wallet_reference_across_finance_tables: manual wallet transaction reference already exists across finance claims and receipts'
+                    'uq_manual_reference_across_finance_tables: manual payment reference already exists across finance claims and receipts'
                     USING ERRCODE = '23505',
-                          CONSTRAINT = 'uq_wallet_reference_across_finance_tables';
+                          CONSTRAINT = 'uq_manual_reference_across_finance_tables';
             END IF;
 
             RETURN NEW;
@@ -195,25 +205,25 @@ def upgrade() -> None:
         $function$
     """)
     op.execute(
-        "REVOKE ALL ON FUNCTION public.nlc_guard_cross_table_wallet_reference() FROM PUBLIC"
+        "REVOKE ALL ON FUNCTION public.nlc_guard_cross_table_manual_reference() FROM PUBLIC"
     )
     op.execute("""
-        CREATE TRIGGER payment_submissions_cross_table_wallet_reference
+        CREATE TRIGGER payment_submissions_cross_table_manual_reference
         BEFORE INSERT OR UPDATE OF method, payer_reference
         ON public.payment_submissions
         FOR EACH ROW
-        EXECUTE FUNCTION public.nlc_guard_cross_table_wallet_reference()
+        EXECUTE FUNCTION public.nlc_guard_cross_table_manual_reference()
     """)
     op.execute("""
-        CREATE TRIGGER payments_cross_table_wallet_reference
+        CREATE TRIGGER payments_cross_table_manual_reference
         BEFORE INSERT OR UPDATE OF method, payer_reference, source_submission_id
         ON public.payments
         FOR EACH ROW
-        EXECUTE FUNCTION public.nlc_guard_cross_table_wallet_reference()
+        EXECUTE FUNCTION public.nlc_guard_cross_table_manual_reference()
     """)
 
 
 def downgrade() -> None:
-    # Forward-only: dropping this guard would permit a provider transfer to be
+    # Forward-only: dropping this guard would permit a bank or cheque payment to be
     # claimed against one invoice and independently credited to another.
     pass

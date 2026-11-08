@@ -33,9 +33,10 @@ def test_signed_rls_migration_rejects_unsafe_roles_and_memberships_in_both_direc
     assert "rolinherit" in source
     assert "rolbypassrls" in source
     assert "pg_auth_members" in source
-    assert "granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in source
     assert "member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in source
-    assert "must have no role memberships in either direction" in source
+    assert "granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in source
+    assert "NOT (member_role.rolsuper OR member_role.rolbypassrls)" in source
+    assert "restricted NLC roles may only be granted to trusted SUPERUSER/BYPASSRLS administrators" in source
 
 
 def test_signed_rls_inventory_preflight_runs_before_schema_mutations():

@@ -1,5 +1,5 @@
 """Regression checks for tenant-scoped payment references and timestamps."""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -52,7 +52,7 @@ def test_offline_payment_timestamp_requires_explicit_timezone():
         invoice_id=uuid4(),
         method="CASH",
         amount_bdt=Decimal("10.00"),
-        paid_at=datetime(2026, 11, 6, 12, 0, 0, tzinfo=timezone.utc),
+        paid_at=datetime(2026, 11, 6, 12, 0, 0, tzinfo=UTC),
     )
     assert accepted.paid_at is not None
     assert accepted.paid_at.utcoffset() is not None
@@ -68,7 +68,7 @@ def test_cheque_clearance_timestamp_requires_explicit_timezone():
         )
 
     accepted = PaymentApprovalRequest(
-        cheque_cleared_at=datetime(2026, 11, 6, 12, 0, 0, tzinfo=timezone.utc)
+        cheque_cleared_at=datetime(2026, 11, 6, 12, 0, 0, tzinfo=UTC)
     )
     assert accepted.cheque_cleared_at is not None
     assert accepted.cheque_cleared_at.utcoffset() is not None
@@ -84,7 +84,7 @@ def test_finance_service_rejects_naive_timestamps_even_when_called_directly():
         _require_aware_datetime(datetime(2026, 11, 6, 12, 0, 0), "paid_at")
 
     _require_aware_datetime(
-        datetime(2026, 11, 6, 12, 0, 0, tzinfo=timezone.utc),
+        datetime(2026, 11, 6, 12, 0, 0, tzinfo=UTC),
         "paid_at",
     )
 
@@ -96,9 +96,9 @@ def test_billing_permissions_match_defined_client_roles():
     assert "CLIENT" not in CUSTOMER_BILLING_READ_ROLES
 
 
-def test_manual_wallet_reference_indexes_exist_on_claims_and_receipts():
+def test_manual_payment_reference_indexes_exist_on_claims_and_receipts():
     submission_indexes = {index.name for index in PaymentSubmission.__table__.indexes}
     payment_indexes = {index.name for index in Payment.__table__.indexes}
 
-    assert "uq_payment_submission_wallet_reference" in submission_indexes
-    assert "uq_payment_wallet_reference" in payment_indexes
+    assert "uq_payment_submission_manual_reference" in submission_indexes
+    assert "uq_payment_manual_reference" in payment_indexes

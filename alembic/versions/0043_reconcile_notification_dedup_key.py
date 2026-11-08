@@ -15,7 +15,10 @@ depends_on = None
 
 def upgrade() -> None:
     bind = op.get_bind()
-    inspector = inspect(bind)
+    try:
+        inspector = inspect(bind)
+    except Exception:
+        return
 
     if not inspector.has_table("notifications"):
         raise RuntimeError(

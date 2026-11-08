@@ -137,8 +137,8 @@ async def test_database_rejects_pending_submission_overbooking(db, db_company, d
 
 
 @pytest.mark.asyncio
-async def test_rejected_manual_wallet_reference_cannot_be_reused(db, db_company, db_user):
-    """A rejected claim does not make a real wallet transaction reference reusable."""
+async def test_rejected_manual_payment_reference_cannot_be_reused(db, db_company, db_user):
+    """A rejected claim does not make a real manual payment reference reusable."""
     from decimal import Decimal
 
     from app.services.finance_service import FinanceConflictError, FinanceService
@@ -152,7 +152,7 @@ async def test_rejected_manual_wallet_reference_cannot_be_reused(db, db_company,
         company_id=db_company.id,
         invoice_id=invoice.id,
         submitted_by=db_user.id,
-        method="BKASH_MANUAL",
+        method="BANK_TRANSFER",
         amount_bdt=Decimal("25.00"),
         payer_reference=reference,
         paid_at=None,
@@ -169,7 +169,7 @@ async def test_rejected_manual_wallet_reference_cannot_be_reused(db, db_company,
             company_id=db_company.id,
             invoice_id=invoice.id,
             submitted_by=db_user.id,
-            method="BKASH_MANUAL",
+            method="BANK_TRANSFER",
             amount_bdt=Decimal("25.00"),
             payer_reference=reference,
             paid_at=None,
