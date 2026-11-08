@@ -1,21 +1,43 @@
-name: Manual Neon PostgreSQL backup to S3
+name: Neon PostgreSQL backup to S3
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/backup-neon-to-s3.yml"
+      - "scripts/backup_to_s3.sh"
+      - "scripts/verify_backup.py"
   workflow_dispatch:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: nlc-neon-backup
   cancel-in-progress: false
 
 jobs:
+  validate-backup-tools:
+    if: github.event_name == 'pull_request'
+    name: Validate backup tooling
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate shell syntax
+        run: bash -n scripts/backup_to_s3.sh
+
+      - name: Validate Python syntax
+        run: python -m py_compile scripts/verify_backup.py
+
   backup:
+    if: github.event_name == 'workflow_dispatch'
     name: Create and verify logical backup
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
