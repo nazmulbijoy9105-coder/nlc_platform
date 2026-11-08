@@ -119,23 +119,10 @@ class EngagementService(BaseService[Engagement]):
             (v["total_collected"] for v in pipeline.values()), zero
         )
         # Structure by revenue tier
-        pipeline: dict[str, dict[str, Any]] = {
-            tier: {
-                "stages": {},
-                "total_estimated": Decimal("0.00"),
-                "total_confirmed": Decimal("0.00"),
-                "total_invoiced": Decimal("0.00"),
-                "total_collected": Decimal("0.00"),
-            }
-            for tier in (
-                "COMPLIANCE_PACKAGE",
-                "STRUCTURED_REGULARIZATION",
-                "CORPORATE_RESCUE",
-            )
         pipeline = {
-            "COMPLIANCE_PACKAGE":        {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_collected": Decimal('0.00')},
-            "STRUCTURED_REGULARIZATION": {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_collected": Decimal('0.00')},
-            "CORPORATE_RESCUE":          {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_collected": Decimal('0.00')},
+            "COMPLIANCE_PACKAGE":        {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_invoiced": Decimal('0.00'), "total_collected": Decimal('0.00')},
+            "STRUCTURED_REGULARIZATION": {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_invoiced": Decimal('0.00'), "total_collected": Decimal('0.00')},
+            "CORPORATE_RESCUE":          {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_invoiced": Decimal('0.00'), "total_collected": Decimal('0.00')},
         }
         for row in rows:
             tier = row.get("revenue_tier", "")
@@ -153,13 +140,11 @@ class EngagementService(BaseService[Engagement]):
                 pipeline[tier]["total_confirmed"] += Decimal(str(row.get("total_confirmed_bdt") or 0))
                 pipeline[tier]["total_invoiced"] += Decimal(str(row.get("total_invoiced_bdt") or 0))
                 pipeline[tier]["total_collected"] += Decimal(str(row.get("total_collected_bdt") or 0))
-                pipeline[tier]["total_estimated"] += Decimal(str(row.get("total_estimated_bdt") or 0))  # type: ignore
-                pipeline[tier]["total_confirmed"]  += Decimal(str(row.get("total_confirmed_bdt") or 0))  # type: ignore
-                pipeline[tier]["total_collected"]  += Decimal(str(row.get("total_collected_bdt") or 0))  # type: ignore
 
         # Grand totals
         grand_total_estimated  = sum(v["total_estimated"]  for v in pipeline.values())  # type: ignore
         grand_total_confirmed  = sum(v["total_confirmed"]  for v in pipeline.values())  # type: ignore
+        grand_total_invoiced = sum(v["total_invoiced"] for v in pipeline.values())  # type: ignore
         grand_total_collected  = sum(v["total_collected"]  for v in pipeline.values())  # type: ignore
 
         return {
