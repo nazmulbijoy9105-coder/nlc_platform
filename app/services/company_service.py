@@ -214,6 +214,7 @@ class CompanyService(BaseService[Company]):
             .options(
                 selectinload(Company.directors),
                 selectinload(Company.shareholders),
+                selectinload(Company.share_compliance_events),
                 selectinload(Company.agms),
                 selectinload(Company.audits),
                 selectinload(Company.annual_returns),
@@ -604,6 +605,46 @@ class CompanyService(BaseService[Company]):
                 transfer_registration_evidence_ref=t.transfer_registration_evidence_ref if registration_verified else None,
             ))
 
+        # ── Verified share statutory events ───────────────────────
+        from app.rule_engine.engine import ShareComplianceEvent as EngineShareComplianceEvent
+        share_compliance_events = []
+        for event in company.share_compliance_events:
+            share_compliance_events.append(EngineShareComplianceEvent(
+                event_id=str(event.id),
+                event_type=event.event_type,
+                event_date=event.event_date,
+                event_verified=bool(
+                    event.event_verified and event.event_evidence_ref
+                    and event.event_verified_at and event.event_verified_by
+                ),
+                event_evidence_ref=event.event_evidence_ref,
+                event_verified_at=event.event_verified_at.date() if event.event_verified_at else None,
+                event_verified_by=str(event.event_verified_by) if event.event_verified_by else None,
+                filing_form=event.filing_form,
+                filing_status=event.filing_status if (
+                    event.filing_status_verified and event.filing_evidence_ref
+                    and event.filing_verified_at and event.filing_verified_by
+                ) else None,
+                filing_status_verified=bool(
+                    event.filing_status_verified and event.filing_evidence_ref
+                    and event.filing_verified_at and event.filing_verified_by
+                ),
+                filing_evidence_ref=event.filing_evidence_ref,
+                filing_verified_at=event.filing_verified_at.date() if event.filing_verified_at else None,
+                filing_verified_by=str(event.filing_verified_by) if event.filing_verified_by else None,
+                certificate_issued=event.certificate_issued if (
+                    event.certificate_status_verified and event.certificate_evidence_ref
+                    and event.certificate_verified_at and event.certificate_verified_by
+                ) else None,
+                certificate_status_verified=bool(
+                    event.certificate_status_verified and event.certificate_evidence_ref
+                    and event.certificate_verified_at and event.certificate_verified_by
+                ),
+                certificate_evidence_ref=event.certificate_evidence_ref,
+                certificate_verified_at=event.certificate_verified_at.date() if event.certificate_verified_at else None,
+                certificate_verified_by=str(event.certificate_verified_by) if event.certificate_verified_by else None,
+            ))
+
         # ── Statutory Registers ───────────────────────────────────
         maintained_registers = [
             r.register_type for r in company.statutory_registers if r.is_maintained
@@ -709,6 +750,7 @@ class CompanyService(BaseService[Company]):
 
             # Share Transfers
             "share_transfers": share_transfers,
+            "share_compliance_events": share_compliance_events,
 
             # Office
 
