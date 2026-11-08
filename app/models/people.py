@@ -267,7 +267,7 @@ class ShareComplianceEvent(FullMixin, Base):
         ),
         CheckConstraint("shares_affected IS NULL OR shares_affected > 0", name="ck_share_event_shares_positive"),
         CheckConstraint("btrim(event_reference) <> '' AND btrim(event_evidence_ref) <> ''", name="ck_share_event_source_required"),
-        CheckConstraint("NOT event_verified OR (event_verified_at IS NOT NULL AND event_verified_by IS NOT NULL)", name="ck_share_event_verification_provenance"),
+        CheckConstraint("NOT event_verified OR (event_verified_at IS NOT NULL AND event_verified_by IS NOT NULL AND event_verified_by <> submitted_by)", name="ck_share_event_verification_provenance"),
         CheckConstraint(
             "NOT filing_status_verified OR (filing_status IS NOT NULL AND filing_evidence_ref IS NOT NULL "
             "AND btrim(filing_evidence_ref) <> '' AND filing_verified_at IS NOT NULL AND filing_verified_by IS NOT NULL)",
@@ -295,6 +295,8 @@ class ShareComplianceEvent(FullMixin, Base):
         nullable=True,
     )
     event_reference: Mapped[str] = mapped_column(String(160), nullable=False)
+    submitted_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     shares_affected: Mapped[int | None] = mapped_column(Integer, nullable=True)
     event_type: Mapped[str] = mapped_column(String(32), nullable=False)
     event_date: Mapped[date] = mapped_column(Date, nullable=False)
