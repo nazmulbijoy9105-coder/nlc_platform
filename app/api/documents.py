@@ -173,7 +173,6 @@ def _doc_to_response(doc) -> DocumentResponse:
         Depends(require_roles("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN")),
         Depends(require_entitlement("document_management")),
     ],
-    dependencies=[Depends(require_entitlement("document_management"))],
     summary="List all documents across portfolio",
 )
 async def list_all_documents(
