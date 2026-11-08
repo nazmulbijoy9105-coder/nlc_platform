@@ -180,19 +180,26 @@ class EngagementService(BaseService[Engagement]):
         *,
         fee_bdt: Decimal | None = None,
         note: str | None = None,
+        locked_engagement: Engagement | None = None,
     ) -> Engagement | None:
         """Advance an engagement only through the canonical lifecycle."""
-        result = await self.db.execute(
-            select(Engagement)
-            .where(
-                Engagement.id == engagement_id,
-                Engagement.is_active.is_(True),
+        if locked_engagement is not None:
+            if locked_engagement.id != engagement_id or not locked_engagement.is_active:
+                return None
+            engagement = locked_engagement
+        else:
+            result = await self.db.execute(
+                select(Engagement)
+                .where(
+                    Engagement.id == engagement_id,
+                    Engagement.is_active.is_(True),
+                )
+                .execution_options(populate_existing=True)
+                .with_for_update()
             )
-            .with_for_update()
-        )
-        engagement = result.scalar_one_or_none()
-        if engagement is None:
-            return None
+            engagement = result.scalar_one_or_none()
+            if engagement is None:
+                return None
 
         if not validate_engagement_transition(engagement.engagement_status, new_status):
             raise InvalidEngagementTransitionError(
@@ -409,6 +416,7 @@ class QuotationService(BaseService[Quotation]):
             engagement.id,
             EngagementStatus.CONFIRMED,
             fee_bdt=quotation.total_bdt,
+            locked_engagement=engagement,
         )
         return accepted
 
