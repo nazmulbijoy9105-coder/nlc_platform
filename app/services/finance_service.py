@@ -417,10 +417,16 @@ class FinanceService:
             text("SELECT pg_advisory_xact_lock(hashtext(:lock_key))"),
             {"lock_key": key_prefix},
         )
+        # Table/column identifiers are selected only from the allowlist above.
+        # Ignore malformed legacy suffixes instead of allowing one bad value
+        # to break all future invoice/payment numbering.
         result = await self.db.execute(
             text(
                 f"SELECT COALESCE(MAX(CASE "
-                f"WHEN SPLIT_PART({column}, '-', 3) ~ '^[0-9]+
+                f"WHEN SPLIT_PART({column}, '-', 3) ~ '^[0-9]+$' "
+                f"THEN CAST(SPLIT_PART({column}, '-', 3) AS INTEGER) "
+                f"ELSE NULL END), 0) "
+                f"FROM {table} WHERE {column} LIKE :prefix"
             ),
             {"prefix": f"{key_prefix}%"},
         )
