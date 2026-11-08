@@ -64,7 +64,6 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
     )
 
     # Persist the original claim once. It must enter the ledger as pending.
-    await set_rls_context(db, str(db_user.id))
     db.add(submission)
     await db.flush()
     assert submission.status == "PENDING_REVIEW"
