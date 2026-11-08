@@ -8,7 +8,7 @@ TLS is enforced through verified asyncpg SSL contexts in production.
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException, Request
 from sqlalchemy import text
@@ -102,7 +102,7 @@ DATABASE_URL = _database_url.difference_update_query(["sslmode", "ssl"]).render_
 # ── CONNECTION ────────────────────────────────────────────────────────
 _testing = os.environ.get("TESTING", "false").lower() == "true"
 
-engine_args = {
+engine_args: dict[str, Any] = {
     "echo": os.environ.get("SQL_ECHO", "false").lower() == "true",
     "pool_pre_ping": True,
     "pool_recycle": 3600,
