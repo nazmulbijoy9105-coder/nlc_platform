@@ -1,15 +1,24 @@
 """COM-005: Fail-closed, server-side company-scoped subscription entitlement checks.
 
-Premium customer features remain unavailable until canonical subscription and
-entitlement records are implemented and verified. Staff authorization is
-handled separately by explicit role checks; it must never be inferred from a
-missing company identifier.
+Premium customer features require an active company membership and a current
+server-verified subscription entitlement. Staff authorization is handled by
+explicit role checks; it is never inferred from a missing company identifier.
 """
 from __future__ import annotations
 
+import uuid
+
+from fastapi import Depends, HTTPException, Request, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.dependencies import get_current_user, get_db_for_user
+from app.models.company import Company, CompanyUserAccess
+from app.models.user import User
+from app.services.subscription_service import SubscriptionService
+
 _PRIVILEGED_BYPASS_ROLES = frozenset({"SUPER_ADMIN", "ADMIN_STAFF"})
 _CUSTOMER_ROLES = frozenset({"CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "LEGAL_STAFF"})
-
 
 async def _company_contexts(
     request: Request,
@@ -145,33 +154,4 @@ def require_entitlement(feature_name: str):
             )
         request.state.entitled_company_ids = [str(item) for item in entitled_company_ids]
         return True
-# Only platform administrators may bypass a customer subscription check.
-# Legal staff still require the route's explicit role authorization and do not
-# receive an implicit subscription bypass.
-_PRIVILEGED_BYPASS_ROLES = frozenset({"SUPER_ADMIN", "ADMIN_STAFF"})
-
-
-def require_entitlement(feature_name: str):
-    """Require a verified entitlement for a premium feature.
-
-    Until a canonical subscription model and company-membership resolution
-    exist, customer access fails closed with 503. Returning 403 would falsely
-    imply that a subscription was checked and found inactive.
-    """
-    async def _check(current_user=Depends(get_current_user)) -> bool:
-        role = getattr(current_user, "role", None)
-        role_value = str(getattr(role, "value", role))
-
-        if role_value in _PRIVILEGED_BYPASS_ROLES:
-            return True
-
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=(
-                f"Feature '{feature_name}' is temporarily unavailable because "
-                "subscription entitlement verification is not configured."
-            ),
-            headers={"Retry-After": "3600"},
-        )
-
     return _check
