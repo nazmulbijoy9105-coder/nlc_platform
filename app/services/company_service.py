@@ -856,7 +856,25 @@ class CompanyService(BaseService[Company]):
             "agm_held_this_cycle": (
                 current_cycle_agm.agm_held if current_cycle_verified else None
             ),
-            "agm_minutes_prepared":       agm_profile_evidence["agm_minutes_prepared"],
+            "agm_scheduled_date": (
+                current_cycle_agm.agm_deadline if current_cycle_agm is not None else None
+            ),
+            "notice_sent_date": agm_profile_evidence["notice_sent_date"],
+            "short_notice_consent_obtained": agm_profile_evidence["short_notice_consent_obtained"],
+            "short_notice_consent_verified": agm_profile_evidence["short_notice_consent_verified"],
+            "short_notice_consent_evidence_ref": agm_profile_evidence["short_notice_consent_evidence_ref"],
+            "members_present_at_agm": agm_profile_evidence["members_present_at_agm"],
+            "agm_attendance_verified": agm_profile_evidence["agm_attendance_verified"],
+            "agm_attendance_evidence_ref": agm_profile_evidence["agm_attendance_evidence_ref"],
+            "agm_quorum_required": agm_profile_evidence["agm_quorum_required"],
+            "agm_quorum_basis_verified": agm_profile_evidence["agm_quorum_basis_verified"],
+            "agm_quorum_evidence_ref": agm_profile_evidence["agm_quorum_evidence_ref"],
+            "auditor_reappointed_at_agm": agm_profile_evidence["auditor_reappointed_at_agm"],
+            "auditor_reappointment_verified": agm_profile_evidence["auditor_reappointment_verified"],
+            "auditor_reappointment_evidence_ref": agm_profile_evidence["auditor_reappointment_evidence_ref"],
+            "accounts_adopted_at_agm": agm_profile_evidence["accounts_adopted_at_agm"],
+            "agm_held_without_audit": agm_profile_evidence["agm_held_without_audit"],
+            "agm_minutes_prepared": agm_profile_evidence["agm_minutes_prepared"],
 
             # Audit State
             "first_auditor_appointed": (
