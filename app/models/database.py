@@ -3,15 +3,16 @@ NEUM LEX COUNSEL — ORM LAYER
 database.py — Async SQLAlchemy engine, session factory, Base declaration
 All DB interactions are async (asyncpg driver).
 AES-256 encryption at rest enforced at PostgreSQL/AWS layer.
-TLS 1.3 enforced in connection string.
+TLS is enforced through verified asyncpg SSL contexts in production.
 """
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException, Request
 from sqlalchemy import text
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
     AsyncSession,
@@ -76,6 +77,30 @@ DATABASE_URL, _DATABASE_SSL_CONTEXT = normalize_asyncpg_url(
     require_tls=_PRODUCTION_ENVIRONMENT,
 )
 
+# asyncpg requires its own `ssl` connect argument; libpq's `sslmode`
+# query parameter is not a substitute. Require verified TLS for every
+# Render/production connection and honour explicit secure SSL modes locally.
+import ssl as _ssl
+
+_database_url = make_url(DATABASE_URL)
+_sslmode = str(_database_url.query.get("sslmode", "")).lower()
+_ssl_option = str(_database_url.query.get("ssl", "")).lower()
+if _PRODUCTION_ENVIRONMENT and _sslmode in {"disable", "allow", "prefer"}:
+    raise RuntimeError(
+        "PostgreSQL TLS must be required in production; remove the insecure "
+        "sslmode and use a verified TLS connection."
+    )
+_require_database_tls = (
+    _PRODUCTION_ENVIRONMENT
+    or _sslmode in {"require", "verify-ca", "verify-full"}
+    or _ssl_option in {"true", "1", "require"}
+)
+# Strip libpq-only URL flags before handing the URL to asyncpg. SSL is
+# configured explicitly below so asyncpg cannot silently connect in cleartext.
+DATABASE_URL = _database_url.difference_update_query(["sslmode", "ssl"]).render_as_string(
+    hide_password=False
+)
+
 # ── CONNECTION ────────────────────────────────────────────────────────
 _testing = os.environ.get("TESTING", "false").lower() == "true"
 
@@ -89,6 +114,7 @@ if _DATABASE_SSL_CONTEXT is not None:
     _connect_args["ssl"] = _DATABASE_SSL_CONTEXT
 
 engine_args = {
+engine_args: dict[str, Any] = {
     "echo": os.environ.get("SQL_ECHO", "false").lower() == "true",
     "pool_pre_ping": True,
     "pool_recycle": 3600,
@@ -102,6 +128,9 @@ if not _testing:
     })
 else:
     engine_args["poolclass"] = NullPool
+
+if _require_database_tls:
+    engine_args["connect_args"]["ssl"] = _ssl.create_default_context()
 
 engine = create_async_engine(DATABASE_URL, **engine_args)
 

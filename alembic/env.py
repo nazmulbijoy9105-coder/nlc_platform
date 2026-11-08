@@ -33,7 +33,7 @@ from sqlalchemy import (
     pool,
     text,
 )
-from sqlalchemy.engine import Connection
+from sqlalchemy.engine import Connection, make_url
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 
@@ -300,6 +300,37 @@ async def run_async_migrations() -> None:
     connect_args = {}
     if ssl_context is not None:
         connect_args["ssl"] = ssl_context
+    import ssl as _ssl
+
+    # Override URL with resolved value. asyncpg uses connect_args["ssl"],
+    # not libpq's sslmode URL parameter. Require verified TLS on Render and
+    # production hosts even when the operator omitted sslmode=require.
+    configuration = config.get_section(config.config_ini_section, {})
+    db_url = get_database_url()
+    parsed_url = make_url(db_url)
+    sslmode = str(parsed_url.query.get("sslmode", "")).lower()
+    ssl_option = str(parsed_url.query.get("ssl", "")).lower()
+    is_render = os.environ.get("RENDER", "").strip().lower() == "true"
+    environment = os.environ.get("ENVIRONMENT", "").strip().lower()
+    is_production = is_render or environment in {"prod", "production"}
+
+    if is_production and sslmode in {"disable", "allow", "prefer"}:
+        raise RuntimeError(
+            "PostgreSQL TLS must be required for production migrations; "
+            "remove the insecure sslmode and use a verified TLS connection."
+        )
+
+    require_tls = (
+        is_production
+        or sslmode in {"require", "verify-ca", "verify-full"}
+        or ssl_option in {"true", "1", "require"}
+    )
+    db_url = parsed_url.difference_update_query(["sslmode", "ssl"]).render_as_string(
+        hide_password=False
+    )
+    connect_args = {}
+    if require_tls:
+        connect_args["ssl"] = _ssl.create_default_context()
 
     configuration["sqlalchemy.url"] = db_url
 
