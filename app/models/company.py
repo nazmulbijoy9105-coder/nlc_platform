@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from .documents import AIOutputLog, Document
     from .filings import AGM, AnnualReturn, Audit
     from .infrastructure import Notification, RegisteredOfficeHistory, StatutoryRegister
-    from .people import Director, Shareholder, ShareTransfer
+    from .people import Director, ShareComplianceEvent, Shareholder, ShareTransfer
     from .rescue import RescuePlan
     from .user import User
 
@@ -365,6 +365,10 @@ class Company(FullMixin, Base):
     )
     share_transfers: Mapped[list[ShareTransfer]] = relationship(
         "ShareTransfer", back_populates="company", lazy="selectin"
+    )
+    share_compliance_events: Mapped[list["ShareComplianceEvent"]] = relationship(
+        "ShareComplianceEvent", back_populates="company", lazy="selectin",
+        order_by="ShareComplianceEvent.event_date.desc()"
     )
     agms: Mapped[list[AGM]] = relationship(
         "AGM", back_populates="company", lazy="selectin",
