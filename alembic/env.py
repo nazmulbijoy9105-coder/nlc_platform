@@ -30,6 +30,7 @@ from sqlalchemy import (
     PrimaryKeyConstraint,
     String,
     Table,
+    inspect,
     pool,
     text,
 )
