@@ -1,69 +1,84 @@
-"""Verify Neon database backup by testing PITR restore.
+#!/usr/bin/env python3
+"""Verify a PostgreSQL custom-format backup archive without connecting to a database.
 
-Run weekly to verify disaster recovery readiness.
-Usage: python3 scripts/verify_backup.py
+This checks the archive TOC and the presence of the three historical evidence
+table definitions. It does NOT prove that rows are present or that a restore
+will succeed. A separate isolated restore rehearsal is mandatory.
 """
-import asyncio
-import os
+from __future__ import annotations
 
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
+import argparse
+import hashlib
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
 
-DB_URL = os.environ.get("DATABASE_URL", "").replace("postgresql://", "postgresql+asyncpg://")
+REQUIRED_EVIDENCE_TABLES = (
+    "webhook_endpoints",
+    "webhook_deliveries",
+    "rescue_audit_log",
+)
 
-async def verify():
-    if not DB_URL:
-        print("✗ DATABASE_URL not set")
-        return False
-    
-    print("Verifying database backup...")
-    engine = create_async_engine(DB_URL, connect_args={"ssl": True} if "neon" in DB_URL else {})
-    
-    checks = []
-    
-    # Check 1: Can connect?
-    try:
-        async with engine.connect() as conn:
-            checks.append(("Database connection", True))
-    except Exception as e:
-        checks.append(("Database connection", False))
-        print(f"✗ Connection failed: {e}")
-        await engine.dispose()
-        return False
-    
-    # Check 2: Rules intact?
-    async with engine.connect() as conn:
-        result = await conn.execute(text("SELECT COUNT(*) FROM legal_rules"))
-        count = result.scalar()
-        checks.append((f"Rules count: {count}", count >= 65))
-    
-    # Check 3: Migrations applied?
-    async with engine.connect() as conn:
-        result = await conn.execute(text("SELECT version_num FROM alembic_version"))
-        version = result.scalar()
-        checks.append((f"Migration version: {version}", version is not None))
-    
-    # Check 4: Tables exist?
-    async with engine.connect() as conn:
-        result = await conn.execute(text("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'"))
-        tables = result.scalar()
-        checks.append((f"Tables: {tables}", tables >= 20))
-    
-    # Check 5: Activity logs?
-    async with engine.connect() as conn:
-        result = await conn.execute(text("SELECT COUNT(*) FROM user_activity_logs"))
-        logs = result.scalar()
-        checks.append((f"Activity logs: {logs}", logs >= 0))
-    
-    await engine.dispose()
-    
-    print("\nBackup verification results:")
-    for name, ok in checks:
-        print(f"  {'✓' if ok else '✗'} {name}")
-    
-    all_ok = all(ok for _, ok in checks)
-    print(f"\n{'✅ Backup verified' if all_ok else '✗ Backup verification failed'}")
-    return all_ok
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("archive", type=Path, help="pg_dump custom-format archive")
+    args = parser.parse_args()
+
+    pg_restore = shutil.which("pg_restore")
+    if not pg_restore:
+        print("FAIL: pg_restore is not installed", file=sys.stderr)
+        return 2
+    if not args.archive.is_file() or args.archive.stat().st_size == 0:
+        print(f"FAIL: archive is missing or empty: {args.archive}", file=sys.stderr)
+        return 2
+
+    checksum_path = Path(f"{args.archive}.sha256")
+    if checksum_path.exists():
+        expected = checksum_path.read_text(encoding="utf-8").split()[0]
+        actual = hashlib.sha256(args.archive.read_bytes()).hexdigest()
+        if actual.lower() != expected.lower():
+            print("FAIL: SHA-256 checksum mismatch", file=sys.stderr)
+            return 1
+        print(f"PASS: SHA-256 {actual}")
+    else:
+        print("WARN: no adjacent .sha256 file; checksum was not checked")
+
+    result = subprocess.run(
+        [pg_restore, "--list", str(args.archive)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        print("FAIL: pg_restore could not read the archive TOC", file=sys.stderr)
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
+        return 1
+
+    toc = result.stdout
+    print(f"PASS: PostgreSQL archive TOC readable ({args.archive.stat().st_size} bytes)")
+    missing = []
+    for table in REQUIRED_EVIDENCE_TABLES:
+        pattern = rf"\bTABLE\s+public\s+{re.escape(table)}\b"
+        if re.search(pattern, toc):
+            print(f"PASS: archive contains table definition entry public.{table}")
+        else:
+            print(f"FAIL: archive has no table definition entry public.{table}")
+            missing.append(table)
+
+    if missing:
+        print("Archive is NOT a recovery candidate for all required evidence tables.")
+        return 1
+
+    print(
+        "ARCHIVE CHECK PASSED. No database connection or restore was performed; "
+        "row counts and restoreability remain unverified."
+    )
+    return 0
+
 
 if __name__ == "__main__":
-    asyncio.run(verify())
+    raise SystemExit(main())
