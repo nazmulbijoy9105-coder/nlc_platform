@@ -28,7 +28,7 @@ from app.models.finance import (
 )
 
 CENT = Decimal("0.01")
-OFFLINE_METHODS = {"BANK_TRANSFER", "CASH", "CHEQUE"}
+OFFLINE_METHODS = {"BANK_TRANSFER", "CASH", "CHEQUE", "BKASH_MANUAL", "NAGAD_MANUAL"}
 PAYMENTABLE_INVOICE_STATES = {"ISSUED", "PARTIALLY_PAID", "OVERDUE"}
 
 
@@ -52,6 +52,8 @@ def _integrity_constraint_name(error: IntegrityError) -> str | None:
         getattr(diagnostic, "constraint_name", None)
         or getattr(original, "constraint_name", None)
     )
+    if isinstance(constraint_name, str) and constraint_name:
+        return constraint_name
     if constraint_name:
         return str(constraint_name)
     # asyncpg's UniqueViolationError omits PostgreSQL's constraint_name
@@ -201,7 +203,7 @@ class FinanceService:
         if method not in OFFLINE_METHODS:
             raise FinanceConflictError("Unsupported offline payment method")
         _require_aware_datetime(paid_at, "paid_at")
-        if method in {"BANK_TRANSFER", "CHEQUE"} and not (payer_reference and payer_reference.strip()):
+        if method in {"BANK_TRANSFER", "CHEQUE", "BKASH_MANUAL", "NAGAD_MANUAL"} and not (payer_reference and payer_reference.strip()):
             raise FinanceConflictError("A transaction or instrument reference is required for this payment method")
         if paid_at is not None and paid_at > datetime.now(UTC):
             raise FinanceConflictError("Payment date cannot be in the future")
@@ -210,7 +212,7 @@ class FinanceService:
         # submissions on the normalized reference, then check both
         # pending/approved claims and already-posted receipts. The unique
         # database indexes remain the final integrity boundary.
-        if method in {"BANK_TRANSFER", "CHEQUE"}:
+        if method in {"BANK_TRANSFER", "CHEQUE", "BKASH_MANUAL", "NAGAD_MANUAL"}:
             assert payer_reference is not None  # required by the method check above
             normalized_reference = payer_reference.strip().lower()
             reference_lock_key = f"nlc:manual-reference:{method}:{normalized_reference}"
@@ -242,7 +244,7 @@ class FinanceService:
                     "This manual payment reference has already been submitted or credited"
                 )
 
-        invoice = await self._locked_invoice(invoice_id, company_id)
+        invoice = await self._locked_invoice(invoice_id, company_id, for_update=False)
         if invoice is None:
             raise FinanceNotFoundError("Invoice not found for this company")
         if invoice.status not in PAYMENTABLE_INVOICE_STATES:
@@ -296,6 +298,15 @@ class FinanceService:
                 raise FinanceConflictError(
                     "This manual payment reference has already been submitted or credited"
                 ) from exc
+            database_message = str(exc).lower()
+            if "pending payment submissions exceed the invoice outstanding balance" in database_message:
+                raise FinanceConflictError(
+                    "Pending payment submissions already reserve the remaining invoice balance"
+                ) from exc
+            if "invoice is not open for payment submissions" in database_message:
+                raise FinanceConflictError(
+                    "Invoice is no longer open for payment submissions"
+                ) from exc
             raise
         return submission
 
@@ -338,6 +349,16 @@ class FinanceService:
             payment = payment_result.scalar_one_or_none()
             if payment is None:
                 raise FinanceConflictError("Approved submission payment record is missing")
+            try:
+                from app.services.subscription_service import SubscriptionService
+
+                await SubscriptionService(self.db).activate_for_paid_invoice(
+                    invoice_id=submission.invoice_id,
+                    payment_id=payment.id,
+                    actor_id=reviewer_id,
+                )
+            except ValueError as exc:
+                raise FinanceConflictError(str(exc)) from exc
             return payment
 
         if submission.status != "PENDING_REVIEW":
@@ -358,7 +379,7 @@ class FinanceService:
         ):
             raise FinanceConflictError("Cheque clearance time cannot precede the payment date")
 
-        if submission.method in {"BANK_TRANSFER", "CHEQUE"}:
+        if submission.method in {"BANK_TRANSFER", "CHEQUE", "BKASH_MANUAL", "NAGAD_MANUAL"}:
             assert submission.payer_reference is not None
             normalized_reference = submission.payer_reference.strip().lower()
             reference_lock_key = (
@@ -477,6 +498,16 @@ class FinanceService:
             ),
         ])
         await self.db.flush()
+        try:
+            from app.services.subscription_service import SubscriptionService
+
+            await SubscriptionService(self.db).activate_for_paid_invoice(
+                invoice_id=invoice.id,
+                payment_id=payment.id,
+                actor_id=reviewer_id,
+            )
+        except ValueError as exc:
+            raise FinanceConflictError(str(exc)) from exc
         return payment
 
     async def reject_offline_payment(
@@ -529,12 +560,22 @@ class FinanceService:
         return list(result.scalars().all())
 
     async def _locked_invoice(
-        self, invoice_id: uuid.UUID, company_id: uuid.UUID | None = None
+        self,
+        invoice_id: uuid.UUID,
+        company_id: uuid.UUID | None = None,
+        *,
+        for_update: bool = True,
     ) -> Invoice | None:
         query = select(Invoice).where(Invoice.id == invoice_id)
         if company_id is not None:
             query = query.where(Invoice.company_id == company_id)
-        result = await self.db.execute(query.with_for_update())
+        # Customer payment submission runs under a role that may read invoice
+        # balances but is not allowed to UPDATE invoices. PostgreSQL applies
+        # UPDATE RLS to SELECT FOR UPDATE and hides the row. The BEFORE INSERT
+        # reservation trigger takes the authoritative invoice row lock instead.
+        if for_update:
+            query = query.with_for_update()
+        result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
     async def _next_number(self, prefix: str, table: str, column: str) -> str:
@@ -546,9 +587,14 @@ class FinanceService:
             text("SELECT pg_advisory_xact_lock(hashtext(:lock_key))"),
             {"lock_key": key_prefix},
         )
+        # Identifiers are selected only from the allowlist above. Ignore
+        # malformed legacy suffixes rather than breaking future numbering.
         result = await self.db.execute(
             text(
-                f"SELECT COALESCE(MAX(CAST(SPLIT_PART({column}, '-', 3) AS INTEGER)), 0) "
+                f"SELECT COALESCE(MAX(CASE "
+                f"WHEN SPLIT_PART({column}, '-', 3) ~ '^[0-9]+$' "
+                f"THEN CAST(SPLIT_PART({column}, '-', 3) AS INTEGER) "
+                f"ELSE NULL END), 0) "
                 f"FROM {table} WHERE {column} LIKE :prefix"
             ),
             {"prefix": f"{key_prefix}%"},

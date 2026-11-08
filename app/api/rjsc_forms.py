@@ -17,6 +17,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.entitlement import require_entitlement
+from app.core.company_authorization import ensure_staff_company_scope
 from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
@@ -25,6 +27,34 @@ from app.core.dependencies import (
 )
 from app.models.rjsc_forms import RJSC_FORMS_REFERENCE
 from app.services.rjsc_form_service import RJSCFormService
+
+
+async def _assert_rjsc_entitlement(company_id: uuid.UUID, current_user, db: AsyncSession) -> None:
+    role = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    if role in ("SUPER_ADMIN", "ADMIN_STAFF"):
+        return
+    if role == "LEGAL_STAFF":
+        await ensure_staff_company_scope(company_id, current_user, db)
+    else:
+        from sqlalchemy import select
+        from app.models.company import CompanyUserAccess
+
+        membership = await db.execute(
+            select(CompanyUserAccess.company_id).where(
+                CompanyUserAccess.company_id == company_id,
+                CompanyUserAccess.user_id == current_user.id,
+                CompanyUserAccess.is_active.is_(True),
+            ).limit(1)
+        )
+        if membership.scalar_one_or_none() is None:
+            raise HTTPException(status_code=403, detail="Active company membership is required.")
+    from app.services.subscription_service import SubscriptionService
+
+    if not await SubscriptionService(db).has_entitlement(
+        company_id=company_id,
+        feature_code="compliance_package",
+    ):
+        raise HTTPException(status_code=402, detail="This company does not have an active compliance-package entitlement.")
 
 router = APIRouter()
 
@@ -64,7 +94,7 @@ async def get_form_reference():
 
 
 @router.get("/{company_id}", response_model=list[FormFilingResponse],
-            dependencies=[Depends(require_company_access("company_id"))],
+            dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
             summary="List all RJSC form filings for a company")
 async def list_forms(company_id: str, db: AsyncSession = Depends(get_db_for_user)):
     svc = RJSCFormService(db)
@@ -81,7 +111,7 @@ async def list_forms(company_id: str, db: AsyncSession = Depends(get_db_for_user
 
 
 @router.get("/{company_id}/pending", response_model=list[FormFilingResponse],
-            dependencies=[Depends(require_company_access("company_id"))],
+            dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
             summary="List pending RJSC forms")
 async def list_pending_forms(company_id: str, db: AsyncSession = Depends(get_db_for_user)):
     svc = RJSCFormService(db)
@@ -99,7 +129,7 @@ async def list_pending_forms(company_id: str, db: AsyncSession = Depends(get_db_
 
 
 @router.get("/{company_id}/overdue", response_model=list[FormFilingResponse],
-            dependencies=[Depends(require_company_access("company_id"))],
+            dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
             summary="List overdue RJSC forms")
 async def list_overdue_forms(company_id: str, db: AsyncSession = Depends(get_db_for_user)):
     svc = RJSCFormService(db)
@@ -117,7 +147,7 @@ async def list_overdue_forms(company_id: str, db: AsyncSession = Depends(get_db_
 
 @router.post("/{company_id}", response_model=FormFilingResponse, status_code=201,
              dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")),
-                           Depends(require_company_access("company_id"))],
+                           Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
              summary="Create RJSC form filing")
 async def create_form_filing(
     company_id: str,
@@ -158,6 +188,7 @@ async def mark_form_filed(
     filing_check = await svc.get_by_id(form_id)
     if not filing_check:
         raise HTTPException(status_code=404, detail="Form filing not found")
+    await _assert_rjsc_entitlement(filing_check.company_id, current_user, db)
     # RJSC-001: verify user has access to this company's filing
     if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):
         from sqlalchemy import select as _sel

@@ -42,11 +42,21 @@ async def test_runtime_role_is_non_bypass_and_has_no_dangerous_privileges(db):
             "SELECT count(*) FROM pg_auth_members m "
             "JOIN pg_roles granted_role ON granted_role.oid = m.roleid "
             "JOIN pg_roles member_role ON member_role.oid = m.member "
-            "WHERE granted_role.rolname = 'nlc_app_role' "
-            "OR member_role.rolname = 'nlc_app_role'"
+            "WHERE member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role') "
+            "OR (granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role') "
+            "AND NOT (member_role.rolsuper OR member_role.rolbypassrls))"
         )
     )
     assert memberships.scalar_one() == 0
+
+    audit_role = await db.execute(
+        text(
+            "SELECT rolcanlogin, rolsuper, rolcreatedb, rolcreaterole, "
+            "rolinherit, rolreplication, rolbypassrls "
+            "FROM pg_roles WHERE rolname = 'nlc_ci_audit_role'"
+        )
+    )
+    assert audit_role.one() == (True, False, False, False, False, False, False)
 
     for privilege in ("TRUNCATE", "TRIGGER", "REFERENCES"):
         result = await db.execute(
@@ -943,3 +953,29 @@ async def test_company_charges_are_forced_rls_and_financially_scoped(
     )
     assert visible.scalar_one() == 1
 
+
+@pytest.mark.asyncio
+async def test_client_cannot_change_own_role_or_active_status(db, db_client_user):
+    """RLS self-row updates must not permit privilege/activation changes."""
+    from sqlalchemy.exc import DBAPIError
+    from app.models.enums import UserRole
+
+    await set_rls_context(db, str(db_client_user.id))
+
+    # The users_self_update policy is intentionally row-scoped. The database
+    # trigger must independently reject changes to authorization attributes.
+    with pytest.raises(DBAPIError, match="Only a verified SUPER_ADMIN"):
+        async with db.begin_nested():
+            await db.execute(
+                text("UPDATE public.users SET role = :role WHERE id = :user_id"),
+                {"role": UserRole.SUPER_ADMIN.value, "user_id": db_client_user.id},
+            )
+
+    with pytest.raises(DBAPIError, match="Only a verified SUPER_ADMIN"):
+        async with db.begin_nested():
+            await db.execute(
+                text("UPDATE public.users SET is_active = FALSE WHERE id = :user_id"),
+                {"user_id": db_client_user.id},
+            )
+
+    await db.rollback()

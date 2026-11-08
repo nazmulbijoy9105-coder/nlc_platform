@@ -207,6 +207,7 @@ class CompanyProfile:
     agm_extension_verified_by: str | None = None
     agm_held_this_cycle: bool | None = None
     agm_held_without_audit: bool = False
+    agm_held_without_audit: bool | None = None
     agm_scheduled_date: Optional[date] = None
     notice_sent_date: Optional[date] = None
     short_notice_consent_obtained: bool | None = None
@@ -222,7 +223,7 @@ class CompanyProfile:
     auditor_reappointed_at_agm: bool | None = None
     auditor_reappointment_verified: bool = False
     auditor_reappointment_evidence_ref: str | None = None
-    accounts_adopted_at_agm: bool = False
+    accounts_adopted_at_agm: bool | None = None
     agm_minutes_prepared: bool | None = None
     first_auditor_appointed: bool | None = None
     first_auditor_appointment_date: Optional[date] = None
@@ -262,7 +263,7 @@ class CompanyProfile:
     subsidiary_status_verified_by: str | None = None
     minimum_directors_met: bool | None = None
     shareholder_change_date: Optional[date] = None
-    form_xv_filed: bool = False
+    form_xv_filed: bool | None = None
     form_xv_filed_date: Optional[date] = None
     last_allotment_date: Optional[date] = None
     share_certificates_issued: bool | None = None

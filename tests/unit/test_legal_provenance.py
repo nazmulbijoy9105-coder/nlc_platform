@@ -1,3 +1,4 @@
+import pytest
 """
 NLC — GATE E4: Legal Source / Provenance Governance Tests
 Proves that no rule can be marked as VERIFIED without a valid legal source.

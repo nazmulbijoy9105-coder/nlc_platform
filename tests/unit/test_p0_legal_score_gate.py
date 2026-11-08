@@ -1,3 +1,4 @@
+import pytest
 """P0 regressions: unapproved rules must never affect authoritative scores or reports."""
 from datetime import date
 from types import SimpleNamespace

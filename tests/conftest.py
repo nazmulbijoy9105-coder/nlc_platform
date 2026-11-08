@@ -38,6 +38,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
+from sqlalchemy.engine import make_url as _make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -65,8 +66,6 @@ def _get_test_db_url() -> str:
 
 
 TEST_DATABASE_URL = _get_test_db_url()
-
-from sqlalchemy.engine import make_url as _make_url
 
 assert _make_url(TEST_DATABASE_URL).host in ("localhost", "127.0.0.1"), \
     "tests must run against a local database"
@@ -593,6 +592,14 @@ async def db_company(db: AsyncSession) -> Company:
 
 
 @pytest_asyncio.fixture
+async def legal_staff_company_scope(api_client, db: AsyncSession, db_company: Company) -> Company:
+    """Assign the persisted LEGAL_STAFF test identity to this company explicitly."""
+    db_company.assigned_staff_id = _role_user_id("LEGAL_STAFF")
+    await db.flush()
+    return db_company
+
+
+@pytest_asyncio.fixture
 async def db_user(db: AsyncSession) -> User:
     """Create a User row in the test DB."""
     from app.core.security import hash_password
@@ -788,9 +795,6 @@ def assert_helpers():
 # ---------------------------------------------------------------------------
 # RLS-aware fixtures (tenant isolation)
 # ---------------------------------------------------------------------------
-
-import os
-
 
 # ---------------------------------------------------------------------------
 # RLS-aware fixtures (tenant isolation)
