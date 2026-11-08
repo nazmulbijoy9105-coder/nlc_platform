@@ -305,9 +305,11 @@ jobs:
           DATABASE_URL="$BASELINE_DATABASE_URL" alembic upgrade head
           CURRENT="$(DATABASE_URL="$BASELINE_DATABASE_URL" alembic current)"
           printf '%s\n' "$CURRENT"
-          HEAD_REVISION="$(alembic heads | awk 'NR == 1 {print $1}')"
+          HEADS="$(alembic heads)"
+          HEAD_COUNT="$(grep -c ' (head)' <<< "$HEADS")"
+          test "$HEAD_COUNT" -eq 1
+          HEAD_REVISION="$(awk 'NR == 1 {print $1}' <<< "$HEADS")"
           grep -q "$HEAD_REVISION" <<< "$CURRENT"
-          grep -q "0086_runtime_role_membership_preflight" <<< "$CURRENT"
 
           # Export the resulting schema snapshot for independent review.
           pg_dump -h localhost -U nlc_test \
