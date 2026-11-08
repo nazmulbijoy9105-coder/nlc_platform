@@ -58,8 +58,8 @@ class EngagementService(BaseService[Engagement]):
         # Structure by revenue tier
         pipeline = {
             "COMPLIANCE_PACKAGE":        {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_invoiced": Decimal('0.00'), "total_collected": Decimal('0.00')},
-            "STRUCTURED_REGULARIZATION": {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_collected": Decimal('0.00')},
-            "CORPORATE_RESCUE":          {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_collected": Decimal('0.00')},
+            "STRUCTURED_REGULARIZATION": {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_invoiced": Decimal('0.00'), "total_collected": Decimal('0.00')},
+            "CORPORATE_RESCUE":          {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_invoiced": Decimal('0.00'), "total_collected": Decimal('0.00')},
         }
         for row in rows:
             tier = row.get("revenue_tier", "")
