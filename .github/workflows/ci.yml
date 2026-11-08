@@ -49,14 +49,13 @@ jobs:
       - name: Compile check
         run: python -m compileall app/
 
-      - name: Lint scoring release-boundary changes
       - name: Lint scoring and migration release changes
         run: |
           ruff check --select E4,E7,E9,F \
             app/services/company_service.py \
             app/services/pdf_report_service.py \
             app/services/rescue_service.py \
-            app/services/commercial_service.py
+            app/services/commercial_service.py \
             tests/unit/test_pdf_report_service.py \
             tests/unit/test_rescue_engagement_contract.py
 
