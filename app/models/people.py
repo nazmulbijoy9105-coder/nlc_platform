@@ -70,7 +70,7 @@ class Director(FullMixin, Base):
     # ── Evidence-bound statutory filing states ────────────────────
     form_xii_filed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     form_xii_filed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    form_xii_status_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    form_xii_status_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     form_xii_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     form_xii_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     form_xii_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
@@ -260,11 +260,11 @@ class ShareComplianceEvent(FullMixin, Base):
 
     company_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"),
-        nullable=False, index=True,
+        nullable=False,
     )
     share_transfer_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("share_transfers.id", ondelete="RESTRICT"),
-        nullable=True, index=True,
+        nullable=True,
     )
     event_type: Mapped[str] = mapped_column(String(32), nullable=False)
     event_date: Mapped[date] = mapped_column(Date, nullable=False)
