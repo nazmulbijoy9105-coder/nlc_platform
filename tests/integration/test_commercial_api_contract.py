@@ -161,7 +161,7 @@ async def test_task_completion_accepts_completion_note(
     assert created.status_code == 201, created.text
 
     response = await api_client.patch(
-        f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete",
+        f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete?company_id={db_company.id}",
         headers=_auth(commercial_admin_token),
         json={"completion_note": "Verified complete"},
     )
@@ -169,7 +169,7 @@ async def test_task_completion_accepts_completion_note(
     assert response.json()["status"] == "COMPLETED"
 
     repeated = await api_client.patch(
-        f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete",
+        f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete?company_id={db_company.id}",
         headers=_auth(commercial_admin_token),
         json={"completion_note": "Should not complete twice"},
     )
