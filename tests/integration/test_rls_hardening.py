@@ -979,3 +979,79 @@ async def test_client_cannot_change_own_role_or_active_status(db, db_client_user
             )
 
     await db.rollback()
+
+@pytest.mark.asyncio
+async def test_legal_staff_company_access_is_assignment_scoped_and_never_financial(
+    db, db_company, db_other_company
+):
+    import uuid
+
+    from app.models.company import CompanyUserAccess
+    from app.models.enums import UserRole
+    from app.models.user import User
+
+    await set_admin_context(db)
+    legal_user = User(
+        id=uuid.uuid4(),
+        email=f"legal-scope-{uuid.uuid4().hex[:8]}@nlctest.com",
+        full_name="Assigned Legal Staff",
+        password_hash="!test-no-login",
+        role=UserRole.LEGAL_STAFF,
+        is_active=True,
+        totp_enabled=False,
+    )
+    db.add(legal_user)
+    await db.flush()
+    db_company.assigned_staff_id = legal_user.id
+    db.add(
+        CompanyUserAccess(
+            user_id=legal_user.id,
+            company_id=db_other_company.id,
+            can_edit=True,
+            can_view_financials=True,
+            is_active=True,
+        )
+    )
+    await db.flush()
+
+    await set_rls_context(db, str(legal_user.id))
+    result = await db.execute(
+        text("""
+            SELECT
+                public.nlc_can_access_company(:assigned_id),
+                public.nlc_can_access_company(:member_id),
+                public.nlc_can_access_company(:unrelated_id),
+                public.nlc_can_edit_company(:assigned_id),
+                public.nlc_can_edit_company(:member_id),
+                public.nlc_can_view_financials_company(:assigned_id),
+                public.nlc_can_view_financials_company(:member_id),
+                public.nlc_can_manage_financials_company(:assigned_id),
+                public.nlc_can_manage_financials_company(:member_id)
+        """),
+        {
+            "assigned_id": db_company.id,
+            "member_id": db_other_company.id,
+            "unrelated_id": uuid.uuid4(),
+        },
+    )
+    row = result.one()
+    assert row == (True, True, False, True, True, False, False, False, False)
+
+
+@pytest.mark.asyncio
+async def test_client_financial_membership_does_not_grant_portfolio_access(
+    db, db_client_user, db_company, db_other_company
+):
+    await set_rls_context(db, str(db_client_user.id))
+    result = await db.execute(
+        text("""
+            SELECT
+                public.nlc_can_access_company(:own_id),
+                public.nlc_can_access_company(:other_id),
+                public.nlc_can_view_financials_company(:own_id),
+                public.nlc_can_view_financials_company(:other_id)
+        """),
+        {"own_id": db_company.id, "other_id": db_other_company.id},
+    )
+    assert result.one() == (True, False, True, False)
+
