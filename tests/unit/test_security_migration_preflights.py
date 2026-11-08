@@ -24,7 +24,7 @@ def test_webhook_and_rescue_reconciliation_refuses_to_replace_missing_evidence()
     assert "CREATE TABLE IF NOT EXISTS" not in source.upper()
 
 
-def test_signed_rls_migration_rejects_unsafe_roles_and_memberships_in_both_directions():
+def test_signed_rls_migration_rejects_unsafe_runtime_role_memberships():
     source = _migration("0050_signed_rls_identity_hardening.py")
 
     assert "nlc_app_role" in source
@@ -35,9 +35,12 @@ def test_signed_rls_migration_rejects_unsafe_roles_and_memberships_in_both_direc
     assert "pg_auth_members" in source
     assert "member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in source
     assert "granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in source
-    # This migration rejects every membership in either direction, which
-    # is stricter than merely allowing trusted privileged members.
-    assert "must have no role memberships in either direction" in source
+    # Runtime roles cannot inherit another role. A restricted runtime role
+    # may only be granted to a trusted SUPERUSER/BYPASSRLS administrator.
+    assert (
+        "restricted NLC roles may only be granted to trusted "
+        "SUPERUSER/BYPASSRLS administrators and must not inherit other roles"
+    ) in source
     assert "IF EXISTS (" in source
     assert "NOT (member_role.rolsuper OR member_role.rolbypassrls)" in source
     assert "restricted NLC roles may only be granted to trusted SUPERUSER/BYPASSRLS administrators" in source
