@@ -285,6 +285,8 @@ class SubscriptionService:
                 SubscriptionPlanPrice.billing_interval == interval,
                 SubscriptionPlanPrice.is_active.is_(True),
             )
+            .with_for_update()
+        )
         )
         # Do not SELECT FOR UPDATE the customer-visible catalogue. PostgreSQL
         # applies UPDATE RLS to row-locking reads, hiding prices from customers.

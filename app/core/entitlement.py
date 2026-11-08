@@ -73,6 +73,53 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db_for_user
+from app.models.company import Company, CompanyUserAccess
+from app.models.user import User
+from app.services.subscription_service import SubscriptionService
+
+_PRIVILEGED_BYPASS_ROLES = frozenset({"SUPER_ADMIN", "ADMIN_STAFF"})
+_CUSTOMER_ROLES = frozenset({"CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "LEGAL_STAFF"})
+
+
+async def _company_contexts(
+    request: Request,
+    db: AsyncSession,
+    current_user: User,
+) -> list[uuid.UUID]:
+    role_value = str(getattr(current_user.role, "value", current_user.role))
+    raw_company_id = (
+        request.path_params.get("company_id")
+        or request.query_params.get("company_id")
+    )
+    if raw_company_id is None and request.method not in {"GET", "HEAD"}:
+        try:
+            payload = await request.json()
+        except (ValueError, TypeError):
+            payload = None
+        if isinstance(payload, dict):
+            raw_company_id = payload.get("company_id")
+
+    if raw_company_id:
+        try:
+            company_id = uuid.UUID(str(raw_company_id))
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail="Invalid company context") from exc
+        if role_value == "LEGAL_STAFF":
+            from app.core.company_authorization import ensure_staff_company_scope
+
+            await ensure_staff_company_scope(company_id, current_user, db)
+            return [company_id]
+        membership = await db.execute(
+            select(CompanyUserAccess.company_id).where(
+                CompanyUserAccess.company_id == company_id,
+                CompanyUserAccess.user_id == current_user.id,
+                CompanyUserAccess.is_active.is_(True),
+            ).limit(1)
+        )
+        if membership.scalar_one_or_none() is None:
+            raise HTTPException(status_code=403, detail="Active company membership is required.")
+        return [company_id]
+
 from app.models.company import CompanyUserAccess
 from app.models.user import User
 from app.services.subscription_service import SubscriptionService
@@ -202,6 +249,9 @@ async def _company_contexts(
         result = await db.execute(
             select(Document.company_id).where(Document.id == document_id).limit(1)
         )
+        company_id = result.scalar_one_or_none()
+        if company_id is None:
+            raise HTTPException(status_code=404, detail="Document not found")
         document_company_id = result.scalar_one_or_none()
         if document_company_id is None:
             raise HTTPException(status_code=404, detail="Document not found")
@@ -317,6 +367,14 @@ async def _company_contexts(
         select(CompanyUserAccess.company_id).where(
             CompanyUserAccess.user_id == current_user.id,
             CompanyUserAccess.is_active.is_(True),
+        )
+    )
+    return list(dict.fromkeys(result.scalars().all()))
+
+
+def require_entitlement(feature_name: str):
+    """Require an active paid feature for the exact company being accessed.
+
             CompanyUserAccess.can_view_financials.is_(True),
         )
     )

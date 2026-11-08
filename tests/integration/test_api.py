@@ -1448,6 +1448,14 @@ class TestSubscriptionEntitlementRouteGates:
 
     @pytest.mark.asyncio
     async def test_legal_staff_requires_assignment_and_paid_entitlement(
+        self, api_client, legal_tok, db_company, legal_staff_company_scope
+    ):
+        response = await api_client.get(
+            f"/api/v1/companies/{db_company.id}/compliance",
+            headers=_auth(legal_tok),
+        )
+        assert response.status_code == 402
+
         self, api_client, legal_token, db_company, legal_staff_company_scope
     ):
         response = await api_client.get(
