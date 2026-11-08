@@ -78,7 +78,13 @@ def _applied_score_impacts(flags) -> list[dict]:
     The returned value is aligned by index with the original flags list so
     repeated rule IDs cannot overwrite one another.
     """
-    from app.rule_engine.engine import CATEGORY_CAPS, LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS, RuleState
+    from app.rule_engine.engine import (
+        AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
+        CATEGORY_CAPS,
+        LEGAL_SCORE_RELEASED,
+        VERIFIED_RULE_IDS,
+        RuleState,
+    )
 
     remaining = {name: cap[0] for name, cap in CATEGORY_CAPS.items()}
     results = []
@@ -112,9 +118,7 @@ def _applied_score_impacts(flags) -> list[dict]:
         )
         authorised_black_override = (
             flag.rule_id in VERIFIED_RULE_IDS
-            and flag.rule_id in __import__(
-                "app.rule_engine.engine", fromlist=["AUTHORIZED_BLACK_OVERRIDE_RULE_IDS"]
-            ).AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+            and flag.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
             and getattr(flag, "is_black_override", False) is True
             and severity_value == "BLACK"
         )
