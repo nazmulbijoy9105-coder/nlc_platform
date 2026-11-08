@@ -37,6 +37,8 @@ from sqlalchemy import (
 from sqlalchemy.engine import Connection, make_url
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from app.db_url import is_render_runtime, normalize_asyncpg_url
+
 
 class NLCPostgresqlImpl(PostgresqlImpl):
     """Use a 255-character Alembic revision column for NLC migrations."""
@@ -269,7 +271,7 @@ def validate_production_migration_role(connection: Connection) -> None:
     Render sets RENDER=true. Other production hosts must explicitly set
     ENVIRONMENT=production. Local development and CI do not run this gate.
     """
-    is_render = os.environ.get("RENDER", "").strip().lower() == "true"
+    is_render = is_render_runtime(os.environ)
     environment = os.environ.get("ENVIRONMENT", "").strip().lower()
     if not (is_render or environment in {"prod", "production"}):
         return
@@ -316,8 +318,6 @@ def validate_production_migration_role(connection: Connection) -> None:
 
 async def run_async_migrations() -> None:
     """Run Alembic with the privileged migration URL and verified TLS."""
-    from app.db_url import normalize_asyncpg_url
-
     configuration = config.get_section(config.config_ini_section, {})
     is_render = os.environ.get("RENDER", "").strip().lower() == "true"
     environment = os.environ.get("ENVIRONMENT", "").strip().lower()
