@@ -653,7 +653,7 @@ class CompanyService(BaseService[Company]):
         ]
         agm_count = len(verified_held_agms) if agm_history_verified else None
         last_verified_agm_date = (
-            max((row.agm_date for row in verified_held_agms), default=None)
+            max((row.agm_date for row in verified_held_agms if row.agm_date is not None), default=None)
             if agm_history_verified else None
         )
 
@@ -842,7 +842,11 @@ class CompanyService(BaseService[Company]):
             "last_agm_date": last_verified_agm_date,
             "agm_history_verified": agm_history_verified,
             "agm_history_evidence_ref": company.agm_history_evidence_ref if agm_history_verified else None,
-            "agm_history_verified_at": company.agm_history_verified_at.date() if agm_history_verified else None,
+            "agm_history_verified_at": (
+                company.agm_history_verified_at.date()
+                if agm_history_verified and company.agm_history_verified_at is not None
+                else None
+            ),
             "agm_history_verified_by": str(company.agm_history_verified_by) if agm_history_verified else None,
             "agm_extension_granted_until": company.agm_extension_granted_until,
             "agm_extension_application_date": company.agm_extension_application_date,
@@ -856,7 +860,9 @@ class CompanyService(BaseService[Company]):
             "agm_extension_verified_at": company.agm_extension_verified_at.date() if company.agm_extension_verified_at else None,
             "agm_extension_verified_by": str(company.agm_extension_verified_by) if company.agm_extension_verified_by else None,
             "agm_held_this_cycle": (
-                current_cycle_agm.agm_held if current_cycle_verified else None
+                current_cycle_agm.agm_held
+                if current_cycle_verified and current_cycle_agm is not None
+                else None
             ),
             "agm_scheduled_date": (
                 current_cycle_agm.agm_deadline if current_cycle_agm is not None else None
