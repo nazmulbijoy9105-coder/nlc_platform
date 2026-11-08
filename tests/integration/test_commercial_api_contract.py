@@ -206,3 +206,59 @@ async def test_engagement_rejects_invalid_status_jump(
     )
     assert response.status_code == 409, response.text
 
+@pytest.mark.asyncio
+async def test_concurrent_competing_quotation_acceptance_is_serialized(
+    api_client, commercial_admin_token, db_company
+):
+    engagement = await _create_engagement(
+        api_client, commercial_admin_token, db_company.id
+    )
+    first_quote = await _create_quotation(
+        api_client, commercial_admin_token, db_company.id, engagement["engagement_id"]
+    )
+    second_quote = await _create_quotation(
+        api_client, commercial_admin_token, db_company.id, engagement["engagement_id"]
+    )
+
+    first_response, second_response = await asyncio.gather(
+        api_client.patch(
+            f"/api/v1/commercial/quotations/{first_quote['quotation_id']}/accept",
+            headers=_auth(commercial_admin_token),
+        ),
+        api_client.patch(
+            f"/api/v1/commercial/quotations/{second_quote['quotation_id']}/accept",
+            headers=_auth(commercial_admin_token),
+        ),
+    )
+
+    assert sorted([first_response.status_code, second_response.status_code]) == [200, 409]
+    accepted = first_response if first_response.status_code == 200 else second_response
+    assert accepted.json()["status"] == "ACCEPTED"
+
+
+@pytest.mark.asyncio
+async def test_concurrent_accept_and_reject_of_same_quotation_is_serialized(
+    api_client, commercial_admin_token, db_company
+):
+    engagement = await _create_engagement(
+        api_client, commercial_admin_token, db_company.id
+    )
+    quotation = await _create_quotation(
+        api_client, commercial_admin_token, db_company.id, engagement["engagement_id"]
+    )
+
+    accept_response, reject_response = await asyncio.gather(
+        api_client.patch(
+            f"/api/v1/commercial/quotations/{quotation['quotation_id']}/accept",
+            headers=_auth(commercial_admin_token),
+        ),
+        api_client.patch(
+            f"/api/v1/commercial/quotations/{quotation['quotation_id']}/reject",
+            headers=_auth(commercial_admin_token),
+            json={"reason": "Concurrent rejection regression"},
+        ),
+    )
+
+    assert sorted([accept_response.status_code, reject_response.status_code]) == [200, 409]
+    successful = accept_response if accept_response.status_code == 200 else reject_response
+    assert successful.json()["status"] in {"ACCEPTED", "REJECTED"}
