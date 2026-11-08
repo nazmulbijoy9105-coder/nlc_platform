@@ -22,6 +22,29 @@ def test_production_url_without_sslmode_still_uses_verified_tls():
     assert context.check_hostname is True
 
 
+def test_neon_endpoint_requires_verified_tls_without_runtime_flag():
+    url, context = normalize_asyncpg_url(
+        "postgresql://nlc_app:secret@ep-example.ap-southeast-1.aws.neon.tech/neondb",
+        require_tls=False,
+    )
+
+    assert url.startswith("postgresql+asyncpg://")
+    assert isinstance(context, ssl.SSLContext)
+    assert context.verify_mode == ssl.CERT_REQUIRED
+    assert context.check_hostname is True
+
+
+def test_neon_pooler_endpoint_also_requires_verified_tls():
+    _, context = normalize_asyncpg_url(
+        "postgresql://nlc_app:secret@ep-example-pooler.ap-southeast-1.aws.neon.tech/neondb",
+        require_tls=False,
+    )
+
+    assert isinstance(context, ssl.SSLContext)
+    assert context.verify_mode == ssl.CERT_REQUIRED
+    assert context.check_hostname is True
+
+
 @pytest.mark.parametrize("parameter", ["sslmode=require", "ssl=require"])
 def test_libpq_tls_parameters_are_translated_to_asyncpg_context(parameter):
     url, context = normalize_asyncpg_url(
@@ -42,6 +65,14 @@ def test_production_refuses_explicit_tls_disable():
         )
 
 
+def test_neon_refuses_explicit_tls_disable_even_outside_render():
+    with pytest.raises(ValueError, match="cannot be disabled"):
+        normalize_asyncpg_url(
+            "postgresql://nlc_app:secret@ep-example.ap-southeast-1.aws.neon.tech/neondb?sslmode=disable",
+            require_tls=False,
+        )
+
+
 def test_development_can_keep_tls_disabled_without_ssl_connect_argument():
     url, context = normalize_asyncpg_url(
         "postgresql://nlc_app:secret@localhost/neondb?sslmode=disable",
@@ -51,6 +82,7 @@ def test_development_can_keep_tls_disabled_without_ssl_connect_argument():
     assert "sslmode" not in url
     assert context is None
 
+
 @pytest.mark.parametrize(
     "raw_url",
     ["", "mysql://user:secret@db.example.com/nlc"],
@@ -58,7 +90,6 @@ def test_development_can_keep_tls_disabled_without_ssl_connect_argument():
 def test_rejects_empty_or_non_postgresql_connection_urls(raw_url):
     with pytest.raises(ValueError):
         normalize_asyncpg_url(raw_url, require_tls=True)
-
 
 
 def test_libpq_channel_binding_is_removed_but_verified_tls_is_preserved():
