@@ -5,6 +5,7 @@ The engine is parsed as Python syntax. Rule IDs and statutory bases are read
 from the same ComplianceFlag constructor call, not inferred from nearby text.
 """
 import ast
+import re
 import csv
 from collections import Counter
 from pathlib import Path
@@ -499,3 +500,23 @@ def test_legal_reconciliation_checklist_covers_all_85_unverified_rules():
     assert all(row["Status"] == "RECONCILE" for row in rows)
     assert all(row["Legal Team Sign-Off"] == "PENDING" for row in rows)
     assert all(row["Candidate Provision"].startswith("UNVERIFIED CANDIDATE — ") for row in rows)
+
+
+def test_counsel_docket_covers_all_85_rules_and_matches_unverified_candidates():
+    path = ROOT / "docs" / "legal" / "85_RULE_COUNSEL_VALIDATION_DOCKET.md"
+    content = path.read_text(encoding="utf-8")
+    headings = list(re.finditer(r"^### ([A-Z]{2,5}-\\d{3}) —", content, re.MULTILINE))
+    ids = [match.group(1) for match in headings]
+    assert len(ids) == EXPECTED
+    assert set(ids) == set(STATUTORY_RULE_REGISTRY)
+
+    for index, match in enumerate(headings):
+        end = headings[index + 1].start() if index + 1 < len(headings) else len(content)
+        block = content[match.start():end]
+        rule = STATUTORY_RULE_REGISTRY[match.group(1)]
+        assert f"- **Catalogue anchor:** {rule.law}" in block
+        assert (
+            "- **Current canonical provision candidate (unverified):** "
+            f"{rule.provision}"
+        ) in block
+        assert "OPEN — NOT COUNSEL VALIDATED" in block
