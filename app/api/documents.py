@@ -36,6 +36,8 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
+from app.core.entitlement import require_entitlement
+from app.core.company_authorization import ensure_staff_company_scope
 from app.models.enums import DocumentType
 from app.models.user import User
 from app.services.document_service import DocumentService, PromptTemplateService
@@ -167,6 +169,10 @@ def _doc_to_response(doc) -> DocumentResponse:
 @router.get(
     "",
     response_model=list[DocumentResponse],
+    dependencies=[
+        Depends(require_roles("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN")),
+        Depends(require_entitlement("document_management")),
+    ],
     dependencies=[Depends(require_entitlement("document_management"))],
     summary="List all documents across portfolio",
 )
@@ -177,9 +183,9 @@ async def list_all_documents(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    from sqlalchemy import select
+    from sqlalchemy import or_, select
 
-    from app.models.company import CompanyUserAccess
+    from app.models.company import Company, CompanyUserAccess
     from app.models.documents import Document
 
     client_roles = ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY")
@@ -247,7 +253,13 @@ async def list_all_documents(
     "/templates",
     response_model=list[TemplateResponse],
     dependencies=[Depends(require_entitlement("document_management"))],
+    dependencies=[
+        Depends(require_roles("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN")),
+        Depends(require_entitlement("document_management")),
+    ],
     summary="List all available AI document templates",
+    dependencies=[Depends(require_roles("LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN"))],
+    summary="List the non-company-specific AI document template catalogue",
 )
 async def list_templates(
     document_type: DocumentType | None = None,
@@ -387,6 +399,10 @@ async def generate_document(
 @router.get(
     "/{company_id}",
     response_model=list[DocumentResponse],
+    dependencies=[
+        Depends(require_company_access("company_id")),
+        Depends(require_entitlement("document_management")),
+    ],
     dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("document_management"))],
     summary="List all documents for a company",
 )
@@ -414,6 +430,26 @@ async def list_documents(
 # ---------------------------------------------------------------------------
 
 async def _assert_document_entitlement(doc, current_user: User, db: AsyncSession) -> None:
+    """Verify the entitlement against the document's actual owning company."""
+    role = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    if role in ("SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF"):
+        return
+    from sqlalchemy import select
+
+    from app.models.company import CompanyUserAccess
+    from app.services.subscription_service import SubscriptionService
+
+    membership = await db.execute(
+        select(CompanyUserAccess.company_id).where(
+            CompanyUserAccess.user_id == current_user.id,
+            CompanyUserAccess.company_id == doc.company_id,
+            CompanyUserAccess.is_active.is_(True),
+            CompanyUserAccess.can_view_financials.is_(True),
+        ).limit(1)
+    )
+    if membership.scalar_one_or_none() is None:
+        raise HTTPException(status_code=403, detail="Active company financial access is required.")
+
     """Verify entitlement against the document's actual owning company."""
     role = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
     if role in ("SUPER_ADMIN", "ADMIN_STAFF"):
@@ -438,6 +474,10 @@ async def _assert_document_entitlement(doc, current_user: User, db: AsyncSession
         company_id=doc.company_id,
         feature_code="document_management",
     ):
+        raise HTTPException(
+            status_code=402,
+            detail="This company does not have an active document-management entitlement.",
+        )
         raise HTTPException(status_code=402, detail="This company does not have an active document-management entitlement.")
 
 
@@ -540,6 +580,8 @@ async def approve_document(
     doc_check = await svc.get_by_id_or_404(document_id)
     await ensure_staff_company_scope(doc_check.company_id, current_user, db)
 
+    doc_check = await svc.get_by_id_or_404(document_id)
+    await _assert_document_company_access(doc_check, current_user, db)
     doc = await svc.approve_document(  # type: ignore
         document_id=document_id,
         approved_by=current_user.id,
@@ -587,6 +629,7 @@ async def release_document(
     activity = ActivityService(db)
 
     doc = await svc.get_by_id_or_404(document_id)
+    await _assert_document_company_access(doc, current_user, db)
     await ensure_staff_company_scope(doc.company_id, current_user, db)
     _require_document_legal_release(doc.document_type)
     if not doc.human_approved:
@@ -639,8 +682,10 @@ async def get_pdf_url(
 
     doc = await svc.get_by_id_or_404(document_id)
 
-    # Explicit company-access check (IDOR defence — path has no company_id)
+    # Explicit company-access and paid-entitlement checks (IDOR defence —
+    # the route carries document_id rather than its owning company_id).
     await _assert_document_company_access(doc, current_user, db)
+    await _assert_document_entitlement(doc, current_user, db)
 
     # SEC-010: Clients may only download approved documents from their company
     if current_user.role in ("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY"):

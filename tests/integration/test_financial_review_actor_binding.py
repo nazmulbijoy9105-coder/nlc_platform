@@ -15,7 +15,7 @@ from app.models.database import set_rls_context
 @pytest.mark.asyncio
 @pytest.mark.parametrize("allocation_event_matches_invoice", [True, False])
 async def test_approval_requires_allocation_event_for_submission_invoice(
-    db, db_company, db_user, allocation_event_matches_invoice
+    db, db_company, db_user, db_super_admin, allocation_event_matches_invoice
 ):
     """The deferred DB trigger rejects an allocation event naming another invoice."""
     from app.models.finance import (
@@ -40,7 +40,7 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
             tax_bdt=Decimal("0.00"),
             due_at=None,
             notes=None,
-            actor_id=db_user.id,
+            actor_id=db_super_admin.id,
         )
         invoices.append(await service.issue_invoice(invoice.id))
 
@@ -70,14 +70,38 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
         source_submission_id=submission.id,
         status="SETTLED",
         received_at=now,
-        verified_by=db_user.id,
+        verified_by=db_super_admin.id,
         verified_at=now,
         created_by=db_user.id,
     )
     # The source claim must exist before the receipt's composite FK can bind
     # it. Explicit flush avoids relying on mapper/table ordering in add_all().
     db.add(submission)
+    # A claim must first be persisted in PENDING_REVIEW. The production
+    # approval service later updates that existing row to APPROVED before it
+    # creates the linked receipt; inserting a new row as APPROVED is forbidden.
+    db.add(submission)
     await db.flush()
+    # The source claim must exist before the receipt's composite FK can bind
+    # it. Explicit flush avoids relying on mapper/table ordering in add_all().
+    db.add(submission)
+    await db.flush()
+
+    # The receipt's BEFORE INSERT guard requires the exact source claim to be
+    # approved first. The deferred ledger constraint validates the complete
+    # payment/allocation/event chain when forced below.
+    await set_rls_context(db, str(db_super_admin.id))
+    # New claims must enter PENDING_REVIEW. Production then transitions the
+    # existing row to APPROVED before creating the linked receipt.
+    db.add(submission)
+    await db.flush()
+    assert submission.status == "PENDING_REVIEW"
+    submission.status = "APPROVED"
+    submission.reviewed_by = db_super_admin.id
+    submission.reviewed_at = now
+    submission.review_note = "Regression test approval"
+    await db.flush()
+
     db.add(payment)
     await db.flush()
 
@@ -87,7 +111,7 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
         invoice_id=submission_invoice.id,
         amount_bdt=amount,
         currency="BDT",
-        created_by=db_user.id,
+        created_by=db_super_admin.id,
     ))
     allocation_event_invoice_id = (
         submission_invoice.id if allocation_event_matches_invoice else other_invoice.id
@@ -102,7 +126,7 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
             amount_bdt=amount,
             currency="BDT",
             reference=submission.payer_reference,
-            actor_id=db_user.id,
+            actor_id=db_super_admin.id,
             event_metadata={"method": "BANK_TRANSFER", "channel": "OFFLINE"},
         ),
         PaymentLedgerEvent(
@@ -114,16 +138,19 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
             amount_bdt=amount,
             currency="BDT",
             reference=submission_invoice.invoice_number,
-            actor_id=db_user.id,
+            actor_id=db_super_admin.id,
             event_metadata={"allocation": "FULL_SUBMISSION"},
         ),
     ])
     await db.flush()
 
     # The trigger checks the signed actor, not an unsigned session GUC.
-    await set_rls_context(db, str(db_user.id))
+    await set_rls_context(db, str(db_super_admin.id))
 
     async def approve_and_force_deferred_constraint():
+        # The claim was already approved above while the signed reviewer was
+        # active. Force the deferred ledger assertion after receipt/allocation
+        # evidence has been inserted; do not attempt a second state transition.
         await db.execute(
             text("""
                 UPDATE public.payment_submissions

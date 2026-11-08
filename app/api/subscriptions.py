@@ -20,6 +20,7 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
+from app.models.finance import ClientSubscription
 from app.models.finance import ClientSubscription, Invoice
 from app.models.user import User
 from app.services.notification_service import ActivityService
