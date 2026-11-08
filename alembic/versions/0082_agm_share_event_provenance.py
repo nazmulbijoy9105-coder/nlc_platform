@@ -251,12 +251,21 @@ def upgrade() -> None:
         SET search_path = pg_catalog, public
         AS $function$
         BEGIN
+            IF NEW.company_id IS DISTINCT FROM OLD.company_id
+                OR NEW.agm_id IS DISTINCT FROM OLD.agm_id
+                OR NEW.submitted_by IS DISTINCT FROM OLD.submitted_by
+                OR NEW.submitted_at IS DISTINCT FROM OLD.submitted_at
+            THEN
+                RAISE EXCEPTION 'AGM evidence identity and submitter provenance are immutable';
+            END IF;
             IF OLD.entitled_member_verified AND (
                 NEW.entitled_member_verified IS DISTINCT FROM TRUE
                 OR NEW.recipient_key IS DISTINCT FROM OLD.recipient_key
                 OR NEW.recipient_name IS DISTINCT FROM OLD.recipient_name
                 OR NEW.shareholder_id IS DISTINCT FROM OLD.shareholder_id
                 OR NEW.entitlement_evidence_ref IS DISTINCT FROM OLD.entitlement_evidence_ref
+                OR NEW.entitlement_verified_at IS DISTINCT FROM OLD.entitlement_verified_at
+                OR NEW.entitlement_verified_by IS DISTINCT FROM OLD.entitlement_verified_by
             ) THEN
                 RAISE EXCEPTION 'Verified AGM member identity/evidence is immutable; add a correction record';
             END IF;
@@ -265,6 +274,8 @@ def upgrade() -> None:
                 OR NEW.notice_delivery_status IS DISTINCT FROM OLD.notice_delivery_status
                 OR NEW.notice_sent_date IS DISTINCT FROM OLD.notice_sent_date
                 OR NEW.notice_evidence_ref IS DISTINCT FROM OLD.notice_evidence_ref
+                OR NEW.notice_verified_at IS DISTINCT FROM OLD.notice_verified_at
+                OR NEW.notice_verified_by IS DISTINCT FROM OLD.notice_verified_by
             ) THEN
                 RAISE EXCEPTION 'Verified AGM notice evidence is immutable; add a correction record';
             END IF;
@@ -273,6 +284,8 @@ def upgrade() -> None:
                 OR NEW.consent_given IS DISTINCT FROM OLD.consent_given
                 OR NEW.consent_received_date IS DISTINCT FROM OLD.consent_received_date
                 OR NEW.consent_evidence_ref IS DISTINCT FROM OLD.consent_evidence_ref
+                OR NEW.consent_verified_at IS DISTINCT FROM OLD.consent_verified_at
+                OR NEW.consent_verified_by IS DISTINCT FROM OLD.consent_verified_by
             ) THEN
                 RAISE EXCEPTION 'Verified short-notice consent evidence is immutable; add a correction record';
             END IF;
@@ -280,6 +293,8 @@ def upgrade() -> None:
                 NEW.omission_verified IS DISTINCT FROM TRUE
                 OR NEW.omission_accidental IS DISTINCT FROM OLD.omission_accidental
                 OR NEW.omission_evidence_ref IS DISTINCT FROM OLD.omission_evidence_ref
+                OR NEW.omission_verified_at IS DISTINCT FROM OLD.omission_verified_at
+                OR NEW.omission_verified_by IS DISTINCT FROM OLD.omission_verified_by
             ) THEN
                 RAISE EXCEPTION 'Verified accidental-omission evidence is immutable; add a correction record';
             END IF;
@@ -298,6 +313,12 @@ def upgrade() -> None:
         SET search_path = pg_catalog, public
         AS $function$
         BEGIN
+            IF NEW.company_id IS DISTINCT FROM OLD.company_id
+                OR NEW.submitted_by IS DISTINCT FROM OLD.submitted_by
+                OR NEW.submitted_at IS DISTINCT FROM OLD.submitted_at
+            THEN
+                RAISE EXCEPTION 'Share event identity and submitter provenance are immutable';
+            END IF;
             IF OLD.event_verified AND (
                 NEW.event_verified IS DISTINCT FROM TRUE
                 OR NEW.event_reference IS DISTINCT FROM OLD.event_reference
@@ -307,6 +328,8 @@ def upgrade() -> None:
                 OR NEW.share_transfer_id IS DISTINCT FROM OLD.share_transfer_id
                 OR NEW.shareholder_id IS DISTINCT FROM OLD.shareholder_id
                 OR NEW.shares_affected IS DISTINCT FROM OLD.shares_affected
+                OR NEW.event_verified_at IS DISTINCT FROM OLD.event_verified_at
+                OR NEW.event_verified_by IS DISTINCT FROM OLD.event_verified_by
             ) THEN
                 RAISE EXCEPTION 'Verified share event facts are immutable; submit a correction event';
             END IF;
@@ -316,6 +339,8 @@ def upgrade() -> None:
                 OR NEW.filing_status IS DISTINCT FROM OLD.filing_status
                 OR NEW.filing_date IS DISTINCT FROM OLD.filing_date
                 OR NEW.filing_evidence_ref IS DISTINCT FROM OLD.filing_evidence_ref
+                OR NEW.filing_verified_at IS DISTINCT FROM OLD.filing_verified_at
+                OR NEW.filing_verified_by IS DISTINCT FROM OLD.filing_verified_by
             ) THEN
                 RAISE EXCEPTION 'Verified filing status is immutable; submit a correction event';
             END IF;
@@ -324,6 +349,8 @@ def upgrade() -> None:
                 OR NEW.certificate_issued IS DISTINCT FROM OLD.certificate_issued
                 OR NEW.certificate_issue_date IS DISTINCT FROM OLD.certificate_issue_date
                 OR NEW.certificate_evidence_ref IS DISTINCT FROM OLD.certificate_evidence_ref
+                OR NEW.certificate_verified_at IS DISTINCT FROM OLD.certificate_verified_at
+                OR NEW.certificate_verified_by IS DISTINCT FROM OLD.certificate_verified_by
             ) THEN
                 RAISE EXCEPTION 'Verified certificate status is immutable; submit a correction event';
             END IF;
