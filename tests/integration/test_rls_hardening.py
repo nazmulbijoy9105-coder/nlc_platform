@@ -860,6 +860,13 @@ async def test_client_cannot_escalate_own_role_or_reactivate_account(db, db_clie
     from sqlalchemy.exc import DBAPIError
     from app.models.enums import UserRole
 
+    # Put the fixture into an inactive state through the trusted service
+    # principal, then verify that the account cannot reactivate itself.
+    await set_admin_context(db)
+    await db.execute(
+        text("UPDATE public.users SET is_active = FALSE WHERE id = :user_id"),
+        {"user_id": db_client_user.id},
+    )
     await set_rls_context(db, str(db_client_user.id))
 
     # The users_self_update policy is intentionally row-scoped. The database
