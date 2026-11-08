@@ -42,11 +42,21 @@ async def test_runtime_role_is_non_bypass_and_has_no_dangerous_privileges(db):
             "SELECT count(*) FROM pg_auth_members m "
             "JOIN pg_roles granted_role ON granted_role.oid = m.roleid "
             "JOIN pg_roles member_role ON member_role.oid = m.member "
-            "WHERE granted_role.rolname = 'nlc_app_role' "
-            "OR member_role.rolname = 'nlc_app_role'"
+            "WHERE member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role') "
+            "OR (granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role') "
+            "AND NOT (member_role.rolsuper OR member_role.rolbypassrls))"
         )
     )
     assert memberships.scalar_one() == 0
+
+    audit_role = await db.execute(
+        text(
+            "SELECT rolcanlogin, rolsuper, rolcreatedb, rolcreaterole, "
+            "rolinherit, rolreplication, rolbypassrls "
+            "FROM pg_roles WHERE rolname = 'nlc_ci_audit_role'"
+        )
+    )
+    assert audit_role.one() == (True, False, False, False, False, False, False)
 
     for privilege in ("TRUNCATE", "TRIGGER", "REFERENCES"):
         result = await db.execute(
@@ -842,3 +852,130 @@ async def test_legal_staff_cannot_read_engagements_quotations_or_revenue_pipelin
         text("SELECT count(*) FROM public.vw_revenue_pipeline")
     )
     assert revenue_rows.scalar_one() == 0
+
+@pytest.mark.asyncio
+async def test_company_charges_are_forced_rls_and_financially_scoped(
+    db, db_company
+):
+    import uuid
+    from datetime import date
+    from decimal import Decimal
+
+    from app.models.charges import CompanyCharge
+    from app.models.company import CompanyUserAccess
+    from app.models.enums import UserRole
+    from app.models.user import User
+
+    await set_admin_context(db)
+    charge = CompanyCharge(
+        company_id=db_company.id,
+        creation_date=date(2025, 1, 10),
+        charge_type="MORTGAGE",
+        amount_bdt=Decimal("250000.00"),
+        charge_holder="RLS Test Bank",
+    )
+    db.add(charge)
+    await db.flush()
+
+    view_user = User(
+        id=uuid.uuid4(),
+        email=f"charge-view-{uuid.uuid4().hex[:8]}@nlctest.com",
+        full_name="Charge View Only",
+        password_hash="!test-no-login",
+        role=UserRole.CLIENT_VIEW_ONLY,
+        is_active=True,
+        totp_enabled=False,
+    )
+    finance_user = User(
+        id=uuid.uuid4(),
+        email=f"charge-finance-{uuid.uuid4().hex[:8]}@nlctest.com",
+        full_name="Charge Finance Viewer",
+        password_hash="!test-no-login",
+        role=UserRole.CLIENT_VIEW_ONLY,
+        is_active=True,
+        totp_enabled=False,
+    )
+    db.add_all([view_user, finance_user])
+    await db.flush()
+    db.add_all([
+        CompanyUserAccess(
+            user_id=view_user.id, company_id=db_company.id,
+            can_edit=False, can_view_financials=False, is_active=True,
+        ),
+        CompanyUserAccess(
+            user_id=finance_user.id, company_id=db_company.id,
+            can_edit=False, can_view_financials=True, is_active=True,
+        ),
+    ])
+    await db.flush()
+
+    relation = await db.execute(
+        text(
+            "SELECT c.relrowsecurity, c.relforcerowsecurity "
+            "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+            "WHERE n.nspname = 'public' AND c.relname = 'company_charges'"
+        )
+    )
+    assert relation.one() == (True, True)
+
+    policies = await db.execute(
+        text(
+            "SELECT policyname, cmd, qual, with_check FROM pg_policies "
+            "WHERE schemaname = 'public' AND tablename = 'company_charges'"
+        )
+    )
+    policy_rows = {row[0]: row for row in policies.fetchall()}
+    assert set(policy_rows) == {
+        "company_charges_tenant_select",
+        "company_charges_tenant_insert",
+        "company_charges_tenant_update",
+    }
+    assert "nlc_can_view_financials_company" in (policy_rows["company_charges_tenant_select"][2] or "")
+    for name in ("company_charges_tenant_insert", "company_charges_tenant_update"):
+        expressions = " ".join(str(value or "") for value in policy_rows[name][2:])
+        assert "nlc_can_manage_financials_company" in expressions
+    delete_privilege = await db.execute(
+        text("SELECT has_table_privilege('nlc_app_role', 'public.company_charges', 'DELETE')")
+    )
+    assert delete_privilege.scalar_one() is False
+
+    await set_rls_context(db, str(view_user.id))
+    hidden = await db.execute(
+        text("SELECT count(*) FROM company_charges WHERE company_id = :company_id"),
+        {"company_id": db_company.id},
+    )
+    assert hidden.scalar_one() == 0
+
+    await set_rls_context(db, str(finance_user.id))
+    visible = await db.execute(
+        text("SELECT count(*) FROM company_charges WHERE company_id = :company_id"),
+        {"company_id": db_company.id},
+    )
+    assert visible.scalar_one() == 1
+
+
+@pytest.mark.asyncio
+async def test_client_cannot_change_own_role_or_active_status(db, db_client_user):
+    """RLS self-row updates must not permit privilege/activation changes."""
+    from sqlalchemy.exc import DBAPIError
+    from app.models.enums import UserRole
+
+    await set_rls_context(db, str(db_client_user.id))
+
+    # The users_self_update policy is intentionally row-scoped. The database
+    # trigger must independently reject changes to authorization attributes.
+    with pytest.raises(DBAPIError, match="Only a verified SUPER_ADMIN"):
+        async with db.begin_nested():
+            await db.execute(
+                text("UPDATE public.users SET role = :role WHERE id = :user_id"),
+                {"role": UserRole.SUPER_ADMIN.value, "user_id": db_client_user.id},
+            )
+
+    with pytest.raises(DBAPIError, match="Only a verified SUPER_ADMIN"):
+        async with db.begin_nested():
+            await db.execute(
+                text("UPDATE public.users SET is_active = FALSE WHERE id = :user_id"),
+                {"user_id": db_client_user.id},
+            )
+
+    await db.rollback()

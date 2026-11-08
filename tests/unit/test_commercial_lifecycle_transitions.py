@@ -17,3 +17,14 @@ def test_non_enum_legacy_states_are_rejected():
     assert not validate_engagement_transition("CONFIRMED", "STARTED")
     assert not validate_engagement_transition("QUOTED", "REJECTED")
     assert not validate_engagement_transition("UNKNOWN", "COMPLETED")
+
+
+def test_transition_validator_accepts_enum_instances_and_cancellation():
+    from app.models.enums import EngagementStatus
+
+    assert validate_engagement_transition(
+        EngagementStatus.IDENTIFIED, EngagementStatus.CANCELLED
+    )
+    assert not validate_engagement_transition(
+        EngagementStatus.IDENTIFIED, EngagementStatus.IDENTIFIED
+    )

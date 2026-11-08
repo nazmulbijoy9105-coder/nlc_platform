@@ -176,6 +176,8 @@ class SubscriptionService:
             select(SubscriptionPlanPrice).where(SubscriptionPlanPrice.plan_code == code)
         )
         existing_prices = {item.billing_interval: item for item in existing_prices_result.scalars().all()}
+        for interval, existing_price_item in existing_prices.items():
+            existing_price_item.is_active = interval in intervals
         for interval, item in existing_prices.items():
             item.is_active = interval in intervals
         for price in prices:
@@ -183,6 +185,8 @@ class SubscriptionService:
             amount = Decimal(str(price["amount_bdt"])).quantize(Decimal("0.01"))
             tax = Decimal(str(price["tax_bdt"])).quantize(Decimal("0.01"))
             tax_reference = str(price["tax_policy_reference"]).strip()
+            price_item: SubscriptionPlanPrice | None = existing_prices.get(interval)
+            if price_item is None:
             item = existing_prices.get(interval)
             if item is None:
                 self.db.add(SubscriptionPlanPrice(
@@ -192,6 +196,11 @@ class SubscriptionService:
                     currency="BDT", is_active=True,
                 ))
             else:
+                price_item.amount_bdt = amount
+                price_item.tax_bdt = tax
+                price_item.tax_policy_reference = tax_reference
+                price_item.currency = "BDT"
+                price_item.is_active = True
                 item.amount_bdt = amount
                 item.tax_bdt = tax
                 item.tax_policy_reference = tax_reference
@@ -202,6 +211,8 @@ class SubscriptionService:
             select(SubscriptionPlanFeature).where(SubscriptionPlanFeature.plan_code == code)
         )
         existing_features = {item.feature_code: item for item in existing_features_result.scalars().all()}
+        for feature_code, feature_item in existing_features.items():
+            feature_item.enabled = feature_code in requested_features
         for feature_code, item in existing_features.items():
             item.enabled = feature_code in requested_features
         for feature_code, feature in requested_features.items():
@@ -258,17 +269,28 @@ class SubscriptionService:
         interval = billing_interval.upper()
         if interval not in BILLING_INTERVALS:
             raise SubscriptionConflictError("Unsupported billing interval")
+        normalized_plan_code = plan_code.strip().upper()
+        # Serialize with finance plan edits without SELECT FOR UPDATE. Under
+        # forced RLS, customer roles intentionally have no UPDATE policy on
+        # catalogue rows, and PostgreSQL hides rows from FOR UPDATE readers.
+        await self.db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtextextended(:lock_key, 0))"),
+            {"lock_key": f"nlc:subscription-plan:{normalized_plan_code}"},
+        )
         plan_result = await self.db.execute(
             select(SubscriptionPlan, SubscriptionPlanPrice)
             .join(SubscriptionPlanPrice, SubscriptionPlanPrice.plan_code == SubscriptionPlan.plan_code)
             .where(
+                SubscriptionPlan.plan_code == normalized_plan_code,
                 SubscriptionPlan.plan_code == plan_code.upper(),
                 SubscriptionPlan.is_active.is_(True),
                 SubscriptionPlanPrice.billing_interval == interval,
                 SubscriptionPlanPrice.is_active.is_(True),
             )
-            .with_for_update()
         )
+        # Do not SELECT FOR UPDATE the customer-visible catalogue. PostgreSQL
+        # applies UPDATE RLS to row-locking reads, hiding prices from customers.
+        # The INSERT policy revalidates the exact active price snapshot.
         row = plan_result.one_or_none()
         if row is None:
             raise SubscriptionNotFoundError("Active plan price not found")
@@ -764,6 +786,7 @@ class SubscriptionService:
         if subscription.status != "PENDING":
             raise SubscriptionConflictError("Only a pending subscription request can be cancelled by finance")
         if subscription.invoice_id is not None:
+            invoice_result = await self.db.execute(
             invoice = await self.db.execute(
                 select(Invoice)
                 .where(
@@ -772,6 +795,7 @@ class SubscriptionService:
                 )
                 .with_for_update()
             )
+            invoice = invoice_result.scalar_one_or_none()
             invoice = invoice.scalar_one_or_none()
             if invoice is None:
                 raise SubscriptionConflictError("Linked subscription invoice is missing")

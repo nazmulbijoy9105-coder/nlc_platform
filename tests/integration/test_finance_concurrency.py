@@ -26,6 +26,7 @@ from app.models.finance import (
     PaymentLedgerEvent,
     PaymentSubmission,
 )
+from app.models.subscription import SubscriptionPlan, SubscriptionPlanPrice
 from app.models.user import User
 from app.services.finance_service import FinanceConflictError, FinanceService
 from app.services.subscription_service import SubscriptionService
@@ -292,6 +293,21 @@ async def _committed_active_subscription(
         )
 
         await set_rls_context(session, str(client_user_id))
+        visible_plan = await session.execute(
+            select(SubscriptionPlan.plan_code).where(
+                SubscriptionPlan.plan_code == plan_code,
+                SubscriptionPlan.is_active.is_(True),
+            )
+        )
+        visible_price = await session.execute(
+            select(SubscriptionPlanPrice.plan_code).where(
+                SubscriptionPlanPrice.plan_code == plan_code,
+                SubscriptionPlanPrice.billing_interval == "MONTHLY",
+                SubscriptionPlanPrice.is_active.is_(True),
+            )
+        )
+        assert visible_plan.scalar_one_or_none() == plan_code
+        assert visible_price.scalar_one_or_none() == plan_code
         subscription = await subscriptions.request_subscription(
             company_id=company_id,
             plan_code=plan_code,
@@ -324,6 +340,10 @@ async def _committed_active_subscription(
             review_note="PostgreSQL subscription activation integration test",
             cheque_cleared_at=None,
         )
+        # The deferred payment ledger trigger binds the reviewer to the signed
+        # principal active at approval. Commit this actor's transaction before
+        # switching to the client actor for a separate cancellation request.
+        await session.commit()
 
         if cancel_at_period_end:
             await set_rls_context(session, str(client_user_id))

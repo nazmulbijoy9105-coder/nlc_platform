@@ -1,4 +1,4 @@
-"""Regression coverage for historical Articles migration recovery and RLS."""
+"""Regression coverage for historical Articles migration recovery and signed RLS."""
 from __future__ import annotations
 
 import pytest
@@ -9,7 +9,7 @@ pytestmark = [pytest.mark.integration]
 
 
 @pytest.mark.asyncio
-async def test_articles_evidence_tables_have_signed_staff_write_policies(db):
+async def test_articles_evidence_tables_have_signed_tenant_write_policies(db):
     expected = {
         "articles_verifications": {
             "articles_verifications_company_read",
@@ -36,9 +36,14 @@ async def test_articles_evidence_tables_have_signed_staff_write_policies(db):
 
         read_policy = policies[f"{table}_company_read"]
         assert read_policy[1] == "SELECT"
-        assert "nlc_can_access_company" in (read_policy[2] or "")
+        assert "nlc_can_access_articles_company" in (read_policy[2] or "")
 
-        insert_policy = policies[f"{table}_staff_insert"]
+        insert_name = (
+            "articles_verifications_member_submit"
+            if table == "articles_verifications"
+            else "articles_verification_events_actor_insert"
+        )
+        insert_policy = policies[insert_name]
         assert insert_policy[1] == "INSERT"
         assert "nlc_current_user_id" in (insert_policy[3] or "")
         assert "nlc_can_edit_company" in (insert_policy[3] or "")
@@ -46,6 +51,7 @@ async def test_articles_evidence_tables_have_signed_staff_write_policies(db):
             assert "submitted_by" in (insert_policy[3] or "")
         else:
             assert "actor_id" in (insert_policy[3] or "")
+            assert "nlc_can_access_articles_company" in (insert_policy[3] or "")
 
         for policy in policies.values():
             for expression in (policy[2] or "", policy[3] or ""):
@@ -53,6 +59,7 @@ async def test_articles_evidence_tables_have_signed_staff_write_policies(db):
                 assert "nlc_current_user_id" not in expression.lower() or (
                     "nlc_current_user_is_staff" in expression
                     or "nlc_can_access_company" in expression
+                    or "nlc_can_access_articles_company" in expression
                     or "nlc_can_edit_company" in expression
                 )
 
@@ -61,6 +68,7 @@ async def test_articles_evidence_tables_have_signed_staff_write_policies(db):
             assert update_policy[1] == "UPDATE"
             assert "nlc_current_user_is_staff" in (update_policy[2] or "")
             assert "nlc_current_user_is_staff" in (update_policy[3] or "")
+            assert "nlc_can_access_articles_company" in (update_policy[3] or "")
 
         flags = await db.execute(
             text(
@@ -74,8 +82,23 @@ async def test_articles_evidence_tables_have_signed_staff_write_policies(db):
         assert enabled is True
         assert forced is True
 
-    # SQL grants independently prevent destructive operations on evidence.
+    helper = await db.execute(
+        text(
+            "SELECT pg_get_functiondef("
+            "'public.nlc_can_access_articles_company(uuid)'::regprocedure)"
+        )
+    )
+    helper_definition = helper.scalar_one()
+    assert "assigned_staff_id" in helper_definition
+    assert "LEGAL_STAFF" in helper_definition
+    assert "company_user_access" in helper_definition
+
     for table, privilege in (
+        ("articles_verifications", "SELECT"),
+        ("articles_verifications", "INSERT"),
+        ("articles_verifications", "UPDATE"),
+        ("articles_verification_events", "SELECT"),
+        ("articles_verification_events", "INSERT"),
         ("articles_verifications", "DELETE"),
         ("articles_verifications", "TRUNCATE"),
         ("articles_verification_events", "UPDATE"),
@@ -89,9 +112,11 @@ async def test_articles_evidence_tables_have_signed_staff_write_policies(db):
             ),
             {"table": f"public.{table}", "privilege": privilege},
         )
-        assert result.scalar_one() is False
+        allowed = privilege in {"SELECT", "INSERT", "UPDATE"} and table == "articles_verifications" or (
+            privilege in {"SELECT", "INSERT"} and table == "articles_verification_events"
+        )
+        assert result.scalar_one() is allowed
 
-    # Preserve the historical evidence integrity triggers.
     trigger_rows = await db.execute(
         text(
             "SELECT tgname FROM pg_trigger "

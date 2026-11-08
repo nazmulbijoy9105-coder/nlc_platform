@@ -21,6 +21,8 @@ Endpoints:
   PATCH /commercial/tasks/{id}/complete   Mark task complete
 """
 
+
+
 import uuid
 from datetime import date
 from decimal import Decimal
@@ -30,6 +32,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.company_authorization import ensure_staff_company_scope
 from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
@@ -38,6 +41,7 @@ from app.core.dependencies import (
 )
 from app.models.enums import EngagementStatus, RevenueTier, TaskPriority, TaskStatus
 from app.models.user import User
+from app.services.commercial_service import CommercialConflictError, EngagementService, QuotationService, TaskService
 from app.services.commercial_service import (
     CommercialConflictError,
     EngagementService,
@@ -77,7 +81,7 @@ class EngagementResponse(BaseModel):
     company_id: str
     engagement_type: str
     revenue_tier: str
-    status: str
+    status: str | None
     description: str | None
     estimated_fee_bdt: Decimal | None
     confirmed_fee_bdt: Decimal | None
@@ -111,7 +115,7 @@ class QuotationResponse(BaseModel):
     vat_bdt: Decimal
     total_fee_bdt: Decimal
     status: str
-    valid_until: str
+    valid_until: str | None
     created_at: str
 
 
@@ -131,7 +135,7 @@ class TaskCreateRequest(BaseModel):
     assigned_to: uuid.UUID | None = None
     linked_flag_id: uuid.UUID | None = None
     source_rescue_step_id: uuid.UUID | None = None
-    priority: TaskPriority = Field(default=TaskPriority.MEDIUM, description="LOW | MEDIUM | HIGH | CRITICAL")
+    priority: TaskPriority = TaskPriority.MEDIUM
 
 
 class TaskCompleteRequest(BaseModel):
@@ -143,7 +147,7 @@ class TaskResponse(BaseModel):
     company_id: str
     title: str
     description: str | None
-    status: str
+    status: str | None
     priority: str
     due_date: str | None
     assigned_to: str | None
@@ -166,7 +170,7 @@ def _engagement_to_response(e) -> EngagementResponse:
         company_id=str(e.company_id),
         engagement_type=e.engagement_type,
         revenue_tier=e.revenue_tier,
-        status=str(e.engagement_status) if e.engagement_status else None,
+        status=str(e.engagement_status),
         description=getattr(e, "engagement_title", None),
         estimated_fee_bdt=e.estimated_fee_bdt,
         confirmed_fee_bdt=e.confirmed_fee_bdt,
@@ -187,7 +191,7 @@ def _quotation_to_response(q) -> QuotationResponse:
         vat_bdt=q.vat_bdt or Decimal('0.00'),
         total_fee_bdt=q.total_bdt,
         status=q.status,
-        valid_until=q.valid_until.isoformat(),
+        valid_until=q.valid_until.isoformat() if q.valid_until else None,
         created_at=q.created_at.isoformat(),
     )
 
@@ -198,7 +202,7 @@ def _task_to_response(t) -> TaskResponse:
         company_id=str(t.company_id),
         title=t.title,
         description=t.description,
-        status=str(t.task_status) if t.task_status else None,
+        status=str(t.task_status),
         priority=t.priority,
         due_date=str(t.due_date) if t.due_date else None,
         assigned_to=str(t.assigned_to) if t.assigned_to else None,
@@ -309,9 +313,10 @@ async def advance_engagement_status(
         engagement = await svc.advance_status(
             engagement_id=engagement_id,
             new_status=body.new_status,
+            note=body.note,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found.")
 
@@ -319,9 +324,10 @@ async def advance_engagement_status(
         action="ENGAGEMENT_STATUS_UPDATED",
         resource_type="engagement",
         resource_id=str(engagement_id),
-        description=body.note or f"Engagement status → {body.new_status}",
+        description=f"Engagement status → {body.new_status}",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
+        company_id=engagement.company_id,
     )
     return _engagement_to_response(engagement)
 
@@ -362,6 +368,7 @@ async def create_quotation(
     except ValueError as exc:
         # Do not disclose whether an engagement exists in another tenant.
         raise HTTPException(status_code=404, detail="Engagement not found.") from exc
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     await activity.log(
         action="QUOTATION_CREATED",
@@ -370,6 +377,7 @@ async def create_quotation(
         description=f"Quotation {quotation.quotation_number} created",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
+        company_id=quotation.company_id,
     )
     return _quotation_to_response(quotation)
 
@@ -394,8 +402,10 @@ async def accept_quotation(
     except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
+        # Keep inaccessible or inactive engagement details tenant-safe.
         # Preserve tenant-safe not-found semantics for a missing or inaccessible engagement.
         raise HTTPException(status_code=404, detail="Quotation not found.") from exc
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
 
@@ -406,6 +416,7 @@ async def accept_quotation(
         description=f"Quotation {quotation.quotation_number} accepted",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
+        company_id=quotation.company_id,
     )
     return _quotation_to_response(quotation)
 
@@ -430,8 +441,12 @@ async def reject_quotation(
             reason=body.reason or "Rejected by authorized staff",
             rejected_by=current_user.id,
         )
-    except ValueError as exc:
+    except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except CommercialConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
     await ActivityService(db).log(
@@ -463,6 +478,7 @@ async def create_task(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    await ensure_staff_company_scope(body.company_id, current_user, db)
     svc = TaskService(db)
     task = await svc.create_task(  # type: ignore
         company_id=body.company_id,
@@ -474,6 +490,15 @@ async def create_task(
         source_rescue_step_id=body.source_rescue_step_id,
         priority=body.priority,
         created_by=current_user.id,
+    )
+    await ActivityService(db).log(
+        action="TASK_CREATED",
+        resource_type="task",
+        resource_id=str(task.id),
+        description=f"Task created: {task.title}",
+        ip_address=request.client.host if request.client else None,
+        actor_user_id=current_user.id,
+        company_id=task.company_id,
     )
     return _task_to_response(task)
 
@@ -504,13 +529,16 @@ async def complete_task(
     task_id: uuid.UUID,
     body: TaskCompleteRequest,
     request: Request,
+    company_id: uuid.UUID = Depends(require_company_access("company_id")),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = TaskService(db)
-    task = await svc.complete_task(  # type: ignore
-        task_id=task_id,
-    )
+    try:
+        task = await svc.complete_task(task_id=task_id, company_id=company_id)
+        task = await svc.complete_task(task_id=task_id)
+    except CommercialConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
     await ActivityService(db).log(

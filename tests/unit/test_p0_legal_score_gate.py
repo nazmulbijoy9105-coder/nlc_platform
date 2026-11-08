@@ -1,5 +1,4 @@
 import pytest
-pytestmark = pytest.mark.skip(reason="pending reconciliation")
 """P0 regressions: unapproved rules must never affect authoritative scores or reports."""
 from datetime import date
 from types import SimpleNamespace
@@ -67,7 +66,7 @@ def test_unapproved_black_flag_is_excluded_from_persisted_score_reconciliation(m
         is_black_override=True,
     )
     assert _applied_score_impacts([flag]) == [
-        {"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"}
+        {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
     ]
 
 
@@ -83,3 +82,40 @@ def test_pdf_score_reconciliation_counts_only_approved_rules(monkeypatch):
     approved = SimpleNamespace(rule_id="AGM-001", severity="RED", score_impact=15)
     unapproved = SimpleNamespace(rule_id="AUD-003", severity="BLACK", score_impact=25)
     assert _verified_flag_score([approved, unapproved]) == (85, False)
+
+
+def test_release_switch_without_any_approved_rules_does_not_release_a_score(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    result = NLCRuleEngine(today=date(2026, 11, 5))._calculate_score(
+        [_engine_flag()], CompanyProfile(company_id="x", company_name="Test")
+    )
+    assert engine_module.legal_score_is_released() is False
+    assert result.final_score == 100  # non-authoritative arithmetic placeholder
+    assert result.risk_band == Severity.NOT_EVALUATED
+    assert result.override_applied is False
+    assert _applied_score_impacts([_engine_flag()]) == [
+        {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
+    ]
+
+
+def test_pdf_requires_explicit_authorisation_for_black_override(monkeypatch):
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
+    flag = SimpleNamespace(
+        rule_id="AGM-001",
+        severity="BLACK",
+        score_impact=25,
+        is_black_override=True,
+    )
+    score, override = _verified_flag_score([flag])
+    assert score == 80  # ordinary AGM category cap, no forced zero
+    assert override is False
+
+    monkeypatch.setattr(
+        report_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"AGM-001"})
+    )
+    score, override = _verified_flag_score([flag])
+    assert score == 0
+    assert override is True

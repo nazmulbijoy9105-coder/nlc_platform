@@ -38,6 +38,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
+from sqlalchemy.engine import make_url as _make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -65,8 +66,6 @@ def _get_test_db_url() -> str:
 
 
 TEST_DATABASE_URL = _get_test_db_url()
-
-from sqlalchemy.engine import make_url as _make_url
 
 assert _make_url(TEST_DATABASE_URL).host in ("localhost", "127.0.0.1"), \
     "tests must run against a local database"
@@ -796,9 +795,6 @@ def assert_helpers():
 # ---------------------------------------------------------------------------
 # RLS-aware fixtures (tenant isolation)
 # ---------------------------------------------------------------------------
-
-import os
-
 
 # ---------------------------------------------------------------------------
 # RLS-aware fixtures (tenant isolation)
