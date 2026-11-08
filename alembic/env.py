@@ -224,6 +224,12 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 def validate_production_migration_role(connection: Connection) -> None:
+    """Fail before DDL if Render is using the restricted runtime DB role.
+
+    Production migrations need the privileged owner connection. The API uses
+    APP_DATABASE_URL as nlc_app_role; Alembic must use DATABASE_URL as the
+    migration/owner principal.
+    """
     """Fail before DDL if a production deployment uses the restricted runtime role.
 
     Render sets RENDER=true. Other production hosts must explicitly set
