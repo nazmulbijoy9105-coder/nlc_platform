@@ -703,7 +703,6 @@ class CompanyService(BaseService[Company]):
             "agm_extension_evidence_ref": company.agm_extension_evidence_ref,
             "agm_extension_verified_at": company.agm_extension_verified_at.date() if company.agm_extension_verified_at else None,
             "agm_extension_verified_by": str(company.agm_extension_verified_by) if company.agm_extension_verified_by else None,
-            "agm_held_this_cycle":        latest_agm.agm_held if latest_agm else None,
             "agm_held_this_cycle": (
                 latest_agm.agm_held
                 if (
