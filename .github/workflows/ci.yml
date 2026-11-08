@@ -75,13 +75,22 @@ jobs:
             tests/unit/test_pdf_report_service.py \
             tests/unit/test_rescue_engagement_contract.py \
             tests/unit/test_rule_engine_factory.py \
-            alembic/versions/0081_merge_release_and_articles_wallet_heads.py
+            tests/unit/test_share_compliance_event_rules.py \
+            tests/unit/test_agm_notice_evidence_gating.py \
+            tests/integration/test_agm_share_event_rls.py \
+            app/api/filings.py app/models/filings.py app/models/people.py \
+            app/models/company.py app/models/__init__.py app/rule_engine/engine.py \
+            app/services/filing_service.py \
+            alembic/versions/0081_merge_release_and_articles_wallet_heads.py \
+            alembic/versions/0082_agm_share_event_provenance.py
 
       - name: Type-check scoring release services
         run: |
           mypy app/services/company_service.py \
             app/services/pdf_report_service.py \
-            app/services/rescue_service.py
+            app/services/rescue_service.py \
+            app/services/filing_service.py \
+            app/rule_engine/engine.py
 
       - name: Verify single Alembic head
         run: |
