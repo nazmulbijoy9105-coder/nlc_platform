@@ -93,6 +93,7 @@ class AGMResponse(BaseModel):
     financial_year: int
     agm_due_date: str | None
     held_date: str | None
+    held_status_verified: bool
     filed_date: str | None
     quorum_met: bool | None
     quorum_required: int | None = None
@@ -777,8 +778,25 @@ def _agm_to_response(agm) -> AGMResponse:
         company_id=str(agm.company_id),
         financial_year=agm.financial_year,
         agm_due_date=(agm.agm_deadline.isoformat() if LEGAL_CALENDAR_RELEASED and agm.agm_deadline else None),
-        held_date=agm.agm_date.isoformat() if agm.agm_date else None,
-        filed_date=agm.rjsc_filing_date.isoformat() if agm.rjsc_filing_date else None,
+        held_date=(
+            agm.agm_date.isoformat()
+            if (
+                getattr(agm, "agm_held_verified", False) is True
+                and bool(getattr(agm, "agm_held_evidence_ref", None))
+                and getattr(agm, "agm_held_verified_at", None) is not None
+                and getattr(agm, "agm_held_verified_by", None) is not None
+                and agm.agm_held is True
+                and agm.agm_date is not None
+            ) else None
+        ),
+        held_status_verified=(
+            getattr(agm, "agm_held_verified", False) is True
+            and bool(getattr(agm, "agm_held_evidence_ref", None))
+            and getattr(agm, "agm_held_verified_at", None) is not None
+            and getattr(agm, "agm_held_verified_by", None) is not None
+        ),
+        # Filing date lacks a separate receipt/verification actor path.
+        filed_date=None,
         quorum_met=(
             agm.quorum_met
             if (
