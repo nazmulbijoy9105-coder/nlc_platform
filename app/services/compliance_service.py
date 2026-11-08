@@ -81,9 +81,9 @@ def _applied_score_impacts(flags) -> list[dict]:
     from app.rule_engine.engine import (
         AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
         CATEGORY_CAPS,
-        LEGAL_SCORE_RELEASED,
         VERIFIED_RULE_IDS,
         RuleState,
+        legal_score_is_released,
     )
 
     remaining = {name: cap[0] for name, cap in CATEGORY_CAPS.items()}
@@ -104,7 +104,7 @@ def _applied_score_impacts(flags) -> list[dict]:
 
         # The global release gate takes precedence over per-rule eligibility:
         # while release is closed, no rule has an applied score impact.
-        if not LEGAL_SCORE_RELEASED:
+        if not legal_score_is_released():
             results.append({"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"})
             continue
         if flag.rule_id not in VERIFIED_RULE_IDS:
@@ -178,7 +178,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         """
         from app.core.dependencies import get_rule_engine
         from app.rule_engine import CompanyProfile
-        from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
+        from app.rule_engine.engine import VERIFIED_RULE_IDS, legal_score_is_released
         from app.services.company_service import CompanyService
 
         # ── Step 1: Build profile ──────────────────────────────────
@@ -203,7 +203,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "value",
             output.score_breakdown.risk_band,
         )
-        score_is_released = LEGAL_SCORE_RELEASED and risk_band_value != "NOT_EVALUATED"
+        score_is_released = legal_score_is_released() and risk_band_value != "NOT_EVALUATED"
         public_risk_band = risk_band_value if score_is_released else "NOT_EVALUATED"
         api_score = output.score_breakdown.final_score if score_is_released else None
         api_raw_total = output.score_breakdown.raw_total if score_is_released else None
@@ -288,7 +288,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         Persist all evaluation results to DB atomically.
         Order: resolve old flags → insert new flags → score snapshot → update company.
         """
-        from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
+        from app.rule_engine.engine import VERIFIED_RULE_IDS, legal_score_is_released
 
         engine_version = str(getattr(output, "engine_version", "") or "").strip()
         if not engine_version or engine_version.lower() == "unknown":
@@ -313,11 +313,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # Defense in depth: persistence independently enforces the
         # counsel-approved release switch; a provisional engine band cannot
         # publish a numeric score while legal approval is disabled.
-        if not LEGAL_SCORE_RELEASED:
+        if not legal_score_is_released():
             risk_band = RiskBand.NOT_EVALUATED
         score_for_current = (
             score
-            if LEGAL_SCORE_RELEASED and risk_band != RiskBand.NOT_EVALUATED
+            if legal_score_is_released() and risk_band != RiskBand.NOT_EVALUATED
             else None
         )
 
@@ -362,7 +362,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             existing_flag = existing.scalar_one_or_none()
             if existing_flag:
                 # Update score impact and description in case rule changed
-                approved = LEGAL_SCORE_RELEASED and flag.rule_id in VERIFIED_RULE_IDS
+                approved = legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS
                 existing_flag.severity = (
                     SeverityLevel(flag.severity) if approved else SeverityLevel.NOT_EVALUATED
                 )
@@ -389,18 +389,18 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     flag_code=flag.rule_id,
                     statutory_basis=(
                         flag.statutory_basis
-                        if LEGAL_SCORE_RELEASED and flag.rule_id in VERIFIED_RULE_IDS
+                        if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS
                         else "NOT VALIDATED — independent counsel review required"
                     ),
                     severity=SeverityLevel(flag.severity)
-                    if LEGAL_SCORE_RELEASED and flag.rule_id in VERIFIED_RULE_IDS
+                    if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS
                     else SeverityLevel.NOT_EVALUATED,
                     score_impact=flag.score_impact
-                    if LEGAL_SCORE_RELEASED and flag.rule_id in VERIFIED_RULE_IDS
+                    if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS
                     else 0,
                     exposure_band=(
                         ExposureBand(getattr(getattr(flag, "exposure_band", None) or output.score_breakdown.exposure_band, "value", getattr(flag, "exposure_band", None) or output.score_breakdown.exposure_band))
-                        if LEGAL_SCORE_RELEASED and flag.rule_id in VERIFIED_RULE_IDS
+                        if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS
                         else None
                     ),
                     revenue_tier=RevenueTier(flag.revenue_tier.value if hasattr(flag.revenue_tier, 'value') else flag.revenue_tier),
@@ -408,7 +408,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     triggered_date=today,
                     description=(
                         flag.description
-                        if LEGAL_SCORE_RELEASED and flag.rule_id in VERIFIED_RULE_IDS
+                        if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS
                         else "Internal review signal only. No legal conclusion, breach, liability, penalty or compliance status is determined."
                     ),
                     detail=getattr(flag, "detail", None),
@@ -612,7 +612,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # ── Queue notifications for new RED/BLACK flags ─────────
         notification_flags = [
             flag for flag in collected_new_flags
-            if LEGAL_SCORE_RELEASED and flag.rule_id in VERIFIED_RULE_IDS
+            if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS
         ]
         if notification_flags:
             notif_svc = NotificationService(self.db)
@@ -656,11 +656,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
             )
         )
         rows = flags_result.all()
-        from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
+        from app.rule_engine.engine import VERIFIED_RULE_IDS, legal_score_is_released
         verified_severities = [
             str(getattr(severity, "value", severity)).upper()
             for rule_id, severity in rows
-            if LEGAL_SCORE_RELEASED and rule_id in VERIFIED_RULE_IDS
+            if legal_score_is_released() and rule_id in VERIFIED_RULE_IDS
         ]
         black_count = verified_severities.count("BLACK")
         red_count = verified_severities.count("RED")
@@ -737,11 +737,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
             .limit(months)
         )
         rows = result.scalars().all()
-        from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+        from app.rule_engine.engine import legal_score_is_released
         history = []
         for row in rows:
             stored_band = getattr(row.risk_band, "value", row.risk_band)
-            released = LEGAL_SCORE_RELEASED and stored_band != "NOT_EVALUATED"
+            released = legal_score_is_released() and stored_band != "NOT_EVALUATED"
             history.append({
                 "month": row.snapshot_month.isoformat(),
                 "score": row.score if released else None,
@@ -775,8 +775,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
     async def get_dashboard_kpis(self, user_id=None) -> dict:
         """Aggregate KPIs; never expose legacy bands while statutory scoring is withheld."""
-        from app.rule_engine.engine import LEGAL_SCORE_RELEASED
-        if not LEGAL_SCORE_RELEASED:
+        from app.rule_engine.engine import legal_score_is_released
+        if not legal_score_is_released():
             if user_id:
                 total_query = text(
                     "SELECT COUNT(*) FROM companies WHERE assigned_staff_id = :uid AND is_active = true"
