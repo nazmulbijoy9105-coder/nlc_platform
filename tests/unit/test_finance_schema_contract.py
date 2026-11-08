@@ -135,3 +135,18 @@ def test_manual_mobile_wallet_methods_require_reference_and_are_supported():
     assert "NAGAD_MANUAL" in str(payment_reference.sqltext)
     assert "BKASH_MANUAL" in str(OFFLINE_METHOD)
     assert "NAGAD_MANUAL" in str(OFFLINE_METHOD)
+
+@pytest.mark.asyncio
+async def test_finance_number_allocator_ignores_malformed_legacy_suffixes():
+    from unittest.mock import AsyncMock, MagicMock
+
+    from app.services.finance_service import FinanceService
+
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=[None, MagicMock(scalar_one=MagicMock(return_value=7))])
+    result = await FinanceService(db)._next_number("INV", "invoices", "invoice_number")
+
+    assert result.endswith("-000008")
+    query = str(db.execute.await_args_list[1].args[0])
+    assert "CASE" in query
+    assert "SPLIT_PART(invoice_number, '-', 3) ~ '^[0-9]+$'" in query
