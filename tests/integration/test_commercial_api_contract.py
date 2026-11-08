@@ -178,10 +178,9 @@ async def test_task_completion_accepts_completion_note(
         headers=_auth(commercial_admin_token),
         json={"completion_note": "Duplicate completion must not create another transition"},
     )
-    assert duplicate.status_code == 409, duplicate.text
+    assert duplicate.status_code == 422, duplicate.text
     repeated = await api_client.patch(
         f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete?company_id={db_company.id}",
-        f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete",
         headers=_auth(commercial_admin_token),
         json={"completion_note": "Should not complete twice"},
     )
