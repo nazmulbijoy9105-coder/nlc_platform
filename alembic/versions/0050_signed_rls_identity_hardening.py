@@ -153,9 +153,10 @@ def upgrade() -> None:
                     'nlc_ci_audit_role has unsafe attributes; require LOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, NOREPLICATION and NOBYPASSRLS';
             END IF;
 
-            -- NOINHERIT does not prevent SET ROLE. Reject memberships in
-            -- either direction so neither principal can inherit or assume
-            -- another role, and no other role can assume these principals.
+            -- NOINHERIT does not prevent SET ROLE. The application and CI
+            -- audit roles connect directly and must have no membership edges
+            -- in either direction. Privileged administrators do not need to
+            -- assume these runtime identities through role membership.
             IF EXISTS (
                 SELECT 1
                   FROM pg_auth_members membership
