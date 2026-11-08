@@ -200,7 +200,7 @@ class CompanyProfile:
     agm_extension_evidence_ref: str | None = None
     agm_extension_verified_at: date | None = None
     agm_extension_verified_by: str | None = None
-    agm_held_this_cycle: bool = False
+    agm_held_this_cycle: bool | None = None
     agm_held_without_audit: bool = False
     agm_scheduled_date: Optional[date] = None
     notice_sent_date: Optional[date] = None
@@ -448,8 +448,6 @@ class EngineOutput:
 # BANGLADESH COMPANIES ACT 1994 CONSTANTS
 # ═══════════════════════════════════════════════════════════════════════
 
-FIRST_AGM_DEADLINE_DAYS = 548
-SUBSEQUENT_AGM_DEADLINE_DAYS = 456
 FY_END_AGM_DEADLINE_DAYS = 182
 AGM_NOTICE_MINIMUM_DAYS = 21
 PRIVATE_COMPANY_QUORUM_SMALL = 2   # Section 85(2)(b): private company with ≤6 members
@@ -1157,6 +1155,21 @@ class NLCRuleEngine:
 
     def _run_agm_rules(self, c: CompanyProfile) -> None:
         # Section 81 deadlines depend on a complete, verified AGM history.
+        # Missing history is an explicit UNKNOWN review state, not an assumed
+        # absence of meetings and not a deadline breach.
+        if not self._agm_history_is_verified(c):
+            self._add_flag(ComplianceFlag(
+                rule_id="AGM-001",
+                flag_code="AGM_HISTORY_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="AGM history has not been independently verified; no first- or subsequent-AGM default is inferred.",
+                statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                detail={"agm_count": c.agm_count, "last_agm_date": str(c.last_agm_date) if c.last_agm_date else None},
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+            ))
         if self._agm_history_is_verified(c):
             if c.agm_count is None:
                 self._add_flag(ComplianceFlag(
@@ -1189,7 +1202,13 @@ class NLCRuleEngine:
                             revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                             description=f"First AGM not held within 18 calendar months. Section 81(1): overdue by {delay} days.",
                             statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
-                            detail={"delay_days": delay, "deadline": str(deadline)},
+                            detail={
+                                "delay_days": delay,
+                                "deadline": deadline.isoformat(),
+                                "deadline_basis": "18_CALENDAR_MONTHS_FROM_INCORPORATION",
+                                "statutory_period_months": 18,
+                                "incorporation_date": c.incorporation_date.isoformat(),
+                            },
                         ))
             elif c.agm_count > 0:
                 if c.last_agm_date is None:
@@ -1200,6 +1219,18 @@ class NLCRuleEngine:
                         description="AGM history is marked verified but the last AGM date is missing.",
                         statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
                         state=RuleState.UNKNOWN, eval_state="UNKNOWN",
+                    ))
+                elif c.agm_held_this_cycle is None:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-002",
+                        flag_code="CURRENT_YEAR_AGM_STATUS_UNKNOWN",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="Whether an AGM was held in the current calendar year is not verified; no subsequent-AGM default is inferred.",
+                        statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
                     ))
                 elif c.agm_held_this_cycle is False:
                     agm_deadline = self._subsequent_agm_deadline(c)
@@ -1245,8 +1276,25 @@ class NLCRuleEngine:
                                 "basis": basis,
                                 "interval_deadline": str(interval_deadline) if interval_deadline else None,
                                 "calendar_year_deadline": (
-                                    str(calendar_year_deadline) if calendar_year_deadline else None
+                                    calendar_year_deadline.isoformat() if calendar_year_deadline else None
                                 ),
+                                "statutory_base_deadline": min(
+                                    interval_deadline, calendar_year_deadline
+                                ).isoformat() if interval_deadline and calendar_year_deadline else None,
+                                "extension_application_date": (
+                                    c.agm_extension_application_date.isoformat()
+                                    if c.agm_extension_application_date else None
+                                ),
+                                "extension_granted_until": (
+                                    c.agm_extension_granted_until.isoformat()
+                                    if c.agm_extension_granted_until else None
+                                ),
+                                "extension_evidence_ref": c.agm_extension_evidence_ref,
+                                "extension_verified": c.agm_extension_verified is True,
+                                "extension_statutory_limit": min(
+                                    min(interval_deadline, calendar_year_deadline) + timedelta(days=90),
+                                    calendar_year_deadline,
+                                ).isoformat() if interval_deadline and calendar_year_deadline else None,
                             },
                         ))
         # Unverified AGM history is not converted into a deadline breach.
@@ -1934,8 +1982,10 @@ class NLCRuleEngine:
                         detail={"charge_id": charge.charge_id, "delay": delay, "amount": charge.amount_bdt}
                     ))
 
-            if charge.satisfied is True:
+            if charge.satisfied is None or charge.satisfied is True:
                 unknown_reasons = []
+                if charge.satisfied is None:
+                    unknown_reasons.append("SATISFACTION_STATUS_UNKNOWN")
                 if not charge.satisfaction_verified or not charge.satisfaction_evidence_ref:
                     unknown_reasons.append("SATISFACTION_NOT_AUTHENTICATED")
                 if charge.satisfaction_date is None:
@@ -1976,21 +2026,28 @@ class NLCRuleEngine:
                     charge.satisfaction_filed is False
                     and charge.satisfaction_date is not None
                 ):
+                    satisfaction_deadline = charge.satisfaction_date + timedelta(days=21)
                     satisfaction_delay = (self.today - charge.satisfaction_date).days
-                    if satisfaction_delay > 21:
+                    days_overdue = (self.today - satisfaction_deadline).days
+                    if self.today > satisfaction_deadline:
                         self._add_flag(ComplianceFlag(
                             rule_id="CHG-001",
                             flag_code="CHARGE_SATISFACTION_NOT_FILED",
                             severity=Severity.YELLOW,
                             score_impact=3,
                             revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                            description=f"Verified s.159-registrable charge satisfaction is not evidenced as filed via Form XXVIII within 21 days. Section 172(1). Overdue by {satisfaction_delay} days.",
+                            description=f"Verified s.159-registrable charge satisfaction was not notified to RJSC within 21 days under Section 172(1). Form XXVIII is the satisfaction filing. Overdue by {days_overdue} days.",
                             statutory_basis="Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh)",
                             detail={
                                 "charge_id": charge.charge_id,
                                 "charge_type": charge.charge_type,
-                                "delay_days": satisfaction_delay,
+                                "satisfaction_date": charge.satisfaction_date.isoformat(),
+                                "statutory_deadline": satisfaction_deadline.isoformat(),
+                                "statutory_period_days": 21,
+                                "elapsed_days": satisfaction_delay,
+                                "days_overdue": days_overdue,
                                 "form": "Form XXVIII",
+                                "statutory_basis": "Section 172(1), read with Section 159",
                             },
                             state=RuleState.NON_COMPLIANT,
                             eval_state="VIOLATION",
