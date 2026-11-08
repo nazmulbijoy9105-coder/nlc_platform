@@ -839,3 +839,54 @@ def test_first_agm_in_incorporation_year_uses_section_81_following_year_exemptio
     )
     # The first-AGM proviso removes the need for another AGM in 2026.
     assert engine._subsequent_agm_deadline(profile) == date(2027, 12, 31)
+
+
+def test_missing_charge_registration_evidence_is_unknown_not_an_invented_breach():
+    charge = ChargeEvent(
+        charge_id="charge-registration-unknown",
+        creation_date=date(2025, 1, 1),
+        charge_type="FIXED",
+        amount_bdt=100000,
+        charge_holder="Test Bank",
+        form_xviii_filed=False,
+        registrable_under_s159=True,
+        registrability_verified=True,
+        registrability_evidence_ref="RJSC-CLASS-001",
+    )
+    result = NLCRuleEngine().evaluate(
+        _profile(charges=[charge]),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "CAP-002")
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.score_impact == 0
+
+
+def test_verified_charge_registration_uses_section_159_twenty_one_day_deadline():
+    charge = ChargeEvent(
+        charge_id="charge-registration-overdue",
+        creation_date=date(2026, 10, 1),
+        charge_type="FIXED",
+        amount_bdt=100000,
+        charge_holder="Test Bank",
+        form_xviii_filed=False,
+        creation_date_verified=True,
+        creation_date_evidence_ref="EXECUTED-CHARGE-001",
+        form_xviii_filing_status_verified=True,
+        form_xviii_filing_evidence_ref="RJSC-SEARCH-003",
+        registrable_under_s159=True,
+        registrability_verified=True,
+        registrability_evidence_ref="RJSC-CLASS-003",
+    )
+    result = NLCRuleEngine().evaluate(
+        _profile(charges=[charge]),
+        today=date(2026, 10, 23),
+    )
+    flag = _flag(result, "CAP-002")
+    assert flag.state == RuleState.NON_COMPLIANT
+    assert flag.eval_state == "VIOLATION"
+    assert flag.detail["statutory_deadline"] == "2026-10-22"
+    assert flag.detail["days_overdue"] == 1
+    assert flag.detail["form"] == "Form XVIII"
