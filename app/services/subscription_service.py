@@ -786,7 +786,6 @@ class SubscriptionService:
             raise SubscriptionConflictError("Only a pending subscription request can be cancelled by finance")
         if subscription.invoice_id is not None:
             invoice_result = await self.db.execute(
-            invoice = await self.db.execute(
                 select(Invoice)
                 .where(
                     Invoice.id == subscription.invoice_id,
@@ -795,7 +794,6 @@ class SubscriptionService:
                 .with_for_update()
             )
             invoice = invoice_result.scalar_one_or_none()
-            invoice = invoice.scalar_one_or_none()
             if invoice is None:
                 raise SubscriptionConflictError("Linked subscription invoice is missing")
             if invoice.status not in ("ISSUED", "OVERDUE") or invoice.paid_bdt != 0 or invoice.balance_bdt != invoice.total_bdt:
