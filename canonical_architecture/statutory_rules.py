@@ -1274,8 +1274,10 @@ def _legacy_rule(key: str, d: Dict[str, Any]) -> Optional[StatutoryRule]:
         raise RuntimeError(
             f"{key}: evidence_required must contain unique, non-empty strings"
         )
-    if list(d["evidence_required"]) != ["DOCUMENTARY_EVIDENCE"]:
-        return None
+    # Admit both placeholder DOCUMENTARY_EVIDENCE stubs and fully specified
+    # multi-item evidence lists (INC-005, INC-006, CAP-003). The previous
+    # DOCUMENTARY_EVIDENCE-only gate silently dropped those three rules and
+    # left STATUTORY_RULE_REGISTRY at 82 while the engine exposes 85.
     auth = _LEGACY_AUTHORITY_OVERRIDE.get(key) or _LEGACY_AUTHORITY[d["legal_domain"]]
     applies_if = None if applicability == "ALL_ACTIVE_COMPANIES" else applicability
     return StatutoryRule(
