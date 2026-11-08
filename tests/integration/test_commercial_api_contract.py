@@ -507,7 +507,7 @@ def test_quotation_accept_and_reject_lock_parent_before_locked_quotation():
         next_method = source.find("\n    async def ", start + 1)
         method = source[start: next_method if next_method >= 0 else len(source)]
         engagement_lock = method.index("select(Engagement)")
-        quotation_lock = method.index("select(Quotation).where", method.index("with_for_update()", engagement_lock))
+        quotation_lock = method.index("select(Quotation)", method.index("with_for_update()", engagement_lock))
         assert engagement_lock < quotation_lock
         assert "with_for_update()" in method[engagement_lock:quotation_lock]
         assert "with_for_update()" in method[quotation_lock:]
