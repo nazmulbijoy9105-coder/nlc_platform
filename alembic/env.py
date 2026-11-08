@@ -282,7 +282,7 @@ def validate_production_migration_role(connection: Connection) -> None:
 
 async def run_async_migrations() -> None:
     """Run Alembic with the privileged migration URL and verified TLS."""
-    from app.core.db_url import normalize_asyncpg_url
+    from app.db_url import normalize_asyncpg_url
 
     configuration = config.get_section(config.config_ini_section, {})
     is_render = os.environ.get("RENDER", "").strip().lower() == "true"
