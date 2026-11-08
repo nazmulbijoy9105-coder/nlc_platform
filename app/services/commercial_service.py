@@ -506,12 +506,17 @@ class TaskService(BaseService[Task]):
     async def complete_task(
         self,
         task_id: uuid.UUID,
+        company_id: uuid.UUID,
     ) -> Task | None:
-        """Mark a task as completed."""
+        """Complete only a task belonging to the already-authorized company."""
         from datetime import datetime
         task_result = await self.db.execute(
             select(Task)
-            .where(Task.id == task_id)
+            .where(
+                Task.id == task_id,
+                Task.company_id == company_id,
+                Task.is_active.is_(True),
+            )
             .with_for_update()
         )
         task = task_result.scalar_one_or_none()
