@@ -108,7 +108,7 @@ class QuotationResponse(BaseModel):
     vat_bdt: Decimal
     total_fee_bdt: Decimal
     status: str
-    valid_until: str
+    valid_until: str | None
     created_at: str
 
 
@@ -184,7 +184,7 @@ def _quotation_to_response(q) -> QuotationResponse:
         vat_bdt=q.vat_bdt or Decimal('0.00'),
         total_fee_bdt=q.total_bdt,
         status=q.status,
-        valid_until=q.valid_until.isoformat(),
+        valid_until=q.valid_until.isoformat() if q.valid_until else None,
         created_at=q.created_at.isoformat(),
     )
 
