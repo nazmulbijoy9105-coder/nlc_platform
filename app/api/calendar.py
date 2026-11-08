@@ -39,6 +39,8 @@ async def generate_calendar(
     db: AsyncSession = Depends(get_db_for_user),
     current_user=Depends(get_current_user),
 ):
+    if current_user.role == "LEGAL_STAFF":
+        await ensure_staff_company_scope(company_id, current_user, db)
     _require_calendar_release()
     if current_user.role == "LEGAL_STAFF":
         await ensure_staff_company_scope(company_id, current_user, db)
@@ -61,6 +63,8 @@ async def get_calendar(
     db: AsyncSession = Depends(get_db_for_user),
     current_user=Depends(get_current_user),
 ):
+    if current_user.role == "LEGAL_STAFF":
+        await ensure_staff_company_scope(company_id, current_user, db)
     _require_calendar_release()
     service = ComplianceCalendarService(db)
     events = await service.get_upcoming(company_id, days_ahead=days_ahead)

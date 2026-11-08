@@ -389,6 +389,10 @@ def require_company_access(company_id_param: str = "company_id"):
     Dependency factory that validates the requesting user has access
     to the company specified in the path parameter.
 
+    Platform admins: portfolio-wide access.
+    Legal staff: must be assigned to the company or hold an active company
+    access row. Client roles: must hold a live active company membership;
+    JWT company_ids are informational and are never trusted for authorization.
     Platform admins: portfolio-wide access. Legal staff must be assigned
     to the company or hold an active company access row. Client roles require
     a live active company membership; JWT company_ids are never trusted.
