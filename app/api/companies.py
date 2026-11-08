@@ -695,14 +695,33 @@ async def verify_company_charge(
             group_fields.add("satisfaction_date")
         elif verified_field == "satisfaction_filing_status_verified":
             group_fields.add("satisfaction_filed_date")
+        if verified_field in updates and updates[verified_field] is None:
+            raise HTTPException(status_code=422, detail=f"{verified_field} cannot be null.")
         if (
             getattr(charge, verified_field) is True
             and any(field in updates for field in group_fields)
-            and updates.get(verified_field) is not True
+            and verified_field not in updates
         ):
             raise HTTPException(
                 status_code=422,
-                detail=f"Changing {verified_field} facts requires re-verification with fresh evidence, or explicitly setting the verified state to false.",
+                detail=f"Changing {verified_field} facts requires explicit re-verification or setting the verified state to false.",
+            )
+        changed_fact_fields = set(required_facts)
+        if verified_field == "form_xviii_filing_status_verified":
+            changed_fact_fields.add("form_xviii_filed_date")
+        elif verified_field == "satisfaction_verified":
+            changed_fact_fields.add("satisfaction_date")
+        elif verified_field == "satisfaction_filing_status_verified":
+            changed_fact_fields.add("satisfaction_filed_date")
+        if (
+            getattr(charge, verified_field) is True
+            and updates.get(verified_field) is True
+            and any(field in updates for field in changed_fact_fields)
+            and evidence_field not in updates
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=f"Changing verified {verified_field} facts requires a new evidence reference.",
             )
         if updates.get(verified_field) is True:
             evidence_ref = updates.get(evidence_field, getattr(charge, evidence_field))
