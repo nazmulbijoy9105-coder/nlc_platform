@@ -4,7 +4,8 @@ NEUM LEX COUNSEL
 """
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
+from decimal import Decimal
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -20,6 +21,7 @@ from app.core.dependencies import (
     require_roles,
 )
 from app.models.company import CompanyUserAccess
+from app.models.charges import CompanyCharge
 from app.models.enums import CompanyStatus, CompanyType, RevenueTier, RiskBand, UserRole
 from app.models.user import User
 from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
@@ -117,6 +119,68 @@ class CompanyUpdateRequest(BaseModel):
     penalty_notices_resolved: int | None = None
     # Explicit null resets the fact to UNKNOWN.
     is_manufacturing: bool | None = None
+
+
+
+
+class CompanyChargeCreateRequest(BaseModel):
+    creation_date: date
+    charge_type: str = Field(min_length=1, max_length=100)
+    amount_bdt: Decimal = Field(ge=0, max_digits=20, decimal_places=2)
+    charge_holder: str = Field(min_length=1, max_length=500)
+    charge_reference: str | None = Field(default=None, max_length=255)
+    # These are client-reported values only. They remain UNKNOWN to the engine
+    # until a legal reviewer records evidence and verification provenance.
+    form_xviii_filed: bool | None = None
+    form_xviii_filed_date: date | None = None
+    registrable_under_s159: bool | None = None
+    satisfied: bool | None = None
+    satisfaction_date: date | None = None
+    satisfaction_filed: bool | None = None
+    satisfaction_filed_date: date | None = None
+
+
+class CompanyChargeVerificationRequest(BaseModel):
+    creation_date_verified: bool | None = None
+    creation_date_evidence_ref: str | None = Field(default=None, max_length=2000)
+    form_xviii_filed: bool | None = None
+    form_xviii_filed_date: date | None = None
+    form_xviii_filing_status_verified: bool | None = None
+    form_xviii_filing_evidence_ref: str | None = Field(default=None, max_length=2000)
+    registrable_under_s159: bool | None = None
+    registrability_verified: bool | None = None
+    registrability_evidence_ref: str | None = Field(default=None, max_length=2000)
+    satisfied: bool | None = None
+    satisfaction_date: date | None = None
+    satisfaction_verified: bool | None = None
+    satisfaction_evidence_ref: str | None = Field(default=None, max_length=2000)
+    satisfaction_filed: bool | None = None
+    satisfaction_filed_date: date | None = None
+    satisfaction_filing_status_verified: bool | None = None
+    satisfaction_filing_evidence_ref: str | None = Field(default=None, max_length=2000)
+
+
+class CompanyChargeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    company_id: uuid.UUID
+    creation_date: date
+    charge_type: str
+    amount_bdt: Decimal
+    charge_holder: str
+    charge_reference: str | None
+    form_xviii_filed: bool | None
+    form_xviii_filed_date: date | None
+    registrable_under_s159: bool | None
+    satisfied: bool | None
+    satisfaction_date: date | None
+    satisfaction_filed: bool | None
+    satisfaction_filed_date: date | None
+    creation_date_verified: bool
+    form_xviii_filing_status_verified: bool
+    registrability_verified: bool
+    satisfaction_verified: bool
+    satisfaction_filing_status_verified: bool
 
 
 class FlagResolveRequest(BaseModel):
@@ -530,3 +594,107 @@ async def get_risk_distribution(current_user: User = Depends(get_current_user), 
     _require_legal_dashboard_release()
     svc = CompanyService(db)
     return await svc.get_risk_distribution(user_id=current_user.id)
+
+@router.get(
+    "/{company_id}/charges",
+    response_model=list[CompanyChargeResponse],
+    dependencies=[Depends(require_company_access("company_id"))],
+    summary="List company charge records",
+)
+async def list_company_charges(
+    company_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    result = await db.execute(
+        select(CompanyCharge)
+        .where(CompanyCharge.company_id == company_id, CompanyCharge.is_active.is_(True))
+        .order_by(CompanyCharge.creation_date.desc(), CompanyCharge.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+@router.post(
+    "/{company_id}/charges",
+    response_model=CompanyChargeResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")),
+        Depends(require_company_access("company_id")),
+    ],
+    summary="Record a reported company charge",
+)
+async def create_company_charge(
+    company_id: uuid.UUID,
+    body: CompanyChargeCreateRequest,
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    company = await db.get(__import__("app.models.company", fromlist=["Company"]).Company, company_id)
+    if company is None:
+        raise HTTPException(status_code=404, detail="Company not found.")
+    charge = CompanyCharge(company_id=company_id, **body.model_dump())
+    db.add(charge)
+    await db.flush()
+    await db.refresh(charge)
+    return charge
+
+
+@router.patch(
+    "/{company_id}/charges/{charge_id}/verify",
+    response_model=CompanyChargeResponse,
+    dependencies=[
+        Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")),
+        Depends(require_company_access("company_id")),
+    ],
+    summary="Verify charge facts against documentary evidence",
+)
+async def verify_company_charge(
+    company_id: uuid.UUID,
+    charge_id: uuid.UUID,
+    body: CompanyChargeVerificationRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    result = await db.execute(
+        select(CompanyCharge).where(
+            CompanyCharge.id == charge_id,
+            CompanyCharge.company_id == company_id,
+            CompanyCharge.is_active.is_(True),
+        )
+    )
+    charge = result.scalar_one_or_none()
+    if charge is None:
+        raise HTTPException(status_code=404, detail="Charge record not found.")
+
+    updates = body.model_dump(exclude_unset=True)
+    verification_groups = (
+        ("creation_date_verified", "creation_date_evidence_ref", ("creation_date",)),
+        ("form_xviii_filing_status_verified", "form_xviii_filing_evidence_ref", ("form_xviii_filed",)),
+        ("registrability_verified", "registrability_evidence_ref", ("registrable_under_s159",)),
+        ("satisfaction_verified", "satisfaction_evidence_ref", ("satisfied",)),
+        ("satisfaction_filing_status_verified", "satisfaction_filing_evidence_ref", ("satisfaction_filed",)),
+    )
+    for verified_field, evidence_field, required_facts in verification_groups:
+        if updates.get(verified_field) is True:
+            evidence_ref = updates.get(evidence_field, getattr(charge, evidence_field))
+            if not evidence_ref or any(
+                updates.get(fact, getattr(charge, fact)) is None for fact in required_facts
+            ):
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"{verified_field} requires its fact value and documentary evidence reference.",
+                )
+            if verified_field == "form_xviii_filing_status_verified" and updates.get("form_xviii_filed", charge.form_xviii_filed) is True and updates.get("form_xviii_filed_date", charge.form_xviii_filed_date) is None:
+                raise HTTPException(status_code=422, detail="A filed Form XVIII requires its filing date.")
+            if verified_field == "satisfaction_verified" and updates.get("satisfied", charge.satisfied) is True and updates.get("satisfaction_date", charge.satisfaction_date) is None:
+                raise HTTPException(status_code=422, detail="A satisfied charge requires its satisfaction date.")
+            if verified_field == "satisfaction_filing_status_verified" and updates.get("satisfaction_filed", charge.satisfaction_filed) is True and updates.get("satisfaction_filed_date", charge.satisfaction_filed_date) is None:
+                raise HTTPException(status_code=422, detail="A filed Form XXVIII requires its filing date.")
+            updates[f"{verified_field.replace('_verified', '')}_verified_at"] = datetime.now(UTC)
+            updates[f"{verified_field.replace('_verified', '')}_verified_by"] = current_user.id
+
+    for field_name, value in updates.items():
+        setattr(charge, field_name, value)
+    await db.flush()
+    await db.refresh(charge)
+    return charge
+
