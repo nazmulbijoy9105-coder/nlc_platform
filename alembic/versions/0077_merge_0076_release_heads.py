@@ -5,6 +5,8 @@ Revises: 0076_manual_mobile_wallet_methods, 0076_subscription_entitlements
 
 This merge is intentionally schema-neutral. It makes the Alembic graph
 unambiguous before any further schema changes are introduced.
+Schema-neutral merge. Both 0076 revisions descend from 0075; this revision
+restores a single Alembic head before any new schema work.
 """
 from alembic import op
 

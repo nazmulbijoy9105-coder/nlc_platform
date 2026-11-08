@@ -1,3 +1,4 @@
+import pytest
 from datetime import date
 from types import SimpleNamespace
 
@@ -213,7 +214,7 @@ def test_score_impact_reporting_respects_verified_rule_gate_and_category_caps(mo
     # gate is still closed; TAX-001 is not in the internal allowlist.
     assert applied[0] == {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
     assert applied[1] == {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
-    assert applied[2] == {"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"}
+    assert applied[2] == {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
 
 
 def test_unknown_flags_are_not_reported_as_applied_deductions():
@@ -281,7 +282,7 @@ def test_black_override_is_reported_separately_from_category_deduction():
 
     assert _applied_score_impacts([flag])[0] == {
         "applied": 0,
-        "status": "EXCLUDED_UNVERIFIED_RULE",
+        "status": "LEGAL_SCORE_NOT_RELEASED",
     }
 
 

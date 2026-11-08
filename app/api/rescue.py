@@ -35,6 +35,8 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
+from app.core.entitlement import require_entitlement
+from app.core.company_authorization import ensure_staff_company_scope
 from app.models.enums import RiskBand
 from app.models.user import User
 from app.services.company_service import CompanyService
@@ -62,9 +64,9 @@ router = APIRouter()
 
 def _require_legal_release() -> None:
     """Prevent rescue actions based on unapproved legal findings."""
-    from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+    from app.rule_engine.engine import legal_score_is_released
 
-    if not LEGAL_SCORE_RELEASED:
+    if not legal_score_is_released():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=(
@@ -194,8 +196,8 @@ async def create_rescue_plan(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    from app.rule_engine.engine import LEGAL_SCORE_RELEASED
-    if not LEGAL_SCORE_RELEASED:
+    from app.rule_engine.engine import legal_score_is_released
+    if not legal_score_is_released():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Automated rescue generation is withheld until statutory scoring is independently approved and released.",
@@ -320,6 +322,10 @@ async def list_rescue_plans(
 @router.get(
     "/plans/{company_id}/active",
     response_model=RescuePlanResponse,
+    dependencies=[
+        Depends(require_company_access("company_id")),
+        Depends(require_entitlement("corporate_rescue")),
+    ],
     dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("corporate_rescue"))],
     summary="Get the active rescue plan for a company",
 )
@@ -328,6 +334,8 @@ async def get_active_plan(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    if current_user.role == "LEGAL_STAFF":
+        await ensure_staff_company_scope(company_id, current_user, db)
     _require_legal_release()
     if current_user.role == "LEGAL_STAFF":
         await ensure_staff_company_scope(company_id, current_user, db)
@@ -374,6 +382,7 @@ async def get_rescue_plan(
     plan = result.scalar_one_or_none()
     if not plan:
         raise HTTPException(status_code=404, detail="Rescue plan not found.")
+    await ensure_staff_company_scope(plan.company_id, current_user, db, additional_staff_id=plan.assigned_staff_id)
     await _assert_rescue_entitlement(plan.company_id, current_user, db)
     return _plan_to_response(plan)
 
@@ -413,6 +422,7 @@ async def update_rescue_step(
 
     from app.models.enums import RescueStepStatus
     plan = await rescue_svc.get_by_id_or_404(plan_id)
+    await ensure_staff_company_scope(plan.company_id, current_user, db, additional_staff_id=plan.assigned_staff_id)
     await _assert_rescue_entitlement(plan.company_id, current_user, db)
     step = next((st for st in plan.steps if st.step_number == step_number), None)
     if step is None:
