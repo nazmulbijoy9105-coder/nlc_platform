@@ -692,6 +692,10 @@ class CompanyService(BaseService[Company]):
                     and company.agm_history_verified_at is not None
                     and company.agm_history_verified_by is not None
                     and latest_agm.agm_date is not None
+                    and latest_agm.agm_held_verified is True
+                    and bool(latest_agm.agm_held_evidence_ref)
+                    and latest_agm.agm_held_verified_at is not None
+                    and latest_agm.agm_held_verified_by is not None
                 ) else None
             ),
             "agm_minutes_prepared":       agm_profile_evidence["agm_minutes_prepared"],
