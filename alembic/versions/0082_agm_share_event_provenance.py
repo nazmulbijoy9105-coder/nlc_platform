@@ -127,6 +127,8 @@ def upgrade() -> None:
         sa.Column("share_transfer_id", sa.UUID(), sa.ForeignKey("share_transfers.id", ondelete="RESTRICT"), nullable=True),
         sa.Column("shareholder_id", sa.UUID(), sa.ForeignKey("shareholders.id", ondelete="RESTRICT"), nullable=True),
         sa.Column("event_reference", sa.String(160), nullable=False),
+        sa.Column("submitted_by", sa.UUID(), sa.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False),
+        sa.Column("submitted_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("shares_affected", sa.Integer(), nullable=True),
         sa.Column("event_type", sa.String(32), nullable=False),
         sa.Column("event_date", sa.Date(), nullable=False),
@@ -162,7 +164,7 @@ def upgrade() -> None:
         sa.CheckConstraint("shares_affected IS NULL OR shares_affected > 0", name="ck_share_event_shares_positive"),
         sa.CheckConstraint("btrim(event_reference) <> '' AND btrim(event_evidence_ref) <> ''", name="ck_share_event_source_required"),
         sa.CheckConstraint(
-            "NOT event_verified OR (event_verified_at IS NOT NULL AND event_verified_by IS NOT NULL)",
+            "NOT event_verified OR (event_verified_at IS NOT NULL AND event_verified_by IS NOT NULL AND event_verified_by <> submitted_by)",
             name="ck_share_event_verification_provenance",
         ),
         sa.CheckConstraint(
@@ -195,6 +197,8 @@ def upgrade() -> None:
                 AND event_verified IS FALSE
                 AND filing_status_verified IS FALSE
                 AND certificate_status_verified IS FALSE
+                AND submitted_by = public.nlc_current_user_id()
+                AND submitted_at IS NOT NULL
             )
         """ if table == "share_compliance_events" else f"""
             CREATE POLICY {table}_member_submit ON public.{table}
