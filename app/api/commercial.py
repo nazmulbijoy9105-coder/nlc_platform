@@ -528,14 +528,14 @@ async def complete_task(
     task_id: uuid.UUID,
     body: TaskCompleteRequest,
     request: Request,
-    company_id: uuid.UUID = Depends(require_company_access("company_id")),
+    company_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    await ensure_staff_company_scope(company_id, current_user, db)
     svc = TaskService(db)
     try:
         task = await svc.complete_task(task_id=task_id, company_id=company_id)
-        task = await svc.complete_task(task_id=task_id)
     except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not task:
