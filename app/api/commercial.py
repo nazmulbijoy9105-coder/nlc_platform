@@ -30,6 +30,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.company_authorization import ensure_staff_company_scope
 from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
@@ -473,6 +474,7 @@ async def create_task(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    await ensure_staff_company_scope(body.company_id, current_user, db)
     svc = TaskService(db)
     task = await svc.create_task(  # type: ignore
         company_id=body.company_id,
