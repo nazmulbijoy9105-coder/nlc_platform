@@ -1,8 +1,8 @@
 # NLC Bangladesh 85-rule counsel validation docket
 
 **Repository:** nazmulbijoy9105-coder/nlc_platform  
-**Review baseline:** fix/legal-corpus-current-law-reconciliation  
-**Prepared:** 7 November 2026  
+**Review baseline:** fix/canonical-legal-rule-seed-sync-20261108 (PR #210)  
+**Prepared:** 8 November 2026  
 **Status:** Research docket for independent Bangladesh-qualified counsel; NOT a legal opinion or approval.
 
 ## Executive control
@@ -36,6 +36,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### ACC-001 — Financial Statements Not Presented at AGM
 
 - **Catalogue anchor:** Section 183, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 183, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -53,6 +55,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### ACC-002 — Financial Statements Not Filed with Registrar
 
 - **Catalogue anchor:** Section 190, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 190, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -70,6 +74,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### ACC-003 — Books of Account Not Kept
 
 - **Catalogue anchor:** Section 181, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 181, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -87,6 +93,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### AGM-001 — First AGM Default
 
 - **Catalogue anchor:** Section 81(1), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 81(1), Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -104,6 +112,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### AGM-002 — Subsequent AGM Default
 
 - **Catalogue anchor:** Section 81(1), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 81(1), Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -121,6 +131,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### AGM-003 — AGM Short Notice — Consent Verification
 
 - **Catalogue anchor:** Section 85(1)(a), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 85(1)(a), Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -138,6 +150,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### AGM-004 — AGM Notice or Short-Notice Consent Missing
 
 - **Catalogue anchor:** Section 85(1)(a), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 85(1)(a), Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -154,7 +168,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### AGM-005 — AGM Quorum Not Met
 
-- **Catalogue anchor:** Section 85(2)(b), Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Section 85(2)(b), Companies Act 1994 (Bangladesh), read with the Articles
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 85(2)(b), Companies Act 1994 (Bangladesh), read with the Articles
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -172,6 +188,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### AGM-006 — AGM Minutes Status Requires Verification
 
 - **Catalogue anchor:** Section 89, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 89, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -188,7 +206,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### AGM-007 — AGM Adjourned Without Proper Notice
 
-- **Catalogue anchor:** Section 85, Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Companies Act 1994, Section 85 and the company Articles; exact adjournment provision requires counsel verification
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Companies Act 1994, Section 85 and the company Articles; exact adjournment provision requires counsel verification
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -206,6 +226,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### AR-001 — Annual Return Default — Single Year
 
 - **Catalogue anchor:** Section 36 (Schedule X), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 36 (Schedule X), Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -222,7 +244,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### AR-002 — Annual Return Backlog — Review Required
 
-- **Catalogue anchor:** Section 36 and Schedule X (annual-return duty); Section 346 (separate Registrar strike-off process)
+- **Catalogue anchor:** Section 36 and Schedule X (annual-return duty); Section 346 governs a separate Registrar strike-off procedure.
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 36 and Schedule X (annual-return duty); Section 346 governs a separate Registrar strike-off procedure.
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -239,7 +263,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### AR-003 — Annual Return Backlog — Extended Review Required
 
-- **Catalogue anchor:** Section 36 and Schedule X (annual-return duty); Section 346 (separate Registrar strike-off process)
+- **Catalogue anchor:** Section 36 and Schedule X (annual-return duty); Section 346 requires separate Registrar grounds and statutory notice steps.
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 36 and Schedule X (annual-return duty); Section 346 requires separate Registrar grounds and statutory notice steps.
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -257,6 +283,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### AR-004 — Annual Return Filed But Incomplete
 
 - **Catalogue anchor:** Section 36, Schedule X, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 36, Schedule X, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -274,6 +302,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### AUD-001 — First Auditor Not Appointed Within One Calendar Month
 
 - **Catalogue anchor:** Section 210(6), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 210(6), Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -291,6 +321,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### AUD-002 — Audit Not Completed Before AGM
 
 - **Catalogue anchor:** Section 183, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 183, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -308,6 +340,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### AUD-003 — AGM Held Without Completed Audit
 
 - **Catalogue anchor:** Sections 183 and 210, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Sections 183 and 210, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -325,6 +359,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### AUD-004 — Auditor Not Reappointed at AGM
 
 - **Catalogue anchor:** Section 210(3), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 210(3), Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -342,6 +378,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### AUD-005 — Subsequent Auditor Reappointment Status Unknown
 
 - **Catalogue anchor:** Section 210(3), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 210(3), Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -358,7 +396,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### BNK-001 — Winding Up Petition Filed
 
-- **Catalogue anchor:** Companies Act 1994 (Bangladesh), Part V, sections 241–244; exact petition provision and case status require review
+- **Catalogue anchor:** Companies Act 1994 (Bangladesh), Part V, including sections 241–244; exact petition provision requires case review
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Companies Act 1994 (Bangladesh), Part V, including sections 241–244; exact petition provision requires case review
+
 - **Source correction (7 Nov 2026):** Corporate company winding-up is governed by Part V of the Companies Act 1994, not the personal Bankruptcy Act 1997. Sections 241–244 address court-winding-up grounds/petition procedure. A petition is not a winding-up order or proof of insolvency without the authenticated case record.
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
@@ -376,7 +416,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### BNK-002 — Liquidator Appointed
 
-- **Catalogue anchor:** Companies Act 1994 (Bangladesh), Part V; section 255 for court-appointed Official Liquidators; voluntary route requires separate mapping
+- **Catalogue anchor:** Companies Act 1994 (Bangladesh), Part V; section 255 applies to court-appointed Official Liquidators; route-specific provision requires review
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Companies Act 1994 (Bangladesh), Part V; section 255 applies to court-appointed Official Liquidators; route-specific provision requires review
+
 - **Source correction (7 Nov 2026):** A liquidator appointment must be classified by route. Section 255 addresses court-appointed Official Liquidators; voluntary winding-up appointments arise under separate Part V provisions. Do not apply one section or BLACK status to every appointment.
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
@@ -394,7 +436,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### BNK-003 — Court-Ordered Winding Up
 
-- **Catalogue anchor:** Companies Act 1994 (Bangladesh), Part V, sections 241–246; exact order provision requires case review
+- **Catalogue anchor:** Companies Act 1994 (Bangladesh), Part V, including sections 241–246; exact order provision requires case review
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Companies Act 1994 (Bangladesh), Part V, including sections 241–246; exact order provision requires case review
+
 - **Source correction (7 Nov 2026):** Court-ordered company winding-up is a Companies Act Part V process. Require the authenticated order, operative date, jurisdiction, appeal/stay/suspension and current status. Do not cite Bankruptcy Act 1997 or infer the order from a petition.
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
@@ -413,6 +457,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### BOD-001 — Board Meeting Not Held Within Quarter
 
 - **Catalogue anchor:** Section 96, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 96, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -430,6 +476,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### BOD-002 — Board Meeting Notice Not Given
 
 - **Catalogue anchor:** Section 95, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 95, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -447,6 +495,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### BOD-003 — Board Meeting Minutes Not Prepared
 
 - **Catalogue anchor:** Section 89, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 89, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -464,6 +514,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### BSEC-001 — Quarterly Report Status Requires Verification
 
 - **Catalogue anchor:** Applicable BSEC financial-reporting instrument; exact notification, issuer class, reporting period and due date require verification
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Applicable BSEC financial-reporting instrument; exact notification, issuer class, reporting period and due date require verification
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -481,6 +533,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### BSEC-002 — CG Certificate Status Requires Verification
 
 - **Catalogue anchor:** BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -498,6 +552,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### BSEC-003 — Board Composition Status Requires Verification
 
 - **Catalogue anchor:** BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -515,6 +571,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### BSEC-004 — Audit Committee Status Requires Verification
 
 - **Catalogue anchor:** BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -531,9 +589,11 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### CAP-001 — Capital Alteration Authority Requires Review
 
+- **Catalogue anchor:** Sections 53, 54 and 56, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Sections 53, 54 and 56, Companies Act 1994 (Bangladesh)
+
 - **Source correction (7 Nov 2026):** Section 53 concerns alteration of share capital subject to Articles authority; section 54 addresses specified consolidation/conversion/subdivision notices; section 56 separately governs increase of registered share capital. The prior claim that s.54 is the generic capital-increase procedure was removed. The exact resolution type must be checked against the Articles and transaction.
 
-- **Catalogue anchor:** Sections 53, 54 and 56, Companies Act 1994 (Bangladesh)
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -551,6 +611,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### CAP-002 — Charge Not Registered With RJSC Within 21 Days
 
 - **Catalogue anchor:** Section 159(1), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 159(1), Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -568,6 +630,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### CAP-003 — Capital Reduction — Court Confirmation Review
 
 - **Catalogue anchor:** Sections 59-60, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Sections 59-60, Companies Act 1994 (Bangladesh)
+
 - **Source correction (7 Nov 2026):** The earlier Section 150(1)/(6) citation was a category error: Section 150 concerns commencement of business, not reduction of share capital. The official Companies Act places reduction of share capital in Section 59 and the application for court confirmation in Section 60. The rule remains NOT_COUNSEL_VALIDATED; the exact Articles authority, special-resolution, creditor-notice, court-order and registration steps require rule-level counsel review.
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
@@ -586,6 +650,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### CAP-004 — Special Resolution Not Filed With RJSC
 
 - **Catalogue anchor:** Section 88(1), Companies Act 1994 (Bangladesh) — 15 days
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 88(1), Companies Act 1994 (Bangladesh) — 15 days
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -602,7 +668,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### CHG-001 — Charge Satisfaction Not Filed
 
-- **Catalogue anchor:** Section 172, Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -619,7 +687,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### DEF-001 — Director Disqualified
 
-- **Catalogue anchor:** Section 94, Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Section 94(1)(d), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 94(1)(d), Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -637,6 +707,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### DEF-002 — Unresolved Penalty Notices
 
 - **Catalogue anchor:** Case-specific enabling provision required; not a universal section
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Case-specific enabling provision required; not a universal section
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -653,7 +725,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### DIR-001 — Director Appointment Not Filed Within 14 Days
 
-- **Catalogue anchor:** Section 115, Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Section 115(2), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 115(2), Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -670,7 +744,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### DIR-002 — Director Departure Not Filed Within 14 Days
 
-- **Catalogue anchor:** Section 115, Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Section 115(2), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 115(2), Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -687,9 +763,11 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### DIR-003 — Director Filing Delay — Internal 365-Day Escalation
 
+- **Catalogue anchor:** Section 115(2), Companies Act 1994 (Bangladesh); 365-day threshold is NLC policy only
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 115(2), Companies Act 1994 (Bangladesh); 365-day threshold is NLC policy only
+
 - **Source correction (7 Nov 2026):** Section 115(2) contains the 14-day Form XII particulars filing duty. The 365-day threshold is NLC internal escalation policy only. The prior assertions of a continuing offence under s.92 and a daily statutory fine were removed; no such consequence is inferred without a separate verified provision.
 
-- **Catalogue anchor:** Section 115, Companies Act 1994 (Bangladesh)
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -707,6 +785,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### DIR-004 — Late Director Cessation Filing - Legal Effect Review
 
 - **Catalogue anchor:** Section 115, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 115, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -723,7 +803,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### DIR-005 — Register of Directors Interests Missing
 
-- **Catalogue anchor:** Section 130, Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Companies Act 1994, Section 130 (director-interest disclosure); generic register duty/title requires legal reconciliation
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Companies Act 1994, Section 130 (director-interest disclosure); generic register duty/title requires legal reconciliation
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -740,7 +822,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### DIR-006 — Register of Contracts Missing
 
-- **Catalogue anchor:** Section 130, Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Companies Act 1994 and applicable Articles; exact register obligation requires counsel verification
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Companies Act 1994 and applicable Articles; exact register obligation requires counsel verification
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -757,10 +841,12 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### DIR-007 — Director Consent Not Filed Within 30 Days
 
+- **Catalogue anchor:** Section 93(2), Companies Act 1994 (Bangladesh); section 92/Form IX mapping requires review
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 93(2), Companies Act 1994 (Bangladesh); section 92/Form IX mapping requires review
+
 - **Source reconciliation (7 Nov 2026):** The Companies Act text distinguishes s.92 pre-appointment consent/eligibility requirements from s.93(2), which requires the signed consent to be filed with the Registrar within 30 days after appointment. The RJSC eBRS FAQ/Form IX materials label Form IX with s.92 while also describing a 30-day post-appointment filing. Do not collapse the form reference and statutory trigger into one unqualified citation. The current 30-day engine rule is provisionally anchored to s.93(2); counsel must confirm the applicable form mapping and any transitional/current RJSC instructions before approval.
 
 
-- **Catalogue anchor:** Section 93(2), Companies Act 1994 (Bangladesh); section 92/Form IX mapping requires counsel reconciliation
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -778,6 +864,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### DIR-008 — Director Holding Office of Profit Without Consent
 
 - **Catalogue anchor:** Section 104, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 104, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -795,6 +883,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### DIR-010 — Managing Director Appointed for More Than 5 Years
 
 - **Catalogue anchor:** Section 110, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 110, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -811,7 +901,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### ESC-001 — Strike-Off Risk Elevated
 
-- **Catalogue anchor:** Section 346, Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -828,7 +920,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### ESC-002 — Strike-Off Status Requires Verification
 
-- **Catalogue anchor:** Section 346, Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -846,6 +940,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### ESC-003 — Corporate Rescue Mandatory — Systemic Failure
 
 - **Catalogue anchor:** NLC internal risk policy; not a statutory risk band under the Companies Act 1994.
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — NLC internal risk policy; not a statutory risk band under the Companies Act 1994.
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -862,7 +958,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### ESC-004 — Voluntary Winding Up
 
-- **Catalogue anchor:** Section 286, Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Section 286 and following provisions, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 286 and following provisions, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -880,6 +978,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### ESC-005 — Investigation Order Pending
 
 - **Catalogue anchor:** Sections 195 and 197; section 199 where related entities are included, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Sections 195 and 197; section 199 where related entities are included, Companies Act 1994 (Bangladesh)
+
 - **Source correction (7 Nov 2026):** Sections 195 and 197 concern Government appointment of inspectors; section 199 concerns extending investigation to related entities/agents. A reported inquiry or investigation is not itself a finding of liability; require the authenticated appointment/order and scope.
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
@@ -898,6 +998,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### FX-001 — Foreign Exchange Violation
 
 - **Catalogue anchor:** Foreign Exchange Regulation Act 1947 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Foreign Exchange Regulation Act 1947 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -914,9 +1016,11 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### INC-001 — MoA/AoA Registration Status Requires Verification
 
+- **Catalogue anchor:** Section 23, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 23, Companies Act 1994 (Bangladesh)
+
 - **Source correction (7 Nov 2026):** The governing registration provision is section 23, not section 11. The prior assertion that non-production means the company has no valid constitution was removed. NLC absence is a data gap; only an authenticated RJSC search/record can support a verified-absence status.
 
-- **Catalogue anchor:** Section 23, Companies Act 1994 (Bangladesh)
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -934,6 +1038,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### INC-003 — Minimum Directors Not Appointed
 
 - **Catalogue anchor:** Sections 90(1) and 90(2), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Sections 90(1) and 90(2), Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -951,6 +1057,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### INC-004 — Paid-Up / Authorized Capital Mismatch — Legal Review
 
 - **Catalogue anchor:** Section 56, Companies Act 1994 (Bangladesh) — applicability and consequences require lawyer review
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 56, Companies Act 1994 (Bangladesh) — applicability and consequences require lawyer review
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -968,6 +1076,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### INC-005 — Encashment Certificate Missing — Foreign Shareholding
 
 - **Catalogue anchor:** GFET-2018 Vol.1, Chapter 9, paragraph 2(A); FE Circular No.10 (21 June 2023); FEID Circular No.01 (27 January 2025) and subsequent applicable circulars
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — GFET-2018 Vol.1, Chapter 9, paragraph 2(A); FE Circular No.10 (21 June 2023); FEID Circular No.01 (27 January 2025) and subsequent applicable circulars
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -985,7 +1095,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### INC-006 — Initial Establishment Remittance Evidence — Work Permit Review
 
-- **Catalogue anchor:** BIDA Guidelines 2023 for permission to establish foreign commercial offices and issue work permits; exact operative clause/version and current amendments require verification
+- **Catalogue anchor:** BIDA Guidelines for permission to establish foreign commercial offices and issue work permits in Bangladesh (2023); exact operative clause/version and current amendments require verification
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — BIDA Guidelines for permission to establish foreign commercial offices and issue work permits in Bangladesh (2023); exact operative clause/version and current amendments require verification
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1003,7 +1115,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### INC-007 — Business Commenced Without Section 150 Declaration
 
-- **Catalogue anchor:** Sections 59-60, Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Section 150(1) and (6), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 150(1) and (6), Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1021,6 +1135,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### LBR-001 — Factory License Missing
 
 - **Catalogue anchor:** Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1038,6 +1154,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### LBR-002 — Factory License Expired
 
 - **Catalogue anchor:** Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1055,6 +1173,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### LBR-003 — Labour Court Order Pending
 
 - **Catalogue anchor:** Bangladesh Labour Act 2006 and the specific Labour Court order; enabling provision and operative status require case-specific verification
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Bangladesh Labour Act 2006 and the specific Labour Court order; enabling provision and operative status require case-specific verification
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1073,6 +1193,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### MEM-001 — Company Operating with Fewer than Minimum Members
 
 - **Catalogue anchor:** Section 222, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 222, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1090,6 +1212,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### OFF-001 — Change of Registered Office Not Filed Within 28 Days
 
 - **Catalogue anchor:** Section 77, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 77, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1106,7 +1230,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### REG-001 — Statutory Registers Incomplete
 
-- **Catalogue anchor:** Section 38(4), Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Section 34, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 34, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1124,6 +1250,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### REG-002 — Core Statutory Registers Missing
 
 - **Catalogue anchor:** Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1141,6 +1269,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### REG-003 — Registers Not Kept at Registered Office
 
 - **Catalogue anchor:** Section 34(2), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 34(2), Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1157,10 +1287,12 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### SH-001 — Share Allotment Not Filed — Form XV
 
+- **Catalogue anchor:** Section 151, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 151, Companies Act 1994 (Bangladesh)
+
 - **Source correction (7 Nov 2026):** Companies Act 1994, s.151 requires the return of allotment and prescribed supporting documents within 60 days after allotment; the section also permits a Registrar extension on timely application. The earlier seed text stating 30 days and citing s.50 was incorrect. Official RJSC eBRS guidance independently lists Form XV within 60 days under s.151. Engine/seed deadline is now 60 days, but the rule remains NOT_EVALUATED and counsel approval is still required.
 
 
-- **Catalogue anchor:** Section 151, Companies Act 1994 (Bangladesh)
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1178,6 +1310,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### SH-002 — Share Certificates Not Issued Within 90 Days
 
 - **Catalogue anchor:** Section 158, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 158, Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1194,10 +1328,12 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### SH-003 — Capital Increase Not Filed — Form IV
 
+- **Catalogue anchor:** Section 56, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 56, Companies Act 1994 (Bangladesh)
+
 - **Source correction (7 Nov 2026):** Companies Act 1994, s.56 requires notice of an increase in registered share capital within 15 days of the decision to increase the share capital. Official BDLaws text and RJSC eBRS guidance support the 15-day period. The prior engine used the 60-day allotment constant and the seed described a 30-day/s.52 period; this was incorrect. Engine/seed now use 15 days, but the exact event-date field must represent the resolution/decision date and the rule remains NOT_EVALUATED pending counsel review.
 
 
-- **Catalogue anchor:** Section 56, Companies Act 1994 (Bangladesh)
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1215,6 +1351,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### STR-001 — Name Change Not Filed
 
 - **Catalogue anchor:** Sections 11 and 88(1), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Sections 11 and 88(1), Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1232,6 +1370,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### STR-002 — Object Clause Change Not Filed
 
 - **Catalogue anchor:** Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1249,6 +1389,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### STR-003 — AoA Alteration Not Filed
 
 - **Catalogue anchor:** Sections 20 and 88(1), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Sections 20 and 88(1), Companies Act 1994 (Bangladesh)
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1266,6 +1408,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### TAX-001 — TIN Status Requires Verification
 
 - **Catalogue anchor:** Income Tax Act 2023, sections 166, 261 and 264; company-specific duty and evidence require verification
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Income Tax Act 2023, sections 166, 261 and 264; company-specific duty and evidence require verification
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1283,7 +1427,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### TAX-002 — VAT Registration or Turnover-Tax Enlistment Status Requires Verification
 
-- **Catalogue anchor:** Value Added Tax and Supplementary Duty Act 2012, as amended by Act No. 77 of 2026; exact current section and taxpayer-specific instruments require counsel verification
+- **Catalogue anchor:** Value Added Tax and Supplementary Duty Act 2012, sections 2(48), 2(57), 4 and 10, as amended by Act No. 77 of 2026 and Finance Act No. 96 of 2026; exact current section and taxpayer-specific instruments require counsel verification
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Value Added Tax and Supplementary Duty Act 2012, sections 2(48), 2(57), 4 and 10, as amended by Act No. 77 of 2026 and Finance Act No. 96 of 2026; exact current section and taxpayer-specific instruments require counsel verification
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1300,7 +1446,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### TAX-003 — Annual Tax Return Overdue
 
-- **Catalogue anchor:** Income Tax Act 2023, Sections 170(2) and 171, as amended by Finance Act 2026 (Act No. 96 of 2026)
+- **Catalogue anchor:** Income Tax Act 2023, Sections 170(2) and 171, as amended by Finance Act 2026 (Act No. 96 of 2026); taxpayer-specific and holiday verification required
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Income Tax Act 2023, Sections 170(2) and 171, as amended by Finance Act 2026 (Act No. 96 of 2026); taxpayer-specific and holiday verification required
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1317,7 +1465,9 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### TAX-004 — Advance Tax Missed
 
-- **Catalogue anchor:** Income Tax Act 2023, sections 154-157, as amended by Finance Act 2026 (Act 96/2026), sections 87-88
+- **Catalogue anchor:** Income Tax Act 2023, sections 154-157, as amended by Finance Act 2026 (Act 96/2026), sections 87-88; NOT_EVALUATED pending taxpayer-specific verification
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Income Tax Act 2023, sections 154-157, as amended by Finance Act 2026 (Act 96/2026), sections 87-88; NOT_EVALUATED pending taxpayer-specific verification
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1336,6 +1486,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### TL-001 — Trade License Not Obtained
 
 - **Catalogue anchor:** Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1353,6 +1505,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### TL-002 — Trade License Expired
 
 - **Catalogue anchor:** Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1369,9 +1523,11 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### TR-001 — No Share Transfer Instrument — Form 117
 
+- **Catalogue anchor:** Section 38(3), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 38(3), Companies Act 1994 (Bangladesh)
+
 - **Source correction (7 Nov 2026):** Section 38(3) requires a proper transfer instrument duly stamped and executed by transferor and transferee, with the relevant certificate, subject to the statutory lost-instrument/indemnity exception. The prior s.108 citation and automatic-void assertion were removed.
 
-- **Catalogue anchor:** Section 38(3), Companies Act 1994 (Bangladesh)
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1388,9 +1544,11 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### TR-002 — Share Transfer Stamp Duty Requires Verification
 
+- **Catalogue anchor:** Stamp Act 1899, current Schedule I and applicable amendments
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Stamp Act 1899, current Schedule I and applicable amendments
+
 - **Source correction (7 Nov 2026):** Stamp duty applicability and amount depend on the instrument category, execution facts and current Schedule I/amendments. The prior automatic inadmissibility/unenforceable-title assertions were removed; missing payment evidence is not proof of non-payment.
 
-- **Catalogue anchor:** Stamp Act 1899, Schedule I, Item 62
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1407,9 +1565,11 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### TR-003 — Articles-Based Transfer Restriction Review
 
+- **Catalogue anchor:** Section 38(7), Companies Act 1994 (Bangladesh), and the company’s Articles
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 38(7), Companies Act 1994 (Bangladesh), and the company’s Articles
+
 - **Source correction (7 Nov 2026):** Section 38(7) preserves the company's power under its Articles to refuse registration. Board approval is not a universal statutory requirement; the operative Articles restriction must be verified. The prior s.47 citation and automatic-void/title assertions were removed.
 
-- **Catalogue anchor:** Section 38(7), Companies Act 1994 (Bangladesh), and the company's Articles
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1426,9 +1586,11 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### TR-004 — Notice of Refusal to Register Transfer
 
+- **Catalogue anchor:** Section 38(4), Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 38(4), Companies Act 1994 (Bangladesh)
+
 - **Source correction (7 Nov 2026):** The prior two-month register-update deadline under s.34 was unsupported. The corrected rule is limited to s.38(4): where registration is refused, notice of refusal must be sent to both transferor and transferee within 30 days after lodgement. It triggers only with verified refusal, lodgement date and notice status.
 
-- **Catalogue anchor:** Section 34, Companies Act 1994 (Bangladesh)
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1445,9 +1607,11 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### TR-005 — Share Transfer Violates AoA Restriction — Counsel Review
 
+- **Catalogue anchor:** Section 38(7), Companies Act 1994 (Bangladesh), and the company’s Articles
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 38(7), Companies Act 1994 (Bangladesh), and the company’s Articles
+
 - **Source correction (7 Nov 2026):** Section 38(7) concerns the company's power to refuse registration under its Articles; it does not automatically make every restricted transfer void ab initio. The prior BLACK override, no-title conclusion and unverified court-order/unanimous-ratification assertions were removed.
 
-- **Catalogue anchor:** Section 38; AoA, Companies Act 1994 (Bangladesh)
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1464,9 +1628,11 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### TR-006 — Composite Transfer Record Review
 
+- **Catalogue anchor:** Sections 34 and 38, Companies Act 1994 (Bangladesh), and applicable Articles
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Sections 34 and 38, Companies Act 1994 (Bangladesh), and applicable Articles
+
 - **Source correction (7 Nov 2026):** Composite transfer-record signals are internal review prompts only. The previous s.47/s.108 references and assertion that each deficiency may independently void a transfer were removed; use sections 34 and 38 plus the operative Articles as applicable.
 
-- **Catalogue anchor:** Sections 34 and 38, Companies Act 1994 (Bangladesh), and applicable Articles
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1484,6 +1650,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### VAT-002 — VAT Return Period Requires Verification
 
 - **Catalogue anchor:** Value Added Tax and Supplementary Duty Act 2012, section 64 as amended by Finance Act 2026 and VAT Amendment Ordinance 2026, with applicable VAT Rules/SROs
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Value Added Tax and Supplementary Duty Act 2012, section 64 as amended by Finance Act 2026 and VAT Amendment Ordinance 2026, with applicable VAT Rules/SROs
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED
@@ -1502,6 +1670,8 @@ This docket expands the source triage into a separate signed-review record for e
 ### VAT-003 — VAT Annual Return Status Requires Verification
 
 - **Catalogue anchor:** Value Added Tax Act 2012 (Bangladesh); specific annual-return obligation and due date require current-law verification
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Value Added Tax Act 2012 (Bangladesh); specific annual-return obligation and due date require current-law verification
+
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
 - **Current review finding:** OPEN — NOT COUNSEL VALIDATED

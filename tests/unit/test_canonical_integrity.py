@@ -5,11 +5,14 @@ The engine is parsed as Python syntax. Rule IDs and statutory bases are read
 from the same ComplianceFlag constructor call, not inferred from nearby text.
 """
 import ast
+import re
+import csv
 from collections import Counter
 from pathlib import Path
 
 from canonical_architecture.statutory_rescue import STATUTORY_RESCUE_REGISTRY
 from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+from canonical_architecture.legal_reconciliation import LEGAL_RECONCILIATION
 
 ROOT = Path(__file__).resolve().parents[2]
 EXPECTED = 85  # ILRMF production corpus; this gate does not add or remove rules.
@@ -39,7 +42,7 @@ def test_statutory_catalog_has_no_duplicate_literal_dictionary_keys():
             else:
                 seen[key] = key_node.lineno
 
-    assert not duplicates, "\\n".join(duplicates)
+    assert not duplicates, "\n".join(duplicates)
 
 def _is_rule_id(value: str) -> bool:
     """Validate the repository's PREFIX-NNN rule ID format without text scraping."""
@@ -334,6 +337,29 @@ def test_inner_ids_match_registry_keys():
     assert not bad_rescue, sorted(bad_rescue)
 
 
+def test_canonical_registry_matches_seed_basis_and_requirement_for_all_rules():
+    """The canonical registry, seed corpus and engine must not drift rule-by-rule."""
+    rows = _seed_rows()
+    assert len(rows) == EXPECTED
+    seed_by_id = {row["rule_id"]: row for row in rows}
+    assert set(seed_by_id) == set(STATUTORY_RULE_REGISTRY)
+
+    mismatches = []
+    for rule_id, row in seed_by_id.items():
+        rule = STATUTORY_RULE_REGISTRY[rule_id]
+        seed_basis = _normalise_basis(row["statutory_basis"])
+        canonical_basis = _normalise_basis(rule.law)
+        if seed_basis != canonical_basis or rule.requirement != row["description"]:
+            mismatches.append({
+                "rule_id": rule_id,
+                "seed_basis": row["statutory_basis"],
+                "canonical_basis": rule.law,
+                "seed_requirement": row["description"],
+                "canonical_requirement": rule.requirement,
+            })
+    assert not mismatches, mismatches
+
+
 def test_seed_statutory_basis_matches_engine_call_for_same_rule():
     engine_data, errors = _engine_rule_data()
     assert not errors, errors
@@ -400,3 +426,97 @@ def test_affected_agm_and_charge_provenance_matches_seed_engine_and_canonical():
             "seed": seed_by_id[rule_id]["statutory_basis"],
             "engine": sorted(engine_data.get(rule_id, set())),
         }
+
+
+def test_legal_reconciliation_registry_has_exact_unique_rule_coverage():
+    """Catch missing IDs and duplicate literal keys before dict construction hides them."""
+    source = (
+        ROOT / "canonical_architecture" / "legal_reconciliation.py"
+    ).read_text(encoding="utf-8")
+    tree = ast.parse(source, filename="canonical_architecture/legal_reconciliation.py")
+    duplicates = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Dict):
+            continue
+        seen = {}
+        for key_node in node.keys:
+            if not isinstance(key_node, ast.Constant) or not isinstance(key_node.value, str):
+                continue
+            key = key_node.value
+            if key in seen:
+                duplicates.append(
+                    f"line {key_node.lineno}: duplicate key {key!r}; first at line {seen[key]}"
+                )
+            else:
+                seen[key] = key_node.lineno
+    assert not duplicates, "\\n".join(duplicates)
+    assert set(LEGAL_RECONCILIATION) == set(STATUTORY_RULE_REGISTRY)
+    assert len(LEGAL_RECONCILIATION) == EXPECTED
+
+
+def test_unreconciled_canonical_rules_cannot_affect_score():
+    """All unresolved statutory provisions stay NOT_EVALUATED with zero impact."""
+    unsafe = [
+        {
+            "rule_id": rule_id,
+            "provision": rule.provision,
+            "severity": rule.severity.value,
+            "score_impact": rule.score_impact,
+        }
+        for rule_id, rule in STATUTORY_RULE_REGISTRY.items()
+        if rule.provision_status.value == "RECONCILE"
+        and (rule.severity.value != "NOT_EVALUATED" or rule.score_impact != 0)
+    ]
+    assert not unsafe, unsafe
+
+
+def test_every_provision_is_explicitly_unverified_until_counsel_signoff():
+    """No TBD placeholder or implied legal approval; all candidates remain non-scoring."""
+    unsafe = []
+    for rule_id, rule in STATUTORY_RULE_REGISTRY.items():
+        if (
+            not rule.provision.startswith("UNVERIFIED CANDIDATE — ")
+            or "TBD" in rule.provision.upper()
+            or rule.provision_status.value != "RECONCILE"
+            or rule.severity.value != "NOT_EVALUATED"
+            or rule.score_impact != 0
+        ):
+            unsafe.append({
+                "rule_id": rule_id,
+                "provision": rule.provision,
+                "status": rule.provision_status.value,
+                "severity": rule.severity.value,
+                "score_impact": rule.score_impact,
+            })
+    assert not unsafe, unsafe
+
+
+def test_legal_reconciliation_checklist_covers_all_85_unverified_rules():
+    path = ROOT / "docs" / "LEGAL_RECONCILIATION_CHECKLIST.csv"
+    with path.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == EXPECTED
+    assert {row["Rule ID"] for row in rows} == set(STATUTORY_RULE_REGISTRY)
+    assert all(row["Status"] == "RECONCILE" for row in rows)
+    assert all(row["Legal Team Sign-Off"] == "PENDING" for row in rows)
+    assert all(row["Candidate Provision"].startswith("UNVERIFIED CANDIDATE — ") for row in rows)
+
+
+def test_counsel_docket_covers_all_85_rules_and_matches_unverified_candidates():
+    path = ROOT / "docs" / "legal" / "85_RULE_COUNSEL_VALIDATION_DOCKET.md"
+    content = path.read_text(encoding="utf-8")
+    headings = list(re.finditer(r"^### ([A-Z]{2,5}-\d{3}) —", content, re.MULTILINE))
+    ids = [match.group(1) for match in headings]
+    assert len(ids) == EXPECTED
+    assert set(ids) == set(STATUTORY_RULE_REGISTRY)
+
+    for index, match in enumerate(headings):
+        end = headings[index + 1].start() if index + 1 < len(headings) else len(content)
+        block = content[match.start():end]
+        rule = STATUTORY_RULE_REGISTRY[match.group(1)]
+        assert f"- **Catalogue anchor:** {rule.law}" in block
+        assert (
+            "- **Current canonical provision candidate (unverified):** "
+            f"{rule.provision}"
+        ) in block
+        assert "OPEN — NOT COUNSEL VALIDATED" in block
