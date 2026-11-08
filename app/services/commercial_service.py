@@ -390,38 +390,19 @@ class QuotationService(BaseService[Quotation]):
             text("SELECT pg_advisory_xact_lock(hashtext(:lock_key))"),
             {"lock_key": prefix},
         )
-        result = await self.db.execute(
-            text(
-                "SELECT COALESCE(MAX(CAST(SPLIT_PART(quotation_number, '-', 3) AS INTEGER)), 0) "
-                "FROM quotations WHERE quotation_number LIKE :prefix"
         pattern = f"{prefix}%"
         result = await self.db.execute(
             text(
                 "SELECT COALESCE(MAX("
-                "CAST(SUBSTRING(quotation_number FROM CAST(:suffix_start AS INTEGER)) AS INTEGER)"
-                "), 0) + 1 "
-                "FROM quotations "
-                "WHERE quotation_number LIKE :pattern "
-                "AND SUBSTRING(quotation_number FROM CAST(:suffix_start AS INTEGER)) ~ '^[0-9]+$'"
-                "CAST(SUBSTRING(quotation_number FROM :suffix_start) AS INTEGER)"
-                "), 0) + 1 "
-                "FROM quotations "
-                "WHERE quotation_number LIKE :pattern "
-                "AND SUBSTRING(quotation_number FROM :suffix_start) ~ '^[0-9]+
-                "AND SUBSTRING(quotation_number FROM :suffix_start) ~ '^[0-9]+$'"
-                "CASE "
-                "WHEN SPLIT_PART(quotation_number, '-', 3) ~ '^[0-9]+$' "
+                "CASE WHEN SPLIT_PART(quotation_number, '-', 3) ~ '^[0-9]+$' "
                 "THEN CAST(SPLIT_PART(quotation_number, '-', 3) AS INTEGER) "
                 "ELSE NULL END"
-                "), 0) "
+                "), 0) + 1 "
                 "FROM quotations WHERE quotation_number LIKE :pattern"
             ),
-            {"pattern": f"{prefix}%"},
             {"pattern": pattern},
         )
-        number = int(result.scalar_one())
-        return f"{prefix}{number:04d}"
-        next_number = int(result.scalar_one()) + 1
+        next_number = int(result.scalar_one())
         return f"{prefix}{next_number:04d}"
 
     async def accept(
