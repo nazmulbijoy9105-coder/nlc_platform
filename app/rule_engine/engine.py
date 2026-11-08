@@ -1123,16 +1123,13 @@ class NLCRuleEngine:
             and bool(c.agm_history_verified_by)
         )
 
-    def _subsequent_agm_deadline(self, c: CompanyProfile) -> date | None:
-        if not self._agm_history_is_verified(c):
+    def _subsequent_agm_deadline_components(
+        self, c: CompanyProfile
+    ) -> tuple[date, date, date, str] | None:
+        if not self._agm_history_is_verified(c) or c.last_agm_date is None:
             return None
-        if c.last_agm_date is None:
-            return None
-        # Section 81(1): every subsequent AGM must be held in each
-        # calendar year and no more than 15 months may elapse between AGMs.
-        # The first-AGM proviso does not erase the separate 15-month cap
-        # measured from the actual first AGM date.
-        fifteen_month_deadline = self._add_months(c.last_agm_date, 15)
+
+        interval_deadline = self._add_months(c.last_agm_date, 15)
         first_agm_in_incorporation_year = (
             c.agm_count == 1
             and c.incorporation_date is not None
@@ -1140,20 +1137,38 @@ class NLCRuleEngine:
             and c.last_agm_date <= self._add_months(c.incorporation_date, 18)
         )
         if first_agm_in_incorporation_year:
-            # Section 81(1)'s first-AGM proviso expressly removes the need
-            # for another AGM in the incorporation year or the following
-            # year. If the ordinary 15-month date falls in that exempt
-            # following year, the next calendar-year obligation is 31 Dec
-            # of the year after it; otherwise the 15-month date still governs.
             calendar_year_deadline = date(c.incorporation_date.year + 2, 12, 31)
-            base_deadline = (
-                calendar_year_deadline
-                if fifteen_month_deadline.year <= c.incorporation_date.year + 1
-                else min(fifteen_month_deadline, calendar_year_deadline)
-            )
+            # The first-AGM proviso removes the need for another meeting in
+            # the incorporation year or the following year. If the 15-month
+            # date falls in that exempt following year, defer the calendar
+            # obligation to the end of the next year; otherwise the 15-month
+            # interval remains the earlier controlling deadline.
+            if interval_deadline.year <= c.incorporation_date.year + 1:
+                base_deadline = calendar_year_deadline
+                basis = "FIRST_AGM_PROVISO"
+            else:
+                base_deadline = min(interval_deadline, calendar_year_deadline)
+                basis = (
+                    "15_MONTH_INTERVAL"
+                    if interval_deadline <= calendar_year_deadline
+                    else "CALENDAR_YEAR"
+                )
         else:
             calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
-            base_deadline = min(fifteen_month_deadline, calendar_year_deadline)
+            base_deadline = min(interval_deadline, calendar_year_deadline)
+            basis = (
+                "15_MONTH_INTERVAL"
+                if interval_deadline <= calendar_year_deadline
+                else "CALENDAR_YEAR"
+            )
+        return interval_deadline, calendar_year_deadline, base_deadline, basis
+
+    def _subsequent_agm_deadline(self, c: CompanyProfile) -> date | None:
+        components = self._subsequent_agm_deadline_components(c)
+        if components is None:
+            return None
+        _, calendar_year_deadline, base_deadline, _ = components
+
         if c.agm_extension_granted_until is None:
             return base_deadline
         extension_verified = (
@@ -1164,7 +1179,9 @@ class NLCRuleEngine:
         )
         if not extension_verified or c.agm_extension_application_date is None:
             return None
-        application_days_after_deadline = (c.agm_extension_application_date - base_deadline).days
+        application_days_after_deadline = (
+            c.agm_extension_application_date - base_deadline
+        ).days
         if application_days_after_deadline < 0 or application_days_after_deadline > 30:
             return None
         statutory_limit = min(
@@ -1258,21 +1275,17 @@ class NLCRuleEngine:
                     ))
                 elif c.agm_held_this_cycle is False:
                     agm_deadline = self._subsequent_agm_deadline(c)
-                    interval_deadline = (
-                        self._add_months(c.last_agm_date, 15)
-                        if c.last_agm_date is not None else None
-                    )
-                    calendar_year_deadline = (
-                        date(c.last_agm_date.year + 1, 12, 31)
-                        if c.last_agm_date is not None else None
-                    )
-                    deadline_basis = (
-                        "15_MONTH_INTERVAL"
-                        if interval_deadline is not None
-                        and calendar_year_deadline is not None
-                        and interval_deadline <= calendar_year_deadline
-                        else "CALENDAR_YEAR"
-                    )
+                    deadline_components = self._subsequent_agm_deadline_components(c)
+                    if deadline_components is None:
+                        interval_deadline = calendar_year_deadline = base_deadline = None
+                        deadline_basis = "UNKNOWN"
+                    else:
+                        (
+                            interval_deadline,
+                            calendar_year_deadline,
+                            base_deadline,
+                            deadline_basis,
+                        ) = deadline_components
                     if agm_deadline is None:
                         self._add_flag(ComplianceFlag(
                             rule_id="AGM-002", flag_code="AGM_EXTENSION_REQUIRES_REVIEW",
@@ -1288,7 +1301,12 @@ class NLCRuleEngine:
                         severity = Severity.BLACK if delay > 365 else Severity.RED
                         basis = (
                             "VALIDATED_EXTENSION"
-                            if c.agm_extension_granted_until == agm_deadline
+                            if (
+                                c.agm_extension_granted_until is not None
+                                and c.agm_extension_granted_until == agm_deadline
+                                and base_deadline is not None
+                                and agm_deadline > base_deadline
+                            )
                             else deadline_basis
                         )
                         self._add_flag(ComplianceFlag(
@@ -1306,9 +1324,9 @@ class NLCRuleEngine:
                                 "calendar_year_deadline": (
                                     calendar_year_deadline.isoformat() if calendar_year_deadline else None
                                 ),
-                                "statutory_base_deadline": min(
-                                    interval_deadline, calendar_year_deadline
-                                ).isoformat() if interval_deadline and calendar_year_deadline else None,
+                                "statutory_base_deadline": (
+                                    base_deadline.isoformat() if base_deadline else None
+                                ),
                                 "extension_application_date": (
                                     c.agm_extension_application_date.isoformat()
                                     if c.agm_extension_application_date else None
@@ -1320,9 +1338,9 @@ class NLCRuleEngine:
                                 "extension_evidence_ref": c.agm_extension_evidence_ref,
                                 "extension_verified": c.agm_extension_verified is True,
                                 "extension_statutory_limit": min(
-                                    min(interval_deadline, calendar_year_deadline) + timedelta(days=90),
+                                    base_deadline + timedelta(days=90),
                                     calendar_year_deadline,
-                                ).isoformat() if interval_deadline and calendar_year_deadline else None,
+                                ).isoformat() if base_deadline and calendar_year_deadline else None,
                             },
                         ))
         # Unverified AGM history is not converted into a deadline breach.
