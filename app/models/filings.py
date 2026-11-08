@@ -182,6 +182,8 @@ class AGMNoticeEvidence(FullMixin, Base):
     shareholder_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("shareholders.id", ondelete="RESTRICT"), nullable=True)
     recipient_key: Mapped[str] = mapped_column(String(160), nullable=False)
     recipient_name: Mapped[str] = mapped_column(String(300), nullable=False)
+    submitted_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     entitled_member_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     entitlement_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
