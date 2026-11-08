@@ -155,6 +155,9 @@ class EngagementService(BaseService[Engagement]):
             }
             for row in result.all()
         }
+        stages = {row.engagement_status: {"count": row.count, "value": Decimal(str(row.value or 0))}
+                  for row in result.all()}
+
         total_identified = stages.get("IDENTIFIED", {}).get("count", 0)
         total_confirmed = stages.get("CONFIRMED", {}).get("count", 0)
         total_completed = stages.get("COMPLETED", {}).get("count", 0)
