@@ -1,3 +1,4 @@
+import pytest
 """
 NLC Legal Audit Test Suite — Implements the test matrix from the deep legal audit.
 
