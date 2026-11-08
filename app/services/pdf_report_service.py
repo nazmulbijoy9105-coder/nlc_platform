@@ -501,8 +501,17 @@ def build_compliance_report_html(
     is omitted entirely.
     engine_version and snapshot_hash are included in the footer for audit trail.
     """
-    score = company.current_compliance_score or 0
-    band = company.current_risk_band or "NOT_EVALUATED"
+    # The HTML builder is also called directly by tests and internal jobs.
+    # Enforce the release boundary here, not only in the HTTP endpoint:
+    # stale cached scores, flags and rescue plans must never leak into a report.
+    if not _legal_score_is_released():
+        flags = ()
+        rescue_plan = None
+        score = 0
+        band = "NOT_EVALUATED"
+    else:
+        score = company.current_compliance_score or 0
+        band = company.current_risk_band or "NOT_EVALUATED"
     company_name = company.company_name or "[COMPANY NAME NOT ON FILE]"
     score_display = "NOT EVALUATED" if band == "NOT_EVALUATED" else f"{score} / 100"
     score_css_class = "score-warn" if band == "NOT_EVALUATED" else _score_class(score)
