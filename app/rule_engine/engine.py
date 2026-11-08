@@ -176,6 +176,7 @@ class ChargeEvent:
     satisfied: bool | None = None
     satisfaction_date: Optional[date] = None
     satisfaction_filed: bool | None = None
+    satisfaction_filed_date: Optional[date] = None
     # Section 172 applies only to charges whose registration is required by s.159.
     registrable_under_s159: bool | None = None
     registrability_verified: bool = False
@@ -2037,6 +2038,8 @@ class NLCRuleEngine:
                 registration_unknown.append("RJSC_FORM_XVIII_STATUS_UNVERIFIED")
             if charge.form_xviii_filed is True and charge.form_xviii_filed_date is None:
                 registration_unknown.append("FORM_XVIII_FILING_DATE_UNKNOWN")
+            if charge.form_xviii_filed is False and charge.form_xviii_filed_date is not None:
+                registration_unknown.append("FORM_XVIII_STATUS_DATE_CONFLICT")
 
             registrability_verified_not_applicable = (
                 charge.registrable_under_s159 is False
@@ -2056,34 +2059,58 @@ class NLCRuleEngine:
                     state=RuleState.UNKNOWN,
                     eval_state="UNKNOWN",
                 ))
-            elif (
-                charge.registrable_under_s159 is True
-                and charge.form_xviii_filed is False
-            ):
+            elif charge.registrable_under_s159 is True:
                 registration_deadline = (
                     charge.creation_date + timedelta(days=CHARGE_REGISTRATION_DEADLINE_DAYS)
                 )
-                delay = (self.today - registration_deadline).days
-                if self.today > registration_deadline:
+                if charge.form_xviii_filed is False:
+                    days_overdue = (self.today - registration_deadline).days
+                    if self.today > registration_deadline:
+                        self._add_flag(ComplianceFlag(
+                            rule_id="CAP-002",
+                            flag_code="CHARGE_NOT_REGISTERED",
+                            severity=Severity.YELLOW if days_overdue < 90 else Severity.RED,
+                            score_impact=5,
+                            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                            description=f"{charge.charge_type} charge (Tk {charge.amount_bdt:,.2f}) was not registered within 21 days of creation under Section 159(1). Overdue by {days_overdue} days.",
+                            statutory_basis="Section 159(1), Companies Act 1994 (Bangladesh)",
+                            detail={
+                                "charge_id": charge.charge_id,
+                                "creation_date": charge.creation_date.isoformat(),
+                                "statutory_deadline": registration_deadline.isoformat(),
+                                "statutory_period_days": CHARGE_REGISTRATION_DEADLINE_DAYS,
+                                "days_overdue": days_overdue,
+                                "form": "Form XVIII",
+                                "amount": charge.amount_bdt,
+                            },
+                            state=RuleState.NON_COMPLIANT,
+                            eval_state="VIOLATION",
+                        ))
+                elif (
+                    charge.form_xviii_filed is True
+                    and charge.form_xviii_filed_date is not None
+                    and charge.form_xviii_filed_date > registration_deadline
+                ):
+                    days_late = (charge.form_xviii_filed_date - registration_deadline).days
                     self._add_flag(ComplianceFlag(
                         rule_id="CAP-002",
-                        flag_code="CHARGE_NOT_REGISTERED",
-                        severity=Severity.YELLOW if delay < 90 else Severity.RED,
-                        score_impact=5,
+                        flag_code="CHARGE_REGISTERED_LATE_REQUIRES_REVIEW",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"{charge.charge_type} charge (Tk {charge.amount_bdt:,.2f}) was not registered within 21 days of creation under Section 159(1). Overdue by {delay} days.",
+                        description="Form XVIII filing is evidenced after the Section 159(1) 21-day period. Review any Registrar extension and the legal effect of late registration; do not infer cure or voidness automatically.",
                         statutory_basis="Section 159(1), Companies Act 1994 (Bangladesh)",
                         detail={
                             "charge_id": charge.charge_id,
                             "creation_date": charge.creation_date.isoformat(),
                             "statutory_deadline": registration_deadline.isoformat(),
-                            "statutory_period_days": CHARGE_REGISTRATION_DEADLINE_DAYS,
-                            "days_overdue": delay,
+                            "filed_date": charge.form_xviii_filed_date.isoformat(),
+                            "days_late": days_late,
                             "form": "Form XVIII",
-                            "amount": charge.amount_bdt,
+                            "registrar_extension_evidence_required": True,
                         },
-                        state=RuleState.NON_COMPLIANT,
-                        eval_state="VIOLATION",
+                        state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                        eval_state="UNKNOWN",
                     ))
 
             if charge.satisfied is None or charge.satisfied is True:
@@ -2109,6 +2136,10 @@ class NLCRuleEngine:
                     or not charge.satisfaction_filing_evidence_ref
                 ):
                     unknown_reasons.append("RJSC_FILING_STATUS_UNVERIFIED")
+                if charge.satisfaction_filed is True and charge.satisfaction_filed_date is None:
+                    unknown_reasons.append("SATISFACTION_FILING_DATE_UNKNOWN")
+                if charge.satisfaction_filed is False and charge.satisfaction_filed_date is not None:
+                    unknown_reasons.append("SATISFACTION_FILING_STATUS_DATE_CONFLICT")
                 if unknown_reasons:
                     self._add_flag(ComplianceFlag(
                         rule_id="CHG-001",
@@ -2126,6 +2157,34 @@ class NLCRuleEngine:
                         state=RuleState.UNKNOWN,
                         eval_state="UNKNOWN",
                     ))
+                elif (
+                    charge.satisfaction_filed is True
+                    and charge.satisfaction_date is not None
+                    and charge.satisfaction_filed_date is not None
+                ):
+                    satisfaction_deadline = charge.satisfaction_date + timedelta(days=21)
+                    if charge.satisfaction_filed_date > satisfaction_deadline:
+                        days_late = (charge.satisfaction_filed_date - satisfaction_deadline).days
+                        self._add_flag(ComplianceFlag(
+                            rule_id="CHG-001",
+                            flag_code="CHARGE_SATISFACTION_FILED_LATE_REQUIRES_REVIEW",
+                            severity=Severity.NOT_EVALUATED,
+                            score_impact=0,
+                            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                            description="Form XXVIII filing is evidenced after the Section 172(1) 21-day period. Review any Registrar extension and the legal effect of late filing; do not infer cure or voidness automatically.",
+                            statutory_basis="Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh)",
+                            detail={
+                                "charge_id": charge.charge_id,
+                                "satisfaction_date": charge.satisfaction_date.isoformat(),
+                                "statutory_deadline": satisfaction_deadline.isoformat(),
+                                "filed_date": charge.satisfaction_filed_date.isoformat(),
+                                "days_late": days_late,
+                                "form": "Form XXVIII",
+                                "registrar_extension_evidence_required": True,
+                            },
+                            state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                            eval_state="UNKNOWN",
+                        ))
                 elif (
                     charge.satisfaction_filed is False
                     and charge.satisfaction_date is not None
