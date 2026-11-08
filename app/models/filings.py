@@ -157,24 +157,28 @@ class AGMNoticeEvidence(FullMixin, Base):
             "AND entitlement_verified_at IS NOT NULL AND entitlement_verified_by IS NOT NULL)",
             name="ck_agm_notice_entitlement_provenance",
         ),
+        CheckConstraint("NOT entitled_member_verified OR entitlement_verified_by <> submitted_by", name="ck_agm_notice_entitlement_four_eyes"),
         CheckConstraint(
             "NOT notice_verified OR "
             "(notice_evidence_ref IS NOT NULL AND btrim(notice_evidence_ref) <> '' "
             "AND notice_delivery_status <> 'UNKNOWN' AND notice_verified_at IS NOT NULL AND notice_verified_by IS NOT NULL)",
             name="ck_agm_notice_service_provenance",
         ),
+        CheckConstraint("NOT notice_verified OR notice_verified_by <> submitted_by", name="ck_agm_notice_service_four_eyes"),
         CheckConstraint(
             "NOT consent_verified OR "
             "(consent_given IS NOT NULL AND consent_evidence_ref IS NOT NULL "
             "AND btrim(consent_evidence_ref) <> '' AND consent_verified_at IS NOT NULL AND consent_verified_by IS NOT NULL)",
             name="ck_agm_notice_consent_provenance",
         ),
+        CheckConstraint("NOT consent_verified OR consent_verified_by <> submitted_by", name="ck_agm_notice_consent_four_eyes"),
         CheckConstraint(
             "NOT omission_verified OR "
             "(omission_accidental IS NOT NULL AND omission_evidence_ref IS NOT NULL "
             "AND btrim(omission_evidence_ref) <> '' AND omission_verified_at IS NOT NULL AND omission_verified_by IS NOT NULL)",
             name="ck_agm_notice_omission_provenance",
         ),
+        CheckConstraint("NOT omission_verified OR omission_verified_by <> submitted_by", name="ck_agm_notice_omission_four_eyes"),
     )
 
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
