@@ -88,24 +88,38 @@ def _applied_score_impacts(flags) -> list[dict]:
         if not active:
             results.append({"applied": 0, "status": "INACTIVE"})
             continue
-        if state != RuleState.NON_COMPLIANT or getattr(flag, "eval_state", "VIOLATION") == "UNKNOWN":
+        confirmed_violation = (
+            state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+            and getattr(flag, "eval_state", "VIOLATION") == "VIOLATION"
+        )
+        if not confirmed_violation:
             results.append({"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"})
             continue
-        # Legal approval is checked before severity or override handling.
-        # An unapproved BLACK-labelled flag is visible evidence only: it must
-        # not acquire scoring or override semantics through a side path.
-        if flag.rule_id not in VERIFIED_RULE_IDS:
-            results.append({"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"})
-            continue
-        # Internal source-check allowlisting is not release authority. While
-        # statutory scoring is disabled, no downstream report may describe a
-        # provisional impact as applied.
+
+        # The global release gate takes precedence over per-rule eligibility:
+        # while release is closed, no rule has an applied score impact.
         if not LEGAL_SCORE_RELEASED:
             results.append({"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"})
             continue
-        severity_value = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
-        if getattr(flag, "is_black_override", False) or severity_value == "BLACK":
-            results.append({"applied": 0, "status": "BLACK_OVERRIDE_POLICY"})
+        if flag.rule_id not in VERIFIED_RULE_IDS:
+            results.append({"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"})
+            continue
+
+        severity_value = getattr(
+            getattr(flag, "severity", None),
+            "value",
+            getattr(flag, "severity", None),
+        )
+        authorised_black_override = (
+            flag.rule_id in VERIFIED_RULE_IDS
+            and flag.rule_id in __import__(
+                "app.rule_engine.engine", fromlist=["AUTHORIZED_BLACK_OVERRIDE_RULE_IDS"]
+            ).AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+            and getattr(flag, "is_black_override", False) is True
+            and severity_value == "BLACK"
+        )
+        if authorised_black_override:
+            results.append({"applied": 0, "status": "BLACK_OVERRIDE_APPLIED"})
             continue
 
         category = next(
