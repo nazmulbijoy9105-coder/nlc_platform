@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pytest
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 
 from app.models.database import set_admin_context, set_rls_context
 from app.services.notification_service import ActivityService
@@ -1059,11 +1060,10 @@ async def test_client_financial_membership_does_not_grant_portfolio_access(
 
 @pytest.mark.asyncio
 async def test_activity_logs_are_company_scoped_for_legal_staff_and_actor_bound_on_insert(
-    db, db_company, db_other_company, db_client_user, db_user
+    db, db_company, db_other_company, db_user
 ):
     import uuid
 
-    from app.models.company import Company
     from app.models.enums import UserRole
     from app.models.user import User
 
@@ -1112,7 +1112,7 @@ async def test_activity_logs_are_company_scoped_for_legal_staff_and_actor_bound_
     ]
 
     # A signed actor cannot insert an event claiming another actor.
-    with pytest.raises(Exception):
+    with pytest.raises(DBAPIError):
         async with db.begin_nested():
             await ActivityService(db).log(
                 user_id=db_user.id,
