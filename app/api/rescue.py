@@ -343,7 +343,6 @@ async def list_rescue_plans(
         Depends(require_company_access("company_id")),
         Depends(require_entitlement("corporate_rescue")),
     ],
-    dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("corporate_rescue"))],
     summary="Get the active rescue plan for a company",
 )
 async def get_active_plan(
