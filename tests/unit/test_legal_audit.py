@@ -16,7 +16,6 @@ Legal basis: Companies Act 1994 (Bangladesh)
 
 from datetime import date, timedelta
 
-import pytest
 
 from app.rule_engine.engine import (
     VERIFIED_RULE_IDS,
