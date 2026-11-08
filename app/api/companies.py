@@ -9,7 +9,7 @@ from decimal import Decimal
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -144,6 +144,22 @@ class CompanyChargeCreateRequest(BaseModel):
 
 class CompanyChargeVerificationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_null_verification_flags(cls, values):
+        if isinstance(values, dict):
+            verification_flags = (
+                "creation_date_verified",
+                "form_xviii_filing_status_verified",
+                "registrability_verified",
+                "satisfaction_verified",
+                "satisfaction_filing_status_verified",
+            )
+            if any(field in values and values[field] is None for field in verification_flags):
+                raise ValueError("Verification flags must be true or false, not null.")
+        return values
+
     creation_date_verified: bool | None = None
     creation_date_evidence_ref: str | None = Field(default=None, max_length=2000)
     form_xviii_filed: bool | None = None
