@@ -28,7 +28,7 @@ from app.models.finance import (
 )
 
 CENT = Decimal("0.01")
-OFFLINE_METHODS = {"BANK_TRANSFER", "CASH", "CHEQUE"}
+OFFLINE_METHODS = {"BANK_TRANSFER", "CASH", "CHEQUE", "BKASH_MANUAL", "NAGAD_MANUAL"}
 PAYMENTABLE_INVOICE_STATES = {"ISSUED", "PARTIALLY_PAID", "OVERDUE"}
 
 
@@ -54,6 +54,8 @@ def _integrity_constraint_name(error: IntegrityError) -> str | None:
     )
     if isinstance(constraint_name, str) and constraint_name:
         return constraint_name
+    if constraint_name:
+        return str(constraint_name)
     # asyncpg's UniqueViolationError omits PostgreSQL's constraint_name
     # diagnostic from its public attributes; the trigger includes a stable
     # constraint token in its message so service errors remain deterministic.
@@ -201,7 +203,7 @@ class FinanceService:
         if method not in OFFLINE_METHODS:
             raise FinanceConflictError("Unsupported offline payment method")
         _require_aware_datetime(paid_at, "paid_at")
-        if method in {"BANK_TRANSFER", "CHEQUE"} and not (payer_reference and payer_reference.strip()):
+        if method in {"BANK_TRANSFER", "CHEQUE", "BKASH_MANUAL", "NAGAD_MANUAL"} and not (payer_reference and payer_reference.strip()):
             raise FinanceConflictError("A transaction or instrument reference is required for this payment method")
         if paid_at is not None and paid_at > datetime.now(UTC):
             raise FinanceConflictError("Payment date cannot be in the future")
@@ -210,7 +212,7 @@ class FinanceService:
         # submissions on the normalized reference, then check both
         # pending/approved claims and already-posted receipts. The unique
         # database indexes remain the final integrity boundary.
-        if method in {"BANK_TRANSFER", "CHEQUE"}:
+        if method in {"BANK_TRANSFER", "CHEQUE", "BKASH_MANUAL", "NAGAD_MANUAL"}:
             assert payer_reference is not None  # required by the method check above
             normalized_reference = payer_reference.strip().lower()
             reference_lock_key = f"nlc:manual-reference:{method}:{normalized_reference}"
@@ -377,7 +379,7 @@ class FinanceService:
         ):
             raise FinanceConflictError("Cheque clearance time cannot precede the payment date")
 
-        if submission.method in {"BANK_TRANSFER", "CHEQUE"}:
+        if submission.method in {"BANK_TRANSFER", "CHEQUE", "BKASH_MANUAL", "NAGAD_MANUAL"}:
             assert submission.payer_reference is not None
             normalized_reference = submission.payer_reference.strip().lower()
             reference_lock_key = (
@@ -585,9 +587,14 @@ class FinanceService:
             text("SELECT pg_advisory_xact_lock(hashtext(:lock_key))"),
             {"lock_key": key_prefix},
         )
+        # Identifiers are selected only from the allowlist above. Ignore
+        # malformed legacy suffixes rather than breaking future numbering.
         result = await self.db.execute(
             text(
-                f"SELECT COALESCE(MAX(CAST(SPLIT_PART({column}, '-', 3) AS INTEGER)), 0) "
+                f"SELECT COALESCE(MAX(CASE "
+                f"WHEN SPLIT_PART({column}, '-', 3) ~ '^[0-9]+$' "
+                f"THEN CAST(SPLIT_PART({column}, '-', 3) AS INTEGER) "
+                f"ELSE NULL END), 0) "
                 f"FROM {table} WHERE {column} LIKE :prefix"
             ),
             {"prefix": f"{key_prefix}%"},

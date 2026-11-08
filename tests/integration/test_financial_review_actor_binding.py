@@ -83,6 +83,11 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
     # approved first. The deferred ledger constraint validates the complete
     # payment/allocation/event chain when forced below.
     await set_rls_context(db, str(db_super_admin.id))
+    # New claims must enter PENDING_REVIEW. Production then transitions the
+    # existing row to APPROVED before creating the linked receipt.
+    db.add(submission)
+    await db.flush()
+    assert submission.status == "PENDING_REVIEW"
     submission.status = "APPROVED"
     submission.reviewed_by = db_super_admin.id
     submission.reviewed_at = now

@@ -126,7 +126,6 @@ async def test_stale_token_role_is_rejected_before_session_is_yielded(monkeypatc
     assert session.rolled_back is True
     assert session.closed is True
 
-
 @pytest.mark.asyncio
 async def test_legal_staff_keeps_signed_user_identity(monkeypatch):
     user_id = uuid.uuid4()

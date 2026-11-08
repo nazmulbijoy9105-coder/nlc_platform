@@ -178,6 +178,8 @@ class SubscriptionService:
         existing_prices = {item.billing_interval: item for item in existing_prices_result.scalars().all()}
         for interval, existing_price_item in existing_prices.items():
             existing_price_item.is_active = interval in intervals
+        for interval, item in existing_prices.items():
+            item.is_active = interval in intervals
         for price in prices:
             interval = str(price["billing_interval"]).upper()
             amount = Decimal(str(price["amount_bdt"])).quantize(Decimal("0.01"))
@@ -185,6 +187,8 @@ class SubscriptionService:
             tax_reference = str(price["tax_policy_reference"]).strip()
             price_item: SubscriptionPlanPrice | None = existing_prices.get(interval)
             if price_item is None:
+            item = existing_prices.get(interval)
+            if item is None:
                 self.db.add(SubscriptionPlanPrice(
                     plan_code=code, billing_interval=interval,
                     amount_bdt=amount, tax_bdt=tax,
@@ -197,6 +201,11 @@ class SubscriptionService:
                 price_item.tax_policy_reference = tax_reference
                 price_item.currency = "BDT"
                 price_item.is_active = True
+                item.amount_bdt = amount
+                item.tax_bdt = tax
+                item.tax_policy_reference = tax_reference
+                item.currency = "BDT"
+                item.is_active = True
 
         existing_features_result = await self.db.execute(
             select(SubscriptionPlanFeature).where(SubscriptionPlanFeature.plan_code == code)
@@ -204,6 +213,8 @@ class SubscriptionService:
         existing_features = {item.feature_code: item for item in existing_features_result.scalars().all()}
         for feature_code, feature_item in existing_features.items():
             feature_item.enabled = feature_code in requested_features
+        for feature_code, item in existing_features.items():
+            item.enabled = feature_code in requested_features
         for feature_code, feature in requested_features.items():
             if feature_code not in existing_features:
                 self.db.add(SubscriptionPlanFeature(
@@ -271,6 +282,8 @@ class SubscriptionService:
         # Do not SELECT FOR UPDATE the customer-visible catalogue. PostgreSQL
         # applies UPDATE RLS to row-locking reads, hiding prices from customers.
         # The INSERT policy revalidates the exact active price snapshot.
+            .with_for_update()
+        )
         row = plan_result.one_or_none()
         if row is None:
             raise SubscriptionNotFoundError("Active plan price not found")
@@ -767,6 +780,7 @@ class SubscriptionService:
             raise SubscriptionConflictError("Only a pending subscription request can be cancelled by finance")
         if subscription.invoice_id is not None:
             invoice_result = await self.db.execute(
+            invoice = await self.db.execute(
                 select(Invoice)
                 .where(
                     Invoice.id == subscription.invoice_id,
@@ -775,6 +789,7 @@ class SubscriptionService:
                 .with_for_update()
             )
             invoice = invoice_result.scalar_one_or_none()
+            invoice = invoice.scalar_one_or_none()
             if invoice is None:
                 raise SubscriptionConflictError("Linked subscription invoice is missing")
             if invoice.status not in ("ISSUED", "OVERDUE") or invoice.paid_bdt != 0 or invoice.balance_bdt != invoice.total_bdt:
