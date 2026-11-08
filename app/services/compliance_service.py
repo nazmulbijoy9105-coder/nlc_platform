@@ -523,10 +523,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
             default=str,
         )
         evaluation_hash = hashlib.sha256(hash_material.encode()).hexdigest()
-        black_flags = sum(
-            1 for f in output.flags
-            if f.rule_id in VERIFIED_RULE_IDS
-            and str(getattr(f.severity, "value", f.severity)).upper() == "BLACK"
+        black_flags = (
+            output.score_breakdown.black_flag_count
+            if legal_score_is_released() else 0
         )
         evaluation_run = ComplianceEvaluationRun(
             id=uuid.uuid4(),
