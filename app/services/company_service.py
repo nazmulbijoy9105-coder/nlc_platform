@@ -653,7 +653,7 @@ class CompanyService(BaseService[Company]):
         ]
         agm_count = len(verified_held_agms) if agm_history_verified else None
         last_verified_agm_date = (
-            max((row.agm_date for row in verified_held_agms), default=None)
+            max((row.agm_date for row in verified_held_agms if row.agm_date is not None), default=None)
             if agm_history_verified else None
         )
 
@@ -842,7 +842,11 @@ class CompanyService(BaseService[Company]):
             "last_agm_date": last_verified_agm_date,
             "agm_history_verified": agm_history_verified,
             "agm_history_evidence_ref": company.agm_history_evidence_ref if agm_history_verified else None,
-            "agm_history_verified_at": company.agm_history_verified_at.date() if agm_history_verified else None,
+            "agm_history_verified_at": (
+                company.agm_history_verified_at.date()
+                if agm_history_verified and company.agm_history_verified_at is not None
+                else None
+            ),
             "agm_history_verified_by": str(company.agm_history_verified_by) if agm_history_verified else None,
             "agm_extension_granted_until": company.agm_extension_granted_until,
             "agm_extension_application_date": company.agm_extension_application_date,
@@ -856,7 +860,9 @@ class CompanyService(BaseService[Company]):
             "agm_extension_verified_at": company.agm_extension_verified_at.date() if company.agm_extension_verified_at else None,
             "agm_extension_verified_by": str(company.agm_extension_verified_by) if company.agm_extension_verified_by else None,
             "agm_held_this_cycle": (
-                current_cycle_agm.agm_held if current_cycle_verified else None
+                current_cycle_agm.agm_held
+                if current_cycle_verified and current_cycle_agm is not None
+                else None
             ),
             "agm_minutes_prepared":       agm_profile_evidence["agm_minutes_prepared"],
 
@@ -1078,22 +1084,8 @@ class CompanyService(BaseService[Company]):
             "minutes_book_board_maintained": getattr(company, "minutes_book_board_maintained", True),
 
             # AGM Details
-            "agm_adjourned_without_notice":  getattr(company, "agm_adjourned_without_notice", False),
-            "agm_scheduled_date":            getattr(company, "agm_scheduled_date", None),
-            "notice_sent_date":              agm_profile_evidence["notice_sent_date"],
-            "short_notice_consent_obtained": agm_profile_evidence.get("short_notice_consent_obtained"),
-            "short_notice_consent_verified": agm_profile_evidence.get("short_notice_consent_verified", False),
-            "short_notice_consent_evidence_ref": agm_profile_evidence.get("short_notice_consent_evidence_ref"),
-            "members_present_at_agm":        agm_profile_evidence["members_present_at_agm"],
-            "agm_attendance_verified":       agm_profile_evidence.get("agm_attendance_verified", False),
-            "agm_attendance_evidence_ref":   agm_profile_evidence.get("agm_attendance_evidence_ref"),
-            "agm_quorum_required":           agm_profile_evidence.get("agm_quorum_required"),
-            "agm_quorum_basis_verified":     agm_profile_evidence.get("agm_quorum_basis_verified", False),
-            "agm_quorum_evidence_ref":       agm_profile_evidence.get("agm_quorum_evidence_ref"),
-            "auditor_reappointed_at_agm":    agm_profile_evidence["auditor_reappointed_at_agm"],
-            "auditor_reappointment_verified": agm_profile_evidence.get("auditor_reappointment_verified", False),
-            "auditor_reappointment_evidence_ref": agm_profile_evidence.get("auditor_reappointment_evidence_ref"),
-            "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", None),
+            # Legacy company-level assertions are intentionally not promoted.
+            "agm_adjourned_without_notice": None,
 
             # Audit Details
             "audit_in_progress":             getattr(company, "audit_in_progress", False),

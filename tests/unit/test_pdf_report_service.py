@@ -1,6 +1,7 @@
 """Unit tests for the compliance report PDF service (no database required)."""
 import asyncio
 import re
+from uuid import uuid4
 import zlib
 from datetime import datetime
 from enum import Enum
@@ -125,7 +126,7 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
             return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
 
     response = asyncio.run(
-        PDFReportService(db=FakeDB()).generate_company_compliance_pdf("any-id")
+        PDFReportService(db=FakeDB()).generate_company_compliance_pdf(str(uuid4()))
     )
 
     assert isinstance(response, Response)

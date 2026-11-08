@@ -12,7 +12,7 @@ AI Constitution Article 2.2:
 """
 from __future__ import annotations
 
-from datetime import UTC, date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
@@ -177,19 +177,27 @@ class EngagementService(BaseService[Engagement]):
         *,
         fee_bdt: Decimal | None = None,
         note: str | None = None,
+        locked_engagement: Engagement | None = None,
     ) -> Engagement | None:
         """Advance an engagement only through the canonical lifecycle."""
-        result = await self.db.execute(
-            select(Engagement)
-            .where(
-                Engagement.id == engagement_id,
-                Engagement.is_active.is_(True),
+        engagement: Engagement | None
+        if locked_engagement is not None:
+            if locked_engagement.id != engagement_id or not locked_engagement.is_active:
+                return None
+            engagement = locked_engagement
+        else:
+            result = await self.db.execute(
+                select(Engagement)
+                .where(
+                    Engagement.id == engagement_id,
+                    Engagement.is_active.is_(True),
+                )
+                .execution_options(populate_existing=True)
+                .with_for_update()
             )
-            .with_for_update()
-        )
-        engagement = result.scalar_one_or_none()
-        if engagement is None:
-            return None
+            engagement = result.scalar_one_or_none()
+            if engagement is None:
+                return None
 
         if not validate_engagement_transition(engagement.engagement_status, new_status):
             raise InvalidEngagementTransitionError(
@@ -364,19 +372,21 @@ class QuotationService(BaseService[Quotation]):
     ) -> Quotation | None:
         """Accept a valid quotation while locking its engagement first."""
         quotation_ref_result = await self.db.execute(
+    async def accept(self, quotation_id: uuid.UUID) -> Quotation | None:
+        """Accept a valid quotation while serializing parent lifecycle changes."""
+        parent_result = await self.db.execute(
             select(Quotation.engagement_id, Quotation.company_id).where(
                 Quotation.id == quotation_id
             )
         )
-        quotation_ref = quotation_ref_result.one_or_none()
-        if quotation_ref is None:
+        parent = parent_result.one_or_none()
+        if parent is None:
             return None
-
         engagement_result = await self.db.execute(
             select(Engagement)
             .where(
-                Engagement.id == quotation_ref.engagement_id,
-                Engagement.company_id == quotation_ref.company_id,
+                Engagement.id == parent.engagement_id,
+                Engagement.company_id == parent.company_id,
                 Engagement.is_active.is_(True),
             )
             .with_for_update()
@@ -387,6 +397,7 @@ class QuotationService(BaseService[Quotation]):
                 "Quotation engagement is missing, inactive, or belongs to another company."
             )
 
+            raise ValueError("Quotation engagement is missing, inactive, or belongs to another company.")
         quotation_result = await self.db.execute(
             select(Quotation)
             .where(
@@ -399,29 +410,27 @@ class QuotationService(BaseService[Quotation]):
         if quotation is None:
             return None
         if quotation.engagement_id != engagement.id:
+        if quotation.engagement_id != engagement.id or quotation.company_id != engagement.company_id:
             raise ValueError("Quotation parent changed while acceptance was being processed.")
+        if quotation.status == "ACCEPTED":
+            return quotation
         if quotation.status not in {"DRAFT", "SENT"}:
-            raise CommercialConflictError(
-                f"Cannot accept a quotation in {quotation.status} state."
-            )
+            raise CommercialConflictError(f"Cannot accept a quotation in {quotation.status} state.")
         if quotation.valid_until is None or quotation.valid_until < date.today():
-            raise CommercialConflictError(
-                "An expired quotation cannot be accepted; issue a renewed quotation."
-            )
+            raise CommercialConflictError("An expired quotation cannot be accepted; issue a renewed quotation.")
         if engagement.engagement_status != EngagementStatus.QUOTED:
-            raise CommercialConflictError(
-                "Only a quotation for a QUOTED engagement can be accepted."
-            )
-
+            raise CommercialConflictError("Only a quotation for a QUOTED engagement can be accepted.")
         accepted = await self.update_instance(
             quotation,
             status="ACCEPTED",
             accepted_date=date.today(),
         )
+        await self.db.flush()
         await EngagementService(self.db).advance_status(
             engagement.id,
             EngagementStatus.CONFIRMED,
             fee_bdt=quotation.total_bdt,
+            locked_engagement=engagement,
         )
         return accepted
 
@@ -433,19 +442,20 @@ class QuotationService(BaseService[Quotation]):
     ) -> Quotation | None:
         """Reject a draft or sent quotation while locking its engagement first."""
         quotation_ref_result = await self.db.execute(
+        """Reject a quotation while serializing against engagement lifecycle writes."""
+        parent_result = await self.db.execute(
             select(Quotation.engagement_id, Quotation.company_id).where(
                 Quotation.id == quotation_id
             )
         )
-        quotation_ref = quotation_ref_result.one_or_none()
-        if quotation_ref is None:
+        parent = parent_result.one_or_none()
+        if parent is None:
             return None
-
         engagement_result = await self.db.execute(
             select(Engagement)
             .where(
-                Engagement.id == quotation_ref.engagement_id,
-                Engagement.company_id == quotation_ref.company_id,
+                Engagement.id == parent.engagement_id,
+                Engagement.company_id == parent.company_id,
                 Engagement.is_active.is_(True),
             )
             .with_for_update()
@@ -456,6 +466,7 @@ class QuotationService(BaseService[Quotation]):
                 "Quotation engagement is missing, inactive, or belongs to another company."
             )
 
+            raise ValueError("Quotation engagement is missing, inactive, or belongs to another company.")
         quotation_result = await self.db.execute(
             select(Quotation)
             .where(
@@ -473,12 +484,16 @@ class QuotationService(BaseService[Quotation]):
             raise CommercialConflictError(
                 f"Cannot reject a quotation in {quotation.status} state."
             )
+        if quotation.engagement_id != engagement.id or quotation.company_id != engagement.company_id:
+            raise ValueError("Quotation parent changed while rejection was being processed.")
+        if quotation.status not in {"DRAFT", "SENT"}:
+            raise CommercialConflictError(f"Cannot reject a quotation in {quotation.status} state.")
         return await self.update_instance(
             quotation,
             status="REJECTED",
             rejection_reason=reason,
             rejected_by=rejected_by,
-        )
+        )  # COM-002
 
 
 class TaskService(BaseService[Task]):
@@ -535,10 +550,13 @@ class TaskService(BaseService[Task]):
         self,
         task_id: uuid.UUID,
         company_id: uuid.UUID,
+        *,
+        completion_note: str | None = None,
     ) -> Task | None:
         """Complete only an active task belonging to the authorized company."""
         from datetime import datetime
 
+        """Complete only a task belonging to the already-authorized company."""
         task_result = await self.db.execute(
             select(Task)
             .where(
@@ -555,8 +573,12 @@ class TaskService(BaseService[Task]):
             raise CommercialConflictError(
                 f"Cannot complete a task in {task.task_status} state."
             )
+        normalized_note = completion_note.strip() if completion_note else None
+        if normalized_note is not None and len(normalized_note) > 2000:
+            raise ValueError("Completion note must not exceed 2,000 characters.")
         return await self.update_instance(
             task,
             task_status=TaskStatus.COMPLETED,
             completed_at=datetime.now(UTC),
+            completion_note=normalized_note,
         )

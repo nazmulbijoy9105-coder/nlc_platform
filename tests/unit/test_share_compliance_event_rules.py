@@ -29,7 +29,9 @@ def _event(
         filing_evidence_ref=f"rjsc://{reference}/filing" if filing_verified else None,
         certificate_issued=certificate_issued,
         certificate_status_verified=certificate_verified,
-        certificate_evidence_ref=f"register://{reference}/certificate" if certificate_verified else None,
+        certificate_evidence_ref=(
+            f"register://{reference}/certificate" if certificate_verified else None
+        ),
     )
 
 
@@ -40,7 +42,11 @@ def test_sh001_uses_verified_allotment_and_form_xv_trigger(rule_engine, build_pr
         filing_form="FORM_XV", filing_status=False, filing_verified=True,
     )
     output = rule_engine.evaluate(
-        build_profile(share_compliance_events=[event], last_allotment_date=None, form_xv_filed=None),
+        build_profile(
+            share_compliance_events=[event],
+            last_allotment_date=None,
+            form_xv_filed=None,
+        ),
         today=today,
     )
     assert_flag_triggered(output, "SH-001")
@@ -89,7 +95,11 @@ def test_sh003_uses_capital_increase_resolution_date_and_form_iv(rule_engine, bu
         filing_form="FORM_IV", filing_status=False, filing_verified=True,
     )
     output = rule_engine.evaluate(
-        build_profile(share_compliance_events=[event], capital_increase_date=None, form_iv_filed=None),
+        build_profile(
+            share_compliance_events=[event],
+            capital_increase_date=None,
+            form_iv_filed=None,
+        ),
         today=today,
     )
     assert_flag_triggered(output, "SH-003")

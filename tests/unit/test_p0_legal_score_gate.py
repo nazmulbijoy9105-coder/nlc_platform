@@ -110,7 +110,7 @@ def test_pdf_requires_explicit_authorisation_for_black_override(monkeypatch):
         is_black_override=True,
     )
     score, override = _verified_flag_score([flag])
-    assert score == 80  # ordinary AGM category cap, no forced zero
+    assert score == 75  # AGM category cap applies; no forced-zero override
     assert override is False
 
     monkeypatch.setattr(

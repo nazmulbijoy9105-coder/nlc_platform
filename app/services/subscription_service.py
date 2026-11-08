@@ -233,20 +233,22 @@ class SubscriptionService:
     ) -> ClientSubscription:
         # Serialize requests per company; concurrent requests cannot create two
         # pending subscriptions for the same tenant.
+        await self.db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtextextended(:lock_key, 0))"),
+            {"lock_key": f"nlc:subscription-company:{company_id}"},
+        )
         company_result = await self.db.execute(
-            select(Company.id).where(Company.id == company_id).with_for_update()
+            select(Company.id).where(Company.id == company_id)
         )
         if company_result.scalar_one_or_none() is None:
             raise SubscriptionNotFoundError("Company not found")
 
         now = datetime.now(UTC)
         existing_result = await self.db.execute(
-            select(ClientSubscription)
-            .where(
+            select(ClientSubscription).where(
                 ClientSubscription.company_id == company_id,
                 ClientSubscription.status.in_(("PENDING", "ACTIVE", "PAST_DUE", "SUSPENDED")),
             )
-            .with_for_update()
         )
         for existing in existing_result.scalars().all():
             if existing.status == "PENDING":
@@ -280,12 +282,10 @@ class SubscriptionService:
             .join(SubscriptionPlanPrice, SubscriptionPlanPrice.plan_code == SubscriptionPlan.plan_code)
             .where(
                 SubscriptionPlan.plan_code == normalized_plan_code,
-                SubscriptionPlan.plan_code == plan_code.upper(),
                 SubscriptionPlan.is_active.is_(True),
                 SubscriptionPlanPrice.billing_interval == interval,
                 SubscriptionPlanPrice.is_active.is_(True),
             )
-            .with_for_update()
         )
         # Do not SELECT FOR UPDATE the customer-visible catalogue. PostgreSQL
         # applies UPDATE RLS to row-locking reads, hiding prices from customers.

@@ -779,12 +779,6 @@ class NLCRuleEngine:
         if (c.company_type == "PRIVATE_LIMITED" and c.directors_verified
                 and c.current_director_count is not None
                 and c.current_director_count < 2):  # RULE-001: only fire when verified against RJSC
-            inc003_impact = 15
-            inc003_desc = (
-                "Private company has NO directors. Section 90(2) requires minimum 2. Director records require verification - absence in NLC database does not confirm actual absence."
-                if c.current_director_count == 0
-                else "Private company has only 1 director. Section 90(2) requires minimum 2."
-            )
             self._add_flag(ComplianceFlag(
                 rule_id="INC-003",
                 flag_code="MINIMUM_DIRECTORS_NOT_MET",
@@ -1553,11 +1547,16 @@ class NLCRuleEngine:
 
         if c.annual_return_filed and c.annual_return_content_complete is False:
             missing = []
-            if c.schedule_x_attached is False: missing.append("Schedule X")
-            if c.balance_sheet_attached is False: missing.append("Balance Sheet")
-            if c.profit_loss_attached is False: missing.append("P&L Account")
-            if c.directors_list_attached is False: missing.append("Directors List")
-            if c.shareholders_list_attached is False: missing.append("Shareholders List")
+            if c.schedule_x_attached is False:
+                missing.append("Schedule X")
+            if c.balance_sheet_attached is False:
+                missing.append("Balance Sheet")
+            if c.profit_loss_attached is False:
+                missing.append("P&L Account")
+            if c.directors_list_attached is False:
+                missing.append("Directors List")
+            if c.shareholders_list_attached is False:
+                missing.append("Shareholders List")
             self._add_flag(ComplianceFlag(
                 rule_id="AR-004",
                 flag_code="ANNUAL_RETURN_INCOMPLETE",
@@ -2328,7 +2327,7 @@ class NLCRuleEngine:
                     severity=Severity.YELLOW if delay < 90 else Severity.RED,
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Special resolution filing not evidenced within 15 days. Section 88(1); determine the resolution date and filing receipt.",
+                    description="Special resolution filing not evidenced within 15 days. Section 88(1); determine the resolution date and filing receipt.",
                     statutory_basis="Section 88(1), Companies Act 1994 (Bangladesh) — 15 days",
                     detail={"delay": delay}
                 ))
@@ -2390,12 +2389,6 @@ class NLCRuleEngine:
             # not yet verified; keep this as a non-scoring review prompt.
             if self.today > deadline:
                 delay = (self.today - deadline).days
-                if delay <= 90:
-                    t3_sev, t3_imp = Severity.YELLOW, 3
-                elif delay <= 180:
-                    t3_sev, t3_imp = Severity.RED, 5
-                else:
-                    t3_sev, t3_imp = Severity.RED, 8
                 self._add_flag(ComplianceFlag(
                     rule_id="TAX-003",
                     flag_code="ANNUAL_TAX_RETURN_OVERDUE",
@@ -2427,10 +2420,14 @@ class NLCRuleEngine:
                 q3_deadline = date(t.year, 3, 15)
                 q4_deadline = date(t.year, 6, 15)
                 
-            if t > q1_deadline and c.advance_tax_q1_paid is False: missed.append("Q1")
-            if t > q2_deadline and c.advance_tax_q2_paid is False: missed.append("Q2")
-            if t > q3_deadline and c.advance_tax_q3_paid is False: missed.append("Q3")
-            if t > q4_deadline and c.advance_tax_q4_paid is False: missed.append("Q4")
+            if t > q1_deadline and c.advance_tax_q1_paid is False:
+                missed.append("Q1")
+            if t > q2_deadline and c.advance_tax_q2_paid is False:
+                missed.append("Q2")
+            if t > q3_deadline and c.advance_tax_q3_paid is False:
+                missed.append("Q3")
+            if t > q4_deadline and c.advance_tax_q4_paid is False:
+                missed.append("Q4")
             
             if missed:
                 self._add_flag(ComplianceFlag(
@@ -3064,11 +3061,11 @@ class NLCRuleEngine:
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description=(
-                    f"Disqualification allegation(s) received for director(s) "
-                    f"but evidence NOT verified. Section 94 requires a "
-                    f"competent court declaration, insolvency certificate, "
-                    f"or other authoritative determination. Cannot determine "
-                    f"compliance status until evidence is reviewed."
+                    "Disqualification allegation(s) received for director(s) "
+                    "but evidence NOT verified. Section 94 requires a "
+                    "competent court declaration, insolvency certificate, "
+                    "or other authoritative determination. Cannot determine "
+                    "compliance status until evidence is reviewed."
                 ),
                 statutory_basis="Section 94, Companies Act 1994 (Bangladesh)",
                 detail={
@@ -3551,23 +3548,31 @@ class NLCRuleEngine:
     def _fiscal_quarter(self) -> int:
         """Return current fiscal quarter (1-4) for Bangladesh FY (Jul-Jun)."""
         m = self.today.month
-        if m <= 3:   return 3  # Jan-Mar = Q3
-        if m <= 6:   return 4  # Apr-Jun = Q4
-        if m <= 9:   return 1  # Jul-Sep = Q1
+        if m <= 3:
+            return 3  # Jan-Mar = Q3
+        if m <= 6:
+            return 4  # Apr-Jun = Q4
+        if m <= 9:
+            return 1  # Jul-Sep = Q1
         return 2              # Oct-Dec = Q2
 
     def _add_flag(self, flag: ComplianceFlag) -> None:
         self._flags.append(flag)
 
     def _graduated_agm_deduction(self, delay: int) -> int:
-        if delay <= 90: return 5
-        if delay <= 180: return 10
-        if delay <= 365: return 15
+        if delay <= 90:
+            return 5
+        if delay <= 180:
+            return 10
+        if delay <= 365:
+            return 15
         return 20
 
     def _graduated_ar_deduction(self, delay: int) -> int:
-        if delay <= 60: return 3
-        if delay <= 180: return 5
+        if delay <= 60:
+            return 3
+        if delay <= 180:
+            return 5
         return 10
 
     def _get_fy_end_deadline(self, c: CompanyProfile) -> date:

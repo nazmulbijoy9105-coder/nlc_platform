@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from datetime import date, datetime
     from decimal import Decimal
 
+    from .charges import CompanyCharge
     from .commercial import Engagement, Task
     from .compliance import ComplianceEvaluationRun, ComplianceFlag, ComplianceScoreHistory
     from .documents import AIOutputLog, Document
