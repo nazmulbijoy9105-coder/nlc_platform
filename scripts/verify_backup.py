@@ -22,6 +22,14 @@ REQUIRED_EVIDENCE_TABLES = (
 )
 
 
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("archive", type=Path, help="pg_dump custom-format archive")
@@ -38,7 +46,7 @@ def main() -> int:
     checksum_path = Path(f"{args.archive}.sha256")
     if checksum_path.exists():
         expected = checksum_path.read_text(encoding="utf-8").split()[0]
-        actual = hashlib.sha256(args.archive.read_bytes()).hexdigest()
+        actual = file_sha256(args.archive)
         if actual.lower() != expected.lower():
             print("FAIL: SHA-256 checksum mismatch", file=sys.stderr)
             return 1
