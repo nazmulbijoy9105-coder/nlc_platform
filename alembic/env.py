@@ -281,14 +281,9 @@ def validate_production_migration_role(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    """
-    Async entry point for migrations.
-    Uses asyncpg engine with NullPool for Alembic (one connection per run).
-    """
+    """Run Alembic with the privileged migration URL and verified TLS."""
     from app.core.db_url import normalize_asyncpg_url
 
-    # Override URL with resolved value. Render/production always require
-    # certificate-verified TLS, even when the provider URL omits sslmode.
     configuration = config.get_section(config.config_ini_section, {})
     is_render = os.environ.get("RENDER", "").strip().lower() == "true"
     environment = os.environ.get("ENVIRONMENT", "").strip().lower()
@@ -297,55 +292,19 @@ async def run_async_migrations() -> None:
         get_database_url(),
         require_tls=require_tls,
     )
-    connect_args = {}
+    connect_args: dict[str, object] = {}
     if ssl_context is not None:
         connect_args["ssl"] = ssl_context
-    import ssl as _ssl
-
-    # Override URL with resolved value. asyncpg uses connect_args["ssl"],
-    # not libpq's sslmode URL parameter. Require verified TLS on Render and
-    # production hosts even when the operator omitted sslmode=require.
-    configuration = config.get_section(config.config_ini_section, {})
-    db_url = get_database_url()
-    parsed_url = make_url(db_url)
-    sslmode = str(parsed_url.query.get("sslmode", "")).lower()
-    ssl_option = str(parsed_url.query.get("ssl", "")).lower()
-    is_render = os.environ.get("RENDER", "").strip().lower() == "true"
-    environment = os.environ.get("ENVIRONMENT", "").strip().lower()
-    is_production = is_render or environment in {"prod", "production"}
-
-    if is_production and sslmode in {"disable", "allow", "prefer"}:
-        raise RuntimeError(
-            "PostgreSQL TLS must be required for production migrations; "
-            "remove the insecure sslmode and use a verified TLS connection."
-        )
-
-    require_tls = (
-        is_production
-        or sslmode in {"require", "verify-ca", "verify-full"}
-        or ssl_option in {"true", "1", "require"}
-    )
-    db_url = parsed_url.difference_update_query(["sslmode", "ssl"]).render_as_string(
-        hide_password=False
-    )
-    connect_args = {}
-    if require_tls:
-        connect_args["ssl"] = _ssl.create_default_context()
 
     configuration["sqlalchemy.url"] = db_url
-
     connectable = async_engine_from_config(
         configuration,
         prefix="sqlalchemy.",
-        poolclass=pool.NullPool,  # Always NullPool for migrations
+        poolclass=pool.NullPool,
         connect_args=connect_args,
     )
 
     async with connectable.connect() as connection:
-        # SET starts an implicit SQLAlchemy transaction. Commit it before
-        # handing the connection to Alembic, otherwise Alembic's
-        # transaction_per_migration and autocommit boundaries are not owned
-        # by its MigrationContext.
         await connection.execute(text("SET timezone = 'UTC'"))
         await connection.commit()
         await connection.run_sync(validate_production_migration_role)
