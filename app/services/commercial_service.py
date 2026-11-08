@@ -48,58 +48,97 @@ class EngagementService(BaseService[Engagement]):
 
     async def get_pipeline(self) -> dict:
         """
-        Revenue pipeline from vw_revenue_pipeline view.
-        _get_revenue_pipeline stub implementation.
+        Revenue pipeline from the finance-ledger-backed vw_revenue_pipeline view.
+
+        Estimated, quoted, and confirmed values are engagement aggregates.
+        Invoiced values come from non-draft/non-void invoices; collected values
+        come from allocations against settled payments. These are not bank-
+        statement reconciled cash receipts.
         """
         result = await self.db.execute(text("SELECT * FROM vw_revenue_pipeline"))
         rows = [dict(r) for r in result.mappings().all()]
 
-        # Structure by revenue tier
+        zero = Decimal("0.00")
         pipeline = {
-            "COMPLIANCE_PACKAGE":        {"stages": {}, "total_estimated": 0, "total_confirmed": 0, "total_invoiced": 0, "total_collected": 0},
-            "STRUCTURED_REGULARIZATION": {"stages": {}, "total_estimated": 0, "total_confirmed": 0, "total_invoiced": 0, "total_collected": 0},
-            "CORPORATE_RESCUE":          {"stages": {}, "total_estimated": 0, "total_confirmed": 0, "total_invoiced": 0, "total_collected": 0},
+            "COMPLIANCE_PACKAGE": {
+                "stages": {},
+                "total_estimated": zero,
+                "total_confirmed": zero,
+                "total_invoiced": zero,
+                "total_collected": zero,
+            },
+            "STRUCTURED_REGULARIZATION": {
+                "stages": {},
+                "total_estimated": zero,
+                "total_confirmed": zero,
+                "total_invoiced": zero,
+                "total_collected": zero,
+            },
+            "CORPORATE_RESCUE": {
+                "stages": {},
+                "total_estimated": zero,
+                "total_confirmed": zero,
+                "total_invoiced": zero,
+                "total_collected": zero,
+            },
         }
         for row in rows:
             tier = row.get("revenue_tier", "")
-            if tier in pipeline:
-                stage = row.get("engagement_status", "")
-                pipeline[tier]["stages"][stage] = {  # type: ignore
-                    "count":          row.get("engagement_count", 0),
-                    "estimated_bdt":  float(row.get("total_estimated_bdt") or 0),
-                    "quoted_bdt":     float(row.get("total_quoted_bdt") or 0),
-                    "confirmed_bdt":  float(row.get("total_confirmed_bdt") or 0),
-                    "invoiced_bdt":   float(row.get("total_invoiced_bdt") or 0),
-                    "collected_bdt":  float(row.get("total_collected_bdt") or 0),
-                }
-                pipeline[tier]["total_estimated"] += float(row.get("total_estimated_bdt") or 0)  # type: ignore
-                pipeline[tier]["total_confirmed"]  += float(row.get("total_confirmed_bdt") or 0)  # type: ignore
-                pipeline[tier]["total_invoiced"]   += float(row.get("total_invoiced_bdt") or 0)  # type: ignore
-                pipeline[tier]["total_collected"]  += float(row.get("total_collected_bdt") or 0)  # type: ignore
+            if tier not in pipeline:
+                continue
+            stage = row.get("engagement_status", "")
+            estimated = Decimal(str(row.get("total_estimated_bdt") or 0))
+            quoted = Decimal(str(row.get("total_quoted_bdt") or 0))
+            confirmed = Decimal(str(row.get("total_confirmed_bdt") or 0))
+            invoiced = Decimal(str(row.get("total_invoiced_bdt") or 0))
+            collected = Decimal(str(row.get("total_collected_bdt") or 0))
+            pipeline[tier]["stages"][stage] = {
+                "count": row.get("engagement_count", 0),
+                "estimated_bdt": estimated,
+                "quoted_bdt": quoted,
+                "confirmed_bdt": confirmed,
+                "invoiced_bdt": invoiced,
+                "collected_bdt": collected,
+            }
+            pipeline[tier]["total_estimated"] += estimated
+            pipeline[tier]["total_confirmed"] += confirmed
+            pipeline[tier]["total_invoiced"] += invoiced
+            pipeline[tier]["total_collected"] += collected
 
-        # Grand totals
-        grand_total_estimated  = sum(v["total_estimated"]  for v in pipeline.values())  # type: ignore
-        grand_total_confirmed  = sum(v["total_confirmed"]  for v in pipeline.values())  # type: ignore
-        grand_total_invoiced   = sum(v["total_invoiced"]   for v in pipeline.values())  # type: ignore
-        grand_total_collected  = sum(v["total_collected"]  for v in pipeline.values())  # type: ignore
+        grand_total_estimated = sum(
+            (v["total_estimated"] for v in pipeline.values()), zero
+        )
+        grand_total_confirmed = sum(
+            (v["total_confirmed"] for v in pipeline.values()), zero
+        )
+        grand_total_invoiced = sum(
+            (v["total_invoiced"] for v in pipeline.values()), zero
+        )
+        grand_total_collected = sum(
+            (v["total_collected"] for v in pipeline.values()), zero
+        )
 
         return {
-            "by_tier":              pipeline,
-            "grand_total_estimated_bdt":  grand_total_estimated,
-            "grand_total_confirmed_bdt":  grand_total_confirmed,
-            "grand_total_invoiced_bdt":   grand_total_invoiced,
-            "grand_total_collected_bdt":  grand_total_collected,
-            "collection_rate":      (
-                round(grand_total_collected / grand_total_confirmed * 100, 1)
-                if grand_total_confirmed > 0 else 0
+            "by_tier": pipeline,
+            "grand_total_estimated_bdt": grand_total_estimated,
+            "grand_total_confirmed_bdt": grand_total_confirmed,
+            "grand_total_invoiced_bdt": grand_total_invoiced,
+            "grand_total_collected_bdt": grand_total_collected,
+            "collection_rate": (
+                round(
+                    grand_total_collected / grand_total_confirmed * 100, 1
+                )
+                if grand_total_confirmed > 0
+                else 0
             ),
+            "engagement_amounts_source": "ENGAGEMENT_RECORDS",
+            "invoiced_amounts_source": "NON_DRAFT_NON_VOID_FINANCE_INVOICES",
+            "collected_amounts_source": "SETTLED_FINANCE_PAYMENT_ALLOCATIONS",
+            "bank_reconciliation_verified": False,
         }
 
     async def get_conversion_funnel(self) -> dict:
-        """
-        Engagement conversion funnel metrics.
-        _get_conversion_funnel stub implementation.
-        """
+        """Engagement conversion funnel metrics using exact decimal amounts."""
         result = await self.db.execute(
             select(
                 Engagement.engagement_status,
@@ -109,22 +148,29 @@ class EngagementService(BaseService[Engagement]):
             .where(Engagement.is_active)
             .group_by(Engagement.engagement_status)
         )
-        stages = {row.engagement_status: {"count": row.count, "value": float(row.value or 0)}
-                  for row in result.all()}
+        stages = {
+            row.engagement_status: {
+                "count": row.count,
+                "value": Decimal(str(row.value or 0)),
+            }
+            for row in result.all()
+        }
 
         total_identified = stages.get("IDENTIFIED", {}).get("count", 0)
-        total_confirmed  = stages.get("CONFIRMED", {}).get("count", 0)
-        total_completed  = stages.get("COMPLETED", {}).get("count", 0)
+        total_confirmed = stages.get("CONFIRMED", {}).get("count", 0)
+        total_completed = stages.get("COMPLETED", {}).get("count", 0)
 
         return {
             "stages": stages,
             "conversion_identified_to_confirmed": (
-                round(total_confirmed / total_identified * 100, 1)  # type: ignore
-                if total_identified > 0 else 0  # type: ignore
+                round(total_confirmed / total_identified * 100, 1)
+                if total_identified > 0
+                else 0
             ),
             "conversion_confirmed_to_completed": (
-                round(total_completed / total_confirmed * 100, 1)  # type: ignore
-                if total_confirmed > 0 else 0  # type: ignore
+                round(total_completed / total_confirmed * 100, 1)
+                if total_confirmed > 0
+                else 0
             ),
         }
 
