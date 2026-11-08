@@ -398,10 +398,9 @@ class QuotationService(BaseService[Quotation]):
         self,
         quotation_id: uuid.UUID,
         reason: str | None = None,
-        rejected_by: uuid.UUID | None = None,  # COM-002
+        rejected_by: uuid.UUID | None = None,
     ) -> Quotation | None:
-        """Mark quotation as rejected."""
-        """Reject a quotation while serializing against parent lifecycle writes."""
+        """Reject a quotation while serializing against engagement lifecycle writes."""
         quotation_ref_result = await self.db.execute(
             select(Quotation.engagement_id, Quotation.company_id).where(
                 Quotation.id == quotation_id
@@ -422,25 +421,28 @@ class QuotationService(BaseService[Quotation]):
         )
         engagement = engagement_result.scalar_one_or_none()
         if engagement is None:
-            raise ValueError("Quotation engagement is missing, inactive, or belongs to another company.")
+            raise ValueError(
+                "Quotation engagement is missing, inactive, or belongs to another company."
+            )
 
         quotation_result = await self.db.execute(
             select(Quotation).where(Quotation.id == quotation_id).with_for_update()
         )
-        q = quotation_result.scalar_one_or_none()
-        if not q:
+        quotation = quotation_result.scalar_one_or_none()
+        if quotation is None:
             return None
-        if q.status not in {"DRAFT", "SENT"}:
-            raise ValueError(f"Cannot reject a quotation in {q.status} state.")
-        if q is None:
-            return None
-        if q.engagement_id != engagement.id or q.company_id != engagement.company_id:
-            raise ValueError("Quotation parent changed while the rejection was being processed.")
-        if q.status not in {"DRAFT", "SENT"}:
-            raise CommercialConflictError(f"Cannot reject a quotation in {q.status} state.")
+        if (
+            quotation.engagement_id != engagement.id
+            or quotation.company_id != engagement.company_id
+        ):
+            raise ValueError("Quotation parent changed while rejection was being processed.")
+        if quotation.status not in {"DRAFT", "SENT"}:
+            raise CommercialConflictError(
+                f"Cannot reject a quotation in {quotation.status} state."
+            )
 
         return await self.update_instance(
-            q,
+            quotation,
             status="REJECTED",
             rejection_reason=reason,
             rejected_by=rejected_by,
