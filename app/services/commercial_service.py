@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, timedelta
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import func, select, text
 
@@ -59,7 +59,7 @@ class EngagementService(BaseService[Engagement]):
         rows = [dict(r) for r in result.mappings().all()]
 
         zero = Decimal("0.00")
-        pipeline = {
+        pipeline: dict[str, dict[str, Any]] = {
             "COMPLIANCE_PACKAGE": {
                 "stages": {},
                 "total_estimated": zero,
@@ -83,10 +83,10 @@ class EngagementService(BaseService[Engagement]):
             },
         }
         for row in rows:
-            tier = row.get("revenue_tier", "")
+            tier = str(row.get("revenue_tier", ""))
             if tier not in pipeline:
                 continue
-            stage = row.get("engagement_status", "")
+            stage = str(row.get("engagement_status", ""))
             estimated = Decimal(str(row.get("total_estimated_bdt") or 0))
             quoted = Decimal(str(row.get("total_quoted_bdt") or 0))
             confirmed = Decimal(str(row.get("total_confirmed_bdt") or 0))
@@ -148,8 +148,8 @@ class EngagementService(BaseService[Engagement]):
             .where(Engagement.is_active)
             .group_by(Engagement.engagement_status)
         )
-        stages = {
-            row.engagement_status: {
+        stages: dict[str, dict[str, Any]] = {
+            str(row.engagement_status): {
                 "count": row.count,
                 "value": Decimal(str(row.value or 0)),
             }
@@ -186,6 +186,7 @@ class EngagementService(BaseService[Engagement]):
             select(Engagement)
             .where(Engagement.id == engagement_id)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
         eng = engagement_result.scalar_one_or_none()
         if not eng:
