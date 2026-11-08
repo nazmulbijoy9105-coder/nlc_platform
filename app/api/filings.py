@@ -234,6 +234,7 @@ async def list_all_filings(
 ):
     from sqlalchemy import select
 
+    from app.models.company import Company
     from app.models.filings import AGM, AnnualReturn, Audit
 
     # Customer and legal-staff portfolio views are restricted to the exact
@@ -244,6 +245,7 @@ async def list_all_filings(
         for value in getattr(request.state, "entitled_company_ids", [])
     ]
     if role_value in {"CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "LEGAL_STAFF"}:
+        company_filter = Company.id.in_(entitled_company_ids)
         company_filter = entitled_company_ids
     else:
         company_filter = None
