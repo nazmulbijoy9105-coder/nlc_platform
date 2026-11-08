@@ -25,11 +25,13 @@ after update so the company score is always fresh.
 
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
+from typing import Literal
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
@@ -40,6 +42,8 @@ from app.core.dependencies import (
 )
 from app.core.entitlement import require_entitlement
 from app.models.user import User
+from app.models.filings import AGM, AGMNoticeEvidence
+from app.models.people import ShareComplianceEvent, Shareholder, ShareTransfer
 from app.services.filing_service import (
     AGMService,
     AnnualReturnService,
@@ -89,6 +93,7 @@ class AGMResponse(BaseModel):
     financial_year: int
     agm_due_date: str | None
     held_date: str | None
+    held_status_verified: bool
     filed_date: str | None
     quorum_met: bool | None
     quorum_required: int | None = None
@@ -101,6 +106,84 @@ class AGMResponse(BaseModel):
     minutes_prepared: bool | None
     is_default: bool | None
     created_at: str
+
+
+
+class ShareEventCreateRequest(BaseModel):
+    event_type: Literal["ALLOTMENT", "CAPITAL_INCREASE_RESOLUTION", "TRANSFER_REGISTERED"]
+    event_reference: str = Field(min_length=2, max_length=160)
+    event_date: date
+    event_evidence_ref: str = Field(min_length=4, max_length=2000)
+    share_transfer_id: uuid.UUID | None = None
+    shareholder_id: uuid.UUID | None = None
+    shares_affected: int | None = Field(default=None, gt=0)
+
+
+class ShareEventVerifyRequest(BaseModel):
+    filing_status: bool | None = None
+    filing_evidence_ref: str | None = Field(default=None, min_length=4, max_length=2000)
+    filing_date: date | None = None
+    certificate_issued: bool | None = None
+    certificate_evidence_ref: str | None = Field(default=None, min_length=4, max_length=2000)
+    certificate_issue_date: date | None = None
+
+
+def _share_event_response(event: ShareComplianceEvent) -> dict:
+    return {
+        "event_id": str(event.id),
+        "company_id": str(event.company_id),
+        "event_reference": event.event_reference,
+        "event_type": event.event_type,
+        "event_date": event.event_date.isoformat(),
+        "event_verified": event.event_verified,
+        "event_evidence_ref": event.event_evidence_ref,
+        "submitted_by": str(event.submitted_by),
+        "submitted_at": event.submitted_at.isoformat(),
+        "event_verified_by": str(event.event_verified_by) if event.event_verified_by else None,
+        "event_verified_at": event.event_verified_at.isoformat() if event.event_verified_at else None,
+        "filing_form": event.filing_form,
+        "filing_status": event.filing_status if event.filing_status_verified else None,
+        "filing_status_verified": event.filing_status_verified,
+        "filing_date": event.filing_date.isoformat() if event.filing_date else None,
+        "filing_evidence_ref": event.filing_evidence_ref if event.filing_status_verified else None,
+        "certificate_issued": event.certificate_issued if event.certificate_status_verified else None,
+        "certificate_status_verified": event.certificate_status_verified,
+        "certificate_issue_date": event.certificate_issue_date.isoformat() if event.certificate_issue_date else None,
+        "certificate_evidence_ref": event.certificate_evidence_ref if event.certificate_status_verified else None,
+    }
+
+
+class AGMVerifyStatusRequest(BaseModel):
+    held: bool
+    held_date: date | None = None
+    evidence_ref: str = Field(min_length=4, max_length=2000)
+
+
+class AGMMembersRegisterVerifyRequest(BaseModel):
+    entitled_members_count: int = Field(ge=1)
+    evidence_ref: str = Field(min_length=4, max_length=2000)
+
+
+class AGMNoticeEvidenceCreateRequest(BaseModel):
+    recipient_key: str = Field(min_length=2, max_length=160)
+    recipient_name: str = Field(min_length=2, max_length=300)
+    shareholder_id: uuid.UUID | None = None
+    entitlement_evidence_ref: str = Field(min_length=4, max_length=2000)
+    notice_delivery_status: Literal["SERVED", "NOT_SERVED", "NOT_RECEIVED", "UNKNOWN"] = "UNKNOWN"
+    notice_sent_date: date | None = None
+    notice_evidence_ref: str | None = Field(default=None, min_length=4, max_length=2000)
+    consent_given: bool | None = None
+    consent_received_date: date | None = None
+    consent_evidence_ref: str | None = Field(default=None, min_length=4, max_length=2000)
+    omission_accidental: bool | None = None
+    omission_evidence_ref: str | None = Field(default=None, min_length=4, max_length=2000)
+
+
+class AGMNoticeEvidenceVerifyRequest(BaseModel):
+    verify_entitlement: bool = True
+    verify_notice: bool = False
+    verify_consent: bool = False
+    verify_omission: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -695,8 +778,25 @@ def _agm_to_response(agm) -> AGMResponse:
         company_id=str(agm.company_id),
         financial_year=agm.financial_year,
         agm_due_date=(agm.agm_deadline.isoformat() if LEGAL_CALENDAR_RELEASED and agm.agm_deadline else None),
-        held_date=agm.agm_date.isoformat() if agm.agm_date else None,
-        filed_date=agm.rjsc_filing_date.isoformat() if agm.rjsc_filing_date else None,
+        held_date=(
+            agm.agm_date.isoformat()
+            if (
+                getattr(agm, "agm_held_verified", False) is True
+                and bool(getattr(agm, "agm_held_evidence_ref", None))
+                and getattr(agm, "agm_held_verified_at", None) is not None
+                and getattr(agm, "agm_held_verified_by", None) is not None
+                and agm.agm_held is True
+                and agm.agm_date is not None
+            ) else None
+        ),
+        held_status_verified=(
+            getattr(agm, "agm_held_verified", False) is True
+            and bool(getattr(agm, "agm_held_evidence_ref", None))
+            and getattr(agm, "agm_held_verified_at", None) is not None
+            and getattr(agm, "agm_held_verified_by", None) is not None
+        ),
+        # Filing date lacks a separate receipt/verification actor path.
+        filed_date=None,
         quorum_met=(
             agm.quorum_met
             if (
@@ -810,3 +910,379 @@ def _statutory_register_to_response(r) -> StatutoryRegisterResponse:
         notes=r.notes,
         updated_at=r.updated_at.isoformat(),
     )
+
+
+# ---------------------------------------------------------------------------
+# Share statutory event evidence
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/share-events/{company_id}",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN"))],
+    summary="Record an unverified share statutory event with source provenance",
+)
+async def create_share_compliance_event(
+    company_id: uuid.UUID,
+    body: ShareEventCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    from app.core.company_authorization import ensure_staff_company_scope
+
+    await ensure_staff_company_scope(company_id, current_user, db)
+    event_type = body.event_type
+    if event_type == "TRANSFER_REGISTERED":
+        if body.share_transfer_id is None:
+            raise HTTPException(status_code=422, detail="A registered-transfer event must reference its share transfer.")
+        transfer_result = await db.execute(
+            select(ShareTransfer.id).where(
+                ShareTransfer.id == body.share_transfer_id,
+                ShareTransfer.company_id == company_id,
+                ShareTransfer.is_active.is_(True),
+            ).limit(1)
+        )
+        if transfer_result.scalar_one_or_none() is None:
+            raise HTTPException(status_code=404, detail="Share transfer not found in this company.")
+    elif body.share_transfer_id is not None:
+        raise HTTPException(status_code=422, detail="Only TRANSFER_REGISTERED events may reference a transfer row.")
+
+    if body.shareholder_id is not None:
+        shareholder_result = await db.execute(
+            select(Shareholder.id).where(
+                Shareholder.id == body.shareholder_id,
+                Shareholder.company_id == company_id,
+                Shareholder.is_active.is_(True),
+            ).limit(1)
+        )
+        if shareholder_result.scalar_one_or_none() is None:
+            raise HTTPException(status_code=404, detail="Shareholder not found in this company.")
+
+    filing_form = {
+        "ALLOTMENT": "FORM_XV",
+        "CAPITAL_INCREASE_RESOLUTION": "FORM_IV",
+        "TRANSFER_REGISTERED": None,
+    }[event_type]
+    event = ShareComplianceEvent(
+        company_id=company_id,
+        share_transfer_id=body.share_transfer_id,
+        shareholder_id=body.shareholder_id,
+        event_reference=body.event_reference.strip(),
+        shares_affected=body.shares_affected,
+        event_type=event_type,
+        event_date=body.event_date,
+        event_verified=False,
+        event_evidence_ref=body.event_evidence_ref.strip(),
+        submitted_by=current_user.id,
+        submitted_at=datetime.now(UTC),
+        filing_form=filing_form,
+        filing_status=None,
+        filing_status_verified=False,
+        certificate_issued=None,
+        certificate_status_verified=False,
+    )
+    db.add(event)
+    await db.flush()
+    await db.refresh(event)
+    return _share_event_response(event)
+
+
+@router.post(
+    "/share-events/{event_id}/verify",
+    dependencies=[Depends(require_roles("LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN"))],
+    summary="Independently verify share event, filing and certificate evidence",
+)
+async def verify_share_compliance_event(
+    event_id: uuid.UUID,
+    body: ShareEventVerifyRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    from app.core.company_authorization import ensure_staff_company_scope
+
+    result = await db.execute(
+        select(ShareComplianceEvent)
+        .where(ShareComplianceEvent.id == event_id, ShareComplianceEvent.is_active.is_(True))
+        .with_for_update()
+    )
+    event = result.scalar_one_or_none()
+    if event is None:
+        raise HTTPException(status_code=404, detail="Share event not found.")
+    await ensure_staff_company_scope(event.company_id, current_user, db)
+    if event.submitted_by == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A different authorized reviewer must verify the submitted event.",
+        )
+    if not event.event_evidence_ref.strip():
+        raise HTTPException(status_code=422, detail="The original event evidence reference is missing.")
+
+    updates = {
+        "event_verified": True,
+        "event_verified_at": datetime.now(UTC),
+        "event_verified_by": current_user.id,
+    }
+    if body.filing_status is not None:
+        expected_form = {
+            "ALLOTMENT": "FORM_XV",
+            "CAPITAL_INCREASE_RESOLUTION": "FORM_IV",
+        }.get(event.event_type)
+        if expected_form is None or event.filing_form != expected_form:
+            raise HTTPException(status_code=422, detail="This event type has no Form XV/Form IV filing trigger.")
+        if not body.filing_evidence_ref:
+            raise HTTPException(status_code=422, detail="Filing status verification requires a filing evidence reference.")
+        if body.filing_status and body.filing_date is None:
+            raise HTTPException(status_code=422, detail="A filed status requires the filing date.")
+        if not body.filing_status and body.filing_date is not None:
+            raise HTTPException(status_code=422, detail="An unfiled status cannot carry a filing date.")
+        updates.update({
+            "filing_status": body.filing_status,
+            "filing_evidence_ref": body.filing_evidence_ref.strip(),
+            "filing_date": body.filing_date,
+            "filing_status_verified": True,
+            "filing_verified_at": datetime.now(UTC),
+            "filing_verified_by": current_user.id,
+        })
+    elif body.filing_evidence_ref is not None or body.filing_date is not None:
+        raise HTTPException(status_code=422, detail="Filing evidence/date cannot be supplied without a filing status.")
+
+    if body.certificate_issued is not None:
+        if event.event_type not in {"ALLOTMENT", "TRANSFER_REGISTERED"}:
+            raise HTTPException(status_code=422, detail="Section 158 certificate status requires an allotment or registered-transfer event.")
+        if not body.certificate_evidence_ref:
+            raise HTTPException(status_code=422, detail="Certificate status verification requires a certificate evidence reference.")
+        if body.certificate_issued and body.certificate_issue_date is None:
+            raise HTTPException(status_code=422, detail="An issued certificate requires its issue date.")
+        if not body.certificate_issued and body.certificate_issue_date is not None:
+            raise HTTPException(status_code=422, detail="An unissued certificate cannot carry an issue date.")
+        updates.update({
+            "certificate_issued": body.certificate_issued,
+            "certificate_evidence_ref": body.certificate_evidence_ref.strip(),
+            "certificate_issue_date": body.certificate_issue_date,
+            "certificate_status_verified": True,
+            "certificate_verified_at": datetime.now(UTC),
+            "certificate_verified_by": current_user.id,
+        })
+    elif body.certificate_evidence_ref is not None or body.certificate_issue_date is not None:
+        raise HTTPException(status_code=422, detail="Certificate evidence/date cannot be supplied without a certificate status.")
+
+    for key, value in updates.items():
+        setattr(event, key, value)
+    await db.flush()
+    await db.refresh(event)
+    return _share_event_response(event)
+
+
+# ---------------------------------------------------------------------------
+# AGM evidence verification — cycle, member register and recipient notices
+# ---------------------------------------------------------------------------
+
+@router.patch(
+    "/agm/{agm_id}/verify-status",
+    dependencies=[Depends(require_roles("LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN"))],
+    summary="Verify the held or non-held status of an AGM cycle",
+)
+async def verify_agm_cycle_status(
+    agm_id: uuid.UUID,
+    body: AGMVerifyStatusRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    from app.core.company_authorization import ensure_staff_company_scope
+
+    result = await db.execute(
+        select(AGM).where(AGM.id == agm_id, AGM.is_active.is_(True)).with_for_update()
+    )
+    agm = result.scalar_one_or_none()
+    if agm is None:
+        raise HTTPException(status_code=404, detail="AGM cycle not found.")
+    await ensure_staff_company_scope(agm.company_id, current_user, db)
+    if body.held and body.held_date is None:
+        raise HTTPException(status_code=422, detail="A verified held AGM requires its meeting date.")
+    if not body.held and body.held_date is not None:
+        raise HTTPException(status_code=422, detail="A verified non-held AGM cycle cannot carry a meeting date.")
+    if body.held_date is not None and body.held_date > date.today():
+        raise HTTPException(status_code=422, detail="A meeting in the future cannot be verified as held.")
+    agm.agm_held = body.held
+    agm.agm_date = body.held_date
+    agm.agm_held_verified = True
+    agm.agm_held_evidence_ref = body.evidence_ref.strip()
+    agm.agm_held_verified_at = datetime.now(UTC)
+    agm.agm_held_verified_by = current_user.id
+    await db.flush()
+    await db.refresh(agm)
+    return _agm_to_response(agm)
+
+
+@router.patch(
+    "/agm/{agm_id}/verify-member-register",
+    dependencies=[Depends(require_roles("LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN"))],
+    summary="Verify the complete entitled-member snapshot for AGM notice assessment",
+)
+async def verify_agm_member_register(
+    agm_id: uuid.UUID,
+    body: AGMMembersRegisterVerifyRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    from app.core.company_authorization import ensure_staff_company_scope
+
+    result = await db.execute(
+        select(AGM).where(AGM.id == agm_id, AGM.is_active.is_(True)).with_for_update()
+    )
+    agm = result.scalar_one_or_none()
+    if agm is None:
+        raise HTTPException(status_code=404, detail="AGM cycle not found.")
+    await ensure_staff_company_scope(agm.company_id, current_user, db)
+    agm.member_register_snapshot_verified = True
+    agm.member_register_evidence_ref = body.evidence_ref.strip()
+    agm.member_register_verified_at = datetime.now(UTC)
+    agm.member_register_verified_by = current_user.id
+    agm.entitled_members_count = body.entitled_members_count
+    await db.flush()
+    await db.refresh(agm)
+    return {
+        "agm_id": str(agm.id),
+        "entitled_members_count": agm.entitled_members_count,
+        "member_register_snapshot_verified": agm.member_register_snapshot_verified,
+        "evidence_ref": agm.member_register_evidence_ref,
+        "verified_at": agm.member_register_verified_at.isoformat(),
+        "verified_by": str(agm.member_register_verified_by),
+    }
+
+
+@router.post(
+    "/agm/{agm_id}/notice-evidence",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN"))],
+    summary="Record an unverified per-member AGM notice/consent evidence row",
+)
+async def create_agm_notice_evidence(
+    agm_id: uuid.UUID,
+    body: AGMNoticeEvidenceCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    from app.core.company_authorization import ensure_staff_company_scope
+    from app.models.people import Shareholder
+
+    agm_result = await db.execute(
+        select(AGM).where(AGM.id == agm_id, AGM.is_active.is_(True)).limit(1)
+    )
+    agm = agm_result.scalar_one_or_none()
+    if agm is None:
+        raise HTTPException(status_code=404, detail="AGM cycle not found.")
+    await ensure_staff_company_scope(agm.company_id, current_user, db)
+    if body.shareholder_id is not None:
+        member_result = await db.execute(
+            select(Shareholder.id).where(
+                Shareholder.id == body.shareholder_id,
+                Shareholder.company_id == agm.company_id,
+                Shareholder.is_active.is_(True),
+            ).limit(1)
+        )
+        if member_result.scalar_one_or_none() is None:
+            raise HTTPException(status_code=404, detail="Shareholder does not belong to this company.")
+    row = AGMNoticeEvidence(
+        company_id=agm.company_id,
+        agm_id=agm.id,
+        shareholder_id=body.shareholder_id,
+        recipient_key=body.recipient_key.strip(),
+        recipient_name=body.recipient_name.strip(),
+        submitted_by=current_user.id,
+        submitted_at=datetime.now(UTC),
+        entitled_member_verified=False,
+        entitlement_evidence_ref=body.entitlement_evidence_ref.strip(),
+        notice_delivery_status=body.notice_delivery_status,
+        notice_sent_date=body.notice_sent_date,
+        notice_evidence_ref=body.notice_evidence_ref.strip() if body.notice_evidence_ref else None,
+        notice_verified=False,
+        consent_given=body.consent_given,
+        consent_received_date=body.consent_received_date,
+        consent_evidence_ref=body.consent_evidence_ref.strip() if body.consent_evidence_ref else None,
+        consent_verified=False,
+        omission_accidental=body.omission_accidental,
+        omission_evidence_ref=body.omission_evidence_ref.strip() if body.omission_evidence_ref else None,
+        omission_verified=False,
+    )
+    db.add(row)
+    await db.flush()
+    await db.refresh(row)
+    return {
+        "notice_evidence_id": str(row.id),
+        "agm_id": str(row.agm_id),
+        "company_id": str(row.company_id),
+        "recipient_key": row.recipient_key,
+        "recipient_name": row.recipient_name,
+        "submitted_by": str(row.submitted_by),
+        "submitted_at": row.submitted_at.isoformat(),
+        "verification_state": "UNVERIFIED",
+    }
+
+
+@router.post(
+    "/agm/notice-evidence/{evidence_id}/verify",
+    dependencies=[Depends(require_roles("LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN"))],
+    summary="Independently verify AGM member, notice, consent and omission evidence",
+)
+async def verify_agm_notice_evidence(
+    evidence_id: uuid.UUID,
+    body: AGMNoticeEvidenceVerifyRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    from app.core.company_authorization import ensure_staff_company_scope
+
+    result = await db.execute(
+        select(AGMNoticeEvidence)
+        .where(AGMNoticeEvidence.id == evidence_id, AGMNoticeEvidence.is_active.is_(True))
+        .with_for_update()
+    )
+    row = result.scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="AGM notice evidence not found.")
+    await ensure_staff_company_scope(row.company_id, current_user, db)
+    if row.submitted_by == current_user.id:
+        raise HTTPException(status_code=409, detail="A different authorized reviewer must verify the submitted evidence.")
+    now = datetime.now(UTC)
+    if body.verify_entitlement:
+        if not row.entitlement_evidence_ref:
+            raise HTTPException(status_code=422, detail="Member entitlement evidence reference is required.")
+        row.entitled_member_verified = True
+        row.entitlement_verified_at = now
+        row.entitlement_verified_by = current_user.id
+    if body.verify_notice:
+        if row.notice_delivery_status == "UNKNOWN" or not row.notice_evidence_ref:
+            raise HTTPException(status_code=422, detail="Notice delivery status and evidence reference are required.")
+        if row.notice_delivery_status == "SERVED" and row.notice_sent_date is None:
+            raise HTTPException(status_code=422, detail="A served notice requires its service date.")
+        row.notice_verified = True
+        row.notice_verified_at = now
+        row.notice_verified_by = current_user.id
+    if body.verify_consent:
+        if row.consent_given is None or not row.consent_evidence_ref:
+            raise HTTPException(status_code=422, detail="Consent status and written evidence reference are required.")
+        if row.consent_given and row.consent_received_date is None:
+            raise HTTPException(status_code=422, detail="Written consent requires its date.")
+        row.consent_verified = True
+        row.consent_verified_at = now
+        row.consent_verified_by = current_user.id
+    if body.verify_omission:
+        if row.omission_accidental is None or not row.omission_evidence_ref:
+            raise HTTPException(status_code=422, detail="Omission classification and evidence reference are required.")
+        row.omission_verified = True
+        row.omission_verified_at = now
+        row.omission_verified_by = current_user.id
+    await db.flush()
+    await db.refresh(row)
+    return {
+        "notice_evidence_id": str(row.id),
+        "agm_id": str(row.agm_id),
+        "recipient_key": row.recipient_key,
+        "entitled_member_verified": row.entitled_member_verified,
+        "notice_verified": row.notice_verified,
+        "consent_verified": row.consent_verified,
+        "omission_verified": row.omission_verified,
+        "verified_by": str(current_user.id),
+        "verified_at": now.isoformat(),
+    }
