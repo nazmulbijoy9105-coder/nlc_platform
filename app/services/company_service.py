@@ -633,7 +633,11 @@ class CompanyService(BaseService[Company]):
             ))
 
         # ── Mortgage / charge evidence ─────────────────────────────
-        charge_events = [_charge_event_from_record(charge) for charge in company.charges]
+        charge_events = [
+            _charge_event_from_record(charge)
+            for charge in company.charges
+            if charge.is_active
+        ]
 
         # ── Statutory Registers ───────────────────────────────────
         maintained_registers = [
