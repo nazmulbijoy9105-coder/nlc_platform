@@ -35,8 +35,7 @@ class Severity(str, Enum):
     YELLOW = "YELLOW"
 
 
-_BASE_STATES = (RuleState.COMPLIANT, RuleState.NON_COMPLIANT,
-                RuleState.UNKNOWN, RuleState.CONTRADICTORY)
+_BASE_STATES = (RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT)
 _COMMON_INVARIANTS = ("R-001", "R-002", "R-003", "R-005", "R-007", "R-008",
                       "R-009", "R-010", "R-012", "R-014", "R-018", "R-019")
 
@@ -73,40 +72,40 @@ _RULES = (
         "INC-001", "Corporate", "Companies Act 1994",
         "File Memorandum and Articles of Association", "Section 23",
         ProvisionStatus.RECONCILE, "RJSC", ("MOA_FILED", "AOA_FILED"),
-        Severity.RED, 15),
+        Severity.NOT_EVALUATED, 0),
     StatutoryRule(
         "AR-001", "Corporate", "Companies Act 1994",
         "Statutory annual filing obligation (Schedule X)", "Section 36",
         ProvisionStatus.RECONCILE, "RJSC",
         ("MEMBER_SHARE_DATA", "AGM_INFORMATION", "FILING_EVIDENCE"),
-        Severity.YELLOW, 10, exceptions=("DORMANT_STRIKE_OFF",)),
+        Severity.NOT_EVALUATED, 0, exceptions=("DORMANT_STRIKE_OFF",)),
     StatutoryRule(
         "TAX-001", "Tax", "Income Tax Act 2023",
         "Obtain Tax Identification Number (TIN)",
         "UNIDENTIFIED (NBR instrument to be located)",
         ProvisionStatus.RECONCILE, "NBR", ("TIN_CERTIFICATE",),
-        Severity.RED, 10),
+        Severity.NOT_EVALUATED, 0),
     StatutoryRule(
         "LBR-001", "Labour", "Labour Act 2006",
         "Factory license obtained", "Section 326",
         ProvisionStatus.RECONCILE, "LABOUR_DEPT", ("FACTORY_LICENSE",),
-        Severity.RED, 10, applies_if="IS_MANUFACTURING",
+        Severity.NOT_EVALUATED, 0, applies_if="IS_MANUFACTURING",
         exceptions=("NON_FACTORY_OPERATIONS",)),
     StatutoryRule(
         "TL-001", "Local Authority", "Local authority trade licensing (instrument to be identified)",
         "Valid trade license from local authority", "UNIDENTIFIED",
         ProvisionStatus.RECONCILE, "CITY_CORPORATION", ("TRADE_LICENSE",),
-        Severity.YELLOW, 5),
+        Severity.NOT_EVALUATED, 0),
     StatutoryRule(
         "DIR-005", "Corporate", "Companies Act 1994",
         "Maintain statutory register mapped to DIR-005 (mapping under review)",
         "Section 130", ProvisionStatus.RECONCILE, "INTERNAL",
-        ("REGISTER_DIR_005",), Severity.YELLOW, 5),
+        ("REGISTER_DIR_005",), Severity.NOT_EVALUATED, 0),
     StatutoryRule(
         "DIR-006", "Corporate", "Companies Act 1994",
         "Maintain statutory register mapped to DIR-006 (mapping under review)",
         "Section 130", ProvisionStatus.RECONCILE, "INTERNAL",
-        ("REGISTER_DIR_006",), Severity.YELLOW, 5),
+        ("REGISTER_DIR_006",), Severity.NOT_EVALUATED, 0),
 )
 
 STATUTORY_RULE_REGISTRY: Dict[str, StatutoryRule] = {r.rule_id: r for r in _RULES}
@@ -128,9 +127,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 15,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     
@@ -144,9 +143,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 15,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "INC-004": {
@@ -159,7 +158,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
         "severity": "NOT_EVALUATED",
         "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
@@ -174,9 +173,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 8,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "INC-006": {
@@ -189,9 +188,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "AUD-001": {
@@ -204,9 +203,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 10,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "AUD-002": {
@@ -219,9 +218,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 12,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "AUD-003": {
@@ -234,8 +233,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
-        "severity": "RED",
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
         "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
@@ -249,9 +248,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "AGM-001": {
@@ -264,9 +263,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 20,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "AGM-002": {
@@ -279,9 +278,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
-        "severity": "RED",
-        "score_impact": 20,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "AGM-003": {
@@ -294,9 +293,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "AGM-004": {
@@ -309,9 +308,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 15,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "AGM-005": {
@@ -324,9 +323,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 15,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "AGM-006": {
@@ -339,9 +338,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "AR-001": {
@@ -354,9 +353,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 10,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "AR-002": {
@@ -399,9 +398,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 8,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "DIR-001": {
@@ -414,9 +413,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 10,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "DIR-002": {
@@ -429,9 +428,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 10,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "DIR-003": {
@@ -444,9 +443,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 15,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "DIR-004": {
@@ -459,8 +458,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
-        "severity": "YELLOW",
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
         "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
@@ -474,9 +473,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 8,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "SH-002": {
@@ -489,9 +488,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "SH-003": {
@@ -504,9 +503,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 8,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "TR-001": {
@@ -519,9 +518,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "TR-002": {
@@ -534,9 +533,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "TR-003": {
@@ -549,9 +548,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 8,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "TR-004": {
@@ -564,9 +563,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "TR-005": {
@@ -579,9 +578,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "BLACK",
-        "score_impact": 15,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "TR-006": {
@@ -594,9 +593,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 10,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "REG-001": {
@@ -609,9 +608,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "REG-002": {
@@ -624,9 +623,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 10,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "REG-003": {
@@ -639,9 +638,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 3,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "OFF-001": {
@@ -654,9 +653,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 3,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "CAP-001": {
@@ -669,9 +668,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "CAP-002": {
@@ -684,9 +683,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "CAP-003": {
@@ -699,7 +698,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
         "severity": "NOT_EVALUATED",
         "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
@@ -714,9 +713,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 8,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "TAX-001": {
@@ -729,9 +728,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 10,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "TAX-002": {
@@ -744,7 +743,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "CONDITIONAL — taxpayer activity, statutory exclusions and mandatory-registration categories",
         "exceptions": ["Exempt supplies", "Sale of capital assets", "Other statutory exclusions", "Mandatory registration categories under section 4(2) require separate analysis"],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT, RuleState.NOT_APPLICABLE],
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
         "severity": "NOT_EVALUATED",
         "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
@@ -789,9 +788,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "BLACK",
-        "score_impact": 25,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "AGM-007": {
@@ -819,9 +818,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 10,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "BNK-001": {
@@ -834,9 +833,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "BLACK",
-        "score_impact": 25,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "BNK-002": {
@@ -849,9 +848,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "BLACK",
-        "score_impact": 25,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "BNK-003": {
@@ -864,9 +863,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "BLACK",
-        "score_impact": 35,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "BSEC-001": {
@@ -879,9 +878,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 10,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "BSEC-002": {
@@ -894,9 +893,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 10,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "BSEC-003": {
@@ -909,9 +908,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 8,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "BSEC-004": {
@@ -924,9 +923,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "CHG-001": {
@@ -939,7 +938,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "CONDITIONAL — only charges whose registration is required by section 159",
         "exceptions": ["Charges not registrable under section 159"],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT, RuleState.NOT_APPLICABLE],
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
         "severity": "NOT_EVALUATED",
         "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
@@ -954,9 +953,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN, RuleState.DISPUTED],
-        "severity": "RED",
-        "score_impact": 10,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "DEF-002": {
@@ -969,9 +968,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "DIR-005": {
@@ -1014,9 +1013,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "BLACK",
-        "score_impact": 30,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "ESC-005": {
@@ -1029,9 +1028,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 20,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "FX-001": {
@@ -1044,9 +1043,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 15,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "LBR-001": {
@@ -1059,9 +1058,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 10,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "LBR-002": {
@@ -1074,9 +1073,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "LBR-003": {
@@ -1089,9 +1088,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "RED",
-        "score_impact": 15,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "STR-001": {
@@ -1104,9 +1103,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 3,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "STR-002": {
@@ -1119,9 +1118,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 3,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "STR-003": {
@@ -1134,9 +1133,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 3,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "TAX-003": {
@@ -1149,9 +1148,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "TAX-004": {
@@ -1164,9 +1163,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 3,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "TL-001": {
@@ -1179,9 +1178,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "TL-002": {
@@ -1194,9 +1193,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "VAT-002": {
@@ -1209,9 +1208,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 8,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
     "VAT-003": {
@@ -1224,23 +1223,23 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
-        "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN],
-        "severity": "YELLOW",
-        "score_impact": 5,
+        "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
+        "severity": "NOT_EVALUATED",
+        "score_impact": 0,
         "invariants": ["R-007", "R-008", "R-014", "R-019"]
     },
 
     "BOD-001": {"rule_id": "BOD-001", "legal_domain": "Corporate", "law": "Section 96, Companies Act 1994 (Bangladesh)", "requirement": "Section 96 requires at least one Board meeting every three months and at least four meetings per year; full verified meeting history is required before evaluation.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "BOD-002": {"rule_id": "BOD-002", "legal_domain": "Corporate", "law": "Section 95, Companies Act 1994 (Bangladesh)", "requirement": "Written notice to each director then in Bangladesh; verify service, address, dispatch/receipt and applicable Articles before any breach finding.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "BOD-003": {"rule_id": "BOD-003", "legal_domain": "Corporate", "law": "Section 89, Companies Act 1994 (Bangladesh)", "requirement": "Minutes must be entered in the minute book; verify records, subsequent signature, custody and inspection. Missing upload alone is not proof of non-creation.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
-    "ACC-001": {"rule_id": "ACC-001", "legal_domain": "Corporate", "law": "Section 183, Companies Act 1994 (Bangladesh)", "requirement": "AGM held but balance sheet and P&L not presented. Section 183.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "RED", "score_impact": 15, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
-    "ACC-002": {"rule_id": "ACC-002", "legal_domain": "Corporate", "law": "Section 190, Companies Act 1994 (Bangladesh)", "requirement": "Balance sheet not filed within 30 days of AGM. Section 190.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "RED", "score_impact": 15, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
-    "ACC-003": {"rule_id": "ACC-003", "legal_domain": "Corporate", "law": "Section 181, Companies Act 1994 (Bangladesh)", "requirement": "Proper books of account not maintained. Section 181.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "RED", "score_impact": 15, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
-    "DIR-007": {"rule_id": "DIR-007", "legal_domain": "Corporate", "law": "Section 92, Companies Act 1994 (Bangladesh)", "requirement": "Director consent to act filed using Form IX within 30 days of appointment under Section 92; distinguish this from Form XII particulars under Section 115.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "YELLOW", "score_impact": 5, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
+    "ACC-001": {"rule_id": "ACC-001", "legal_domain": "Corporate", "law": "Section 183, Companies Act 1994 (Bangladesh)", "requirement": "AGM held but balance sheet and P&L not presented. Section 183.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
+    "ACC-002": {"rule_id": "ACC-002", "legal_domain": "Corporate", "law": "Section 190, Companies Act 1994 (Bangladesh)", "requirement": "Balance sheet not filed within 30 days of AGM. Section 190.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
+    "ACC-003": {"rule_id": "ACC-003", "legal_domain": "Corporate", "law": "Section 181, Companies Act 1994 (Bangladesh)", "requirement": "Proper books of account not maintained. Section 181.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
+    "DIR-007": {"rule_id": "DIR-007", "legal_domain": "Corporate", "law": "Section 92, Companies Act 1994 (Bangladesh)", "requirement": "Director consent to act filed using Form IX within 30 days of appointment under Section 92; distinguish this from Form XII particulars under Section 115.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "DIR-008": {"rule_id": "DIR-008", "legal_domain": "Corporate", "law": "Section 104, Companies Act 1994 (Bangladesh)", "requirement": "Verify office category, statutory exclusions, company relationship and general-meeting consent before assessing an office-of-profit issue.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "DIR-010": {"rule_id": "DIR-010", "legal_domain": "Corporate", "law": "Section 110, Companies Act 1994 (Bangladesh)", "requirement": "Verify current managing-director appointment instrument, term, reappointment, approval and continuity before assessing the five-year-at-a-time limit.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
-    "MEM-001": {"rule_id": "MEM-001", "legal_domain": "Corporate", "law": "Section 222, Companies Act 1994 (Bangladesh)", "requirement": "Company below minimum members. Section 222: private < 2, public < 7.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "RED", "score_impact": 10, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
-    "INC-007": {"rule_id": "INC-007", "legal_domain": "Corporate", "law": "Section 150, Companies Act 1994 (Bangladesh)", "requirement": "Business commenced without Section 150 declaration.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.COMPLIANT, RuleState.NON_COMPLIANT, RuleState.UNKNOWN], "severity": "RED", "score_impact": 10, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
+    "MEM-001": {"rule_id": "MEM-001", "legal_domain": "Corporate", "law": "Section 222, Companies Act 1994 (Bangladesh)", "requirement": "Company below minimum members. Section 222: private < 2, public < 7.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
+    "INC-007": {"rule_id": "INC-007", "legal_domain": "Corporate", "law": "Section 150, Companies Act 1994 (Bangladesh)", "requirement": "Business commenced without Section 150 declaration.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
 
 }
 
@@ -1265,14 +1264,16 @@ def _legacy_rule(key: str, d: Dict[str, Any]) -> Optional[StatutoryRule]:
         not isinstance(item, str) or not item.strip() for item in exceptions
     ):
         raise RuntimeError(f"{key}: exceptions must be non-empty strings")
-    if list(d["evidence_required"]) != ["DOCUMENTARY_EVIDENCE"]:
-        return None
+    evidence_required = d["evidence_required"]
+    if not isinstance(evidence_required, (list, tuple)) or not evidence_required or any(
+        not isinstance(item, str) or not item.strip() for item in evidence_required
+    ):
+        raise RuntimeError(f"{key}: evidence_required must contain non-empty strings")
     auth = _LEGACY_AUTHORITY_OVERRIDE.get(key) or _LEGACY_AUTHORITY[d["legal_domain"]]
     applies_if = None if applicability == "ALL_ACTIVE_COMPANIES" else applicability
     return StatutoryRule(
         key, d["legal_domain"], d["law"], d["requirement"], d["provision"],
-        d["provision_status"], auth,
-        (key + ":DOCUMENTARY_EVIDENCE",),   # per-rule key: shared key would couple all rules
+        d["provision_status"], auth, tuple(evidence_required),
         Severity(d["severity"]), d["score_impact"],
         applies_if=applies_if,
         exceptions=tuple(exceptions),

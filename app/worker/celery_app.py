@@ -36,6 +36,8 @@ human_approved=False and in_review_queue=True.
 """
 from __future__ import annotations
 
+import asyncio
+from datetime import UTC
 import logging
 import os
 import sys
@@ -50,6 +52,7 @@ from celery.signals import (
     task_prerun,
     task_retry,
     task_success,
+    worker_process_init,
     worker_ready,
     worker_shutdown,
 )
@@ -65,6 +68,8 @@ except ImportError:
     pass
 
 logger = logging.getLogger(__name__)
+
+_worker_runtime_verified = False
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -98,6 +103,32 @@ def _get_celery_backend() -> str:
     except Exception:
         return os.environ.get("CELERY_RESULT_BACKEND",
                               os.environ.get("REDIS_URL", "redis://localhost:6379/0"))
+
+
+def _resolve_task_always_eager() -> bool:
+    """Allow eager task execution only outside deployment-grade runtimes."""
+    environment = os.environ.get("ENVIRONMENT", "development").strip().lower()
+    production_runtime = (
+        environment in {"prod", "production"}
+        or os.environ.get("RENDER", "").strip().lower() == "true"
+    )
+    configured = os.environ.get("CELERY_TASK_ALWAYS_EAGER")
+    if configured is None:
+        # Keep the lightweight synchronous default for local/free-tier
+        # development, but require a real worker in production.
+        return not production_runtime
+
+    value = configured.strip().lower()
+    if value not in {"true", "false"}:
+        raise RuntimeError(
+            "CELERY_TASK_ALWAYS_EAGER must be explicitly 'true' or 'false'"
+        )
+    if production_runtime and value == "true":
+        raise RuntimeError(
+            "CELERY_TASK_ALWAYS_EAGER=true is forbidden in production; "
+            "background jobs must execute in a dedicated Celery worker"
+        )
+    return value == "true"
 
 
 # Create Celery application
@@ -178,6 +209,7 @@ celery_app.conf.update(
         "app.worker.tasks.cleanup_expired_notifications":   {"queue": "maintenance"},
         "app.worker.tasks.database_health_check":           {"queue": "maintenance"},
         "app.worker.tasks.sync_sro_registry":               {"queue": "maintenance"},
+        "app.worker.tasks.process_due_subscriptions":       {"queue": "maintenance"},
     },
 
     # ── Worker Configuration ──────────────────────────────────────
@@ -225,14 +257,11 @@ celery_app.conf.update(
     task_send_sent_event=True,     # Send 'sent' event for each task
 
     # ── Security ─────────────────────────────────────────────────
-    task_always_eager=os.environ.get("CELERY_TASK_ALWAYS_EAGER", "true").lower() == "true",  # true = sync (free tier), false = needs workers       # Never run tasks synchronously in production
-                                   # Override in tests: task_always_eager=True
+    task_always_eager=_resolve_task_always_eager(),
 )
 
-# ── Import beat schedule (must come after celery_app is created) ──────
-from datetime import UTC
-
-from app.worker.beat_schedule import BEAT_SCHEDULE
+# ── Import beat schedule after celery_app creation to avoid a cycle. ──
+from app.worker.beat_schedule import BEAT_SCHEDULE  # noqa: E402
 
 celery_app.conf.beat_schedule = BEAT_SCHEDULE
 
@@ -263,6 +292,34 @@ def configure_worker(sender: str | None = None, conf: Any = None, **kwargs: Any)
     )
 
 
+@worker_process_init.connect
+def verify_worker_runtime_security(**kwargs: Any) -> None:
+    """Verify the database identity inside a worker process."""
+    global _worker_runtime_verified
+
+    async def _verify_and_dispose() -> None:
+        from app.models.database import (
+            dispose_engine,
+            verify_runtime_database_role,
+        )
+
+        try:
+            await verify_runtime_database_role()
+        finally:
+            # The verification connection must not be inherited by later
+            # task event loops or retained across their lifecycle.
+            await dispose_engine()
+
+    try:
+        asyncio.run(_verify_and_dispose())
+        _worker_runtime_verified = True
+    except Exception:
+        logger.exception(
+            "[Worker] Runtime database role verification failed; refusing startup"
+        )
+        raise
+
+
 @worker_ready.connect
 def on_worker_ready(sender: Any = None, **kwargs: Any) -> None:
     """Called when worker is ready to accept tasks."""
@@ -283,7 +340,12 @@ def on_task_prerun(
     kwargs: dict | None = None,
     **extra: Any,
 ) -> None:
-    """Log task start with structured context."""
+    """Verify fallback worker pools, then log task start."""
+    # worker_process_init covers prefork workers. The first task also gates
+    # solo/threads pools where no forked child initialization signal exists.
+    if not _worker_runtime_verified:
+        verify_worker_runtime_security()
+
     logger.info(
         f"[Task] START  task={task.name} id={task_id} "
         f"args={args!r:.200} kwargs={kwargs!r:.200}"
@@ -347,26 +409,33 @@ def on_task_failure(
             async def _log_failure() -> None:
                 from datetime import datetime
 
-                from app.models.database import AsyncSessionLocal, set_admin_context
+                from app.models.database import (
+                    AsyncSessionLocal,
+                    dispose_engine,
+                    set_admin_context,
+                )
                 from app.models.infrastructure import UserActivityLog
-                async with AsyncSessionLocal() as db, db.begin():
-                    await set_admin_context(db)
-                    log = UserActivityLog(
-                        action="TASK_FAILURE",
-                        resource_type="CeleryTask",
-                        description=(
-                            f"Task {sender.name if sender else 'unknown'} "
-                            f"failed: {exception!r:.200}"
-                        ),
-                        detail={
-                            "task_id":    task_id,
-                            "task_name":  sender.name if sender else None,
-                            "company_id": str(kwargs.get("company_id", "")),
-                            "error":      repr(exception)[:500],
-                        },
-                        logged_at=datetime.now(UTC),
-                    )
-                    db.add(log)
+                try:
+                    async with AsyncSessionLocal() as db, db.begin():
+                        await set_admin_context(db)
+                        log = UserActivityLog(
+                            action="TASK_FAILURE",
+                            resource_type="CeleryTask",
+                            description=(
+                                f"Task {sender.name if sender else 'unknown'} "
+                                f"failed: {exception!r:.200}"
+                            ),
+                            detail={
+                                "task_id":    task_id,
+                                "task_name":  sender.name if sender else None,
+                                "company_id": str(kwargs.get("company_id", "")),
+                                "error":      repr(exception)[:500],
+                            },
+                            logged_at=datetime.now(UTC),
+                        )
+                        db.add(log)
+                finally:
+                    await dispose_engine()
 
             asyncio.run(_log_failure())
         except Exception as log_err:

@@ -60,7 +60,7 @@ class User(FullMixin, Base):
         "CompanyUserAccess", back_populates="user", lazy="selectin"
     )
     activity_logs: Mapped[list[UserActivityLog]] = relationship(
-        "UserActivityLog", back_populates="user", lazy="noload"
+        "UserActivityLog", back_populates="user", lazy="raise"
     )
 
 

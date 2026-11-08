@@ -65,15 +65,15 @@ if _PRODUCTION_WORKER:
 elif _os.environ.get("CELERY_BROKER_URL") or _os.environ.get("CELERY_BROKER"):
     if not (_APP_DATABASE_URL or _DATABASE_URL):
         raise RuntimeError("SEC-009: runtime database URL not configured — refusing to run worker tasks")
-import logging
-import uuid
-from datetime import UTC, date, datetime, timedelta
-from typing import Any, cast
+import logging  # noqa: E402
+import uuid  # noqa: E402
+from datetime import UTC, date, datetime, timedelta  # noqa: E402
+from typing import Any, cast  # noqa: E402
 
-from celery import Task
-from celery.exceptions import SoftTimeLimitExceeded
+from celery import Task  # noqa: E402
+from celery.exceptions import SoftTimeLimitExceeded  # noqa: E402
 
-from app.worker.celery_app import celery_app
+from app.worker.celery_app import celery_app  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -96,8 +96,19 @@ def run_async(coro):
     try:
         return loop.run_until_complete(coro)
     finally:
-        loop.close()
-        asyncio.set_event_loop(None)
+        # SQLAlchemy async pooled connections are bound to the event loop
+        # that created them. This worker deliberately creates a new loop for
+        # every task, so dispose the pool before closing that loop; otherwise
+        # a later task can reuse an asyncpg connection from a closed loop.
+        try:
+            from app.models.database import dispose_engine
+
+            loop.run_until_complete(dispose_engine())
+        except Exception:
+            logger.exception("worker_async_engine_dispose_failed")
+        finally:
+            loop.close()
+            asyncio.set_event_loop(None)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -538,6 +549,25 @@ def queue_deadline_warning_notifications(
     """
     if warning_days is None:
         warning_days = [30, 15, 7, 3, 1]
+    if not warning_days or any(day < 0 for day in warning_days):
+        raise ValueError("warning_days must contain non-negative day thresholds")
+
+    # Do not send customer-facing statutory deadline alerts while the legal
+    # calendar is quarantined. The privileged worker scanner is intentionally
+    # global, so this release check must happen before opening its admin session.
+    from app.services.compliance_calendar import (
+        LEGAL_CALENDAR_RELEASED,
+        VERIFIED_CALENDAR_EVENT_TYPES,
+    )
+    if not LEGAL_CALENDAR_RELEASED or not VERIFIED_CALENDAR_EVENT_TYPES:
+        logger.warning(
+            "[Deadlines] Withheld: statutory calendar has not been independently released"
+        )
+        return {
+            "queued": 0,
+            "deadlines_checked": 0,
+            "status": "WITHHELD_LEGAL_CALENDAR_NOT_RELEASED",
+        }
 
     logger.info(
         f"[Deadlines] Checking upcoming deadlines for days: {warning_days}"
@@ -838,6 +868,36 @@ def process_ai_review_queue(
 # ═══════════════════════════════════════════════════════════════════════
 # MAINTENANCE TASKS
 # ═══════════════════════════════════════════════════════════════════════
+
+@celery_app.task(
+    bind=True,
+    base=NLCBaseTask,
+    name="app.worker.tasks.process_due_subscriptions",
+    queue="maintenance",
+    max_retries=3,
+    default_retry_delay=120,
+    time_limit=600,
+)
+def process_due_subscriptions(self: Task) -> dict[str, Any]:
+    """Advance subscription expiry, grace and scheduled-cancellation states daily."""
+    async def _process():
+        from app.models.database import AsyncSessionLocal, set_admin_context
+        from app.services.subscription_service import SubscriptionService
+
+        async with AsyncSessionLocal() as db, db.begin():
+            await set_admin_context(db)
+            return await SubscriptionService(db).process_due_subscriptions(actor_id=None)
+
+    try:
+        result = run_async(_process())
+        logger.info("[Subscriptions] Daily lifecycle processing: %s", result)
+        return cast("dict[str, Any]", result)
+    except Exception as exc:
+        if _is_transient_error(exc):
+            raise self.retry(exc=exc)
+        raise
+
+
 
 @celery_app.task(
     bind=True,

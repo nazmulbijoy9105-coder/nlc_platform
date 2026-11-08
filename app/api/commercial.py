@@ -32,6 +32,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.company_authorization import ensure_staff_company_scope
 from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
@@ -74,7 +75,7 @@ class EngagementResponse(BaseModel):
     company_id: str
     engagement_type: str
     revenue_tier: str
-    status: str
+    status: str | None
     description: str | None
     estimated_fee_bdt: Decimal | None
     confirmed_fee_bdt: Decimal | None
@@ -140,7 +141,7 @@ class TaskResponse(BaseModel):
     company_id: str
     title: str
     description: str | None
-    status: str
+    status: str | None
     priority: str
     due_date: str | None
     assigned_to: str | None
@@ -163,7 +164,7 @@ def _engagement_to_response(e) -> EngagementResponse:
         company_id=str(e.company_id),
         engagement_type=e.engagement_type,
         revenue_tier=e.revenue_tier,
-        status=str(e.engagement_status) if e.engagement_status else None,
+        status=str(e.engagement_status),
         description=getattr(e, "engagement_title", None),
         estimated_fee_bdt=e.estimated_fee_bdt,
         confirmed_fee_bdt=e.confirmed_fee_bdt,
@@ -195,7 +196,7 @@ def _task_to_response(t) -> TaskResponse:
         company_id=str(t.company_id),
         title=t.title,
         description=t.description,
-        status=str(t.task_status) if t.task_status else None,
+        status=str(t.task_status),
         priority=t.priority,
         due_date=str(t.due_date) if t.due_date else None,
         assigned_to=str(t.assigned_to) if t.assigned_to else None,
@@ -359,6 +360,8 @@ async def create_quotation(
     except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
+        # Do not disclose whether an engagement exists in another tenant.
+        raise HTTPException(status_code=404, detail="Engagement not found.") from exc
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     await activity.log(
@@ -393,6 +396,8 @@ async def accept_quotation(
     except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
+        # Preserve tenant-safe not-found semantics for a missing or inaccessible engagement.
+        raise HTTPException(status_code=404, detail="Quotation not found.") from exc
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
@@ -431,6 +436,8 @@ async def reject_quotation(
         )
     except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except CommercialConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     if not quotation:
@@ -464,6 +471,7 @@ async def create_task(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    await ensure_staff_company_scope(body.company_id, current_user, db)
     svc = TaskService(db)
     task = await svc.create_task(  # type: ignore
         company_id=body.company_id,
@@ -514,11 +522,13 @@ async def complete_task(
     task_id: uuid.UUID,
     body: TaskCompleteRequest,
     request: Request,
+    company_id: uuid.UUID = Depends(require_company_access("company_id")),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = TaskService(db)
     try:
+        task = await svc.complete_task(task_id=task_id, company_id=company_id)
         task = await svc.complete_task(task_id=task_id)
     except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc

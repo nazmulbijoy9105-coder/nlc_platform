@@ -4,10 +4,15 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 from decimal import Decimal
+from datetime import date, timedelta
+from decimal import Decimal
+from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 
 from app.core.security import create_access_token
+from app.models.commercial import Engagement, Quotation
 
 
 def _auth(token: str) -> dict[str, str]:
@@ -160,7 +165,7 @@ async def test_task_completion_accepts_completion_note(
     assert created.status_code == 201, created.text
 
     response = await api_client.patch(
-        f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete",
+        f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete?company_id={db_company.id}",
         headers=_auth(commercial_admin_token),
         json={"completion_note": "Verified complete"},
     )
@@ -174,6 +179,7 @@ async def test_task_completion_accepts_completion_note(
     )
     assert duplicate.status_code == 409, duplicate.text
     repeated = await api_client.patch(
+        f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete?company_id={db_company.id}",
         f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete",
         headers=_auth(commercial_admin_token),
         json={"completion_note": "Should not complete twice"},
@@ -236,6 +242,51 @@ def test_quotation_response_supports_legacy_null_valid_until():
     )
     response = _quotation_to_response(quotation)
     assert response.valid_until is None
+@pytest.mark.asyncio
+async def test_expired_quotation_cannot_be_accepted(
+    api_client, commercial_admin_token, db_company, db
+):
+    engagement = await _create_engagement(
+        api_client, commercial_admin_token, db_company.id
+    )
+    quotation = await _create_quotation(
+        api_client, commercial_admin_token, db_company.id, engagement["engagement_id"]
+    )
+    stored = await db.get(Quotation, UUID(quotation["quotation_id"]))
+    assert stored is not None
+    stored.valid_until = date.today() - timedelta(days=1)
+    await db.flush()
+
+    response = await api_client.patch(
+        f"/api/v1/commercial/quotations/{quotation['quotation_id']}/accept",
+        headers=_auth(commercial_admin_token),
+    )
+    assert response.status_code == 409, response.text
+    assert "expired" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_accepting_quotation_with_inactive_engagement_returns_not_found(
+    api_client, commercial_admin_token, db_company, db
+):
+    engagement = await _create_engagement(
+        api_client, commercial_admin_token, db_company.id
+    )
+    quotation = await _create_quotation(
+        api_client, commercial_admin_token, db_company.id, engagement["engagement_id"]
+    )
+    stored = await db.get(Engagement, UUID(engagement["engagement_id"]))
+    assert stored is not None
+    stored.is_active = False
+    await db.flush()
+
+    response = await api_client.patch(
+        f"/api/v1/commercial/quotations/{quotation['quotation_id']}/accept",
+        headers=_auth(commercial_admin_token),
+    )
+    assert response.status_code == 404, response.text
+
+
 def test_quotation_accept_and_reject_lock_parent_before_locked_quotation():
     """Guard the required engagement-first lock order in both lifecycle paths."""
     from pathlib import Path
@@ -254,3 +305,51 @@ def test_quotation_accept_and_reject_lock_parent_before_locked_quotation():
         assert engagement_lock < quotation_lock
         assert "with_for_update()" in method[engagement_lock:quotation_lock]
         assert "with_for_update()" in method[quotation_lock:]
+
+
+@pytest.mark.asyncio
+async def test_task_completion_requires_company_scope_and_runs_once(
+    api_client, commercial_admin_token, db_company
+):
+    created = await api_client.post(
+        "/api/v1/commercial/tasks",
+        headers=_auth(commercial_admin_token),
+        json={
+            "company_id": str(db_company.id),
+            "title": "Task completion tenant-scope regression",
+            "priority": "MEDIUM",
+        },
+    )
+    assert created.status_code == 201, created.text
+    task_id = created.json()["task_id"]
+
+    missing_scope = await api_client.patch(
+        f"/api/v1/commercial/tasks/{task_id}/complete",
+        headers=_auth(commercial_admin_token),
+        json={"completion_note": "Missing company context"},
+    )
+    assert missing_scope.status_code == 422, missing_scope.text
+
+    completed = await api_client.patch(
+        f"/api/v1/commercial/tasks/{task_id}/complete?company_id={db_company.id}",
+        headers=_auth(commercial_admin_token),
+        json={"completion_note": "Completed once with authorized company context"},
+    )
+    assert completed.status_code == 200, completed.text
+    assert completed.json()["status"] == "COMPLETED"
+    assert completed.json()["completed_at"] is not None
+
+    repeated = await api_client.patch(
+        f"/api/v1/commercial/tasks/{task_id}/complete?company_id={db_company.id}",
+        headers=_auth(commercial_admin_token),
+        json={"completion_note": "Duplicate completion must not be accepted"},
+    )
+    assert repeated.status_code == 409, repeated.text
+
+    wrong_company = await api_client.patch(
+        f"/api/v1/commercial/tasks/{task_id}/complete?company_id={uuid4()}",
+        headers=_auth(commercial_admin_token),
+        json={"completion_note": "Wrong company must not find this task"},
+    )
+    assert wrong_company.status_code == 404, wrong_company.text
+

@@ -14,10 +14,14 @@ Do not deploy a partial PR stack. The canonical migration path is expected to en
 
 - `0058_suppress_unreleased_rule_notifications` — PR #125
 - `0059_finance_role_separation` and `0060_financial_billing_core` — PR #129
-- `0061`–`0067` — finance ledger integrity, rescue-audit retention, verified revenue pipeline, and manual wallet-reference uniqueness — PR #130
-- `0068_repair_aggregate_view_and_revenue_rls` — forward-only security repair for databases where an older `0050` or `0059` was already applied
+- `0061`–`0068` — finance ledger integrity, rescue-audit retention, verified revenue pipeline, manual wallet-reference uniqueness, and forward-only aggregate-view/revenue-RLS repair — PR #130
+- `0069` — cross-table wallet-reference guard
+- `0070` — deferred invoice/allocation reconciliation
+- `0071` — immutable payment-submission link and reviewer-bound ledger evidence
+- `0072` — reconciliation after allocation mutations
+- `0073` — append-only posted payment allocations
 
-Expected final Alembic head after the complete stack: `0068_repair_aggregate_view_and_revenue_rls`. Never stamp, skip, or manually rewrite the Alembic revision to force this value.
+Expected final Alembic head after the complete stack: `0073_payment_allocations_append_only`. Never stamp, skip, or manually rewrite the Alembic revision to force this value.
 
 ## 2. Create and verify a recovery point first
 
@@ -103,7 +107,7 @@ Do **not** create empty replacement tables or use `CREATE TABLE IF NOT EXISTS` t
 
 On the isolated restored branch only:
 
-1. Apply migrations from the observed `0042_dedup_key` through `0068_repair_aggregate_view_and_revenue_rls`.
+1. Apply migrations from the observed `0042_dedup_key` through `0073_payment_allocations_append_only`.
 2. Require exactly one Alembic head and a clean upgrade with no stamping or skipped revisions.
 3. Compare pre/post row counts and key aggregates; investigate every unexplained delta.
 4. Verify all expected evidence tables, constraints, indexes, triggers, and foreign keys.
@@ -112,8 +116,9 @@ On the isolated restored branch only:
 7. Verify `engagements` is visible only to the signed trusted `ADMIN` service principal and active `SUPER_ADMIN`/`ADMIN_STAFF` identities. Legal staff must not see engagement or revenue-pipeline rows.
 8. Verify quotations: finance staff may manage them; non-staff company members may read only when their own membership has `can_view_financials=true`; legal staff must not gain access through staff status or membership.
 9. Verify billing helpers: legal staff cannot read billing rows or submit payment claims even when their membership has `can_view_financials=true` and `can_edit=true`; non-staff clients need explicit financial permission, and payment submission additionally needs edit permission.
-10. Run cross-tenant, forged-identity, finance-role, rejected-wallet-reference reuse, ledger reconciliation, append-only privilege, PDF reconciliation, and runtime Docker tests using the actual `nlc_app_role` connection.
-11. Verify the audit credential cannot read tenant tables or assume privileged roles.
+10. Run cross-tenant, forged-identity, finance-role, rejected-wallet-reference reuse, ledger reconciliation, allocation UPDATE/DELETE trigger and privilege checks, PDF reconciliation, and runtime Docker tests using the actual `nlc_app_role` connection.
+11. Separately test simultaneous payment submissions and approvals using independent database connections and committed test fixtures; sequential retries do not prove race safety.
+12. Verify the audit credential cannot read tenant tables or assume privileged roles.
 
 A query run as `neondb_owner` does not prove application-role RLS. The runtime proof must connect through the actual application credential and report `current_user = 'nlc_app_role'`.
 

@@ -15,6 +15,17 @@ before Alembic migrations are generated.
 # ── Database infrastructure ─────────────────────────────────────────
 # ── Commercial (Tasks, Engagements, Quotations) ──────────────────────
 from .commercial import Engagement, Quotation, Task
+from .finance import (
+    ClientSubscription,
+    Invoice,
+    InvoiceLine,
+    Payment,
+    PaymentAllocation,
+    PaymentIntent,
+    PaymentLedgerEvent,
+    PaymentProviderEvent,
+    PaymentSubmission,
+)
 
 # ── Companies ────────────────────────────────────────────────────────
 from .company import Company, CompanyUserAccess
@@ -79,6 +90,13 @@ from .infrastructure import (
 # ── People (Directors, Shareholders, Transfers) ──────────────────────
 from .people import Director, Shareholder, ShareTransfer
 from .regulatory_rule import RegulatoryRule
+from .subscription import (
+    ClientSubscriptionFeature,
+    SubscriptionEvent,
+    SubscriptionPlan,
+    SubscriptionPlanFeature,
+    SubscriptionPlanPrice,
+)
 
 # ── Rescue (Plans + Steps) ───────────────────────────────────────────
 from .rescue import RescuePlan, RescueStep
@@ -103,6 +121,12 @@ __all__ = [
     "CompanyStatus",
     "CompanyType",
     "CompanyUserAccess",
+    "ClientSubscription",
+    "ClientSubscriptionFeature",
+    "SubscriptionEvent",
+    "SubscriptionPlan",
+    "SubscriptionPlanFeature",
+    "SubscriptionPlanPrice",
     "ComplexityLevel",
     "ComplianceCalendarEvent",
     "ComplianceEvent",

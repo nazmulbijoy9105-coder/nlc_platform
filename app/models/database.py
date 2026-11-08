@@ -270,7 +270,7 @@ async def verify_runtime_database_role() -> None:
             can_replicate,
             bypasses_rls,
         ) = row
-        memberships = (
+        memberships: bool = (
             await connection.execute(
                 text(
                     "SELECT EXISTS ("

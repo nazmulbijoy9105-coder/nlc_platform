@@ -21,10 +21,14 @@ Business rules:
 import uuid
 from datetime import date
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
+from app.core.entitlement import require_entitlement
+from app.core.company_authorization import ensure_staff_company_scope
 from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
@@ -32,15 +36,42 @@ from app.core.dependencies import (
     require_roles,
 )
 from app.models.enums import RiskBand
+from app.models.user import User
 from app.services.company_service import CompanyService
 from app.services.notification_service import ActivityService
 from app.services.rescue_service import RescueService
 
+
+async def _assert_rescue_entitlement(company_id: uuid.UUID, current_user: User, db: AsyncSession) -> None:
+    role = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    if role in ("SUPER_ADMIN", "ADMIN_STAFF"):
+        return
+    await ensure_staff_company_scope(company_id, current_user, db)
+    from app.services.subscription_service import SubscriptionService
+
+    if not await SubscriptionService(db).has_entitlement(
+        company_id=company_id,
+        feature_code="corporate_rescue",
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="This company does not have an active corporate-rescue entitlement.",
+        )
 router = APIRouter()
 
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
+def _require_legal_release() -> None:
+    """Prevent rescue actions based on unapproved legal findings."""
+    from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+
+    if not LEGAL_SCORE_RELEASED:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Rescue plans are withheld until the underlying legal rules "
+                "receive independent counsel approval and the legal score is released."
+            ),
+        )
 
 logger = structlog.get_logger(__name__)
 
@@ -154,7 +185,7 @@ def _plan_to_response(plan, company=None) -> RescuePlanResponse:
     "/plans",
     response_model=RescuePlanResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("corporate_rescue"))],
     summary="Generate a corporate rescue plan for a BLACK or RED band company",
 )
 async def create_rescue_plan(
@@ -174,7 +205,8 @@ async def create_rescue_plan(
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
-    # Verify company exists and fetch
+    # Verify company exists and enforce assigned legal-staff scope.
+    await ensure_staff_company_scope(body.company_id, current_user, db)
     company = await company_svc.get_by_id_or_404(body.company_id)
 
     # Enforce: rescue plans only for RED or BLACK companies
@@ -249,17 +281,19 @@ async def create_rescue_plan(
 @router.get(
     "/plans",
     response_model=list[RescuePlanResponse],
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("corporate_rescue"))],
     summary="List rescue plans, optionally filtered by company_id",
 )
 async def list_rescue_plans(
     company_id: uuid.UUID | None = None,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
     """Issue 5: support optional company_id filter.
     Without company_id, returns all plans (admin/portfolio view).
     With company_id, returns only that company's plans.
     """
+    _require_legal_release()
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
 
@@ -267,7 +301,11 @@ async def list_rescue_plans(
 
     query = select(RescuePlan).options(selectinload(RescuePlan.steps))
     if company_id is not None:
+        if current_user.role == "LEGAL_STAFF":
+            await ensure_staff_company_scope(company_id, current_user, db)
         query = query.where(RescuePlan.company_id == company_id)
+    elif current_user.role not in ("SUPER_ADMIN", "ADMIN_STAFF"):
+        raise HTTPException(status_code=403, detail="Portfolio-wide rescue plan access is restricted to platform administrators.")
     query = query.order_by(RescuePlan.created_at.desc())
 
     result = await db.execute(query)
@@ -282,13 +320,17 @@ async def list_rescue_plans(
 @router.get(
     "/plans/{company_id}/active",
     response_model=RescuePlanResponse,
-    dependencies=[Depends(require_company_access("company_id"))],
+    dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("corporate_rescue"))],
     summary="Get the active rescue plan for a company",
 )
 async def get_active_plan(
     company_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    _require_legal_release()
+    if current_user.role == "LEGAL_STAFF":
+        await ensure_staff_company_scope(company_id, current_user, db)
     rescue_svc = RescueService(db)
     company_svc = CompanyService(db)
 
@@ -315,8 +357,10 @@ async def get_active_plan(
 )
 async def get_rescue_plan(
     plan_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    _require_legal_release()
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
 
@@ -330,6 +374,7 @@ async def get_rescue_plan(
     plan = result.scalar_one_or_none()
     if not plan:
         raise HTTPException(status_code=404, detail="Rescue plan not found.")
+    await _assert_rescue_entitlement(plan.company_id, current_user, db)
     return _plan_to_response(plan)
 
 
@@ -355,6 +400,7 @@ async def update_rescue_step(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    _require_legal_release()
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
@@ -367,6 +413,7 @@ async def update_rescue_step(
 
     from app.models.enums import RescueStepStatus
     plan = await rescue_svc.get_by_id_or_404(plan_id)
+    await _assert_rescue_entitlement(plan.company_id, current_user, db)
     step = next((st for st in plan.steps if st.step_number == step_number), None)
     if step is None:
         raise HTTPException(status_code=404, detail="Rescue plan or step not found.")
@@ -425,6 +472,7 @@ async def create_engagement_from_rescue(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    _require_legal_release()
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
