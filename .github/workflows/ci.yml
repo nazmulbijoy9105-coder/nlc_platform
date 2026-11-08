@@ -50,6 +50,11 @@ jobs:
       - name: Compile check
         run: python -m compileall app/
 
+      - name: Validate backup tooling syntax
+        run: |
+          bash -n scripts/backup_to_s3.sh
+          python -m py_compile scripts/verify_backup.py
+
       - name: Lint scoring and migration release changes
         run: |
           ruff check --select E4,E7,E9,F \

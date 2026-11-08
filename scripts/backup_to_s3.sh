@@ -1,72 +1,127 @@
-#!/bin/bash
-# =============================================================================
-# Backup to S3 Script
-# Automatically exports PostgreSQL data to S3 for long-term archival
-# =============================================================================
+#!/usr/bin/env bash
+# Full PostgreSQL logical backup from Neon to S3.
+# Requires a direct PostgreSQL connection string (not a transaction-pooler URL).
+set -Eeuo pipefail
 
-set -e
+: "${NLC_BACKUP_DATABASE_URL:?Set NLC_BACKUP_DATABASE_URL to a direct Neon PostgreSQL URL}"
+: "${S3_BACKUP_BUCKET:?Set S3_BACKUP_BUCKET to the bucket name}"
+: "${AWS_REGION:?Set AWS_REGION explicitly}"
 
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-TIMESTAMP=$(date -u +%Y-%m-%d_%H-%M-%S)
-BACKUP_DIR="/tmp/nlc_backups"
-BACKUP_FILE="$BACKUP_DIR/nlc_backup_$TIMESTAMP.sql"
-BACKUP_TARBALL="$BACKUP_DIR/nlc_backup_$TIMESTAMP.tar.gz"
+for command in pg_dump pg_restore aws sha256sum; do
+  command -v "$command" >/dev/null 2>&1 || {
+    echo "ERROR: required command not found: $command" >&2
+    exit 1
+  }
+done
 
-echo "🔄 Starting NLC Platform Backup to S3..."
-echo "⏰ Timestamp: $TIMESTAMP"
+case "$NLC_BACKUP_DATABASE_URL" in
+  postgresql://*|postgres://*) ;;
+  *)
+    echo "ERROR: NLC_BACKUP_DATABASE_URL must use postgresql:// or postgres:// (direct Neon endpoint)." >&2
+    exit 1
+    ;;
+esac
 
-# Create backup directory
-mkdir -p "$BACKUP_DIR"
+case "$NLC_BACKUP_DATABASE_URL" in
+  *-pooler.*)
+    echo "ERROR: pg_dump backup must use Neon's direct endpoint, not a pooler endpoint." >&2
+    exit 1
+    ;;
+esac
 
-# Export PostgreSQL database
-echo "📦 Exporting PostgreSQL database..."
-flyctl ssh console --app nlc-api --command "pg_dump -U nlc_user nlc_db" > "$BACKUP_FILE"
-
-if [ ! -f "$BACKUP_FILE" ]; then
-  echo "❌ Failed to create backup file"
+if [[ "$NLC_BACKUP_DATABASE_URL" != *"sslmode=require"* &&
+      "$NLC_BACKUP_DATABASE_URL" != *"sslmode=verify-ca"* &&
+      "$NLC_BACKUP_DATABASE_URL" != *"sslmode=verify-full"* ]]; then
+  echo "ERROR: NLC_BACKUP_DATABASE_URL must explicitly require TLS with sslmode=require, verify-ca, or verify-full." >&2
   exit 1
 fi
 
-FILE_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
-echo "✅ PostgreSQL backup created: $FILE_SIZE"
-
-# Compress backup
-echo "🗜️  Compressing backup..."
-tar -czf "$BACKUP_TARBALL" -C "$BACKUP_DIR" "nlc_backup_$TIMESTAMP.sql"
-COMPRESSED_SIZE=$(du -h "$BACKUP_TARBALL" | cut -f1)
-echo "✅ Backup compressed: $COMPRESSED_SIZE"
-
-# Upload to S3
-echo "📤 Uploading to S3..."
-aws s3 cp "$BACKUP_TARBALL" "s3://nlc-backups/database/nlc_backup_$TIMESTAMP.tar.gz" \
-  --storage-class STANDARD_IA \
-  --metadata "created=$TIMESTAMP,type=postgresql_database" \
-  --region ap-south-1
-
-if [ $? -eq 0 ]; then
-  echo "✅ Successfully uploaded to S3"
+BACKUP_DIR="${BACKUP_DIR:-${RUNNER_TEMP:-/tmp}/nlc-backups}"
+S3_BACKUP_PREFIX="${S3_BACKUP_PREFIX:-database}"
+S3_BACKUP_PREFIX="${S3_BACKUP_PREFIX#/}"
+S3_BACKUP_PREFIX="${S3_BACKUP_PREFIX%/}"
+TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+BACKUP_NAME="nlc-postgres-${TIMESTAMP}.dump"
+BACKUP_FILE="$BACKUP_DIR/$BACKUP_NAME"
+CHECKSUM_FILE="${BACKUP_FILE}.sha256"
+if [[ -n "$S3_BACKUP_PREFIX" ]]; then
+  S3_KEY="${S3_BACKUP_PREFIX}/${BACKUP_NAME}"
 else
-  echo "❌ Failed to upload to S3"
-  exit 1
+  S3_KEY="$BACKUP_NAME"
 fi
+S3_URI="s3://${S3_BACKUP_BUCKET}/${S3_KEY}"
+CHECKSUM_URI="${S3_URI}.sha256"
+UPLOAD_VERIFIED=0
 
-# List recent backups
-echo ""
-echo "📋 Recent backups in S3:"
-aws s3 ls s3://nlc-backups/database/ --region ap-south-1 --recursive | tail -5
+mkdir -p "$BACKUP_DIR"
+chmod 700 "$BACKUP_DIR"
 
-# Cleanup local backup
-echo ""
-echo "🧹 Cleaning up local files..."
-rm -f "$BACKUP_FILE" "$BACKUP_TARBALL"
+cleanup() {
+  if [[ "$UPLOAD_VERIFIED" == "1" ]]; then
+    rm -f "$BACKUP_FILE" "$CHECKSUM_FILE"
+  else
+    echo "Backup/upload did not complete; local artifacts retained in $BACKUP_DIR" >&2
+  fi
+}
+trap cleanup EXIT
 
-# Verification
-echo ""
-echo "✅ Backup Complete!"
-echo "📊 Summary:"
-echo "  - Backup timestamp: $TIMESTAMP"
-echo "  - Compressed size: $COMPRESSED_SIZE"
-echo "  - Location: s3://nlc-backups/database/nlc_backup_$TIMESTAMP.tar.gz"
-echo "  - Retention: STANDARD_IA (30+ days cheap storage)"
+echo "Creating PostgreSQL custom-format backup: $BACKUP_NAME"
+pg_dump \
+  --format=custom \
+  --no-owner \
+  --verbose \
+  --file="$BACKUP_FILE" \
+  --dbname="$NLC_BACKUP_DATABASE_URL"
 
-exit 0
+[[ -s "$BACKUP_FILE" ]] || {
+  echo "ERROR: pg_dump produced an empty archive" >&2
+  exit 1
+}
+
+echo "Checking archive TOC before upload"
+pg_restore --list "$BACKUP_FILE" >/dev/null
+
+sha256sum "$BACKUP_FILE" > "$CHECKSUM_FILE"
+LOCAL_BYTES="$(wc -c < "$BACKUP_FILE" | tr -d '[:space:]')"
+LOCAL_SHA256="$(awk '{print $1}' "$CHECKSUM_FILE")"
+
+echo "Uploading archive to $S3_URI"
+aws s3 cp "$BACKUP_FILE" "$S3_URI" \
+  --region "$AWS_REGION" \
+  --storage-class STANDARD_IA \
+  --sse AES256 \
+  --metadata "sha256=$LOCAL_SHA256,created_utc=$TIMESTAMP,format=pg_custom"
+
+echo "Uploading checksum to $CHECKSUM_URI"
+aws s3 cp "$CHECKSUM_FILE" "$CHECKSUM_URI" \
+  --region "$AWS_REGION" \
+  --storage-class STANDARD_IA \
+  --sse AES256
+
+REMOTE_BYTES="$(aws s3api head-object \
+  --bucket "$S3_BACKUP_BUCKET" \
+  --key "$S3_KEY" \
+  --region "$AWS_REGION" \
+  --query ContentLength \
+  --output text)"
+REMOTE_SHA256="$(aws s3api head-object \
+  --bucket "$S3_BACKUP_BUCKET" \
+  --key "$S3_KEY" \
+  --region "$AWS_REGION" \
+  --query 'Metadata.sha256' \
+  --output text)"
+
+[[ "$REMOTE_BYTES" == "$LOCAL_BYTES" ]] || {
+  echo "ERROR: S3 object size mismatch (local=$LOCAL_BYTES remote=$REMOTE_BYTES)" >&2
+  exit 1
+}
+[[ "$REMOTE_SHA256" == "$LOCAL_SHA256" ]] || {
+  echo "ERROR: S3 object metadata checksum mismatch" >&2
+  exit 1
+}
+
+UPLOAD_VERIFIED=1
+echo "SUCCESS: archive uploaded and S3 size/metadata verified."
+echo "Archive: $S3_URI"
+echo "SHA256:  $LOCAL_SHA256"
+echo "NOTE: This verifies upload integrity and archive readability, not a database restore."

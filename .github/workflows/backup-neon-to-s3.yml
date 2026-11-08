@@ -1,0 +1,43 @@
+name: Neon PostgreSQL backup to S3
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nlc-neon-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    if: github.event_name == 'workflow_dispatch'
+    name: Create and verify logical backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_BACKUP_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Create and upload backup
+        env:
+          NLC_BACKUP_DATABASE_URL: ${{ secrets.NLC_BACKUP_DATABASE_URL }}
+          S3_BACKUP_BUCKET: ${{ vars.S3_BACKUP_BUCKET }}
+          S3_BACKUP_PREFIX: database
+          AWS_REGION: ${{ vars.AWS_REGION }}
+        run: bash scripts/backup_to_s3.sh

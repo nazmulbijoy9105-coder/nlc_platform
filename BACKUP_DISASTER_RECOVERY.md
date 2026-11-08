@@ -1,495 +1,159 @@
-# 🔒 Backup & Disaster Recovery Plan
+# NLC Backup and Disaster Recovery Runbook
 
-## Part 1: Automated Database Backups
+**Platform:** Render backend + Neon PostgreSQL + Vercel frontend.  
+**Status:** Operational procedures are being brought into line with the deployed infrastructure. Do not use the legacy Fly.io instructions.
 
-### PostgreSQL Backups (Fly.io Managed)
+## 1. Non-negotiable recovery rules
 
-Fly.io **automatically backs up** your PostgreSQL to:
-- **Frequency:** Daily
-- **Retention:** 7 days (free tier)
-- **Location:** Multiple geographic regions
-- **Recovery Time:** < 5 minutes
+1. Never run a database restore, migration, DROP, TRUNCATE, or table recreation against production as an exploratory step.
+2. Restore to a separate Neon branch first. Validate schema, row counts, constraints, indexes, RLS, and application compatibility before considering a production cutover.
+3. Do not treat an Alembic revision stamp as proof that the schema or historical data exists.
+4. Do not recreate missing webhook or rescue-audit tables as empty tables and call that recovery. Their historical evidence may be legally or operationally material.
+5. Do not use git revert as a database rollback. Application rollback and database recovery are separate procedures.
+6. A backup is not verified until it has been restored into an isolated database and passed the documented integrity checks.
 
-#### View Backups
+## 2. Current incident facts (2026-11-08)
 
-```bash
-# List all backups
-flyctl postgres backups list
+The following are observed facts, not a statement that recovery is complete:
 
-# Example output:
-# ID          | Timestamp           | Size
-# backup-100  | 2026-03-24T19:00:00Z | 1.2GB
-# backup-99   | 2026-03-23T19:00:00Z | 1.1GB
-```
+- Neon project: rapid-bonus-26545234; database: neondb.
+- Production branch: br-purple-fog-aodj8s04; observed Alembic revision: b10c91ac6860.
+- Available manual snapshot: nlc-production-pre-migration-recovery-2026-11-07, created 2026-11-07 07:47:20 UTC.
+- Production snapshot schedule currently returns an empty schedule.
+- Restored forensic branch: br-little-cake-aovrrz0y; observed Alembic revision: 0042_dedup_key.
+- These three tables are absent from both branches: public.webhook_endpoints, public.webhook_deliveries, and public.rescue_audit_log.
+- Migration 0037 creates the two webhook tables; migration 0038 creates the rescue audit table. Their absence at revision 0042 or later is schema drift.
+- No S3 object listing or verified S3 backup has yet been produced in this incident. The former Fly.io S3 script is not evidence that any backup exists.
 
-#### Restore from Backup
+**Incident hold:** Migration 0044 intentionally stops when these historical tables are missing. Keep that fail-closed guard. Do not rerun the failing production deployment until evidence recovery or a formally approved unrecoverable-evidence decision is documented.
 
-```bash
-# List available backups
-flyctl postgres backups list
+## 3. Neon recovery and PITR
 
-# Restore to specific backup
-flyctl postgres backups restore backup-100 --app nlc-db
+### Inspect before restoring
 
-# Verify restore
-flyctl postgres connect
-SELECT * FROM companies LIMIT 1;
-```
+1. In Neon, inspect project snapshots, branch history, and the configured snapshot schedule.
+2. Record the target timestamp, snapshot ID, source branch, and current Alembic revision.
+3. Create a separate recovery branch from the chosen restore point. Do not overwrite the production branch.
+4. On the recovery branch, run read-only checks for:
+   - Alembic revision rows;
+   - the three historical evidence tables;
+   - row counts for each table;
+   - table columns, primary/foreign keys, indexes, triggers, policies, RLS/FORCE RLS, and grants;
+   - related webhook/rescue parent tables and foreign-key relationships.
+5. Compare with the migration definitions and a known-good backup. A table's existence alone does not establish that its historical rows survived.
 
-### Redis Backups
+### Cutover gate
 
-Redis data is **volatile** by default. To enable persistent backups:
+Do not change Render's DATABASE_URL until all of the following are true:
 
-```bash
-# Enable persistence in Redis
-flyctl redis update --app nlc-redis --enable-persistence
-```
+- recovery source and restore timestamp are recorded;
+- all required historical evidence is recovered or a signed, explicit loss determination is approved;
+- migration graph and schema match the intended release;
+- tenant isolation, signed identity, and RLS checks pass;
+- application smoke tests pass against the isolated branch;
+- a second operator/counsel review is recorded where legal evidence is affected;
+- a fresh pre-cutover recovery point is available.
 
----
+Only then may an authorized operator update the Render connection string and perform a controlled deployment. Preserve the old production branch and connection details for rollback; do not delete it during the incident.
 
-## Part 2: Application Code Recovery
+## 4. Full logical backup to S3
 
-### GitHub Automatic Backup
+The current backup script is scripts/backup_to_s3.sh. It uses pg_dump custom format against a direct Neon PostgreSQL endpoint and uploads an archive plus SHA-256 sidecar.
 
-Your code is automatically backed up on GitHub:
+Required environment:
+- NLC_BACKUP_DATABASE_URL: direct Neon URL using postgresql:// or postgres://, with sslmode=require, verify-ca, or verify-full. Do not use a transaction-pooler endpoint.
+- S3_BACKUP_BUCKET: bucket name, not an s3:// URL.
+- AWS_REGION: explicit bucket region.
+- Optional S3_BACKUP_PREFIX (defaults to database).
 
-```bash
-# View commit history
-git log --oneline
+The script requires pg_dump, pg_restore, aws, and sha256sum. It:
+- creates a full custom-format logical dump, preserving database ACL statements while omitting source ownership;
+- verifies the archive TOC locally;
+- calculates SHA-256;
+- uploads the dump and checksum with server-side encryption;
+- checks the remote object's byte size and checksum metadata.
 
-# View all branches
-git branch -a
+PostgreSQL logical dumps do not include cluster-level role definitions. The target Neon project must have the required roles provisioned before restoring ACLs. Keep role provisioning in reviewed infrastructure/migration configuration; do not export passwords into the backup artifact.
 
-# View all tags
-git tag
+It does NOT prove that the database can be restored. Do not report a successful restore based only on an S3 upload or pg_restore --list.
 
-# Restore to specific commit
-git checkout <commit-hash>
-git reset --hard <commit-hash>
+### GitHub Actions
 
-# Restore specific file
-git checkout <commit-hash> -- path/to/file.py
-```
+.github/workflows/backup-neon-to-s3.yml validates backup-tool syntax on pull requests and runs the upload only through manual dispatch. Configure:
+- GitHub Actions variable AWS_REGION;
+- GitHub Actions variable S3_BACKUP_BUCKET;
+- GitHub Actions secret AWS_BACKUP_ROLE_ARN for an AWS IAM role trusted through GitHub OIDC;
+- GitHub Actions secret NLC_BACKUP_DATABASE_URL containing a direct Neon URL.
 
-### Version Tagging Strategy
+Use least-privilege AWS permissions restricted to the designated bucket/prefix. The workflow needs object upload and HEAD/read access for the uploaded objects; large multipart uploads may also require the corresponding multipart permissions. Restrict the OIDC trust policy to this repository and the intended branch. Do not create long-lived AWS access keys if OIDC is available. Do not enable a scheduled run until a manual backup has succeeded and an isolated restore rehearsal has passed.
 
-```bash
-# Create release tags
-git tag -a v1.0.0 -m "Release 1.0" main
-git push origin v1.0.0
+## 5. Archive checks versus restore tests
 
-# Tag format: v<major>.<minor>.<patch>
-# Example: v1.2.3
-```
+Run an archive check on a downloaded backup:
 
----
+    python3 scripts/verify_backup.py ./nlc-postgres-YYYYMMDDTHHMMSSZ.dump
 
-## Part 3: Disaster Recovery Procedures
+This checks the SHA-256 sidecar when present, archive TOC readability, and whether both table-definition and table-data entries exist for the three required historical evidence tables. It does not check row counts or execute a restore. A TABLE DATA entry does not prove that the table contained non-zero rows.
 
-### Scenario 1: App Crashed
+A proper restore drill must use a disposable Neon branch/database and a direct connection URL for that isolated target. Restore with pg_restore only after confirming the target is not production. Verify:
+- all expected schemas, tables, sequences, constraints, indexes, functions, and extensions;
+- row counts for critical tables, especially webhook and rescue audit evidence;
+- migration revision and consistency with the archive timestamp;
+- RLS enabled and forced where required, policies and grants;
+- representative application reads and tenant-isolation tests.
 
-**Recovery Time Objective (RTO):** 1 minute
+Record archive key, checksum, source timestamp, target branch, restore duration, failures, and reviewer. Destroy the disposable target only after preserving the test report. Never use a production URL for a restore test.
 
-```bash
-# Step 1: Check status
-flyctl status
+## 6. Render deployment failure
 
-# Step 2: View recent logs (find the error)
-flyctl logs -n 50
+The Render service nlc-platform has auto-deploy disabled. A GitHub push or merge therefore does not prove that Render deployed the new code.
 
-# Step 3: Restart machine
-flyctl machine restart <machine-id>
+1. Open Render service nlc-platform and inspect deploy history, commit SHA, pre-deploy output, and migration failure.
+2. If the application image is faulty and no incompatible database migration ran, deploy the last known-good successful deploy from Render's deploy history.
+3. If a migration ran or partially changed the schema, do not blindly roll back the application or downgrade Alembic. Inspect the migration state and use a forward repair or isolated database recovery plan.
+4. Verify /api/v1/health/live, /api/v1/health/ready, DB identity, Redis connectivity, and key read-only application paths.
+5. Record the deployed SHA and database revision.
 
-# Step 4: Verify health
-curl https://nlc-api.fly.dev/api/v1/health/live
-```
+A Git revert creates another source commit; it is not a reliable emergency deployment rollback and cannot undo database changes.
 
-### Scenario 2: Database Corrupted
+## 7. Vercel frontend rollback
 
-**RTO:** 5 minutes
+1. Open the nlc-frontend Vercel project and list recent production deployments.
+2. Select a previous deployment that is confirmed READY and known-good for the matching backend API contract.
+3. Promote that exact deployment to production.
+4. Verify the production domain, authentication, dashboard load, and API requests.
+5. Record deployment ID, commit SHA, and verification result.
 
-```bash
-# Step 1: Check backup list
-flyctl postgres backups list
+Do not select a deployment merely because it is older. Check its backend compatibility first.
 
-# Step 2: Restore latest good backup
-flyctl postgres backups restore backup-latest
+## 8. Data export and import
 
-# Step 3: Verify data integrity
-flyctl postgres connect
-SELECT COUNT(*) FROM companies;
+Use pg_dump for a complete logical database backup. Do not use the legacy flyctl postgres connect < dump_query.sql or CSV examples as a full database export.
 
-# Step 4: Restart app
-flyctl deploy
-```
+For selective CSV export, use psql with client-side \copy and an explicit SELECT. CSV exports are partial data extracts; they do not preserve schema, sequences, constraints, triggers, RLS policies, or all related data.
 
-### Scenario 3: Complete Database Loss
+Never import customer or audit data into production without an approved change plan, a pre-import backup, conflict analysis, and post-import integrity checks.
 
-**RTO:** 30 minutes (includes re-seeding data)
+## 9. RTO/RPO — not yet certified
 
-```bash
-# Step 1: Create new PostgreSQL
-flyctl postgres create --app nlc-db-recovery
+| Scenario | Target | Verified status |
+|---|---:|---|
+| Frontend deployment rollback | To be measured | Not measured in a drill |
+| Backend deployment rollback | To be measured | Not measured in a drill |
+| Neon PITR recovery | To be measured | No successful incident restore recorded here |
+| S3 logical backup restore | To be measured | No verified S3 archive/restore evidence yet |
+| Evidence-table recovery | No target until source found | Open incident |
 
-# Step 2: Get new connection string
-flyctl postgres credentials --app nlc-db-recovery
-# Copy: postgresql+asyncpg://...
+Do not advertise the old 1-, 2-, 5-, or 30-minute RTO claims or a 1-day RPO as achieved. Set targets only after timed restore and rollback drills.
 
-# Step 3: Update backend secrets
-flyctl secrets set DATABASE_URL="postgresql+asyncpg://..."
+## 10. Incident closure checklist
 
-# Step 4: Deploy backend
-flyctl deploy
-
-# Step 5: Initialize database
-flyctl ssh console
-alembic upgrade head
-python scripts/seed_rules.py
-python scripts/seed_prompt_templates.py
-exit
-
-# Step 6: Verify
-curl https://nlc-api.fly.dev/api/v1/health/live
-```
-
-### Scenario 4: Deployment Failed
-
-**RTO:** 2 minutes (rollback)
-
-```bash
-# Step 1: Check deployment history
-git log --oneline -10
-
-# Step 2: Find last good commit
-git log --oneline | grep "working commit message"
-
-# Step 3: Rollback to previous version
-git revert HEAD
-git push origin main
-
-# Step 4: GitHub Actions auto-deploys fixed version
-# Watch: GitHub Actions → Deploy Workflow
-
-# Step 5: Verify
-curl https://nlc-api.fly.dev/api/v1/health/live
-```
-
-### Scenario 5: Frontend Issues
-
-**RTO:** 1 minute
-
-```bash
-# Vercel auto-rollback:
-# 1. Go to Vercel dashboard
-# 2. Select nlc-frontend project
-# 3. Deployments tab
-# 4. Find last stable deployment
-# 5. Click "Promote to Production"
-
-# OR use CLI:
-vercel rollback
-```
-
----
-
-## Part 4: Data Export & Import
-
-### Export All Data
-
-```bash
-# Export PostgreSQL to file
-flyctl postgres connect < dump_query.sql > backup.sql
-
-# Query to dump data:
-cat > dump_query.sql << 'EOF'
-\copy companies TO '/tmp/companies.csv' WITH CSV HEADER
-\copy users TO '/tmp/users.csv' WITH CSV HEADER
-\copy filings TO '/tmp/filings.csv' WITH CSV HEADER
-EOF
-
-# Download files
-flyctl sftp get /tmp/companies.csv ./backup/
-```
-
-### Import Data
-
-```bash
-# Connect to database
-flyctl postgres connect
-
-# Import CSV
-\copy companies FROM '/tmp/companies.csv' WITH CSV HEADER
-
-# Verify import
-SELECT COUNT(*) FROM companies;
-```
-
----
-
-## Part 5: Backup Testing
-
-### Weekly Backup Health Check
-
-Schedule via GitHub Actions (automated):
-
-```yaml
-name: Weekly Backup Test
-
-on:
-  schedule:
-    - cron: '0 10 0 * 1'  # Every Monday 10 AM UTC
-
-jobs:
-  test_backup:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Fly CLI
-        uses: superfly/flyctl-actions/setup-flyctl@master
-
-      - name: List Recent Backups
-        run: flyctl postgres backups list | head -3
-
-      - name: Test DB Connection
-        env:
-          FLY_API_TOKEN: ${{secrets.FLY_API_TOKEN}}
-        run: |
-          flyctl postgres connect -c "SELECT COUNT(*) FROM companies;" || exit 1
-
-      - name: Verify Data Integrity
-        env:
-          FLY_API_TOKEN: ${{secrets.FLY_API_TOKEN}}
-        run: |
-          flyctl ssh console "psql -d nlc_db -c 'SELECT COUNT(*) FROM companies;'" || exit 1
-```
-
----
-
-## Part 6: Manual Backup to S3
-
-### Setup S3 Backup
-
-```bash
-# Create backup script
-cat > scripts/backup_to_s3.py << 'EOF'
-import subprocess
-import boto3
-from datetime import datetime
-
-# Dump database
-subprocess.run([
-    'flyctl', 'postgres', 'connect',
-    '-c', r'\copy companies TO STDOUT WITH CSV HEADER'
-], stdout=open('backup.csv', 'w'))
-
-# Upload to S3
-s3 = boto3.client('s3')
-s3.upload_file(
-    'backup.csv',
-    'nlc-backups',
-    f'database_backup_{datetime.now().isoformat()}.csv'
-)
-
-print("✅ Backup successfully uploaded to S3")
-EOF
-
-# Run script
-python scripts/backup_to_s3.py
-```
-
-### Schedule Daily S3 Backup
-
-GitHub Actions:
-
-```yaml
-name: Daily S3 Backup
-
-on:
-  schedule:
-    - cron: '0 2 * * *'  # 2 AM UTC daily
-
-jobs:
-  backup:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1
-
-      - name: Run backup script
-        env:
-          FLY_API_TOKEN: ${{secrets.FLY_API_TOKEN}}
-        run: python scripts/backup_to_s3.py
-
-      - name: Slack notification
-        uses: slackapi/slack-github-action@v1
-        if: always()
-        with:
-          payload: |
-            {
-              "text": "Daily S3 backup completed"
-            }
-```
-
----
-
-## Part 7: Communication Plan
-
-### Incident Response Team
-
-| Role | Responsibility | Contact |
-|------|---------------|---------| 
-| **Lead** | Decision maker | SMS + Slack |
-| **Backend Dev** | Investigate app | Slack |
-| **DevOps** | Infrastructure | Slack + Email |
-| **Manager** | Customer comms | Email |
-
-### Incident Severity Levels
-
-```
-🟢 LOW (< 30 min impact)
-├─ Memory warning
-├─ High CPU usage
-└─ Non-critical feature down
-→ Slack notification only
-
-🟡 MEDIUM (30-120 min impact)
-├─ Single endpoint down
-├─ Database slow
-└─ Background job failed
-→ Slack + Email to team
-
-🔴 CRITICAL (> 120 min impact)
-├─ Entire API down
-├─ Database lost
-└─ Frontend can't reach backend
-→ Slack + SMS + Call
-```
-
-### Status Page Setup
-
-1. Create status page at https://status.nlccounsel.io
-2. Use https://www.statuspage.io (free)
-3. Auto-update via API on incidents
-4. Notify customers in real-time
-
----
-
-## Part 8: Testing & Drills
-
-### Monthly Disaster Recovery Drill
-
-```bash
-# Checklist:
-- [ ] Restore database from backup (test only)
-- [ ] Verify data integrity after restore
-- [ ] Test app startup with restored DB
-- [ ] Verify frontend can reach backend
-- [ ] Document any issues
-- [ ] Update runbooks
-```
-
-### Backup Restore Test Checklist
-
-```bash
-#!/bin/bash
-
-echo "🧪 Starting Disaster Recovery Test..."
-
-# 1. Create test database
-echo "1. Creating test database..."
-flyctl postgres create --app nlc-db-test
-
-# 2. Restore from backup
-echo "2. Restoring from latest backup..."
-flyctl postgres backups restore backup-latest --app nlc-db-test
-
-# 3. Verify data
-echo "3. Verifying data..."
-flyctl postgres connect --app nlc-db-test << EOF
-SELECT COUNT(*) as company_count FROM companies;
-SELECT COUNT(*) as user_count FROM users;
-EOF
-
-# 4. Report
-echo "✅ Disaster Recovery Test Passed"
-echo "Files can be restored in < 5 minutes"
-
-# 5. Cleanup
-flyctl postgres destroy nlc-db-test
-```
-
----
-
-## Part 9: Recovery Time Objectives (RTOs)
-
-| Scenario | RTO | RPO | Status |
-|----------|-----|-----|--------|
-| **App Crash** | 1 min | 0 min | ✅ Auto-restart |
-| **App Deployment Fail** | 2 min | 0 min | ✅ Rollback ready |
-| **DB Connection Lost** | 5 min | 0 min | ✅ Backup available |
-| **DB Corruption** | 5 min | 1 day | ✅ Restore from backup |
-| **Complete DB Loss** | 30 min | 1 day | ✅ Backup in S3 |
-| **Frontend Broken** | 1 min | 0 min | ✅ Vercel auto-rollback |
-| **Regional Outage** | 15 min | 0 min | ✅ Geo-redundant |
-
----
-
-## Part 10: Backup Checklist
-
-- [ ] PostgreSQL daily backups configured
-- [ ] Redis persistence enabled
-- [ ] GitHub code versioning active
-- [ ] S3 daily exports scheduled
-- [ ] Backup testing automated (weekly)
-- [ ] Incident response team assigned
-- [ ] Communication channels established
-- [ ] Status page created
-- [ ] Runbooks documented
-- [ ] Team trained on procedures
-- [ ] Monthly DR drills scheduled
-
----
-
-## Emergency Contact Card
-
-```
-🚨 INCIDENT RESPONSE
-
-Backend Down:
-→ Check: flyctl logs
-→ Restart: flyctl machine restart <id>
-→ Deploy: flyctl deploy
-→ Verify: curl https://nlc-api.fly.dev/api/v1/health/live
-
-Database Down:
-→ Check: flyctl postgres status
-→ Restore: flyctl postgres backups restore backup-latest
-→ Test: flyctl postgres connect
-
-Frontend Down:
-→ Check: Vercel dashboard
-→ Rollback: vercel rollback
-→ Verify: https://nlc-frontend.vercel.app
-
-All Down / Unknown:
-→ 1. Stay calm
-→ 2. Take screenshot of error
-→ 3. Notify team on Slack
-→ 4. Check https://status.fly.io + https://www.vercelstatus.com
-→ 5. Wait for infrastructure checks (15 min)
-
-24/7 Support:
-→ Slack: #incident-response
-→ Email: devops@nlccounsel.io
-```
-
----
-
-**Your platform is now protected with enterprise-grade disaster recovery!** 🛡️
+- [ ] A verified recovery source is identified.
+- [ ] Backup checksum and archive format pass.
+- [ ] Isolated restore succeeds.
+- [ ] Three historical evidence tables and required rows are present, or the exact loss is formally documented and approved.
+- [ ] Alembic/schema parity is proven.
+- [ ] RLS, grants, signed identity, and tenant isolation pass.
+- [ ] Render deployment and Vercel production compatibility are verified.
+- [ ] Measured RTO/RPO and restore report are retained.
+- [ ] Snapshot schedule and recurring backup process are configured and tested.
