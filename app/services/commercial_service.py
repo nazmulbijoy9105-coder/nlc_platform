@@ -136,6 +136,7 @@ class EngagementService(BaseService[Engagement]):
         engagement_result = await self.db.execute(
             select(Engagement)
             .where(Engagement.id == engagement_id, Engagement.is_active)
+            .where(Engagement.id == engagement_id)
             .with_for_update()
         )
         eng = engagement_result.scalar_one_or_none()
@@ -143,6 +144,13 @@ class EngagementService(BaseService[Engagement]):
             return None
         from app.models.commercial import validate_engagement_transition
         if not validate_engagement_transition(eng.engagement_status, new_status):
+        allowed_transitions = {
+            EngagementStatus.IDENTIFIED: {EngagementStatus.QUOTED, EngagementStatus.CANCELLED},
+            EngagementStatus.QUOTED: {EngagementStatus.CONFIRMED, EngagementStatus.CANCELLED},
+            EngagementStatus.CONFIRMED: {EngagementStatus.IN_PROGRESS, EngagementStatus.CANCELLED},
+            EngagementStatus.IN_PROGRESS: {EngagementStatus.COMPLETED, EngagementStatus.CANCELLED},
+        }
+        if new_status not in allowed_transitions.get(eng.engagement_status, set()):
             raise ValueError(
                 f"Invalid engagement transition: {eng.engagement_status} -> {new_status}"
             )
@@ -270,8 +278,18 @@ class QuotationService(BaseService[Quotation]):
             text(
                 "SELECT COALESCE(MAX(CAST(SPLIT_PART(quotation_number, '-', 3) AS INTEGER)), 0) "
                 "FROM quotations WHERE quotation_number LIKE :prefix"
+        pattern = f"{prefix}%"
+        result = await self.db.execute(
+            text(
+                "SELECT COALESCE(MAX("
+                "CASE "
+                "WHEN SPLIT_PART(quotation_number, '-', 3) ~ '^[0-9]+$' "
+                "THEN CAST(SPLIT_PART(quotation_number, '-', 3) AS INTEGER) "
+                "ELSE NULL END"
+                "), 0) "
+                "FROM quotations WHERE quotation_number LIKE :pattern"
             ),
-            {"prefix": f"NLC-{year}-%"},
+            {"pattern": pattern},
         )
         count = result.scalar_one() + 1
         return f"NLC-{year}-{count:04d}"
@@ -281,6 +299,31 @@ class QuotationService(BaseService[Quotation]):
         quotation_id: uuid.UUID,
     ) -> Quotation | None:
         """Mark quotation as accepted."""
+        """Accept a quotation using the shared engagement-first lock order."""
+        # Read immutable parent keys first; lifecycle writers then lock the
+        # engagement before the quotation to prevent lock-order deadlocks.
+        quotation_ref_result = await self.db.execute(
+            select(Quotation.engagement_id, Quotation.company_id).where(
+                Quotation.id == quotation_id
+            )
+        )
+        quotation_ref = quotation_ref_result.one_or_none()
+        if quotation_ref is None:
+            return None
+
+        engagement_result = await self.db.execute(
+            select(Engagement)
+            .where(
+                Engagement.id == quotation_ref.engagement_id,
+                Engagement.company_id == quotation_ref.company_id,
+                Engagement.is_active.is_(True),
+            )
+            .with_for_update()
+        )
+        engagement = engagement_result.scalar_one_or_none()
+        if engagement is None:
+            raise ValueError("Quotation engagement is missing, inactive, or belongs to another company.")
+
         quotation_result = await self.db.execute(
             select(Quotation).where(Quotation.id == quotation_id).with_for_update()
         )
@@ -314,16 +357,55 @@ class QuotationService(BaseService[Quotation]):
             engagement_status=EngagementStatus.CONFIRMED,
             confirmed_date=date.today(),
             confirmed_fee_bdt=q.total_bdt,
+        if q is None:
+            return None
+        if q.engagement_id != engagement.id or q.company_id != engagement.company_id:
+            raise ValueError("Quotation parent changed while the acceptance was being processed.")
+        if q.status not in {"DRAFT", "SENT"}:
+            raise CommercialConflictError(f"Cannot accept a quotation in {q.status} state.")
+        if q.valid_until is None or q.valid_until < date.today():
+            raise CommercialConflictError("An expired quotation cannot be accepted; issue a renewed quotation.")
+        if engagement.engagement_status != EngagementStatus.QUOTED:
+            raise CommercialConflictError("Only a quotation for a QUOTED engagement can be accepted.")
+
+        accepted = await self.update_instance(q, status="ACCEPTED", accepted_date=date.today())
+        await EngagementService(self.db).advance_status(
+            engagement.id,
+            EngagementStatus.CONFIRMED,
+            fee_bdt=q.total_bdt,
         )
         return accepted
 
     async def reject(
         self,
         quotation_id: uuid.UUID,
-        reason: str,
+        reason: str | None = None,
         rejected_by: uuid.UUID | None = None,  # COM-002
     ) -> Quotation | None:
         """Mark quotation as rejected."""
+        """Reject a quotation while serializing against parent lifecycle writes."""
+        quotation_ref_result = await self.db.execute(
+            select(Quotation.engagement_id, Quotation.company_id).where(
+                Quotation.id == quotation_id
+            )
+        )
+        quotation_ref = quotation_ref_result.one_or_none()
+        if quotation_ref is None:
+            return None
+
+        engagement_result = await self.db.execute(
+            select(Engagement)
+            .where(
+                Engagement.id == quotation_ref.engagement_id,
+                Engagement.company_id == quotation_ref.company_id,
+                Engagement.is_active.is_(True),
+            )
+            .with_for_update()
+        )
+        engagement = engagement_result.scalar_one_or_none()
+        if engagement is None:
+            raise ValueError("Quotation engagement is missing, inactive, or belongs to another company.")
+
         quotation_result = await self.db.execute(
             select(Quotation).where(Quotation.id == quotation_id).with_for_update()
         )
@@ -333,6 +415,19 @@ class QuotationService(BaseService[Quotation]):
         if q.status not in {"DRAFT", "SENT"}:
             raise CommercialConflictError(f"Cannot reject a quotation in {q.status} state")
         return await self.update_instance(q, status="REJECTED", rejection_reason=reason, rejected_by=rejected_by)  # COM-002
+        if q is None:
+            return None
+        if q.engagement_id != engagement.id or q.company_id != engagement.company_id:
+            raise ValueError("Quotation parent changed while the rejection was being processed.")
+        if q.status not in {"DRAFT", "SENT"}:
+            raise CommercialConflictError(f"Cannot reject a quotation in {q.status} state.")
+
+        return await self.update_instance(
+            q,
+            status="REJECTED",
+            rejection_reason=reason,
+            rejected_by=rejected_by,
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -397,6 +492,9 @@ class TaskService(BaseService[Task]):
         from datetime import datetime
         task_result = await self.db.execute(
             select(Task).where(Task.id == task_id, Task.is_active).with_for_update()
+            select(Task)
+            .where(Task.id == task_id)
+            .with_for_update()
         )
         task = task_result.scalar_one_or_none()
         if not task:

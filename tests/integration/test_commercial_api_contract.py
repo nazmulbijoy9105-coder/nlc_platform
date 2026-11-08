@@ -1,6 +1,7 @@
 """Regression tests for the existing commercial API/service contract."""
 from __future__ import annotations
 
+
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -172,6 +173,12 @@ async def test_task_completion_accepts_completion_note(
         json={"completion_note": "Duplicate completion must not create another transition"},
     )
     assert duplicate.status_code == 409, duplicate.text
+    repeated = await api_client.patch(
+        f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete",
+        headers=_auth(commercial_admin_token),
+        json={"completion_note": "Should not complete twice"},
+    )
+    assert repeated.status_code == 409, repeated.text
 
 @pytest.mark.asyncio
 async def test_quotation_cannot_be_attached_to_another_company(
@@ -229,3 +236,21 @@ def test_quotation_response_supports_legacy_null_valid_until():
     )
     response = _quotation_to_response(quotation)
     assert response.valid_until is None
+def test_quotation_accept_and_reject_lock_parent_before_locked_quotation():
+    """Guard the required engagement-first lock order in both lifecycle paths."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    source = (root / "app" / "services" / "commercial_service.py").read_text(
+        encoding="utf-8"
+    )
+    class_start = source.index("class QuotationService")
+    for method_name in ("accept", "reject"):
+        start = source.index(f"    async def {method_name}(", class_start)
+        next_method = source.find("\n    async def ", start + 1)
+        method = source[start: next_method if next_method >= 0 else len(source)]
+        engagement_lock = method.index("select(Engagement)")
+        quotation_lock = method.index("select(Quotation).where", method.index("with_for_update()", engagement_lock))
+        assert engagement_lock < quotation_lock
+        assert "with_for_update()" in method[engagement_lock:quotation_lock]
+        assert "with_for_update()" in method[quotation_lock:]

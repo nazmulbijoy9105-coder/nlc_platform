@@ -392,6 +392,8 @@ async def accept_quotation(
         quotation = await svc.accept(quotation_id=quotation_id)
     except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
 
@@ -429,6 +431,8 @@ async def reject_quotation(
         )
     except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
     await ActivityService(db).log(
