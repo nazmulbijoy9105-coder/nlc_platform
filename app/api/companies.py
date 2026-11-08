@@ -603,8 +603,12 @@ async def get_risk_distribution(current_user: User = Depends(get_current_user), 
 )
 async def list_company_charges(
     company_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    financial_access = await _financial_access_ids(db, current_user, [company_id])
+    if company_id not in financial_access:
+        raise HTTPException(status_code=403, detail="Financial-data access is required to view charge records.")
     result = await db.execute(
         select(CompanyCharge)
         .where(CompanyCharge.company_id == company_id, CompanyCharge.is_active.is_(True))
