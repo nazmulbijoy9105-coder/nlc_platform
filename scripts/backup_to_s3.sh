@@ -22,6 +22,13 @@ case "$NLC_BACKUP_DATABASE_URL" in
     ;;
 esac
 
+if [[ "$NLC_BACKUP_DATABASE_URL" != *"sslmode=require"* &&
+      "$NLC_BACKUP_DATABASE_URL" != *"sslmode=verify-ca"* &&
+      "$NLC_BACKUP_DATABASE_URL" != *"sslmode=verify-full"* ]]; then
+  echo "ERROR: NLC_BACKUP_DATABASE_URL must explicitly require TLS with sslmode=require, verify-ca, or verify-full." >&2
+  exit 1
+fi
+
 BACKUP_DIR="${BACKUP_DIR:-${RUNNER_TEMP:-/tmp}/nlc-backups}"
 S3_BACKUP_PREFIX="${S3_BACKUP_PREFIX:-database}"
 S3_BACKUP_PREFIX="${S3_BACKUP_PREFIX#/}"
@@ -30,7 +37,11 @@ TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 BACKUP_NAME="nlc-postgres-${TIMESTAMP}.dump"
 BACKUP_FILE="$BACKUP_DIR/$BACKUP_NAME"
 CHECKSUM_FILE="${BACKUP_FILE}.sha256"
-S3_KEY="${S3_BACKUP_PREFIX}/${BACKUP_NAME}"
+if [[ -n "$S3_BACKUP_PREFIX" ]]; then
+  S3_KEY="${S3_BACKUP_PREFIX}/${BACKUP_NAME}"
+else
+  S3_KEY="$BACKUP_NAME"
+fi
 S3_URI="s3://${S3_BACKUP_BUCKET}/${S3_KEY}"
 CHECKSUM_URI="${S3_URI}.sha256"
 UPLOAD_VERIFIED=0
@@ -51,7 +62,6 @@ echo "Creating PostgreSQL custom-format backup: $BACKUP_NAME"
 pg_dump \
   --format=custom \
   --no-owner \
-  --no-acl \
   --verbose \
   --file="$BACKUP_FILE" \
   --dbname="$NLC_BACKUP_DATABASE_URL"
