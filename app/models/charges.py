@@ -6,7 +6,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, Numeric, String, Text
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,6 +22,7 @@ class CompanyCharge(FullMixin, Base):
     __tablename__ = "company_charges"
     __table_args__ = (
         Index("ix_company_charges_company_created", "company_id", "creation_date"),
+        UniqueConstraint("company_id", "charge_reference", name="uq_company_charge_reference"),
         CheckConstraint("amount_bdt >= 0", name="ck_company_charges_amount_nonnegative"),
         CheckConstraint(
             "NOT creation_date_verified OR (creation_date_evidence_ref IS NOT NULL AND creation_date_verified_at IS NOT NULL AND creation_date_verified_by IS NOT NULL)",
