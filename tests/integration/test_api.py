@@ -732,7 +732,7 @@ class TestDocuments:
         resp = await api_client.get(
             "/api/v1/documents/templates", headers=_auth(client_tok)
         )
-        assert resp.status_code == 402
+        assert resp.status_code == 403
 
     @pytest.mark.asyncio
     async def test_client_document_portfolio_requires_entitlement(
@@ -1449,14 +1449,14 @@ class TestSubscriptionEntitlementRouteGates:
         assert response.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_legal_staff_requires_assignment_and_paid_entitlement(
-        self, api_client, legal_tok, db_company, legal_staff_company_scope
+    async def test_assigned_legal_staff_can_access_company_compliance_without_customer_subscription(
+        self, api_client, legal_token, db_company, legal_staff_company_scope
     ):
         response = await api_client.get(
             f"/api/v1/companies/{db_company.id}/compliance",
-            headers=_auth(legal_tok),
+            headers=_auth(legal_token),
         )
-        assert response.status_code == 402
+        assert response.status_code == 200, response.text
 
     @pytest.mark.asyncio
     async def test_client_document_pdf_requires_paid_entitlement(
