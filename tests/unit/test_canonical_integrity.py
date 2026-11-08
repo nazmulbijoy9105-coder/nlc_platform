@@ -335,6 +335,29 @@ def test_inner_ids_match_registry_keys():
     assert not bad_rescue, sorted(bad_rescue)
 
 
+def test_canonical_registry_matches_seed_basis_and_requirement_for_all_rules():
+    """The canonical registry, seed corpus and engine must not drift rule-by-rule."""
+    rows = _seed_rows()
+    assert len(rows) == EXPECTED
+    seed_by_id = {row["rule_id"]: row for row in rows}
+    assert set(seed_by_id) == set(STATUTORY_RULE_REGISTRY)
+
+    mismatches = []
+    for rule_id, row in seed_by_id.items():
+        rule = STATUTORY_RULE_REGISTRY[rule_id]
+        seed_basis = _normalise_basis(row["statutory_basis"])
+        canonical_basis = _normalise_basis(rule.law)
+        if seed_basis != canonical_basis or rule.requirement != row["description"]:
+            mismatches.append({
+                "rule_id": rule_id,
+                "seed_basis": row["statutory_basis"],
+                "canonical_basis": rule.law,
+                "seed_requirement": row["description"],
+                "canonical_requirement": rule.requirement,
+            })
+    assert not mismatches, mismatches
+
+
 def test_seed_statutory_basis_matches_engine_call_for_same_rule():
     engine_data, errors = _engine_rule_data()
     assert not errors, errors
