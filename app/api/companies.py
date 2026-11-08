@@ -181,6 +181,21 @@ class CompanyChargeResponse(BaseModel):
     registrability_verified: bool
     satisfaction_verified: bool
     satisfaction_filing_status_verified: bool
+    creation_date_evidence_ref: str | None
+    creation_date_verified_at: datetime | None
+    creation_date_verified_by: uuid.UUID | None
+    form_xviii_filing_evidence_ref: str | None
+    form_xviii_verified_at: datetime | None
+    form_xviii_verified_by: uuid.UUID | None
+    registrability_evidence_ref: str | None
+    registrability_verified_at: datetime | None
+    registrability_verified_by: uuid.UUID | None
+    satisfaction_evidence_ref: str | None
+    satisfaction_verified_at: datetime | None
+    satisfaction_verified_by: uuid.UUID | None
+    satisfaction_filing_evidence_ref: str | None
+    satisfaction_filing_verified_at: datetime | None
+    satisfaction_filing_verified_by: uuid.UUID | None
 
 
 class FlagResolveRequest(BaseModel):
