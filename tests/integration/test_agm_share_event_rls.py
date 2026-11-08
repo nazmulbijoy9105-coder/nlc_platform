@@ -99,4 +99,4 @@ async def test_agm_and_share_event_tables_have_signed_tenant_rls(db):
 async def test_new_evidence_migration_is_the_single_current_revision(db):
     rows = await db.execute(text("SELECT version_num FROM alembic_version"))
     versions = [row[0] for row in rows.fetchall()]
-    assert versions == ["0083_merge_all_release_heads"]
+    assert versions == ["0084_install_legal_rule_version_guard"]
