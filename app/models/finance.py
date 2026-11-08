@@ -144,7 +144,7 @@ class Payment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             postgresql_where=text("source_submission_id IS NOT NULL"),
         ),
         CheckConstraint("amount_bdt > 0", name="ck_payment_amount_positive"),
-        CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE','SSLCOMMERZ')", name="ck_payment_method"),
+        CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE','SSLCOMMERZ','BKASH_MANUAL','NAGAD_MANUAL')", name="ck_payment_method"),
         CheckConstraint("method NOT IN ('BANK_TRANSFER','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL') OR NULLIF(BTRIM(payer_reference), '') IS NOT NULL", name="ck_payment_reference_required"),
         CheckConstraint("channel IN ('ONLINE','OFFLINE')", name="ck_payment_channel"),
         CheckConstraint("status IN ('SETTLED','REVERSED','REFUNDED','DISPUTED')", name="ck_payment_status"),
