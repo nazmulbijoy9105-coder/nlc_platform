@@ -25,11 +25,13 @@ after update so the company score is always fresh.
 
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
+from typing import Literal
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
@@ -40,6 +42,7 @@ from app.core.dependencies import (
 )
 from app.core.entitlement import require_entitlement
 from app.models.user import User
+from app.models.people import ShareComplianceEvent, Shareholder, ShareTransfer
 from app.services.filing_service import (
     AGMService,
     AnnualReturnService,
@@ -101,6 +104,51 @@ class AGMResponse(BaseModel):
     minutes_prepared: bool | None
     is_default: bool | None
     created_at: str
+
+
+
+class ShareEventCreateRequest(BaseModel):
+    event_type: Literal["ALLOTMENT", "CAPITAL_INCREASE_RESOLUTION", "TRANSFER_REGISTERED"]
+    event_reference: str = Field(min_length=2, max_length=160)
+    event_date: date
+    event_evidence_ref: str = Field(min_length=4, max_length=2000)
+    share_transfer_id: uuid.UUID | None = None
+    shareholder_id: uuid.UUID | None = None
+    shares_affected: int | None = Field(default=None, gt=0)
+
+
+class ShareEventVerifyRequest(BaseModel):
+    filing_status: bool | None = None
+    filing_evidence_ref: str | None = Field(default=None, min_length=4, max_length=2000)
+    filing_date: date | None = None
+    certificate_issued: bool | None = None
+    certificate_evidence_ref: str | None = Field(default=None, min_length=4, max_length=2000)
+    certificate_issue_date: date | None = None
+
+
+def _share_event_response(event: ShareComplianceEvent) -> dict:
+    return {
+        "event_id": str(event.id),
+        "company_id": str(event.company_id),
+        "event_reference": event.event_reference,
+        "event_type": event.event_type,
+        "event_date": event.event_date.isoformat(),
+        "event_verified": event.event_verified,
+        "event_evidence_ref": event.event_evidence_ref,
+        "submitted_by": str(event.submitted_by),
+        "submitted_at": event.submitted_at.isoformat(),
+        "event_verified_by": str(event.event_verified_by) if event.event_verified_by else None,
+        "event_verified_at": event.event_verified_at.isoformat() if event.event_verified_at else None,
+        "filing_form": event.filing_form,
+        "filing_status": event.filing_status if event.filing_status_verified else None,
+        "filing_status_verified": event.filing_status_verified,
+        "filing_date": event.filing_date.isoformat() if event.filing_date else None,
+        "filing_evidence_ref": event.filing_evidence_ref if event.filing_status_verified else None,
+        "certificate_issued": event.certificate_issued if event.certificate_status_verified else None,
+        "certificate_status_verified": event.certificate_status_verified,
+        "certificate_issue_date": event.certificate_issue_date.isoformat() if event.certificate_issue_date else None,
+        "certificate_evidence_ref": event.certificate_evidence_ref if event.certificate_status_verified else None,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -810,3 +858,164 @@ def _statutory_register_to_response(r) -> StatutoryRegisterResponse:
         notes=r.notes,
         updated_at=r.updated_at.isoformat(),
     )
+
+
+# ---------------------------------------------------------------------------
+# Share statutory event evidence
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/share-events/{company_id}",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN"))],
+    summary="Record an unverified share statutory event with source provenance",
+)
+async def create_share_compliance_event(
+    company_id: uuid.UUID,
+    body: ShareEventCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    from app.core.company_authorization import ensure_staff_company_scope
+
+    await ensure_staff_company_scope(company_id, current_user, db)
+    event_type = body.event_type
+    if event_type == "TRANSFER_REGISTERED":
+        if body.share_transfer_id is None:
+            raise HTTPException(status_code=422, detail="A registered-transfer event must reference its share transfer.")
+        transfer_result = await db.execute(
+            select(ShareTransfer.id).where(
+                ShareTransfer.id == body.share_transfer_id,
+                ShareTransfer.company_id == company_id,
+                ShareTransfer.is_active.is_(True),
+            ).limit(1)
+        )
+        if transfer_result.scalar_one_or_none() is None:
+            raise HTTPException(status_code=404, detail="Share transfer not found in this company.")
+    elif body.share_transfer_id is not None:
+        raise HTTPException(status_code=422, detail="Only TRANSFER_REGISTERED events may reference a transfer row.")
+
+    if body.shareholder_id is not None:
+        shareholder_result = await db.execute(
+            select(Shareholder.id).where(
+                Shareholder.id == body.shareholder_id,
+                Shareholder.company_id == company_id,
+                Shareholder.is_active.is_(True),
+            ).limit(1)
+        )
+        if shareholder_result.scalar_one_or_none() is None:
+            raise HTTPException(status_code=404, detail="Shareholder not found in this company.")
+
+    filing_form = {
+        "ALLOTMENT": "FORM_XV",
+        "CAPITAL_INCREASE_RESOLUTION": "FORM_IV",
+        "TRANSFER_REGISTERED": None,
+    }[event_type]
+    event = ShareComplianceEvent(
+        company_id=company_id,
+        share_transfer_id=body.share_transfer_id,
+        shareholder_id=body.shareholder_id,
+        event_reference=body.event_reference.strip(),
+        shares_affected=body.shares_affected,
+        event_type=event_type,
+        event_date=body.event_date,
+        event_verified=False,
+        event_evidence_ref=body.event_evidence_ref.strip(),
+        submitted_by=current_user.id,
+        submitted_at=datetime.now(UTC),
+        filing_form=filing_form,
+        filing_status=None,
+        filing_status_verified=False,
+        certificate_issued=None,
+        certificate_status_verified=False,
+    )
+    db.add(event)
+    await db.flush()
+    await db.refresh(event)
+    return _share_event_response(event)
+
+
+@router.post(
+    "/share-events/{event_id}/verify",
+    dependencies=[Depends(require_roles("LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN"))],
+    summary="Independently verify share event, filing and certificate evidence",
+)
+async def verify_share_compliance_event(
+    event_id: uuid.UUID,
+    body: ShareEventVerifyRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    from app.core.company_authorization import ensure_staff_company_scope
+
+    result = await db.execute(
+        select(ShareComplianceEvent)
+        .where(ShareComplianceEvent.id == event_id, ShareComplianceEvent.is_active.is_(True))
+        .with_for_update()
+    )
+    event = result.scalar_one_or_none()
+    if event is None:
+        raise HTTPException(status_code=404, detail="Share event not found.")
+    await ensure_staff_company_scope(event.company_id, current_user, db)
+    if event.submitted_by == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A different authorized reviewer must verify the submitted event.",
+        )
+    if not event.event_evidence_ref.strip():
+        raise HTTPException(status_code=422, detail="The original event evidence reference is missing.")
+
+    updates = {
+        "event_verified": True,
+        "event_verified_at": datetime.now(UTC),
+        "event_verified_by": current_user.id,
+    }
+    if body.filing_status is not None:
+        expected_form = {
+            "ALLOTMENT": "FORM_XV",
+            "CAPITAL_INCREASE_RESOLUTION": "FORM_IV",
+        }.get(event.event_type)
+        if expected_form is None or event.filing_form != expected_form:
+            raise HTTPException(status_code=422, detail="This event type has no Form XV/Form IV filing trigger.")
+        if not body.filing_evidence_ref:
+            raise HTTPException(status_code=422, detail="Filing status verification requires a filing evidence reference.")
+        if body.filing_status and body.filing_date is None:
+            raise HTTPException(status_code=422, detail="A filed status requires the filing date.")
+        if not body.filing_status and body.filing_date is not None:
+            raise HTTPException(status_code=422, detail="An unfiled status cannot carry a filing date.")
+        updates.update({
+            "filing_status": body.filing_status,
+            "filing_evidence_ref": body.filing_evidence_ref.strip(),
+            "filing_date": body.filing_date,
+            "filing_status_verified": True,
+            "filing_verified_at": datetime.now(UTC),
+            "filing_verified_by": current_user.id,
+        })
+    elif body.filing_evidence_ref is not None or body.filing_date is not None:
+        raise HTTPException(status_code=422, detail="Filing evidence/date cannot be supplied without a filing status.")
+
+    if body.certificate_issued is not None:
+        if event.event_type not in {"ALLOTMENT", "TRANSFER_REGISTERED"}:
+            raise HTTPException(status_code=422, detail="Section 158 certificate status requires an allotment or registered-transfer event.")
+        if not body.certificate_evidence_ref:
+            raise HTTPException(status_code=422, detail="Certificate status verification requires a certificate evidence reference.")
+        if body.certificate_issued and body.certificate_issue_date is None:
+            raise HTTPException(status_code=422, detail="An issued certificate requires its issue date.")
+        if not body.certificate_issued and body.certificate_issue_date is not None:
+            raise HTTPException(status_code=422, detail="An unissued certificate cannot carry an issue date.")
+        updates.update({
+            "certificate_issued": body.certificate_issued,
+            "certificate_evidence_ref": body.certificate_evidence_ref.strip(),
+            "certificate_issue_date": body.certificate_issue_date,
+            "certificate_status_verified": True,
+            "certificate_verified_at": datetime.now(UTC),
+            "certificate_verified_by": current_user.id,
+        })
+    elif body.certificate_evidence_ref is not None or body.certificate_issue_date is not None:
+        raise HTTPException(status_code=422, detail="Certificate evidence/date cannot be supplied without a certificate status.")
+
+    for key, value in updates.items():
+        setattr(event, key, value)
+    await db.flush()
+    await db.refresh(event)
+    return _share_event_response(event)
