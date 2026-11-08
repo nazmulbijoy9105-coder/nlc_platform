@@ -828,3 +828,15 @@ def test_black_label_without_authorised_override_is_only_a_normal_deduction(monk
         conditional_applies=True,
     )
     assert _applied_score_impacts([flag]) == [{"applied": 9, "status": "APPLIED"}]
+
+
+def test_first_agm_in_incorporation_year_uses_section_81_following_year_exemption():
+    engine = NLCRuleEngine(today=date(2026, 11, 3))
+    profile = _profile(
+        incorporation_date=date(2025, 1, 15),
+        agm_count=1,
+        last_agm_date=date(2025, 1, 15),
+        agm_held_this_cycle=False,
+    )
+    # The first-AGM proviso removes the need for another AGM in 2026.
+    assert engine._subsequent_agm_deadline(profile) == date(2027, 12, 31)
