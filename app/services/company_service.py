@@ -322,13 +322,16 @@ class CompanyService(BaseService[Company]):
         audits, annual returns, and active compliance flags loaded.
         Used to build the company dashboard view.
         """
+        from app.models.filings import AGM
+
         result = await self.db.execute(
             select(Company)
             .options(
                 selectinload(Company.directors),
                 selectinload(Company.shareholders),
                 selectinload(Company.charges),
-                selectinload(Company.agms),
+                selectinload(Company.agms).selectinload(AGM.notice_evidence),
+                selectinload(Company.share_compliance_events),
                 selectinload(Company.audits),
                 selectinload(Company.annual_returns),
                 selectinload(Company.compliance_flags),
@@ -692,10 +695,54 @@ class CompanyService(BaseService[Company]):
             return None
 
         # ── AGM State ─────────────────────────────────────────────
-        agms_sorted = sorted(company.agms, key=lambda a: a.financial_year, reverse=True)
-        latest_agm = agms_sorted[0] if agms_sorted else None
-        has_agm_records = bool(company.agms) or company.last_agm_date is not None
-        agm_count = (len([a for a in company.agms if a.agm_held]) or (1 if company.last_agm_date else 0)) if has_agm_records else None
+        active_agms = [row for row in company.agms if row.is_active]
+        history_marker_verified = (
+            company.agm_history_verified is True
+            and bool(company.agm_history_evidence_ref)
+            and company.agm_history_verified_at is not None
+            and company.agm_history_verified_by is not None
+        )
+        all_cycle_statuses_verified = all(
+            row.agm_held_verified is True
+            and bool(row.agm_held_evidence_ref)
+            and row.agm_held_verified_at is not None
+            and row.agm_held_verified_by is not None
+            for row in active_agms
+        )
+        agm_history_verified = history_marker_verified and all_cycle_statuses_verified
+        verified_held_agms = [
+            row for row in active_agms
+            if row.agm_held is True
+            and row.agm_held_verified is True
+            and bool(row.agm_held_evidence_ref)
+            and row.agm_held_verified_at is not None
+            and row.agm_held_verified_by is not None
+            and row.agm_date is not None
+        ]
+        agm_count = len(verified_held_agms) if agm_history_verified else None
+        last_verified_agm_date = (
+            max((row.agm_date for row in verified_held_agms), default=None)
+            if agm_history_verified else None
+        )
+
+        annual_agms = [row for row in active_agms if row.agm_type in {"ANNUAL", "FIRST"}]
+        latest_financial_year = max((row.financial_year for row in annual_agms), default=None)
+        latest_year_rows = [
+            row for row in annual_agms if row.financial_year == latest_financial_year
+        ]
+        latest_agm = latest_year_rows[0] if len(latest_year_rows) == 1 else None
+        current_year_rows = [
+            row for row in annual_agms
+            if row.financial_year == date.today().year and row.agm_type == "ANNUAL"
+        ]
+        current_cycle_agm = current_year_rows[0] if len(current_year_rows) == 1 else None
+        current_cycle_verified = bool(
+            current_cycle_agm is not None
+            and current_cycle_agm.agm_held_verified is True
+            and current_cycle_agm.agm_held_evidence_ref
+            and current_cycle_agm.agm_held_verified_at is not None
+            and current_cycle_agm.agm_held_verified_by is not None
+        )
 
         # ── Audit State ───────────────────────────────────────────
         audits_sorted = sorted(company.audits, key=lambda a: a.financial_year, reverse=True)
@@ -741,6 +788,52 @@ class CompanyService(BaseService[Company]):
                 consent_filed_date=d.consent_filed_date if consent_verified else None,
                 consent_verified=consent_verified,
                 consent_evidence_ref=d.consent_evidence_ref if consent_verified else None,
+            ))
+
+        # ── Share Compliance Events ───────────────────────────────
+        from app.rule_engine.engine import ShareComplianceEventEvidence
+
+        share_compliance_events = []
+        for event in company.share_compliance_events:
+            if not event.is_active:
+                continue
+            event_verified = bool(
+                event.event_verified
+                and event.event_evidence_ref
+                and event.event_verified_at
+                and event.event_verified_by
+            )
+            filing_verified = bool(
+                event_verified
+                and event.filing_status_verified
+                and event.filing_status is not None
+                and event.filing_evidence_ref
+                and event.filing_verified_at
+                and event.filing_verified_by
+            )
+            certificate_verified = bool(
+                event_verified
+                and event.certificate_status_verified
+                and event.certificate_issued is not None
+                and event.certificate_evidence_ref
+                and event.certificate_verified_at
+                and event.certificate_verified_by
+            )
+            share_compliance_events.append(ShareComplianceEventEvidence(
+                event_reference=event.event_reference,
+                event_type=event.event_type,
+                event_date=event.event_date,
+                event_verified=event_verified,
+                event_evidence_ref=event.event_evidence_ref if event_verified else None,
+                filing_form=event.filing_form if filing_verified else None,
+                filing_status=event.filing_status if filing_verified else None,
+                filing_status_verified=filing_verified,
+                filing_date=event.filing_date if filing_verified else None,
+                filing_evidence_ref=event.filing_evidence_ref if filing_verified else None,
+                certificate_issued=event.certificate_issued if certificate_verified else None,
+                certificate_status_verified=certificate_verified,
+                certificate_issue_date=event.certificate_issue_date if certificate_verified else None,
+                certificate_evidence_ref=event.certificate_evidence_ref if certificate_verified else None,
             ))
 
         # ── Share Transfers ───────────────────────────────────────
@@ -813,17 +906,12 @@ class CompanyService(BaseService[Company]):
             "financial_year_end":  company.financial_year_end,
 
             # AGM State
-            "agm_count":                  agm_count,
-            "last_agm_date":              company.last_agm_date,
-            "agm_history_verified": (
-                company.agm_history_verified is True
-                and bool(company.agm_history_evidence_ref)
-                and company.agm_history_verified_at is not None
-                and company.agm_history_verified_by is not None
-            ),
-            "agm_history_evidence_ref": company.agm_history_evidence_ref,
-            "agm_history_verified_at": company.agm_history_verified_at.date() if company.agm_history_verified_at else None,
-            "agm_history_verified_by": str(company.agm_history_verified_by) if company.agm_history_verified_by else None,
+            "agm_count": agm_count,
+            "last_agm_date": last_verified_agm_date,
+            "agm_history_verified": agm_history_verified,
+            "agm_history_evidence_ref": company.agm_history_evidence_ref if agm_history_verified else None,
+            "agm_history_verified_at": company.agm_history_verified_at.date() if agm_history_verified else None,
+            "agm_history_verified_by": str(company.agm_history_verified_by) if agm_history_verified else None,
             "agm_extension_granted_until": company.agm_extension_granted_until,
             "agm_extension_application_date": company.agm_extension_application_date,
             "agm_extension_verified": (
@@ -836,15 +924,7 @@ class CompanyService(BaseService[Company]):
             "agm_extension_verified_at": company.agm_extension_verified_at.date() if company.agm_extension_verified_at else None,
             "agm_extension_verified_by": str(company.agm_extension_verified_by) if company.agm_extension_verified_by else None,
             "agm_held_this_cycle": (
-                latest_agm.agm_held
-                if (
-                    latest_agm is not None
-                    and company.agm_history_verified is True
-                    and bool(company.agm_history_evidence_ref)
-                    and company.agm_history_verified_at is not None
-                    and company.agm_history_verified_by is not None
-                    and latest_agm.agm_date is not None
-                ) else None
+                current_cycle_agm.agm_held if current_cycle_verified else None
             ),
             "agm_minutes_prepared":       agm_profile_evidence["agm_minutes_prepared"],
 
@@ -902,6 +982,7 @@ class CompanyService(BaseService[Company]):
 
             # Share Transfers
             "share_transfers": share_transfers,
+            "share_compliance_events": share_compliance_events,
 
             # Office
 
