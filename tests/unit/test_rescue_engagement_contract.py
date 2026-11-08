@@ -53,11 +53,15 @@ def test_rescue_audit_log_model_exists():
 
 
 @pytest.mark.asyncio
-async def test_generate_rescue_plan_passes_engagement_id_to_create():
+async def test_generate_rescue_plan_passes_engagement_id_to_create(monkeypatch):
     """RES-011: the supplied engagement ID must reach plan persistence."""
     from app.services.rescue_service import RescueService
 
     db = MagicMock()
+    from app.rule_engine import engine as engine_module
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AUD-003"}))
+
     db.execute = AsyncMock()
     db.refresh = AsyncMock()
     db.flush = AsyncMock()
@@ -100,3 +104,24 @@ async def test_generate_rescue_plan_passes_engagement_id_to_create():
     create_kwargs = svc.create.await_args.kwargs
     assert create_kwargs["company_id"] == company_id
     assert create_kwargs["engagement_id"] == test_engagement_id
+
+
+@pytest.mark.asyncio
+async def test_generate_rescue_plan_rejects_when_legal_score_release_is_closed():
+    from app.services.rescue_service import RescueService
+
+    db = MagicMock()
+    db.execute = AsyncMock()
+    svc = RescueService(db=db)
+    engine_output = MagicMock()
+    engine_output.rescue_sequence = [{"title": "Must not persist"}]
+
+    with pytest.raises(PermissionError, match="independently approved and released"):
+        await svc.generate_rescue_plan(
+            company_id=uuid.uuid4(),
+            engine_output=engine_output,
+        )
+
+    db.execute.assert_not_awaited()
+    svc.create = AsyncMock()
+    svc.create.assert_not_awaited()

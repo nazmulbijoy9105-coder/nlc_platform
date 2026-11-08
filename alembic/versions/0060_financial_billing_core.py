@@ -102,7 +102,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["invoice_id", "company_id"], ["invoices.id", "invoices.company_id"], ondelete="RESTRICT", name="fk_payment_submissions_invoice_company"),
         sa.CheckConstraint("amount_bdt > 0", name="ck_payment_submission_amount_positive"),
         sa.CheckConstraint("currency = 'BDT'", name="ck_payment_submission_currency_bdt"),
-        sa.CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL')", name="ck_payment_submission_method"),
+        sa.CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE')", name="ck_payment_submission_method"),
         sa.CheckConstraint("status IN ('PENDING_REVIEW','APPROVED','REJECTED')", name="ck_payment_submission_status"),
     )
     op.create_index("ix_payment_submissions_company_status", "payment_submissions", ["company_id", "status"])
@@ -130,7 +130,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("payment_number", name="uq_payments_payment_number"),
         sa.UniqueConstraint("id", "company_id", name="uq_payments_id_company"),
         sa.UniqueConstraint("provider_transaction_id", name="uq_payments_provider_transaction_id"),
-        sa.CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL','BKASH_ONLINE','NAGAD_ONLINE','SSLCOMMERZ')", name="ck_payment_method"),
+        sa.CheckConstraint("method IN ('BANK_TRANSFER','CASH','CHEQUE','SSLCOMMERZ')", name="ck_payment_method"),
         sa.CheckConstraint("channel IN ('ONLINE','OFFLINE')", name="ck_payment_channel"),
         sa.CheckConstraint("status IN ('SETTLED','REVERSED','REFUNDED','DISPUTED')", name="ck_payment_status"),
         sa.CheckConstraint("amount_bdt > 0", name="ck_payment_amount_positive"),
@@ -199,7 +199,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("provider_name", "idempotency_key", name="uq_payment_intent_provider_idempotency"),
         sa.UniqueConstraint("provider_order_id", name="uq_payment_intent_provider_order"),
         sa.UniqueConstraint("provider_transaction_id", name="uq_payment_intent_provider_transaction"),
-        sa.CheckConstraint("provider_name IN ('SSLCOMMERZ','BKASH','NAGAD')", name="ck_payment_intent_provider"),
+        sa.CheckConstraint("provider_name IN ('SSLCOMMERZ')", name="ck_payment_intent_provider"),
         sa.CheckConstraint("status IN ('CREATED','PENDING','SUCCEEDED','FAILED','EXPIRED','CANCELLED')", name="ck_payment_intent_status"),
         sa.ForeignKeyConstraint(["invoice_id", "company_id"], ["invoices.id", "invoices.company_id"], ondelete="RESTRICT", name="fk_payment_intents_invoice_company"),
         sa.CheckConstraint("amount_bdt > 0", name="ck_payment_intent_amount_positive"),

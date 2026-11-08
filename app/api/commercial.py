@@ -25,12 +25,14 @@ Endpoints:
 
 import uuid
 from datetime import date
+from decimal import Decimal
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.company_authorization import ensure_staff_company_scope
 from app.core.dependencies import (
     get_current_user,
     get_db_for_user,
@@ -39,8 +41,13 @@ from app.core.dependencies import (
 )
 from app.models.enums import EngagementStatus, RevenueTier, TaskPriority, TaskStatus
 from app.models.user import User
-from app.services.commercial_service import EngagementService, QuotationService, TaskService
-from app.models.commercial import InvalidEngagementTransitionError
+from app.services.commercial_service import CommercialConflictError, EngagementService, QuotationService, TaskService
+from app.services.commercial_service import (
+    CommercialConflictError,
+    EngagementService,
+    QuotationService,
+    TaskService,
+)
 from app.services.notification_service import ActivityService
 
 logger = structlog.get_logger(__name__)
@@ -58,8 +65,8 @@ class EngagementCreateRequest(BaseModel):
     company_id: uuid.UUID
     engagement_type: str = Field(description="COMPLIANCE_PACKAGE | STRUCTURED_REGULARIZATION | CORPORATE_RESCUE")
     revenue_tier: RevenueTier
-    description: str | None = None
-    estimated_fee_bdt: float | None = Field(None, gt=0)
+    description: str = Field(min_length=3, max_length=500)
+    estimated_fee_bdt: Decimal | None = Field(None, gt=0, max_digits=13, decimal_places=2, allow_inf_nan=False)
     assigned_officer_id: uuid.UUID | None = None
     notes: str | None = None
 
@@ -74,10 +81,10 @@ class EngagementResponse(BaseModel):
     company_id: str
     engagement_type: str
     revenue_tier: str
-    status: str
+    status: str | None
     description: str | None
-    estimated_fee_bdt: float | None
-    confirmed_fee_bdt: float | None
+    estimated_fee_bdt: Decimal | None
+    confirmed_fee_bdt: Decimal | None
     assigned_officer_id: str | None
     created_at: str
     updated_at: str
@@ -90,9 +97,9 @@ class EngagementResponse(BaseModel):
 class QuotationCreateRequest(BaseModel):
     engagement_id: uuid.UUID
     company_id: uuid.UUID
-    professional_fee_bdt: float = Field(gt=0)
-    government_fee_bdt: float = Field(default=0, ge=0)
-    vat_bdt: float = Field(default=0, ge=0)
+    professional_fee_bdt: Decimal = Field(gt=0, max_digits=13, decimal_places=2, allow_inf_nan=False)
+    government_fee_bdt: Decimal = Field(default=Decimal('0.00'), ge=0, max_digits=13, decimal_places=2, allow_inf_nan=False)
+    vat_bdt: Decimal = Field(default=Decimal('0.00'), ge=0, max_digits=13, decimal_places=2, allow_inf_nan=False)
     line_items: list[dict] | None = None
     valid_days: int = Field(default=30, ge=7, le=90)
     notes: str | None = None
@@ -103,12 +110,12 @@ class QuotationResponse(BaseModel):
     quotation_number: str
     engagement_id: str
     company_id: str
-    professional_fee_bdt: float
-    government_fee_bdt: float
-    vat_bdt: float
-    total_fee_bdt: float
+    professional_fee_bdt: Decimal
+    government_fee_bdt: Decimal
+    vat_bdt: Decimal
+    total_fee_bdt: Decimal
     status: str
-    valid_until: str
+    valid_until: str | None
     created_at: str
 
 
@@ -124,11 +131,11 @@ class TaskCreateRequest(BaseModel):
     company_id: uuid.UUID
     title: str = Field(min_length=3, max_length=255)
     description: str | None = None
-    due_date: str | None = None
+    due_date: date | None = None
     assigned_to: uuid.UUID | None = None
     linked_flag_id: uuid.UUID | None = None
     source_rescue_step_id: uuid.UUID | None = None
-    priority: TaskPriority = Field(default=TaskPriority.MEDIUM, description="LOW | MEDIUM | HIGH | CRITICAL")
+    priority: TaskPriority = TaskPriority.MEDIUM
 
 
 class TaskCompleteRequest(BaseModel):
@@ -140,7 +147,7 @@ class TaskResponse(BaseModel):
     company_id: str
     title: str
     description: str | None
-    status: str
+    status: str | None
     priority: str
     due_date: str | None
     assigned_to: str | None
@@ -163,7 +170,7 @@ def _engagement_to_response(e) -> EngagementResponse:
         company_id=str(e.company_id),
         engagement_type=e.engagement_type,
         revenue_tier=e.revenue_tier,
-        status=str(e.engagement_status) if e.engagement_status else None,
+        status=str(e.engagement_status),
         description=getattr(e, "engagement_title", None),
         estimated_fee_bdt=e.estimated_fee_bdt,
         confirmed_fee_bdt=e.confirmed_fee_bdt,
@@ -180,11 +187,11 @@ def _quotation_to_response(q) -> QuotationResponse:
         engagement_id=str(q.engagement_id),
         company_id=str(q.company_id),
         professional_fee_bdt=q.professional_fee_bdt,
-        government_fee_bdt=q.government_fee_bdt,
-        vat_bdt=q.vat_bdt,
-        total_fee_bdt=q.professional_fee_bdt + q.government_fee_bdt + q.vat_bdt,
+        government_fee_bdt=q.government_fee_bdt or Decimal('0.00'),
+        vat_bdt=q.vat_bdt or Decimal('0.00'),
+        total_fee_bdt=q.total_bdt,
         status=q.status,
-        valid_until=q.valid_until.isoformat(),
+        valid_until=q.valid_until.isoformat() if q.valid_until else None,
         created_at=q.created_at.isoformat(),
     )
 
@@ -195,7 +202,7 @@ def _task_to_response(t) -> TaskResponse:
         company_id=str(t.company_id),
         title=t.title,
         description=t.description,
-        status=str(t.task_status) if t.task_status else None,
+        status=str(t.task_status),
         priority=t.priority,
         due_date=str(t.due_date) if t.due_date else None,
         assigned_to=str(t.assigned_to) if t.assigned_to else None,
@@ -254,6 +261,8 @@ async def create_engagement(
         revenue_tier=body.revenue_tier,
         engagement_title=body.description,
         estimated_fee_bdt=body.estimated_fee_bdt,
+        assigned_staff_id=body.assigned_officer_id,
+        notes=body.notes,
         identified_date=date.today(),
     )
 
@@ -264,6 +273,7 @@ async def create_engagement(
         description=f"Engagement created: {body.engagement_type} for company {body.company_id}",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
+        company_id=engagement.company_id,
     )
     return _engagement_to_response(engagement)
 
@@ -303,9 +313,10 @@ async def advance_engagement_status(
         engagement = await svc.advance_status(
             engagement_id=engagement_id,
             new_status=body.new_status,
+            note=body.note,
         )
-    except InvalidEngagementTransitionError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found.")
 
@@ -316,6 +327,7 @@ async def advance_engagement_status(
         description=f"Engagement status → {body.new_status}",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
+        company_id=engagement.company_id,
     )
     return _engagement_to_response(engagement)
 
@@ -340,16 +352,23 @@ async def create_quotation(
     svc = QuotationService(db)
     activity = ActivityService(db)
 
-    quotation = await svc.create_quotation(  # type: ignore
-        engagement_id=body.engagement_id,
-        company_id=body.company_id,
-        professional_fee_bdt=body.professional_fee_bdt,
-        government_fee_bdt=body.government_fee_bdt,
-        vat_bdt=body.vat_bdt,
-        line_items=body.line_items,
-        valid_days=body.valid_days,
-        notes=body.notes,
-    )
+    try:
+        quotation = await svc.create_quotation(
+            engagement_id=body.engagement_id,
+            company_id=body.company_id,
+            professional_fee_bdt=body.professional_fee_bdt,
+            government_fee_bdt=body.government_fee_bdt,
+            vat_bdt=body.vat_bdt,
+            line_items=body.line_items,
+            valid_days=body.valid_days,
+            notes=body.notes,
+        )
+    except CommercialConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        # Do not disclose whether an engagement exists in another tenant.
+        raise HTTPException(status_code=404, detail="Engagement not found.") from exc
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     await activity.log(
         action="QUOTATION_CREATED",
@@ -358,6 +377,7 @@ async def create_quotation(
         description=f"Quotation {quotation.quotation_number} created",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
+        company_id=quotation.company_id,
     )
     return _quotation_to_response(quotation)
 
@@ -377,7 +397,15 @@ async def accept_quotation(
     svc = QuotationService(db)
     activity = ActivityService(db)
 
-    quotation = await svc.accept(quotation_id=quotation_id)
+    try:
+        quotation = await svc.accept(quotation_id=quotation_id)
+    except CommercialConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        # Keep inaccessible or inactive engagement details tenant-safe.
+        # Preserve tenant-safe not-found semantics for a missing or inaccessible engagement.
+        raise HTTPException(status_code=404, detail="Quotation not found.") from exc
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
 
@@ -388,6 +416,7 @@ async def accept_quotation(
         description=f"Quotation {quotation.quotation_number} accepted",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
+        company_id=quotation.company_id,
     )
     return _quotation_to_response(quotation)
 
@@ -406,9 +435,29 @@ async def reject_quotation(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = QuotationService(db)
-    quotation = await svc.reject(quotation_id=quotation_id, reason=body.reason, rejected_by=current_user.id)
+    try:
+        quotation = await svc.reject(
+            quotation_id=quotation_id,
+            reason=body.reason or "Rejected by authorized staff",
+            rejected_by=current_user.id,
+        )
+    except CommercialConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except CommercialConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
+    await ActivityService(db).log(
+        action="QUOTATION_REJECTED",
+        resource_type="quotation",
+        resource_id=str(quotation_id),
+        description=f"Quotation {quotation.quotation_number} rejected: {body.reason or 'No reason supplied'}",
+        ip_address=request.client.host if request.client else None,
+        actor_user_id=current_user.id,
+        company_id=quotation.company_id,
+    )
     return _quotation_to_response(quotation)
 
 
@@ -429,6 +478,7 @@ async def create_task(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    await ensure_staff_company_scope(body.company_id, current_user, db)
     svc = TaskService(db)
     task = await svc.create_task(  # type: ignore
         company_id=body.company_id,
@@ -441,6 +491,15 @@ async def create_task(
         priority=body.priority,
         created_by=current_user.id,
     )
+    await ActivityService(db).log(
+        action="TASK_CREATED",
+        resource_type="task",
+        resource_id=str(task.id),
+        description=f"Task created: {task.title}",
+        ip_address=request.client.host if request.client else None,
+        actor_user_id=current_user.id,
+        company_id=task.company_id,
+    )
     return _task_to_response(task)
 
 
@@ -452,11 +511,11 @@ async def create_task(
 )
 async def list_tasks(
     company_id: uuid.UUID,
-    status_filter: str | None = None,
+    status_filter: TaskStatus | None = None,
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = TaskService(db)
-    tasks = await svc.get_for_company(company_id=company_id, status=TaskStatus(status_filter) if status_filter else None)
+    tasks = await svc.get_for_company(company_id=company_id, status=status_filter)
     return [_task_to_response(t) for t in tasks]
 
 
@@ -470,13 +529,25 @@ async def complete_task(
     task_id: uuid.UUID,
     body: TaskCompleteRequest,
     request: Request,
+    company_id: uuid.UUID = Depends(require_company_access("company_id")),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = TaskService(db)
-    task = await svc.complete_task(  # type: ignore
-        task_id=task_id,
-    )
+    try:
+        task = await svc.complete_task(task_id=task_id, company_id=company_id)
+        task = await svc.complete_task(task_id=task_id)
+    except CommercialConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
+    await ActivityService(db).log(
+        action="TASK_COMPLETED",
+        resource_type="task",
+        resource_id=str(task_id),
+        description=body.completion_note or f"Task completed: {task.title}",
+        ip_address=request.client.host if request.client else None,
+        actor_user_id=current_user.id,
+        company_id=task.company_id,
+    )
     return _task_to_response(task)

@@ -1,4 +1,4 @@
-"""Database enforcement for cross-table manual wallet reference uniqueness."""
+"""Database enforcement for cross-table manual manual payment reference uniqueness."""
 from __future__ import annotations
 
 import uuid
@@ -19,7 +19,7 @@ async def _invoice(db, company, actor):
         company_id=company.id,
         engagement_id=None,
         lines=[{
-            "description": "Cross-table wallet guard",
+            "description": "Cross-table manual reference guard",
             "quantity": Decimal("1.00"),
             "unit_price_bdt": Decimal("100.00"),
         }],
@@ -40,7 +40,7 @@ async def _insert_payment(db, company_id, actor_id, reference):
                  currency, payer_reference, status, received_at, verified_by,
                  verified_at, created_by)
             VALUES
-                (:id, :company_id, :payment_number, 'BKASH_MANUAL', 'OFFLINE',
+                (:id, :company_id, :payment_number, 'BANK_TRANSFER', 'OFFLINE',
                  25.00, 'BDT', :reference, 'SETTLED', :received_at, :actor_id,
                  :verified_at, :actor_id)
         """),
@@ -66,7 +66,7 @@ async def test_direct_payment_insert_cannot_reuse_existing_submission_reference(
         company_id=db_company.id,
         invoice_id=invoice.id,
         submitted_by=db_user.id,
-        method="BKASH_MANUAL",
+        method="BANK_TRANSFER",
         amount_bdt=Decimal("25.00"),
         payer_reference="Txn-Cross-Table-01",
         paid_at=None,
@@ -77,7 +77,7 @@ async def test_direct_payment_insert_cannot_reuse_existing_submission_reference(
         async with db.begin_nested():
             await _insert_payment(db, db_company.id, db_user.id, " txn-cross-table-01 ")
     assert getattr(exc_info.value.orig, "sqlstate", None) == "23505"
-    assert "uq_wallet_reference_across_finance_tables" in str(exc_info.value.orig)
+    assert "uq_manual_reference_across_finance_tables" in str(exc_info.value.orig)
 
 
 @pytest.mark.asyncio
@@ -98,7 +98,7 @@ async def test_direct_submission_insert_cannot_reuse_existing_payment_reference(
                          amount_bdt, currency, payer_reference, status)
                     VALUES
                         (:id, :company_id, :invoice_id, :submitted_by,
-                         'BKASH_MANUAL', 25.00, 'BDT', :reference,
+                         'BANK_TRANSFER', 25.00, 'BDT', :reference,
                          'PENDING_REVIEW')
                 """),
                 {
@@ -111,7 +111,7 @@ async def test_direct_submission_insert_cannot_reuse_existing_payment_reference(
             )
 
     assert getattr(exc_info.value.orig, "sqlstate", None) == "23505"
-    assert "uq_wallet_reference_across_finance_tables" in str(exc_info.value.orig)
+    assert "uq_manual_reference_across_finance_tables" in str(exc_info.value.orig)
 
 @pytest.mark.asyncio
 async def test_approval_links_receipt_to_its_own_submission(db, db_company, db_user):
@@ -122,7 +122,7 @@ async def test_approval_links_receipt_to_its_own_submission(db, db_company, db_u
         company_id=db_company.id,
         invoice_id=invoice.id,
         submitted_by=db_user.id,
-        method="BKASH_MANUAL",
+        method="BANK_TRANSFER",
         amount_bdt=Decimal("25.00"),
         payer_reference=f"Txn-Approve-{uuid.uuid4().hex}",
         paid_at=None,
@@ -146,4 +146,62 @@ async def test_approval_links_receipt_to_its_own_submission(db, db_company, db_u
                 {"id": payment.id},
             )
     assert getattr(exc_info.value.orig, "sqlstate", None) == "23505"
-    assert "uq_wallet_reference_across_finance_tables" in str(exc_info.value.orig)
+    assert "uq_manual_reference_across_finance_tables" in str(exc_info.value.orig)
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("method", ["BKASH_MANUAL", "NAGAD_MANUAL"])
+async def test_direct_mobile_wallet_claim_cannot_reuse_existing_receipt_reference(
+    db, db_company, db_user, method
+):
+    await set_rls_context(db, str(db_user.id))
+    invoice = await _invoice(db, db_company, db_user)
+    reference = f"{method}-DIRECT-{uuid.uuid4().hex}"
+    now = datetime.now(UTC)
+
+    # Insert a receipt directly to prove the database trigger—not only the
+    # service duplicate check—enforces cross-table uniqueness.
+    await db.execute(
+        text("""
+            INSERT INTO public.payments
+                (id, company_id, payment_number, method, channel, amount_bdt,
+                 currency, payer_reference, status, received_at, verified_by,
+                 verified_at, created_by)
+            VALUES
+                (:id, :company_id, :payment_number, :method, 'OFFLINE',
+                 25.00, 'BDT', :reference, 'SETTLED', :received_at, :actor_id,
+                 :verified_at, :actor_id)
+        """),
+        {
+            "id": uuid.uuid4(),
+            "company_id": db_company.id,
+            "payment_number": f"PAY-WALLET-{uuid.uuid4().hex[:12]}",
+            "method": method,
+            "reference": reference,
+            "received_at": now,
+            "verified_at": now,
+            "actor_id": db_user.id,
+        },
+    )
+
+    with pytest.raises(DBAPIError) as exc_info:
+        async with db.begin_nested():
+            await db.execute(
+                text("""
+                    INSERT INTO public.payment_submissions
+                        (id, company_id, invoice_id, submitted_by, method,
+                         amount_bdt, currency, payer_reference, status)
+                    VALUES
+                        (:id, :company_id, :invoice_id, :submitted_by,
+                         :method, 25.00, 'BDT', :reference, 'PENDING_REVIEW')
+                """),
+                {
+                    "id": uuid.uuid4(),
+                    "company_id": db_company.id,
+                    "invoice_id": invoice.id,
+                    "submitted_by": db_user.id,
+                    "method": method,
+                    "reference": reference.upper(),
+                },
+            )
+    assert getattr(exc_info.value.orig, "sqlstate", None) == "23505"
+    assert "uq_manual_reference_across_finance_tables" in str(exc_info.value.orig)

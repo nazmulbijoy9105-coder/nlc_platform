@@ -18,7 +18,13 @@ from sqlalchemy import select
 from app.models.compliance import ComplianceEvaluationRun
 
 # Import CATEGORY_CAPS for score reconciliation (cap adjustment display)
-from app.rule_engine.engine import CATEGORY_CAPS, LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
+from app.rule_engine.engine import (
+    AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
+    CATEGORY_CAPS,
+    LEGAL_SCORE_RELEASED,
+    VERIFIED_RULE_IDS,
+    RuleState,
+)
 from app.services.company_service import CompanyService
 from app.services.pdf_render import (
     asset_uri,
@@ -295,28 +301,66 @@ def _render_rescue_section(rescue_plan: Any) -> str:
     """
 
 
-def _verified_flag_score(flags: Any) -> tuple[int, bool]:
-    """Compute the score implied by verified rules only.
+def _legal_score_is_released() -> bool:
+    """Mirror the engine's two-part release gate using this module's testable inputs."""
+    return LEGAL_SCORE_RELEASED is True and bool(VERIFIED_RULE_IDS)
 
-    Returns (indicated_score, has_black_override). Unapproved rules
-    are excluded from both the score and the BLACK override check.
-    """
-    if not LEGAL_SCORE_RELEASED:
+
+def _verified_flag_score(flags: Any) -> tuple[int, bool]:
+    """Mirror the engine's release, eligibility, category-cap and override gates."""
+    if not _legal_score_is_released():
         return (0, False)
 
-    verified = [
-        f for f in flags
-        if getattr(f, "rule_id", "") in VERIFIED_RULE_IDS
-    ]
+    remaining = {name: cap[0] for name, cap in CATEGORY_CAPS.items()}
+    total_applied = 0
+    has_black_override = False
+    for flag in flags:
+        rule_id = getattr(flag, "rule_id", "")
+        state = getattr(flag, "state", RuleState.NON_COMPLIANT)
+        eval_state = getattr(flag, "eval_state", "VIOLATION")
+        active = (
+            not getattr(flag, "resolved", False)
+            and getattr(flag, "conditional_applies", True)
+        )
+        if (
+            not active
+            or state not in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+            or eval_state != "VIOLATION"
+            or rule_id not in VERIFIED_RULE_IDS
+        ):
+            continue
 
-    total_impact = sum(getattr(f, "score_impact", 0) for f in verified)
-    indicated_score = max(0, min(100, 100 - total_impact))
-    has_black = any(
-        getattr(f, "is_black_override", False)
-        or getattr(f, "severity", "") == "BLACK"
-        for f in verified
-    )
-    return (indicated_score, has_black)
+        severity = getattr(
+            getattr(flag, "severity", None),
+            "value",
+            getattr(flag, "severity", None),
+        )
+        if (
+            rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+            and getattr(flag, "is_black_override", False) is True
+            and severity == "BLACK"
+        ):
+            has_black_override = True
+            continue
+
+        category = next(
+            (
+                name
+                for name, (_, prefixes) in CATEGORY_CAPS.items()
+                if rule_id.startswith(prefixes)
+            ),
+            None,
+        )
+        if category is None:
+            continue
+        applied = min(
+            max(0, int(getattr(flag, "score_impact", 0) or 0)),
+            remaining[category],
+        )
+        remaining[category] -= applied
+        total_applied += applied
+
+    return (0 if has_black_override else max(0, 100 - total_applied), has_black_override)
 
 
 def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
@@ -326,7 +370,7 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
     score_impact_applied. Use nominal impact to show cap reductions, and use
     the persisted applied impact to reconcile the final score.
     """
-    if not LEGAL_SCORE_RELEASED or band in ("BLACK", "NOT_EVALUATED"):
+    if not _legal_score_is_released() or band in ("BLACK", "NOT_EVALUATED"):
         return ""
 
     cat_deductions: dict[str, dict] = {}
@@ -429,7 +473,7 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
 
 def _flag_impact_label(flag: Any) -> str:
     rule_id = getattr(flag, "rule_id", "") or ""
-    if not LEGAL_SCORE_RELEASED or rule_id not in VERIFIED_RULE_IDS:
+    if not _legal_score_is_released() or rule_id not in VERIFIED_RULE_IDS:
         return "Not scored — pending independent legal approval"
     applied = getattr(
         flag,
@@ -457,8 +501,17 @@ def build_compliance_report_html(
     is omitted entirely.
     engine_version and snapshot_hash are included in the footer for audit trail.
     """
-    score = company.current_compliance_score or 0
-    band = company.current_risk_band or "NOT_EVALUATED"
+    # The HTML builder is also called directly by tests and internal jobs.
+    # Enforce the release boundary here, not only in the HTTP endpoint:
+    # stale cached scores, flags and rescue plans must never leak into a report.
+    if not _legal_score_is_released():
+        flags = ()
+        rescue_plan = None
+        score = 0
+        band = "NOT_EVALUATED"
+    else:
+        score = company.current_compliance_score or 0
+        band = company.current_risk_band or "NOT_EVALUATED"
     company_name = company.company_name or "[COMPANY NAME NOT ON FILE]"
     score_display = "NOT EVALUATED" if band == "NOT_EVALUATED" else f"{score} / 100"
     score_css_class = "score-warn" if band == "NOT_EVALUATED" else _score_class(score)
@@ -548,7 +601,7 @@ class PDFReportService:
         self.db = db
 
     async def generate_company_compliance_pdf(self, company_id: str) -> Response:
-        if not LEGAL_SCORE_RELEASED:
+        if not _legal_score_is_released():
             raise HTTPException(
                 status_code=409,
                 detail="PDF withheld: statutory score release is disabled; no score-bearing compliance report may be issued.",

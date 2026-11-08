@@ -1,3 +1,4 @@
+import pytest
 from datetime import date
 from types import SimpleNamespace
 
@@ -213,7 +214,7 @@ def test_score_impact_reporting_respects_verified_rule_gate_and_category_caps(mo
     # gate is still closed; TAX-001 is not in the internal allowlist.
     assert applied[0] == {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
     assert applied[1] == {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
-    assert applied[2] == {"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"}
+    assert applied[2] == {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
 
 
 def test_unknown_flags_are_not_reported_as_applied_deductions():
@@ -281,7 +282,7 @@ def test_black_override_is_reported_separately_from_category_deduction():
 
     assert _applied_score_impacts([flag])[0] == {
         "applied": 0,
-        "status": "EXCLUDED_UNVERIFIED_RULE",
+        "status": "LEGAL_SCORE_NOT_RELEASED",
     }
 
 
@@ -363,3 +364,29 @@ def test_unverified_quorum_and_auditor_defaults_are_not_exposed_as_facts():
     assert evidence["agm_quorum_met"] is None
     assert evidence["auditor_reappointed_at_agm"] is None
     assert evidence["agm_minutes_prepared"] is None
+
+
+def test_missing_agm_cycle_record_does_not_become_non_occurrence_or_overdue_breach():
+    today = date.today()
+    profile = CompanyProfile(
+        company_id="agm-missing-cycle-test",
+        company_name="AGM Missing Cycle Test Ltd",
+        incorporation_date=date(today.year - 3, 1, 1),
+        agm_count=1,
+        agm_history_verified=True,
+        agm_history_evidence_ref="verified-historical-register",
+        agm_history_verified_at=today,
+        agm_history_verified_by="reviewer-001",
+        last_agm_date=date(today.year - 2, 1, 1),
+        agm_held_this_cycle=None,
+        first_auditor_appointed=True,
+        audit_complete=True,
+        annual_return_filed=True,
+    )
+    result = NLCRuleEngine().evaluate(profile)
+    breach_flags = [
+        flag for flag in result.flags
+        if flag.rule_id in {"AGM-002", "ACC-002"}
+        and getattr(flag.state, "value", flag.state) == "NON_COMPLIANT"
+    ]
+    assert breach_flags == []

@@ -8,25 +8,28 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.models.company import Company
+from app.models.company import Company, CompanyUserAccess
 from app.models.database import set_admin_context, set_rls_context
 from app.models.enums import CompanyStatus, RiskBand, UserRole
 from app.models.finance import (
+    ClientSubscription,
     Invoice,
     Payment,
     PaymentAllocation,
     PaymentLedgerEvent,
     PaymentSubmission,
 )
+from app.models.subscription import SubscriptionPlan, SubscriptionPlanPrice
 from app.models.user import User
 from app.services.finance_service import FinanceConflictError, FinanceService
+from app.services.subscription_service import SubscriptionService
 
 
 async def _committed_finance_fixture(test_engine, *, with_submission: bool):
@@ -207,3 +210,225 @@ async def test_concurrent_approval_posts_one_payment_and_one_allocation(test_eng
         assert invoice.paid_bdt == Decimal("100.00")
         assert invoice.balance_bdt == Decimal("0.00")
         assert invoice.status == "PAID"
+
+
+
+async def _committed_active_subscription(
+    test_engine,
+    *,
+    grace_days: int = 0,
+    cancel_at_period_end: bool = False,
+):
+    """Create a real PostgreSQL subscription, issue its invoice and settle it."""
+    sessions = async_sessionmaker(test_engine, expire_on_commit=False)
+    company_id = uuid.uuid4()
+    client_user_id = uuid.uuid4()
+    finance_user_id = uuid.uuid4()
+    plan_code = f"PG{uuid.uuid4().hex[:10].upper()}"
+
+    async with sessions() as session:
+        company = Company(
+            id=company_id,
+            company_name=f"Subscription Lifecycle {company_id.hex[:8]} Ltd",
+            registration_number=f"SL-{company_id.hex[:12].upper()}",
+            incorporation_date=date(2023, 1, 1),
+            registered_address="Test address, Dhaka, Bangladesh",
+            company_type="PRIVATE_LIMITED",
+            member_count=5,
+            financial_year_end=date(2025, 12, 31),
+            current_compliance_score=85,
+            current_risk_band=RiskBand.GREEN,
+            company_status=CompanyStatus.ACTIVE,
+            is_active=True,
+            is_dormant=False,
+            is_fdi_registered=False,
+        )
+        client_user = User(
+            id=client_user_id,
+            email=f"subscription-client-{client_user_id.hex}@nlctest.com",
+            full_name="Subscription Client Director Test",
+            password_hash="!test-only-no-login",
+            role=UserRole.CLIENT_DIRECTOR,
+            is_active=True,
+            totp_enabled=False,
+        )
+        finance_user = User(
+            id=finance_user_id,
+            email=f"subscription-finance-{finance_user_id.hex}@nlctest.com",
+            full_name="Subscription Finance Test",
+            password_hash="!test-only-no-login",
+            role=UserRole.ADMIN_STAFF,
+            is_active=True,
+            totp_enabled=False,
+        )
+        access = CompanyUserAccess(
+            company_id=company_id,
+            user_id=client_user_id,
+            can_edit=True,
+            can_view_financials=True,
+            is_active=True,
+            granted_by=finance_user_id,
+        )
+        # Trusted test fixture bootstrap: tenant RLS must not be bypassed by
+        # the runtime finance identity before the company and membership exist.
+        await set_admin_context(session)
+        session.add_all([company, client_user, finance_user, access])
+        await session.flush()
+        await set_rls_context(session, str(finance_user_id))
+        subscriptions = SubscriptionService(session)
+        await subscriptions.upsert_plan(
+            plan_code=plan_code,
+            plan_name="PostgreSQL lifecycle integration",
+            description="Disposable integration-test plan",
+            grace_days=grace_days,
+            is_active=True,
+            prices=[{
+                "billing_interval": "MONTHLY",
+                "amount_bdt": Decimal("100.00"),
+                "tax_bdt": Decimal("0.00"),
+                "tax_policy_reference": "CI integration fixture tax reference",
+            }],
+            features=[{"feature_code": "compliance_package"}],
+            actor_id=finance_user_id,
+        )
+
+        await set_rls_context(session, str(client_user_id))
+        visible_plan = await session.execute(
+            select(SubscriptionPlan.plan_code).where(
+                SubscriptionPlan.plan_code == plan_code,
+                SubscriptionPlan.is_active.is_(True),
+            )
+        )
+        visible_price = await session.execute(
+            select(SubscriptionPlanPrice.plan_code).where(
+                SubscriptionPlanPrice.plan_code == plan_code,
+                SubscriptionPlanPrice.billing_interval == "MONTHLY",
+                SubscriptionPlanPrice.is_active.is_(True),
+            )
+        )
+        assert visible_plan.scalar_one_or_none() == plan_code
+        assert visible_price.scalar_one_or_none() == plan_code
+        subscription = await subscriptions.request_subscription(
+            company_id=company_id,
+            plan_code=plan_code,
+            billing_interval="MONTHLY",
+            actor_id=client_user_id,
+        )
+
+        await set_rls_context(session, str(finance_user_id))
+        invoice = await subscriptions.issue_invoice(
+            subscription_id=subscription.id,
+            actor_id=finance_user_id,
+        )
+
+        await set_rls_context(session, str(client_user_id))
+        claim = await FinanceService(session).submit_offline_payment(
+            company_id=company_id,
+            invoice_id=invoice.id,
+            submitted_by=client_user_id,
+            method="CASH",
+            amount_bdt=Decimal("100.00"),
+            payer_reference=None,
+            paid_at=None,
+            evidence_document_id=None,
+        )
+
+        await set_rls_context(session, str(finance_user_id))
+        await FinanceService(session).approve_offline_payment(
+            submission_id=claim.id,
+            reviewer_id=finance_user_id,
+            review_note="PostgreSQL subscription activation integration test",
+            cheque_cleared_at=None,
+        )
+        # The deferred payment ledger trigger binds the reviewer to the signed
+        # principal active at approval. Commit this actor's transaction before
+        # switching to the client actor for a separate cancellation request.
+        await session.commit()
+
+        if cancel_at_period_end:
+            await set_rls_context(session, str(client_user_id))
+            subscription = await subscriptions.request_cancel_at_period_end(
+                company_id=company_id,
+                subscription_id=subscription.id,
+                actor_id=client_user_id,
+            )
+        subscription_id = subscription.id
+        await session.commit()
+
+    return sessions, company_id, client_user_id, finance_user_id, subscription_id
+
+
+@pytest.mark.asyncio
+async def test_postgres_period_end_cancellation_is_processed_once(test_engine):
+    """A paid recurring term scheduled for cancellation ends as CANCELLED in PostgreSQL."""
+    sessions, company_id, _, finance_user_id, subscription_id = await _committed_active_subscription(
+        test_engine, cancel_at_period_end=True
+    )
+
+    async with sessions() as session:
+        await set_rls_context(session, str(finance_user_id))
+        past = datetime.now(UTC) - timedelta(days=2)
+        await session.execute(
+            update(ClientSubscription)
+            .where(ClientSubscription.id == subscription_id)
+            .values(ends_at=past, renews_at=past, grace_ends_at=past)
+        )
+        await session.commit()
+
+    async with sessions() as session:
+        await set_rls_context(session, str(finance_user_id))
+        counts = await SubscriptionService(session).process_due_subscriptions(actor_id=finance_user_id)
+        await session.commit()
+        subscription = await session.get(ClientSubscription, subscription_id)
+        assert counts == {"past_due": 0, "expired": 0, "cancelled": 1}
+        assert subscription is not None
+        assert subscription.company_id == company_id
+        assert subscription.status == "CANCELLED"
+
+    async with sessions() as session:
+        await set_rls_context(session, str(finance_user_id))
+        counts = await SubscriptionService(session).process_due_subscriptions(actor_id=finance_user_id)
+        assert counts == {"past_due": 0, "expired": 0, "cancelled": 0}
+
+
+@pytest.mark.asyncio
+async def test_postgres_subscription_grace_period_then_expiry(test_engine):
+    """A paid term enters PAST_DUE during grace, then EXPIRED after grace ends."""
+    sessions, _, _, finance_user_id, subscription_id = await _committed_active_subscription(
+        test_engine, grace_days=5
+    )
+
+    async with sessions() as session:
+        await set_rls_context(session, str(finance_user_id))
+        past = datetime.now(UTC) - timedelta(days=2)
+        await session.execute(
+            update(ClientSubscription)
+            .where(ClientSubscription.id == subscription_id)
+            .values(ends_at=past, renews_at=past, grace_ends_at=datetime.now(UTC) + timedelta(days=2))
+        )
+        await session.commit()
+
+    async with sessions() as session:
+        await set_rls_context(session, str(finance_user_id))
+        counts = await SubscriptionService(session).process_due_subscriptions(actor_id=finance_user_id)
+        await session.commit()
+        subscription = await session.get(ClientSubscription, subscription_id)
+        assert counts == {"past_due": 1, "expired": 0, "cancelled": 0}
+        assert subscription is not None and subscription.status == "PAST_DUE"
+
+    async with sessions() as session:
+        await set_rls_context(session, str(finance_user_id))
+        await session.execute(
+            update(ClientSubscription)
+            .where(ClientSubscription.id == subscription_id)
+            .values(grace_ends_at=datetime.now(UTC) - timedelta(days=1))
+        )
+        await session.commit()
+
+    async with sessions() as session:
+        await set_rls_context(session, str(finance_user_id))
+        counts = await SubscriptionService(session).process_due_subscriptions(actor_id=finance_user_id)
+        await session.commit()
+        subscription = await session.get(ClientSubscription, subscription_id)
+        assert counts == {"past_due": 0, "expired": 1, "cancelled": 0}
+        assert subscription is not None and subscription.status == "EXPIRED"

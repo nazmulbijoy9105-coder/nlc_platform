@@ -1,4 +1,4 @@
-"""Prevent duplicate manual bKash/Nagad transaction references.
+"""Enforce unique normalized references for supported manual payment methods. The historical revision identifier is retained for migration-chain compatibility.
 
 Revision ID: 0067_unique_manual_wallet_references
 Revises: 0066_verified_revenue_pipeline
@@ -20,7 +20,7 @@ def upgrade() -> None:
             IF EXISTS (
                 SELECT 1
                 FROM public.payment_submissions
-                WHERE method IN ('BANK_TRANSFER', 'CHEQUE', 'BKASH_MANUAL', 'NAGAD_MANUAL')
+                WHERE method IN ('BANK_TRANSFER', 'CHEQUE')
                   AND NULLIF(BTRIM(payer_reference), '') IS NULL
             ) THEN
                 RAISE EXCEPTION
@@ -30,7 +30,7 @@ def upgrade() -> None:
             IF EXISTS (
                 SELECT 1
                 FROM public.payments
-                WHERE method IN ('BANK_TRANSFER', 'CHEQUE', 'BKASH_MANUAL', 'NAGAD_MANUAL')
+                WHERE method IN ('BANK_TRANSFER', 'CHEQUE')
                   AND NULLIF(BTRIM(payer_reference), '') IS NULL
             ) THEN
                 RAISE EXCEPTION
@@ -41,24 +41,24 @@ def upgrade() -> None:
                 SELECT 1
                 FROM public.payment_submissions
                 WHERE payer_reference IS NOT NULL
-                  AND method IN ('BKASH_MANUAL', 'NAGAD_MANUAL')
+                  AND method IN ('BANK_TRANSFER', 'CHEQUE')
                   GROUP BY method, lower(btrim(payer_reference))
                 HAVING count(*) > 1
             ) THEN
                 RAISE EXCEPTION
-                    'duplicate active manual wallet references exist in payment_submissions; reconcile before migration';
+                    'duplicate active manual payment references exist in payment_submissions; reconcile before migration';
             END IF;
 
             IF EXISTS (
                 SELECT 1
                 FROM public.payments
                 WHERE payer_reference IS NOT NULL
-                  AND method IN ('BKASH_MANUAL', 'NAGAD_MANUAL')
+                  AND method IN ('BANK_TRANSFER', 'CHEQUE')
                 GROUP BY method, lower(btrim(payer_reference))
                 HAVING count(*) > 1
             ) THEN
                 RAISE EXCEPTION
-                    'duplicate manual wallet references exist in payments; reconcile before migration';
+                    'duplicate manual payment references exist in payments; reconcile before migration';
             END IF;
         END
         $preflight$;
@@ -68,7 +68,7 @@ def upgrade() -> None:
         ALTER TABLE public.payment_submissions
         ADD CONSTRAINT ck_payment_submission_reference_required
         CHECK (
-            method NOT IN ('BANK_TRANSFER','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL')
+            method NOT IN ('BANK_TRANSFER','CHEQUE')
             OR NULLIF(BTRIM(payer_reference), '') IS NOT NULL
         )
     """)
@@ -76,32 +76,32 @@ def upgrade() -> None:
         ALTER TABLE public.payments
         ADD CONSTRAINT ck_payment_reference_required
         CHECK (
-            method NOT IN ('BANK_TRANSFER','CHEQUE','BKASH_MANUAL','NAGAD_MANUAL')
+            method NOT IN ('BANK_TRANSFER','CHEQUE')
             OR NULLIF(BTRIM(payer_reference), '') IS NOT NULL
         )
     """)
 
     op.execute("""
-        CREATE UNIQUE INDEX uq_payment_submission_wallet_reference
+        CREATE UNIQUE INDEX uq_payment_submission_manual_reference
             ON public.payment_submissions (
                 method,
                 lower(btrim(payer_reference))
             )
             WHERE payer_reference IS NOT NULL
-              AND method IN ('BKASH_MANUAL', 'NAGAD_MANUAL')
+              AND method IN ('BANK_TRANSFER', 'CHEQUE')
     """)
     op.execute("""
-        CREATE UNIQUE INDEX uq_payment_wallet_reference
+        CREATE UNIQUE INDEX uq_payment_manual_reference
             ON public.payments (
                 method,
                 lower(btrim(payer_reference))
             )
             WHERE payer_reference IS NOT NULL
-              AND method IN ('BKASH_MANUAL', 'NAGAD_MANUAL')
+              AND method IN ('BANK_TRANSFER', 'CHEQUE')
     """)
 
 
 def downgrade() -> None:
     # Forward-only: removing these constraints would permit duplicate manual
-    # wallet receipts to be credited against multiple invoices.
+    # manual receipts to be credited against multiple invoices.
     pass

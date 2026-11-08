@@ -1,3 +1,4 @@
+import pytest
 """Dashboard aggregates must be scoped to active tenant memberships."""
 import asyncio
 import uuid
@@ -61,7 +62,7 @@ def test_upcoming_deadlines_filter_active_membership_and_user():
     assert "company_user_access" in sql
     assert "cua.user_id = :user_id" in sql
     assert "cua.is_active = true" in sql
-    assert db.params[0] == {"days": 21, "user_id": str(user_id)}
+    assert db.params[0] == {"days": 21, "user_id": str(user_id), "include_assigned_staff": False}
 
 
 def test_upcoming_deadlines_reject_missing_user():
@@ -77,6 +78,7 @@ def test_system_deadline_scan_is_separate_explicit_worker_method():
     assert rows == []
     sql = db.statements[0].lower()
     assert "vw_upcoming_deadlines" in sql
+    assert "public.nlc_current_user_principal() = 'admin'" in sql
     assert "company_user_access" not in sql
     assert "nlc_current_user_principal() = 'admin'" in sql
     assert db.params[0] == {"days": 14}

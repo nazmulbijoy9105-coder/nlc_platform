@@ -111,7 +111,7 @@ async def test_unsupported_payment_and_intent_transitions_are_blocked(db, db_com
     intent = PaymentIntent(
         company_id=db_company.id,
         invoice_id=invoice.id,
-        provider_name="BKASH",
+        provider_name="SSLCOMMERZ",
         idempotency_key=f"test-{uuid.uuid4().hex}",
         provider_order_id=f"order-{uuid.uuid4().hex}",
         amount_bdt=Decimal("100.00"),
@@ -393,7 +393,7 @@ async def test_database_rejects_status_only_payment_submission_rejection(db, db_
 
 
 @pytest.mark.asyncio
-async def test_manual_wallet_transaction_reference_cannot_be_submitted_twice(db, db_company, db_user):
+async def test_manual_payment_reference_cannot_be_submitted_twice(db, db_company, db_user):
     from decimal import Decimal
 
     from app.services.finance_service import FinanceConflictError, FinanceService
@@ -401,7 +401,7 @@ async def test_manual_wallet_transaction_reference_cannot_be_submitted_twice(db,
     await set_rls_context(db, str(db_user.id))
     service = FinanceService(db)
     invoices = []
-    for description in ("First wallet claim", "Second wallet claim"):
+    for description in ("First payment claim", "Second wallet claim"):
         invoice = await service.create_invoice(
             company_id=db_company.id,
             engagement_id=None,
@@ -421,7 +421,7 @@ async def test_manual_wallet_transaction_reference_cannot_be_submitted_twice(db,
         company_id=db_company.id,
         invoice_id=invoices[0].id,
         submitted_by=db_user.id,
-        method="BKASH_MANUAL",
+        method="BANK_TRANSFER",
         amount_bdt=Decimal("25.00"),
         payer_reference="Trx-CaseSensitive-123",
         paid_at=None,
@@ -433,7 +433,7 @@ async def test_manual_wallet_transaction_reference_cannot_be_submitted_twice(db,
             company_id=db_company.id,
             invoice_id=invoices[1].id,
             submitted_by=db_user.id,
-            method="BKASH_MANUAL",
+            method="BANK_TRANSFER",
             amount_bdt=Decimal("25.00"),
             payer_reference="  trx-casesensitive-123  ",
             paid_at=None,
