@@ -705,6 +705,8 @@ async def verify_company_charge(
         raise HTTPException(status_code=404, detail="Charge record not found.")
 
     updates = body.model_dump(exclude_unset=True)
+    if not updates:
+        raise HTTPException(status_code=400, detail="At least one charge fact or verification field is required.")
     verification_groups = (
         ("creation_date_verified", "creation_date_evidence_ref", "creation_date_verified_at", "creation_date_verified_by", ("creation_date",)),
         ("form_xviii_filing_status_verified", "form_xviii_filing_evidence_ref", "form_xviii_verified_at", "form_xviii_verified_by", ("form_xviii_filed",)),
