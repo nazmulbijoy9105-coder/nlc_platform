@@ -439,7 +439,10 @@ def test_unverified_agm_history_does_not_create_deadline_violation():
         ),
         today=date(2026, 11, 3),
     )
-    assert not {"AGM-001", "AGM-002"} & {flag.rule_id for flag in result.flags}
+    agm_review = _flag(result, "AGM-001")
+    assert agm_review.state == RuleState.UNKNOWN
+    assert agm_review.eval_state == "UNKNOWN"
+    assert "AGM-002" not in {flag.rule_id for flag in result.flags}
 
 def test_section_81_first_agm_within_18_months_defers_next_agm_to_second_following_year():
     profile = _profile(
