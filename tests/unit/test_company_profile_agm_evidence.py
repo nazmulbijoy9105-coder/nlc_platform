@@ -63,7 +63,8 @@ def test_agm_profile_evidence_comes_from_the_latest_agm_record():
     # A stored boolean/document ID is still not a reviewer-verified
     # minute-book finding; the engine must remain fail-closed.
     assert evidence["agm_minutes_prepared"] is None
-    assert evidence["notice_sent_date"] == date(2026, 1, 1)
+    # A raw date is not a verified service record without the complete member roster and notice evidence.
+    assert evidence["notice_sent_date"] is None
     assert evidence["agm_notice_verified_absent"] is None
 
 
