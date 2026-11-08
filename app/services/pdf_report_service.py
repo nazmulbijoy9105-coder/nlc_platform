@@ -170,7 +170,7 @@ def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue
     elif band == "YELLOW":
         urgency = "<strong>Compliance monitoring recommended.</strong> The company has minor deficiencies that should be addressed to maintain good standing."
     elif band == "NOT_EVALUATED":
-        urgency = "<strong>No statutory compliance score has been released.</strong> The applicable rule corpus is awaiting independent legal approval or sufficient verified evidence. This report is not a compliance certification."
+        urgency = "<strong>Not scored: no statutory compliance score has been released.</strong> The applicable rule corpus is pending independent legal approval or sufficient verified evidence. This report is not a compliance certification."
     else:
         urgency = "<strong>Company is in good compliance standing.</strong> No critical issues detected. Continue regular monitoring."
 
