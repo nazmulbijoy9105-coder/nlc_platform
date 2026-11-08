@@ -159,6 +159,28 @@ class ShareTransfer:
     transfer_registration_evidence_ref: str | None = None
 
 @dataclass
+class ShareComplianceEvent:
+    event_id: str
+    event_type: str
+    event_date: date
+    event_verified: bool = False
+    event_evidence_ref: str | None = None
+    event_verified_at: date | None = None
+    event_verified_by: str | None = None
+    filing_form: str | None = None
+    filing_status: bool | None = None
+    filing_status_verified: bool = False
+    filing_evidence_ref: str | None = None
+    filing_verified_at: date | None = None
+    filing_verified_by: str | None = None
+    certificate_issued: bool | None = None
+    certificate_status_verified: bool = False
+    certificate_evidence_ref: str | None = None
+    certificate_verified_at: date | None = None
+    certificate_verified_by: str | None = None
+
+
+@dataclass
 class ChargeEvent:
     charge_id: str
     creation_date: date
@@ -266,6 +288,7 @@ class CompanyProfile:
     paid_up_capital_bdt: float = 0.0
     paid_up_ge_authorized: bool | None = None
     share_transfers: List[ShareTransfer] = field(default_factory=list)
+    share_compliance_events: List[ShareComplianceEvent] = field(default_factory=list)
     registered_office_address: str = ""
     registered_office_change_date: Optional[date] = None
     form_vi_filed: bool = False
@@ -1586,47 +1609,99 @@ class NLCRuleEngine:
     # MODULE 5: SHAREHOLDING
     # ───────────────────────────────────────────────────────────────────
     def _run_shareholder_rules(self, c: CompanyProfile) -> None:
-        if c.last_allotment_date and c.form_xv_filed is False:
-            delay = (self.today - c.last_allotment_date).days
-            if delay > ALLOTMENT_FILING_DEADLINE_DAYS:
-                self._add_flag(ComplianceFlag(
-                    rule_id="SH-001",
-                    flag_code="FORM_XV_ALLOTMENT_NOT_FILED",
-                    severity=Severity.YELLOW if delay < 90 else Severity.RED,
-                    score_impact=8,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Share allotment not filed via Form XV. Section 151: 60-day deadline. Overdue by {delay} days.",
-                    statutory_basis="Section 151, Companies Act 1994 (Bangladesh)",
-                    detail={"delay": delay}
-                ))
+        # Use only event rows whose trigger date and relevant status each have
+        # independent evidence provenance. Raw company/shareholder booleans
+        # are deliberately not treated as proof of filing or non-filing.
+        for event in c.share_compliance_events:
+            event_verified = bool(
+                event.event_verified and event.event_evidence_ref
+                and event.event_verified_at and event.event_verified_by
+            )
+            if not event_verified:
+                continue
 
-        if c.last_allotment_date and c.share_certificates_issued is False:
-            delay = (self.today - c.last_allotment_date).days
-            if delay > SHARE_CERTIFICATE_DEADLINE_DAYS:
-                self._add_flag(ComplianceFlag(
-                    rule_id="SH-002",
-                    flag_code="SHARE_CERTIFICATES_NOT_ISSUED",
-                    severity=Severity.YELLOW if delay < 90 else Severity.RED,
-                    score_impact=5,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Share certificates not issued within 90 days. Section 158: overdue by {delay - SHARE_CERTIFICATE_DEADLINE_DAYS} days.",
-                    statutory_basis="Section 158, Companies Act 1994 (Bangladesh)",
-                    detail={"delay": delay}
-                ))
+            filing_verified = bool(
+                event.filing_status_verified and event.filing_status is not None
+                and event.filing_evidence_ref and event.filing_verified_at
+                and event.filing_verified_by
+            )
+            certificate_verified = bool(
+                event.certificate_status_verified and event.certificate_issued is not None
+                and event.certificate_evidence_ref and event.certificate_verified_at
+                and event.certificate_verified_by
+            )
 
-        if c.capital_increase_date and c.form_iv_filed is False:
-            delay = (self.today - c.capital_increase_date).days
-            if delay > CAPITAL_INCREASE_NOTICE_DEADLINE_DAYS:
-                self._add_flag(ComplianceFlag(
-                    rule_id="SH-003",
-                    flag_code="FORM_IV_CAPITAL_INCREASE_NOT_FILED",
-                    severity=Severity.YELLOW if delay < 90 else Severity.RED,
-                    score_impact=8,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Capital increase not filed via Form IV within 15 days under Section 56. Overdue by {delay} days.",
-                    statutory_basis="Section 56, Companies Act 1994 (Bangladesh)",
-                    detail={"delay": delay}
-                ))
+            if (
+                event.event_type == "ALLOTMENT"
+                and event.filing_form == "XV"
+                and filing_verified and event.filing_status is False
+            ):
+                delay = (self.today - event.event_date).days
+                if delay > ALLOTMENT_FILING_DEADLINE_DAYS:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="SH-001",
+                        flag_code="FORM_XV_ALLOTMENT_REQUIRES_COUNSEL_REVIEW",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            "Verified allotment event and verified Form XV status indicate a "
+                            "potential filing delay. Statutory applicability, extension and "
+                            "consequence require individual counsel approval."
+                        ),
+                        statutory_basis="Section 151, Companies Act 1994 (Bangladesh)",
+                        state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                        eval_state="UNKNOWN",
+                        detail={"event_id": event.event_id, "delay_days": delay},
+                    ))
+
+            if (
+                event.event_type in ("ALLOTMENT", "TRANSFER_REGISTRATION")
+                and certificate_verified and event.certificate_issued is False
+            ):
+                delay = (self.today - event.event_date).days
+                if delay > SHARE_CERTIFICATE_DEADLINE_DAYS:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="SH-002",
+                        flag_code="SHARE_CERTIFICATE_TRIGGER_REQUIRES_COUNSEL_REVIEW",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            "Verified allotment/transfer-registration event and verified "
+                            "certificate status indicate a potential 90-day issue. Confirm "
+                            "the relevant holder, certificate obligation and exceptions with counsel."
+                        ),
+                        statutory_basis="Section 158, Companies Act 1994 (Bangladesh)",
+                        state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                        eval_state="UNKNOWN",
+                        detail={"event_id": event.event_id, "trigger_date": event.event_date.isoformat(),
+                                "delay_days": delay, "trigger_type": event.event_type},
+                    ))
+
+            if (
+                event.event_type == "CAPITAL_INCREASE"
+                and event.filing_form == "IV"
+                and filing_verified and event.filing_status is False
+            ):
+                delay = (self.today - event.event_date).days
+                if delay > CAPITAL_INCREASE_NOTICE_DEADLINE_DAYS:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="SH-003",
+                        flag_code="FORM_IV_CAPITAL_INCREASE_REQUIRES_COUNSEL_REVIEW",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            "Verified capital-increase event and verified Form IV status indicate "
+                            "a potential filing delay. Confirm the exact statutory trigger, "
+                            "company scope, extension and remedy with counsel."
+                        ),
+                        statutory_basis="Section 56, Companies Act 1994 (Bangladesh)",
+                        state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                        eval_state="UNKNOWN",
+                        detail={"event_id": event.event_id, "delay_days": delay},
+                    ))
 
     # ───────────────────────────────────────────────────────────────────
     # MODULE 6: SHARE TRANSFERS
