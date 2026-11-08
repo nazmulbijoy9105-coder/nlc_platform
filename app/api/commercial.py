@@ -42,6 +42,12 @@ from app.core.dependencies import (
 from app.models.enums import EngagementStatus, RevenueTier, TaskPriority, TaskStatus
 from app.models.user import User
 from app.services.commercial_service import CommercialConflictError, EngagementService, QuotationService, TaskService
+from app.services.commercial_service import (
+    CommercialConflictError,
+    EngagementService,
+    QuotationService,
+    TaskService,
+)
 from app.services.notification_service import ActivityService
 
 logger = structlog.get_logger(__name__)
@@ -396,6 +402,7 @@ async def accept_quotation(
     except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
+        # Keep inaccessible or inactive engagement details tenant-safe.
         # Preserve tenant-safe not-found semantics for a missing or inaccessible engagement.
         raise HTTPException(status_code=404, detail="Quotation not found.") from exc
         raise HTTPException(status_code=404, detail=str(exc)) from exc

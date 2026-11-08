@@ -17,6 +17,7 @@ from datetime import UTC, date, datetime
 from sqlalchemy import func, or_, select, text, update
 from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.orm import selectinload
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.models.company import Company, CompanyUserAccess
 from app.models.charges import CompanyCharge

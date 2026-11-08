@@ -269,10 +269,19 @@ class SubscriptionService:
         interval = billing_interval.upper()
         if interval not in BILLING_INTERVALS:
             raise SubscriptionConflictError("Unsupported billing interval")
+        normalized_plan_code = plan_code.strip().upper()
+        # Serialize with finance plan edits without SELECT FOR UPDATE. Under
+        # forced RLS, customer roles intentionally have no UPDATE policy on
+        # catalogue rows, and PostgreSQL hides rows from FOR UPDATE readers.
+        await self.db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtextextended(:lock_key, 0))"),
+            {"lock_key": f"nlc:subscription-plan:{normalized_plan_code}"},
+        )
         plan_result = await self.db.execute(
             select(SubscriptionPlan, SubscriptionPlanPrice)
             .join(SubscriptionPlanPrice, SubscriptionPlanPrice.plan_code == SubscriptionPlan.plan_code)
             .where(
+                SubscriptionPlan.plan_code == normalized_plan_code,
                 SubscriptionPlan.plan_code == plan_code.upper(),
                 SubscriptionPlan.is_active.is_(True),
                 SubscriptionPlanPrice.billing_interval == interval,

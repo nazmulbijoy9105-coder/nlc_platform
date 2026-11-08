@@ -9,6 +9,7 @@ from starlette.requests import Request
 import app.core.entitlement as entitlement
 
 
+def _request(company_id: uuid.UUID | None = None, path: str = "/api/v1/companies") -> Request:
 def _request(company_id: uuid.UUID | None = None) -> Request:
     path_params = {"company_id": str(company_id)} if company_id else {}
     return Request({
@@ -16,6 +17,8 @@ def _request(company_id: uuid.UUID | None = None) -> Request:
         "http_version": "1.1",
         "method": "GET",
         "scheme": "https",
+        "path": path,
+        "raw_path": path.encode(),
         "path": "/api/v1/companies",
         "raw_path": b"/api/v1/companies",
         "query_string": b"",
@@ -44,6 +47,35 @@ async def test_authorized_staff_roles_bypass_customer_subscription_lookup(role):
 
 
 @pytest.mark.asyncio
+async def test_legal_staff_access_is_bound_to_explicit_company_assignment(monkeypatch):
+    company_id = uuid.uuid4()
+    user = SimpleNamespace(id=uuid.uuid4(), role="LEGAL_STAFF")
+    calls = []
+
+    async def ensure_scope(requested_company_id, current_user, db):
+        calls.append((requested_company_id, current_user.id))
+        if requested_company_id != company_id:
+            raise HTTPException(status_code=403, detail="Company assignment required")
+
+    monkeypatch.setattr("app.core.company_authorization.ensure_staff_company_scope", ensure_scope)
+    dependency = entitlement.require_entitlement("compliance_package")
+
+    assert await dependency(
+        request=_request(company_id), db=MagicMock(), current_user=user
+    ) is True
+    assert calls == [(company_id, user.id)]
+
+
+@pytest.mark.asyncio
+async def test_legal_staff_can_read_shared_templates_without_customer_subscription():
+    dependency = entitlement.require_entitlement("document_management")
+    user = SimpleNamespace(id=uuid.uuid4(), role="LEGAL_STAFF")
+
+    assert await dependency(
+        request=_request(path="/api/v1/documents/templates"),
+        db=MagicMock(),
+        current_user=user,
+    ) is True
 async def test_legal_staff_does_not_receive_implicit_subscription_bypass():
     dependency = entitlement.require_entitlement("compliance_package")
     user = SimpleNamespace(id=uuid.uuid4(), role="LEGAL_STAFF")
