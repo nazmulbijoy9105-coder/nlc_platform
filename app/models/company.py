@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from .documents import AIOutputLog, Document
     from .filings import AGM, AnnualReturn, Audit
     from .infrastructure import Notification, RegisteredOfficeHistory, StatutoryRegister
-    from .people import Director, Shareholder, ShareTransfer
+    from .people import Director, ShareComplianceEvent, Shareholder, ShareTransfer
     from .rescue import RescuePlan
     from .user import User
 
