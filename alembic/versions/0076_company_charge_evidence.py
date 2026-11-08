@@ -83,20 +83,20 @@ def upgrade() -> None:
     op.execute("ALTER TABLE public.company_charges FORCE ROW LEVEL SECURITY")
     op.execute("""
         CREATE POLICY company_charges_tenant_select ON public.company_charges
-        FOR SELECT USING (public.nlc_can_access_company(company_id))
+        FOR SELECT USING (public.nlc_can_view_financials_company(company_id))
     """)
     op.execute("""
         CREATE POLICY company_charges_tenant_insert ON public.company_charges
-        FOR INSERT WITH CHECK (public.nlc_can_edit_company(company_id))
+        FOR INSERT WITH CHECK (public.nlc_can_manage_financials_company(company_id))
     """)
     op.execute("""
         CREATE POLICY company_charges_tenant_update ON public.company_charges
-        FOR UPDATE USING (public.nlc_can_edit_company(company_id))
-        WITH CHECK (public.nlc_can_edit_company(company_id))
+        FOR UPDATE USING (public.nlc_can_manage_financials_company(company_id))
+        WITH CHECK (public.nlc_can_manage_financials_company(company_id))
     """)
     op.execute("""
         CREATE POLICY company_charges_tenant_delete ON public.company_charges
-        FOR DELETE USING (public.nlc_can_edit_company(company_id))
+        FOR DELETE USING (public.nlc_can_manage_financials_company(company_id))
     """)
     op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON public.company_charges TO nlc_app_role")
 
