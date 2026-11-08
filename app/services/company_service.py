@@ -1095,22 +1095,8 @@ class CompanyService(BaseService[Company]):
             "minutes_book_board_maintained": getattr(company, "minutes_book_board_maintained", True),
 
             # AGM Details
-            "agm_adjourned_without_notice":  getattr(company, "agm_adjourned_without_notice", False),
-            "agm_scheduled_date":            getattr(company, "agm_scheduled_date", None),
-            "notice_sent_date":              agm_profile_evidence["notice_sent_date"],
-            "short_notice_consent_obtained": agm_profile_evidence.get("short_notice_consent_obtained"),
-            "short_notice_consent_verified": agm_profile_evidence.get("short_notice_consent_verified", False),
-            "short_notice_consent_evidence_ref": agm_profile_evidence.get("short_notice_consent_evidence_ref"),
-            "members_present_at_agm":        agm_profile_evidence["members_present_at_agm"],
-            "agm_attendance_verified":       agm_profile_evidence.get("agm_attendance_verified", False),
-            "agm_attendance_evidence_ref":   agm_profile_evidence.get("agm_attendance_evidence_ref"),
-            "agm_quorum_required":           agm_profile_evidence.get("agm_quorum_required"),
-            "agm_quorum_basis_verified":     agm_profile_evidence.get("agm_quorum_basis_verified", False),
-            "agm_quorum_evidence_ref":       agm_profile_evidence.get("agm_quorum_evidence_ref"),
-            "auditor_reappointed_at_agm":    agm_profile_evidence["auditor_reappointed_at_agm"],
-            "auditor_reappointment_verified": agm_profile_evidence.get("auditor_reappointment_verified", False),
-            "auditor_reappointment_evidence_ref": agm_profile_evidence.get("auditor_reappointment_evidence_ref"),
-            "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", None),
+            # Legacy company-level assertions are intentionally not promoted.
+            "agm_adjourned_without_notice": None,
 
             # Audit Details
             "audit_in_progress":             getattr(company, "audit_in_progress", False),
