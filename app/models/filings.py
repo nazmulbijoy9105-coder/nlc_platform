@@ -43,6 +43,21 @@ if TYPE_CHECKING:
 # ═══════════════════════════════════════════════════════════════════
 class AGM(FullMixin, Base):
     __tablename__ = "agms"
+    __table_args__ = (
+        CheckConstraint(
+            "NOT agm_held_verified OR (agm_held_evidence_ref IS NOT NULL "
+            "AND btrim(agm_held_evidence_ref) <> '' AND agm_held_verified_at IS NOT NULL "
+            "AND agm_held_verified_by IS NOT NULL AND (agm_held IS FALSE OR agm_date IS NOT NULL))",
+            name="ck_agms_held_verification_provenance",
+        ),
+        CheckConstraint(
+            "NOT member_register_snapshot_verified OR (member_register_evidence_ref IS NOT NULL "
+            "AND btrim(member_register_evidence_ref) <> '' AND member_register_verified_at IS NOT NULL "
+            "AND member_register_verified_by IS NOT NULL AND entitled_members_count IS NOT NULL "
+            "AND entitled_members_count >= 1)",
+            name="ck_agms_member_register_provenance",
+        ),
+    )
 
     company_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
