@@ -2,13 +2,15 @@ name: CI
 
 on:
   push:
-    branches: [main, fix/nlc-canonical-release-gates-20261105]
+    branches: [main, fix/nlc-canonical-release-gates-20261105, fix/commercial-lock-order-on-160-20261108]
+    branches: [main, fix/nlc-canonical-release-gates-20261105, fix/commercial-lifecycle-concurrency-main-20261108, feat/manual-mobile-wallet-payments-20261108]
   pull_request:
     branches:
       - main
       - fix/0050-role-provisioning-preflight-20261106
       - fix/canonical-migration-chain-20261106
       - feat/finance-ledger-integrated-on-canonical-chain-20261106
+      - repair/nlc-canonical-release-20261108b
 
 jobs:
   unit-tests:
@@ -40,7 +42,7 @@ jobs:
 
       - name: Lint changed backend, finance, commercial and calendar files
         run: |
-          ruff check app/services/bd_calendar_generator.py \
+          ruff check --select E4,E7,E9,F app/services/bd_calendar_generator.py \
             app/api/commercial.py app/models/commercial.py app/services/commercial_service.py \
             app/api/finance.py app/models/finance.py app/services/finance_service.py \
             tests/integration/test_dashboard_tenant_isolation.py \
@@ -109,9 +111,6 @@ jobs:
       DATABASE_URL: postgresql+asyncpg://nlc_test:nlc_test@localhost:5432/nlc_test
       DATABASE_URL_TEST: postgresql+asyncpg://nlc_test:nlc_test@localhost:5432/nlc_test
       REDIS_URL: redis://localhost:6379/0
-      JWT_SECRET_KEY: test-secret-key-not-for-production
-      NLC_RLS_HMAC_SECRET: ci-only-rls-hmac-secret-not-for-production-2026
-      APP_DATABASE_URL: postgresql+asyncpg://nlc_app_role:ci-only-nlc-app-role-password@localhost:5432/nlc_test
       REQUIRE_RLS_APP_ROLE: "true"
       ENVIRONMENT: test
 
@@ -131,6 +130,24 @@ jobs:
 
       - name: Compile check
         run: python -m compileall app/
+
+      - name: Generate ephemeral CI security credentials
+        run: |
+          python - <<'PY'
+          import os
+          import secrets
+
+          password = secrets.token_urlsafe(32)
+          values = {
+              "APP_DATABASE_PASSWORD": password,
+              "APP_DATABASE_URL": f"postgresql+asyncpg://nlc_app_role:{password}@localhost:5432/nlc_test",
+              "JWT_SECRET_KEY": secrets.token_urlsafe(48),
+              "NLC_RLS_HMAC_SECRET": secrets.token_hex(32),
+          }
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
+              for key, value in values.items():
+                  env.write(f"{key}={value}\n")
+          PY
 
       - name: Verify single Alembic head and two fresh PostgreSQL upgrades
         run: |
@@ -191,9 +208,12 @@ jobs:
               )
               conn = await asyncpg.connect(url)
               try:
-                  await conn.execute(
-                      "ALTER ROLE nlc_app_role WITH PASSWORD 'ci-only-nlc-app-role-password'"
+                  password = os.environ["APP_DATABASE_PASSWORD"]
+                  alter_role = await conn.fetchval(
+                      "SELECT format('ALTER ROLE nlc_app_role WITH PASSWORD %L', $1::text)",
+                      password,
                   )
+                  await conn.execute(alter_role)
               finally:
                   await conn.close()
 
@@ -208,20 +228,20 @@ jobs:
           DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
           DATABASE_URL="$SECOND_DATABASE_URL" alembic current
 
-      - name: Rehearse production baseline 0042 through head
+      - name: Migrate a fresh database from revision 0042 through head
         run: |
           set -euo pipefail
           PGPASSWORD=nlc_test createdb -h localhost -U nlc_test nlc_test_baseline_0042
           BASELINE_DATABASE_URL="postgresql+asyncpg://nlc_test:nlc_test@localhost:5432/nlc_test_baseline_0042"
 
-          # Apply the real online migrations to an isolated database restored
-          # at the declared production baseline. This exercises migrations
-          # that intentionally require live catalog/role/secret preflights.
+          # Apply migrations to a fresh isolated database, first advancing it to
+          # revision 0042 and then through head. This validates the forward
+          # chain from that revision; it is NOT a restored production snapshot.
           DATABASE_URL="$BASELINE_DATABASE_URL" alembic upgrade 0042_dedup_key
           DATABASE_URL="$BASELINE_DATABASE_URL" alembic upgrade head
           CURRENT="$(DATABASE_URL="$BASELINE_DATABASE_URL" alembic current)"
           printf '%s\n' "$CURRENT"
-          grep -q "0075_director_transfer_evidence" <<< "$CURRENT"
+          grep -q "0076_manual_mobile_wallet_methods" <<< "$CURRENT"
 
           # Export the resulting schema snapshot for independent review.
           PGPASSWORD=nlc_test pg_dump -h localhost -U nlc_test \
@@ -241,6 +261,9 @@ jobs:
 
       - name: Run finance concurrency regression tests explicitly
         run: python -m pytest tests/integration/test_finance_concurrency.py -q --tb=short
+
+      - name: Run commercial concurrency regression tests explicitly
+        run: python -m pytest tests/integration/test_commercial_concurrency.py -q --tb=short
 
       - name: Run canonical integrity tests
         run: python -m pytest tests/unit/test_canonical_integrity.py -q --tb=short

@@ -23,7 +23,11 @@ from app.core.dependencies import (
 )
 from app.models.finance import Invoice, Payment, PaymentSubmission
 from app.models.user import User
-from app.services.finance_service import (\n    FinanceConflictError,\n    FinanceNotFoundError,\n    FinanceService,\n)
+from app.services.finance_service import (
+    FinanceConflictError,
+    FinanceNotFoundError,
+    FinanceService,
+)
 from app.services.notification_service import ActivityService
 
 logger = structlog.get_logger(__name__)
@@ -36,7 +40,7 @@ CUSTOMER_BILLING_READ_ROLES = [
 CUSTOMER_BILLING_WRITE_ROLES = [
     "CLIENT_DIRECTOR", "ADMIN_STAFF", "SUPER_ADMIN"
 ]
-OFFLINE_METHOD = Literal["BANK_TRANSFER", "CASH", "CHEQUE"]
+OFFLINE_METHOD = Literal["BANK_TRANSFER", "CASH", "CHEQUE", "BKASH_MANUAL", "NAGAD_MANUAL"]
 
 
 def _require_timezone_offset(value: datetime | None, field_name: str) -> datetime | None:
