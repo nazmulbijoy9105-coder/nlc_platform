@@ -624,3 +624,45 @@ async def test_quotation_acceptance_and_rejection_persist_actor_attribution(
         (action, quote_id, db_user.id) for action, quote_id in expected
     }.issubset(observed)
 
+@pytest.mark.asyncio
+async def test_client_company_member_cannot_use_staff_commercial_mutations(
+    api_client, commercial_admin_token, db_company, db_client_user
+):
+    # A live company membership does not grant access to internal commercial
+    # pipeline operations; these endpoints are explicitly staff-role restricted.
+    engagement = await _create_engagement(
+        api_client, commercial_admin_token, db_company.id
+    )
+    quotation = await _create_quotation(
+        api_client,
+        commercial_admin_token,
+        db_company.id,
+        engagement["engagement_id"],
+    )
+    client_token = create_access_token({
+        "sub": str(db_client_user.id),
+        "user_id": str(db_client_user.id),
+        "type": "access",
+        "role": "CLIENT_DIRECTOR",
+        "email": db_client_user.email,
+        "company_ids": [str(db_company.id)],
+    })
+
+    attempts = [
+        await api_client.patch(
+            f"/api/v1/commercial/engagements/{engagement['engagement_id']}/status",
+            headers=_auth(client_token),
+            json={"new_status": "CANCELLED"},
+        ),
+        await api_client.patch(
+            f"/api/v1/commercial/quotations/{quotation['quotation_id']}/accept",
+            headers=_auth(client_token),
+        ),
+        await api_client.patch(
+            f"/api/v1/commercial/quotations/{quotation['quotation_id']}/reject",
+            headers=_auth(client_token),
+            json={"reason": "Unauthorized client attempt"},
+        ),
+    ]
+    assert [response.status_code for response in attempts] == [403, 403, 403]
+
