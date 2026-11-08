@@ -4,14 +4,17 @@ NEUM LEX COUNSEL
 """
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
+from decimal import Decimal
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.entitlement import require_entitlement
 from app.core.dependencies import (
     Pagination,
     get_current_user,
@@ -19,10 +22,16 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
-from app.models.company import CompanyUserAccess
+from app.models.company import Company, CompanyUserAccess
+from app.models.charges import CompanyCharge
 from app.models.enums import CompanyStatus, CompanyType, RevenueTier, RiskBand, UserRole
 from app.models.user import User
 from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
+
+def _legal_score_is_released() -> bool:
+    """Require both the release switch and a non-empty approved rule set."""
+    return LEGAL_SCORE_RELEASED is True and bool(VERIFIED_RULE_IDS)
+
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
 from app.services.compliance_calendar import LEGAL_CALENDAR_RELEASED
@@ -42,7 +51,7 @@ def _require_legal_dashboard_release(*, deadlines: bool = False) -> None:
                 "validation, company-specific applicability and independent counsel approval."
             ),
         )
-    if not deadlines and not LEGAL_SCORE_RELEASED:
+    if not deadlines and not _legal_score_is_released():
         raise HTTPException(
             status_code=503,
             detail=(
@@ -112,6 +121,101 @@ class CompanyUpdateRequest(BaseModel):
     penalty_notices_resolved: int | None = None
     # Explicit null resets the fact to UNKNOWN.
     is_manufacturing: bool | None = None
+
+
+
+
+class CompanyChargeCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    creation_date: date
+    charge_type: str = Field(min_length=1, max_length=100)
+    amount_bdt: Decimal = Field(ge=0, max_digits=20, decimal_places=2)
+    charge_holder: str = Field(min_length=1, max_length=500)
+    charge_reference: str | None = Field(default=None, max_length=255)
+    # These are client-reported values only. They remain UNKNOWN to the engine
+    # until a legal reviewer records evidence and verification provenance.
+    form_xviii_filed: bool | None = None
+    form_xviii_filed_date: date | None = None
+    registrable_under_s159: bool | None = None
+    satisfied: bool | None = None
+    satisfaction_date: date | None = None
+    satisfaction_filed: bool | None = None
+    satisfaction_filed_date: date | None = None
+
+
+class CompanyChargeVerificationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_null_verification_flags(cls, values):
+        if isinstance(values, dict):
+            verification_flags = (
+                "creation_date_verified",
+                "form_xviii_filing_status_verified",
+                "registrability_verified",
+                "satisfaction_verified",
+                "satisfaction_filing_status_verified",
+            )
+            if any(field in values and values[field] is None for field in verification_flags):
+                raise ValueError("Verification flags must be true or false, not null.")
+        return values
+
+    creation_date_verified: bool | None = None
+    creation_date_evidence_ref: str | None = Field(default=None, max_length=2000)
+    form_xviii_filed: bool | None = None
+    form_xviii_filed_date: date | None = None
+    form_xviii_filing_status_verified: bool | None = None
+    form_xviii_filing_evidence_ref: str | None = Field(default=None, max_length=2000)
+    registrable_under_s159: bool | None = None
+    registrability_verified: bool | None = None
+    registrability_evidence_ref: str | None = Field(default=None, max_length=2000)
+    satisfied: bool | None = None
+    satisfaction_date: date | None = None
+    satisfaction_verified: bool | None = None
+    satisfaction_evidence_ref: str | None = Field(default=None, max_length=2000)
+    satisfaction_filed: bool | None = None
+    satisfaction_filed_date: date | None = None
+    satisfaction_filing_status_verified: bool | None = None
+    satisfaction_filing_evidence_ref: str | None = Field(default=None, max_length=2000)
+
+
+class CompanyChargeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    company_id: uuid.UUID
+    creation_date: date
+    charge_type: str
+    amount_bdt: Decimal
+    charge_holder: str
+    charge_reference: str | None
+    form_xviii_filed: bool | None
+    form_xviii_filed_date: date | None
+    registrable_under_s159: bool | None
+    satisfied: bool | None
+    satisfaction_date: date | None
+    satisfaction_filed: bool | None
+    satisfaction_filed_date: date | None
+    creation_date_verified: bool
+    form_xviii_filing_status_verified: bool
+    registrability_verified: bool
+    satisfaction_verified: bool
+    satisfaction_filing_status_verified: bool
+    creation_date_evidence_ref: str | None
+    creation_date_verified_at: datetime | None
+    creation_date_verified_by: uuid.UUID | None
+    form_xviii_filing_evidence_ref: str | None
+    form_xviii_verified_at: datetime | None
+    form_xviii_verified_by: uuid.UUID | None
+    registrability_evidence_ref: str | None
+    registrability_verified_at: datetime | None
+    registrability_verified_by: uuid.UUID | None
+    satisfaction_evidence_ref: str | None
+    satisfaction_verified_at: datetime | None
+    satisfaction_verified_by: uuid.UUID | None
+    satisfaction_filing_evidence_ref: str | None
+    satisfaction_filing_verified_at: datetime | None
+    satisfaction_filing_verified_by: uuid.UUID | None
 
 
 class FlagResolveRequest(BaseModel):
@@ -202,7 +306,7 @@ class MessageResponse(BaseModel):
 
 
 def _flag_to_response(flag) -> FlagResponse:
-    approved = LEGAL_SCORE_RELEASED and flag.rule_id in VERIFIED_RULE_IDS
+    approved = _legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS
     severity = getattr(flag.severity, "value", flag.severity)
     return FlagResponse(
         flag_id=str(flag.id),
@@ -229,7 +333,7 @@ def _flag_to_response(flag) -> FlagResponse:
 
 def _score_history_to_response(item: dict) -> ScoreHistoryEntry:
     source_band = getattr(item["risk_band"], "value", item["risk_band"])
-    released = LEGAL_SCORE_RELEASED and source_band != "NOT_EVALUATED"
+    released = _legal_score_is_released() and source_band != "NOT_EVALUATED"
     return ScoreHistoryEntry(
         snapshot_month=item["month"],
         score=item["score"] if released else None,
@@ -247,7 +351,7 @@ async def _financial_access_ids(
     current_user: User,
     company_ids: list[uuid.UUID],
 ) -> set[uuid.UUID]:
-    if current_user.role in (UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRole.LEGAL_STAFF):
+    if current_user.role in (UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF):
         return set(company_ids)
     if not company_ids:
         return set()
@@ -279,10 +383,10 @@ def _company_to_response(company, *, can_view_financials: bool = True) -> Compan
         return str(val.value if hasattr(val, "value") else val)
 
     risk_band = _s(company.current_risk_band)
-    if not LEGAL_SCORE_RELEASED:
+    if not _legal_score_is_released():
         risk_band = "NOT_EVALUATED"
     compliance_score = (
-        None if (not LEGAL_SCORE_RELEASED or risk_band == "NOT_EVALUATED")
+        None if (not _legal_score_is_released() or risk_band == "NOT_EVALUATED")
         else company.current_compliance_score
     )
 
@@ -298,7 +402,7 @@ def _company_to_response(company, *, can_view_financials: bool = True) -> Compan
             if getattr(company, "last_evaluated_at", None) else None
         ),
         director_count=director_count,
-        violation_count=violation_count if LEGAL_SCORE_RELEASED else 0,
+        violation_count=violation_count if _legal_score_is_released() else 0,
         company_type=_s(getattr(company, "company_type", None)),
         company_status=_s(getattr(company, "company_status", None)),
         financial_year_end=company.financial_year_end.isoformat() if getattr(company, "financial_year_end", None) else None,
@@ -307,10 +411,10 @@ def _company_to_response(company, *, can_view_financials: bool = True) -> Compan
         is_fdi_registered=getattr(company, "is_fdi_registered", None),
         is_dormant=getattr(company, "is_dormant", None),
         created_at=company.created_at.isoformat() if getattr(company, "created_at", None) else None,
-        active_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE")]) if LEGAL_SCORE_RELEASED else 0),
-        black_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("BLACK", "Severity.BLACK")]) if LEGAL_SCORE_RELEASED else 0),
-        red_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("RED", "Severity.RED")]) if LEGAL_SCORE_RELEASED else 0),
-        yellow_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("YELLOW", "Severity.YELLOW")]) if LEGAL_SCORE_RELEASED else 0),
+        active_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE")]) if _legal_score_is_released() else 0),
+        black_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("BLACK", "Severity.BLACK")]) if _legal_score_is_released() else 0),
+        red_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("RED", "Severity.RED")]) if _legal_score_is_released() else 0),
+        yellow_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("YELLOW", "Severity.YELLOW")]) if _legal_score_is_released() else 0),
         is_manufacturing=getattr(company, "is_manufacturing", None),
         tax_return_filed_for_current_fy=(
             getattr(company, "tax_return_filed_for_current_fy", None)
@@ -331,7 +435,7 @@ async def create_company(body: CompanyCreateRequest, request: Request, current_u
     activity = ActivityService(db)
     existing = await svc.get_by_registration_number(body.registration_number)
     if existing:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Company with registration number already exists.")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Company with registration number already exists.")
     company = await svc.create_company(
         company_name=body.company_name, registration_number=body.registration_number,
         incorporation_date=body.incorporation_date, registered_address=body.registered_address,
@@ -366,7 +470,7 @@ async def list_companies(search: str | None = Query(None), risk_band: RiskBand |
         )
     companies, _total = await svc.list_companies(
         search=search,
-        risk_band=risk_band if LEGAL_SCORE_RELEASED else None,
+        risk_band=risk_band if _legal_score_is_released() else None,
         company_status=company_status,
         revenue_tier=revenue_tier,
         is_dormant=is_dormant,
@@ -375,10 +479,11 @@ async def list_companies(search: str | None = Query(None), risk_band: RiskBand |
         user_id=(
             None
             if current_user.role in (
-                UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRole.LEGAL_STAFF
+                UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF
             )
             else current_user.id
         ),
+        include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF,
     )
     financial_ids = await _financial_access_ids(
         db, current_user, [company.id for company in companies]
@@ -433,7 +538,7 @@ async def delete_company(company_id: uuid.UUID, request: Request, current_user: 
     company = await svc.get_by_id_or_404(company_id)
     await svc.soft_delete(company_id)
     await activity.log(action="COMPANY_DELETED", resource_type="company", resource_id=str(company_id), description=f"Company soft-deleted: {company.company_name}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
-    return MessageResponse(message=f"Company deactivated.")
+    return MessageResponse(message="Company deactivated.")
 
 
 @router.post("/{company_id}/evaluate", response_model=ComplianceSummaryResponse, dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_company_access("company_id"))], summary="Trigger compliance evaluation")
@@ -447,23 +552,23 @@ async def evaluate_company(company_id: uuid.UUID, request: Request, current_user
     await db.refresh(company)
     await activity.log(action="COMPLIANCE_EVALUATED", resource_type="company", resource_id=str(company_id), description=f"Evaluation: Score={result['score']}, Band={result['risk_band']}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     flag_summary = await compliance_svc.get_flag_summary(company_id)
-    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=result["score"] if LEGAL_SCORE_RELEASED else None, pre_override_score=result.get("raw_total") if LEGAL_SCORE_RELEASED else None, risk_band=result["risk_band"] if LEGAL_SCORE_RELEASED else "NOT_EVALUATED", active_flags=flag_summary.get("total_active", 0) if LEGAL_SCORE_RELEASED else 0, black_flags=flag_summary.get("black", 0) if LEGAL_SCORE_RELEASED else 0, red_flags=flag_summary.get("red", 0) if LEGAL_SCORE_RELEASED else 0, yellow_flags=flag_summary.get("yellow", 0) if LEGAL_SCORE_RELEASED else 0, last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, evaluation_triggered=True, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
+    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=result["score"] if _legal_score_is_released() else None, pre_override_score=result.get("raw_total") if _legal_score_is_released() else None, risk_band=result["risk_band"] if _legal_score_is_released() else "NOT_EVALUATED", active_flags=flag_summary.get("total_active", 0) if _legal_score_is_released() else 0, black_flags=flag_summary.get("black", 0) if _legal_score_is_released() else 0, red_flags=flag_summary.get("red", 0) if _legal_score_is_released() else 0, yellow_flags=flag_summary.get("yellow", 0) if _legal_score_is_released() else 0, last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, evaluation_triggered=True, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
 
 
-@router.get("/{company_id}/compliance", response_model=ComplianceSummaryResponse, dependencies=[Depends(require_company_access("company_id"))], summary="Get compliance state")
+@router.get("/{company_id}/compliance", response_model=ComplianceSummaryResponse, dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))], summary="Get compliance state")
 async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_db_for_user)):
     company_svc = CompanyService(db)
     compliance_svc = ComplianceService(db)
     company = await company_svc.get_by_id_or_404(company_id)
     flag_summary = await compliance_svc.get_flag_summary(company_id)
     risk_band = getattr(company.current_risk_band, "value", company.current_risk_band)
-    if not LEGAL_SCORE_RELEASED:
+    if not _legal_score_is_released():
         risk_band = "NOT_EVALUATED"
-    current_score = None if (not LEGAL_SCORE_RELEASED or risk_band == "NOT_EVALUATED") else company.current_compliance_score
-    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=current_score, pre_override_score=None, risk_band=risk_band, active_flags=flag_summary.get("total_active", 0), pending_review_flags=flag_summary.get("pending_review", 0), black_flags=flag_summary.get("black", 0) if LEGAL_SCORE_RELEASED else 0, red_flags=flag_summary.get("red", 0) if LEGAL_SCORE_RELEASED else 0, yellow_flags=flag_summary.get("yellow", 0) if LEGAL_SCORE_RELEASED else 0, last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
+    current_score = None if (not _legal_score_is_released() or risk_band == "NOT_EVALUATED") else company.current_compliance_score
+    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=current_score, pre_override_score=None, risk_band=risk_band, active_flags=flag_summary.get("total_active", 0), pending_review_flags=flag_summary.get("pending_review", 0), black_flags=flag_summary.get("black", 0) if _legal_score_is_released() else 0, red_flags=flag_summary.get("red", 0) if _legal_score_is_released() else 0, yellow_flags=flag_summary.get("yellow", 0) if _legal_score_is_released() else 0, last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
 
 
-@router.get("/{company_id}/flags", response_model=list[FlagResponse], dependencies=[Depends(require_company_access("company_id"))], summary="Get active flags")
+@router.get("/{company_id}/flags", response_model=list[FlagResponse], dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))], summary="Get active flags")
 async def get_flags(company_id: uuid.UUID, db: AsyncSession = Depends(get_db_for_user)):
     svc = ComplianceService(db)
     flags = await svc.get_active_flags(company_id)
@@ -478,28 +583,28 @@ async def resolve_flag(company_id: uuid.UUID, flag_id: uuid.UUID, body: FlagReso
     if not flag:
         raise HTTPException(status_code=404, detail="Flag not found.")
     await activity.log(action="FLAG_RESOLVED", resource_type="compliance_flag", resource_id=str(flag_id), description=f"Flag {flag.rule_id} resolved", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
-    return MessageResponse(message=f"Flag resolved.")
+    return MessageResponse(message="Flag resolved.")
 
 
-@router.post("/{company_id}/flags/{flag_id}/acknowledge", response_model=MessageResponse, dependencies=[Depends(require_company_access("company_id"))], summary="Acknowledge flag")
+@router.post("/{company_id}/flags/{flag_id}/acknowledge", response_model=MessageResponse, dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))], summary="Acknowledge flag")
 async def acknowledge_flag(company_id: uuid.UUID, flag_id: uuid.UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     svc = ComplianceService(db)
     flag = await svc.acknowledge_flag(flag_id=flag_id, acknowledged_by=current_user.id)
     if not flag:
         raise HTTPException(status_code=404, detail="Flag not found.")
-    return MessageResponse(message=f"Flag acknowledged.")
+    return MessageResponse(message="Flag acknowledged.")
 
 
 @router.get(
     "/{company_id}/compliance-pdf",
-    dependencies=[Depends(require_company_access("company_id"))],
+    dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))],
     summary="Download Branded PDF Compliance Report"
 )
 async def download_compliance_pdf(company_id: uuid.UUID, db: AsyncSession = Depends(get_db_for_user)):
     pdf_svc = PDFReportService(db)
     return await pdf_svc.generate_company_compliance_pdf(str(company_id))
 
-@router.get("/{company_id}/score-history", response_model=list[ScoreHistoryEntry], dependencies=[Depends(require_company_access("company_id"))], summary="Score history")
+@router.get("/{company_id}/score-history", response_model=list[ScoreHistoryEntry], dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))], summary="Score history")
 async def get_score_history(company_id: uuid.UUID, months: int = Query(default=12, ge=1, le=60), db: AsyncSession = Depends(get_db_for_user)):
     svc = ComplianceService(db)
     history = await svc.get_score_history(company_id=company_id, months=months)
@@ -517,7 +622,7 @@ async def get_dashboard_kpis(current_user: User = Depends(get_current_user), db:
 async def get_upcoming_deadlines(days_ahead: int = Query(default=30, ge=7, le=90), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     _require_legal_dashboard_release(deadlines=True)
     svc = CompanyService(db)
-    return await svc.get_upcoming_deadlines(days_ahead=days_ahead, user_id=current_user.id)
+    return await svc.get_upcoming_deadlines(days_ahead=days_ahead, user_id=current_user.id, include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF)
 
 
 @router.get("/dashboard/risk", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Risk distribution")
@@ -525,3 +630,191 @@ async def get_risk_distribution(current_user: User = Depends(get_current_user), 
     _require_legal_dashboard_release()
     svc = CompanyService(db)
     return await svc.get_risk_distribution(user_id=current_user.id)
+
+@router.get(
+    "/{company_id}/charges",
+    response_model=list[CompanyChargeResponse],
+    dependencies=[Depends(require_company_access("company_id"))],
+    summary="List company charge records",
+)
+async def list_company_charges(
+    company_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    financial_access = await _financial_access_ids(db, current_user, [company_id])
+    if company_id not in financial_access:
+        raise HTTPException(status_code=403, detail="Financial-data access is required to view charge records.")
+    result = await db.execute(
+        select(CompanyCharge)
+        .where(CompanyCharge.company_id == company_id, CompanyCharge.is_active.is_(True))
+        .order_by(CompanyCharge.creation_date.desc(), CompanyCharge.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+@router.post(
+    "/{company_id}/charges",
+    response_model=CompanyChargeResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")),
+        Depends(require_company_access("company_id")),
+    ],
+    summary="Record a reported company charge",
+)
+async def create_company_charge(
+    company_id: uuid.UUID,
+    body: CompanyChargeCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    company = await db.get(Company, company_id)
+    if company is None:
+        raise HTTPException(status_code=404, detail="Company not found.")
+    charge = CompanyCharge(company_id=company_id, **body.model_dump())
+    db.add(charge)
+    try:
+        await db.flush()
+    except IntegrityError as exc:
+        await db.rollback()
+        if "uq_company_charge_reference" in str(exc.orig):
+            raise HTTPException(
+                status_code=409,
+                detail="A charge with this reference already exists for the company.",
+            ) from exc
+        raise
+    await ActivityService(db).log(
+        actor_user_id=current_user.id,
+        company_id=company_id,
+        action="COMPANY_CHARGE_RECORDED",
+        resource_type="company_charge",
+        resource_id=charge.id,
+        description="A reported mortgage/charge record was added; legal facts remain unverified.",
+        detail={"evidence_state": "UNVERIFIED"},
+    )
+    await db.refresh(charge)
+    return charge
+
+
+@router.patch(
+    "/{company_id}/charges/{charge_id}/verify",
+    response_model=CompanyChargeResponse,
+    dependencies=[
+        Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")),
+        Depends(require_company_access("company_id")),
+    ],
+    summary="Verify charge facts against documentary evidence",
+)
+async def verify_company_charge(
+    company_id: uuid.UUID,
+    charge_id: uuid.UUID,
+    body: CompanyChargeVerificationRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    result = await db.execute(
+        select(CompanyCharge).where(
+            CompanyCharge.id == charge_id,
+            CompanyCharge.company_id == company_id,
+            CompanyCharge.is_active.is_(True),
+        )
+    )
+    charge = result.scalar_one_or_none()
+    if charge is None:
+        raise HTTPException(status_code=404, detail="Charge record not found.")
+
+    updates = body.model_dump(exclude_unset=True)
+    if not updates:
+        raise HTTPException(status_code=400, detail="At least one charge fact or verification field is required.")
+    verification_groups = (
+        ("creation_date_verified", "creation_date_evidence_ref", "creation_date_verified_at", "creation_date_verified_by", ("creation_date",)),
+        ("form_xviii_filing_status_verified", "form_xviii_filing_evidence_ref", "form_xviii_verified_at", "form_xviii_verified_by", ("form_xviii_filed",)),
+        ("registrability_verified", "registrability_evidence_ref", "registrability_verified_at", "registrability_verified_by", ("registrable_under_s159",)),
+        ("satisfaction_verified", "satisfaction_evidence_ref", "satisfaction_verified_at", "satisfaction_verified_by", ("satisfied",)),
+        ("satisfaction_filing_status_verified", "satisfaction_filing_evidence_ref", "satisfaction_filing_verified_at", "satisfaction_filing_verified_by", ("satisfaction_filed",)),
+    )
+    for verified_field, evidence_field, verified_at_field, verified_by_field, required_facts in verification_groups:
+        group_fields = {evidence_field, *required_facts}
+        if verified_field == "form_xviii_filing_status_verified":
+            group_fields.add("form_xviii_filed_date")
+        elif verified_field == "satisfaction_verified":
+            group_fields.add("satisfaction_date")
+        elif verified_field == "satisfaction_filing_status_verified":
+            group_fields.add("satisfaction_filed_date")
+        if verified_field in updates and updates[verified_field] is None:
+            raise HTTPException(status_code=422, detail=f"{verified_field} cannot be null.")
+        if (
+            getattr(charge, verified_field) is True
+            and any(field in updates for field in group_fields)
+            and verified_field not in updates
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=f"Changing {verified_field} facts requires explicit re-verification or setting the verified state to false.",
+            )
+        changed_fact_fields = set(required_facts)
+        if verified_field == "form_xviii_filing_status_verified":
+            changed_fact_fields.add("form_xviii_filed_date")
+        elif verified_field == "satisfaction_verified":
+            changed_fact_fields.add("satisfaction_date")
+        elif verified_field == "satisfaction_filing_status_verified":
+            changed_fact_fields.add("satisfaction_filed_date")
+        if (
+            getattr(charge, verified_field) is True
+            and updates.get(verified_field) is True
+            and any(field in updates for field in changed_fact_fields)
+            and evidence_field not in updates
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=f"Changing verified {verified_field} facts requires a new evidence reference.",
+            )
+        if updates.get(verified_field) is False:
+            # A revoked verification must also revoke its provenance. A later
+            # re-verification must attach a new evidence reference.
+            updates[evidence_field] = None
+            updates[verified_at_field] = None
+            updates[verified_by_field] = None
+        if updates.get(verified_field) is True:
+            evidence_ref = updates.get(evidence_field, getattr(charge, evidence_field))
+            if not evidence_ref or any(
+                updates.get(fact, getattr(charge, fact)) is None for fact in required_facts
+            ):
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"{verified_field} requires its fact value and documentary evidence reference.",
+                )
+            if verified_field == "form_xviii_filing_status_verified" and updates.get("form_xviii_filed", charge.form_xviii_filed) is True and updates.get("form_xviii_filed_date", charge.form_xviii_filed_date) is None:
+                raise HTTPException(status_code=422, detail="A filed Form XVIII requires its filing date.")
+            if verified_field == "satisfaction_verified" and updates.get("satisfied", charge.satisfied) is True and updates.get("satisfaction_date", charge.satisfaction_date) is None:
+                raise HTTPException(status_code=422, detail="A satisfied charge requires its satisfaction date.")
+            if verified_field == "satisfaction_filing_status_verified" and updates.get("satisfaction_filed", charge.satisfaction_filed) is True and updates.get("satisfaction_filed_date", charge.satisfaction_filed_date) is None:
+                raise HTTPException(status_code=422, detail="A filed Form XXVIII requires its filing date.")
+            updates[verified_at_field] = datetime.now(UTC)
+            updates[verified_by_field] = current_user.id
+
+    for field_name, value in updates.items():
+        setattr(charge, field_name, value)
+    await db.flush()
+    await ActivityService(db).log(
+        actor_user_id=current_user.id,
+        company_id=company_id,
+        action="COMPANY_CHARGE_EVIDENCE_VERIFIED",
+        resource_type="company_charge",
+        resource_id=charge.id,
+        description="Charge facts were updated by an authorised legal reviewer.",
+        detail={"changed_fields": sorted(updates), "verified_groups": [
+            field for field in (
+                "creation_date_verified",
+                "form_xviii_filing_status_verified",
+                "registrability_verified",
+                "satisfaction_verified",
+                "satisfaction_filing_status_verified",
+            ) if updates.get(field) is True
+        ]},
+    )
+    await db.refresh(charge)
+    return charge
+
+    return await svc.get_risk_distribution(user_id=current_user.id, include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF)

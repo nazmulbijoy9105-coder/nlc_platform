@@ -157,6 +157,10 @@ def upgrade() -> None:
             -- must never be members of another role. Only trusted database
             -- administrators with SUPERUSER or BYPASSRLS may hold memberships
             -- in these restricted roles.
+            -- NOINHERIT does not prevent SET ROLE. The application and CI
+            -- audit roles connect directly and must have no membership edges
+            -- in either direction. Privileged administrators do not need to
+            -- assume these runtime identities through role membership.
             IF EXISTS (
                 SELECT 1
                   FROM pg_auth_members membership

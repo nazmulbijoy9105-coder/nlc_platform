@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from app.models.infrastructure import UserActivityLog
 
 from app.models.enums import NotificationChannel, NotificationStatus
-from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
+from app.rule_engine.engine import VERIFIED_RULE_IDS, legal_score_is_released
 from app.models.infrastructure import Notification
 from app.services.base import BaseService
 
@@ -58,7 +58,7 @@ def is_notification_eligible(
     if not normalized_type or related_flag_id is not None:
         return False
     if is_rule_notification_type(normalized_type):
-        return LEGAL_SCORE_RELEASED and normalized_type in VERIFIED_RULE_IDS
+        return legal_score_is_released() and normalized_type in VERIFIED_RULE_IDS
     if normalized_type in GENERIC_LEGAL_ALERT_TYPES:
         return False
     legal_tokens = (
@@ -136,9 +136,9 @@ class NotificationService(BaseService[Notification]):
         # A provisional RED/BLACK engine label is not an authorised legal
         # alert. Do not notify customers until the statutory score release
         # gate is open and the rule is in the internally source-checked set.
-        from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS, RuleState
+        from app.rule_engine.engine import VERIFIED_RULE_IDS, RuleState, legal_score_is_released
 
-        if not LEGAL_SCORE_RELEASED:
+        if not legal_score_is_released():
             return
 
         for flag in flags:
@@ -353,7 +353,7 @@ class NotificationService(BaseService[Notification]):
                 operational_prefix,
             ),
         )
-        if LEGAL_SCORE_RELEASED:
+        if legal_score_is_released():
             eligible_rule = and_(
                 rule_id_type,
                 Notification.notification_type.in_(VERIFIED_RULE_IDS),
