@@ -166,13 +166,28 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "INC-005": {
         "rule_id": "INC-005",
         "legal_domain": "Corporate",
-        "law": "Section 150, Companies Act 1994; BIDA Foreign Investment Guidelines",
-        "requirement": "Encashment Certificate Missing — Foreign Shareholding - Foreign shareholding detected but Encashment Certificate from AD bank not uploaded. Required under BIDA guidelines. CONDITIONAL: Only applies if has_foreign_shareholder == True.",
-        "provision": "TBD",
+        "law": (
+            "GFET-2018 Vol.1, Chapter 9, paragraph 2(A); FE Circular No.10 "
+            "(21 June 2023); FEID Circular No.01 (27 January 2025); "
+            "subsequent applicable circulars require independent verification"
+        ),
+        "requirement": (
+            "Foreign-shareholding remittance and encashment evidence review. "
+            "Only applicable where a foreign shareholder is verified. Determine "
+            "whether an AD-bank encashment certificate or permitted foreign-currency "
+            "account evidence is required under the operative circular version. "
+            "Missing NLC evidence is not proof of statutory breach."
+        ),
+        "provision": "TBD — operative circular paragraph/version requires legal reconciliation",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
-        "evidence_required": ["DOCUMENTARY_EVIDENCE"],
+        "evidence_required": [
+            "INC-005:SUBSCRIPTION_OR_ALLOTMENT_RECORD",
+            "INC-005:AD_BANK_ENCASHMENT_CERTIFICATE_OR_PERMITTED_FC_ACCOUNT_EVIDENCE",
+            "INC-005:REMITTANCE_IDENTITY_AND_BANK_PROVENANCE",
+            "INC-005:CURRENT_BANGLADESH_BANK_CIRCULAR_VERSION",
+        ],
         "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
         "severity": "NOT_EVALUATED",
         "score_impact": 0,
