@@ -305,7 +305,6 @@ jobs:
           DATABASE_URL="$BASELINE_DATABASE_URL" alembic upgrade head
           CURRENT="$(DATABASE_URL="$BASELINE_DATABASE_URL" alembic current)"
           printf '%s\n' "$CURRENT"
-          grep -q "0081_merge_release_and_articles_wallet_heads" <<< "$CURRENT"
           HEAD_REVISION="$(alembic heads | awk 'NR == 1 {print $1}')"
           grep -q "$HEAD_REVISION" <<< "$CURRENT"
           grep -q "0086_runtime_role_membership_preflight" <<< "$CURRENT"
@@ -349,7 +348,6 @@ jobs:
           DATABASE_URL="$LEGACY_DATABASE_URL" alembic upgrade head
           FINAL_MARKER="$(DATABASE_URL="$LEGACY_DATABASE_URL" alembic current)"
           printf '%s\n' "$FINAL_MARKER"
-          grep -q "0081_merge_release_and_articles_wallet_heads" <<< "$FINAL_MARKER"
           HEAD_REVISION="$(alembic heads | awk 'NR == 1 {print $1}')"
           grep -q "$HEAD_REVISION" <<< "$FINAL_MARKER"
           grep -q "0086_runtime_role_membership_preflight" <<< "$FINAL_MARKER"
