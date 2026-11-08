@@ -279,10 +279,12 @@ jobs:
           DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
           DATABASE_URL="$SECOND_DATABASE_URL" alembic current
 
-          # Verify a failed downgrade leaves the database at exactly the same revision.
+          # Move to the revision immediately after the forward-only legal-evidence
+          # migration. The guard must reject crossing 0076 without deleting evidence.
+          DATABASE_URL="$SECOND_DATABASE_URL" alembic downgrade 0076_company_charge_evidence
           BEFORE_DOWNGRADE="$(DATABASE_URL="$SECOND_DATABASE_URL" alembic current)"
-          if DATABASE_URL="$SECOND_DATABASE_URL" alembic downgrade 0073_payment_allocations_append_only; then
-            echo "ERROR: forward-only quarantine migration unexpectedly downgraded"
+          if DATABASE_URL="$SECOND_DATABASE_URL" alembic downgrade 0075_director_transfer_evidence; then
+            echo "ERROR: forward-only legal-evidence migration unexpectedly downgraded"
             exit 1
           fi
           AFTER_DOWNGRADE="$(DATABASE_URL="$SECOND_DATABASE_URL" alembic current)"
