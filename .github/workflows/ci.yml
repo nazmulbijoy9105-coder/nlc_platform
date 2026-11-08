@@ -81,7 +81,7 @@ jobs:
             app/api/filings.py app/models/filings.py app/models/people.py \
             app/models/company.py app/models/__init__.py app/rule_engine/engine.py \
             app/services/filing_service.py \
-            alembic/versions/0084_install_legal_rule_version_guard.py \
+            alembic/versions/0085_task_completion_note.py \
             alembic/versions/0082_agm_share_event_provenance.py
 
       - name: Type-check scoring release services
@@ -283,7 +283,7 @@ jobs:
           DATABASE_URL="$BASELINE_DATABASE_URL" alembic upgrade head
           CURRENT="$(DATABASE_URL="$BASELINE_DATABASE_URL" alembic current)"
           printf '%s\n' "$CURRENT"
-          grep -q "0084_install_legal_rule_version_guard" <<< "$CURRENT"
+          grep -q "0085_task_completion_note" <<< "$CURRENT"
 
           # Export the resulting schema snapshot for independent review.
           pg_dump -h localhost -U nlc_test \
@@ -324,7 +324,7 @@ jobs:
           DATABASE_URL="$LEGACY_DATABASE_URL" alembic upgrade head
           FINAL_MARKER="$(DATABASE_URL="$LEGACY_DATABASE_URL" alembic current)"
           printf '%s\n' "$FINAL_MARKER"
-          grep -q "0084_install_legal_rule_version_guard" <<< "$FINAL_MARKER"
+          grep -q "0085_task_completion_note" <<< "$FINAL_MARKER"
 
       - name: Upload isolated migration rehearsal schema
         uses: actions/upload-artifact@v4
