@@ -34,7 +34,7 @@ from sqlalchemy import (
     pool,
     text,
 )
-from sqlalchemy.engine import Connection, make_url
+from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 
@@ -323,6 +323,10 @@ async def run_async_migrations() -> None:
     is_render = is_render_runtime(os.environ)
     environment = os.environ.get("ENVIRONMENT", "").strip().lower()
     require_tls = is_render or environment in {"prod", "production"}
+
+    # Keep Alembic's connection policy identical to the API's policy:
+    # normalize asyncpg-incompatible libpq URL parameters and pass a verified
+    # SSLContext explicitly. Render and production must never connect in cleartext.
     db_url, ssl_context = normalize_asyncpg_url(
         get_database_url(),
         require_tls=require_tls,
