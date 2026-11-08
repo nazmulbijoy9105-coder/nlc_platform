@@ -268,7 +268,7 @@ class ShareComplianceEvent(FullMixin, Base):
     )
     event_type: Mapped[str] = mapped_column(String(32), nullable=False)
     event_date: Mapped[date] = mapped_column(Date, nullable=False)
-    event_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    event_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     event_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     event_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     event_verified_by: Mapped[uuid.UUID | None] = mapped_column(
@@ -277,7 +277,7 @@ class ShareComplianceEvent(FullMixin, Base):
 
     filing_form: Mapped[str | None] = mapped_column(String(16), nullable=True)
     filing_status: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    filing_status_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    filing_status_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     filing_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     filing_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     filing_verified_by: Mapped[uuid.UUID | None] = mapped_column(
@@ -286,7 +286,7 @@ class ShareComplianceEvent(FullMixin, Base):
     filing_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     certificate_issued: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    certificate_status_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    certificate_status_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     certificate_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     certificate_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     certificate_verified_by: Mapped[uuid.UUID | None] = mapped_column(
