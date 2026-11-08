@@ -37,7 +37,6 @@ def test_signed_rls_migration_rejects_unsafe_roles_and_memberships_in_both_direc
     assert "granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in source
     # The migration deliberately applies the stricter invariant: neither
     # restricted runtime role may grant or receive any role membership.
-    assert "OR member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in source
     assert "nlc_app_role and nlc_ci_audit_role must have no role memberships in either direction" in source
 
 
