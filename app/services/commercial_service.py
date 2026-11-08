@@ -14,11 +14,17 @@ from __future__ import annotations
 
 from datetime import UTC, date, timedelta
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import func, select, text
 
-from app.models.commercial import Engagement, Quotation, Task
+from app.models.commercial import (
+    Engagement,
+    InvalidEngagementTransitionError,
+    Quotation,
+    Task,
+    validate_engagement_transition,
+)
 from app.models.enums import (
     EngagementStatus,
     TaskPriority,
@@ -50,6 +56,19 @@ class EngagementService(BaseService[Engagement]):
         rows = [dict(r) for r in result.mappings().all()]
 
         # Structure by revenue tier
+        pipeline: dict[str, dict[str, Any]] = {
+            tier: {
+                "stages": {},
+                "total_estimated": Decimal("0.00"),
+                "total_confirmed": Decimal("0.00"),
+                "total_invoiced": Decimal("0.00"),
+                "total_collected": Decimal("0.00"),
+            }
+            for tier in (
+                "COMPLIANCE_PACKAGE",
+                "STRUCTURED_REGULARIZATION",
+                "CORPORATE_RESCUE",
+            )
         pipeline = {
             "COMPLIANCE_PACKAGE":        {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_collected": Decimal('0.00')},
             "STRUCTURED_REGULARIZATION": {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_collected": Decimal('0.00')},
@@ -67,6 +86,10 @@ class EngagementService(BaseService[Engagement]):
                     "invoiced_bdt":   Decimal(str(row.get("total_invoiced_bdt") or 0)),
                     "collected_bdt":  Decimal(str(row.get("total_collected_bdt") or 0)),
                 }
+                pipeline[tier]["total_estimated"] += Decimal(str(row.get("total_estimated_bdt") or 0))
+                pipeline[tier]["total_confirmed"] += Decimal(str(row.get("total_confirmed_bdt") or 0))
+                pipeline[tier]["total_invoiced"] += Decimal(str(row.get("total_invoiced_bdt") or 0))
+                pipeline[tier]["total_collected"] += Decimal(str(row.get("total_collected_bdt") or 0))
                 pipeline[tier]["total_estimated"] += Decimal(str(row.get("total_estimated_bdt") or 0))  # type: ignore
                 pipeline[tier]["total_confirmed"]  += Decimal(str(row.get("total_confirmed_bdt") or 0))  # type: ignore
                 pipeline[tier]["total_collected"]  += Decimal(str(row.get("total_collected_bdt") or 0))  # type: ignore
@@ -80,6 +103,9 @@ class EngagementService(BaseService[Engagement]):
             "by_tier": pipeline,
             "grand_total_estimated_bdt": grand_total_estimated,
             "grand_total_confirmed_bdt": grand_total_confirmed,
+            "grand_total_invoiced_bdt": grand_total_invoiced,
+            "grand_total_collected_bdt": grand_total_collected,
+            # Engagement aggregates are not independently verified receipts.
             "grand_total_collected_bdt": grand_total_collected,
             # These are manually recorded engagement aggregates, not receipts
             # reconciled against a payment ledger or bank/gateway settlement.
@@ -132,6 +158,40 @@ class EngagementService(BaseService[Engagement]):
         fee_bdt: Decimal | None = None,
         note: str | None = None,
     ) -> Engagement | None:
+        """Advance an engagement only through the canonical lifecycle."""
+        result = await self.db.execute(
+            select(Engagement)
+            .where(Engagement.id == engagement_id, Engagement.is_active.is_(True))
+            .with_for_update()
+        )
+        engagement = result.scalar_one_or_none()
+        if engagement is None:
+            return None
+
+        if not validate_engagement_transition(engagement.engagement_status, new_status):
+            raise InvalidEngagementTransitionError(
+                str(engagement.engagement_status), str(new_status)
+            )
+
+        if new_status == EngagementStatus.QUOTED:
+            quotation_count = await self.db.execute(
+                select(func.count())
+                .select_from(Quotation)
+                .where(
+                    Quotation.engagement_id == engagement_id,
+                    Quotation.status.in_({"DRAFT", "SENT"}),
+                )
+            )
+            if quotation_count.scalar_one() < 1:
+                raise CommercialConflictError(
+                    "An issued quotation is required before moving an engagement to QUOTED."
+                )
+
+        if new_status == EngagementStatus.CONFIRMED:
+            accepted_count = await self.db.execute(
+                select(func.count())
+                .select_from(Quotation)
+                .where(
         """Advance engagement through the pipeline stages."""
         engagement_result = await self.db.execute(
             select(Engagement)
@@ -160,18 +220,27 @@ class EngagementService(BaseService[Engagement]):
                     Quotation.status == "ACCEPTED",
                 )
             )
+            if accepted_count.scalar_one() < 1:
+                raise CommercialConflictError(
+                    "An accepted quotation is required before confirming an engagement."
+                )
+
             if accepted_result.scalar_one() < 1:
                 raise CommercialConflictError("An accepted quotation is required before confirmation")
         updates: dict = {"engagement_status": new_status}
         status_date_map = {
-            EngagementStatus.QUOTED:      "quoted_date",
-            EngagementStatus.CONFIRMED:   "confirmed_date",
+            EngagementStatus.QUOTED: "quoted_date",
+            EngagementStatus.CONFIRMED: "confirmed_date",
             EngagementStatus.IN_PROGRESS: "started_date",
-            EngagementStatus.COMPLETED:   "completed_date",
+            EngagementStatus.COMPLETED: "completed_date",
         }
         if new_status in status_date_map:
             updates[status_date_map[new_status]] = date.today()
         if note:
+            existing_notes = engagement.notes or ""
+            updates["notes"] = (
+                f"{existing_notes}\n[{date.today().isoformat()}] {note}"
+            ).strip()
             existing_notes = eng.notes or ""
             updates["notes"] = f"{existing_notes}\n[{date.today().isoformat()}] {note}".strip()
         if fee_bdt is not None:
@@ -179,7 +248,8 @@ class EngagementService(BaseService[Engagement]):
                 updates["quoted_fee_bdt"] = fee_bdt
             elif new_status == EngagementStatus.CONFIRMED:
                 updates["confirmed_fee_bdt"] = fee_bdt
-        return await self.update_instance(eng, **updates)
+
+        return await self.update_instance(engagement, **updates)
 
     async def get_for_company(self, company_id: uuid.UUID) -> list[Engagement]:
         """Get all engagements for a company."""
@@ -215,23 +285,39 @@ class QuotationService(BaseService[Quotation]):
         valid_days: int = 30,
         notes: str | None = None,
     ) -> Quotation:
+        """Create a company-bound quotation using exact decimal arithmetic."""
         """Create a quotation for an engagement owned by the specified company."""
         engagement_result = await self.db.execute(
             select(Engagement)
             .where(
                 Engagement.id == engagement_id,
                 Engagement.company_id == company_id,
+                Engagement.is_active.is_(True),
             )
             .with_for_update()
         )
         engagement = engagement_result.scalar_one_or_none()
         if engagement is None:
+            raise ValueError(
+                "Engagement does not belong to the supplied company or is inactive."
+            )
             raise ValueError("Engagement not found for the specified company")
         if engagement.engagement_status not in {
             EngagementStatus.IDENTIFIED,
             EngagementStatus.QUOTED,
         }:
             raise CommercialConflictError(
+                "A quotation can only be created for an identified or quoted engagement."
+            )
+        if not 7 <= valid_days <= 90:
+            raise ValueError("Quotation validity must be between 7 and 90 days.")
+
+        professional_fee = Decimal(str(professional_fee_bdt)).quantize(Decimal("0.01"))
+        government_fee = Decimal(str(government_fee_bdt)).quantize(Decimal("0.01"))
+        vat_amount = Decimal(str(vat_bdt)).quantize(Decimal("0.01"))
+        if professional_fee <= 0 or government_fee < 0 or vat_amount < 0:
+            raise ValueError("Quotation fees must be positive or zero as applicable.")
+        total_bdt = professional_fee + government_fee + vat_amount
                 f"Cannot issue a quotation while engagement is {engagement.engagement_status}"
             )
         professional_fee_bdt = professional_fee_bdt.quantize(Decimal("0.01"))
@@ -254,6 +340,8 @@ class QuotationService(BaseService[Quotation]):
             line_items=line_items,
             notes=notes,
         )
+        await self.db.flush()
+
         engagement.quoted_fee_bdt = total_bdt
         if engagement.engagement_status == EngagementStatus.IDENTIFIED:
             engagement.engagement_status = EngagementStatus.QUOTED
@@ -263,8 +351,7 @@ class QuotationService(BaseService[Quotation]):
         return quotation
 
     async def _next_quotation_number(self) -> str:
-        """Generate next sequential quotation number NLC-YYYY-NNNN."""
-        from sqlalchemy import text
+        """Generate the next sequential quotation number under a transaction lock."""
         year = date.today().year
         prefix = f"NLC-{year}-"
         await self.db.execute(
@@ -282,15 +369,17 @@ class QuotationService(BaseService[Quotation]):
                 "), 0) "
                 "FROM quotations WHERE quotation_number LIKE :pattern"
             ),
+            {"pattern": f"{prefix}%"},
             {"pattern": pattern},
         )
-        count = result.scalar_one() + 1
-        return f"NLC-{year}-{count:04d}"
+        next_number = int(result.scalar_one()) + 1
+        return f"{prefix}{next_number:04d}"
 
     async def accept(
         self,
         quotation_id: uuid.UUID,
     ) -> Quotation | None:
+        """Accept a valid quotation after locking its company engagement."""
         """Accept a quotation using the shared engagement-first lock order."""
         # Read immutable parent keys first; lifecycle writers then lock the
         # engagement before the quotation to prevent lock-order deadlocks.
@@ -314,11 +403,41 @@ class QuotationService(BaseService[Quotation]):
         )
         engagement = engagement_result.scalar_one_or_none()
         if engagement is None:
+            raise ValueError(
+                "Quotation engagement is missing, inactive, or belongs to another company."
+            )
             raise ValueError("Quotation engagement is missing, inactive, or belongs to another company.")
 
         quotation_result = await self.db.execute(
             select(Quotation).where(Quotation.id == quotation_id).with_for_update()
         )
+        quotation = quotation_result.scalar_one_or_none()
+        if quotation is None:
+            return None
+        if (
+            quotation.engagement_id != engagement.id
+            or quotation.company_id != engagement.company_id
+        ):
+            raise ValueError("Quotation parent changed while acceptance was being processed.")
+        if quotation.status not in {"DRAFT", "SENT"}:
+            raise CommercialConflictError(
+                f"Cannot accept a quotation in {quotation.status} state."
+            )
+        if quotation.valid_until is None or quotation.valid_until < date.today():
+            raise CommercialConflictError(
+                "An expired quotation cannot be accepted; issue a renewed quotation."
+            )
+        if engagement.engagement_status != EngagementStatus.QUOTED:
+            raise CommercialConflictError(
+                "Only a quotation for a QUOTED engagement can be accepted."
+            )
+
+        accepted = await self.update_instance(
+            quotation,
+            status="ACCEPTED",
+            accepted_date=date.today(),
+        )
+        await self.db.flush()
         q = quotation_result.scalar_one_or_none()
         if q is None:
             return None
@@ -335,7 +454,7 @@ class QuotationService(BaseService[Quotation]):
         await EngagementService(self.db).advance_status(
             engagement.id,
             EngagementStatus.CONFIRMED,
-            fee_bdt=q.total_bdt,
+            fee_bdt=quotation.total_bdt,
         )
         return accepted
 
@@ -343,8 +462,9 @@ class QuotationService(BaseService[Quotation]):
         self,
         quotation_id: uuid.UUID,
         reason: str | None = None,
-        rejected_by: uuid.UUID | None = None,  # COM-002
+        rejected_by: uuid.UUID | None = None,
     ) -> Quotation | None:
+        """Reject a quotation while serializing against engagement lifecycle writes."""
         """Reject a quotation while serializing against parent lifecycle writes."""
         quotation_ref_result = await self.db.execute(
             select(Quotation.engagement_id, Quotation.company_id).where(
@@ -366,11 +486,26 @@ class QuotationService(BaseService[Quotation]):
         )
         engagement = engagement_result.scalar_one_or_none()
         if engagement is None:
+            raise ValueError(
+                "Quotation engagement is missing, inactive, or belongs to another company."
+            )
             raise ValueError("Quotation engagement is missing, inactive, or belongs to another company.")
 
         quotation_result = await self.db.execute(
             select(Quotation).where(Quotation.id == quotation_id).with_for_update()
         )
+        quotation = quotation_result.scalar_one_or_none()
+        if quotation is None:
+            return None
+        if (
+            quotation.engagement_id != engagement.id
+            or quotation.company_id != engagement.company_id
+        ):
+            raise ValueError("Quotation parent changed while rejection was being processed.")
+        if quotation.status not in {"DRAFT", "SENT"}:
+            raise CommercialConflictError(
+                f"Cannot reject a quotation in {quotation.status} state."
+            )
         q = quotation_result.scalar_one_or_none()
         if q is None:
             return None
@@ -380,7 +515,7 @@ class QuotationService(BaseService[Quotation]):
             raise CommercialConflictError(f"Cannot reject a quotation in {q.status} state.")
 
         return await self.update_instance(
-            q,
+            quotation,
             status="REJECTED",
             rejection_reason=reason,
             rejected_by=rejected_by,
@@ -444,11 +579,17 @@ class TaskService(BaseService[Task]):
     async def complete_task(
         self,
         task_id: uuid.UUID,
+        company_id: uuid.UUID,
     ) -> Task | None:
-        """Mark a task as completed."""
+        """Complete only a task belonging to the already-authorized company."""
         from datetime import datetime
         task_result = await self.db.execute(
             select(Task)
+            .where(
+                Task.id == task_id,
+                Task.company_id == company_id,
+                Task.is_active.is_(True),
+            )
             .where(Task.id == task_id)
             .with_for_update()
         )

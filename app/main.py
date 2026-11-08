@@ -45,6 +45,7 @@ from app.api import (
     rescue,
     rjsc_forms,
     rules,
+    subscriptions,
     webhooks,
 )
 from app.core.config import get_settings
@@ -382,6 +383,7 @@ def create_app() -> FastAPI:
     app.include_router(documents.router,  prefix=f"{API_PREFIX}/documents",  tags=["Documents"])
     app.include_router(commercial.router, prefix=f"{API_PREFIX}/commercial", tags=["Commercial"])
     app.include_router(finance.router, prefix=f"{API_PREFIX}/finance", tags=["Finance & Billing"])
+    app.include_router(subscriptions.router, prefix=f"{API_PREFIX}/subscriptions", tags=["Subscriptions & Entitlements"])
     app.include_router(rjsc_forms.router, prefix=f"{API_PREFIX}/rjsc-forms", tags=["RJSC Forms"])
     app.include_router(calendar.router, prefix=API_PREFIX, tags=["Compliance Calendar"])
     app.include_router(rules.router,      prefix=f"{API_PREFIX}/rules",      tags=["Legal Rules"])

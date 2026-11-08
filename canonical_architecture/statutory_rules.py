@@ -70,7 +70,7 @@ class StatutoryRule:
 _RULES = (
     StatutoryRule(
         "INC-001", "Corporate", "Companies Act 1994",
-        "MoA/AoA Registration Status Requires Verification", "Section 23",
+        "File Memorandum and Articles of Association", "Section 23",
         ProvisionStatus.RECONCILE, "RJSC", ("MOA_FILED", "AOA_FILED"),
         Severity.NOT_EVALUATED, 0),
     StatutoryRule(
@@ -121,7 +121,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "INC-001",
         "legal_domain": "Corporate",
         "law": "Section 23, Companies Act 1994 (Bangladesh)",
-        "requirement": "Section 23 governs registration of the memorandum and articles. NLC non-production is a data gap, not proof of non-registration or invalidity; require authenticated RJSC registry search, certified filed copies and amendment history.",
+        "requirement": "Memorandum and Articles of Association not filed with RJSC. Section 23: constitutional documents must be filed.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -166,13 +166,13 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "INC-005": {
         "rule_id": "INC-005",
         "legal_domain": "Corporate",
-        "law": "GFET-2018 Vol.1, Chapter 9, paragraph 2(A); FE Circular No.10 (21 June 2023); FEID Circular No.01 (27 January 2025) and subsequent circulars",
-        "requirement": "An AD-bank encashment-certificate record is not present for a foreign-shareholder case. This is an evidence-review prompt only; verify the applicable GFET instructions, current circulars, foreign-currency-account retention and zone exceptions. Absence of an upload is not proof of breach.",
+        "law": "Section 150, Companies Act 1994; BIDA Foreign Investment Guidelines",
+        "requirement": "Encashment Certificate Missing — Foreign Shareholding - Foreign shareholding detected but Encashment Certificate from AD bank not uploaded. Required under BIDA guidelines. CONDITIONAL: Only applies if has_foreign_shareholder == True.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
-        "applicability": "FOREIGN_SHAREHOLDER_AND_RELEVANT_SHARE_ISSUANCE_OR_INWARD_REMITTANCE_CASES_ONLY",
-        "exceptions": ["SPECIAL_ZONE_OR_EXPORT_PROCESSING_ZONE_REGIME_REQUIRES_CHECK", "FOREIGN_CURRENCY_ACCOUNT_RETENTION_OR_PERMITTED_NON_ENCASHMENT_ROUTE_REQUIRES_CHECK", "NO_CURRENT_SHARE_ISSUE_OR_NO_INWARD_REMITTANCE_REQUIRES_CHECK"],
-        "evidence_required": ["SUBSCRIPTION_OR_ALLOTMENT_RECORD", "AD_BANK_ENCASHMENT_CERTIFICATE_OR_PERMITTED_FC_ACCOUNT_EVIDENCE", "REMITTANCE_IDENTITY_AND_BANK_PROVENANCE", "CURRENT_BANGLADESH_BANK_CIRCULAR_VERSION"],
+        "applicability": "ALL_ACTIVE_COMPANIES",
+        "exceptions": [],
+        "evidence_required": ["DOCUMENTARY_EVIDENCE"],
         "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
         "severity": "NOT_EVALUATED",
         "score_impact": 0,
@@ -181,13 +181,13 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "INC-006": {
         "rule_id": "INC-006",
         "legal_domain": "Corporate",
-        "law": "BIDA Guidelines for permission to establish foreign commercial offices and issue work permits in Bangladesh (2023); exact operative clause/version and current amendments require verification",
-        "requirement": "A reported initial-establishment remittance below the USD 50,000 reference amount is a screening prompt only. Verify the operative BIDA guideline, applicant category, effective version, exceptions and bank evidence. Do not infer a statutory breach or automatic work-permit refusal.",
+        "law": "BIDA Foreign Investment Act 1980; BOI Guidelines",
+        "requirement": "Remittance Below Work Permit Threshold - Foreign remittance below USD 50,000 threshold for work permit sponsorship. BIDA registration may be challenged. CONDITIONAL: Only applies if has_foreign_shareholder == True AND bida_registered == True.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
-        "applicability": "BIDA_REGISTERED_FOREIGN_INVESTMENT_ENTITY_APPLYING_FOR_WORK_PERMIT_ONLY",
-        "exceptions": ["APPLICANT_CATEGORY_OUTSIDE_2023_GUIDELINE", "INITIAL_APPLICATION_VS_RENEWAL_SCOPE_REQUIRES_CHECK", "GUIDELINE_VERSION_OR_AMENDMENT_REQUIRES_CHECK", "OTHER_LAWFUL_PERMIT_OR_INVESTMENT_ROUTE_REQUIRES_CHECK"],
-        "evidence_required": ["BIDA_APPLICATION_AND_APPLICANT_CATEGORY", "CURRENT_WORK_PERMIT_GUIDELINE", "AD_BANK_REMITTANCE_AND_FX_CERTIFICATE", "DATE_AND_SOURCE_OF_INITIAL_ESTABLISHMENT_COST"],
+        "applicability": "ALL_ACTIVE_COMPANIES",
+        "exceptions": [],
+        "evidence_required": ["DOCUMENTARY_EVIDENCE"],
         "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
         "severity": "NOT_EVALUATED",
         "score_impact": 0,
@@ -437,7 +437,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "DIR-003",
         "legal_domain": "Corporate",
         "law": "Section 115, Companies Act 1994 (Bangladesh)",
-        "requirement": "Form XII particulars are due within 14 days under section 115(2). Any 365-day escalation is NLC internal policy only, not a separate continuing offence or daily penalty; distinguish filing default from appointment/cessation validity.",
+        "requirement": "Director particulars or changes not filed using Form XII within 14 days under Section 115. A prolonged filing default is distinct from whether the appointment or cessation itself is valid; calculate consequences only from the applicable statutory text.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -467,7 +467,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "SH-001",
         "legal_domain": "Corporate",
         "law": "Section 151, Companies Act 1994 (Bangladesh)",
-        "requirement": "Share Allotment Not Filed — Form XV - Share allotment return and prescribed supporting documents not filed within 60 days after allotment under Section 151, subject to a Registrar extension under the section.",
+        "requirement": "Share Allotment Not Filed — Form XV - Share allotment not filed via Form XV within 30 days. Section 50 requires return of allotment. Failure means allotment not reflected in RJSC register, creating uncertainty about issued capital.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -482,7 +482,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "SH-002",
         "legal_domain": "Corporate",
         "law": "Section 158, Companies Act 1994 (Bangladesh)",
-        "requirement": "Share certificates not made ready for delivery within 90 days after allotment or, for a transfer, within 90 days after registration of the transfer, under Section 158. Check the applicable issue terms and trigger event.",
+        "requirement": "Share Certificates Not Issued Within 60 Days - Share certificates not issued within 60 days of allotment. Section 46 requires certificates within 2 months. Non-issuance means no documentary evidence of ownership, obstructing transfers and dividends.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -496,8 +496,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "SH-003": {
         "rule_id": "SH-003",
         "legal_domain": "Corporate",
-        "law": "Section 56, Companies Act 1994 (Bangladesh)",
-        "requirement": "Capital Increase Not Filed — Form IV - Form IV notice of increase of share capital not filed within 15 days under Section 56, subject to verification of the exact triggering event, company scope and any applicable extension.",
+        "law": "Section 52, Companies Act 1994 (Bangladesh)",
+        "requirement": "Capital Increase Not Filed — Form IV - Capital increase not filed via Form IV within 30 days of special resolution. Section 52 requires notice of increase. Unrecorded increases cause RJSC records to differ from actual capital.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -511,8 +511,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "TR-001": {
         "rule_id": "TR-001",
         "legal_domain": "Corporate",
-        "law": "Section 38(3), Companies Act 1994 (Bangladesh)",
-        "requirement": "Section 38(3) requires a proper transfer instrument duly stamped and executed by transferor and transferee, together with the relevant share/debenture certificate, subject to the statutory lost-instrument/indemnity exception. A missing upload is not proof of absence or automatic invalidity.",
+        "law": "Section 38, Companies Act 1994 (Bangladesh)",
+        "requirement": "No Share Transfer Instrument — Form 117 - Share transfer without Form 117 instrument. Section 108 requires proper instrument of transfer, duly stamped, executed by both parties. Missing instrument renders transfer void and unregistrable.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -527,7 +527,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "TR-002",
         "legal_domain": "Corporate",
         "law": "Stamp Act 1899 (Bangladesh), Schedule I, Item 62",
-        "requirement": "Verify the instrument category, execution facts, current Stamp Act 1899 Schedule I rate, amendments, exemption/adjudication and authenticated payment evidence. Do not infer inadmissibility, invalidity or unenforceable title from a missing receipt.",
+        "requirement": "Stamp Duty Not Paid on Share Transfer - Stamp duty not paid on share transfer. Stamp Act 1899 requires ad valorem duty. Unstamped instrument inadmissible in court and cannot be registered. Transferee's ownership unenforceable until duty paid.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -541,8 +541,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "TR-003": {
         "rule_id": "TR-003",
         "legal_domain": "Corporate",
-        "law": "Section 38(7), Companies Act 1994 (Bangladesh); Articles of Association",
-        "requirement": "Board approval is not a universal statutory requirement. Section 38(7) preserves the company's power under its Articles to refuse registration; verify the operative restriction, notice, refusal and remedy. Do not declare a transfer void or title absent automatically.",
+        "law": "Section 47, Companies Act 1994 (Bangladesh); Articles of Association",
+        "requirement": "No Board Approval for Share Transfer - Share transfer without board approval where AoA restricts transfer. Section 47 + AoA: board approval required. Transfer in breach is void; transferee has no legal title. Register cannot be validly updated.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -556,8 +556,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "TR-004": {
         "rule_id": "TR-004",
         "legal_domain": "Corporate",
-        "law": "Section 38(4), Companies Act 1994 (Bangladesh)",
-        "requirement": "Where the company refuses registration of a share/debenture transfer, it must send notice of refusal to both transferor and transferee within 30 days after the instrument is lodged. This is not a universal two-month register-update deadline; verify the actual refusal and dispatch evidence.",
+        "law": "Section 34, Companies Act 1994 (Bangladesh)",
+        "requirement": "Register of Members Not Updated After Transfer - Register of Members not updated within 2 months of transfer lodgement. Section 34 requires register update. Until updated, transferee is not recognized member and cannot exercise rights.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -571,8 +571,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "TR-005": {
         "rule_id": "TR-005",
         "legal_domain": "Corporate",
-        "law": "Section 38(7), Companies Act 1994 (Bangladesh); Articles of Association",
-        "requirement": "Reported registration despite an Articles restriction requires case-specific review under section 38(7), the Articles, notices, registration record and remedies. The section preserves a power to refuse registration; it does not automatically make every restricted transfer void ab initio.",
+        "law": "Section 47, Companies Act 1994 (Bangladesh); Articles of Association",
+        "requirement": "Share Transfer Violates AoA Restriction — BLACK OVERRIDE - Transfer executed in violation of AoA restriction — pre-emption rights not offered, prohibited transferee, or board approval refused. Transfer is void ab initio. Transferee has no legal title. Rectification requires court order or unanimous ratification. BLACK OVERRIDE: forces score to BLACK band. Corporate Rescue mandatory.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -586,8 +586,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "TR-006": {
         "rule_id": "TR-006",
         "legal_domain": "Corporate",
-        "law": "Sections 34 and 38, Companies Act 1994 (Bangladesh), and applicable Articles",
-        "requirement": "Two or more transfer-record review signals require document and Articles reconciliation. The composite is an internal review prompt, not a statutory breach, invalidity or title finding.",
+        "law": "Sections 34, 47, 108, Companies Act 1994 (Bangladesh)",
+        "requirement": "Composite Irregular Transfer - Transfer has 2+ concurrent deficiencies from TR-001 to TR-005. Composite irregularity compounds legal risk. Each deficiency may independently void transfer. Together they indicate systemic share administration failure requiring structured remediation.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -661,8 +661,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "CAP-001": {
         "rule_id": "CAP-001",
         "legal_domain": "Corporate",
-        "law": "Sections 53, 54 and 56, Companies Act 1994 (Bangladesh)",
-        "requirement": "Verify the specific capital alteration type and Articles authority under section 53. Section 54 addresses specified consolidation/conversion/subdivision notices; increase of registered share capital is separately governed by section 56. Do not assume a special resolution without checking the Act and Articles.",
+        "law": "Section 54, Companies Act 1994 (Bangladesh)",
+        "requirement": "Capital Alteration Without Proper Resolution - Capital alteration without required board/special resolution, or forms not filed. Section 54 governs capital increase procedure. Unrecorded changes cause RJSC register to differ from actual capital, creating legal uncertainty.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -695,9 +695,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "requirement": "Capital reduction requires compliance with Sections 59-60, including court confirmation and registration. Assess the court order, creditor protection and registration evidence; do not infer a breach from a pending workflow flag alone.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
-        "applicability": "CAPITAL_REDUCTION_PROCEDURE_TRIGGERED_ONLY",
-        "exceptions": ["NO_PROPOSED_OR_COMPLETED_CAPITAL_REDUCTION", "COMPANY_TYPE_AND_ARTICLES_AUTHORITY_REQUIRE_COUNSEL_REVIEW"],
-        "evidence_required": ["SPECIAL_RESOLUTION", "COURT_APPLICATION_AND_ORDER", "CREDITOR_NOTICE_AND_OBJECTION_RECORD", "REGISTRAR_REGISTRATION_EVIDENCE"],
+        "applicability": "ALL_ACTIVE_COMPANIES",
+        "exceptions": [],
+        "evidence_required": ["DOCUMENTARY_EVIDENCE"],
         "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
         "severity": "NOT_EVALUATED",
         "score_impact": 0,
@@ -826,8 +826,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "BNK-001": {
         "rule_id": "BNK-001",
         "legal_domain": "Corporate",
-        "law": "Companies Act 1994 (Bangladesh), Part V, sections 241–244",
-        "requirement": "Reported company winding-up petition; verify Companies Act grounds, petition provision, court, case number, service, current status and authenticated court record. Do not conflate corporate winding-up with personal bankruptcy.",
+        "law": "Bankruptcy Act 1997 (Bangladesh), Section 12",
+        "requirement": "Winding Up Petition Filed - Winding up petition filed against company. Company under court supervision.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -841,8 +841,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "BNK-002": {
         "rule_id": "BNK-002",
         "legal_domain": "Corporate",
-        "law": "Companies Act 1994 (Bangladesh), Part V; section 255 for court-appointed Official Liquidators; route-specific provision requires review",
-        "requirement": "Reported liquidator appointment; distinguish court winding-up, voluntary winding-up and other statutory routes; verify the appointment instrument, appointee authority and current status.",
+        "law": "Bankruptcy Act 1997 (Bangladesh), Section 14",
+        "requirement": "Liquidator Appointed - Liquidator appointed. Company under liquidation proceedings.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -856,8 +856,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "BNK-003": {
         "rule_id": "BNK-003",
         "legal_domain": "Corporate",
-        "law": "Companies Act 1994 (Bangladesh), Part V, sections 241–246",
-        "requirement": "Reported court winding-up order; verify authenticated order, operative date, jurisdiction, appeal/stay, suspension/discharge and current liquidation status.",
+        "law": "Bankruptcy Act 1997 (Bangladesh), Section 18",
+        "requirement": "Court-Ordered Winding Up - Court-ordered winding up. Company being wound up by court order.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -1006,8 +1006,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "ESC-004": {
         "rule_id": "ESC-004",
         "legal_domain": "Corporate",
-        "law": "Section 286, Companies Act 1994 (Bangladesh)",
-        "requirement": "Reported voluntary winding-up resolution; verify statutory ground, resolution, solvency declaration where applicable, liquidator appointment, creditor process and current status under Part V.",
+        "law": "Section 234, Companies Act 1994 (Bangladesh)",
+        "requirement": "Voluntary Winding Up - Voluntary winding up initiated. Section 196.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -1021,8 +1021,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "ESC-005": {
         "rule_id": "ESC-005",
         "legal_domain": "Corporate",
-        "law": "Sections 195 and 197; section 199 where related entities are included, Companies Act 1994 (Bangladesh)",
-        "requirement": "Reported company investigation; verify Government inspector appointment under section 195 or 197, the scope of any section 199 related-entity investigation, authenticated order, parties and current status. An inquiry is not itself a finding of liability.",
+        "law": "Section 199, Companies Act 1994 (Bangladesh)",
+        "requirement": "Investigation Order Pending - Investigation order pending under Section 199.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -1235,11 +1235,11 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "ACC-001": {"rule_id": "ACC-001", "legal_domain": "Corporate", "law": "Section 183, Companies Act 1994 (Bangladesh)", "requirement": "AGM held but balance sheet and P&L not presented. Section 183.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "ACC-002": {"rule_id": "ACC-002", "legal_domain": "Corporate", "law": "Section 190, Companies Act 1994 (Bangladesh)", "requirement": "Balance sheet not filed within 30 days of AGM. Section 190.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "ACC-003": {"rule_id": "ACC-003", "legal_domain": "Corporate", "law": "Section 181, Companies Act 1994 (Bangladesh)", "requirement": "Proper books of account not maintained. Section 181.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
-    "DIR-007": {"rule_id": "DIR-007", "legal_domain": "Corporate", "law": "Section 93(2), Companies Act 1994 (Bangladesh)", "requirement": "Written consent to act as director filed with the Registrar within 30 days of appointment under Section 93(2). Distinguish the separate pre-appointment consent/eligibility requirements in Section 92 and reconcile the Form IX mapping with the current RJSC form instructions before activation.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
+    "DIR-007": {"rule_id": "DIR-007", "legal_domain": "Corporate", "law": "Section 92, Companies Act 1994 (Bangladesh)", "requirement": "Director consent to act filed using Form IX within 30 days of appointment under Section 92; distinguish this from Form XII particulars under Section 115.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "DIR-008": {"rule_id": "DIR-008", "legal_domain": "Corporate", "law": "Section 104, Companies Act 1994 (Bangladesh)", "requirement": "Verify office category, statutory exclusions, company relationship and general-meeting consent before assessing an office-of-profit issue.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "DIR-010": {"rule_id": "DIR-010", "legal_domain": "Corporate", "law": "Section 110, Companies Act 1994 (Bangladesh)", "requirement": "Verify current managing-director appointment instrument, term, reappointment, approval and continuity before assessing the five-year-at-a-time limit.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "MEM-001": {"rule_id": "MEM-001", "legal_domain": "Corporate", "law": "Section 222, Companies Act 1994 (Bangladesh)", "requirement": "Company below minimum members. Section 222: private < 2, public < 7.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
-    "INC-007": {"rule_id": "INC-007", "legal_domain": "Corporate", "law": "Section 150(1) and (6), Companies Act 1994 (Bangladesh)", "requirement": "Review only if the company is a public company that issued a prospectus inviting public subscription and all section 150(1) conditions are applicable and evidenced. Section 150(6) excludes private companies and companies not issuing such a prospectus.", "provision": "Section 150(1), (6)", "provision_status": ProvisionStatus.RECONCILE, "applicability": "PUBLIC_COMPANY_WITH_PROSPECTUS_ONLY; verify every statutory condition", "exceptions": ["Private company", "Public company not issuing a prospectus inviting public subscription", "Other statutory exclusions or valid Registrar evidence"], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
+    "INC-007": {"rule_id": "INC-007", "legal_domain": "Corporate", "law": "Section 150, Companies Act 1994 (Bangladesh)", "requirement": "Business commenced without Section 150 declaration.", "provision": "TBD", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
 
 }
 
@@ -1264,16 +1264,6 @@ def _legacy_rule(key: str, d: Dict[str, Any]) -> Optional[StatutoryRule]:
         not isinstance(item, str) or not item.strip() for item in exceptions
     ):
         raise RuntimeError(f"{key}: exceptions must be non-empty strings")
-    evidence_required = d["evidence_required"]
-    if (
-        not isinstance(evidence_required, (list, tuple))
-        or not evidence_required
-        or any(not isinstance(item, str) or not item.strip() for item in evidence_required)
-        or len(set(evidence_required)) != len(evidence_required)
-    ):
-        raise RuntimeError(
-            f"{key}: evidence_required must contain unique, non-empty strings"
-        )
     if list(d["evidence_required"]) != ["DOCUMENTARY_EVIDENCE"]:
         return None
     auth = _LEGACY_AUTHORITY_OVERRIDE.get(key) or _LEGACY_AUTHORITY[d["legal_domain"]]
@@ -1281,7 +1271,7 @@ def _legacy_rule(key: str, d: Dict[str, Any]) -> Optional[StatutoryRule]:
     return StatutoryRule(
         key, d["legal_domain"], d["law"], d["requirement"], d["provision"],
         d["provision_status"], auth,
-        tuple(f"{key}:{item}" for item in evidence_required),
+        (key + ":DOCUMENTARY_EVIDENCE",),   # per-rule key: shared key would couple all rules
         Severity(d["severity"]), d["score_impact"],
         applies_if=applies_if,
         exceptions=tuple(exceptions),

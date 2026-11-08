@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from datetime import date, timedelta
 from decimal import Decimal
+from uuid import UUID, uuid4
 from uuid import UUID
 
 import pytest
@@ -164,7 +165,7 @@ async def test_task_completion_accepts_completion_note(
     assert created.status_code == 201, created.text
 
     response = await api_client.patch(
-        f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete",
+        f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete?company_id={db_company.id}",
         headers=_auth(commercial_admin_token),
         json={"completion_note": "Verified complete"},
     )
@@ -172,6 +173,7 @@ async def test_task_completion_accepts_completion_note(
     assert response.json()["status"] == "COMPLETED"
 
     repeated = await api_client.patch(
+        f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete?company_id={db_company.id}",
         f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete",
         headers=_auth(commercial_admin_token),
         json={"completion_note": "Should not complete twice"},
@@ -276,3 +278,51 @@ def test_quotation_accept_and_reject_lock_parent_before_locked_quotation():
         assert engagement_lock < quotation_lock
         assert "with_for_update()" in method[engagement_lock:quotation_lock]
         assert "with_for_update()" in method[quotation_lock:]
+
+
+@pytest.mark.asyncio
+async def test_task_completion_requires_company_scope_and_runs_once(
+    api_client, commercial_admin_token, db_company
+):
+    created = await api_client.post(
+        "/api/v1/commercial/tasks",
+        headers=_auth(commercial_admin_token),
+        json={
+            "company_id": str(db_company.id),
+            "title": "Task completion tenant-scope regression",
+            "priority": "MEDIUM",
+        },
+    )
+    assert created.status_code == 201, created.text
+    task_id = created.json()["task_id"]
+
+    missing_scope = await api_client.patch(
+        f"/api/v1/commercial/tasks/{task_id}/complete",
+        headers=_auth(commercial_admin_token),
+        json={"completion_note": "Missing company context"},
+    )
+    assert missing_scope.status_code == 422, missing_scope.text
+
+    completed = await api_client.patch(
+        f"/api/v1/commercial/tasks/{task_id}/complete?company_id={db_company.id}",
+        headers=_auth(commercial_admin_token),
+        json={"completion_note": "Completed once with authorized company context"},
+    )
+    assert completed.status_code == 200, completed.text
+    assert completed.json()["status"] == "COMPLETED"
+    assert completed.json()["completed_at"] is not None
+
+    repeated = await api_client.patch(
+        f"/api/v1/commercial/tasks/{task_id}/complete?company_id={db_company.id}",
+        headers=_auth(commercial_admin_token),
+        json={"completion_note": "Duplicate completion must not be accepted"},
+    )
+    assert repeated.status_code == 409, repeated.text
+
+    wrong_company = await api_client.patch(
+        f"/api/v1/commercial/tasks/{task_id}/complete?company_id={uuid4()}",
+        headers=_auth(commercial_admin_token),
+        json={"completion_note": "Wrong company must not find this task"},
+    )
+    assert wrong_company.status_code == 404, wrong_company.text
+

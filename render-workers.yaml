@@ -1,14 +1,21 @@
-# Optional paid background services. This file is intentionally separate from render.yaml.
-# Deploy only when the user explicitly approves Render Worker/Starter plan costs.
+# Separate Render Blueprint for background execution only.
+# No API service is defined here; applying this Blueprint creates two workers.
+# Keep autoDeploy disabled until secrets and service health checks are reviewed.
 services:
   - type: worker
-    name: nlc-worker
+    name: nlc-platform-worker
     runtime: docker
     region: singapore
     plan: starter
-    dockerCommand: celery -A app.worker.celery_app worker --loglevel=info --concurrency=2
     autoDeploy: false
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: celery -A app.worker.celery_app worker --loglevel=info --concurrency=2
     envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        sync: false
       - key: APP_DATABASE_URL
         sync: false
       - key: NLC_RLS_HMAC_SECRET
@@ -17,19 +24,25 @@ services:
         value: "true"
       - key: REDIS_URL
         sync: false
-      - key: CELERY_BROKER_URL
+      - key: JWT_SECRET_KEY
         sync: false
-      - key: ENVIRONMENT
-        value: production
+      - key: CELERY_TASK_ALWAYS_EAGER
+        value: "false"
 
   - type: worker
-    name: nlc-beat
+    name: nlc-platform-beat
     runtime: docker
     region: singapore
     plan: starter
-    dockerCommand: celery -A app.worker.celery_app beat --loglevel=info
     autoDeploy: false
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: celery -A app.worker.celery_app beat --loglevel=info --scheduler redbeat.RedBeatScheduler
     envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        sync: false
       - key: APP_DATABASE_URL
         sync: false
       - key: NLC_RLS_HMAC_SECRET
@@ -38,7 +51,7 @@ services:
         value: "true"
       - key: REDIS_URL
         sync: false
-      - key: CELERY_BROKER_URL
+      - key: JWT_SECRET_KEY
         sync: false
-      - key: ENVIRONMENT
-        value: production
+      - key: CELERY_TASK_ALWAYS_EAGER
+        value: "false"
