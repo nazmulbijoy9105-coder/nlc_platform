@@ -2,6 +2,35 @@
 
 **Release posture:** statutory scoring remains disabled until each rule has individual counsel approval. A successful deployment is not legal approval.
 
+## Live production status — 8 November 2026 (read-only verification)
+
+This section supersedes older operational observations below where they differ. All database inspection was read-only; no production migration or DDL was run.
+
+### Migration and legal data
+
+- Production remains at Alembic revision `0042_dedup_key`. A post-deploy read-only check confirmed the version did not change after the failed Render deployment.
+- Current mainline migration head is `0088_strict_activity_log_actor_tenant`. PRs #212, #213 and #214 have merged; their PR-head CI checks passed, including Docker smoke, PostgreSQL integration, fresh 0042-to-head and historical 0048-to-head migration rehearsals. The exact post-merge main commit has not yet received a separate full CI run.
+- Production currently has 75 legal-rule rows. Migration 0049 restores 11 missing canonical rule IDs and retires the extra `INC-002` row, resulting in 85 active rules after the migration chain. The legal score release gate remains disabled in code; this is not counsel approval.
+- Production still has 476 pending legal-rule notifications. Migration 0058 must suppress these before any worker is started. Do not start an older worker against the pending queue.
+- The latest production query confirmed 476 pending rule notifications and 75 current legal-rule rows. No production migration has been applied by the failed deploy.
+
+### Neon backup and role topology
+
+- A manual full snapshot exists: `nlc-production-pre-migration-recovery-2026-11-07` (created 2026-11-07 07:47:20 UTC). The production snapshot schedule is empty; automatic snapshots are not configured.
+- An isolated clone branch named `nlc-prod-migration-0088-rehearsal-20261108` was created from the current production branch. It remains at the production revision and has not been migrated. A separate snapshot-restore branch could not be created because the Neon root-branch limit was reached; this is not a completed restore rehearsal.
+- `nlc_app_role` and `nlc_ci_audit_role` now have the required `NOINHERIT`, `NOBYPASSRLS`, `NOSUPERUSER`, `NOCREATEDB` and `NOCREATEROLE` attributes.
+- A remaining blocking membership check is non-empty: `neondb_owner` is a member of both `nlc_app_role` and `nlc_ci_audit_role`, with `ADMIN OPTION`. Migration 0086 must reject this topology. Do not deploy until an authorised DBA has reviewed and removed these memberships; do not weaken the preflight.
+- `neondb_owner` remains a privileged migration/maintenance role (`BYPASSRLS`, `CREATEDB`, `CREATEROLE`). It must not be used for application runtime.
+
+### Render deployment
+
+- The live Render web service is `nlc_platform`, on the Free plan, with auto-deploy disabled and no configured live health-check path. The repository blueprint specifies a health-check path, but the live service configuration does not currently match it.
+- The latest deploy of main commit `6a75242bfa67e34e4f29adaa71d7e5bede951c65` (deploy `dep-dbo457hsrm7s73attrbg`) also failed. Earlier logs showed the insecure PostgreSQL connection error; after the TLS changes reached the service, the latest startup logs consistently reported `password authentication failed for user 'neondb_owner'`. The migration `DATABASE_URL` secret therefore needs an authorised credential refresh before another deploy.
+- Mainline PRs #212 and #216 contain verified PostgreSQL TLS handling, but the live service has not reached a successful migration connection. The latest failure is password authentication, not proof of a successful TLS or migration handshake. Do not infer deployment success from merged code.
+- Only the API web service is present in the Render workspace. No separate NLC Celery worker or Beat service was found. The Dockerfile contains worker/Beat targets, but they are not deployed. Production background jobs must remain disabled until dedicated services and their required broker/database credentials are provisioned.
+- Do not create paid worker/Beat services, rotate production secrets, revoke role memberships, or trigger another production deployment without explicit operator approval.
+
+
 ## 1. Preconditions
 
 Do not merge/deploy until the latest backend and frontend CI checks pass, including:
