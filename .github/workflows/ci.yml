@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, fix/nlc-canonical-release-gates-20261105]
+    branches: [main, fix/nlc-canonical-release-gates-20261105, fix/repair-finance-numbering-syntax-20261108]
   pull_request:
     branches:
       - main
