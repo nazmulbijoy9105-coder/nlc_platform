@@ -277,9 +277,8 @@ async def verify_runtime_database_role() -> None:
                     "SELECT 1 FROM pg_auth_members m "
                     "JOIN pg_roles granted_role ON granted_role.oid = m.roleid "
                     "JOIN pg_roles member_role ON member_role.oid = m.member "
-                    "WHERE member_role.rolname = current_user "
-                    "OR (granted_role.rolname = current_user "
-                    "AND NOT (member_role.rolsuper OR member_role.rolbypassrls)))"
+                    "WHERE member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role') "
+                    "OR granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role'))"
                 )
             )
         ).scalar_one()

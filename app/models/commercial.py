@@ -75,6 +75,7 @@ class Task(FullMixin, Base):
     completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    completion_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # ── Assignment ────────────────────────────────────────────────
     assigned_to: Mapped[uuid.UUID | None] = mapped_column(

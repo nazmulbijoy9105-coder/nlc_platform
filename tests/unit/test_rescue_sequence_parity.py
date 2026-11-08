@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
+import app.rule_engine.engine as engine_module
 from app.rule_engine.engine import (
     ComplianceFlag,
     NLCRuleEngine,
@@ -11,6 +12,21 @@ from app.rule_engine.engine import (
     RuleState,
     Severity,
 )
+
+
+@pytest.fixture(autouse=True)
+def _enable_release_for_rescue_sequence_unit_tests(monkeypatch):
+    # Isolate rescue sequencing behavior from the production release gate.
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module,
+        "VERIFIED_RULE_IDS",
+        frozenset({
+            "AGM-001", "AGM-002", "AUD-001", "AUD-002", "AUD-003",
+            "TR-005", "TR-006", "ESC-002", "TR-001", "TR-004",
+            "AR-002", "ESC-001", "ESC-003", "AGM-003", "TAX-004",
+        }),
+    )
 
 
 def _flag(
@@ -151,6 +167,14 @@ def test_black_findings_sort_before_red_findings():
     assert all(step["priority"] == "HIGH" for step in steps[1:])
 
 
-def test_missing_mapping_for_actionable_finding_is_explicit():
+def test_missing_mapping_for_actionable_finding_is_explicit(monkeypatch):
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module,
+        "VERIFIED_RULE_IDS",
+        frozenset({"NO-SUCH-RULE"}),
+    )
     with pytest.raises(ValueError, match="Missing statutory rescue mapping"):
         _seq([_flag("NO-SUCH-RULE")])

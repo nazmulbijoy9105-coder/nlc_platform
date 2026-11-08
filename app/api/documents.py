@@ -36,8 +36,6 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
-from app.core.entitlement import require_entitlement
-from app.core.company_authorization import ensure_staff_company_scope
 from app.models.enums import DocumentType
 from app.models.user import User
 from app.services.document_service import DocumentService, PromptTemplateService
@@ -173,7 +171,6 @@ def _doc_to_response(doc) -> DocumentResponse:
         Depends(require_roles("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN")),
         Depends(require_entitlement("document_management")),
     ],
-    dependencies=[Depends(require_entitlement("document_management"))],
     summary="List all documents across portfolio",
 )
 async def list_all_documents(
@@ -252,13 +249,10 @@ async def list_all_documents(
 @router.get(
     "/templates",
     response_model=list[TemplateResponse],
-    dependencies=[Depends(require_entitlement("document_management"))],
     dependencies=[
-        Depends(require_roles("CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN")),
+        Depends(require_roles("LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN")),
         Depends(require_entitlement("document_management")),
     ],
-    summary="List all available AI document templates",
-    dependencies=[Depends(require_roles("LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN"))],
     summary="List the non-company-specific AI document template catalogue",
 )
 async def list_templates(
@@ -403,7 +397,6 @@ async def generate_document(
         Depends(require_company_access("company_id")),
         Depends(require_entitlement("document_management")),
     ],
-    dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("document_management"))],
     summary="List all documents for a company",
 )
 async def list_documents(
@@ -429,31 +422,14 @@ async def list_documents(
 
 # ---------------------------------------------------------------------------
 
-async def _assert_document_entitlement(doc, current_user: User, db: AsyncSession) -> None:
-    """Verify the entitlement against the document's actual owning company."""
-    role = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
-    if role in ("SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF"):
-        return
-    from sqlalchemy import select
-
-    from app.models.company import CompanyUserAccess
-    from app.services.subscription_service import SubscriptionService
-
-    membership = await db.execute(
-        select(CompanyUserAccess.company_id).where(
-            CompanyUserAccess.user_id == current_user.id,
-            CompanyUserAccess.company_id == doc.company_id,
-            CompanyUserAccess.is_active.is_(True),
-            CompanyUserAccess.can_view_financials.is_(True),
-        ).limit(1)
-    )
-    if membership.scalar_one_or_none() is None:
-        raise HTTPException(status_code=403, detail="Active company financial access is required.")
-
-    """Verify entitlement against the document's actual owning company."""
+async def _assert_document_entitlement(
+    doc, current_user: User, db: AsyncSession
+) -> None:
+    """Check document company scope and the company's paid entitlement."""
     role = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
     if role in ("SUPER_ADMIN", "ADMIN_STAFF"):
         return
+
     from sqlalchemy import select
     from app.models.company import CompanyUserAccess
     from app.services.subscription_service import SubscriptionService
@@ -469,7 +445,11 @@ async def _assert_document_entitlement(doc, current_user: User, db: AsyncSession
             ).limit(1)
         )
         if membership.scalar_one_or_none() is None:
-            raise HTTPException(status_code=403, detail="Active company membership is required.")
+            raise HTTPException(
+                status_code=403,
+                detail="Active company membership is required.",
+            )
+
     if not await SubscriptionService(db).has_entitlement(
         company_id=doc.company_id,
         feature_code="document_management",
@@ -478,7 +458,6 @@ async def _assert_document_entitlement(doc, current_user: User, db: AsyncSession
             status_code=402,
             detail="This company does not have an active document-management entitlement.",
         )
-        raise HTTPException(status_code=402, detail="This company does not have an active document-management entitlement.")
 
 
 async def _assert_document_company_access(

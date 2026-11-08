@@ -175,11 +175,13 @@ class SubscriptionService:
         existing_prices_result = await self.db.execute(
             select(SubscriptionPlanPrice).where(SubscriptionPlanPrice.plan_code == code)
         )
-        existing_prices = {item.billing_interval: item for item in existing_prices_result.scalars().all()}
-        for interval, existing_price_item in existing_prices.items():
-            existing_price_item.is_active = interval in intervals
-        for interval, item in existing_prices.items():
-            item.is_active = interval in intervals
+        existing_prices = {
+            item.billing_interval: item
+            for item in existing_prices_result.scalars().all()
+        }
+        for interval, price_item in existing_prices.items():
+            price_item.is_active = interval in intervals
+
         for price in prices:
             interval = str(price["billing_interval"]).upper()
             amount = Decimal(str(price["amount_bdt"])).quantize(Decimal("0.01"))
@@ -187,13 +189,14 @@ class SubscriptionService:
             tax_reference = str(price["tax_policy_reference"]).strip()
             price_item: SubscriptionPlanPrice | None = existing_prices.get(interval)
             if price_item is None:
-            item = existing_prices.get(interval)
-            if item is None:
                 self.db.add(SubscriptionPlanPrice(
-                    plan_code=code, billing_interval=interval,
-                    amount_bdt=amount, tax_bdt=tax,
+                    plan_code=code,
+                    billing_interval=interval,
+                    amount_bdt=amount,
+                    tax_bdt=tax,
                     tax_policy_reference=tax_reference,
-                    currency="BDT", is_active=True,
+                    currency="BDT",
+                    is_active=True,
                 ))
             else:
                 price_item.amount_bdt = amount
@@ -201,11 +204,6 @@ class SubscriptionService:
                 price_item.tax_policy_reference = tax_reference
                 price_item.currency = "BDT"
                 price_item.is_active = True
-                item.amount_bdt = amount
-                item.tax_bdt = tax
-                item.tax_policy_reference = tax_reference
-                item.currency = "BDT"
-                item.is_active = True
 
         existing_features_result = await self.db.execute(
             select(SubscriptionPlanFeature).where(SubscriptionPlanFeature.plan_code == code)
@@ -235,20 +233,22 @@ class SubscriptionService:
     ) -> ClientSubscription:
         # Serialize requests per company; concurrent requests cannot create two
         # pending subscriptions for the same tenant.
+        await self.db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtextextended(:lock_key, 0))"),
+            {"lock_key": f"nlc:subscription-company:{company_id}"},
+        )
         company_result = await self.db.execute(
-            select(Company.id).where(Company.id == company_id).with_for_update()
+            select(Company.id).where(Company.id == company_id)
         )
         if company_result.scalar_one_or_none() is None:
             raise SubscriptionNotFoundError("Company not found")
 
         now = datetime.now(UTC)
         existing_result = await self.db.execute(
-            select(ClientSubscription)
-            .where(
+            select(ClientSubscription).where(
                 ClientSubscription.company_id == company_id,
                 ClientSubscription.status.in_(("PENDING", "ACTIVE", "PAST_DUE", "SUSPENDED")),
             )
-            .with_for_update()
         )
         for existing in existing_result.scalars().all():
             if existing.status == "PENDING":
@@ -282,13 +282,10 @@ class SubscriptionService:
             .join(SubscriptionPlanPrice, SubscriptionPlanPrice.plan_code == SubscriptionPlan.plan_code)
             .where(
                 SubscriptionPlan.plan_code == normalized_plan_code,
-                SubscriptionPlan.plan_code == plan_code.upper(),
                 SubscriptionPlan.is_active.is_(True),
                 SubscriptionPlanPrice.billing_interval == interval,
                 SubscriptionPlanPrice.is_active.is_(True),
             )
-            .with_for_update()
-        )
         )
         # Do not SELECT FOR UPDATE the customer-visible catalogue. PostgreSQL
         # applies UPDATE RLS to row-locking reads, hiding prices from customers.
@@ -789,7 +786,6 @@ class SubscriptionService:
             raise SubscriptionConflictError("Only a pending subscription request can be cancelled by finance")
         if subscription.invoice_id is not None:
             invoice_result = await self.db.execute(
-            invoice = await self.db.execute(
                 select(Invoice)
                 .where(
                     Invoice.id == subscription.invoice_id,
@@ -798,7 +794,6 @@ class SubscriptionService:
                 .with_for_update()
             )
             invoice = invoice_result.scalar_one_or_none()
-            invoice = invoice.scalar_one_or_none()
             if invoice is None:
                 raise SubscriptionConflictError("Linked subscription invoice is missing")
             if invoice.status not in ("ISSUED", "OVERDUE") or invoice.paid_bdt != 0 or invoice.balance_bdt != invoice.total_bdt:
