@@ -39,6 +39,8 @@ def test_signed_rls_migration_rejects_unsafe_roles_and_memberships_in_both_direc
     # is stricter than merely allowing trusted privileged members.
     assert "must have no role memberships in either direction" in source
     assert "IF EXISTS (" in source
+    assert "NOT (member_role.rolsuper OR member_role.rolbypassrls)" in source
+    assert "restricted NLC roles may only be granted to trusted SUPERUSER/BYPASSRLS administrators" in source
 
 
 def test_signed_rls_inventory_preflight_runs_before_schema_mutations():
