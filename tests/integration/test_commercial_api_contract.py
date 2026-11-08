@@ -207,3 +207,21 @@ async def test_engagement_rejects_invalid_status_jump(
     )
     assert response.status_code == 409, response.text
 
+def test_quotation_accept_and_reject_lock_parent_before_locked_quotation():
+    """Guard the required engagement-first lock order in both lifecycle paths."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    source = (root / "app" / "services" / "commercial_service.py").read_text(
+        encoding="utf-8"
+    )
+    class_start = source.index("class QuotationService")
+    for method_name in ("accept", "reject"):
+        start = source.index(f"    async def {method_name}(", class_start)
+        next_method = source.find("\n    async def ", start + 1)
+        method = source[start: next_method if next_method >= 0 else len(source)]
+        engagement_lock = method.index("select(Engagement)")
+        quotation_lock = method.index("select(Quotation).where", method.index("with_for_update()", engagement_lock))
+        assert engagement_lock < quotation_lock
+        assert "with_for_update()" in method[engagement_lock:quotation_lock]
+        assert "with_for_update()" in method[quotation_lock:]
