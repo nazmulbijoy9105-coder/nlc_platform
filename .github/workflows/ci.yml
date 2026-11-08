@@ -12,6 +12,7 @@ on:
       - repair/current-head-commercial-subscription-20261108
       - fix/scoring-release-boundary-20261108
       - fix/canonical-scoring-release-head-20261108
+      - fix/canonical-legal-rule-seed-sync-20261108
   pull_request:
     branches:
       - main
