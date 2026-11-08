@@ -262,19 +262,18 @@ class QuotationService(BaseService[Quotation]):
             {"lock_key": f"nlc-quotation-{year}"},
         )
         prefix = f"NLC-{year}-"
-        suffix_start = len(prefix) + 1
         result = await self.db.execute(
             text(
                 "SELECT COALESCE(MAX("
-                f"CAST(SUBSTRING(quotation_number FROM {suffix_start}) AS INTEGER)"
+                "CAST(SUBSTRING(quotation_number FROM CAST(:suffix_start AS INTEGER)) AS INTEGER)"
                 "), 0) + 1 "
                 "FROM quotations "
                 "WHERE quotation_number LIKE :pattern "
-                f"AND SUBSTRING(quotation_number FROM {suffix_start}) ~ '^[0-9]+$'"
+                "AND SUBSTRING(quotation_number FROM CAST(:suffix_start AS INTEGER)) ~ '^[0-9]+$'"
             ),
-            {"pattern": f"{prefix}%"},
+            {"pattern": f"{prefix}%", "suffix_start": len(prefix) + 1},
         )
-        number: int = result.scalar_one()
+        number = int(result.scalar_one())
         return f"{prefix}{number:04d}"
 
     async def accept(
