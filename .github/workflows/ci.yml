@@ -209,7 +209,7 @@ jobs:
               try:
                   password = os.environ["APP_DATABASE_PASSWORD"]
                   alter_role = await conn.fetchval(
-                      "SELECT format('ALTER ROLE nlc_app_role WITH PASSWORD %L', $1)",
+                      "SELECT format('ALTER ROLE nlc_app_role WITH PASSWORD %L', $1::text)",
                       password,
                   )
                   await conn.execute(alter_role)
