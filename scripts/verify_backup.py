@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Verify a PostgreSQL custom-format backup archive without connecting to a database.
 
-This checks the archive TOC and the presence of the three historical evidence
-table definitions. It does NOT prove that rows are present or that a restore
-will succeed. A separate isolated restore rehearsal is mandatory.
+This checks the archive TOC and the presence of both table-definition and
+table-data entries for the three historical evidence tables. It does NOT prove
+that rows are present or that a restore will succeed. An isolated restore
+rehearsal is mandatory.
 """
 from __future__ import annotations
 
@@ -70,11 +71,17 @@ def main() -> int:
     print(f"PASS: PostgreSQL archive TOC readable ({args.archive.stat().st_size} bytes)")
     missing = []
     for table in REQUIRED_EVIDENCE_TABLES:
-        pattern = rf"\bTABLE\s+public\s+{re.escape(table)}\b"
-        if re.search(pattern, toc):
-            print(f"PASS: archive contains table definition entry public.{table}")
+        definition = rf"\bTABLE\s+public\s+{re.escape(table)}\b"
+        data = rf"\bTABLE DATA\s+public\s+{re.escape(table)}\b"
+        has_definition = re.search(definition, toc) is not None
+        has_data = re.search(data, toc) is not None
+        if has_definition and has_data:
+            print(f"PASS: archive contains table definition and data entries for public.{table}")
         else:
-            print(f"FAIL: archive has no table definition entry public.{table}")
+            if not has_definition:
+                print(f"FAIL: archive has no table definition entry public.{table}")
+            if not has_data:
+                print(f"FAIL: archive has no table data entry public.{table}")
             missing.append(table)
 
     if missing:
