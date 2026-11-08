@@ -368,8 +368,8 @@ async def create_quotation(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         # Do not disclose whether an engagement exists in another tenant.
+        # Do not disclose whether an engagement exists in another company.
         raise HTTPException(status_code=404, detail="Engagement not found.") from exc
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     await activity.log(
         action="QUOTATION_CREATED",
@@ -403,10 +403,8 @@ async def accept_quotation(
     except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
-        # Keep inaccessible or inactive engagement details tenant-safe.
-        # Preserve tenant-safe not-found semantics for a missing or inaccessible engagement.
+        # Preserve tenant-safe not-found semantics for missing or inaccessible quotations.
         raise HTTPException(status_code=404, detail="Quotation not found.") from exc
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
 
@@ -444,10 +442,9 @@ async def reject_quotation(
         )
     except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except CommercialConflictError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        # Avoid exposing whether a quotation exists outside the caller's scope.
+        raise HTTPException(status_code=404, detail="Quotation not found.") from exc
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found.")
     await ActivityService(db).log(
