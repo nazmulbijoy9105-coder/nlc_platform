@@ -257,7 +257,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "AGM-001",
         "legal_domain": "Corporate",
         "law": "Section 81(1), Companies Act 1994 (Bangladesh)",
-        "requirement": "First AGM Default - First AGM not held within 18 months (548 days) of incorporation. Section 81 is mandatory; no waiver for private companies. Default counts from day after deadline.",
+        "requirement": "First AGM must be held within 18 calendar months of incorporation under Section 81(1). Calculate the due date by calendar-month arithmetic; the default begins on the day after the statutory deadline.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -272,7 +272,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "AGM-002",
         "legal_domain": "Corporate",
         "law": "Section 81(1), Companies Act 1994 (Bangladesh)",
-        "requirement": "Subsequent AGM Default - Subsequent AGM not held within 15 months of preceding AGM, or 6 months of FY end — whichever earlier. Section 81 makes no exception for size or dormancy.",
+        "requirement": "A subsequent AGM must be held in each Gregorian calendar year and no more than 15 months may elapse between consecutive AGMs, subject to the first-AGM proviso where the first AGM is held in the incorporation year (no AGM is required in the incorporation year or following year). The Registrar may, on an application made within 30 days after expiry of the statutory period, extend a subsequent AGM by up to 90 days or to 31 December of the relevant calendar year, whichever is earlier.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -676,13 +676,13 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "CAP-002": {
         "rule_id": "CAP-002",
         "legal_domain": "Corporate",
-        "law": "Section 159, Companies Act 1994 (Bangladesh)",
-        "requirement": "Charge creation must be registered within 21 days using Form XVIII under Section 159. Verify that the instrument is registrable, the creation date and RJSC registration evidence before concluding default.",
+        "law": "Section 159(1), Companies Act 1994 (Bangladesh)",
+        "requirement": "A charge registrable under Section 159 must be registered within 21 days of creation using Form XVIII. A default may be concluded only after the executed instrument, creation date, Section 159 registrability and RJSC filing status/date are independently evidenced; a late filing requires review of any Registrar extension and its legal effect.",
         "provision": "TBD",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
-        "evidence_required": ["DOCUMENTARY_EVIDENCE"],
+        "evidence_required": ["EXECUTED_CHARGE_INSTRUMENT", "CREATION_DATE", "SECTION_159_REGISTRABILITY", "RJSC_FORM_XVIII_FILING_STATUS", "FORM_XVIII_FILED_DATE", "REGISTRAR_EXTENSION_IF_ANY"],
         "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
         "severity": "NOT_EVALUATED",
         "score_impact": 0,
@@ -932,12 +932,12 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "CHG-001",
         "legal_domain": "Corporate",
         "law": "Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh)",
-        "requirement": "Review-only unless the charge is proved to be registrable under s.159, satisfaction and its date are authenticated, and the RJSC filing status is independently evidenced. Section 172(1) requires notice of payment/satisfaction of a registrable charge within 21 days. A missing satisfaction date or unverified registry search is UNKNOWN, not proof of non-filing.",
+        "requirement": "Review-only unless the charge is proved to be registrable under s.159, satisfaction and its date are authenticated, and the RJSC filing status/date is independently evidenced. Section 172(1) requires notice of payment/satisfaction of a registrable charge within 21 days; use Form XXVIII for satisfaction. A late filing requires review of any Registrar extension and its legal effect.",
         "provision": "Sections 159 and 172(1)",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "CONDITIONAL — only charges whose registration is required by section 159",
         "exceptions": ["Charges not registrable under section 159"],
-        "evidence_required": ["DOCUMENTARY_EVIDENCE"],
+        "evidence_required": ["CHARGE_SATISFACTION_EVENT", "SATISFACTION_DATE", "SECTION_159_REGISTRABILITY", "RJSC_SATISFACTION_FILING_STATUS", "FORM_XXVIII_FILED_DATE", "REGISTRAR_EXTENSION_IF_ANY"],
         "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
         "severity": "NOT_EVALUATED",
         "score_impact": 0,
@@ -1288,10 +1288,18 @@ def _legacy_rule(key: str, d: Dict[str, Any]) -> Optional[StatutoryRule]:
 
 
 for _k, _d in _LEGACY_RULE_DICTS.items():
-    if _k not in STATUTORY_RULE_REGISTRY:   # canonical wins on overlap
-        _r = _legacy_rule(_k, _d)
-        if _r is not None:
-            STATUTORY_RULE_REGISTRY[_k] = _r
+    if _k not in STATUTORY_RULE_REGISTRY:   # explicit typed rule wins on overlap
+        STATUTORY_RULE_REGISTRY[_k] = _legacy_rule(_k, _d)
+
+# Exact runtime parity is an import-time invariant; permissive >=80 tests are unsafe.
+_EXPECTED_RULE_IDS = frozenset(_LEGACY_RULE_DICTS) | frozenset(rule.rule_id for rule in _RULES)
+if len(_EXPECTED_RULE_IDS) != 85 or set(STATUTORY_RULE_REGISTRY) != _EXPECTED_RULE_IDS:
+    missing = sorted(_EXPECTED_RULE_IDS - set(STATUTORY_RULE_REGISTRY))
+    unexpected = sorted(set(STATUTORY_RULE_REGISTRY) - _EXPECTED_RULE_IDS)
+    raise RuntimeError(
+        f"canonical statutory registry parity failure: expected=85 actual={len(STATUTORY_RULE_REGISTRY)} "
+        f"missing={missing} unexpected={unexpected}"
+    )
 
 def as_dict(rule: StatutoryRule) -> dict:
     """Thin adapter for tests/callers that still expect dict-style access.

@@ -1456,3 +1456,99 @@ class TestSubscriptionEntitlementRouteGates:
         )
         assert response.status_code == 402
 
+    @pytest.mark.asyncio
+    async def test_client_document_pdf_requires_paid_entitlement(
+        self, api_client, db_client_user, db_company, db
+    ):
+        from app.core.security import create_access_token
+        from app.models.documents import Document
+        from app.models.enums import DocumentType
+
+        document = Document(
+            company_id=db_company.id,
+            document_type=DocumentType.OTHER,
+            title="Entitlement gate regression",
+            s3_key="private/entitlement-gate-regression.pdf",
+            human_approved=True,
+            is_client_visible=True,
+        )
+        db.add(document)
+        await db.flush()
+
+        token = create_access_token({
+            "sub": str(db_client_user.id),
+            "user_id": str(db_client_user.id),
+            "type": "access",
+            "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email,
+            "company_ids": [str(db_company.id)],
+        })
+        response = await api_client.get(
+            f"/api/v1/documents/detail/{document.id}/pdf",
+            headers=_auth(token),
+        )
+        assert response.status_code == 402, (response.status_code, response.text)
+
+    @pytest.mark.asyncio
+    async def test_client_filing_routes_require_paid_entitlement(
+        self, api_client, db_client_user, db_company
+    ):
+        from app.core.security import create_access_token
+
+        token = create_access_token({
+            "sub": str(db_client_user.id),
+            "user_id": str(db_client_user.id),
+            "type": "access",
+            "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email,
+            "company_ids": [str(db_company.id)],
+        })
+        headers = _auth(token)
+        for path in (
+            "/api/v1/filings",
+            f"/api/v1/filings/agm/{db_company.id}",
+            f"/api/v1/filings/audit/{db_company.id}",
+            f"/api/v1/filings/annual-return/{db_company.id}",
+            f"/api/v1/filings/statutory-register/{db_company.id}",
+        ):
+            response = await api_client.get(path, headers=headers)
+            assert response.status_code == 402, (path, response.status_code, response.text)
+
+    @pytest.mark.asyncio
+    async def test_legal_staff_cannot_create_agm_for_unassigned_company(
+        self, api_client, legal_token, legal_staff_company_scope, db_other_company
+    ):
+        response = await api_client.post(
+            "/api/v1/filings/agm",
+            headers=_auth(legal_token),
+            json={
+                "company_id": str(db_other_company.id),
+                "financial_year": 2025,
+                "agm_due_date": "2026-06-30",
+            },
+        )
+        assert response.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_legal_staff_cannot_update_agm_for_unassigned_company(
+        self,
+        api_client,
+        legal_token,
+        legal_staff_company_scope,
+        db_other_company,
+        db,
+    ):
+        from app.services.filing_service import AGMService
+
+        agm = await AGMService(db).create_agm(
+            company_id=db_other_company.id,
+            financial_year=2025,
+            agm_deadline=date(2026, 6, 30),
+        )
+        response = await api_client.patch(
+            f"/api/v1/filings/agm/{agm.id}/held",
+            headers=_auth(legal_token),
+            json={"held_date": "2026-06-30"},
+        )
+        assert response.status_code in {403, 404}
+

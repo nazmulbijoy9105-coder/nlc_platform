@@ -165,13 +165,18 @@ class ChargeEvent:
     charge_type: str
     amount_bdt: float
     charge_holder: str
-    form_xviii_filed: bool = False
+    form_xviii_filed: bool | None = None
     form_xviii_filed_date: Optional[date] = None
+    creation_date_verified: bool = False
+    creation_date_evidence_ref: str | None = None
+    form_xviii_filing_status_verified: bool = False
+    form_xviii_filing_evidence_ref: str | None = None
     form_xix_filed: bool = False
     form_xxviii_filed: bool = False
     satisfied: bool | None = None
     satisfaction_date: Optional[date] = None
     satisfaction_filed: bool | None = None
+    satisfaction_filed_date: Optional[date] = None
     # Section 172 applies only to charges whose registration is required by s.159.
     registrable_under_s159: bool | None = None
     registrability_verified: bool = False
@@ -201,6 +206,7 @@ class CompanyProfile:
     agm_extension_verified_at: date | None = None
     agm_extension_verified_by: str | None = None
     agm_held_this_cycle: bool | None = None
+    agm_held_without_audit: bool = False
     agm_held_without_audit: bool | None = None
     agm_scheduled_date: Optional[date] = None
     notice_sent_date: Optional[date] = None
@@ -448,8 +454,6 @@ class EngineOutput:
 # BANGLADESH COMPANIES ACT 1994 CONSTANTS
 # ═══════════════════════════════════════════════════════════════════════
 
-FIRST_AGM_DEADLINE_DAYS = 548
-SUBSEQUENT_AGM_DEADLINE_DAYS = 456
 FY_END_AGM_DEADLINE_DAYS = 182
 AGM_NOTICE_MINIMUM_DAYS = 21
 PRIVATE_COMPANY_QUORUM_SMALL = 2   # Section 85(2)(b): private company with ≤6 members
@@ -544,6 +548,11 @@ LEGAL_SCORE_RELEASED: bool = False
 # Fail-closed release gate: internal source checking is not legal approval.
 # Only after counsel approves current law, applicability, exceptions, evidence
 # standards and effective dates may this flag be changed to True.
+
+def legal_score_is_released() -> bool:
+    """The global switch and a non-empty counsel-approved rule set are both required."""
+    return LEGAL_SCORE_RELEASED is True and bool(VERIFIED_RULE_IDS)
+
 
 
 REVENUE_TIER_MAP = {
@@ -1120,18 +1129,52 @@ class NLCRuleEngine:
             and bool(c.agm_history_verified_by)
         )
 
+    def _subsequent_agm_deadline_components(
+        self, c: CompanyProfile
+    ) -> tuple[date, date, date, str] | None:
+        if not self._agm_history_is_verified(c) or c.last_agm_date is None:
+            return None
+
+        interval_deadline = self._add_months(c.last_agm_date, 15)
+        first_agm_in_incorporation_year = (
+            c.agm_count == 1
+            and c.incorporation_date is not None
+            and c.last_agm_date.year == c.incorporation_date.year
+            and c.last_agm_date <= self._add_months(c.incorporation_date, 18)
+        )
+        if first_agm_in_incorporation_year and c.incorporation_date is not None:
+            calendar_year_deadline = date(c.incorporation_date.year + 2, 12, 31)
+            # The first-AGM proviso removes the need for another meeting in
+            # the incorporation year or the following year. If the 15-month
+            # date falls in that exempt following year, defer the calendar
+            # obligation to the end of the next year; otherwise the 15-month
+            # interval remains the earlier controlling deadline.
+            if interval_deadline.year <= c.incorporation_date.year + 1:
+                base_deadline = calendar_year_deadline
+                basis = "FIRST_AGM_PROVISO"
+            else:
+                base_deadline = min(interval_deadline, calendar_year_deadline)
+                basis = (
+                    "15_MONTH_INTERVAL"
+                    if interval_deadline <= calendar_year_deadline
+                    else "CALENDAR_YEAR"
+                )
+        else:
+            calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
+            base_deadline = min(interval_deadline, calendar_year_deadline)
+            basis = (
+                "15_MONTH_INTERVAL"
+                if interval_deadline <= calendar_year_deadline
+                else "CALENDAR_YEAR"
+            )
+        return interval_deadline, calendar_year_deadline, base_deadline, basis
+
     def _subsequent_agm_deadline(self, c: CompanyProfile) -> date | None:
-        if not self._agm_history_is_verified(c):
+        components = self._subsequent_agm_deadline_components(c)
+        if components is None:
             return None
-        if c.last_agm_date is None:
-            return None
-        # Section 81(1): every subsequent AGM must be held in each
-        # calendar year and no more than 15 months may elapse between AGMs.
-        # The first-AGM proviso does not erase the separate 15-month cap
-        # measured from the actual first AGM date.
-        fifteen_month_deadline = self._add_months(c.last_agm_date, 15)
-        calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
-        base_deadline = min(fifteen_month_deadline, calendar_year_deadline)
+        _, calendar_year_deadline, base_deadline, _ = components
+
         if c.agm_extension_granted_until is None:
             return base_deadline
         extension_verified = (
@@ -1142,7 +1185,9 @@ class NLCRuleEngine:
         )
         if not extension_verified or c.agm_extension_application_date is None:
             return None
-        application_days_after_deadline = (c.agm_extension_application_date - base_deadline).days
+        application_days_after_deadline = (
+            c.agm_extension_application_date - base_deadline
+        ).days
         if application_days_after_deadline < 0 or application_days_after_deadline > 30:
             return None
         statutory_limit = min(
@@ -1157,6 +1202,21 @@ class NLCRuleEngine:
 
     def _run_agm_rules(self, c: CompanyProfile) -> None:
         # Section 81 deadlines depend on a complete, verified AGM history.
+        # Missing history is an explicit UNKNOWN review state, not an assumed
+        # absence of meetings and not a deadline breach.
+        if not self._agm_history_is_verified(c):
+            self._add_flag(ComplianceFlag(
+                rule_id="AGM-001",
+                flag_code="AGM_HISTORY_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="AGM history has not been independently verified; no first- or subsequent-AGM default is inferred.",
+                statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                detail={"agm_count": c.agm_count, "last_agm_date": str(c.last_agm_date) if c.last_agm_date else None},
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+            ))
         if self._agm_history_is_verified(c):
             if c.agm_count is None:
                 self._add_flag(ComplianceFlag(
@@ -1189,7 +1249,13 @@ class NLCRuleEngine:
                             revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                             description=f"First AGM not held within 18 calendar months. Section 81(1): overdue by {delay} days.",
                             statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
-                            detail={"delay_days": delay, "deadline": str(deadline)},
+                            detail={
+                                "delay_days": delay,
+                                "deadline": deadline.isoformat(),
+                                "deadline_basis": "18_CALENDAR_MONTHS_FROM_INCORPORATION",
+                                "statutory_period_months": 18,
+                                "incorporation_date": c.incorporation_date.isoformat(),
+                            },
                         ))
             elif c.agm_count > 0:
                 if c.last_agm_date is None:
@@ -1201,23 +1267,31 @@ class NLCRuleEngine:
                         statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
                         state=RuleState.UNKNOWN, eval_state="UNKNOWN",
                     ))
+                elif c.agm_held_this_cycle is None:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-002",
+                        flag_code="CURRENT_YEAR_AGM_STATUS_UNKNOWN",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description="Whether an AGM was held in the current calendar year is not verified; no subsequent-AGM default is inferred.",
+                        statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                    ))
                 elif c.agm_held_this_cycle is False:
                     agm_deadline = self._subsequent_agm_deadline(c)
-                    interval_deadline = (
-                        self._add_months(c.last_agm_date, 15)
-                        if c.last_agm_date is not None else None
-                    )
-                    calendar_year_deadline = (
-                        date(c.last_agm_date.year + 1, 12, 31)
-                        if c.last_agm_date is not None else None
-                    )
-                    deadline_basis = (
-                        "15_MONTH_INTERVAL"
-                        if interval_deadline is not None
-                        and calendar_year_deadline is not None
-                        and interval_deadline <= calendar_year_deadline
-                        else "CALENDAR_YEAR"
-                    )
+                    deadline_components = self._subsequent_agm_deadline_components(c)
+                    if deadline_components is None:
+                        interval_deadline = calendar_year_deadline = base_deadline = None
+                        deadline_basis = "UNKNOWN"
+                    else:
+                        (
+                            interval_deadline,
+                            calendar_year_deadline,
+                            base_deadline,
+                            deadline_basis,
+                        ) = deadline_components
                     if agm_deadline is None:
                         self._add_flag(ComplianceFlag(
                             rule_id="AGM-002", flag_code="AGM_EXTENSION_REQUIRES_REVIEW",
@@ -1231,7 +1305,17 @@ class NLCRuleEngine:
                     elif self.today > agm_deadline:
                         delay = (self.today - agm_deadline).days
                         severity = Severity.BLACK if delay > 365 else Severity.RED
-                        basis = "VALIDATED_EXTENSION" if c.agm_extension_granted_until else deadline_basis
+                        basis = (
+                            "VALIDATED_EXTENSION"
+                            if (
+                                c.agm_extension_granted_until is not None
+                                and c.agm_extension_granted_until == agm_deadline
+                                and base_deadline is not None
+                                and agm_deadline is not None
+                                and agm_deadline > base_deadline
+                            )
+                            else deadline_basis
+                        )
                         self._add_flag(ComplianceFlag(
                             rule_id="AGM-002", flag_code="SUBSEQUENT_AGM_DEFAULT",
                             severity=severity,
@@ -1245,8 +1329,25 @@ class NLCRuleEngine:
                                 "basis": basis,
                                 "interval_deadline": str(interval_deadline) if interval_deadline else None,
                                 "calendar_year_deadline": (
-                                    str(calendar_year_deadline) if calendar_year_deadline else None
+                                    calendar_year_deadline.isoformat() if calendar_year_deadline else None
                                 ),
+                                "statutory_base_deadline": (
+                                    base_deadline.isoformat() if base_deadline else None
+                                ),
+                                "extension_application_date": (
+                                    c.agm_extension_application_date.isoformat()
+                                    if c.agm_extension_application_date else None
+                                ),
+                                "extension_granted_until": (
+                                    c.agm_extension_granted_until.isoformat()
+                                    if c.agm_extension_granted_until else None
+                                ),
+                                "extension_evidence_ref": c.agm_extension_evidence_ref,
+                                "extension_verified": c.agm_extension_verified is True,
+                                "extension_statutory_limit": min(
+                                    base_deadline + timedelta(days=90),
+                                    calendar_year_deadline,
+                                ).isoformat() if base_deadline and calendar_year_deadline else None,
                             },
                         ))
         # Unverified AGM history is not converted into a deadline breach.
@@ -1920,22 +2021,104 @@ class NLCRuleEngine:
             ))
 
         for charge in c.charges:
-            if not charge.form_xviii_filed:
-                delay = (self.today - charge.creation_date).days
-                if delay > CHARGE_REGISTRATION_DEADLINE_DAYS:
+            registration_unknown = []
+            if not charge.creation_date_verified or not charge.creation_date_evidence_ref:
+                registration_unknown.append("CHARGE_CREATION_DATE_UNVERIFIED")
+            if (
+                charge.registrable_under_s159 is None
+                or not charge.registrability_verified
+                or not charge.registrability_evidence_ref
+            ):
+                registration_unknown.append("SECTION_159_REGISTRABILITY_UNKNOWN")
+            elif charge.registrable_under_s159 is False:
+                registration_unknown = []
+            if (
+                charge.form_xviii_filed is None
+                or not charge.form_xviii_filing_status_verified
+                or not charge.form_xviii_filing_evidence_ref
+            ):
+                registration_unknown.append("RJSC_FORM_XVIII_STATUS_UNVERIFIED")
+            if charge.form_xviii_filed is True and charge.form_xviii_filed_date is None:
+                registration_unknown.append("FORM_XVIII_FILING_DATE_UNKNOWN")
+            if charge.form_xviii_filed is False and charge.form_xviii_filed_date is not None:
+                registration_unknown.append("FORM_XVIII_STATUS_DATE_CONFLICT")
+
+            registrability_verified_not_applicable = (
+                charge.registrable_under_s159 is False
+                and charge.registrability_verified
+                and bool(charge.registrability_evidence_ref)
+            )
+            if registration_unknown and not registrability_verified_not_applicable:
+                self._add_flag(ComplianceFlag(
+                    rule_id="CAP-002",
+                    flag_code="CHARGE_REGISTRATION_REQUIRES_EVIDENCE_REVIEW",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="Charge registration status, creation date or Section 159 applicability is not sufficiently evidenced. Missing evidence is UNKNOWN, not proof of non-registration.",
+                    statutory_basis="Section 159(1), Companies Act 1994 (Bangladesh)",
+                    detail={"charge_id": charge.charge_id, "unknown_reasons": registration_unknown},
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                ))
+            elif charge.registrable_under_s159 is True:
+                registration_deadline = (
+                    charge.creation_date + timedelta(days=CHARGE_REGISTRATION_DEADLINE_DAYS)
+                )
+                if charge.form_xviii_filed is False:
+                    days_overdue = (self.today - registration_deadline).days
+                    if self.today > registration_deadline:
+                        self._add_flag(ComplianceFlag(
+                            rule_id="CAP-002",
+                            flag_code="CHARGE_NOT_REGISTERED",
+                            severity=Severity.YELLOW if days_overdue < 90 else Severity.RED,
+                            score_impact=5,
+                            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                            description=f"{charge.charge_type} charge (Tk {charge.amount_bdt:,.2f}) was not registered within 21 days of creation under Section 159(1). Overdue by {days_overdue} days.",
+                            statutory_basis="Section 159(1), Companies Act 1994 (Bangladesh)",
+                            detail={
+                                "charge_id": charge.charge_id,
+                                "creation_date": charge.creation_date.isoformat(),
+                                "statutory_deadline": registration_deadline.isoformat(),
+                                "statutory_period_days": CHARGE_REGISTRATION_DEADLINE_DAYS,
+                                "days_overdue": days_overdue,
+                                "form": "Form XVIII",
+                                "amount": charge.amount_bdt,
+                            },
+                            state=RuleState.NON_COMPLIANT,
+                            eval_state="VIOLATION",
+                        ))
+                elif (
+                    charge.form_xviii_filed is True
+                    and charge.form_xviii_filed_date is not None
+                    and charge.form_xviii_filed_date > registration_deadline
+                ):
+                    days_late = (charge.form_xviii_filed_date - registration_deadline).days
                     self._add_flag(ComplianceFlag(
                         rule_id="CAP-002",
-                        flag_code="CHARGE_NOT_REGISTERED",
-                        severity=Severity.YELLOW if delay < 90 else Severity.RED,
-                        score_impact=5,
+                        flag_code="CHARGE_REGISTERED_LATE_REQUIRES_REVIEW",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"{charge.charge_type} charge (Tk {charge.amount_bdt:,.2f}) not registered within 21 days of creation. Section 159(1): unregistered charge void against creditors and liquidator.",
+                        description="Form XVIII filing is evidenced after the Section 159(1) 21-day period. Review any Registrar extension and the legal effect of late registration; do not infer cure or voidness automatically.",
                         statutory_basis="Section 159(1), Companies Act 1994 (Bangladesh)",
-                        detail={"charge_id": charge.charge_id, "delay": delay, "amount": charge.amount_bdt}
+                        detail={
+                            "charge_id": charge.charge_id,
+                            "creation_date": charge.creation_date.isoformat(),
+                            "statutory_deadline": registration_deadline.isoformat(),
+                            "filed_date": charge.form_xviii_filed_date.isoformat(),
+                            "days_late": days_late,
+                            "form": "Form XVIII",
+                            "registrar_extension_evidence_required": True,
+                        },
+                        state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                        eval_state="UNKNOWN",
                     ))
 
-            if charge.satisfied is True:
+            if charge.satisfied is None or charge.satisfied is True:
                 unknown_reasons = []
+                if charge.satisfied is None:
+                    unknown_reasons.append("SATISFACTION_STATUS_UNKNOWN")
                 if not charge.satisfaction_verified or not charge.satisfaction_evidence_ref:
                     unknown_reasons.append("SATISFACTION_NOT_AUTHENTICATED")
                 if charge.satisfaction_date is None:
@@ -1955,6 +2138,10 @@ class NLCRuleEngine:
                     or not charge.satisfaction_filing_evidence_ref
                 ):
                     unknown_reasons.append("RJSC_FILING_STATUS_UNVERIFIED")
+                if charge.satisfaction_filed is True and charge.satisfaction_filed_date is None:
+                    unknown_reasons.append("SATISFACTION_FILING_DATE_UNKNOWN")
+                if charge.satisfaction_filed is False and charge.satisfaction_filed_date is not None:
+                    unknown_reasons.append("SATISFACTION_FILING_STATUS_DATE_CONFLICT")
                 if unknown_reasons:
                     self._add_flag(ComplianceFlag(
                         rule_id="CHG-001",
@@ -1973,24 +2160,60 @@ class NLCRuleEngine:
                         eval_state="UNKNOWN",
                     ))
                 elif (
+                    charge.satisfaction_filed is True
+                    and charge.satisfaction_date is not None
+                    and charge.satisfaction_filed_date is not None
+                ):
+                    satisfaction_deadline = charge.satisfaction_date + timedelta(days=21)
+                    if charge.satisfaction_filed_date > satisfaction_deadline:
+                        days_late = (charge.satisfaction_filed_date - satisfaction_deadline).days
+                        self._add_flag(ComplianceFlag(
+                            rule_id="CHG-001",
+                            flag_code="CHARGE_SATISFACTION_FILED_LATE_REQUIRES_REVIEW",
+                            severity=Severity.NOT_EVALUATED,
+                            score_impact=0,
+                            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                            description="Form XXVIII filing is evidenced after the Section 172(1) 21-day period. Review any Registrar extension and the legal effect of late filing; do not infer cure or voidness automatically.",
+                            statutory_basis="Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh)",
+                            detail={
+                                "charge_id": charge.charge_id,
+                                "satisfaction_date": charge.satisfaction_date.isoformat(),
+                                "statutory_deadline": satisfaction_deadline.isoformat(),
+                                "filed_date": charge.satisfaction_filed_date.isoformat(),
+                                "days_late": days_late,
+                                "form": "Form XXVIII",
+                                "registrar_extension_evidence_required": True,
+                            },
+                            state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                            eval_state="UNKNOWN",
+                        ))
+                elif (
                     charge.satisfaction_filed is False
                     and charge.satisfaction_date is not None
                 ):
+                    satisfaction_deadline = charge.satisfaction_date + timedelta(days=21)
                     satisfaction_delay = (self.today - charge.satisfaction_date).days
-                    if satisfaction_delay > 21:
+                    days_overdue = (self.today - satisfaction_deadline).days
+                    if self.today > satisfaction_deadline:
                         self._add_flag(ComplianceFlag(
                             rule_id="CHG-001",
                             flag_code="CHARGE_SATISFACTION_NOT_FILED",
                             severity=Severity.YELLOW,
                             score_impact=3,
                             revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                            description=f"Verified s.159-registrable charge satisfaction is not evidenced as filed via Form XXVIII within 21 days. Section 172(1). Overdue by {satisfaction_delay} days.",
+                            description=f"Verified s.159-registrable charge satisfaction was not notified to RJSC within 21 days under Section 172(1). Form XXVIII is the satisfaction filing. Overdue by {days_overdue} days.",
                             statutory_basis="Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh)",
                             detail={
                                 "charge_id": charge.charge_id,
                                 "charge_type": charge.charge_type,
+                                "satisfaction_date": charge.satisfaction_date.isoformat(),
+                                "statutory_deadline": satisfaction_deadline.isoformat(),
+                                "statutory_period_days": 21,
+                                "elapsed_days": satisfaction_delay,
                                 "delay_days": satisfaction_delay,
+                                "days_overdue": days_overdue,
                                 "form": "Form XXVIII",
+                                "statutory_basis": "Section 172(1), read with Section 159",
                             },
                             state=RuleState.NON_COMPLIANT,
                             eval_state="VIOLATION",
@@ -2811,17 +3034,19 @@ class NLCRuleEngine:
             f.rule_id in VERIFIED_RULE_IDS
             and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
             and f.is_black_override
+            and f.severity == Severity.BLACK
             and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and f.eval_state == "VIOLATION"
             for f in self._flags if not f.resolved and f.conditional_applies
         )
 
-        if LEGAL_SCORE_RELEASED and (pre_score <= 29 or has_black_override):
+        if legal_score_is_released() and (pre_score <= 29 or has_black_override):
             black_count = len([
                 f for f in self._flags
                 if f.rule_id in VERIFIED_RULE_IDS
                 and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
                 and f.is_black_override
+                and f.severity == Severity.BLACK
                 and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
                 and f.eval_state == "VIOLATION"
                 and not f.resolved and f.conditional_applies
@@ -2880,7 +3105,7 @@ class NLCRuleEngine:
         ]
         scored = [
             f for f in violations
-            if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS
+            if legal_score_is_released() and f.rule_id in VERIFIED_RULE_IDS
         ]
 
         deductions = {
@@ -2918,7 +3143,7 @@ class NLCRuleEngine:
         # score_impact is excluded from deductions.
         scored = [
             f for f in violations
-            if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS
+            if legal_score_is_released() and f.rule_id in VERIFIED_RULE_IDS
         ]
 
         tax_ded = sum(f.score_impact for f in scored if f.rule_id.startswith(("TAX-", "VAT-")))
@@ -2958,14 +3183,15 @@ class NLCRuleEngine:
         
         override = False
         reason = None
-        final = raw if LEGAL_SCORE_RELEASED else 100
+        final = raw if legal_score_is_released() else 100
         critical = []
-        if LEGAL_SCORE_RELEASED:
+        if legal_score_is_released():
             critical = [
                 f for f in active
                 if f.rule_id in VERIFIED_RULE_IDS
                 and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
                 and f.is_black_override
+                and f.severity == Severity.BLACK
                 and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
                 and f.eval_state == "VIOLATION"
             ]
@@ -2979,12 +3205,12 @@ class NLCRuleEngine:
         # Keep the band NOT_EVALUATED until the full legal corpus is independently approved.
         score_band = (
             Severity(self._score_to_band(final, force_black=bool(critical), coverage=coverage))
-            if LEGAL_SCORE_RELEASED else Severity.NOT_EVALUATED
+            if legal_score_is_released() else Severity.NOT_EVALUATED
         )
 
         # Band = worst of (score-based band, highest active flag severity)
         # Prevents false GREEN when a RED-severity rule fires (BLACK handled above)'t override
-        if LEGAL_SCORE_RELEASED and not critical:
+        if legal_score_is_released() and not critical:
             severity_rank = {Severity.GREEN: 0, Severity.YELLOW: 1, Severity.RED: 2, Severity.BLACK: 3}
             max_flag_severity = Severity.GREEN
             for f in active:
@@ -3026,7 +3252,8 @@ class NLCRuleEngine:
             "engine_version": RULE_ENGINE_VERSION,
             "ilrmf_version": ILRMF_VERSION,
             "verified_rule_ids": sorted(VERIFIED_RULE_IDS),
-            "legal_score_released": LEGAL_SCORE_RELEASED,
+            "legal_score_release_switch": LEGAL_SCORE_RELEASED,
+            "legal_score_released": legal_score_is_released(),
             "flags": flag_signatures,
             "final_score": final,
         }
@@ -3055,8 +3282,8 @@ class NLCRuleEngine:
             revenue_tier=REVENUE_TIER_MAP[band],
             active_flag_count=len(active),
             coverage=coverage,
-            black_flag_count=len([f for f in active if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS and (f.is_black_override or f.severity == Severity.BLACK) and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
-            red_flag_count=len([f for f in active if LEGAL_SCORE_RELEASED and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.RED and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            black_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            red_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.RED and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             yellow_flag_count=len([f for f in active if f.severity == Severity.YELLOW and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             green_flag_count=len([f for f in active if f.severity == Severity.GREEN and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             bankruptcy_score=max(0, 5 - bnk_ded),
@@ -3091,7 +3318,10 @@ class NLCRuleEngine:
         # We now include YELLOW severity flags in addition to RED/BLACK.
         actionable = [
             f for f in active
-            if f.state == RuleState.NON_COMPLIANT
+            if legal_score_is_released()
+            and f.rule_id in VERIFIED_RULE_IDS
+            and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+            and f.eval_state == "VIOLATION"
             and f.severity in (Severity.RED, Severity.BLACK)
         ]
         if not actionable:

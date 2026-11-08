@@ -17,7 +17,6 @@ Legal basis: Companies Act 1994 (Bangladesh)
 
 from datetime import date, timedelta
 
-import pytest
 
 from app.rule_engine.engine import (
     VERIFIED_RULE_IDS,
@@ -79,7 +78,7 @@ class TestDirectorDisqualification:
         flag = _flag_by_id(result, "DEF-001")
         assert flag is None, "DEF-001 should NOT fire for a valid director"
 
-    def test_LEG_002_verified_disqualification_triggers_black(self):
+    def test_LEG_002_verified_disqualification_is_not_automatic_black(self):
         """LEG-002: Undischarged insolvent director with verified evidence → BLACK."""
         c = _base_profile(
             any_director_disqualified=True,
