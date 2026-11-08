@@ -626,6 +626,7 @@ async def list_company_charges(
 async def create_company_charge(
     company_id: uuid.UUID,
     body: CompanyChargeCreateRequest,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
     company = await db.get(Company, company_id)
@@ -634,6 +635,15 @@ async def create_company_charge(
     charge = CompanyCharge(company_id=company_id, **body.model_dump())
     db.add(charge)
     await db.flush()
+    await ActivityService(db).log(
+        actor_user_id=current_user.id,
+        company_id=company_id,
+        action="COMPANY_CHARGE_RECORDED",
+        resource_type="company_charge",
+        resource_id=charge.id,
+        description="A reported mortgage/charge record was added; legal facts remain unverified.",
+        detail={"evidence_state": "UNVERIFIED"},
+    )
     await db.refresh(charge)
     return charge
 
@@ -695,6 +705,23 @@ async def verify_company_charge(
     for field_name, value in updates.items():
         setattr(charge, field_name, value)
     await db.flush()
+    await ActivityService(db).log(
+        actor_user_id=current_user.id,
+        company_id=company_id,
+        action="COMPANY_CHARGE_EVIDENCE_VERIFIED",
+        resource_type="company_charge",
+        resource_id=charge.id,
+        description="Charge facts were updated by an authorised legal reviewer.",
+        detail={"changed_fields": sorted(updates), "verified_groups": [
+            field for field in (
+                "creation_date_verified",
+                "form_xviii_filing_status_verified",
+                "registrability_verified",
+                "satisfaction_verified",
+                "satisfaction_filing_status_verified",
+            ) if updates.get(field) is True
+        ]},
+    )
     await db.refresh(charge)
     return charge
 
