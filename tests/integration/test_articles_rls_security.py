@@ -4,6 +4,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import text
 
+
 pytestmark = [pytest.mark.integration]
 
 
@@ -57,6 +58,7 @@ async def test_articles_evidence_tables_have_signed_tenant_write_policies(db):
                 assert "current_setting" not in expression.lower()
                 assert "nlc_current_user_id" not in expression.lower() or (
                     "nlc_current_user_is_staff" in expression
+                    or "nlc_can_access_company" in expression
                     or "nlc_can_access_articles_company" in expression
                     or "nlc_can_edit_company" in expression
                 )
@@ -149,7 +151,6 @@ async def test_unsigned_admin_guc_cannot_authorize_articles_staff_write(db_for_u
         text("SELECT public.nlc_current_user_is_staff()")
     )
     assert staff.scalar_one() is False
-
 
 @pytest.mark.asyncio
 async def test_legacy_agm_evidence_reference_uses_canonical_text_type(db):

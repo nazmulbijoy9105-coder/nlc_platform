@@ -149,6 +149,11 @@ def upgrade() -> None:
             CREATE POLICY {table}_company_read
             ON public.{table}
             FOR SELECT
+            USING (public.nlc_can_access_company(company_id))
+        """)
+        if table == "articles_verifications":
+            # A company user with edit permission may submit evidence, but the
+            # submitter identity must be the verified signed principal.
             USING (public.nlc_can_access_articles_company(company_id))
         """)
         if table == "articles_verifications":
@@ -161,6 +166,12 @@ def upgrade() -> None:
                 WITH CHECK (
                     submitted_by = public.nlc_current_user_id()
                     AND public.nlc_can_edit_company(company_id)
+                )
+            """)
+        else:
+            # Event actor identity is cryptographically bound to the session.
+            # Both company editors and staff can append an event; no caller may
+            # forge another user as the actor.
                     AND public.nlc_can_access_articles_company(company_id)
                 )
             """)
