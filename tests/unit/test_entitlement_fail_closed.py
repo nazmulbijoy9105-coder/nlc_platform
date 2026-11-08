@@ -24,14 +24,6 @@ def _request(company_id: uuid.UUID | None = None) -> Request:
         "server": ("testserver", 443),
         "path_params": path_params,
     })
-from types import SimpleNamespace
-
-import pytest
-from fastapi import HTTPException
-
-from app.core.entitlement import require_entitlement
-
-
 @pytest.mark.asyncio
 @pytest.mark.parametrize("role", ["SUPER_ADMIN", "ADMIN_STAFF"])
 async def test_authorized_staff_roles_bypass_customer_subscription_lookup(role):
