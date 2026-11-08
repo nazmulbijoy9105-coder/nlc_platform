@@ -24,6 +24,20 @@ from app.models.people import Director, Shareholder
 from app.services.base import BaseService
 
 
+def _verified_agm_held_status(company, latest_agm) -> bool | None:
+    """Return held/not-held only when this specific meeting is verified."""
+    if (
+        latest_agm is None
+        or latest_agm.agm_date is None
+        or latest_agm.agm_held_verified is not True
+        or not latest_agm.agm_held_evidence_ref
+        or latest_agm.agm_held_verified_at is None
+        or latest_agm.agm_held_verified_by is None
+    ):
+        return None
+    return latest_agm.agm_held
+
+
 def _agm_profile_evidence(latest_agm) -> dict:
     """Expose only AGM facts supported by explicit evidence provenance.
 
@@ -683,21 +697,7 @@ class CompanyService(BaseService[Company]):
             "agm_extension_evidence_ref": company.agm_extension_evidence_ref,
             "agm_extension_verified_at": company.agm_extension_verified_at.date() if company.agm_extension_verified_at else None,
             "agm_extension_verified_by": str(company.agm_extension_verified_by) if company.agm_extension_verified_by else None,
-            "agm_held_this_cycle": (
-                latest_agm.agm_held
-                if (
-                    latest_agm is not None
-                    and company.agm_history_verified is True
-                    and bool(company.agm_history_evidence_ref)
-                    and company.agm_history_verified_at is not None
-                    and company.agm_history_verified_by is not None
-                    and latest_agm.agm_date is not None
-                    and latest_agm.agm_held_verified is True
-                    and bool(latest_agm.agm_held_evidence_ref)
-                    and latest_agm.agm_held_verified_at is not None
-                    and latest_agm.agm_held_verified_by is not None
-                ) else None
-            ),
+            "agm_held_this_cycle": _verified_agm_held_status(company, latest_agm),
             "agm_minutes_prepared":       agm_profile_evidence["agm_minutes_prepared"],
 
             # Audit State
