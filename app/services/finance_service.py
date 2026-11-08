@@ -546,9 +546,14 @@ class FinanceService:
             text("SELECT pg_advisory_xact_lock(hashtext(:lock_key))"),
             {"lock_key": key_prefix},
         )
+        # Identifiers are selected only from the allowlist above. Ignore
+        # malformed legacy suffixes rather than breaking future numbering.
         result = await self.db.execute(
             text(
-                f"SELECT COALESCE(MAX(CAST(SPLIT_PART({column}, '-', 3) AS INTEGER)), 0) "
+                f"SELECT COALESCE(MAX(CASE "
+                f"WHEN SPLIT_PART({column}, '-', 3) ~ '^[0-9]+$' "
+                f"THEN CAST(SPLIT_PART({column}, '-', 3) AS INTEGER) "
+                f"ELSE NULL END), 0) "
                 f"FROM {table} WHERE {column} LIKE :prefix"
             ),
             {"prefix": f"{key_prefix}%"},
