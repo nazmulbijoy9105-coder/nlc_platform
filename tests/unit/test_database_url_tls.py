@@ -5,7 +5,7 @@ import ssl
 
 import pytest
 
-from app.core.db_url import normalize_asyncpg_url
+from app.db_url import normalize_asyncpg_url
 
 
 def test_production_url_without_sslmode_still_uses_verified_tls():
