@@ -35,8 +35,14 @@ def test_signed_rls_migration_rejects_unsafe_roles_and_memberships_in_both_direc
     assert "pg_auth_members" in source
     assert "member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in source
     assert "granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in source
-    assert "NOT (member_role.rolsuper OR member_role.rolbypassrls)" in source
-    assert "restricted NLC roles may only be granted to trusted SUPERUSER/BYPASSRLS administrators" in source
+    # The migration takes the stricter fail-closed position: neither
+    # restricted role may participate in any membership, in either direction.
+    membership_guard = source[source.index("IF EXISTS (", source.index("NOINHERIT does not prevent SET ROLE")):]
+    membership_guard = membership_guard[:membership_guard.index("$role_preflight$")]
+    assert "FROM pg_auth_members membership" in membership_guard
+    assert "granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in membership_guard
+    assert "member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in membership_guard
+    assert "must have no role memberships in either direction" in membership_guard
 
 
 def test_signed_rls_inventory_preflight_runs_before_schema_mutations():

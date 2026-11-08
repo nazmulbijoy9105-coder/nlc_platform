@@ -105,3 +105,46 @@ async def test_manual_payment_submission_rejects_reference_already_present_in_pa
             paid_at=None,
             evidence_document_id=None,
         )
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("method", ["BKASH_MANUAL", "NAGAD_MANUAL"])
+async def test_manual_mobile_wallet_reference_is_unique_across_claims_and_receipts(
+    db, db_company, db_user, method
+):
+    from app.services.finance_service import FinanceConflictError, FinanceService
+
+    await set_rls_context(db, str(db_user.id))
+    service = FinanceService(db)
+    invoice = await _issued_invoice(db, db_company, db_user)
+    reference = f"{method}-TXN-{uuid.uuid4().hex}"
+
+    submission = await service.submit_offline_payment(
+        company_id=db_company.id,
+        invoice_id=invoice.id,
+        submitted_by=db_user.id,
+        method=method,
+        amount_bdt=Decimal("25.00"),
+        payer_reference=reference,
+        paid_at=None,
+        evidence_document_id=None,
+    )
+    payment = await service.approve_offline_payment(
+        submission_id=submission.id,
+        reviewer_id=db_user.id,
+        review_note="Manual wallet receipt verified",
+        cheque_cleared_at=None,
+    )
+    assert payment.method == method
+    assert payment.payer_reference == reference
+
+    with pytest.raises(FinanceConflictError, match="already been submitted or credited"):
+        await service.submit_offline_payment(
+            company_id=db_company.id,
+            invoice_id=invoice.id,
+            submitted_by=db_user.id,
+            method=method,
+            amount_bdt=Decimal("25.00"),
+            payer_reference=reference.lower(),
+            paid_at=None,
+            evidence_document_id=None,
+        )
