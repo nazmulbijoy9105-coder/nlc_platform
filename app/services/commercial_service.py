@@ -57,12 +57,18 @@ class EngagementService(BaseService[Engagement]):
 
         # Structure by revenue tier
         pipeline = {
-            "COMPLIANCE_PACKAGE":        {"stages": {}, "total_estimated": 0, "total_confirmed": 0, "total_invoiced": 0, "total_collected": 0},
-            "STRUCTURED_REGULARIZATION": {"stages": {}, "total_estimated": 0, "total_confirmed": 0, "total_invoiced": 0, "total_collected": 0},
-            "CORPORATE_RESCUE":          {"stages": {}, "total_estimated": 0, "total_confirmed": 0, "total_invoiced": 0, "total_collected": 0},
-            "COMPLIANCE_PACKAGE":        {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_collected": Decimal('0.00')},
-            "STRUCTURED_REGULARIZATION": {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_collected": Decimal('0.00')},
-            "CORPORATE_RESCUE":          {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_collected": Decimal('0.00')},
+            tier: {
+                "stages": {},
+                "total_estimated": Decimal("0.00"),
+                "total_confirmed": Decimal("0.00"),
+                "total_invoiced": Decimal("0.00"),
+                "total_collected": Decimal("0.00"),
+            }
+            for tier in (
+                "COMPLIANCE_PACKAGE",
+                "STRUCTURED_REGULARIZATION",
+                "CORPORATE_RESCUE",
+            )
         }
         for row in rows:
             tier = row.get("revenue_tier", "")
@@ -76,13 +82,10 @@ class EngagementService(BaseService[Engagement]):
                     "invoiced_bdt":   Decimal(str(row.get("total_invoiced_bdt") or 0)),
                     "collected_bdt":  Decimal(str(row.get("total_collected_bdt") or 0)),
                 }
-                pipeline[tier]["total_estimated"] += float(row.get("total_estimated_bdt") or 0)  # type: ignore
-                pipeline[tier]["total_confirmed"]  += float(row.get("total_confirmed_bdt") or 0)  # type: ignore
-                pipeline[tier]["total_invoiced"]   += float(row.get("total_invoiced_bdt") or 0)  # type: ignore
-                pipeline[tier]["total_collected"]  += float(row.get("total_collected_bdt") or 0)  # type: ignore
-                pipeline[tier]["total_estimated"] += Decimal(str(row.get("total_estimated_bdt") or 0))  # type: ignore
-                pipeline[tier]["total_confirmed"]  += Decimal(str(row.get("total_confirmed_bdt") or 0))  # type: ignore
-                pipeline[tier]["total_collected"]  += Decimal(str(row.get("total_collected_bdt") or 0))  # type: ignore
+                pipeline[tier]["total_estimated"] += Decimal(str(row.get("total_estimated_bdt") or 0))
+                pipeline[tier]["total_confirmed"] += Decimal(str(row.get("total_confirmed_bdt") or 0))
+                pipeline[tier]["total_invoiced"] += Decimal(str(row.get("total_invoiced_bdt") or 0))
+                pipeline[tier]["total_collected"] += Decimal(str(row.get("total_collected_bdt") or 0))
 
         # Grand totals
         grand_total_estimated  = sum(v["total_estimated"]  for v in pipeline.values())  # type: ignore
@@ -91,18 +94,12 @@ class EngagementService(BaseService[Engagement]):
         grand_total_collected  = sum(v["total_collected"]  for v in pipeline.values())  # type: ignore
 
         return {
-            "by_tier":              pipeline,
-            "grand_total_estimated_bdt":  grand_total_estimated,
-            "grand_total_confirmed_bdt":  grand_total_confirmed,
-            "grand_total_invoiced_bdt":   grand_total_invoiced,
-            "grand_total_collected_bdt":  grand_total_collected,
-            "collection_rate":      (
             "by_tier": pipeline,
             "grand_total_estimated_bdt": grand_total_estimated,
             "grand_total_confirmed_bdt": grand_total_confirmed,
+            "grand_total_invoiced_bdt": grand_total_invoiced,
             "grand_total_collected_bdt": grand_total_collected,
-            # These are manually recorded engagement aggregates, not receipts
-            # reconciled against a payment ledger or bank/gateway settlement.
+            # Engagement aggregates are not independently verified receipts.
             "revenue_data_basis": "ENGAGEMENT_RECORDED_AGGREGATES",
             "collected_cash_reconciled": False,
             "collection_rate": (
