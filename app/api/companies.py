@@ -627,14 +627,16 @@ async def get_upcoming_deadlines(days_ahead: int = Query(default=30, ge=7, le=90
         user_id=current_user.id,
         include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF,
     )
-    return await svc.get_upcoming_deadlines(days_ahead=days_ahead, user_id=current_user.id, include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF)
 
 
 @router.get("/dashboard/risk", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Risk distribution")
 async def get_risk_distribution(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     _require_legal_dashboard_release()
     svc = CompanyService(db)
-    return await svc.get_risk_distribution(user_id=current_user.id)
+    return await svc.get_risk_distribution(
+        user_id=current_user.id,
+        include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF,
+    )
 
 @router.get(
     "/{company_id}/charges",
@@ -821,9 +823,3 @@ async def verify_company_charge(
     )
     await db.refresh(charge)
     return charge
-
-    return await svc.get_risk_distribution(
-        user_id=current_user.id,
-        include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF,
-    )
-    return await svc.get_risk_distribution(user_id=current_user.id, include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF)
