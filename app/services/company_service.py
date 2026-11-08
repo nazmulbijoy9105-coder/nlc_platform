@@ -466,6 +466,8 @@ class CompanyService(BaseService[Company]):
         self, user_id: uuid.UUID, *, include_assigned_staff: bool = False
     ) -> list[dict]:
         """Return risk aggregates after filtering to the caller's company scope."""
+        if user_id is None:
+            raise ValueError("user_id is required for tenant-scoped risk distribution")
         result = await self.db.execute(
             text(
                 """
