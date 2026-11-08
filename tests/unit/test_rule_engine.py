@@ -32,6 +32,7 @@ from app.rule_engine.engine import (
     RevenueTier,
     RuleState,
     Severity,
+    ShareComplianceEventEvidence,
 )
 from tests.conftest import (
     assert_flag_not_triggered,
@@ -540,26 +541,48 @@ class TestShareholderRules:
 
     def test_SH001_triggers_change_not_in_return(self, rule_engine, build_profile):
         """Share allotment not filed via Form XV → SH-001."""
-        profile = build_profile(
-            last_allotment_date=date.today() - timedelta(days=61),
-            form_xv_filed=False,
-        )
+        profile = build_profile(share_compliance_events=[ShareComplianceEventEvidence(
+            event_reference="ALLOTMENT-TEST-001",
+            event_type="ALLOTMENT",
+            event_date=date.today() - timedelta(days=61),
+            event_verified=True,
+            event_evidence_ref="evidence://allotment/001",
+            filing_form="FORM_XV",
+            filing_status=False,
+            filing_status_verified=True,
+            filing_evidence_ref="evidence://rjsc/form-xv-search",
+        )])
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "SH-001")
 
     def test_SH001_no_trigger_at_60_day_limit(self, rule_engine, build_profile):
-        profile = build_profile(
-            last_allotment_date=date.today() - timedelta(days=60),
-            form_xv_filed=False,
-        )
+        profile = build_profile(share_compliance_events=[ShareComplianceEventEvidence(
+            event_reference="ALLOTMENT-TEST-002",
+            event_type="ALLOTMENT",
+            event_date=date.today() - timedelta(days=60),
+            event_verified=True,
+            event_evidence_ref="evidence://allotment/002",
+            filing_form="FORM_XV",
+            filing_status=False,
+            filing_status_verified=True,
+            filing_evidence_ref="evidence://rjsc/form-xv-search",
+        )])
         output = rule_engine.evaluate(profile)
         assert_flag_not_triggered(output, "SH-001")
 
     def test_SH001_no_trigger_when_filed(self, rule_engine, build_profile):
-        profile = build_profile(
-            shareholder_change_date=date.today() - timedelta(days=100),
-            form_xv_filed=True,
-        )
+        profile = build_profile(share_compliance_events=[ShareComplianceEventEvidence(
+            event_reference="ALLOTMENT-TEST-003",
+            event_type="ALLOTMENT",
+            event_date=date.today() - timedelta(days=100),
+            event_verified=True,
+            event_evidence_ref="evidence://allotment/003",
+            filing_form="FORM_XV",
+            filing_status=True,
+            filing_status_verified=True,
+            filing_date=date.today() - timedelta(days=20),
+            filing_evidence_ref="evidence://rjsc/form-xv-filed",
+        )])
         output = rule_engine.evaluate(profile)
         assert_flag_not_triggered(output, "SH-001")
 
@@ -723,10 +746,16 @@ class TestRegisterRules:
         NOTE: Test was originally asserting REG-002, but REG-002 = core registers missing.
         Share certificate non-issuance is SH-002 in the engine.
         """
-        profile = build_profile(
-            last_allotment_date=date.today() - timedelta(days=95),
-            share_certificates_issued=False,
-        )
+        profile = build_profile(share_compliance_events=[ShareComplianceEventEvidence(
+            event_reference="ALLOTMENT-TEST-004",
+            event_type="ALLOTMENT",
+            event_date=date.today() - timedelta(days=95),
+            event_verified=True,
+            event_evidence_ref="evidence://allotment/004",
+            certificate_issued=False,
+            certificate_status_verified=True,
+            certificate_evidence_ref="evidence://company/certificate-register",
+        )])
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "SH-002")
 
@@ -1304,11 +1333,31 @@ class TestUntestedRules:
         assert_flag_triggered(rule_engine.evaluate(profile), "SH-002")
 
     def test_SH003_triggers(self, rule_engine, build_profile):
-        profile = build_profile(capital_increase_date=date.today() - timedelta(days=16), form_iv_filed=False)
+        profile = build_profile(share_compliance_events=[ShareComplianceEventEvidence(
+            event_reference="CAPITAL-TEST-001",
+            event_type="CAPITAL_INCREASE_RESOLUTION",
+            event_date=date.today() - timedelta(days=16),
+            event_verified=True,
+            event_evidence_ref="evidence://resolution/capital-increase",
+            filing_form="FORM_IV",
+            filing_status=False,
+            filing_status_verified=True,
+            filing_evidence_ref="evidence://rjsc/form-iv-search",
+        )])
         assert_flag_triggered(rule_engine.evaluate(profile), "SH-003")
 
     def test_SH003_no_trigger_at_15_day_limit(self, rule_engine, build_profile):
-        profile = build_profile(capital_increase_date=date.today() - timedelta(days=15), form_iv_filed=False)
+        profile = build_profile(share_compliance_events=[ShareComplianceEventEvidence(
+            event_reference="CAPITAL-TEST-002",
+            event_type="CAPITAL_INCREASE_RESOLUTION",
+            event_date=date.today() - timedelta(days=15),
+            event_verified=True,
+            event_evidence_ref="evidence://resolution/capital-increase",
+            filing_form="FORM_IV",
+            filing_status=False,
+            filing_status_verified=True,
+            filing_evidence_ref="evidence://rjsc/form-iv-search",
+        )])
         assert_flag_not_triggered(rule_engine.evaluate(profile), "SH-003")
 
     def test_TAX001_triggers(self, rule_engine, build_profile):
