@@ -88,7 +88,7 @@ from .infrastructure import (
 )
 
 # ── People (Directors, Shareholders, Transfers) ──────────────────────
-from .people import Director, Shareholder, ShareTransfer
+from .people import Director, ShareComplianceEvent, Shareholder, ShareTransfer
 from .regulatory_rule import RegulatoryRule
 from .subscription import (
     ClientSubscriptionFeature,
@@ -162,6 +162,7 @@ __all__ = [
     "RuleType",
     "SRORegistry",
     "SeverityLevel",
+    "ShareComplianceEvent",
     "ShareTransfer",
     "Shareholder",
     "SroType",
