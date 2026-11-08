@@ -110,6 +110,32 @@ def upgrade() -> None:
         ON public.share_compliance_events
         FOR INSERT WITH CHECK (public.nlc_can_edit_company(company_id))
     """)
+    # Prevent a tenant from linking its event to another tenant's transfer.
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_guard_share_event_transfer_tenant()
+        RETURNS trigger
+        LANGUAGE plpgsql
+        SET search_path = pg_catalog, public
+        AS $function$
+        BEGIN
+            IF NEW.share_transfer_id IS NOT NULL AND NOT EXISTS (
+                SELECT 1 FROM public.share_transfers st
+                 WHERE st.id = NEW.share_transfer_id
+                   AND st.company_id = NEW.company_id
+            ) THEN
+                RAISE EXCEPTION 'share event transfer must belong to the same company'
+                    USING ERRCODE = '23514';
+            END IF;
+            RETURN NEW;
+        END
+        $function$
+    """)
+    op.execute("""
+        CREATE TRIGGER trg_share_event_transfer_tenant
+        BEFORE INSERT ON public.share_compliance_events
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_guard_share_event_transfer_tenant()
+    """)
+
     # Event rows are immutable evidence. Corrections must be represented by
     # a new event; application roles cannot update or delete the evidence row.
     op.execute("REVOKE UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON public.share_compliance_events FROM nlc_app_role")
