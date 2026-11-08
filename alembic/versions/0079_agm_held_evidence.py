@@ -66,10 +66,7 @@ def upgrade() -> None:
         "AND agm_held_verified_by IS NOT NULL AND agm_date IS NOT NULL)",
         schema="public",
     )
-    # Do not set a default that could promote historical rows to verified.
-    op.alter_column(
-        "agms", "agm_held_verified", server_default=None, schema="public"
-    )
+    # Database default is explicitly FALSE: legacy rows remain unverified.
 
 
 def downgrade() -> None:
