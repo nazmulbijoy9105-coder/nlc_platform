@@ -322,6 +322,7 @@ async def advance_engagement_status(
         description=body.note or f"Engagement status → {body.new_status}",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
+        company_id=engagement.company_id,
     )
     return _engagement_to_response(engagement)
 
@@ -370,6 +371,7 @@ async def create_quotation(
         description=f"Quotation {quotation.quotation_number} created",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
+        company_id=quotation.company_id,
     )
     return _quotation_to_response(quotation)
 
@@ -406,6 +408,7 @@ async def accept_quotation(
         description=f"Quotation {quotation.quotation_number} accepted",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
+        company_id=quotation.company_id,
     )
     return _quotation_to_response(quotation)
 
