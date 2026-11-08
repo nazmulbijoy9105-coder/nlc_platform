@@ -186,8 +186,8 @@ jobs:
           alembic upgrade head
           alembic current
 
-          # Provision a CI-only credential for the runtime role. The app pool
-          # must connect as nlc_app_role itself, not as the migration owner.
+          # Ensure the runtime role can log in. The app pool must connect as
+          # nlc_app_role itself, not as the migration owner; CI uses local trust auth.
           python - <<'PY'
           import asyncio
           import os
