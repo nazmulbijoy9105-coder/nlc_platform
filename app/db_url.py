@@ -30,9 +30,9 @@ def normalize_asyncpg_url(
 ) -> tuple[str, ssl.SSLContext | None]:
     """Return an asyncpg URL and a verified TLS context when required.
 
-    asyncpg does not accept several libpq-only URL parameters. Remove
-    sslmode/ssl and channel_binding from the URL; express TLS policy through
-    asyncpg's ssl connect argument. Production callers always require TLS.
+    Neon endpoints always require TLS, independently of deployment-environment
+    detection. Other production callers can require TLS explicitly. Remove
+    libpq-only URL parameters and express TLS through asyncpg's ssl argument.
     """
     if not raw_url or not raw_url.strip():
         raise ValueError("PostgreSQL connection URL must not be empty")
@@ -45,6 +45,10 @@ def normalize_asyncpg_url(
             "Database URL must use PostgreSQL with the asyncpg driver"
         )
 
+    host = (url.host or "").strip().lower().rstrip(".")
+    is_neon_endpoint = host == "neon.tech" or host.endswith(".neon.tech")
+    tls_required_by_policy = require_tls or is_neon_endpoint
+
     query = dict(url.query)
     sslmode = str(query.pop("sslmode", "")).strip().lower()
     ssl_option = str(query.pop("ssl", "")).strip().lower()
@@ -56,12 +60,12 @@ def normalize_asyncpg_url(
         "false",
         "0",
     }
-    if require_tls and explicitly_disabled:
+    if tls_required_by_policy and explicitly_disabled:
         raise ValueError(
-            "PostgreSQL TLS cannot be disabled in production or on Render"
+            "PostgreSQL TLS cannot be disabled for Neon, production, or Render"
         )
 
-    tls_required = require_tls or sslmode in {
+    tls_required = tls_required_by_policy or sslmode in {
         "require",
         "verify-ca",
         "verify-full",
