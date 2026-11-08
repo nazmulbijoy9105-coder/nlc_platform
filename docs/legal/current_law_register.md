@@ -64,6 +64,7 @@ BCIC vs Registrar of Joint Stock Companies (High Court Division).
 | F-6 | CHG-001 | Incorrect Form XIX/Section 159 satisfaction anchor and no statutory due-date metadata | Engine remediated: Section 172(1) read with s.159, Form XXVIII, satisfaction date + 21 days, and UNKNOWN on missing evidence. Production persistence is still open: no CompanyCharge model/relationship currently feeds charge records into CompanyProfile |
 | F-7 | DEF-002 | s.447 "penalty notices, Tk 10,000" | s.447 = punishment for fraud; not applicable as cited |
 | F-11 | DIR-007 | cites s.93(2) for consent | s.92 (Form IX, 30 days) |
+| F-12 | CAP-002 | form_xviii_filed defaulted false and could be treated as non-registration without authenticated creation, registrability and RJSC status evidence | Engine remediated: tri-state filing status, verified evidence requirements, UNKNOWN state, Form XVIII and creation date + 21-day deadline metadata. Production charge-record persistence remains open |
 | F-3 | REG-004 | seed-only orphan; absent from registry and engine | restore or delete seed entry (decision pending) |
 
 ## Probable / to pin
