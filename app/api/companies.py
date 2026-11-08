@@ -723,6 +723,12 @@ async def verify_company_charge(
                 status_code=422,
                 detail=f"Changing verified {verified_field} facts requires a new evidence reference.",
             )
+        if updates.get(verified_field) is False:
+            # A revoked verification must also revoke its provenance. A later
+            # re-verification must attach a new evidence reference.
+            updates[evidence_field] = None
+            updates[verified_at_field] = None
+            updates[verified_by_field] = None
         if updates.get(verified_field) is True:
             evidence_ref = updates.get(evidence_field, getattr(charge, evidence_field))
             if not evidence_ref or any(
