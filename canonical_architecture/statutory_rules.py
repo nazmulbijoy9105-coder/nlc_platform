@@ -180,7 +180,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         ),
         "provision": "TBD — operative circular paragraph/version requires legal reconciliation",
         "provision_status": ProvisionStatus.RECONCILE,
-        "applicability": "ALL_ACTIVE_COMPANIES",
+        "applicability": "has_foreign_shareholder == True",
         "exceptions": [],
         "evidence_required": [
             "INC-005:SUBSCRIPTION_OR_ALLOTMENT_RECORD",
