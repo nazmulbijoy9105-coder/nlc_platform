@@ -184,19 +184,13 @@ class EngagementService(BaseService[Engagement]):
         fee_bdt: Decimal | None = None,
         note: str | None = None,
     ) -> Engagement | None:
-        """Advance engagement through the pipeline stages."""
-        engagement_result = await self.db.execute(
-            select(Engagement)
-            .where(Engagement.id == engagement_id)
-            .with_for_update()
-            .execution_options(populate_existing=True)
-        )
-        eng = engagement_result.scalar_one_or_none()
-        if not eng:
         """Advance an engagement only through the canonical lifecycle."""
         result = await self.db.execute(
             select(Engagement)
-            .where(Engagement.id == engagement_id, Engagement.is_active.is_(True))
+            .where(
+                Engagement.id == engagement_id,
+                Engagement.is_active.is_(True),
+            )
             .with_for_update()
         )
         engagement = result.scalar_one_or_none()
@@ -209,17 +203,17 @@ class EngagementService(BaseService[Engagement]):
             )
 
         if new_status == EngagementStatus.QUOTED:
-            quotation_count = await self.db.execute(
+            issued_count = await self.db.execute(
                 select(func.count())
                 .select_from(Quotation)
                 .where(
                     Quotation.engagement_id == engagement_id,
-                    Quotation.status.in_({"DRAFT", "SENT"}),
+                    Quotation.status.in_({"DRAFT", "SENT", "ACCEPTED"}),
                 )
             )
-            if quotation_count.scalar_one() < 1:
+            if issued_count.scalar_one() < 1:
                 raise CommercialConflictError(
-                    "An issued quotation is required before moving an engagement to QUOTED."
+                    "A quotation record is required before moving an engagement to QUOTED."
                 )
 
         if new_status == EngagementStatus.CONFIRMED:
@@ -227,25 +221,6 @@ class EngagementService(BaseService[Engagement]):
                 select(func.count())
                 .select_from(Quotation)
                 .where(
-        """Advance engagement through the pipeline stages."""
-        engagement_result = await self.db.execute(
-            select(Engagement)
-            .where(Engagement.id == engagement_id, Engagement.is_active)
-            .with_for_update()
-        )
-        eng = engagement_result.scalar_one_or_none()
-        if not eng:
-            return None
-        from app.models.commercial import validate_engagement_transition
-        if not validate_engagement_transition(eng.engagement_status, new_status):
-            raise ValueError(
-                f"Invalid engagement transition: {eng.engagement_status} -> {new_status}"
-            )
-        if new_status == EngagementStatus.QUOTED:
-            raise CommercialConflictError("Create a quotation to move an engagement into QUOTED")
-        if new_status == EngagementStatus.CONFIRMED:
-            accepted_result = await self.db.execute(
-                select(func.count()).select_from(Quotation).where(
                     Quotation.engagement_id == engagement_id,
                     Quotation.status == "ACCEPTED",
                 )
@@ -255,8 +230,6 @@ class EngagementService(BaseService[Engagement]):
                     "An accepted quotation is required before confirming an engagement."
                 )
 
-            if accepted_result.scalar_one() < 1:
-                raise CommercialConflictError("An accepted quotation is required before confirmation")
         updates: dict = {"engagement_status": new_status}
         status_date_map = {
             EngagementStatus.QUOTED: "quoted_date",
@@ -271,8 +244,6 @@ class EngagementService(BaseService[Engagement]):
             updates["notes"] = (
                 f"{existing_notes}\n[{date.today().isoformat()}] {note}"
             ).strip()
-            existing_notes = eng.notes or ""
-            updates["notes"] = f"{existing_notes}\n[{date.today().isoformat()}] {note}".strip()
         if fee_bdt is not None:
             if new_status == EngagementStatus.QUOTED:
                 updates["quoted_fee_bdt"] = fee_bdt
