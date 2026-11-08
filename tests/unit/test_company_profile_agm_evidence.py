@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import app.rule_engine.engine as engine_module
 
-from app.services.company_service import _agm_profile_evidence
+from app.services.company_service import _agm_profile_evidence, _verified_agm_held_status
 from app.services.compliance_service import _applied_score_impacts, _is_rescue_required
 from app.rule_engine.engine import RuleState, _input_coverage
 from app.rule_engine.engine import CompanyProfile, NLCRuleEngine
@@ -390,3 +390,27 @@ def test_missing_agm_cycle_record_does_not_become_non_occurrence_or_overdue_brea
         and getattr(flag.state, "value", flag.state) == "NON_COMPLIANT"
     ]
     assert breach_flags == []
+
+
+def test_agm_held_boolean_requires_meeting_specific_verification_provenance():
+    today = date.today()
+    missing_provenance = SimpleNamespace(
+        agm_date=today, agm_held=False, agm_held_verified=False,
+        agm_held_evidence_ref=None, agm_held_verified_at=None,
+        agm_held_verified_by=None,
+    )
+    assert _verified_agm_held_status(SimpleNamespace(), missing_provenance) is None
+
+    verified_held = SimpleNamespace(
+        agm_date=today, agm_held=True, agm_held_verified=True,
+        agm_held_evidence_ref="AGM-MINUTES-VERIFIED-001",
+        agm_held_verified_at=today, agm_held_verified_by="reviewer-001",
+    )
+    assert _verified_agm_held_status(SimpleNamespace(), verified_held) is True
+
+    verified_not_held = SimpleNamespace(
+        agm_date=today, agm_held=False, agm_held_verified=True,
+        agm_held_evidence_ref="RJSC-HISTORY-VERIFIED-002",
+        agm_held_verified_at=today, agm_held_verified_by="reviewer-001",
+    )
+    assert _verified_agm_held_status(SimpleNamespace(), verified_not_held) is False
