@@ -21,7 +21,7 @@ from app.models.compliance import ComplianceEvaluationRun
 from app.rule_engine.engine import (
     AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
     CATEGORY_CAPS,
-    LEGAL_SCORE_RELEASED,
+    legal_score_is_released,
     VERIFIED_RULE_IDS,
     RuleState,
 )
@@ -303,7 +303,7 @@ def _render_rescue_section(rescue_plan: Any) -> str:
 
 def _verified_flag_score(flags: Any) -> tuple[int, bool]:
     """Mirror the engine's release, eligibility, category-cap and override gates."""
-    if not LEGAL_SCORE_RELEASED:
+    if not legal_score_is_released():
         return (0, False)
 
     remaining = {name: cap[0] for name, cap in CATEGORY_CAPS.items()}
@@ -365,7 +365,7 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
     score_impact_applied. Use nominal impact to show cap reductions, and use
     the persisted applied impact to reconcile the final score.
     """
-    if not LEGAL_SCORE_RELEASED or band in ("BLACK", "NOT_EVALUATED"):
+    if not legal_score_is_released() or band in ("BLACK", "NOT_EVALUATED"):
         return ""
 
     cat_deductions: dict[str, dict] = {}
@@ -468,7 +468,7 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
 
 def _flag_impact_label(flag: Any) -> str:
     rule_id = getattr(flag, "rule_id", "") or ""
-    if not LEGAL_SCORE_RELEASED or rule_id not in VERIFIED_RULE_IDS:
+    if not legal_score_is_released() or rule_id not in VERIFIED_RULE_IDS:
         return "Not scored — pending independent legal approval"
     applied = getattr(
         flag,
@@ -587,7 +587,7 @@ class PDFReportService:
         self.db = db
 
     async def generate_company_compliance_pdf(self, company_id: str) -> Response:
-        if not LEGAL_SCORE_RELEASED:
+        if not legal_score_is_released():
             raise HTTPException(
                 status_code=409,
                 detail="PDF withheld: statutory score release is disabled; no score-bearing compliance report may be issued.",
