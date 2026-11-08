@@ -291,63 +291,100 @@ class QuotationService(BaseService[Quotation]):
         self,
         quotation_id: uuid.UUID,
     ) -> Quotation | None:
-        """Mark quotation as accepted."""
-        quotation_result = await self.db.execute(
-            select(Quotation)
-            .where(Quotation.id == quotation_id)
-            .with_for_update()
+        """Accept a quotation using the shared engagement-first lock order."""
+        # Read immutable parent keys first; lifecycle writers then lock the
+        # engagement before the quotation to prevent lock-order deadlocks.
+        quotation_ref_result = await self.db.execute(
+            select(Quotation.engagement_id, Quotation.company_id).where(
+                Quotation.id == quotation_id
+            )
         )
-        q = quotation_result.scalar_one_or_none()
-        if not q:
+        quotation_ref = quotation_ref_result.one_or_none()
+        if quotation_ref is None:
             return None
-        if q.status == "ACCEPTED":
-            return q
-        if q.status not in {"DRAFT", "SENT"}:
-            raise CommercialConflictError(f"Cannot accept a quotation in {q.status} state")
-        if q.valid_until is not None and q.valid_until < date.today():
-            raise CommercialConflictError("Quotation has expired")
+
         engagement_result = await self.db.execute(
             select(Engagement)
             .where(
-                Engagement.id == q.engagement_id,
-                Engagement.company_id == q.company_id,
+                Engagement.id == quotation_ref.engagement_id,
+                Engagement.company_id == quotation_ref.company_id,
+                Engagement.is_active.is_(True),
             )
             .with_for_update()
         )
         engagement = engagement_result.scalar_one_or_none()
         if engagement is None:
-            raise ValueError("Quotation engagement no longer exists")
+            raise ValueError("Quotation engagement is missing, inactive, or belongs to another company.")
+
+        quotation_result = await self.db.execute(
+            select(Quotation).where(Quotation.id == quotation_id).with_for_update()
+        )
+        q = quotation_result.scalar_one_or_none()
+        if q is None:
+            return None
+        if q.engagement_id != engagement.id or q.company_id != engagement.company_id:
+            raise ValueError("Quotation parent changed while the acceptance was being processed.")
+        if q.status not in {"DRAFT", "SENT"}:
+            raise CommercialConflictError(f"Cannot accept a quotation in {q.status} state.")
+        if q.valid_until is None or q.valid_until < date.today():
+            raise CommercialConflictError("An expired quotation cannot be accepted; issue a renewed quotation.")
         if engagement.engagement_status != EngagementStatus.QUOTED:
-            raise CommercialConflictError(
-                f"Cannot accept a quotation while engagement is {engagement.engagement_status}"
-            )
+            raise CommercialConflictError("Only a quotation for a QUOTED engagement can be accepted.")
+
         accepted = await self.update_instance(q, status="ACCEPTED", accepted_date=date.today())
-        await EngagementService(self.db).update_instance(
-            engagement,
-            engagement_status=EngagementStatus.CONFIRMED,
-            confirmed_date=date.today(),
-            confirmed_fee_bdt=q.total_bdt,
+        await EngagementService(self.db).advance_status(
+            engagement.id,
+            EngagementStatus.CONFIRMED,
+            fee_bdt=q.total_bdt,
         )
         return accepted
 
     async def reject(
         self,
         quotation_id: uuid.UUID,
-        reason: str,
+        reason: str | None = None,
         rejected_by: uuid.UUID | None = None,  # COM-002
     ) -> Quotation | None:
-        """Mark quotation as rejected."""
-        quotation_result = await self.db.execute(
-            select(Quotation)
-            .where(Quotation.id == quotation_id)
+        """Reject a quotation while serializing against parent lifecycle writes."""
+        quotation_ref_result = await self.db.execute(
+            select(Quotation.engagement_id, Quotation.company_id).where(
+                Quotation.id == quotation_id
+            )
+        )
+        quotation_ref = quotation_ref_result.one_or_none()
+        if quotation_ref is None:
+            return None
+
+        engagement_result = await self.db.execute(
+            select(Engagement)
+            .where(
+                Engagement.id == quotation_ref.engagement_id,
+                Engagement.company_id == quotation_ref.company_id,
+                Engagement.is_active.is_(True),
+            )
             .with_for_update()
         )
+        engagement = engagement_result.scalar_one_or_none()
+        if engagement is None:
+            raise ValueError("Quotation engagement is missing, inactive, or belongs to another company.")
+
+        quotation_result = await self.db.execute(
+            select(Quotation).where(Quotation.id == quotation_id).with_for_update()
+        )
         q = quotation_result.scalar_one_or_none()
-        if not q:
+        if q is None:
             return None
+        if q.engagement_id != engagement.id or q.company_id != engagement.company_id:
+            raise ValueError("Quotation parent changed while the rejection was being processed.")
         if q.status not in {"DRAFT", "SENT"}:
-            raise CommercialConflictError(f"Cannot reject a quotation in {q.status} state")
-        return await self.update_instance(q, status="REJECTED", rejection_reason=reason, rejected_by=rejected_by)  # COM-002
+            raise CommercialConflictError(f"Cannot reject a quotation in {q.status} state.")
+
+        return await self.update_instance(
+            q,
+            status="REJECTED",
+            rejection_reason=reason,
+            rejected_by=rejected_by,
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════
