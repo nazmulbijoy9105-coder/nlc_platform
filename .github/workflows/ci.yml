@@ -95,6 +95,8 @@ jobs:
             app/services/filing_service.py \
             alembic/versions/0081_merge_release_and_articles_wallet_heads.py \
             alembic/versions/0086_runtime_role_membership_preflight.py \
+            alembic/versions/0087_legal_staff_company_scope.py \
+            alembic/versions/0088_strict_activity_log_actor_tenant.py \
             alembic/versions/0082_agm_share_event_provenance.py
 
       - name: Type-check scoring release services
@@ -353,7 +355,7 @@ jobs:
           printf '%s\n' "$FINAL_MARKER"
           HEAD_REVISION="$(alembic heads | awk 'NR == 1 {print $1}')"
           grep -q "$HEAD_REVISION" <<< "$FINAL_MARKER"
-          grep -q "0086_runtime_role_membership_preflight" <<< "$FINAL_MARKER"
+          grep -q "0088_strict_activity_log_actor_tenant" <<< "$FINAL_MARKER"
 
       - name: Upload isolated migration rehearsal schema
         uses: actions/upload-artifact@v4
