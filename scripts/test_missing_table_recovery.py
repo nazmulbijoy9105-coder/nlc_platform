@@ -103,7 +103,7 @@ async def main() -> None:
             row for row in foreign_keys
             if row["target_table"] == "rescue_plans"
         ]
-        if len(plan_fk) != 1 or plan_fk[0]["confdeltype"] != "r":
+        if len(plan_fk) != 1 or bytes(plan_fk[0]["confdeltype"]).decode() != "r":
             raise AssertionError(
                 "rescue_audit_log -> rescue_plans must have exactly one "
                 "ON DELETE RESTRICT FK; observed: "
