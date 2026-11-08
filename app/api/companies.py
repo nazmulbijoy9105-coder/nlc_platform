@@ -658,10 +658,12 @@ async def create_company_charge(
         await db.flush()
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(
-            status_code=409,
-            detail="A charge with this reference already exists for the company.",
-        ) from exc
+        if "uq_company_charge_reference" in str(exc.orig):
+            raise HTTPException(
+                status_code=409,
+                detail="A charge with this reference already exists for the company.",
+            ) from exc
+        raise
     await ActivityService(db).log(
         actor_user_id=current_user.id,
         company_id=company_id,
