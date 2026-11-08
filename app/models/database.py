@@ -11,6 +11,8 @@ import os
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException, Request
+
+from app.core.db_url import normalize_asyncpg_url
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
@@ -69,8 +71,6 @@ if _PRODUCTION_ENVIRONMENT and len(os.environ.get("NLC_RLS_HMAC_SECRET", "")) < 
 DATABASE_URL = _APP_DATABASE_URL or _MIGRATION_DATABASE_URL
 if not DATABASE_URL:
     raise RuntimeError('DATABASE_URL or APP_DATABASE_URL is empty; refusing to start')
-
-from app.core.db_url import normalize_asyncpg_url
 
 DATABASE_URL, _DATABASE_SSL_CONTEXT = normalize_asyncpg_url(
     DATABASE_URL,
