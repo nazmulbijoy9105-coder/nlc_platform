@@ -1250,7 +1250,7 @@ _LEGACY_KEYS = frozenset({"rule_id", "legal_domain", "law", "requirement", "prov
     "evaluation_states", "severity", "score_impact", "invariants"})
 
 
-def _legacy_rule(key: str, d: Dict[str, Any]) -> Optional[StatutoryRule]:
+def _legacy_rule(key: str, d: Dict[str, Any]) -> StatutoryRule:
     extra = set(d) - _LEGACY_KEYS
     if extra:
         raise RuntimeError(f"{key}: unknown legacy keys {sorted(extra)}")
@@ -1275,7 +1275,6 @@ def _legacy_rule(key: str, d: Dict[str, Any]) -> Optional[StatutoryRule]:
     # multi-item evidence lists (INC-005, INC-006, CAP-003). The previous
     # DOCUMENTARY_EVIDENCE-only gate silently dropped those three rules and
     # left STATUTORY_RULE_REGISTRY at 82 while the engine exposes 85.
-        raise RuntimeError(f"{key}: evidence_required must contain non-empty strings")
     auth = _LEGACY_AUTHORITY_OVERRIDE.get(key) or _LEGACY_AUTHORITY[d["legal_domain"]]
     applies_if = None if applicability == "ALL_ACTIVE_COMPANIES" else applicability
     return StatutoryRule(
