@@ -235,6 +235,14 @@ def validate_production_migration_role(connection: Connection) -> None:
         "prod", "production"
     }
     if not (is_render or is_production):
+    """Fail before DDL if a production deployment uses the restricted runtime role.
+
+    Render sets RENDER=true. Other production hosts must explicitly set
+    ENVIRONMENT=production. Local development and CI do not run this gate.
+    """
+    is_render = os.environ.get("RENDER", "").strip().lower() == "true"
+    environment = os.environ.get("ENVIRONMENT", "").strip().lower()
+    if not (is_render or environment in {"prod", "production"}):
         return
 
     row = connection.execute(

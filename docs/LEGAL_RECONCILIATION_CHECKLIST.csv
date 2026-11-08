@@ -1,76 +1,86 @@
-Rule ID,Legal Domain,Candidate Law,Candidate Provision,Status,Legal Team Sign-Off
-AGM-001,Corporate,"Section 81, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-AGM-002,Corporate,"Section 81, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-AGM-003,Corporate,"Section 85, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-AGM-004,Corporate,"Section 85, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-AGM-005,Corporate,"Section 83(12), Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-AGM-006,Corporate,"Section 83, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-AGM-007,Corporate,"Section 84, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-AR-001,Corporate,"Section 36, Companies Act 1994 (Bangladesh) – Schedule X",TBD,RECONCILE,PENDING
-AR-002,Corporate,"Section 36 and Schedule X; Section 346 is a separate Registrar strike-off process",TBD,RECONCILE,PENDING
-AR-003,Corporate,"Section 36 and Schedule X; Section 346 requires separate Registrar grounds and notice steps",TBD,RECONCILE,PENDING
-AR-004,Corporate,"Section 36, Companies Act 1994 (Bangladesh) – Schedule X",TBD,RECONCILE,PENDING
-AUD-001,Corporate,"Section 210(1), Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-AUD-002,Corporate,"Section 151, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-AUD-003,Corporate,"Sections 151, 210, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-AUD-004,Corporate,"Section 210(2), Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-AUD-005,Corporate,"Section 210(2), Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-BNK-001,Corporate,"Bankruptcy Act 1997 (Bangladesh), Section 12",TBD,RECONCILE,PENDING
-BNK-002,Corporate,"Bankruptcy Act 1997 (Bangladesh), Section 14",TBD,RECONCILE,PENDING
-BNK-003,Corporate,"Bankruptcy Act 1997 (Bangladesh), Section 18",TBD,RECONCILE,PENDING
-BSEC-001,Corporate,"BSEC Corporate Governance Code 2023, Para 8",TBD,RECONCILE,PENDING
-BSEC-002,Corporate,"BSEC Corporate Governance Code 2023, Para 9",TBD,RECONCILE,PENDING
-BSEC-003,Corporate,"BSEC Corporate Governance Code 2023, Para 5",TBD,RECONCILE,PENDING
-BSEC-004,Corporate,"BSEC Corporate Governance Code 2023, Para 6",TBD,RECONCILE,PENDING
-CAP-001,Corporate,"Section 54, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-CAP-002,Corporate,"Section 87, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-CAP-003,Corporate,"Section 87(2), Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-CAP-004,Corporate,"Section 87, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-CHG-001,Corporate,"Section 87, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-DEF-001,Corporate,"Section 297, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-DEF-002,Corporate,"Section 447, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-DIR-001,Corporate,"Section 92, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-DIR-002,Corporate,"Section 92, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-DIR-003,Corporate,"Section 92, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-DIR-004,Corporate,"Section 92, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-DIR-005,Corporate,"Section 97, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-DIR-006,Corporate,"Section 98, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-ESC-001,Corporate,"Section 346, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-ESC-002,Corporate,"Section 346, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-ESC-003,Corporate,"NLC internal risk policy; not a statutory Companies Act consequence",TBD,RECONCILE,PENDING
-ESC-004,Corporate,"Section 196, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-ESC-005,Corporate,"Section 199, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-FX-001,Corporate,Foreign Exchange Regulation Act 1947 (Bangladesh),TBD,RECONCILE,PENDING
-INC-001,Corporate,"Section 9, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-INC-002,Corporate,"Section 11, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-INC-003,Corporate,"Section 90(2), Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-INC-004,Corporate,"Section 150, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-INC-005,Corporate,"Section 150, Companies Act 1994; BIDA Foreign Investment Guidelines",TBD,RECONCILE,PENDING
-INC-006,Corporate,BIDA Foreign Investment Act 1980; BOI Guidelines,TBD,RECONCILE,PENDING
-LBR-001,Labour,"Labour Act 2006 (Bangladesh), Section 35",TBD,RECONCILE,PENDING
-LBR-002,Labour,"Labour Act 2006 (Bangladesh), Section 35",TBD,RECONCILE,PENDING
-LBR-003,Labour,"Labour Act 2006 (Bangladesh), Section 209",TBD,RECONCILE,PENDING
-OFF-001,Corporate,"Section 81, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-REG-001,Corporate,"Sections 34, 83, 87, 90, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-REG-002,Corporate,"Sections 34, 83, 87, 90, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-REG-003,Corporate,"Section 34(2), Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-SH-001,Corporate,"Section 50, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-SH-002,Corporate,"Section 46, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-SH-003,Corporate,"Section 52, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-STR-001,Corporate,"Section 20, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-STR-002,Corporate,"Section 17, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-STR-003,Corporate,"Section 18, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-TAX-001,Tax,Income Tax Act 2023 (Bangladesh),TBD,RECONCILE,PENDING
-TAX-002,Tax,"VAT and SD Act 2012 ss.2(48), 2(57), 4, 10; Act 77/2026; Finance Act 96/2026","30 lakh enlistment / 50 lakh registration; 12-month turnover and exclusions; s.4(2) categories; s.10 30-day enlistment application",RECONCILE,PENDING
-TAX-003,Tax,"Income Tax Act 2023, Section 75",TBD,RECONCILE,PENDING
-TAX-004,Tax,"Income Tax Act 2023, Section 74",TBD,RECONCILE,PENDING
-TL-001,Corporate,City Corporation Ordinance 1983 / Pourashava Act 2009,TBD,RECONCILE,PENDING
-TL-002,Corporate,City Corporation Ordinance 1983 / Pourashava Act 2009,TBD,RECONCILE,PENDING
-TR-001,Corporate,"Section 108, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-TR-002,Corporate,"Stamp Act 1899 (Bangladesh), Schedule I, Item 62",TBD,RECONCILE,PENDING
-TR-003,Corporate,"Section 47, Companies Act 1994 (Bangladesh); Articles of Association",TBD,RECONCILE,PENDING
-TR-004,Corporate,"Section 34, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-TR-005,Corporate,"Section 47, Companies Act 1994 (Bangladesh); Articles of Association",TBD,RECONCILE,PENDING
-TR-006,Corporate,"Sections 34, 47, 108, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-VAT-002,Tax,Value Added Tax Act 2012 (Bangladesh),TBD,RECONCILE,PENDING
-VAT-003,Tax,Value Added Tax Act 2012 (Bangladesh),TBD,RECONCILE,PENDING
+"Rule ID","Legal Domain","Candidate Law","Candidate Provision","Status","Legal Team Sign-Off"
+"ACC-001","Corporate","Section 183, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 183, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"ACC-002","Corporate","Section 190, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 190, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"ACC-003","Corporate","Section 181, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 181, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"AGM-001","Corporate","Section 81(1), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 81(1), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"AGM-002","Corporate","Section 81(1), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 81(1), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"AGM-003","Corporate","Section 85(1)(a), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 85(1)(a), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"AGM-004","Corporate","Section 85(1)(a), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 85(1)(a), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"AGM-005","Corporate","Section 85(2)(b), Companies Act 1994 (Bangladesh), read with the Articles","UNVERIFIED CANDIDATE — Section 85(2)(b), Companies Act 1994 (Bangladesh), read with the Articles","RECONCILE","PENDING"
+"AGM-006","Corporate","Section 89, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 89, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"AGM-007","Corporate","Companies Act 1994, Section 85 and the company Articles; exact adjournment provision requires counsel verification","UNVERIFIED CANDIDATE — Companies Act 1994, Section 85 and the company Articles; exact adjournment provision requires counsel verification","RECONCILE","PENDING"
+"AR-001","Corporate","Section 36 (Schedule X), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 36 (Schedule X), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"AR-002","Corporate","Section 36 and Schedule X (annual-return duty); Section 346 governs a separate Registrar strike-off procedure.","UNVERIFIED CANDIDATE — Section 36 and Schedule X (annual-return duty); Section 346 governs a separate Registrar strike-off procedure.","RECONCILE","PENDING"
+"AR-003","Corporate","Section 36 and Schedule X (annual-return duty); Section 346 requires separate Registrar grounds and statutory notice steps.","UNVERIFIED CANDIDATE — Section 36 and Schedule X (annual-return duty); Section 346 requires separate Registrar grounds and statutory notice steps.","RECONCILE","PENDING"
+"AR-004","Corporate","Section 36, Schedule X, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 36, Schedule X, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"AUD-001","Corporate","Section 210(6), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 210(6), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"AUD-002","Corporate","Section 183, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 183, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"AUD-003","Corporate","Sections 183 and 210, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Sections 183 and 210, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"AUD-004","Corporate","Section 210(3), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 210(3), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"AUD-005","Corporate","Section 210(3), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 210(3), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"BNK-001","Corporate","Companies Act 1994 (Bangladesh), Part V, including sections 241–244; exact petition provision requires case review","UNVERIFIED CANDIDATE — Companies Act 1994 (Bangladesh), Part V, including sections 241–244; exact petition provision requires case review","RECONCILE","PENDING"
+"BNK-002","Corporate","Companies Act 1994 (Bangladesh), Part V; section 255 applies to court-appointed Official Liquidators; route-specific provision requires review","UNVERIFIED CANDIDATE — Companies Act 1994 (Bangladesh), Part V; section 255 applies to court-appointed Official Liquidators; route-specific provision requires review","RECONCILE","PENDING"
+"BNK-003","Corporate","Companies Act 1994 (Bangladesh), Part V, including sections 241–246; exact order provision requires case review","UNVERIFIED CANDIDATE — Companies Act 1994 (Bangladesh), Part V, including sections 241–246; exact order provision requires case review","RECONCILE","PENDING"
+"BOD-001","Corporate","Section 96, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 96, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"BOD-002","Corporate","Section 95, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 95, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"BOD-003","Corporate","Section 89, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 89, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"BSEC-001","Corporate","Applicable BSEC financial-reporting instrument; exact notification, issuer class, reporting period and due date require verification","UNVERIFIED CANDIDATE — Applicable BSEC financial-reporting instrument; exact notification, issuer class, reporting period and due date require verification","RECONCILE","PENDING"
+"BSEC-002","Corporate","BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification","UNVERIFIED CANDIDATE — BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification","RECONCILE","PENDING"
+"BSEC-003","Corporate","BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification","UNVERIFIED CANDIDATE — BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification","RECONCILE","PENDING"
+"BSEC-004","Corporate","BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification","UNVERIFIED CANDIDATE — BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification","RECONCILE","PENDING"
+"CAP-001","Corporate","Sections 53, 54 and 56, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Sections 53, 54 and 56, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"CAP-002","Corporate","Section 159(1), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 159(1), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"CAP-003","Corporate","Sections 59-60, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Sections 59-60, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"CAP-004","Corporate","Section 88(1), Companies Act 1994 (Bangladesh) — 15 days","UNVERIFIED CANDIDATE — Section 88(1), Companies Act 1994 (Bangladesh) — 15 days","RECONCILE","PENDING"
+"CHG-001","Corporate","Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"DEF-001","Corporate","Section 94(1)(d), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 94(1)(d), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"DEF-002","Corporate","Case-specific enabling provision required; not a universal section","UNVERIFIED CANDIDATE — Case-specific enabling provision required; not a universal section","RECONCILE","PENDING"
+"DIR-001","Corporate","Section 115(2), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 115(2), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"DIR-002","Corporate","Section 115(2), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 115(2), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"DIR-003","Corporate","Section 115(2), Companies Act 1994 (Bangladesh); 365-day threshold is NLC policy only","UNVERIFIED CANDIDATE — Section 115(2), Companies Act 1994 (Bangladesh); 365-day threshold is NLC policy only","RECONCILE","PENDING"
+"DIR-004","Corporate","Section 115, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 115, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"DIR-005","Corporate","Companies Act 1994, Section 130 (director-interest disclosure); generic register duty/title requires legal reconciliation","UNVERIFIED CANDIDATE — Companies Act 1994, Section 130 (director-interest disclosure); generic register duty/title requires legal reconciliation","RECONCILE","PENDING"
+"DIR-006","Corporate","Companies Act 1994 and applicable Articles; exact register obligation requires counsel verification","UNVERIFIED CANDIDATE — Companies Act 1994 and applicable Articles; exact register obligation requires counsel verification","RECONCILE","PENDING"
+"DIR-007","Corporate","Section 93(2), Companies Act 1994 (Bangladesh); section 92/Form IX mapping requires review","UNVERIFIED CANDIDATE — Section 93(2), Companies Act 1994 (Bangladesh); section 92/Form IX mapping requires review","RECONCILE","PENDING"
+"DIR-008","Corporate","Section 104, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 104, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"DIR-010","Corporate","Section 110, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 110, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"ESC-001","Corporate","Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required","UNVERIFIED CANDIDATE — Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required","RECONCILE","PENDING"
+"ESC-002","Corporate","Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required","UNVERIFIED CANDIDATE — Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required","RECONCILE","PENDING"
+"ESC-003","Corporate","NLC internal risk policy; not a statutory risk band under the Companies Act 1994.","UNVERIFIED CANDIDATE — NLC internal risk policy; not a statutory risk band under the Companies Act 1994.","RECONCILE","PENDING"
+"ESC-004","Corporate","Section 286 and following provisions, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 286 and following provisions, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"ESC-005","Corporate","Sections 195 and 197; section 199 where related entities are included, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Sections 195 and 197; section 199 where related entities are included, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"FX-001","Corporate","Foreign Exchange Regulation Act 1947 (Bangladesh)","UNVERIFIED CANDIDATE — Foreign Exchange Regulation Act 1947 (Bangladesh)","RECONCILE","PENDING"
+"INC-001","Corporate","Section 23, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 23, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"INC-003","Corporate","Sections 90(1) and 90(2), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Sections 90(1) and 90(2), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"INC-004","Corporate","Section 56, Companies Act 1994 (Bangladesh) — applicability and consequences require lawyer review","UNVERIFIED CANDIDATE — Section 56, Companies Act 1994 (Bangladesh) — applicability and consequences require lawyer review","RECONCILE","PENDING"
+"INC-005","Corporate","GFET-2018 Vol.1, Chapter 9, paragraph 2(A); FE Circular No.10 (21 June 2023); FEID Circular No.01 (27 January 2025) and subsequent applicable circulars","UNVERIFIED CANDIDATE — GFET-2018 Vol.1, Chapter 9, paragraph 2(A); FE Circular No.10 (21 June 2023); FEID Circular No.01 (27 January 2025) and subsequent applicable circulars","RECONCILE","PENDING"
+"INC-006","Corporate","BIDA Guidelines for permission to establish foreign commercial offices and issue work permits in Bangladesh (2023); exact operative clause/version and current amendments require verification","UNVERIFIED CANDIDATE — BIDA Guidelines for permission to establish foreign commercial offices and issue work permits in Bangladesh (2023); exact operative clause/version and current amendments require verification","RECONCILE","PENDING"
+"INC-007","Corporate","Section 150(1) and (6), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 150(1) and (6), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"LBR-001","Labour","Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026","UNVERIFIED CANDIDATE — Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026","RECONCILE","PENDING"
+"LBR-002","Labour","Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026","UNVERIFIED CANDIDATE — Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026","RECONCILE","PENDING"
+"LBR-003","Labour","Bangladesh Labour Act 2006 and the specific Labour Court order; enabling provision and operative status require case-specific verification","UNVERIFIED CANDIDATE — Bangladesh Labour Act 2006 and the specific Labour Court order; enabling provision and operative status require case-specific verification","RECONCILE","PENDING"
+"MEM-001","Corporate","Section 222, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 222, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"OFF-001","Corporate","Section 77, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 77, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"REG-001","Corporate","Section 34, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 34, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"REG-002","Corporate","Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"REG-003","Corporate","Section 34(2), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 34(2), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"SH-001","Corporate","Section 151, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 151, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"SH-002","Corporate","Section 158, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 158, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"SH-003","Corporate","Section 56, Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 56, Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"STR-001","Corporate","Sections 11 and 88(1), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Sections 11 and 88(1), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"STR-002","Corporate","Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"STR-003","Corporate","Sections 20 and 88(1), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Sections 20 and 88(1), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"TAX-001","Tax","Income Tax Act 2023, sections 166, 261 and 264; company-specific duty and evidence require verification","UNVERIFIED CANDIDATE — Income Tax Act 2023, sections 166, 261 and 264; company-specific duty and evidence require verification","RECONCILE","PENDING"
+"TAX-002","Tax","Value Added Tax and Supplementary Duty Act 2012, sections 2(48), 2(57), 4 and 10, as amended by Act No. 77 of 2026 and Finance Act No. 96 of 2026; exact current section and taxpayer-specific instruments require counsel verification","UNVERIFIED CANDIDATE — Value Added Tax and Supplementary Duty Act 2012, sections 2(48), 2(57), 4 and 10, as amended by Act No. 77 of 2026 and Finance Act No. 96 of 2026; exact current section and taxpayer-specific instruments require counsel verification","RECONCILE","PENDING"
+"TAX-003","Tax","Income Tax Act 2023, Sections 170(2) and 171, as amended by Finance Act 2026 (Act No. 96 of 2026); taxpayer-specific and holiday verification required","UNVERIFIED CANDIDATE — Income Tax Act 2023, Sections 170(2) and 171, as amended by Finance Act 2026 (Act No. 96 of 2026); taxpayer-specific and holiday verification required","RECONCILE","PENDING"
+"TAX-004","Tax","Income Tax Act 2023, sections 154-157, as amended by Finance Act 2026 (Act 96/2026), sections 87-88; NOT_EVALUATED pending taxpayer-specific verification","UNVERIFIED CANDIDATE — Income Tax Act 2023, sections 154-157, as amended by Finance Act 2026 (Act 96/2026), sections 87-88; NOT_EVALUATED pending taxpayer-specific verification","RECONCILE","PENDING"
+"TL-001","Corporate","Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009","UNVERIFIED CANDIDATE — Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009","RECONCILE","PENDING"
+"TL-002","Corporate","Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009","UNVERIFIED CANDIDATE — Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009","RECONCILE","PENDING"
+"TR-001","Corporate","Section 38(3), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 38(3), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"TR-002","Corporate","Stamp Act 1899, current Schedule I and applicable amendments","UNVERIFIED CANDIDATE — Stamp Act 1899, current Schedule I and applicable amendments","RECONCILE","PENDING"
+"TR-003","Corporate","Section 38(7), Companies Act 1994 (Bangladesh), and the company’s Articles","UNVERIFIED CANDIDATE — Section 38(7), Companies Act 1994 (Bangladesh), and the company’s Articles","RECONCILE","PENDING"
+"TR-004","Corporate","Section 38(4), Companies Act 1994 (Bangladesh)","UNVERIFIED CANDIDATE — Section 38(4), Companies Act 1994 (Bangladesh)","RECONCILE","PENDING"
+"TR-005","Corporate","Section 38(7), Companies Act 1994 (Bangladesh), and the company’s Articles","UNVERIFIED CANDIDATE — Section 38(7), Companies Act 1994 (Bangladesh), and the company’s Articles","RECONCILE","PENDING"
+"TR-006","Corporate","Sections 34 and 38, Companies Act 1994 (Bangladesh), and applicable Articles","UNVERIFIED CANDIDATE — Sections 34 and 38, Companies Act 1994 (Bangladesh), and applicable Articles","RECONCILE","PENDING"
+"VAT-002","Tax","Value Added Tax and Supplementary Duty Act 2012, section 64 as amended by Finance Act 2026 and VAT Amendment Ordinance 2026, with applicable VAT Rules/SROs","UNVERIFIED CANDIDATE — Value Added Tax and Supplementary Duty Act 2012, section 64 as amended by Finance Act 2026 and VAT Amendment Ordinance 2026, with applicable VAT Rules/SROs","RECONCILE","PENDING"
+"VAT-003","Tax","Value Added Tax Act 2012 (Bangladesh); specific annual-return obligation and due date require current-law verification","UNVERIFIED CANDIDATE — Value Added Tax Act 2012 (Bangladesh); specific annual-return obligation and due date require current-law verification","RECONCILE","PENDING"
