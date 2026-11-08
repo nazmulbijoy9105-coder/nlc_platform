@@ -27,16 +27,16 @@ from app.models.charges import CompanyCharge
 from app.models.enums import CompanyStatus, CompanyType, RevenueTier, RiskBand, UserRole
 from app.models.user import User
 from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
-
-def _legal_score_is_released() -> bool:
-    """Require both the release switch and a non-empty approved rule set."""
-    return LEGAL_SCORE_RELEASED is True and bool(VERIFIED_RULE_IDS)
-
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
 from app.services.compliance_calendar import LEGAL_CALENDAR_RELEASED
 from app.services.notification_service import ActivityService
 from app.services.pdf_report_service import PDFReportService
+
+
+def _legal_score_is_released() -> bool:
+    """Require both the release switch and a non-empty approved rule set."""
+    return LEGAL_SCORE_RELEASED is True and bool(VERIFIED_RULE_IDS)
 
 logger = structlog.get_logger(__name__)
 
