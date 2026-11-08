@@ -138,14 +138,14 @@ class EngagementService(BaseService[Engagement]):
         }
 
     async def get_conversion_funnel(self) -> dict:
-        """Engagement conversion funnel metrics using exact decimal amounts."""
+        """Return engagement conversion metrics from a single aggregate query."""
         result = await self.db.execute(
             select(
                 Engagement.engagement_status,
                 func.count().label("count"),
                 func.sum(Engagement.estimated_fee_bdt).label("value"),
             )
-            .where(Engagement.is_active)
+            .where(Engagement.is_active.is_(True))
             .group_by(Engagement.engagement_status)
         )
         stages: dict[str, dict[str, Any]] = {
@@ -158,18 +158,15 @@ class EngagementService(BaseService[Engagement]):
         total_identified = stages.get("IDENTIFIED", {}).get("count", 0)
         total_confirmed = stages.get("CONFIRMED", {}).get("count", 0)
         total_completed = stages.get("COMPLETED", {}).get("count", 0)
-
         return {
             "stages": stages,
             "conversion_identified_to_confirmed": (
                 round(total_confirmed / total_identified * 100, 1)
-                if total_identified > 0
-                else 0
+                if total_identified > 0 else 0
             ),
             "conversion_confirmed_to_completed": (
                 round(total_completed / total_confirmed * 100, 1)
-                if total_confirmed > 0
-                else 0
+                if total_confirmed > 0 else 0
             ),
         }
 
@@ -369,6 +366,12 @@ class QuotationService(BaseService[Quotation]):
         next_number = int(result.scalar_one())
         return f"{prefix}{next_number:04d}"
 
+    async def accept(
+        self,
+        quotation_id: uuid.UUID,
+    ) -> Quotation | None:
+        """Accept a valid quotation while locking its engagement first."""
+        quotation_ref_result = await self.db.execute(
     async def accept(self, quotation_id: uuid.UUID) -> Quotation | None:
         """Accept a valid quotation while serializing parent lifecycle changes."""
         parent_result = await self.db.execute(
@@ -390,13 +393,23 @@ class QuotationService(BaseService[Quotation]):
         )
         engagement = engagement_result.scalar_one_or_none()
         if engagement is None:
+            raise ValueError(
+                "Quotation engagement is missing, inactive, or belongs to another company."
+            )
+
             raise ValueError("Quotation engagement is missing, inactive, or belongs to another company.")
         quotation_result = await self.db.execute(
-            select(Quotation).where(Quotation.id == quotation_id).with_for_update()
+            select(Quotation)
+            .where(
+                Quotation.id == quotation_id,
+                Quotation.company_id == engagement.company_id,
+            )
+            .with_for_update()
         )
         quotation = quotation_result.scalar_one_or_none()
         if quotation is None:
             return None
+        if quotation.engagement_id != engagement.id:
         if quotation.engagement_id != engagement.id or quotation.company_id != engagement.company_id:
             raise ValueError("Quotation parent changed while acceptance was being processed.")
         if quotation.status == "ACCEPTED":
@@ -427,6 +440,8 @@ class QuotationService(BaseService[Quotation]):
         reason: str | None = None,
         rejected_by: uuid.UUID | None = None,
     ) -> Quotation | None:
+        """Reject a draft or sent quotation while locking its engagement first."""
+        quotation_ref_result = await self.db.execute(
         """Reject a quotation while serializing against engagement lifecycle writes."""
         parent_result = await self.db.execute(
             select(Quotation.engagement_id, Quotation.company_id).where(
@@ -447,13 +462,28 @@ class QuotationService(BaseService[Quotation]):
         )
         engagement = engagement_result.scalar_one_or_none()
         if engagement is None:
+            raise ValueError(
+                "Quotation engagement is missing, inactive, or belongs to another company."
+            )
+
             raise ValueError("Quotation engagement is missing, inactive, or belongs to another company.")
         quotation_result = await self.db.execute(
-            select(Quotation).where(Quotation.id == quotation_id).with_for_update()
+            select(Quotation)
+            .where(
+                Quotation.id == quotation_id,
+                Quotation.company_id == engagement.company_id,
+            )
+            .with_for_update()
         )
         quotation = quotation_result.scalar_one_or_none()
         if quotation is None:
             return None
+        if quotation.engagement_id != engagement.id:
+            raise ValueError("Quotation parent changed while rejection was being processed.")
+        if quotation.status not in {"DRAFT", "SENT"}:
+            raise CommercialConflictError(
+                f"Cannot reject a quotation in {quotation.status} state."
+            )
         if quotation.engagement_id != engagement.id or quotation.company_id != engagement.company_id:
             raise ValueError("Quotation parent changed while rejection was being processed.")
         if quotation.status not in {"DRAFT", "SENT"}:
@@ -465,10 +495,6 @@ class QuotationService(BaseService[Quotation]):
             rejected_by=rejected_by,
         )  # COM-002
 
-
-# ═══════════════════════════════════════════════════════════════════════
-# TASK SERVICE
-# ═══════════════════════════════════════════════════════════════════════
 
 class TaskService(BaseService[Task]):
     model = Task
@@ -527,6 +553,9 @@ class TaskService(BaseService[Task]):
         *,
         completion_note: str | None = None,
     ) -> Task | None:
+        """Complete only an active task belonging to the authorized company."""
+        from datetime import datetime
+
         """Complete only a task belonging to the already-authorized company."""
         task_result = await self.db.execute(
             select(Task)
