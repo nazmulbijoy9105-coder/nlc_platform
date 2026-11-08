@@ -39,6 +39,7 @@ from app.models.enums import RiskBand
 from app.models.user import User
 from app.services.company_service import CompanyService
 from app.services.notification_service import ActivityService
+from app.services.rescue_service import RescueService
 async def _assert_rescue_entitlement(
     company_id: uuid.UUID, current_user: User, db: AsyncSession
 ) -> None:
