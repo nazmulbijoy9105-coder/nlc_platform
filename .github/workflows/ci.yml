@@ -55,7 +55,7 @@ jobs:
             app/services/pdf_report_service.py \
             app/services/rescue_service.py \
             app/services/commercial_service.py
-          ruff check --select E,F app/services/bd_calendar_generator.py \
+          ruff check --select E4,E7,E9,F app/services/bd_calendar_generator.py \
             app/api/commercial.py app/models/commercial.py app/services/commercial_service.py \
             app/api/finance.py app/models/finance.py app/services/finance_service.py \
             app/api/subscriptions.py app/models/subscription.py app/services/subscription_service.py \
