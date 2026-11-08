@@ -54,6 +54,10 @@ jobs:
             app/services/company_service.py \
             app/services/pdf_report_service.py \
             app/services/rescue_service.py \
+            app/services/commercial_service.py \
+            app/services/subscription_service.py \
+            app/worker/beat_schedule.py \
+            app/core/dependencies.py \
             tests/unit/test_pdf_report_service.py \
             tests/unit/test_rescue_engagement_contract.py \
             tests/unit/test_rule_engine_factory.py \
