@@ -890,3 +890,21 @@ def test_verified_charge_registration_uses_section_159_twenty_one_day_deadline()
     assert flag.detail["statutory_deadline"] == "2026-10-22"
     assert flag.detail["days_overdue"] == 1
     assert flag.detail["form"] == "Form XVIII"
+
+
+def test_subsequent_agm_violation_reports_statutory_deadline_and_basis_metadata():
+    profile = _profile(
+        agm_count=1,
+        last_agm_date=date(2025, 6, 1),
+        agm_held_this_cycle=False,
+    )
+    result = NLCRuleEngine().evaluate(profile, today=date(2026, 9, 2))
+    flag = _flag(result, "AGM-002")
+    assert flag.state == RuleState.NON_COMPLIANT
+    assert flag.eval_state == "VIOLATION"
+    assert flag.detail["deadline"] == "2026-09-01"
+    assert flag.detail["basis"] == "15_MONTH_INTERVAL"
+    assert flag.detail["interval_deadline"] == "2026-09-01"
+    assert flag.detail["calendar_year_deadline"] == "2026-12-31"
+    assert flag.detail["statutory_base_deadline"] == "2026-09-01"
+    assert flag.detail["extension_statutory_limit"] == "2026-11-30"
