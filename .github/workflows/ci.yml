@@ -12,6 +12,7 @@ on:
       - repair/current-head-commercial-subscription-20261108
       - fix/scoring-release-boundary-20261108
       - fix/canonical-scoring-release-head-20261108
+      - fix/canonical-legal-rule-seed-sync-20261108
   pull_request:
     branches:
       - main
@@ -49,14 +50,13 @@ jobs:
       - name: Compile check
         run: python -m compileall app/
 
-      - name: Lint scoring release-boundary changes
       - name: Lint scoring and migration release changes
         run: |
           ruff check --select E4,E7,E9,F \
             app/services/company_service.py \
             app/services/pdf_report_service.py \
             app/services/rescue_service.py \
-            app/services/commercial_service.py
+            app/services/commercial_service.py \
             tests/unit/test_pdf_report_service.py \
             tests/unit/test_rescue_engagement_contract.py
 
@@ -280,10 +280,12 @@ jobs:
           DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
           DATABASE_URL="$SECOND_DATABASE_URL" alembic current
 
-          # Verify a failed downgrade leaves the database at exactly the same revision.
+          # Move to the revision immediately after the forward-only legal-evidence
+          # migration. The guard must reject crossing 0076 without deleting evidence.
+          DATABASE_URL="$SECOND_DATABASE_URL" alembic downgrade 0076_company_charge_evidence
           BEFORE_DOWNGRADE="$(DATABASE_URL="$SECOND_DATABASE_URL" alembic current)"
-          if DATABASE_URL="$SECOND_DATABASE_URL" alembic downgrade 0073_payment_allocations_append_only; then
-            echo "ERROR: forward-only quarantine migration unexpectedly downgraded"
+          if DATABASE_URL="$SECOND_DATABASE_URL" alembic downgrade 0075_director_transfer_evidence; then
+            echo "ERROR: forward-only legal-evidence migration unexpectedly downgraded"
             exit 1
           fi
           AFTER_DOWNGRADE="$(DATABASE_URL="$SECOND_DATABASE_URL" alembic current)"
@@ -304,10 +306,11 @@ jobs:
           DATABASE_URL="$BASELINE_DATABASE_URL" alembic upgrade head
           CURRENT="$(DATABASE_URL="$BASELINE_DATABASE_URL" alembic current)"
           printf '%s\n' "$CURRENT"
-          grep -q "0081_merge_release_and_articles_wallet_heads" <<< "$CURRENT"
-          HEAD_REVISION="$(alembic heads | awk 'NR == 1 {print $1}')"
+          HEADS="$(alembic heads)"
+          HEAD_COUNT="$(grep -c ' (head)' <<< "$HEADS")"
+          test "$HEAD_COUNT" -eq 1
+          HEAD_REVISION="$(awk 'NR == 1 {print $1}' <<< "$HEADS")"
           grep -q "$HEAD_REVISION" <<< "$CURRENT"
-          grep -q "0086_runtime_role_membership_preflight" <<< "$CURRENT"
 
           # Export the resulting schema snapshot for independent review.
           pg_dump -h localhost -U nlc_test \
@@ -348,7 +351,6 @@ jobs:
           DATABASE_URL="$LEGACY_DATABASE_URL" alembic upgrade head
           FINAL_MARKER="$(DATABASE_URL="$LEGACY_DATABASE_URL" alembic current)"
           printf '%s\n' "$FINAL_MARKER"
-          grep -q "0081_merge_release_and_articles_wallet_heads" <<< "$FINAL_MARKER"
           HEAD_REVISION="$(alembic heads | awk 'NR == 1 {print $1}')"
           grep -q "$HEAD_REVISION" <<< "$FINAL_MARKER"
           grep -q "0086_runtime_role_membership_preflight" <<< "$FINAL_MARKER"

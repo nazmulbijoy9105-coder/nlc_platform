@@ -5,6 +5,8 @@ The engine is parsed as Python syntax. Rule IDs and statutory bases are read
 from the same ComplianceFlag constructor call, not inferred from nearby text.
 """
 import ast
+import re
+import csv
 from collections import Counter
 from pathlib import Path
 
@@ -335,6 +337,29 @@ def test_inner_ids_match_registry_keys():
     assert not bad_rescue, sorted(bad_rescue)
 
 
+def test_canonical_registry_matches_seed_basis_and_requirement_for_all_rules():
+    """The canonical registry, seed corpus and engine must not drift rule-by-rule."""
+    rows = _seed_rows()
+    assert len(rows) == EXPECTED
+    seed_by_id = {row["rule_id"]: row for row in rows}
+    assert set(seed_by_id) == set(STATUTORY_RULE_REGISTRY)
+
+    mismatches = []
+    for rule_id, row in seed_by_id.items():
+        rule = STATUTORY_RULE_REGISTRY[rule_id]
+        seed_basis = _normalise_basis(row["statutory_basis"])
+        canonical_basis = _normalise_basis(rule.law)
+        if seed_basis != canonical_basis or rule.requirement != row["description"]:
+            mismatches.append({
+                "rule_id": rule_id,
+                "seed_basis": row["statutory_basis"],
+                "canonical_basis": rule.law,
+                "seed_requirement": row["description"],
+                "canonical_requirement": rule.requirement,
+            })
+    assert not mismatches, mismatches
+
+
 def test_seed_statutory_basis_matches_engine_call_for_same_rule():
     engine_data, errors = _engine_rule_data()
     assert not errors, errors
@@ -443,3 +468,55 @@ def test_unreconciled_canonical_rules_cannot_affect_score():
         and (rule.severity.value != "NOT_EVALUATED" or rule.score_impact != 0)
     ]
     assert not unsafe, unsafe
+
+
+def test_every_provision_is_explicitly_unverified_until_counsel_signoff():
+    """No TBD placeholder or implied legal approval; all candidates remain non-scoring."""
+    unsafe = []
+    for rule_id, rule in STATUTORY_RULE_REGISTRY.items():
+        if (
+            not rule.provision.startswith("UNVERIFIED CANDIDATE — ")
+            or "TBD" in rule.provision.upper()
+            or rule.provision_status.value != "RECONCILE"
+            or rule.severity.value != "NOT_EVALUATED"
+            or rule.score_impact != 0
+        ):
+            unsafe.append({
+                "rule_id": rule_id,
+                "provision": rule.provision,
+                "status": rule.provision_status.value,
+                "severity": rule.severity.value,
+                "score_impact": rule.score_impact,
+            })
+    assert not unsafe, unsafe
+
+
+def test_legal_reconciliation_checklist_covers_all_85_unverified_rules():
+    path = ROOT / "docs" / "LEGAL_RECONCILIATION_CHECKLIST.csv"
+    with path.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == EXPECTED
+    assert {row["Rule ID"] for row in rows} == set(STATUTORY_RULE_REGISTRY)
+    assert all(row["Status"] == "RECONCILE" for row in rows)
+    assert all(row["Legal Team Sign-Off"] == "PENDING" for row in rows)
+    assert all(row["Candidate Provision"].startswith("UNVERIFIED CANDIDATE — ") for row in rows)
+
+
+def test_counsel_docket_covers_all_85_rules_and_matches_unverified_candidates():
+    path = ROOT / "docs" / "legal" / "85_RULE_COUNSEL_VALIDATION_DOCKET.md"
+    content = path.read_text(encoding="utf-8")
+    headings = list(re.finditer(r"^### ([A-Z]{2,5}-\d{3}) —", content, re.MULTILINE))
+    ids = [match.group(1) for match in headings]
+    assert len(ids) == EXPECTED
+    assert set(ids) == set(STATUTORY_RULE_REGISTRY)
+
+    for index, match in enumerate(headings):
+        end = headings[index + 1].start() if index + 1 < len(headings) else len(content)
+        block = content[match.start():end]
+        rule = STATUTORY_RULE_REGISTRY[match.group(1)]
+        assert f"- **Catalogue anchor:** {rule.law}" in block
+        assert (
+            "- **Current canonical provision candidate (unverified):** "
+            f"{rule.provision}"
+        ) in block
+        assert "OPEN — NOT COUNSEL VALIDATED" in block
