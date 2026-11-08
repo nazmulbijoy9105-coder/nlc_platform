@@ -126,7 +126,6 @@ async def test_stale_token_role_is_rejected_before_session_is_yielded(monkeypatc
     assert session.rolled_back is True
     assert session.closed is True
 
-
 @pytest.mark.asyncio
 async def test_legal_staff_keeps_signed_user_identity(monkeypatch):
     user_id = uuid.uuid4()
@@ -154,3 +153,9 @@ async def test_legal_staff_keeps_signed_user_identity(monkeypatch):
     assert calls == [("user", str(user_id))]
     assert session.committed is True
     assert session.closed is True
+
+def test_admin_db_dependency_requires_live_super_admin_authorization():
+    import inspect
+
+    parameter = inspect.signature(dependencies.get_admin_db).parameters["token"]
+    assert parameter.default.dependency is dependencies.require_super_admin

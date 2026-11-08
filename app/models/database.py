@@ -270,16 +270,15 @@ async def verify_runtime_database_role() -> None:
             can_replicate,
             bypasses_rls,
         ) = row
-        memberships = (
+        memberships: bool = (
             await connection.execute(
                 text(
                     "SELECT EXISTS ("
                     "SELECT 1 FROM pg_auth_members m "
                     "JOIN pg_roles granted_role ON granted_role.oid = m.roleid "
                     "JOIN pg_roles member_role ON member_role.oid = m.member "
-                    "WHERE member_role.rolname = current_user "
-                    "OR (granted_role.rolname = current_user "
-                    "AND NOT (member_role.rolsuper OR member_role.rolbypassrls)))"
+                    "WHERE granted_role.rolname = current_user "
+                    "OR member_role.rolname = current_user)"
                 )
             )
         ).scalar_one()
@@ -297,7 +296,7 @@ async def verify_runtime_database_role() -> None:
         raise RuntimeError(
             "Unsafe runtime database role: expected nlc_app_role with "
             "NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, "
-            "NOREPLICATION, NOBYPASSRLS, no inherited memberships, and no grants to untrusted roles"
+            "NOREPLICATION, NOBYPASSRLS and no role memberships"
         )
 
     # Prove that the runtime secret matches the database's private signing key.

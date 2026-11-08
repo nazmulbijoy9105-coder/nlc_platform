@@ -116,7 +116,7 @@ class LegalRule(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     versions: Mapped[list[LegalRuleVersion]] = relationship(
         "LegalRuleVersion", back_populates="rule",
         order_by="LegalRuleVersion.changed_at.desc()",
-        lazy="noload",
+        lazy="raise",
     )
 
     def __repr__(self) -> str:
