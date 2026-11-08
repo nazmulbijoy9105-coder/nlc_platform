@@ -206,3 +206,26 @@ async def test_engagement_rejects_invalid_status_jump(
     )
     assert response.status_code == 409, response.text
 
+
+
+def test_quotation_response_supports_legacy_null_valid_until():
+    from datetime import datetime, timezone
+    from types import SimpleNamespace
+
+    from app.api.commercial import _quotation_to_response
+
+    quotation = SimpleNamespace(
+        id="00000000-0000-0000-0000-000000000001",
+        quotation_number="NLC-2024-0001",
+        engagement_id="00000000-0000-0000-0000-000000000002",
+        company_id="00000000-0000-0000-0000-000000000003",
+        professional_fee_bdt=Decimal("100.00"),
+        government_fee_bdt=Decimal("0.00"),
+        vat_bdt=Decimal("0.00"),
+        total_bdt=Decimal("100.00"),
+        status="ACCEPTED",
+        valid_until=None,
+        created_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+    )
+    response = _quotation_to_response(quotation)
+    assert response.valid_until is None
