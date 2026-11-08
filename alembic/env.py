@@ -285,21 +285,21 @@ async def run_async_migrations() -> None:
     Async entry point for migrations.
     Uses asyncpg engine with NullPool for Alembic (one connection per run).
     """
-    import re as _re
-    import ssl as _ssl
+    from app.core.db_url import normalize_asyncpg_url
 
-    # Override URL with resolved value
+    # Override URL with resolved value. Render/production always require
+    # certificate-verified TLS, even when the provider URL omits sslmode.
     configuration = config.get_section(config.config_ini_section, {})
-    db_url = get_database_url()
-
-    # asyncpg does not accept ssl=require as a URL param — strip it and use connect_args
+    is_render = os.environ.get("RENDER", "").strip().lower() == "true"
+    environment = os.environ.get("ENVIRONMENT", "").strip().lower()
+    require_tls = is_render or environment in {"prod", "production"}
+    db_url, ssl_context = normalize_asyncpg_url(
+        get_database_url(),
+        require_tls=require_tls,
+    )
     connect_args = {}
-    if "ssl=require" in db_url or "sslmode=require" in db_url:
-        db_url = _re.sub(r'[?&]ssl=require', '', db_url)
-        db_url = _re.sub(r'[?&]sslmode=require', '', db_url)
-        db_url = db_url.rstrip('?').rstrip('&')
-        ssl_ctx = _ssl.create_default_context()
-        connect_args["ssl"] = ssl_ctx
+    if ssl_context is not None:
+        connect_args["ssl"] = ssl_context
 
     configuration["sqlalchemy.url"] = db_url
 
