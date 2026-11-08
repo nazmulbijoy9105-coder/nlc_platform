@@ -96,3 +96,25 @@ def test_release_switch_without_any_approved_rules_does_not_release_a_score(monk
     assert _applied_score_impacts([_engine_flag()]) == [
         {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
     ]
+
+
+def test_pdf_requires_explicit_authorisation_for_black_override(monkeypatch):
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
+    flag = SimpleNamespace(
+        rule_id="AGM-001",
+        severity="BLACK",
+        score_impact=25,
+        is_black_override=True,
+    )
+    score, override = _verified_flag_score([flag])
+    assert score == 80  # ordinary AGM category cap, no forced zero
+    assert override is False
+
+    monkeypatch.setattr(
+        report_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"AGM-001"})
+    )
+    score, override = _verified_flag_score([flag])
+    assert score == 0
+    assert override is True
