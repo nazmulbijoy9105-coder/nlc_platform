@@ -165,8 +165,12 @@ class ChargeEvent:
     charge_type: str
     amount_bdt: float
     charge_holder: str
-    form_xviii_filed: bool = False
+    form_xviii_filed: bool | None = None
     form_xviii_filed_date: Optional[date] = None
+    creation_date_verified: bool = False
+    creation_date_evidence_ref: str | None = None
+    form_xviii_filing_status_verified: bool = False
+    form_xviii_filing_evidence_ref: str | None = None
     form_xix_filed: bool = False
     form_xxviii_filed: bool = False
     satisfied: bool | None = None
@@ -2014,18 +2018,67 @@ class NLCRuleEngine:
             ))
 
         for charge in c.charges:
-            if not charge.form_xviii_filed:
-                delay = (self.today - charge.creation_date).days
-                if delay > CHARGE_REGISTRATION_DEADLINE_DAYS:
+            registration_unknown = []
+            if not charge.creation_date_verified or not charge.creation_date_evidence_ref:
+                registration_unknown.append("CHARGE_CREATION_DATE_UNVERIFIED")
+            if (
+                charge.registrable_under_s159 is None
+                or not charge.registrability_verified
+                or not charge.registrability_evidence_ref
+            ):
+                registration_unknown.append("SECTION_159_REGISTRABILITY_UNKNOWN")
+            elif charge.registrable_under_s159 is False:
+                registration_unknown = []
+            if (
+                charge.form_xviii_filed is None
+                or not charge.form_xviii_filing_status_verified
+                or not charge.form_xviii_filing_evidence_ref
+            ):
+                registration_unknown.append("RJSC_FORM_XVIII_STATUS_UNVERIFIED")
+            if charge.form_xviii_filed is True and charge.form_xviii_filed_date is None:
+                registration_unknown.append("FORM_XVIII_FILING_DATE_UNKNOWN")
+
+            if charge.registrable_under_s159 is True and registration_unknown:
+                self._add_flag(ComplianceFlag(
+                    rule_id="CAP-002",
+                    flag_code="CHARGE_REGISTRATION_REQUIRES_EVIDENCE_REVIEW",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="Charge registration status, creation date or Section 159 applicability is not sufficiently evidenced. Missing evidence is UNKNOWN, not proof of non-registration.",
+                    statutory_basis="Section 159(1), Companies Act 1994 (Bangladesh)",
+                    detail={"charge_id": charge.charge_id, "unknown_reasons": registration_unknown},
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                ))
+            elif (
+                charge.registrable_under_s159 is True
+                and charge.form_xviii_filed is False
+            ):
+                registration_deadline = (
+                    charge.creation_date + timedelta(days=CHARGE_REGISTRATION_DEADLINE_DAYS)
+                )
+                delay = (self.today - registration_deadline).days
+                if self.today > registration_deadline:
                     self._add_flag(ComplianceFlag(
                         rule_id="CAP-002",
                         flag_code="CHARGE_NOT_REGISTERED",
                         severity=Severity.YELLOW if delay < 90 else Severity.RED,
                         score_impact=5,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"{charge.charge_type} charge (Tk {charge.amount_bdt:,.2f}) not registered within 21 days of creation. Section 159(1): unregistered charge void against creditors and liquidator.",
+                        description=f"{charge.charge_type} charge (Tk {charge.amount_bdt:,.2f}) was not registered within 21 days of creation under Section 159(1). Overdue by {delay} days.",
                         statutory_basis="Section 159(1), Companies Act 1994 (Bangladesh)",
-                        detail={"charge_id": charge.charge_id, "delay": delay, "amount": charge.amount_bdt}
+                        detail={
+                            "charge_id": charge.charge_id,
+                            "creation_date": charge.creation_date.isoformat(),
+                            "statutory_deadline": registration_deadline.isoformat(),
+                            "statutory_period_days": CHARGE_REGISTRATION_DEADLINE_DAYS,
+                            "days_overdue": delay,
+                            "form": "Form XVIII",
+                            "amount": charge.amount_bdt,
+                        },
+                        state=RuleState.NON_COMPLIANT,
+                        eval_state="VIOLATION",
                     ))
 
             if charge.satisfied is None or charge.satisfied is True:
