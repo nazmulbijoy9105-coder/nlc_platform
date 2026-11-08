@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, feat/manual-mobile-wallet-payments-20261108]
+    branches: [main, fix/nlc-canonical-release-gates-20261105, fix/commercial-lifecycle-concurrency-main-20261108, feat/manual-mobile-wallet-payments-20261108]
   pull_request:
     branches:
       - main
