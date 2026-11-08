@@ -41,6 +41,16 @@ def upgrade() -> None:
             "migration-owner bypass would otherwise be available to the runtime"
         )
 
+    migration_is_database_owner = bind.execute(
+        sa.text(
+            "SELECT pg_has_role(session_user, 'pg_database_owner', 'USAGE')"
+        )
+    ).scalar_one()
+    if not migration_is_database_owner:
+        raise RuntimeError(
+            "Legal-rule guard migration must run under the database-owner migration principal"
+        )
+
     op.execute("""
         CREATE OR REPLACE FUNCTION public.nlc_require_legal_rule_version_snapshot()
         RETURNS trigger
