@@ -433,11 +433,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
         existing_snapshot_row = existing_snapshot.scalar_one_or_none()
         if not existing_snapshot_row:
             sb = output.score_breakdown
-            black_flags = len([
-                f for f in output.flags
-                if f.rule_id in VERIFIED_RULE_IDS
-                and (f.severity.value if hasattr(f.severity, 'value') else f.severity) == "BLACK"
-            ])
+            # Use the engine's validated override count; a BLACK label alone
+            # is not authority to trigger BLACK override semantics.
+            black_flags = sb.black_flag_count if legal_score_is_released() else 0
             snapshot = ComplianceScoreHistory(
                 id=uuid.uuid4(),
                 company_id=company_id,
@@ -445,11 +443,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 risk_band=risk_band,
                 snapshot_month=snapshot_month,
                 calculated_at=now,
-                agm_score=sb.agm_score,
-                audit_score=sb.audit_score,
-                return_score=sb.return_score,
-                director_score=sb.director_score,
-                shareholding_score=sb.shareholding_score,
+                agm_score=sb.agm_score if score_for_current is not None else None,
+                audit_score=sb.audit_score if score_for_current is not None else None,
+                return_score=sb.return_score if score_for_current is not None else None,
+                director_score=sb.director_score if score_for_current is not None else None,
+                shareholding_score=sb.shareholding_score if score_for_current is not None else None,
                 active_flags_count=len(output.flags),
                 black_flags_count=black_flags,
                 override_applied=sb.override_applied,
