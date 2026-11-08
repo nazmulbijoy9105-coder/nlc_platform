@@ -12,7 +12,10 @@ async def test_runtime_database_pool_uses_nlc_app_role_and_rejects_unsigned_admi
     if os.getenv("REQUIRE_RLS_APP_ROLE", "").lower() != "true":
         pytest.skip("runtime-role connection check is enabled in the production-like CI job")
 
-    from app.models.database import AsyncSessionLocal
+    from app.models.database import AsyncSessionLocal, verify_runtime_database_role
+
+    # Exercise the same fail-fast check invoked by the FastAPI lifespan.
+    await verify_runtime_database_role()
 
     async with AsyncSessionLocal() as session:
         role_result = await session.execute(text("""
