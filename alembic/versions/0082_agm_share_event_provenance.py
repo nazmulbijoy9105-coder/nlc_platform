@@ -245,6 +245,108 @@ def upgrade() -> None:
         FOR EACH ROW EXECUTE FUNCTION public.nlc_validate_share_event_company()
     """)
 
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_protect_agm_notice_evidence()
+        RETURNS trigger LANGUAGE plpgsql
+        SET search_path = pg_catalog, public
+        AS $function$
+        BEGIN
+            IF OLD.entitled_member_verified AND (
+                NEW.entitled_member_verified IS DISTINCT FROM TRUE
+                OR NEW.recipient_key IS DISTINCT FROM OLD.recipient_key
+                OR NEW.recipient_name IS DISTINCT FROM OLD.recipient_name
+                OR NEW.shareholder_id IS DISTINCT FROM OLD.shareholder_id
+                OR NEW.entitlement_evidence_ref IS DISTINCT FROM OLD.entitlement_evidence_ref
+            ) THEN
+                RAISE EXCEPTION 'Verified AGM member identity/evidence is immutable; add a correction record';
+            END IF;
+            IF OLD.notice_verified AND (
+                NEW.notice_verified IS DISTINCT FROM TRUE
+                OR NEW.notice_delivery_status IS DISTINCT FROM OLD.notice_delivery_status
+                OR NEW.notice_sent_date IS DISTINCT FROM OLD.notice_sent_date
+                OR NEW.notice_evidence_ref IS DISTINCT FROM OLD.notice_evidence_ref
+            ) THEN
+                RAISE EXCEPTION 'Verified AGM notice evidence is immutable; add a correction record';
+            END IF;
+            IF OLD.consent_verified AND (
+                NEW.consent_verified IS DISTINCT FROM TRUE
+                OR NEW.consent_given IS DISTINCT FROM OLD.consent_given
+                OR NEW.consent_received_date IS DISTINCT FROM OLD.consent_received_date
+                OR NEW.consent_evidence_ref IS DISTINCT FROM OLD.consent_evidence_ref
+            ) THEN
+                RAISE EXCEPTION 'Verified short-notice consent evidence is immutable; add a correction record';
+            END IF;
+            IF OLD.omission_verified AND (
+                NEW.omission_verified IS DISTINCT FROM TRUE
+                OR NEW.omission_accidental IS DISTINCT FROM OLD.omission_accidental
+                OR NEW.omission_evidence_ref IS DISTINCT FROM OLD.omission_evidence_ref
+            ) THEN
+                RAISE EXCEPTION 'Verified accidental-omission evidence is immutable; add a correction record';
+            END IF;
+            RETURN NEW;
+        END;
+        $function$
+    """)
+    op.execute("""
+        CREATE TRIGGER trg_agm_notice_evidence_immutable
+        BEFORE UPDATE ON public.agm_notice_evidence
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_protect_agm_notice_evidence()
+    """)
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_protect_share_compliance_event()
+        RETURNS trigger LANGUAGE plpgsql
+        SET search_path = pg_catalog, public
+        AS $function$
+        BEGIN
+            IF OLD.event_verified AND (
+                NEW.event_verified IS DISTINCT FROM TRUE
+                OR NEW.event_reference IS DISTINCT FROM OLD.event_reference
+                OR NEW.event_type IS DISTINCT FROM OLD.event_type
+                OR NEW.event_date IS DISTINCT FROM OLD.event_date
+                OR NEW.event_evidence_ref IS DISTINCT FROM OLD.event_evidence_ref
+                OR NEW.share_transfer_id IS DISTINCT FROM OLD.share_transfer_id
+                OR NEW.shareholder_id IS DISTINCT FROM OLD.shareholder_id
+                OR NEW.shares_affected IS DISTINCT FROM OLD.shares_affected
+            ) THEN
+                RAISE EXCEPTION 'Verified share event facts are immutable; submit a correction event';
+            END IF;
+            IF OLD.filing_status_verified AND (
+                NEW.filing_status_verified IS DISTINCT FROM TRUE
+                OR NEW.filing_form IS DISTINCT FROM OLD.filing_form
+                OR NEW.filing_status IS DISTINCT FROM OLD.filing_status
+                OR NEW.filing_date IS DISTINCT FROM OLD.filing_date
+                OR NEW.filing_evidence_ref IS DISTINCT FROM OLD.filing_evidence_ref
+            ) THEN
+                RAISE EXCEPTION 'Verified filing status is immutable; submit a correction event';
+            END IF;
+            IF OLD.certificate_status_verified AND (
+                NEW.certificate_status_verified IS DISTINCT FROM TRUE
+                OR NEW.certificate_issued IS DISTINCT FROM OLD.certificate_issued
+                OR NEW.certificate_issue_date IS DISTINCT FROM OLD.certificate_issue_date
+                OR NEW.certificate_evidence_ref IS DISTINCT FROM OLD.certificate_evidence_ref
+            ) THEN
+                RAISE EXCEPTION 'Verified certificate status is immutable; submit a correction event';
+            END IF;
+            RETURN NEW;
+        END;
+        $function$
+    """)
+    op.execute("""
+        CREATE TRIGGER trg_share_compliance_event_immutable
+        BEFORE UPDATE ON public.share_compliance_events
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_protect_share_compliance_event()
+    """)
+    op.execute("""
+        REVOKE DELETE, TRUNCATE, REFERENCES, TRIGGER
+        ON TABLE public.agm_notice_evidence, public.share_compliance_events
+        FROM nlc_app_role
+    """)
+    op.execute("""
+        GRANT SELECT, INSERT, UPDATE
+        ON TABLE public.agm_notice_evidence, public.share_compliance_events
+        TO nlc_app_role
+    """)
+
     for table in ("agm_notice_evidence", "share_compliance_events"):
         op.execute(f"ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY")
         op.execute(f"ALTER TABLE public.{table} FORCE ROW LEVEL SECURITY")
