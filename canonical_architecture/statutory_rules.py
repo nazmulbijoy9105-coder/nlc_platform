@@ -1,4 +1,3 @@
-PLACEHOLDER
 """
 NLC Layer 2: Statutory Rule Registry - WHAT Bangladesh law requires.
 Every provision is RECONCILE (unverified) until checked against the legal
