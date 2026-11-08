@@ -2389,7 +2389,6 @@ class NLCRuleEngine:
             # not yet verified; keep this as a non-scoring review prompt.
             if self.today > deadline:
                 delay = (self.today - deadline).days
-                if delay <= 90:
                 self._add_flag(ComplianceFlag(
                     rule_id="TAX-003",
                     flag_code="ANNUAL_TAX_RETURN_OVERDUE",
