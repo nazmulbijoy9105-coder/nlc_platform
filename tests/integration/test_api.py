@@ -637,9 +637,6 @@ class TestDocuments:
         assert isinstance(templates, list)
 
     @pytest.mark.asyncio
-    async def test_generate_document_invalid_template(
-        self, api_client, legal_tok, db_company, legal_staff_company_scope
-    ):
     async def test_generate_document_invalid_template(self, api_client, admin_token, db_company):
         resp = await api_client.post(
             "/api/v1/documents/generate",
@@ -663,9 +660,6 @@ class TestDocuments:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_list_documents_for_company(
-        self, api_client, legal_tok, db_company, legal_staff_company_scope
-    ):
     async def test_list_documents_for_company(self, api_client, admin_token, db_company):
         resp = await api_client.get(
             f"/api/v1/documents/{db_company.id}",
@@ -851,9 +845,6 @@ class TestDocuments:
         assert resp.status_code == 402
 
     @pytest.mark.asyncio
-    async def test_release_requires_approval_first(
-        self, api_client, legal_tok, db, db_company, legal_staff_company_scope
-    ):
     async def test_release_requires_approval_first(self, api_client, admin_token, db, db_company):
         """Cannot release an unapproved document."""
         from app.models.documents import Document
