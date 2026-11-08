@@ -1133,8 +1133,27 @@ class NLCRuleEngine:
         # The first-AGM proviso does not erase the separate 15-month cap
         # measured from the actual first AGM date.
         fifteen_month_deadline = self._add_months(c.last_agm_date, 15)
-        calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
-        base_deadline = min(fifteen_month_deadline, calendar_year_deadline)
+        first_agm_in_incorporation_year = (
+            c.agm_count == 1
+            and c.incorporation_date is not None
+            and c.last_agm_date.year == c.incorporation_date.year
+            and c.last_agm_date <= self._add_months(c.incorporation_date, 18)
+        )
+        if first_agm_in_incorporation_year:
+            # Section 81(1)'s first-AGM proviso expressly removes the need
+            # for another AGM in the incorporation year or the following
+            # year. If the ordinary 15-month date falls in that exempt
+            # following year, the next calendar-year obligation is 31 Dec
+            # of the year after it; otherwise the 15-month date still governs.
+            calendar_year_deadline = date(c.incorporation_date.year + 2, 12, 31)
+            base_deadline = (
+                calendar_year_deadline
+                if fifteen_month_deadline.year <= c.incorporation_date.year + 1
+                else min(fifteen_month_deadline, calendar_year_deadline)
+            )
+        else:
+            calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
+            base_deadline = min(fifteen_month_deadline, calendar_year_deadline)
         if c.agm_extension_granted_until is None:
             return base_deadline
         extension_verified = (
