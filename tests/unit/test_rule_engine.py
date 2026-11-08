@@ -1329,7 +1329,16 @@ class TestUntestedRules:
         assert_flag_triggered(rule_engine.evaluate(build_profile(paid_up_capital_bdt=200000, authorized_capital_bdt=100000)), "INC-004")
 
     def test_SH002_triggers(self, rule_engine, build_profile):
-        profile = build_profile(last_allotment_date=date.today() - timedelta(days=95), share_certificates_issued=False)
+        profile = build_profile(share_compliance_events=[ShareComplianceEventEvidence(
+            event_reference="ALLOTMENT-TEST-005",
+            event_type="ALLOTMENT",
+            event_date=date.today() - timedelta(days=95),
+            event_verified=True,
+            event_evidence_ref="evidence://allotment/005",
+            certificate_issued=False,
+            certificate_status_verified=True,
+            certificate_evidence_ref="evidence://company/certificate-register",
+        )])
         assert_flag_triggered(rule_engine.evaluate(profile), "SH-002")
 
     def test_SH003_triggers(self, rule_engine, build_profile):
