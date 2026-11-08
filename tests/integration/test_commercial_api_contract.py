@@ -172,6 +172,12 @@ async def test_task_completion_accepts_completion_note(
     assert response.status_code == 200, response.text
     assert response.json()["status"] == "COMPLETED"
 
+    duplicate = await api_client.patch(
+        f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete",
+        headers=_auth(commercial_admin_token),
+        json={"completion_note": "Duplicate completion must not create another transition"},
+    )
+    assert duplicate.status_code == 409, duplicate.text
     repeated = await api_client.patch(
         f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete?company_id={db_company.id}",
         f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete",
@@ -215,6 +221,27 @@ async def test_engagement_rejects_invalid_status_jump(
 
 
 
+def test_quotation_response_supports_legacy_null_valid_until():
+    from datetime import datetime, timezone
+    from types import SimpleNamespace
+
+    from app.api.commercial import _quotation_to_response
+
+    quotation = SimpleNamespace(
+        id="00000000-0000-0000-0000-000000000001",
+        quotation_number="NLC-2024-0001",
+        engagement_id="00000000-0000-0000-0000-000000000002",
+        company_id="00000000-0000-0000-0000-000000000003",
+        professional_fee_bdt=Decimal("100.00"),
+        government_fee_bdt=Decimal("0.00"),
+        vat_bdt=Decimal("0.00"),
+        total_bdt=Decimal("100.00"),
+        status="ACCEPTED",
+        valid_until=None,
+        created_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+    )
+    response = _quotation_to_response(quotation)
+    assert response.valid_until is None
 @pytest.mark.asyncio
 async def test_expired_quotation_cannot_be_accepted(
     api_client, commercial_admin_token, db_company, db
