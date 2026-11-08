@@ -933,3 +933,93 @@ def test_verified_black_severity_without_override_authority_does_not_force_zero(
     assert result.override_applied is False
     assert result.final_score == 91
     assert result.black_flag_count == 1
+
+
+def test_late_form_xviii_registration_is_reviewed_not_automatically_treated_as_unfiled():
+    charge = ChargeEvent(
+        charge_id="charge-registration-late",
+        creation_date=date(2026, 10, 1),
+        charge_type="FIXED",
+        amount_bdt=100000,
+        charge_holder="Test Bank",
+        form_xviii_filed=True,
+        form_xviii_filed_date=date(2026, 10, 25),
+        creation_date_verified=True,
+        creation_date_evidence_ref="EXECUTED-CHARGE-LATE",
+        form_xviii_filing_status_verified=True,
+        form_xviii_filing_evidence_ref="RJSC-SEARCH-LATE",
+        registrable_under_s159=True,
+        registrability_verified=True,
+        registrability_evidence_ref="RJSC-CLASS-LATE",
+    )
+    result = NLCRuleEngine().evaluate(
+        _profile(charges=[charge]),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "CAP-002")
+    assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.score_impact == 0
+    assert flag.detail["statutory_deadline"] == "2026-10-22"
+    assert flag.detail["filed_date"] == "2026-10-25"
+    assert flag.detail["days_late"] == 3
+
+
+def test_late_form_xxviii_satisfaction_is_reviewed_not_assumed_cured():
+    charge = ChargeEvent(
+        charge_id="charge-satisfaction-late",
+        creation_date=date(2025, 1, 1),
+        charge_type="FIXED",
+        amount_bdt=100000,
+        charge_holder="Test Bank",
+        satisfied=True,
+        satisfaction_date=date(2026, 10, 1),
+        satisfaction_verified=True,
+        satisfaction_evidence_ref="BANK-SATISFACTION-LATE",
+        registrable_under_s159=True,
+        registrability_verified=True,
+        registrability_evidence_ref="RJSC-CLASS-SAT-LATE",
+        satisfaction_filed=True,
+        satisfaction_filed_date=date(2026, 10, 25),
+        satisfaction_filing_status_verified=True,
+        satisfaction_filing_evidence_ref="RJSC-SEARCH-SAT-LATE",
+    )
+    result = NLCRuleEngine().evaluate(
+        _profile(charges=[charge]),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "CHG-001")
+    assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.score_impact == 0
+    assert flag.detail["statutory_deadline"] == "2026-10-22"
+    assert flag.detail["days_late"] == 3
+
+
+def test_claimed_satisfaction_filing_without_filing_date_is_unknown():
+    charge = ChargeEvent(
+        charge_id="charge-satisfaction-filed-date-missing",
+        creation_date=date(2025, 1, 1),
+        charge_type="FIXED",
+        amount_bdt=100000,
+        charge_holder="Test Bank",
+        satisfied=True,
+        satisfaction_date=date(2026, 10, 1),
+        satisfaction_verified=True,
+        satisfaction_evidence_ref="BANK-SATISFACTION-MISSING-DATE",
+        registrable_under_s159=True,
+        registrability_verified=True,
+        registrability_evidence_ref="RJSC-CLASS-MISSING-DATE",
+        satisfaction_filed=True,
+        satisfaction_filed_date=None,
+        satisfaction_filing_status_verified=True,
+        satisfaction_filing_evidence_ref="RJSC-SEARCH-MISSING-DATE",
+    )
+    result = NLCRuleEngine().evaluate(
+        _profile(charges=[charge]),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "CHG-001")
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert "SATISFACTION_FILING_DATE_UNKNOWN" in flag.detail["unknown_reasons"]
