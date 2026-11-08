@@ -516,22 +516,23 @@ async def list_tasks(
 @router.patch(
     "/tasks/{task_id}/complete",
     response_model=TaskResponse,
-    dependencies=[Depends(require_roles(*STAFF_ROLES))],
+    dependencies=[
+        Depends(require_company_access("company_id")),
+        Depends(require_roles(*STAFF_ROLES)),
+    ],
     summary="Mark a task as complete",
 )
 async def complete_task(
     task_id: uuid.UUID,
+    company_id: uuid.UUID,
     body: TaskCompleteRequest,
     request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = TaskService(db)
-    task = await svc.complete_task(  # type: ignore
-        task_id=task_id,
-    )
     try:
-        task = await svc.complete_task(task_id=task_id)
+        task = await svc.complete_task(task_id=task_id, company_id=company_id)
     except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not task:
