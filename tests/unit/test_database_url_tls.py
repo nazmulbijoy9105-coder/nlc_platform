@@ -59,3 +59,17 @@ def test_rejects_empty_or_non_postgresql_connection_urls(raw_url):
     with pytest.raises(ValueError):
         normalize_asyncpg_url(raw_url, require_tls=True)
 
+
+
+def test_libpq_channel_binding_is_removed_but_verified_tls_is_preserved():
+    url, context = normalize_asyncpg_url(
+        "postgresql://nlc_app:secret@db.example.com/neondb"
+        "?channel_binding=require&application_name=nlc",
+        require_tls=True,
+    )
+
+    assert "channel_binding" not in url
+    assert "application_name=nlc" in url
+    assert isinstance(context, ssl.SSLContext)
+    assert context.verify_mode == ssl.CERT_REQUIRED
+    assert context.check_hostname is True
