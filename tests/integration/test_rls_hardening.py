@@ -932,7 +932,6 @@ async def test_company_charges_are_forced_rls_and_financially_scoped(
         {"company_id": db_company.id},
     )
     assert hidden.scalar_one() == 0
-    await db.rollback()
 
     await set_rls_context(db, str(finance_user.id))
     visible = await db.execute(
