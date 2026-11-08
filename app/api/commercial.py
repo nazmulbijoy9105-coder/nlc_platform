@@ -311,13 +311,10 @@ async def advance_engagement_status(
         engagement = await svc.advance_status(
             engagement_id=engagement_id,
             new_status=body.new_status,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
             note=body.note,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found.")
 
