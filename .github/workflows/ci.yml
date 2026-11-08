@@ -93,7 +93,7 @@ jobs:
         image: postgres:15
         env:
           POSTGRES_USER: nlc_test
-          POSTGRES_PASSWORD: nlc_test
+          POSTGRES_HOST_AUTH_METHOD: trust
           POSTGRES_DB: nlc_test
         ports:
           - 5432:5432
@@ -114,12 +114,12 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql+asyncpg://nlc_test:nlc_test@localhost:5432/nlc_test
-      DATABASE_URL_TEST: postgresql+asyncpg://nlc_test:nlc_test@localhost:5432/nlc_test
+      DATABASE_URL: postgresql+asyncpg://nlc_test@localhost:5432/nlc_test
+      DATABASE_URL_TEST: postgresql+asyncpg://nlc_test@localhost:5432/nlc_test
       REDIS_URL: redis://localhost:6379/0
       JWT_SECRET_KEY: test-secret-key-not-for-production
       NLC_RLS_HMAC_SECRET: ci-only-rls-hmac-secret-not-for-production-2026
-      APP_DATABASE_URL: postgresql+asyncpg://nlc_app_role:ci-only-nlc-app-role-password@localhost:5432/nlc_test
+      APP_DATABASE_URL: postgresql+asyncpg://nlc_app_role@localhost:5432/nlc_test
       REQUIRE_RLS_APP_ROLE: "true"
       ENVIRONMENT: test
 
@@ -200,7 +200,7 @@ jobs:
               conn = await asyncpg.connect(url)
               try:
                   await conn.execute(
-                      "ALTER ROLE nlc_app_role WITH PASSWORD 'ci-only-nlc-app-role-password'"
+                      "ALTER ROLE nlc_app_role WITH LOGIN"
                   )
               finally:
                   await conn.close()
@@ -210,8 +210,8 @@ jobs:
 
           # A second independent empty database catches hidden dependence on
           # migration state left by the first upgrade.
-          PGPASSWORD=nlc_test createdb -h localhost -U nlc_test nlc_test_second
-          SECOND_DATABASE_URL="postgresql+asyncpg://nlc_test:nlc_test@localhost:5432/nlc_test_second"
+          createdb -h localhost -U nlc_test nlc_test_second
+          SECOND_DATABASE_URL="postgresql+asyncpg://nlc_test@localhost:5432/nlc_test_second"
           DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
           DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
           DATABASE_URL="$SECOND_DATABASE_URL" alembic current
@@ -219,8 +219,8 @@ jobs:
       - name: Rehearse production baseline 0042 through head
         run: |
           set -euo pipefail
-          PGPASSWORD=nlc_test createdb -h localhost -U nlc_test nlc_test_baseline_0042
-          BASELINE_DATABASE_URL="postgresql+asyncpg://nlc_test:nlc_test@localhost:5432/nlc_test_baseline_0042"
+          createdb -h localhost -U nlc_test nlc_test_baseline_0042
+          BASELINE_DATABASE_URL="postgresql+asyncpg://nlc_test@localhost:5432/nlc_test_baseline_0042"
 
           # Apply the real online migrations to an isolated database restored
           # at the declared production baseline. This exercises migrations
@@ -232,7 +232,7 @@ jobs:
           grep -q "0079_reconcile_legacy_agm_evidence_types" <<< "$CURRENT"
 
           # Export the resulting schema snapshot for independent review.
-          PGPASSWORD=nlc_test pg_dump -h localhost -U nlc_test \
+          pg_dump -h localhost -U nlc_test \
             --schema-only --no-owner --no-privileges nlc_test_baseline_0042 \
             > /tmp/nlc_0042_to_head_schema.sql
           test -s /tmp/nlc_0042_to_head_schema.sql
@@ -258,7 +258,7 @@ jobs:
 
           asyncio.run(main())
           PY
-          LEGACY_DATABASE_URL="postgresql+asyncpg://nlc_test:nlc_test@localhost:5432/nlc_test_legacy_0048"
+          LEGACY_DATABASE_URL="postgresql+asyncpg://nlc_test@localhost:5432/nlc_test_legacy_0048"
 
           # Recreate the historical deployed revision using the real migration
           # path, then prove that the canonical branch can continue from it.
