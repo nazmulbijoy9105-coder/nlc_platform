@@ -523,6 +523,8 @@ class TaskService(BaseService[Task]):
         self,
         task_id: uuid.UUID,
         company_id: uuid.UUID,
+        *,
+        completion_note: str | None = None,
     ) -> Task | None:
         """Complete only a task belonging to the already-authorized company."""
         task_result = await self.db.execute(
@@ -541,8 +543,12 @@ class TaskService(BaseService[Task]):
             raise CommercialConflictError(
                 f"Cannot complete a task in {task.task_status} state."
             )
+        normalized_note = completion_note.strip() if completion_note else None
+        if normalized_note is not None and len(normalized_note) > 2000:
+            raise ValueError("Completion note must not exceed 2,000 characters.")
         return await self.update_instance(
             task,
             task_status=TaskStatus.COMPLETED,
             completed_at=datetime.now(UTC),
+            completion_note=normalized_note,
         )
