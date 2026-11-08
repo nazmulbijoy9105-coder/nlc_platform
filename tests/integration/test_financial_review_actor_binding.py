@@ -164,3 +164,55 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
         with pytest.raises(DBAPIError):
             async with db.begin_nested():
                 await force_deferred_ledger_constraint()
+
+@pytest.mark.asyncio
+async def test_payment_approval_rejects_reviewer_id_not_matching_signed_actor(
+    db, db_company, db_user, db_super_admin
+):
+    """A caller cannot pass another finance user's ID as reviewer_id."""
+    from decimal import Decimal
+
+    from app.services.finance_service import FinanceService
+
+    await set_rls_context(db, str(db_user.id))
+    service = FinanceService(db)
+    invoice = await service.create_invoice(
+        company_id=db_company.id,
+        engagement_id=None,
+        lines=[{
+            "description": "Reviewer identity binding",
+            "quantity": "1",
+            "unit_price_bdt": "100.00",
+        }],
+        tax_bdt=Decimal("0.00"),
+        due_at=None,
+        notes=None,
+        actor_id=db_user.id,
+    )
+    await service.issue_invoice(invoice.id)
+    submission = await service.submit_offline_payment(
+        company_id=db_company.id,
+        invoice_id=invoice.id,
+        submitted_by=db_user.id,
+        method="CASH",
+        amount_bdt=Decimal("50.00"),
+        payer_reference=None,
+        paid_at=None,
+        evidence_document_id=None,
+    )
+
+    # The signed principal is the Super Admin, but the caller lies about
+    # reviewer_id. The deferred ledger trigger must reject the mismatch.
+    await set_rls_context(db, str(db_super_admin.id))
+    with pytest.raises(DBAPIError):
+        async with db.begin_nested():
+            await FinanceService(db).approve_offline_payment(
+                submission_id=submission.id,
+                reviewer_id=db_user.id,
+                review_note="Must be rejected: wrong reviewer identity",
+                cheque_cleared_at=None,
+            )
+            await db.execute(
+                text("SET CONSTRAINTS payment_submissions_ledger_integrity IMMEDIATE")
+            )
+
