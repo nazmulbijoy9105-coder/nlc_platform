@@ -227,15 +227,15 @@ jobs:
           DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
           DATABASE_URL="$SECOND_DATABASE_URL" alembic current
 
-      - name: Rehearse production baseline 0042 through head
+      - name: Migrate a fresh database from revision 0042 through head
         run: |
           set -euo pipefail
           PGPASSWORD=nlc_test createdb -h localhost -U nlc_test nlc_test_baseline_0042
           BASELINE_DATABASE_URL="postgresql+asyncpg://nlc_test:nlc_test@localhost:5432/nlc_test_baseline_0042"
 
-          # Apply the real online migrations to an isolated database restored
-          # at the declared production baseline. This exercises migrations
-          # that intentionally require live catalog/role/secret preflights.
+          # Apply migrations to a fresh isolated database, first advancing it to
+          # revision 0042 and then through head. This validates the forward
+          # chain from that revision; it is NOT a restored production snapshot.
           DATABASE_URL="$BASELINE_DATABASE_URL" alembic upgrade 0042_dedup_key
           DATABASE_URL="$BASELINE_DATABASE_URL" alembic upgrade head
           CURRENT="$(DATABASE_URL="$BASELINE_DATABASE_URL" alembic current)"
