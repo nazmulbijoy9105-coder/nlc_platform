@@ -9,6 +9,7 @@ on:
       - fix/0050-role-provisioning-preflight-20261106
       - fix/canonical-migration-chain-20261106
       - feat/finance-ledger-integrated-on-canonical-chain-20261106
+      - fix/repair-finance-numbering-syntax-20261108
 
 jobs:
   unit-tests:
