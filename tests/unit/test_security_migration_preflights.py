@@ -1,4 +1,4 @@
-"""Regression guards for fail-closed schema and role migration preflights."""
+"""Regression guards for schema-recovery and signed-RLS migration preflights."""
 
 from pathlib import Path
 
@@ -7,21 +7,23 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def _migration(name: str) -> str:
-    return (
-        ROOT / "alembic" / "versions" / name
-    ).read_text(encoding="utf-8")
+    return (ROOT / "alembic" / "versions" / name).read_text(encoding="utf-8")
 
 
-def test_webhook_and_rescue_reconciliation_refuses_to_replace_missing_evidence():
+def test_webhook_and_rescue_reconciliation_is_explicitly_schema_only():
     source = _migration("0044_webhook_schema_reconcile.py")
 
     assert '"webhook_endpoints"' in source
     assert '"webhook_deliveries"' in source
     assert '"rescue_audit_log"' in source
-    assert "to_regclass(:qualified_name)" in source
-    assert "Restore/reconcile schema and evidence from a verified backup" in source
-    assert "CREATE TABLE" not in source.upper()
-    assert "CREATE TABLE IF NOT EXISTS" not in source.upper()
+    assert "op.create_table(" in source
+    assert "SCHEMA-ONLY RECONSTRUCTION" in source
+    assert "Historical endpoint rows were not restored" in source
+    assert "Historical rescue audit rows were not restored" in source
+    # SQLAlchemy renders this FK option into PostgreSQL DDL during migration.
+    assert 'sa.ForeignKey("rescue_plans.id", ondelete="RESTRICT")' in source
+    assert "ENABLE ROW LEVEL SECURITY" in source
+    assert "FORCE ROW LEVEL SECURITY" in source
 
 
 def test_signed_rls_migration_restricts_memberships_to_trusted_admins():
@@ -52,6 +54,6 @@ def test_signed_rls_inventory_preflight_runs_before_schema_mutations():
     assert "to_regclass(:qualified_name)" in source
     assert "RLS migration preflight found missing expected public tables:" in source
     assert "RLS migration preflight found missing expected public views:" in source
-    assert "will not recreate empty tables" in _migration(
+    assert "SCHEMA-ONLY RECONSTRUCTION" in _migration(
         "0044_webhook_schema_reconcile.py"
     )

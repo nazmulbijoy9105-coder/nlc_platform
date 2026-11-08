@@ -365,6 +365,10 @@ jobs:
             -v ON_ERROR_STOP=1 \
             -c "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(32)"
 
+          # Simulate historical table loss only in this disposable CI database.
+          # The recovery script upgrades to head and verifies the complete schema.
+          DATABASE_URL="$BASELINE_DATABASE_URL" python scripts/test_missing_table_recovery.py
+
           # The env.py preflight must widen the legacy column before the next
           # long revision identifier is written.
           DATABASE_URL="$BASELINE_DATABASE_URL" alembic upgrade head

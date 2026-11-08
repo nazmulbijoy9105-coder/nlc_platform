@@ -4,22 +4,22 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_webhook_reconciliation_is_fail_closed_before_signed_identity():
+def test_webhook_reconciliation_reconstructs_schema_but_stays_fail_closed():
     migration = (
         ROOT / "alembic" / "versions" / "0044_webhook_schema_reconcile.py"
     ).read_text(encoding="utf-8")
 
+    assert "_create_missing_tables()" in migration
+    assert "op.create_table(" in migration
+    assert "SCHEMA-ONLY RECONSTRUCTION" in migration
+    assert "Historical endpoint rows were not restored" in migration
+    assert "Historical delivery and retry rows were not restored" in migration
+    assert "Historical rescue audit rows were not restored" in migration
     assert "ENABLE ROW LEVEL SECURITY" in migration
     assert "FORCE ROW LEVEL SECURITY" in migration
     assert "DROP POLICY" in migration
     assert "current_setting('app.current_user_id'" not in migration
     assert "CREATE POLICY" not in migration
-    assert "CREATE TABLE IF NOT EXISTS" not in migration
-    assert "to_regclass(:qualified_name)" in migration
-    assert "REQUIRED_TABLES" in migration
-    for table in ("webhook_endpoints", "webhook_deliveries", "rescue_audit_log"):
-        assert f'"{table}"' in migration
-    assert "will not recreate empty tables" in migration
 
 
 def test_rescue_audit_table_is_forced_rls_when_created():
