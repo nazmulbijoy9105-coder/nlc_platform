@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException, Request
 from sqlalchemy import text
-from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
     AsyncSession,
@@ -70,6 +69,7 @@ if _PRODUCTION_ENVIRONMENT and len(os.environ.get("NLC_RLS_HMAC_SECRET", "")) < 
 DATABASE_URL = _APP_DATABASE_URL or _MIGRATION_DATABASE_URL
 if not DATABASE_URL:
     raise RuntimeError('DATABASE_URL or APP_DATABASE_URL is empty; refusing to start')
+
 from app.core.db_url import normalize_asyncpg_url
 
 DATABASE_URL, _DATABASE_SSL_CONTEXT = normalize_asyncpg_url(
@@ -77,34 +77,10 @@ DATABASE_URL, _DATABASE_SSL_CONTEXT = normalize_asyncpg_url(
     require_tls=_PRODUCTION_ENVIRONMENT,
 )
 
-# asyncpg requires its own `ssl` connect argument; libpq's `sslmode`
-# query parameter is not a substitute. Require verified TLS for every
-# Render/production connection and honour explicit secure SSL modes locally.
-import ssl as _ssl
-
-_database_url = make_url(DATABASE_URL)
-_sslmode = str(_database_url.query.get("sslmode", "")).lower()
-_ssl_option = str(_database_url.query.get("ssl", "")).lower()
-if _PRODUCTION_ENVIRONMENT and _sslmode in {"disable", "allow", "prefer"}:
-    raise RuntimeError(
-        "PostgreSQL TLS must be required in production; remove the insecure "
-        "sslmode and use a verified TLS connection."
-    )
-_require_database_tls = (
-    _PRODUCTION_ENVIRONMENT
-    or _sslmode in {"require", "verify-ca", "verify-full"}
-    or _ssl_option in {"true", "1", "require"}
-)
-# Strip libpq-only URL flags before handing the URL to asyncpg. SSL is
-# configured explicitly below so asyncpg cannot silently connect in cleartext.
-DATABASE_URL = _database_url.difference_update_query(["sslmode", "ssl"]).render_as_string(
-    hide_password=False
-)
-
 # ── CONNECTION ────────────────────────────────────────────────────────
 _testing = os.environ.get("TESTING", "false").lower() == "true"
 
-_connect_args: dict[str, object] = {
+_connect_args: dict[str, Any] = {
     "server_settings": {
         "application_name": "nlc_api",
         "timezone": "UTC",
@@ -113,7 +89,6 @@ _connect_args: dict[str, object] = {
 if _DATABASE_SSL_CONTEXT is not None:
     _connect_args["ssl"] = _DATABASE_SSL_CONTEXT
 
-engine_args = {
 engine_args: dict[str, Any] = {
     "echo": os.environ.get("SQL_ECHO", "false").lower() == "true",
     "pool_pre_ping": True,
@@ -128,9 +103,6 @@ if not _testing:
     })
 else:
     engine_args["poolclass"] = NullPool
-
-if _require_database_tls:
-    engine_args["connect_args"]["ssl"] = _ssl.create_default_context()
 
 engine = create_async_engine(DATABASE_URL, **engine_args)
 
