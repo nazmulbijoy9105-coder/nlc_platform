@@ -18,7 +18,13 @@ from sqlalchemy import select
 from app.models.compliance import ComplianceEvaluationRun
 
 # Import CATEGORY_CAPS for score reconciliation (cap adjustment display)
-from app.rule_engine.engine import CATEGORY_CAPS, LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
+from app.rule_engine.engine import (
+    AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
+    CATEGORY_CAPS,
+    LEGAL_SCORE_RELEASED,
+    VERIFIED_RULE_IDS,
+    RuleState,
+)
 from app.services.company_service import CompanyService
 from app.services.pdf_render import (
     asset_uri,
@@ -296,27 +302,60 @@ def _render_rescue_section(rescue_plan: Any) -> str:
 
 
 def _verified_flag_score(flags: Any) -> tuple[int, bool]:
-    """Compute the score implied by verified rules only.
-
-    Returns (indicated_score, has_black_override). Unapproved rules
-    are excluded from both the score and the BLACK override check.
-    """
+    """Mirror the engine's release, eligibility, category-cap and override gates."""
     if not LEGAL_SCORE_RELEASED:
         return (0, False)
 
-    verified = [
-        f for f in flags
-        if getattr(f, "rule_id", "") in VERIFIED_RULE_IDS
-    ]
+    remaining = {name: cap[0] for name, cap in CATEGORY_CAPS.items()}
+    total_applied = 0
+    has_black_override = False
+    for flag in flags:
+        rule_id = getattr(flag, "rule_id", "")
+        state = getattr(flag, "state", RuleState.NON_COMPLIANT)
+        eval_state = getattr(flag, "eval_state", "VIOLATION")
+        active = (
+            not getattr(flag, "resolved", False)
+            and getattr(flag, "conditional_applies", True)
+        )
+        if (
+            not active
+            or state not in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+            or eval_state != "VIOLATION"
+            or rule_id not in VERIFIED_RULE_IDS
+        ):
+            continue
 
-    total_impact = sum(getattr(f, "score_impact", 0) for f in verified)
-    indicated_score = max(0, min(100, 100 - total_impact))
-    has_black = any(
-        getattr(f, "is_black_override", False)
-        or getattr(f, "severity", "") == "BLACK"
-        for f in verified
-    )
-    return (indicated_score, has_black)
+        severity = getattr(
+            getattr(flag, "severity", None),
+            "value",
+            getattr(flag, "severity", None),
+        )
+        if (
+            rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+            and getattr(flag, "is_black_override", False) is True
+            and severity == "BLACK"
+        ):
+            has_black_override = True
+            continue
+
+        category = next(
+            (
+                name
+                for name, (_, prefixes) in CATEGORY_CAPS.items()
+                if rule_id.startswith(prefixes)
+            ),
+            None,
+        )
+        if category is None:
+            continue
+        applied = min(
+            max(0, int(getattr(flag, "score_impact", 0) or 0)),
+            remaining[category],
+        )
+        remaining[category] -= applied
+        total_applied += applied
+
+    return (0 if has_black_override else max(0, 100 - total_applied), has_black_override)
 
 
 def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
