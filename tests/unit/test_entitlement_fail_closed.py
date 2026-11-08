@@ -24,6 +24,12 @@ def _request(company_id: uuid.UUID | None = None) -> Request:
         "server": ("testserver", 443),
         "path_params": path_params,
     })
+from types import SimpleNamespace
+
+import pytest
+from fastapi import HTTPException
+
+from app.core.entitlement import require_entitlement
 
 
 @pytest.mark.asyncio
@@ -49,6 +55,8 @@ async def test_legal_staff_does_not_receive_implicit_subscription_bypass():
 
     with pytest.raises(HTTPException) as exc:
         await dependency(request=_request(), db=db, current_user=user)
+    with pytest.raises(HTTPException) as exc:
+        await dependency(request=_request(), db=MagicMock(), current_user=user)
 
     assert exc.value.status_code == 403
 
@@ -136,6 +144,7 @@ async def test_customer_with_verified_company_entitlement_is_allowed(monkeypatch
 
 
 @pytest.mark.asyncio
+async def test_customer_without_live_company_membership_is_denied():
 async def test_customer_without_live_financial_company_membership_is_denied():
     result = MagicMock()
     result.scalars.return_value.all.return_value = []
@@ -149,6 +158,7 @@ async def test_customer_without_live_financial_company_membership_is_denied():
 
     assert exc.value.status_code == 403
     assert "company membership" in exc.value.detail
+    assert "financial access" in exc.value.detail
 
 
 @pytest.mark.asyncio
@@ -163,6 +173,7 @@ async def test_unknown_account_role_does_not_receive_entitlement():
 
 
 @pytest.mark.asyncio
+async def test_known_company_id_without_active_membership_is_denied(monkeypatch):
 async def test_known_company_id_without_financial_membership_is_denied(monkeypatch):
     company_id = uuid.uuid4()
 
@@ -193,6 +204,14 @@ async def test_active_company_member_without_financial_permission_can_use_docume
     company_id = uuid.uuid4()
 
     class PaidDocumentSubscription:
+    assert "financial access" in exc.value.detail
+
+
+@pytest.mark.asyncio
+async def test_active_company_member_without_financial_permission_is_denied(monkeypatch):
+    company_id = uuid.uuid4()
+
+    class MustNotCheckEntitlement:
         def __init__(self, db):
             pass
 
@@ -203,6 +222,11 @@ async def test_active_company_member_without_financial_permission_can_use_docume
     monkeypatch.setattr(entitlement, "SubscriptionService", PaidDocumentSubscription)
     membership = MagicMock()
     membership.scalar_one_or_none.return_value = company_id
+            raise AssertionError("Billing visibility must be checked before reading paid entitlement")
+
+    monkeypatch.setattr(entitlement, "SubscriptionService", MustNotCheckEntitlement)
+    membership = MagicMock()
+    membership.scalar_one_or_none.return_value = None
     db = MagicMock()
     db.execute = AsyncMock(return_value=membership)
     dependency = entitlement.require_entitlement("document_management")
@@ -211,3 +235,35 @@ async def test_active_company_member_without_financial_permission_can_use_docume
     # A document entitlement is not a financial-data permission. Active
     # membership plus the exact paid feature is sufficient for this route.
     assert await dependency(request=_request(company_id), db=db, current_user=user) is True
+    with pytest.raises(HTTPException) as exc:
+        await dependency(request=_request(company_id), db=db, current_user=user)
+
+    assert exc.value.status_code == 403
+    assert "financial access" in exc.value.detail
+async def test_platform_admin_can_bypass_customer_entitlement(role):
+    dependency = require_entitlement("advanced_compliance")
+    result = await dependency(SimpleNamespace(role=role))
+    assert result is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", ["CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "LEGAL_STAFF"])
+async def test_unverified_entitlement_fails_closed_for_non_admin_roles(role):
+    dependency = require_entitlement("advanced_compliance")
+
+    with pytest.raises(HTTPException) as exc:
+        await dependency(SimpleNamespace(role=role))
+
+    assert exc.value.status_code == 503
+    assert "entitlement verification is not configured" in exc.value.detail
+    assert exc.value.headers["Retry-After"] == "3600"
+
+
+@pytest.mark.asyncio
+async def test_missing_role_does_not_grant_entitlement():
+    dependency = require_entitlement("advanced_compliance")
+
+    with pytest.raises(HTTPException) as exc:
+        await dependency(SimpleNamespace())
+
+    assert exc.value.status_code == 503

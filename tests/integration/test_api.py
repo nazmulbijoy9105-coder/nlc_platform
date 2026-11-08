@@ -79,6 +79,54 @@ class TestHealth:
 
 
 # =============================================================================
+# CRON EVALUATION AUTHENTICATION
+# =============================================================================
+
+class TestCronEvaluation:
+
+    @pytest.mark.asyncio
+    async def test_cron_evaluation_fails_closed_when_secret_missing(
+        self, api_client, monkeypatch
+    ):
+        monkeypatch.delenv("CRON_SECRET", raising=False)
+        resp = await api_client.post("/api/v1/admin/cron/evaluate-all")
+        assert resp.status_code == 403
+        assert "CRON_SECRET is not configured" in resp.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_cron_evaluation_disables_weak_secret(
+        self, api_client, monkeypatch
+    ):
+        monkeypatch.setenv("CRON_SECRET", "too-short")
+        resp = await api_client.post(
+            "/api/v1/admin/cron/evaluate-all",
+            headers={"X-Cron-Secret": "too-short"},
+        )
+        assert resp.status_code == 503
+        assert "at least 32 characters" in resp.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_cron_evaluation_rejects_wrong_secret(
+        self, api_client, monkeypatch
+    ):
+        monkeypatch.setenv(
+            "CRON_SECRET", "expected-test-only-cron-secret-with-32-plus-characters"
+        )
+        resp = await api_client.post(
+            "/api/v1/admin/cron/evaluate-all",
+            headers={"X-Cron-Secret": "wrong-test-secret"},
+        )
+        assert resp.status_code == 403
+        assert resp.json()["detail"] == "Invalid cron secret"
+
+    @pytest.mark.asyncio
+    async def test_cron_health_is_public_and_reports_ok(self, api_client):
+        resp = await api_client.get("/api/v1/admin/cron/health")
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "ok"
+
+
+# =============================================================================
 # AUTH ENDPOINTS
 # =============================================================================
 
@@ -1187,6 +1235,39 @@ class TestSubscriptionEntitlementRouteGates:
         assert response.status_code == 402
 
     @pytest.mark.asyncio
+    async def test_client_document_pdf_requires_paid_entitlement(
+        self, api_client, db_client_user, db_company, db
+    ):
+        from app.core.security import create_access_token
+        from app.models.documents import Document
+        from app.models.enums import DocumentType
+
+        document = Document(
+            company_id=db_company.id,
+            document_type=DocumentType.OTHER,
+            title="Entitlement gate regression",
+            s3_key="private/entitlement-gate-regression.pdf",
+            human_approved=True,
+            is_client_visible=True,
+        )
+        db.add(document)
+        await db.flush()
+
+        token = create_access_token({
+            "sub": str(db_client_user.id),
+            "user_id": str(db_client_user.id),
+            "type": "access",
+            "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email,
+            "company_ids": [str(db_company.id)],
+        })
+        response = await api_client.get(
+            f"/api/v1/documents/detail/{document.id}/pdf",
+            headers=_auth(token),
+        )
+        assert response.status_code == 402, (response.status_code, response.text)
+
+    @pytest.mark.asyncio
     async def test_client_filing_routes_require_paid_entitlement(
         self, api_client, db_client_user, db_company
     ):
@@ -1248,4 +1329,5 @@ class TestSubscriptionEntitlementRouteGates:
             json={"held_date": "2026-06-30"},
         )
         assert response.status_code == 403
+        assert response.status_code in {403, 404}
 

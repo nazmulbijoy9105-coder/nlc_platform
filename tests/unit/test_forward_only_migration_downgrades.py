@@ -27,6 +27,7 @@ FORWARD_ONLY_MIGRATIONS = (
     "alembic/versions/0073_payment_allocations_append_only.py",
     "alembic/versions/0074_legal_release_quarantine.py",
     "alembic/versions/0075_director_transfer_evidence.py",
+    "alembic/versions/0076_company_charge_evidence.py",
 )
 
 

@@ -142,3 +142,14 @@ def test_flag_summary_separates_pending_review_from_released_findings(monkeypatc
     assert result["black"] == result["red"] == result["yellow"] == 0
     assert result["pending_review"] == 2
     assert result["pending_review_flags"] == 2
+
+
+def test_release_switch_without_verified_rule_ids_still_hides_company_score(monkeypatch):
+    monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", set())
+
+    response = _company_to_response(_company(88, "GREEN"))
+
+    assert response.band == "NOT_EVALUATED"
+    assert response.compliance_score is None
+    assert response.violation_count == 0

@@ -1,4 +1,15 @@
-"""Server-side company-scoped subscription entitlement dependency."""
+"""COM-005: Fail-closed, server-side company-scoped subscription entitlement checks.
+
+Premium customer features require an active company membership and a current
+server-verified subscription entitlement. Staff authorization is handled by
+explicit role checks; it is never inferred from a missing company identifier.
+"""COM-005: Fail-closed server-side entitlement checks.
+
+Premium customer features remain unavailable until the canonical subscription
+and entitlement records are implemented and verified. Staff authorization is
+handled separately by explicit role checks; it must never be inferred from a
+missing company identifier.
+"""
 from __future__ import annotations
 
 import uuid
@@ -14,7 +25,6 @@ from app.services.subscription_service import SubscriptionService
 
 _PRIVILEGED_BYPASS_ROLES = frozenset({"SUPER_ADMIN", "ADMIN_STAFF"})
 _CUSTOMER_ROLES = frozenset({"CLIENT_DIRECTOR", "CLIENT_VIEW_ONLY", "LEGAL_STAFF"})
-
 
 async def _company_contexts(
     request: Request,
@@ -123,6 +133,30 @@ async def _company_contexts(
         company_id = result.scalar_one_or_none()
         if company_id is None:
             raise HTTPException(status_code=404, detail="Filing record not found")
+        if resource_param == "agm_id":
+            result = await db.execute(
+                select(AGM.company_id).where(AGM.id == resource_id).limit(1)
+            )
+        elif resource_param == "audit_id":
+            result = await db.execute(
+                select(Audit.company_id).where(Audit.id == resource_id).limit(1)
+            )
+        elif resource_param == "return_id":
+            result = await db.execute(
+                select(AnnualReturn.company_id)
+                .where(AnnualReturn.id == resource_id)
+                .limit(1)
+            )
+        else:
+            result = await db.execute(
+                select(StatutoryRegister.company_id)
+                .where(StatutoryRegister.id == resource_id)
+                .limit(1)
+            )
+        resource_company_id = result.scalar_one_or_none()
+        if resource_company_id is None:
+            raise HTTPException(status_code=404, detail="Filing record not found")
+        company_id = resource_company_id
 
         if role_value == "LEGAL_STAFF":
             from app.core.company_authorization import ensure_staff_company_scope
@@ -205,5 +239,33 @@ def require_entitlement(feature_name: str):
             )
         request.state.entitled_company_ids = [str(item) for item in entitled_company_ids]
         return True
+# Only platform administrators may bypass a customer subscription check.
+# Legal staff still require the route's explicit role authorization and do not
+# receive an implicit subscription bypass.
+_PRIVILEGED_BYPASS_ROLES = frozenset({"SUPER_ADMIN", "ADMIN_STAFF"})
+
+
+def require_entitlement(feature_name: str):
+    """Require a verified entitlement for a premium feature.
+
+    Until a canonical subscription model and company-membership resolution
+    exist, customer access fails closed with 503. Returning 403 would falsely
+    imply that a subscription was checked and found inactive.
+    """
+    async def _check(current_user=Depends(get_current_user)) -> bool:
+        role = getattr(current_user, "role", None)
+        role_value = str(getattr(role, "value", role))
+
+        if role_value in _PRIVILEGED_BYPASS_ROLES:
+            return True
+
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                f"Feature '{feature_name}' is temporarily unavailable because "
+                "subscription entitlement verification is not configured."
+            ),
+            headers={"Retry-After": "3600"},
+        )
 
     return _check

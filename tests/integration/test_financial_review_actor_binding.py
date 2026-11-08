@@ -74,6 +74,11 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
         verified_at=now,
         created_by=db_user.id,
     )
+    # A claim must first be persisted in PENDING_REVIEW. The production
+    # approval service later updates that existing row to APPROVED before it
+    # creates the linked receipt; inserting a new row as APPROVED is forbidden.
+    db.add(submission)
+    await db.flush()
     # The source claim must exist before the receipt's composite FK can bind
     # it. Explicit flush avoids relying on mapper/table ordering in add_all().
     db.add(submission)
@@ -83,6 +88,11 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
     # approved first. The deferred ledger constraint validates the complete
     # payment/allocation/event chain when forced below.
     await set_rls_context(db, str(db_super_admin.id))
+    # New claims must enter PENDING_REVIEW. Production then transitions the
+    # existing row to APPROVED before creating the linked receipt.
+    db.add(submission)
+    await db.flush()
+    assert submission.status == "PENDING_REVIEW"
     submission.status = "APPROVED"
     submission.reviewed_by = db_super_admin.id
     submission.reviewed_at = now
@@ -135,21 +145,9 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
     await set_rls_context(db, str(db_super_admin.id))
 
     async def approve_and_force_deferred_constraint():
-        await db.execute(
-            text("""
-                UPDATE public.payment_submissions
-                   SET status = 'APPROVED',
-                       reviewed_by = :reviewer_id,
-                       reviewed_at = :reviewed_at,
-                       review_note = 'Regression test approval'
-                 WHERE id = :submission_id
-            """),
-            {
-                "reviewer_id": db_super_admin.id,
-                "reviewed_at": now,
-                "submission_id": submission.id,
-            },
-        )
+        # The claim was already approved above while the signed reviewer was
+        # active. Force the deferred ledger assertion after receipt/allocation
+        # evidence has been inserted; do not attempt a second state transition.
         await db.execute(
             text("SET CONSTRAINTS payment_submissions_ledger_integrity IMMEDIATE")
         )

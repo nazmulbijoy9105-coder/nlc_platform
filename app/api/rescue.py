@@ -62,9 +62,9 @@ router = APIRouter()
 
 def _require_legal_release() -> None:
     """Prevent rescue actions based on unapproved legal findings."""
-    from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+    from app.rule_engine.engine import legal_score_is_released
 
-    if not LEGAL_SCORE_RELEASED:
+    if not legal_score_is_released():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=(
@@ -194,8 +194,8 @@ async def create_rescue_plan(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    from app.rule_engine.engine import LEGAL_SCORE_RELEASED
-    if not LEGAL_SCORE_RELEASED:
+    from app.rule_engine.engine import legal_score_is_released
+    if not legal_score_is_released():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Automated rescue generation is withheld until statutory scoring is independently approved and released.",
