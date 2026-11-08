@@ -125,6 +125,7 @@ class CompanyUpdateRequest(BaseModel):
 
 
 class CompanyChargeCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     creation_date: date
     charge_type: str = Field(min_length=1, max_length=100)
     amount_bdt: Decimal = Field(ge=0, max_digits=20, decimal_places=2)
@@ -142,6 +143,7 @@ class CompanyChargeCreateRequest(BaseModel):
 
 
 class CompanyChargeVerificationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     creation_date_verified: bool | None = None
     creation_date_evidence_ref: str | None = Field(default=None, max_length=2000)
     form_xviii_filed: bool | None = None
