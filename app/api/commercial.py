@@ -514,7 +514,10 @@ async def complete_task(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = TaskService(db)
-    task = await svc.complete_task(task_id=task_id)
+    try:
+        task = await svc.complete_task(task_id=task_id)
+    except CommercialConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
     await ActivityService(db).log(

@@ -133,7 +133,12 @@ class EngagementService(BaseService[Engagement]):
         note: str | None = None,
     ) -> Engagement | None:
         """Advance engagement through the pipeline stages."""
-        eng = await self.get_by_id(engagement_id)
+        engagement_result = await self.db.execute(
+            select(Engagement)
+            .where(Engagement.id == engagement_id, Engagement.is_active)
+            .with_for_update()
+        )
+        eng = engagement_result.scalar_one_or_none()
         if not eng:
             return None
         allowed_transitions = {
@@ -281,7 +286,10 @@ class QuotationService(BaseService[Quotation]):
         quotation_id: uuid.UUID,
     ) -> Quotation | None:
         """Mark quotation as accepted."""
-        q = await self.get_by_id(quotation_id)
+        quotation_result = await self.db.execute(
+            select(Quotation).where(Quotation.id == quotation_id).with_for_update()
+        )
+        q = quotation_result.scalar_one_or_none()
         if not q:
             return None
         if q.status == "ACCEPTED":
@@ -321,7 +329,10 @@ class QuotationService(BaseService[Quotation]):
         rejected_by: uuid.UUID | None = None,  # COM-002
     ) -> Quotation | None:
         """Mark quotation as rejected."""
-        q = await self.get_by_id(quotation_id)
+        quotation_result = await self.db.execute(
+            select(Quotation).where(Quotation.id == quotation_id).with_for_update()
+        )
+        q = quotation_result.scalar_one_or_none()
         if not q:
             return None
         if q.status not in {"DRAFT", "SENT"}:
@@ -389,9 +400,16 @@ class TaskService(BaseService[Task]):
     ) -> Task | None:
         """Mark a task as completed."""
         from datetime import datetime
-        task = await self.get_by_id(task_id)
+        task_result = await self.db.execute(
+            select(Task).where(Task.id == task_id, Task.is_active).with_for_update()
+        )
+        task = task_result.scalar_one_or_none()
         if not task:
             return None
+        if task.task_status not in {TaskStatus.PENDING, TaskStatus.IN_PROGRESS}:
+            raise CommercialConflictError(
+                f"Cannot complete a task in {task.task_status} state"
+            )
         return await self.update_instance(
             task,
             task_status=TaskStatus.COMPLETED,
