@@ -261,6 +261,9 @@ jobs:
       - name: Run finance concurrency regression tests explicitly
         run: python -m pytest tests/integration/test_finance_concurrency.py -q --tb=short
 
+      - name: Run commercial concurrency regression tests explicitly
+        run: python -m pytest tests/integration/test_commercial_concurrency.py -q --tb=short
+
       - name: Run canonical integrity tests
         run: python -m pytest tests/unit/test_canonical_integrity.py -q --tb=short
 
