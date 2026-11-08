@@ -40,7 +40,7 @@ def test_statutory_catalog_has_no_duplicate_literal_dictionary_keys():
             else:
                 seen[key] = key_node.lineno
 
-    assert not duplicates, "\\n".join(duplicates)
+    assert not duplicates, "\n".join(duplicates)
 
 def _is_rule_id(value: str) -> bool:
     """Validate the repository's PREFIX-NNN rule ID format without text scraping."""
