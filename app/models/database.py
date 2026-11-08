@@ -3,7 +3,7 @@ NEUM LEX COUNSEL — ORM LAYER
 database.py — Async SQLAlchemy engine, session factory, Base declaration
 All DB interactions are async (asyncpg driver).
 AES-256 encryption at rest enforced at PostgreSQL/AWS layer.
-TLS 1.3 enforced in connection string.
+TLS is enforced through verified asyncpg SSL contexts in production.
 """
 from __future__ import annotations
 
@@ -78,7 +78,6 @@ elif DATABASE_URL.startswith("postgresql://"):
 # asyncpg requires its own `ssl` connect argument; libpq's `sslmode`
 # query parameter is not a substitute. Require verified TLS for every
 # Render/production connection and honour explicit secure SSL modes locally.
-from urllib.parse import quote
 import ssl as _ssl
 
 _database_url = make_url(DATABASE_URL)
