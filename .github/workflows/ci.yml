@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, fix/nlc-canonical-release-gates-20261105]
+    branches: [main, fix/nlc-canonical-release-gates-20261105, fix/release-ci-commercial-finance-tests-v2-20261108]
   pull_request:
     branches:
       - main
