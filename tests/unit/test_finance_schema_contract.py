@@ -102,3 +102,24 @@ def test_manual_payment_reference_indexes_exist_on_claims_and_receipts():
 
     assert "uq_payment_submission_manual_reference" in submission_indexes
     assert "uq_payment_manual_reference" in payment_indexes
+
+def test_manual_mobile_wallet_methods_require_reference_and_are_supported():
+    from app.models.finance import Payment, PaymentSubmission
+    from app.services.finance_service import OFFLINE_METHODS
+    from app.api.finance import OFFLINE_METHOD
+
+    assert {"BKASH_MANUAL", "NAGAD_MANUAL"} <= OFFLINE_METHODS
+    submission_method = next(
+        constraint for constraint in PaymentSubmission.__table__.constraints
+        if getattr(constraint, "name", None) == "ck_payment_submission_method"
+    )
+    payment_method = next(
+        constraint for constraint in Payment.__table__.constraints
+        if getattr(constraint, "name", None) == "ck_payment_method"
+    )
+    assert "BKASH_MANUAL" in str(submission_method.sqltext)
+    assert "NAGAD_MANUAL" in str(submission_method.sqltext)
+    assert "BKASH_MANUAL" in str(payment_method.sqltext)
+    assert "NAGAD_MANUAL" in str(payment_method.sqltext)
+    assert "BKASH_MANUAL" in str(OFFLINE_METHOD)
+    assert "NAGAD_MANUAL" in str(OFFLINE_METHOD)
