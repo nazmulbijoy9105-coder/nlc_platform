@@ -118,35 +118,6 @@ class EngagementService(BaseService[Engagement]):
         grand_total_collected = sum(
             (v["total_collected"] for v in pipeline.values()), zero
         )
-        # Structure by revenue tier
-        pipeline = {
-            "COMPLIANCE_PACKAGE":        {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_invoiced": Decimal('0.00'), "total_collected": Decimal('0.00')},
-            "STRUCTURED_REGULARIZATION": {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_invoiced": Decimal('0.00'), "total_collected": Decimal('0.00')},
-            "CORPORATE_RESCUE":          {"stages": {}, "total_estimated": Decimal('0.00'), "total_confirmed": Decimal('0.00'), "total_invoiced": Decimal('0.00'), "total_collected": Decimal('0.00')},
-        }
-        for row in rows:
-            tier = row.get("revenue_tier", "")
-            if tier in pipeline:
-                stage = row.get("engagement_status", "")
-                pipeline[tier]["stages"][stage] = {  # type: ignore
-                    "count":          row.get("engagement_count", 0),
-                    "estimated_bdt":  Decimal(str(row.get("total_estimated_bdt") or 0)),
-                    "quoted_bdt":     Decimal(str(row.get("total_quoted_bdt") or 0)),
-                    "confirmed_bdt":  Decimal(str(row.get("total_confirmed_bdt") or 0)),
-                    "invoiced_bdt":   Decimal(str(row.get("total_invoiced_bdt") or 0)),
-                    "collected_bdt":  Decimal(str(row.get("total_collected_bdt") or 0)),
-                }
-                pipeline[tier]["total_estimated"] += Decimal(str(row.get("total_estimated_bdt") or 0))
-                pipeline[tier]["total_confirmed"] += Decimal(str(row.get("total_confirmed_bdt") or 0))
-                pipeline[tier]["total_invoiced"] += Decimal(str(row.get("total_invoiced_bdt") or 0))
-                pipeline[tier]["total_collected"] += Decimal(str(row.get("total_collected_bdt") or 0))
-
-        # Grand totals
-        grand_total_estimated  = sum(v["total_estimated"]  for v in pipeline.values())  # type: ignore
-        grand_total_confirmed  = sum(v["total_confirmed"]  for v in pipeline.values())  # type: ignore
-        grand_total_invoiced = sum(v["total_invoiced"] for v in pipeline.values())  # type: ignore
-        grand_total_collected  = sum(v["total_collected"]  for v in pipeline.values())  # type: ignore
-
         return {
             "by_tier": pipeline,
             "grand_total_estimated_bdt": grand_total_estimated,
@@ -154,21 +125,12 @@ class EngagementService(BaseService[Engagement]):
             "grand_total_invoiced_bdt": grand_total_invoiced,
             "grand_total_collected_bdt": grand_total_collected,
             "collection_rate": (
-                round(
-                    grand_total_collected / grand_total_confirmed * 100, 1
-                )
-                if grand_total_confirmed > 0
-                else 0
+                round(grand_total_collected / grand_total_confirmed * 100, 1)
+                if grand_total_confirmed > zero else 0
+            ),
             # Engagement aggregates are not independently verified receipts.
-            "grand_total_collected_bdt": grand_total_collected,
-            # These are manually recorded engagement aggregates, not receipts
-            # reconciled against a payment ledger or bank/gateway settlement.
             "revenue_data_basis": "ENGAGEMENT_RECORDED_AGGREGATES",
             "collected_cash_reconciled": False,
-            "collection_rate": (
-                round(grand_total_collected / grand_total_confirmed * 100, 1)
-                if grand_total_confirmed > 0 else 0
-            ),
             "engagement_amounts_source": "ENGAGEMENT_RECORDS",
             "invoiced_amounts_source": "NON_DRAFT_NON_VOID_FINANCE_INVOICES",
             "collected_amounts_source": "SETTLED_FINANCE_PAYMENT_ALLOCATIONS",
