@@ -9,6 +9,8 @@ installs and databases restored from either historical branch.
 """
 from typing import Sequence, Union
 
+from alembic import op
+
 revision: str = "0081_merge_release_and_articles_wallet_heads"
 down_revision: Union[str, Sequence[str], None] = (
     "0077_merge_0076_release_heads",

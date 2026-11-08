@@ -56,6 +56,7 @@ jobs:
             app/services/company_service.py \
             app/services/pdf_report_service.py \
             app/services/rescue_service.py \
+            app/services/commercial_service.py
             tests/unit/test_pdf_report_service.py \
             tests/unit/test_rescue_engagement_contract.py
 
@@ -92,6 +93,7 @@ jobs:
             app/api/filings.py app/models/filings.py app/models/people.py \
             app/models/company.py app/models/__init__.py app/rule_engine/engine.py \
             app/services/filing_service.py \
+            alembic/versions/0081_merge_release_and_articles_wallet_heads.py \
             alembic/versions/0086_runtime_role_membership_preflight.py \
             alembic/versions/0082_agm_share_event_provenance.py
 
@@ -302,6 +304,7 @@ jobs:
           DATABASE_URL="$BASELINE_DATABASE_URL" alembic upgrade head
           CURRENT="$(DATABASE_URL="$BASELINE_DATABASE_URL" alembic current)"
           printf '%s\n' "$CURRENT"
+          grep -q "0081_merge_release_and_articles_wallet_heads" <<< "$CURRENT"
           HEAD_REVISION="$(alembic heads | awk 'NR == 1 {print $1}')"
           grep -q "$HEAD_REVISION" <<< "$CURRENT"
           grep -q "0086_runtime_role_membership_preflight" <<< "$CURRENT"
@@ -345,6 +348,7 @@ jobs:
           DATABASE_URL="$LEGACY_DATABASE_URL" alembic upgrade head
           FINAL_MARKER="$(DATABASE_URL="$LEGACY_DATABASE_URL" alembic current)"
           printf '%s\n' "$FINAL_MARKER"
+          grep -q "0081_merge_release_and_articles_wallet_heads" <<< "$FINAL_MARKER"
           HEAD_REVISION="$(alembic heads | awk 'NR == 1 {print $1}')"
           grep -q "$HEAD_REVISION" <<< "$FINAL_MARKER"
           grep -q "0086_runtime_role_membership_preflight" <<< "$FINAL_MARKER"
