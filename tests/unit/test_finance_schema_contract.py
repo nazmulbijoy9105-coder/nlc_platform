@@ -121,5 +121,17 @@ def test_manual_mobile_wallet_methods_require_reference_and_are_supported():
     assert "NAGAD_MANUAL" in str(submission_method.sqltext)
     assert "BKASH_MANUAL" in str(payment_method.sqltext)
     assert "NAGAD_MANUAL" in str(payment_method.sqltext)
+    submission_reference = next(
+        constraint for constraint in PaymentSubmission.__table__.constraints
+        if getattr(constraint, "name", None) == "ck_payment_submission_reference_required"
+    )
+    payment_reference = next(
+        constraint for constraint in Payment.__table__.constraints
+        if getattr(constraint, "name", None) == "ck_payment_reference_required"
+    )
+    assert "BKASH_MANUAL" in str(submission_reference.sqltext)
+    assert "NAGAD_MANUAL" in str(submission_reference.sqltext)
+    assert "BKASH_MANUAL" in str(payment_reference.sqltext)
+    assert "NAGAD_MANUAL" in str(payment_reference.sqltext)
     assert "BKASH_MANUAL" in str(OFFLINE_METHOD)
     assert "NAGAD_MANUAL" in str(OFFLINE_METHOD)
