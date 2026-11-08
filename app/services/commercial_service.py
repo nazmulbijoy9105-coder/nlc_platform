@@ -287,7 +287,9 @@ class QuotationService(BaseService[Quotation]):
         notes: str | None = None,
     ) -> Quotation:
         """Create a company-bound quotation using exact decimal arithmetic."""
-        """Create a quotation for an engagement owned by the specified company."""
+        if not 7 <= valid_days <= 90:
+            raise ValueError("Quotation validity must be between 7 and 90 days.")
+
         engagement_result = await self.db.execute(
             select(Engagement)
             .where(
@@ -302,31 +304,20 @@ class QuotationService(BaseService[Quotation]):
             raise ValueError(
                 "Engagement does not belong to the supplied company or is inactive."
             )
-            raise ValueError("Engagement not found for the specified company")
         if engagement.engagement_status not in {
             EngagementStatus.IDENTIFIED,
             EngagementStatus.QUOTED,
         }:
-            raise CommercialConflictError("A quotation can only be created for an identified or quoted engagement.")
-        from decimal import Decimal
             raise CommercialConflictError(
                 "A quotation can only be created for an identified or quoted engagement."
             )
-        if not 7 <= valid_days <= 90:
-            raise ValueError("Quotation validity must be between 7 and 90 days.")
 
         professional_fee = Decimal(str(professional_fee_bdt)).quantize(Decimal("0.01"))
         government_fee = Decimal(str(government_fee_bdt)).quantize(Decimal("0.01"))
         vat_amount = Decimal(str(vat_bdt)).quantize(Decimal("0.01"))
         if professional_fee <= 0 or government_fee < 0 or vat_amount < 0:
             raise ValueError("Quotation fees must be positive or zero as applicable.")
-        total_bdt = professional_fee + government_fee + vat_amount
-                f"Cannot issue a quotation while engagement is {engagement.engagement_status}"
-            )
-        professional_fee_bdt = professional_fee_bdt.quantize(Decimal("0.01"))
-        government_fee_bdt = government_fee_bdt.quantize(Decimal("0.01"))
-        vat_bdt = vat_bdt.quantize(Decimal("0.01"))
-        total_bdt = (professional_fee_bdt + government_fee_bdt + vat_bdt).quantize(Decimal("0.01"))
+        total_bdt = (professional_fee + government_fee + vat_amount).quantize(Decimal("0.01"))
         quotation_number = await self._next_quotation_number()
 
         quotation = await self.create(
@@ -334,22 +325,19 @@ class QuotationService(BaseService[Quotation]):
             company_id=company_id,
             quotation_number=quotation_number,
             quotation_date=date.today(),
-            valid_until=date.today() + timedelta(days=valid_days) if valid_days else None,
-            professional_fee_bdt=professional_fee_bdt,
-            government_fee_bdt=government_fee_bdt,
-            vat_bdt=vat_bdt,
+            valid_until=date.today() + timedelta(days=valid_days),
+            professional_fee_bdt=professional_fee,
+            government_fee_bdt=government_fee,
+            vat_bdt=vat_amount,
             total_bdt=total_bdt,
             status="DRAFT",
             line_items=line_items,
             notes=notes,
         )
-        await self.db.flush()
-
         engagement.quoted_fee_bdt = total_bdt
         if engagement.engagement_status == EngagementStatus.IDENTIFIED:
             engagement.engagement_status = EngagementStatus.QUOTED
             engagement.quoted_date = date.today()
-        self.db.add(engagement)
         await self.db.flush()
         return quotation
 
