@@ -366,6 +366,10 @@ class Company(FullMixin, Base):
     share_transfers: Mapped[list[ShareTransfer]] = relationship(
         "ShareTransfer", back_populates="company", lazy="selectin"
     )
+    share_compliance_events: Mapped[list["ShareComplianceEvent"]] = relationship(
+        "ShareComplianceEvent", back_populates="company", lazy="selectin",
+        order_by="ShareComplianceEvent.event_date.desc()"
+    )
     agms: Mapped[list[AGM]] = relationship(
         "AGM", back_populates="company", lazy="selectin",
         order_by="AGM.financial_year.desc()"
