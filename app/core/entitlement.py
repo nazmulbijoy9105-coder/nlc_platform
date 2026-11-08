@@ -1,20 +1,7 @@
-"""Server-side company-scoped subscription entitlement dependency."""
-from __future__ import annotations
+"""COM-005: Fail-closed, server-side company-scoped subscription entitlement checks.
 
-import uuid
-
-from fastapi import Depends, HTTPException, Request, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.dependencies import get_current_user, get_db_for_user
-from app.models.company import Company, CompanyUserAccess
-from app.models.user import User
-from app.services.subscription_service import SubscriptionService
-"""COM-005: Fail-closed server-side entitlement checks.
-
-Premium customer features remain unavailable until the canonical subscription
-and entitlement records are implemented and verified. Staff authorization is
+Premium customer features remain unavailable until canonical subscription and
+entitlement records are implemented and verified. Staff authorization is
 handled separately by explicit role checks; it must never be inferred from a
 missing company identifier.
 """
