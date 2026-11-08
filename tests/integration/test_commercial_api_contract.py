@@ -168,6 +168,13 @@ async def test_task_completion_accepts_completion_note(
     assert response.status_code == 200, response.text
     assert response.json()["status"] == "COMPLETED"
 
+    repeated = await api_client.patch(
+        f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete",
+        headers=_auth(commercial_admin_token),
+        json={"completion_note": "Should not complete twice"},
+    )
+    assert repeated.status_code == 409, repeated.text
+
 @pytest.mark.asyncio
 async def test_quotation_cannot_be_attached_to_another_company(
     api_client, commercial_admin_token, db_company
