@@ -303,6 +303,7 @@ async def test_task_completion_requires_company_scope_and_runs_once(
     )
     assert completed.status_code == 200, completed.text
     assert completed.json()["status"] == "COMPLETED"
+    assert completed.json()["completed_at"] is not None
 
     repeated = await api_client.patch(
         f"/api/v1/commercial/tasks/{task_id}/complete?company_id={db_company.id}",
