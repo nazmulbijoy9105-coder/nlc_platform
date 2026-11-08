@@ -22,6 +22,13 @@ case "$NLC_BACKUP_DATABASE_URL" in
     ;;
 esac
 
+case "$NLC_BACKUP_DATABASE_URL" in
+  *-pooler.*)
+    echo "ERROR: pg_dump backup must use Neon's direct endpoint, not a pooler endpoint." >&2
+    exit 1
+    ;;
+esac
+
 if [[ "$NLC_BACKUP_DATABASE_URL" != *"sslmode=require"* &&
       "$NLC_BACKUP_DATABASE_URL" != *"sslmode=verify-ca"* &&
       "$NLC_BACKUP_DATABASE_URL" != *"sslmode=verify-full"* ]]; then
