@@ -17,33 +17,85 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Render Deploy Hook
+        id: trigger
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        shell: bash
         run: |
-          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
-            echo "::warning::RENDER_DEPLOY_HOOK_URL secret not set."
-            echo "Get it from: Render Dashboard → nlc-platform → Settings → Deploy Hook"
-            echo "Then add it as RENDER_DEPLOY_HOOK_URL in GitHub Secrets."
-            exit 0
+          set -euo pipefail
+
+          if [[ -z "${RENDER_DEPLOY_HOOK:-}" ]]; then
+            echo "::error::RENDER_DEPLOY_HOOK_URL secret is not configured."
+            echo "Configure it in GitHub Actions secrets before triggering a deployment."
+            exit 1
           fi
+
           echo "Triggering Render deploy..."
-          RESPONSE=$(curl -s -X POST "$RENDER_DEPLOY_HOOK")
-          echo "Response: $RESPONSE"
+          if RESPONSE=$(curl --silent --show-error --fail-with-body --max-time 30 \
+            --request POST "$RENDER_DEPLOY_HOOK"); then
+            echo "Render accepted the deploy request."
+          else
+            echo "::error::Render deploy hook request failed."
+            exit 1
+          fi
+
+          # Render's response contains a deployment identifier, not the hook URL.
+          DEPLOYMENT_ID=$(printf '%s' "$RESPONSE" | python -c \
+            'import json,sys; data=json.load(sys.stdin); print(data.get("deploy", {}).get("id", ""))') || {
+              echo "::error::Could not parse the Render deployment response."
+              exit 1
+            }
+          if [[ -z "$DEPLOYMENT_ID" ]]; then
+            echo "::error::Render response did not contain a deployment ID."
+            exit 1
+          fi
+
+          echo "Render deployment ID: $DEPLOYMENT_ID"
+          echo "deployment_id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
 
       - name: Wait and verify backend health
+        env:
+          DEPLOYMENT_ID: ${{ steps.trigger.outputs.deployment_id }}
+        shell: bash
         run: |
-          echo "Waiting 3 minutes for Render to build and deploy..."
+          set -euo pipefail
+
+          echo "Waiting 3 minutes for Render deployment $DEPLOYMENT_ID to start..."
           sleep 180
-          for i in 1 2 3 4 5; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 \
-              https://nlc-platform.onrender.com/api/v1/health/live 2>/dev/null)
-            echo "Health check attempt $i: HTTP $STATUS"
-            if [ "$STATUS" = "200" ]; then
-              echo "Backend is healthy!"
-              curl -s https://nlc-platform.onrender.com/api/v1/health/live
+
+          HEALTH_URL="https://nlc-platform.onrender.com/api/v1/health/live"
+          BODY_FILE="$(mktemp)"
+          trap 'rm -f "$BODY_FILE"' EXIT
+
+          for attempt in 1 2 3 4 5; do
+            # A curl transport failure is a failed probe (000), not a shell failure.
+            if STATUS=$(curl --silent --show-error --output "$BODY_FILE" \
+              --write-out '%{http_code}' --connect-timeout 10 --max-time 15 \
+              "$HEALTH_URL"); then
+              :
+            else
+              STATUS="000"
+            fi
+
+            echo "Deployment $DEPLOYMENT_ID — health probe $attempt/5: HTTP $STATUS"
+            if [[ "$STATUS" == "200" ]]; then
+              echo "Backend health check passed."
+              head -c 1000 "$BODY_FILE"
+              echo
               exit 0
             fi
-            sleep 30
+
+            if [[ -s "$BODY_FILE" ]]; then
+              echo "Health response body (first 1000 bytes):"
+              head -c 1000 "$BODY_FILE"
+              echo
+            fi
+
+            if [[ "$attempt" -lt 5 ]]; then
+              echo "Health check not ready; retrying in 30 seconds..."
+              sleep 30
+            fi
           done
-          echo "::warning::Backend health check incomplete — check Render dashboard"
-          exit 0
+
+          echo "::error::Deployment $DEPLOYMENT_ID did not become healthy after five probes."
+          exit 1
