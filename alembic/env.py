@@ -268,8 +268,9 @@ def validate_production_migration_role(connection: Connection) -> None:
     """
     """Fail before DDL if a production deployment uses the restricted runtime role.
 
-    Render sets RENDER=true. Other production hosts must explicitly set
-    ENVIRONMENT=production. Local development and CI do not run this gate.
+    Render service identifiers and RENDER=true identify hosted deployments.
+    Other production hosts must explicitly set ENVIRONMENT=production.
+    Local development and CI do not run this gate.
     """
     is_render = is_render_runtime(os.environ)
     environment = os.environ.get("ENVIRONMENT", "").strip().lower()
@@ -319,7 +320,7 @@ def validate_production_migration_role(connection: Connection) -> None:
 async def run_async_migrations() -> None:
     """Run Alembic with the privileged migration URL and verified TLS."""
     configuration = config.get_section(config.config_ini_section, {})
-    is_render = os.environ.get("RENDER", "").strip().lower() == "true"
+    is_render = is_render_runtime(os.environ)
     environment = os.environ.get("ENVIRONMENT", "").strip().lower()
     require_tls = is_render or environment in {"prod", "production"}
     db_url, ssl_context = normalize_asyncpg_url(
