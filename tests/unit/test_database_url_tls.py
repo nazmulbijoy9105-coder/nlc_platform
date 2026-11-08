@@ -5,7 +5,7 @@ import ssl
 
 import pytest
 
-from app.db_url import normalize_asyncpg_url
+from app.db_url import is_render_runtime, normalize_asyncpg_url
 
 
 def test_production_url_without_sslmode_still_uses_verified_tls():
@@ -73,3 +73,19 @@ def test_libpq_channel_binding_is_removed_but_verified_tls_is_preserved():
     assert isinstance(context, ssl.SSLContext)
     assert context.verify_mode == ssl.CERT_REQUIRED
     assert context.check_hostname is True
+
+
+@pytest.mark.parametrize(
+    "render_environment",
+    [
+        {"RENDER": "true"},
+        {"RENDER_SERVICE_ID": "srv-example"},
+        {"RENDER_INSTANCE_ID": "srv-example-instance"},
+    ],
+)
+def test_render_environment_identifiers_enable_deployment_tls(render_environment):
+    assert is_render_runtime(render_environment) is True
+
+
+def test_non_render_environment_does_not_enable_render_detection():
+    assert is_render_runtime({"ENVIRONMENT": "development"}) is False

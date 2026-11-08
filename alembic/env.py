@@ -80,6 +80,8 @@ elif alembic_ddl_impl._impls.get("postgresql") is not NLCPostgresqlImpl:
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from app.db_url import is_render_runtime, normalize_asyncpg_url
+
 # Load project .env before importing app.models.
 # Existing shell environment variables always take precedence.
 from dotenv import load_dotenv
@@ -266,10 +268,11 @@ def validate_production_migration_role(connection: Connection) -> None:
     """
     """Fail before DDL if a production deployment uses the restricted runtime role.
 
-    Render sets RENDER=true. Other production hosts must explicitly set
-    ENVIRONMENT=production. Local development and CI do not run this gate.
+    Render service identifiers and RENDER=true identify hosted deployments.
+    Other production hosts must explicitly set ENVIRONMENT=production.
+    Local development and CI do not run this gate.
     """
-    is_render = os.environ.get("RENDER", "").strip().lower() == "true"
+    is_render = is_render_runtime(os.environ)
     environment = os.environ.get("ENVIRONMENT", "").strip().lower()
     if not (is_render or environment in {"prod", "production"}):
         return
@@ -316,10 +319,8 @@ def validate_production_migration_role(connection: Connection) -> None:
 
 async def run_async_migrations() -> None:
     """Run Alembic with the privileged migration URL and verified TLS."""
-    from app.db_url import normalize_asyncpg_url
-
     configuration = config.get_section(config.config_ini_section, {})
-    is_render = os.environ.get("RENDER", "").strip().lower() == "true"
+    is_render = is_render_runtime(os.environ)
     environment = os.environ.get("ENVIRONMENT", "").strip().lower()
     require_tls = is_render or environment in {"prod", "production"}
     db_url, ssl_context = normalize_asyncpg_url(

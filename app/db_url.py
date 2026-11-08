@@ -1,9 +1,26 @@
 """PostgreSQL asyncpg URL normalization with explicit TLS enforcement."""
 from __future__ import annotations
 
+import os
 import ssl
+from collections.abc import Mapping
 
 from sqlalchemy.engine import make_url
+
+
+def is_render_runtime(environ: Mapping[str, str] | None = None) -> bool:
+    """Return whether the process is running inside a Render service.
+
+    Render service/instance identifiers are stronger deployment signals than
+    relying only on the optional convenience RENDER flag. Keep this helper
+    shared by Alembic and the API so TLS and runtime-role policy agree.
+    """
+    source = os.environ if environ is None else environ
+    return (
+        source.get("RENDER", "").strip().lower() == "true"
+        or bool(source.get("RENDER_SERVICE_ID", "").strip())
+        or bool(source.get("RENDER_INSTANCE_ID", "").strip())
+    )
 
 
 def normalize_asyncpg_url(

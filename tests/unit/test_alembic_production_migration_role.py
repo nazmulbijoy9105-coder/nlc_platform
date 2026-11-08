@@ -8,8 +8,11 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def test_production_role_preflight_is_opt_in_outside_render():
     source = (ROOT / "alembic" / "env.py").read_text(encoding="utf-8")
+    helper = (ROOT / "app" / "db_url.py").read_text(encoding="utf-8")
 
-    assert 'os.environ.get("RENDER", "").strip().lower() == "true"' in source
+    assert "is_render_runtime(os.environ)" in source
+    assert "RENDER_SERVICE_ID" in helper
+    assert "RENDER_INSTANCE_ID" in helper
     assert 'os.environ.get("ENVIRONMENT", "").strip().lower()' in source
     assert 'environment in {"prod", "production"}' in source
     assert 'os.environ.get("ENVIRONMENT", "production")' not in source
