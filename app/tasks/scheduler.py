@@ -1,4 +1,9 @@
-"""APScheduler for free-tier deployment — no Celery workers needed."""
+"""Legacy single-instance APScheduler fallback; Celery Beat is the canonical scheduler.
+
+Do not enable this in API replicas or alongside Celery Beat: jobs overlap.
+ENABLE_SCHEDULER defaults to false and must only be enabled in a dedicated,
+exactly-one-instance scheduler process after an operational ownership decision.
+"""
 from __future__ import annotations
 
 import logging
@@ -123,7 +128,7 @@ def create_scheduler() -> AsyncIOScheduler:
 
 async def start_scheduler() -> None:
     global scheduler
-    if os.environ.get("ENABLE_SCHEDULER", "true").lower() != "true":
+    if os.environ.get("ENABLE_SCHEDULER", "false").lower() != "true":
         logger.info("scheduler_disabled_by_env")
         return
     if scheduler is not None:

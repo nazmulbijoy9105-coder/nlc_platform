@@ -78,7 +78,7 @@ def _applied_score_impacts(flags) -> list[dict]:
     The returned value is aligned by index with the original flags list so
     repeated rule IDs cannot overwrite one another.
     """
-    from app.rule_engine.engine import CATEGORY_CAPS, VERIFIED_RULE_IDS, RuleState
+    from app.rule_engine.engine import CATEGORY_CAPS, LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS, RuleState
 
     remaining = {name: cap[0] for name, cap in CATEGORY_CAPS.items()}
     results = []
@@ -96,6 +96,12 @@ def _applied_score_impacts(flags) -> list[dict]:
         # not acquire scoring or override semantics through a side path.
         if flag.rule_id not in VERIFIED_RULE_IDS:
             results.append({"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"})
+            continue
+        # Internal source-check allowlisting is not release authority. While
+        # statutory scoring is disabled, no downstream report may describe a
+        # provisional impact as applied.
+        if not LEGAL_SCORE_RELEASED:
+            results.append({"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"})
             continue
         severity_value = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
         if getattr(flag, "is_black_override", False) or severity_value == "BLACK":
@@ -124,7 +130,7 @@ def _is_rescue_required(output) -> bool:
     """Whether the company NEEDS a rescue plan — based on flag presence,
     not on whether the engine happened to produce a sequence."""
     sb = output.score_breakdown
-    return (
+    return bool(
         sb.black_flag_count > 0
         or sb.red_flag_count > 0
         or sb.override_applied
@@ -202,22 +208,25 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "raw_total":     api_raw_total,
             "risk_band":     public_risk_band,
             "exposure_band": output.score_breakdown.exposure_band if score_is_released else None,
-            "flags":         [
+            "legal_evaluation_status": (
+                "RELEASED" if score_is_released
+                else "NOT_EVALUATED_COUNSEL_REVIEW_PENDING"
+            ),
+            # Unapproved rule triggers are retained only in the internal
+            # audit store. They are not exposed as customer-facing flags.
+            "flags": [
                 {
-                    "rule_id":        f.rule_id,
-                    "severity":       f.severity if score_is_released and f.rule_id in VERIFIED_RULE_IDS else "NOT_EVALUATED",
-                    "description":    (
-                        f.description
-                        if score_is_released and f.rule_id in VERIFIED_RULE_IDS
-                        else f"Pending counsel review: {f.description}"
-                    ),
-                    "score_impact":   f.score_impact if score_is_released and f.rule_id in VERIFIED_RULE_IDS else 0,
+                    "rule_id": f.rule_id,
+                    "severity": f.severity,
+                    "description": f.description,
+                    "score_impact": f.score_impact,
                     "score_impact_applied": applied_impacts[index]["applied"],
                     "scoring_status": applied_impacts[index]["status"],
-                    "revenue_tier":   f.revenue_tier,
+                    "revenue_tier": f.revenue_tier,
                     "statutory_basis": f.statutory_basis,
                 }
                 for index, f in enumerate(output.flags)
+                if score_is_released and f.rule_id in VERIFIED_RULE_IDS
             ],
             "score_breakdown": {
                 "risk_band": public_risk_band,
@@ -237,8 +246,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "escalation_score": output.score_breakdown.escalation_score if score_is_released else None,
                 "raw_total": api_raw_total,
                 "final_score": api_score,
-                "coverage": output.score_breakdown.coverage,
-                "active_flag_count": output.score_breakdown.active_flag_count,
+                "coverage": output.score_breakdown.coverage if score_is_released else None,
+                "active_flag_count": output.score_breakdown.active_flag_count if score_is_released else 0,
                 "black_flag_count": output.score_breakdown.black_flag_count if score_is_released else 0,
                 "red_flag_count": output.score_breakdown.red_flag_count if score_is_released else 0,
                 "yellow_flag_count": output.score_breakdown.yellow_flag_count if score_is_released else 0,
@@ -335,8 +344,22 @@ class ComplianceService(BaseService[ComplianceFlag]):
             existing_flag = existing.scalar_one_or_none()
             if existing_flag:
                 # Update score impact and description in case rule changed
-                existing_flag.score_impact = flag.score_impact
-                existing_flag.description = flag.description
+                approved = LEGAL_SCORE_RELEASED and flag.rule_id in VERIFIED_RULE_IDS
+                existing_flag.severity = (
+                    SeverityLevel(flag.severity) if approved else SeverityLevel.NOT_EVALUATED
+                )
+                existing_flag.score_impact = flag.score_impact if approved else 0
+                existing_flag.statutory_basis = (
+                    flag.statutory_basis if approved
+                    else "NOT VALIDATED — independent counsel review required"
+                )
+                existing_flag.description = (
+                    flag.description if approved
+                    else "Internal review signal only. No legal conclusion, breach, liability, penalty or compliance status is determined."
+                )
+                existing_flag.exposure_band = (
+                    getattr(flag, "exposure_band", None) if approved else None
+                )
                 self.db.add(existing_flag)
             else:
                 # New flag
@@ -346,14 +369,30 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     rule_id=flag.rule_id,
                     rule_version=str(getattr(flag, 'rule_version', None) or engine_version),
                     flag_code=flag.rule_id,
-                    statutory_basis=flag.statutory_basis,
-                    severity=SeverityLevel(flag.severity),
-                    score_impact=flag.score_impact,
-                    exposure_band=ExposureBand(getattr(getattr(flag, "exposure_band", None) or output.score_breakdown.exposure_band, "value", getattr(flag, "exposure_band", None) or output.score_breakdown.exposure_band)),
+                    statutory_basis=(
+                        flag.statutory_basis
+                        if LEGAL_SCORE_RELEASED and flag.rule_id in VERIFIED_RULE_IDS
+                        else "NOT VALIDATED — independent counsel review required"
+                    ),
+                    severity=SeverityLevel(flag.severity)
+                    if LEGAL_SCORE_RELEASED and flag.rule_id in VERIFIED_RULE_IDS
+                    else SeverityLevel.NOT_EVALUATED,
+                    score_impact=flag.score_impact
+                    if LEGAL_SCORE_RELEASED and flag.rule_id in VERIFIED_RULE_IDS
+                    else 0,
+                    exposure_band=(
+                        ExposureBand(getattr(getattr(flag, "exposure_band", None) or output.score_breakdown.exposure_band, "value", getattr(flag, "exposure_band", None) or output.score_breakdown.exposure_band))
+                        if LEGAL_SCORE_RELEASED and flag.rule_id in VERIFIED_RULE_IDS
+                        else None
+                    ),
                     revenue_tier=RevenueTier(flag.revenue_tier.value if hasattr(flag.revenue_tier, 'value') else flag.revenue_tier),
                     flag_status=FlagStatus.ACTIVE,
                     triggered_date=today,
-                    description=flag.description,
+                    description=(
+                        flag.description
+                        if LEGAL_SCORE_RELEASED and flag.rule_id in VERIFIED_RULE_IDS
+                        else "Internal review signal only. No legal conclusion, breach, liability, penalty or compliance status is determined."
+                    ),
                     detail=getattr(flag, "detail", None),
                     notification_sent=False,
                 )
@@ -608,16 +647,21 @@ class ComplianceService(BaseService[ComplianceFlag]):
         black_count = verified_severities.count("BLACK")
         red_count = verified_severities.count("RED")
         yellow_count = verified_severities.count("YELLOW")
+        pending_review_count = len(rows) - len(verified_severities)
         summary.update({
-            "total_active": len(rows),
-            "total_active_flags": len(rows),
+            # Customer-facing active counts include only rules approved for release.
+            # Unapproved engine flags remain separately visible as review prompts.
+            "total_active": len(verified_severities),
+            "total_active_flags": len(verified_severities),
+            "pending_review": pending_review_count,
+            "pending_review_flags": pending_review_count,
             "black": black_count,
             "red": red_count,
             "yellow": yellow_count,
             "black_flags": black_count,
             "red_flags": red_count,
             "yellow_flags": yellow_count,
-            "not_evaluated": len(rows) - len(verified_severities),
+            "not_evaluated": pending_review_count,
         })
         return summary
 

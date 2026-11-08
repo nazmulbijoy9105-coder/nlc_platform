@@ -39,15 +39,32 @@ from __future__ import annotations
 
 import asyncio
 
-# SEC-009: fail closed if required secrets are missing (worker context only)
+# SEC-009/010: fail closed before a production/Render worker accepts tasks.
 import os as _os
 
-if _os.environ.get("CELERY_BROKER_URL") or _os.environ.get("CELERY_BROKER"):
-    from app.core.config import settings as _settings
-    if not _settings.ASYNC_APP_DATABASE_URL:
-        raise RuntimeError("SEC-009: runtime database URL not configured — refusing to run worker tasks")
-    if _settings.REQUIRE_RLS_APP_ROLE and not _settings.APP_DATABASE_URL:
+_RENDER_RUNTIME = _os.environ.get("RENDER", "").strip().lower() == "true"
+_PRODUCTION_WORKER = (
+    _RENDER_RUNTIME
+    or _os.environ.get("ENVIRONMENT", "development").strip().lower() in {"prod", "production"}
+)
+_APP_DATABASE_URL = _os.environ.get("APP_DATABASE_URL", "").strip()
+_DATABASE_URL = _os.environ.get("DATABASE_URL", "").strip()
+_BROKER_URL = (
+    _os.environ.get("CELERY_BROKER_URL", "").strip()
+    or _os.environ.get("REDIS_URL", "").strip()
+)
+if _PRODUCTION_WORKER:
+    # Check raw deployment environment before importing app.core.config:
+    # app.core package initialisation imports API dependencies and database.
+    if not _APP_DATABASE_URL:
         raise RuntimeError("SEC-010: APP_DATABASE_URL is required for non-BYPASSRLS worker access")
+    if len(_os.environ.get("NLC_RLS_HMAC_SECRET", "")) < 32:
+        raise RuntimeError("SEC-011: NLC_RLS_HMAC_SECRET must contain at least 32 characters for production/Render workers")
+    if not _BROKER_URL:
+        raise RuntimeError("SEC-012: CELERY_BROKER_URL or REDIS_URL is required for production/Render workers")
+elif _os.environ.get("CELERY_BROKER_URL") or _os.environ.get("CELERY_BROKER"):
+    if not (_APP_DATABASE_URL or _DATABASE_URL):
+        raise RuntimeError("SEC-009: runtime database URL not configured — refusing to run worker tasks")
 import logging
 import uuid
 from datetime import UTC, date, datetime, timedelta
@@ -79,8 +96,19 @@ def run_async(coro):
     try:
         return loop.run_until_complete(coro)
     finally:
-        loop.close()
-        asyncio.set_event_loop(None)
+        # SQLAlchemy async pooled connections are bound to the event loop
+        # that created them. This worker deliberately creates a new loop for
+        # every task, so dispose the pool before closing that loop; otherwise
+        # a later task can reuse an asyncpg connection from a closed loop.
+        try:
+            from app.models.database import dispose_engine
+
+            loop.run_until_complete(dispose_engine())
+        except Exception:
+            logger.exception("worker_async_engine_dispose_failed")
+        finally:
+            loop.close()
+            asyncio.set_event_loop(None)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -346,9 +374,12 @@ def send_pending_notifications(
     async def _process():
 
         from app.models.database import AsyncSessionLocal, set_admin_context
-        from app.services.notification_service import NotificationService
+        from app.services.notification_service import (
+            NotificationService,
+            is_notification_eligible,
+        )
 
-        sent = failed = skipped = 0
+        sent = failed = skipped = suppressed = 0
 
         async with AsyncSessionLocal() as db, db.begin():
             await set_admin_context(db)
@@ -358,6 +389,19 @@ def send_pending_notifications(
             pending = await svc.get_pending(limit=batch_size)
 
             for notif in pending:
+                if not is_notification_eligible(
+                    notif.notification_type,
+                    related_flag_id=notif.related_flag_id,
+                ):
+                    await svc.mark_suppressed(
+                        notif.id,
+                        reason=(
+                            "Suppressed: rule alert is not independently approved "
+                            "and statutory score release is disabled."
+                        ),
+                    )
+                    suppressed += 1
+                    continue
                 try:
                     success = await _deliver_notification(notif, db)
                     if success:
@@ -381,7 +425,7 @@ def send_pending_notifications(
                     )
                     failed += 1
 
-        return {"sent": sent, "failed": failed, "skipped": skipped}
+        return {"sent": sent, "failed": failed, "skipped": skipped, "suppressed": suppressed}
 
     async def _deliver_notification(notif, db) -> bool:
         """Attempt to deliver a single notification. Returns True on success."""
@@ -505,6 +549,25 @@ def queue_deadline_warning_notifications(
     """
     if warning_days is None:
         warning_days = [30, 15, 7, 3, 1]
+    if not warning_days or any(day < 0 for day in warning_days):
+        raise ValueError("warning_days must contain non-negative day thresholds")
+
+    # Do not send customer-facing statutory deadline alerts while the legal
+    # calendar is quarantined. The privileged worker scanner is intentionally
+    # global, so this release check must happen before opening its admin session.
+    from app.services.compliance_calendar import (
+        LEGAL_CALENDAR_RELEASED,
+        VERIFIED_CALENDAR_EVENT_TYPES,
+    )
+    if not LEGAL_CALENDAR_RELEASED or not VERIFIED_CALENDAR_EVENT_TYPES:
+        logger.warning(
+            "[Deadlines] Withheld: statutory calendar has not been independently released"
+        )
+        return {
+            "queued": 0,
+            "deadlines_checked": 0,
+            "status": "WITHHELD_LEGAL_CALENDAR_NOT_RELEASED",
+        }
 
     logger.info(
         f"[Deadlines] Checking upcoming deadlines for days: {warning_days}"

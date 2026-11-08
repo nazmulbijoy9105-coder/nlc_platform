@@ -258,19 +258,21 @@ class Quotation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 # Every PATCH /engagement handler must validate `next_status` against this map.
 VALID_ENGAGEMENT_TRANSITIONS: dict[str, set[str]] = {
     "IDENTIFIED":  {"QUOTED", "CANCELLED"},
-    "QUOTED":      {"CONFIRMED", "REJECTED", "CANCELLED"},
-    "CONFIRMED":   {"STARTED", "CANCELLED"},
-    "STARTED":     {"COMPLETED", "CANCELLED"},
-    "COMPLETED":   set(),  # terminal
-    "REJECTED":    {"IDENTIFIED"},  # allow re-identification after rejection
-    "CANCELLED":   set(),  # terminal
+    "QUOTED":      {"CONFIRMED", "CANCELLED"},
+    "CONFIRMED":   {"IN_PROGRESS", "CANCELLED"},
+    "IN_PROGRESS": {"COMPLETED", "CANCELLED"},
+    "COMPLETED":   set(),
+    "CANCELLED":   set(),
 }
 
 
 def validate_engagement_transition(current_status: str, next_status: str) -> bool:
-    """Return True if the transition is allowed, False otherwise."""
-    allowed = VALID_ENGAGEMENT_TRANSITIONS.get(current_status, set())
-    return next_status in allowed
+    """Return True only for transitions represented by EngagementStatus."""
+    current = getattr(current_status, "value", current_status)
+    next_ = getattr(next_status, "value", next_status)
+    if current not in EngagementStatus.__members__ or next_ not in EngagementStatus.__members__:
+        return False
+    return next_ in VALID_ENGAGEMENT_TRANSITIONS.get(current, set())
 
 
 class InvalidEngagementTransitionError(ValueError):

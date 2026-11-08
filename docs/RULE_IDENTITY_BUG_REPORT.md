@@ -80,15 +80,15 @@ Engine uses Section 85 (correct — notice of AGM). Seed uses Section 86 (shorte
 | Rule ID | Seed Section | Engine Section | Issue |
 |---|---|---|---|
 | AR-001 | 190 | 119 | Annual return filing is Section 119 |
-| AR-002 | 190, 396 | 119, 304 | Strike-off is Section 304 |
-| AR-003 | 190, 396 | 119, 304 | Same |
+| AR-002 | 36, 346 | 36, 346 | Section 346 is the Registrar's separate defunct-company strike-off process; backlog alone is not proof of proceedings |
+| AR-003 | 36, 346 | 36, 346 | Same; three-year backlog is review-only, not automatic strike-off/dissolution |
 | AR-004 | 190 | 119 | Same as AR-001 |
 | DIR-001 | 115 | 92 | Director filing is Section 92 |
 | DIR-002 | 115 | 92 | Same |
 | DIR-003 | 115 | 92 | Same |
 | DIR-004 | 115 | 92 | Same |
-| ESC-001 | 396 | 304 | Strike-off is Section 304 |
-| ESC-002 | 396 | 304 | Same |
+| ESC-001 | 346 | 346 | Section 346 notice sequence and current register status require case-specific evidence |
+| ESC-002 | 346 | 346 | No backlog-based strike-off imminent or BLACK conclusion |
 | OFF-001 | 77 | 81 | Office change filing is Section 81 |
 | TR-001 | 82 | 108 | Transfer instrument is Section 108 |
 | TR-004 | 82 | 34 | Register update is Section 34 |

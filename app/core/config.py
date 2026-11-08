@@ -1,10 +1,17 @@
 import os
 from typing import List
 
-from pydantic_settings import BaseSettings
+from pydantic import model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra="ignore",
+    )
+
     aws_key_id: str | None = None
     aws_secret: str | None = None
     ses_region: str | None = None
@@ -27,10 +34,26 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "")  # privileged migration/maintenance connection
     APP_DATABASE_URL: str = os.getenv("APP_DATABASE_URL", "")  # non-BYPASSRLS runtime connection
-    REQUIRE_RLS_APP_ROLE: bool = os.getenv(
-        "REQUIRE_RLS_APP_ROLE",
-        "true" if os.getenv("ENVIRONMENT", "production").strip().lower() in {"prod", "production"} else "false",
-    ).strip().lower() == "true"
+    # Render is a deployment runtime even if ENVIRONMENT is omitted or
+    # incorrectly set. Never let an environment override disable RLS-role
+    # enforcement for an API or worker running on Render.
+    REQUIRE_RLS_APP_ROLE: bool = (
+        True
+        if os.getenv("RENDER", "").strip().lower() == "true"
+        or os.getenv("ENVIRONMENT", "production").strip().lower() in {"prod", "production"}
+        else os.getenv("REQUIRE_RLS_APP_ROLE", "false").strip().lower() == "true"
+    )
+
+    @model_validator(mode="after")
+    def enforce_deployment_rls_role(self):
+        # BaseSettings may load REQUIRE_RLS_APP_ROLE from the environment and
+        # override its class default. Reassert the invariant after env parsing.
+        if (
+            os.getenv("RENDER", "").strip().lower() == "true"
+            or self.ENVIRONMENT.strip().lower() in {"prod", "production"}
+        ):
+            self.REQUIRE_RLS_APP_ROLE = True
+        return self
 
     @property
     def ASYNC_DATABASE_URL(self) -> str:
@@ -111,10 +134,6 @@ class Settings(BaseSettings):
     max_login_attempts: int = 5
     lockout_minutes: int = 30
     max_page_size: int = 100
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-        extra = "ignore"
 
 from functools import lru_cache
 

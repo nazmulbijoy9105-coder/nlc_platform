@@ -1,5 +1,10 @@
-"""Reconcile webhook schema and tenant RLS on existing installations."""
+"""Reconcile webhook schema without silently recreating missing evidence.
+
+Revision ID: 0044_webhook_schema_reconcile
+Revises: b10c91ac6860
+"""
 from alembic import op
+import sqlalchemy as sa
 
 revision = "0044_webhook_schema_reconcile"
 down_revision = "b10c91ac6860"
@@ -7,97 +12,75 @@ branch_labels = None
 depends_on = None
 
 
+REQUIRED_TABLES = (
+    "webhook_endpoints",
+    "webhook_deliveries",
+    "rescue_audit_log",
+)
+
+
 def upgrade() -> None:
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS webhook_endpoints (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            url VARCHAR(500) NOT NULL,
-            secret VARCHAR(128) NOT NULL,
-            events VARCHAR(50)[] NOT NULL DEFAULT '{}',
-            is_active BOOLEAN NOT NULL DEFAULT TRUE,
-            last_delivery_at TIMESTAMPTZ NULL,
-            last_response_code INTEGER NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    # These objects are created by earlier revisions (0037/0038). If one is
+    # missing, the database has drifted or lost operational/audit evidence.
+    # Do not silently create replacement tables here: an empty replacement would hide
+    # missing webhook configuration, delivery history, or rescue audit rows.
+    bind = op.get_bind()
+    missing = [
+        table
+        for table in REQUIRED_TABLES
+        if bind.execute(
+            sa.text("SELECT to_regclass(:qualified_name)"),
+            {"qualified_name": f"public.{table}"},
+        ).scalar_one() is None
+    ]
+    if missing:
+        raise RuntimeError(
+            "Webhook/rescue schema preflight found missing historical tables: "
+            + ", ".join(sorted(missing))
+            + ". Restore/reconcile schema and evidence from a verified backup "
+            "before retrying; this migration will not recreate empty tables."
         )
-    """)
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS webhook_deliveries (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            endpoint_id UUID NOT NULL REFERENCES webhook_endpoints(id) ON DELETE CASCADE,
-            event_type VARCHAR(50) NOT NULL,
-            payload JSONB NOT NULL,
-            status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
-            attempts INTEGER NOT NULL DEFAULT 0,
-            max_attempts INTEGER NOT NULL DEFAULT 3,
-            response_code INTEGER NULL,
-            response_body TEXT NULL,
-            error_message TEXT NULL,
-            delivered_at TIMESTAMPTZ NULL,
-            next_retry_at TIMESTAMPTZ NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """)
+
     for statement in (
-        "CREATE INDEX IF NOT EXISTS idx_webhook_endpoints_user ON webhook_endpoints(user_id)",
-        "CREATE INDEX IF NOT EXISTS idx_webhook_endpoints_active ON webhook_endpoints(is_active)",
-        "CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_endpoint ON webhook_deliveries(endpoint_id)",
-        "CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_pending ON webhook_deliveries(status) WHERE status = 'PENDING'",
-        "CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_retry ON webhook_deliveries(next_retry_at) WHERE status = 'PENDING' AND next_retry_at IS NOT NULL",
+        "CREATE INDEX IF NOT EXISTS idx_webhook_endpoints_user ON public.webhook_endpoints(user_id)",
+        "CREATE INDEX IF NOT EXISTS idx_webhook_endpoints_active ON public.webhook_endpoints(is_active)",
+        "CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_endpoint ON public.webhook_deliveries(endpoint_id)",
+        "CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_pending ON public.webhook_deliveries(status) WHERE status = 'PENDING'",
+        "CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_retry ON public.webhook_deliveries(next_retry_at) WHERE status = 'PENDING' AND next_retry_at IS NOT NULL",
     ):
         op.execute(statement)
 
-    op.execute("ALTER TABLE webhook_deliveries ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()")
-    op.execute("ALTER TABLE webhook_endpoints ENABLE ROW LEVEL SECURITY")
-    op.execute("ALTER TABLE webhook_deliveries ENABLE ROW LEVEL SECURITY")
-    op.execute("DROP POLICY IF EXISTS webhook_endpoints_owner_scope ON webhook_endpoints")
-    op.execute("""
-        CREATE POLICY webhook_endpoints_owner_scope ON webhook_endpoints
-        USING (
-            user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
-        )
-        WITH CHECK (
-            user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
-        )
-    """)
-    op.execute("DROP POLICY IF EXISTS webhook_deliveries_owner_scope ON webhook_deliveries")
-    op.execute("""
-        CREATE POLICY webhook_deliveries_owner_scope ON webhook_deliveries
-        USING (
-            EXISTS (
-                SELECT 1 FROM webhook_endpoints e
-                WHERE e.id = webhook_deliveries.endpoint_id
-                  AND e.user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
-            )
-        )
-        WITH CHECK (
-            EXISTS (
-                SELECT 1 FROM webhook_endpoints e
-                WHERE e.id = webhook_deliveries.endpoint_id
-                  AND e.user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
-            )
-        )
-    """)
-    op.execute("""
-        DO $$
-        BEGIN
-            IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
-                REVOKE ALL PRIVILEGES ON webhook_endpoints FROM nlc_app_role;
-                REVOKE ALL PRIVILEGES ON webhook_deliveries FROM nlc_app_role;
-                GRANT SELECT, INSERT, UPDATE, DELETE ON webhook_endpoints TO nlc_app_role;
-                GRANT SELECT, INSERT, UPDATE, DELETE ON webhook_deliveries TO nlc_app_role;
-            END IF;
-        END
-        $$
-    """)
+    op.execute(
+        "ALTER TABLE public.webhook_deliveries "
+        "ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+    )
+
+    # Do not install raw caller-settable GUC policies. Close webhook and
+    # rescue-audit tables with FORCE RLS and no policies until 0050 installs
+    # cryptographically verified signed-identity policies.
+    for table in REQUIRED_TABLES:
+        op.execute(f"ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY")
+        op.execute(f"ALTER TABLE public.{table} FORCE ROW LEVEL SECURITY")
+        op.execute(f"REVOKE ALL ON TABLE public.{table} FROM PUBLIC")
+        op.execute(f"""
+            DO $policies$
+            DECLARE p record;
+            BEGIN
+                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
+                    EXECUTE 'REVOKE ALL ON TABLE public.{table} FROM nlc_app_role';
+                END IF;
+                FOR p IN
+                    SELECT policyname FROM pg_policies
+                    WHERE schemaname = 'public' AND tablename = '{table}'
+                LOOP
+                    EXECUTE format('DROP POLICY %I ON public.{table}', p.policyname);
+                END LOOP;
+            END
+            $policies$;
+        """)
 
 
 def downgrade() -> None:
-    # The reconciliation may have adopted tables created by the earlier 0037
-    # migration. Never drop customer webhook data when reverting this revision.
-    op.execute("DROP POLICY IF EXISTS webhook_deliveries_owner_scope ON webhook_deliveries")
-    op.execute("DROP POLICY IF EXISTS webhook_endpoints_owner_scope ON webhook_endpoints")
-    op.execute("ALTER TABLE IF EXISTS webhook_deliveries DISABLE ROW LEVEL SECURITY")
-    op.execute("ALTER TABLE IF EXISTS webhook_endpoints DISABLE ROW LEVEL SECURITY")
+    # Forward-only: reintroducing raw-GUC policies would restore the
+    # caller-controlled identity vulnerability.
+    pass

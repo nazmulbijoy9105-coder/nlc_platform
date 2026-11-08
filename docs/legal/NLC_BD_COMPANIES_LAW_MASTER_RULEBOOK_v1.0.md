@@ -98,8 +98,8 @@ The following is an inventory of rules present in the current legal-basis matrix
 | AGM-006 | AGM Minutes Not Prepared | Section 89, Companies Act 1994 (Bangladesh) | YELLOW / 5 / BLACK=false | PENDING COUNSEL |
 | AGM-007 | AGM Adjourned Without Proper Notice | Section 130, Companies Act 1994 (Bangladesh) | YELLOW / 5 / BLACK=false | PENDING COUNSEL |
 | AR-001 | Annual Return Default — Single Year | Section 36 (Schedule X), Companies Act 1994 (Bangladesh) | YELLOW / 10 / BLACK=false | PENDING COUNSEL |
-| AR-002 | Annual Return 2-Year Backlog | Sections 36 and 304, Companies Act 1994 (Bangladesh) | RED / 20 / BLACK=false | PENDING COUNSEL |
-| AR-003 | Annual Return 3-Year Backlog — Strike-Off Risk | Sections 36 and 304, Companies Act 1994 (Bangladesh) | BLACK / 20 / BLACK=false | PENDING COUNSEL |
+| AR-002 | Annual Return Backlog — Review Required | Section 36 and Schedule X; Section 346 governs a separate Registrar strike-off process | NOT_EVALUATED / 0 / BLACK=false | PENDING COUNSEL — backlog alone is not a legal conclusion |
+| AR-003 | Annual Return Backlog — Extended Review Required | Section 36 and Schedule X; Section 346 requires separate Registrar grounds and notice steps | NOT_EVALUATED / 0 / BLACK=false | PENDING COUNSEL — no automatic strike-off or rescue conclusion |
 | AR-004 | Annual Return Filed But Incomplete | Section 36, Schedule X, Companies Act 1994 (Bangladesh) | YELLOW / 8 / BLACK=false | PENDING COUNSEL |
 | AUD-001 | First Auditor Not Appointed Within One Calendar Month | Section 210(6), Companies Act 1994 (Bangladesh) | YELLOW / 10 / BLACK=false | PENDING COUNSEL |
 | AUD-002 | Audit Not Completed Before AGM | Section 183, Companies Act 1994 (Bangladesh) | RED / 12 / BLACK=false | PENDING COUNSEL |
@@ -120,7 +120,7 @@ The following is an inventory of rules present in the current legal-basis matrix
 | CAP-002 | Charge Not Registered With RJSC Within 21 Days | Section 159(1), Companies Act 1994 (Bangladesh) | YELLOW / 5 / BLACK=false | PENDING COUNSEL |
 | CAP-003 | Capital Reduction Without Court Order | Section 150, Companies Act 1994 (Bangladesh) | BLACK / 15 / BLACK=true | PENDING COUNSEL |
 | CAP-004 | Special Resolution Not Filed With RJSC | Section 88, Companies Act 1994 (Bangladesh) | YELLOW / 8 / BLACK=false | PENDING COUNSEL |
-| CHG-001 | Charge Satisfaction Not Filed | Section 159, Companies Act 1994 (Bangladesh) | YELLOW / 3 / BLACK=false | PENDING COUNSEL |
+| CHG-001 | Charge Satisfaction — Evidence Review Required | Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh) | NOT_EVALUATED / 0 / BLACK=false | PENDING COUNSEL; registrability and filing evidence required |
 | DEF-001 | Director Disqualified | Section 94, Companies Act 1994 (Bangladesh) | BLACK / 20 / BLACK=true | PENDING COUNSEL |
 | DEF-002 | Unresolved Penalty Notices | Section 397, Companies Act 1994 (Bangladesh) | YELLOW / 5 / BLACK=false | PENDING COUNSEL |
 | DIR-001 | Director Appointment Not Filed Within 14 Days | Section 90, Companies Act 1994 (Bangladesh) | YELLOW / 10 / BLACK=false | PENDING COUNSEL |
@@ -132,9 +132,9 @@ The following is an inventory of rules present in the current legal-basis matrix
 | DIR-007 | Director Consent Not Filed Within 30 Days | Section 93, Companies Act 1994 (Bangladesh) | YELLOW / 5 / BLACK=false | PENDING COUNSEL |
 | DIR-008 | Director Holding Office of Profit Without Consent | Section 104, Companies Act 1994 (Bangladesh) | YELLOW / 8 / BLACK=false | PENDING COUNSEL |
 | DIR-010 | Managing Director Appointed for More Than 5 Years | Section 110, Companies Act 1994 (Bangladesh) | YELLOW / 5 / BLACK=false | PENDING COUNSEL |
-| ESC-001 | Strike-Off Risk Elevated | Section 346, Companies Act 1994 (Bangladesh) | RED / 15 / BLACK=false | PENDING COUNSEL |
-| ESC-002 | Strike-Off Imminent — BLACK OVERRIDE | Section 346, Companies Act 1994 (Bangladesh) | BLACK / 10 / BLACK=true | PENDING COUNSEL |
-| ESC-003 | Corporate Rescue Mandatory — Systemic Failure | Sections 81, 115, 36, 346 (aggregate), Companies Act 1994 (Bangladesh) | BLACK / 10 / BLACK=true | PENDING COUNSEL |
+| ESC-001 | Strike-Off Process Status Requires Verification | Section 346, Companies Act 1994 (Bangladesh) | NOT_EVALUATED / 0 / BLACK=false | PENDING COUNSEL — verify statutory notice sequence |
+| ESC-002 | Strike-Off Status Requires Verification | Section 346, Companies Act 1994 (Bangladesh) | NOT_EVALUATED / 0 / BLACK=false | PENDING COUNSEL — no backlog-based BLACK override |
+| ESC-003 | Corporate Rescue Mandatory — Systemic Failure | NLC internal risk policy; not a statutory Companies Act consequence | BLACK / 10 / BLACK=true | POLICY OWNER APPROVAL PENDING — internal policy only |
 | ESC-004 | Voluntary Winding Up | Section 130, Companies Act 1994 (Bangladesh) | BLACK / 30 / BLACK=true | PENDING COUNSEL |
 | ESC-005 | Investigation Order Pending | Section 104, Companies Act 1994 (Bangladesh) | RED / 20 / BLACK=false | PENDING COUNSEL |
 | FX-001 | Foreign Exchange Violation | Foreign Exchange Regulation Act 1947 (Bangladesh) | RED / 15 / BLACK=false | PENDING COUNSEL |
@@ -159,7 +159,7 @@ The following is an inventory of rules present in the current legal-basis matrix
 | STR-002 | Object Clause Change Not Filed | Section 17, Companies Act 1994 (Bangladesh) | YELLOW / 3 / BLACK=false | PENDING COUNSEL |
 | STR-003 | AoA Alteration Not Filed | Section 18, Companies Act 1994 (Bangladesh) | YELLOW / 3 / BLACK=false | PENDING COUNSEL |
 | TAX-001 | Tax Identification Number (TIN) Not Obtained | Income Tax Act 2023 (Bangladesh) | RED / 10 / BLACK=false | PENDING COUNSEL |
-| TAX-002 | VAT Registration Required But Not Obtained | Value Added Tax Act 2012 (Bangladesh) | YELLOW / 5 / BLACK=false | PENDING COUNSEL |
+| TAX-002 | VAT / turnover-tax status — review only | VAT & SD Act 2012, ss.2(48), 2(57), 4 and 10; Act 77/2026 and Finance Act 96/2026 | NOT_EVALUATED / 0 / BLACK=false | PENDING COUNSEL; no automatic breach finding |
 | TAX-003 | Annual Tax Return Overdue | Income Tax Act 2023, Section 75 | YELLOW / 5 / BLACK=false | PENDING COUNSEL |
 | TAX-004 | Advance Tax Missed | Income Tax Act 2023, Section 74 | YELLOW / 3 / BLACK=false | PENDING COUNSEL |
 | TL-001 | Trade License Not Obtained | Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009 | YELLOW / 5 / BLACK=false | PENDING COUNSEL |

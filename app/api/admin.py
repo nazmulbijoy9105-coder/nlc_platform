@@ -2,12 +2,11 @@ import time
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.auth import get_current_user
-from app.core.dependencies import get_db, get_db_for_user
+from app.core.dependencies import get_current_user, get_db, get_db_for_user
 from app.models.database import set_admin_context
 from app.models.infrastructure import UserActivityLog
 from app.models.user import User
@@ -150,8 +149,7 @@ class UserListItem(BaseModel):
     full_name: str
     role: str
     is_active: bool
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class GrantAccessRequest(BaseModel):
     company_id: str
@@ -365,15 +363,22 @@ async def cron_evaluate_all(
     Protected by CRON_SECRET env var. Use with cron-job.org or GitHub Actions.
     Example: curl -X POST URL/api/v1/admin/cron/evaluate-all -H "X-Cron-Secret: your_secret"
     """
+    import hmac
     import os
-    # CRON_SECRET is optional — if not set, endpoint is open (for free tier)
-    cron_secret = os.environ.get("CRON_SECRET")
+
+    # Fail closed: this endpoint grants portfolio-wide evaluation authority.
+    cron_secret = os.environ.get("CRON_SECRET", "")
     if not cron_secret:
         raise HTTPException(status_code=403, detail="CRON_SECRET is not configured. Endpoint disabled.")
-    if cron_secret:
-        provided = request.headers.get("X-Cron-Secret", "")
-        if provided != cron_secret:
-            raise HTTPException(status_code=403, detail="Invalid cron secret")
+    if len(cron_secret) < 32:
+        raise HTTPException(
+            status_code=503,
+            detail="CRON_SECRET must contain at least 32 characters. Endpoint disabled.",
+        )
+
+    provided = request.headers.get("X-Cron-Secret", "")
+    if not hmac.compare_digest(provided.encode("utf-8"), cron_secret.encode("utf-8")):
+        raise HTTPException(status_code=403, detail="Invalid cron secret")
 
     # The secret is verified before granting this background task ADMIN RLS context.
     await set_admin_context(db)

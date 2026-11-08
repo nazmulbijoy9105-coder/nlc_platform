@@ -58,3 +58,39 @@ jobs:
             --output /dev/null
 
           echo "Evaluation endpoint accepted the request and the live health endpoint responded."
+      - name: Validate cron secret and trigger evaluation
+        shell: bash
+        env:
+          NLC_CRON_SECRET: ${{ secrets.NLC_CRON_SECRET }}
+        run: |
+          set -Eeuo pipefail
+
+          : "${NLC_CRON_SECRET:?Required GitHub Actions secret NLC_CRON_SECRET is missing or empty}"
+
+          curl --fail --silent --show-error \
+            --connect-timeout 10 --max-time 20 \
+            "https://nlc-platform.onrender.com/api/v1/admin/cron/health" \
+            --output /dev/null
+
+          evaluation_response="$(curl --fail --silent --show-error \
+            --connect-timeout 10 --max-time 180 \
+            --request POST "https://nlc-platform.onrender.com/api/v1/admin/cron/evaluate-all" \
+            --header "X-Cron-Secret: $NLC_CRON_SECRET")"
+
+          jq -e '
+            .status == "complete"
+            and (.total_companies | type == "number")
+            and (.evaluated | type == "number")
+            and (.errors | type == "number")
+          ' <<<"$evaluation_response" >/dev/null
+
+          total="$(jq -r '.total_companies' <<<"$evaluation_response")"
+          evaluated="$(jq -r '.evaluated' <<<"$evaluation_response")"
+          errors="$(jq -r '.errors' <<<"$evaluation_response")"
+          unset evaluation_response NLC_CRON_SECRET
+
+          echo "Evaluation result: total=$total evaluated=$evaluated errors=$errors"
+          if [[ "$errors" != "0" ]]; then
+            echo "::error::One or more company evaluations failed; inspect the application logs."
+            exit 1
+          fi
