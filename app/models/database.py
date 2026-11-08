@@ -69,24 +69,30 @@ if _PRODUCTION_ENVIRONMENT and len(os.environ.get("NLC_RLS_HMAC_SECRET", "")) < 
 DATABASE_URL = _APP_DATABASE_URL or _MIGRATION_DATABASE_URL
 if not DATABASE_URL:
     raise RuntimeError('DATABASE_URL or APP_DATABASE_URL is empty; refusing to start')
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
-elif DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+from app.core.db_url import normalize_asyncpg_url
+
+DATABASE_URL, _DATABASE_SSL_CONTEXT = normalize_asyncpg_url(
+    DATABASE_URL,
+    require_tls=_PRODUCTION_ENVIRONMENT,
+)
 
 # ── CONNECTION ────────────────────────────────────────────────────────
 _testing = os.environ.get("TESTING", "false").lower() == "true"
+
+_connect_args = {
+    "server_settings": {
+        "application_name": "nlc_api",
+        "timezone": "UTC",
+    }
+}
+if _DATABASE_SSL_CONTEXT is not None:
+    _connect_args["ssl"] = _DATABASE_SSL_CONTEXT
 
 engine_args = {
     "echo": os.environ.get("SQL_ECHO", "false").lower() == "true",
     "pool_pre_ping": True,
     "pool_recycle": 3600,
-    "connect_args": {
-        "server_settings": {
-            "application_name": "nlc_api",
-            "timezone": "UTC",
-        }
-    },
+    "connect_args": _connect_args,
 }
 
 if not _testing:
