@@ -230,11 +230,6 @@ def validate_production_migration_role(connection: Connection) -> None:
     APP_DATABASE_URL as nlc_app_role; Alembic must use DATABASE_URL as the
     migration/owner principal.
     """
-    is_render = os.environ.get("RENDER", "").strip().lower() == "true"
-    is_production = os.environ.get("ENVIRONMENT", "production").strip().lower() in {
-        "prod", "production"
-    }
-    if not (is_render or is_production):
     """Fail before DDL if a production deployment uses the restricted runtime role.
 
     Render sets RENDER=true. Other production hosts must explicitly set
