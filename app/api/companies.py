@@ -11,6 +11,7 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
@@ -653,7 +654,14 @@ async def create_company_charge(
         raise HTTPException(status_code=404, detail="Company not found.")
     charge = CompanyCharge(company_id=company_id, **body.model_dump())
     db.add(charge)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="A charge with this reference already exists for the company.",
+        ) from exc
     await ActivityService(db).log(
         actor_user_id=current_user.id,
         company_id=company_id,
