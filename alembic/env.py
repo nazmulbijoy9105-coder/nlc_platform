@@ -95,6 +95,7 @@ from app.models import (  # noqa: F401 — imports are for side-effects
     Audit,
     Base,
     Company,
+    CompanyCharge,
     CompanyUserAccess,
     ComplianceEvent,
     ComplianceFlag,
