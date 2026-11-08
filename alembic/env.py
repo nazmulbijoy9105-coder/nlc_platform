@@ -223,6 +223,60 @@ def do_run_migrations(connection: Connection) -> None:
         context.run_migrations()
 
 
+def validate_production_migration_role(connection: Connection) -> None:
+    """Fail before DDL if Render is using the restricted runtime DB role.
+
+    Production migrations need the privileged owner connection. The API uses
+    APP_DATABASE_URL as nlc_app_role; Alembic must use DATABASE_URL as the
+    migration/owner principal.
+    """
+    is_render = os.environ.get("RENDER", "").strip().lower() == "true"
+    is_production = os.environ.get("ENVIRONMENT", "production").strip().lower() in {
+        "prod", "production"
+    }
+    if not (is_render or is_production):
+        return
+
+    row = connection.execute(
+        text(
+            """
+            SELECT current_user,
+                   role.rolsuper,
+                   role.rolbypassrls,
+                   CASE
+                       WHEN audit_table.oid IS NULL THEN NULL
+                       ELSE audit_table.relowner = role.oid
+                   END AS owns_rescue_audit_log
+              FROM pg_roles AS role
+              LEFT JOIN pg_class AS audit_table
+                ON audit_table.oid = to_regclass('public.rescue_audit_log')
+             WHERE role.rolname = current_user
+            """
+        )
+    ).one_or_none()
+
+    if row is None:
+        raise RuntimeError("Unable to inspect the PostgreSQL migration role.")
+
+    role_name, is_superuser, bypasses_rls, owns_rescue_audit_log = row
+    if role_name == "nlc_app_role":
+        raise RuntimeError(
+            "DATABASE_URL is using nlc_app_role. Set DATABASE_URL to the "
+            "privileged migration/table-owner connection; keep APP_DATABASE_URL "
+            "as the restricted nlc_app_role runtime connection."
+        )
+    if not (is_superuser or bypasses_rls):
+        raise RuntimeError(
+            f"Migration role {role_name!r} must have BYPASSRLS or SUPERUSER "
+            "for the signed-RLS migrations; use the provisioned migration owner."
+        )
+    if owns_rescue_audit_log is False and not is_superuser:
+        raise RuntimeError(
+            f"Migration role {role_name!r} does not own public.rescue_audit_log. "
+            "Use the database owner connection; do not grant ownership to nlc_app_role."
+        )
+
+
 async def run_async_migrations() -> None:
     """
     Async entry point for migrations.
@@ -260,6 +314,7 @@ async def run_async_migrations() -> None:
         # by its MigrationContext.
         await connection.execute(text("SET timezone = 'UTC'"))
         await connection.commit()
+        await connection.run_sync(validate_production_migration_role)
         await connection.run_sync(do_run_migrations)
         await connection.commit()
 
