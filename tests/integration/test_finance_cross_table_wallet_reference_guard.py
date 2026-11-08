@@ -148,6 +148,7 @@ async def test_approval_links_receipt_to_its_own_submission(db, db_company, db_u
     assert getattr(exc_info.value.orig, "sqlstate", None) == "23505"
     assert "uq_manual_reference_across_finance_tables" in str(exc_info.value.orig)
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize("method", ["BKASH_MANUAL", "NAGAD_MANUAL"])
 async def test_direct_mobile_wallet_claim_cannot_reuse_existing_receipt_reference(
     db, db_company, db_user, method

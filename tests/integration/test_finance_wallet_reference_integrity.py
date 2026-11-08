@@ -106,6 +106,7 @@ async def test_manual_payment_submission_rejects_reference_already_present_in_pa
             evidence_document_id=None,
         )
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize("method", ["BKASH_MANUAL", "NAGAD_MANUAL"])
 async def test_manual_mobile_wallet_reference_is_unique_across_claims_and_receipts(
     db, db_company, db_user, method

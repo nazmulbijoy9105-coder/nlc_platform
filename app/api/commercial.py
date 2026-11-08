@@ -21,6 +21,8 @@ Endpoints:
   PATCH /commercial/tasks/{id}/complete   Mark task complete
 """
 
+
+
 import uuid
 from datetime import date
 from decimal import Decimal
@@ -39,12 +41,7 @@ from app.core.dependencies import (
 )
 from app.models.enums import EngagementStatus, RevenueTier, TaskPriority, TaskStatus
 from app.models.user import User
-from app.services.commercial_service import (
-    CommercialConflictError,
-    EngagementService,
-    QuotationService,
-    TaskService,
-)
+from app.services.commercial_service import CommercialConflictError, EngagementService, QuotationService, TaskService
 from app.services.notification_service import ActivityService
 
 logger = structlog.get_logger(__name__)
@@ -132,7 +129,7 @@ class TaskCreateRequest(BaseModel):
     assigned_to: uuid.UUID | None = None
     linked_flag_id: uuid.UUID | None = None
     source_rescue_step_id: uuid.UUID | None = None
-    priority: TaskPriority = Field(default=TaskPriority.MEDIUM, description="LOW | MEDIUM | HIGH | CRITICAL")
+    priority: TaskPriority = TaskPriority.MEDIUM
 
 
 class TaskCompleteRequest(BaseModel):
@@ -167,7 +164,7 @@ def _engagement_to_response(e) -> EngagementResponse:
         company_id=str(e.company_id),
         engagement_type=e.engagement_type,
         revenue_tier=e.revenue_tier,
-        status=str(e.engagement_status) if e.engagement_status else None,
+        status=str(e.engagement_status),
         description=getattr(e, "engagement_title", None),
         estimated_fee_bdt=e.estimated_fee_bdt,
         confirmed_fee_bdt=e.confirmed_fee_bdt,
@@ -199,7 +196,7 @@ def _task_to_response(t) -> TaskResponse:
         company_id=str(t.company_id),
         title=t.title,
         description=t.description,
-        status=str(t.task_status) if t.task_status else None,
+        status=str(t.task_status),
         priority=t.priority,
         due_date=str(t.due_date) if t.due_date else None,
         assigned_to=str(t.assigned_to) if t.assigned_to else None,
@@ -313,7 +310,7 @@ async def advance_engagement_status(
             note=body.note,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found.")
 
@@ -321,7 +318,7 @@ async def advance_engagement_status(
         action="ENGAGEMENT_STATUS_UPDATED",
         resource_type="engagement",
         resource_id=str(engagement_id),
-        description=body.note or f"Engagement status → {body.new_status}",
+        description=f"Engagement status → {body.new_status}",
         ip_address=request.client.host if request.client else None,
         actor_user_id=current_user.id,
         company_id=engagement.company_id,
@@ -437,7 +434,7 @@ async def reject_quotation(
             reason=body.reason or "Rejected by authorized staff",
             rejected_by=current_user.id,
         )
-    except ValueError as exc:
+    except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -532,6 +529,7 @@ async def complete_task(
     svc = TaskService(db)
     try:
         task = await svc.complete_task(task_id=task_id, company_id=company_id)
+        task = await svc.complete_task(task_id=task_id)
     except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not task:

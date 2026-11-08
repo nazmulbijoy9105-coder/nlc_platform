@@ -1,9 +1,13 @@
 """Regression tests for the existing commercial API/service contract."""
 from __future__ import annotations
 
+
+from datetime import date, timedelta
+from decimal import Decimal
 from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 
@@ -170,6 +174,7 @@ async def test_task_completion_accepts_completion_note(
 
     repeated = await api_client.patch(
         f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete?company_id={db_company.id}",
+        f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete",
         headers=_auth(commercial_admin_token),
         json={"completion_note": "Should not complete twice"},
     )
@@ -253,6 +258,8 @@ async def test_accepting_quotation_with_inactive_engagement_returns_not_found(
         headers=_auth(commercial_admin_token),
     )
     assert response.status_code == 404, response.text
+
+
 def test_quotation_accept_and_reject_lock_parent_before_locked_quotation():
     """Guard the required engagement-first lock order in both lifecycle paths."""
     from pathlib import Path
