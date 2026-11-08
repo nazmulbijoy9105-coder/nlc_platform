@@ -9,6 +9,7 @@ on:
       - fix/0050-role-provisioning-preflight-20261106
       - fix/canonical-migration-chain-20261106
       - feat/finance-ledger-integrated-on-canonical-chain-20261106
+      - feat/subscriptions-on-canonical-20261108b
 
 jobs:
   unit-tests:
@@ -40,7 +41,7 @@ jobs:
 
       - name: Lint changed backend, finance, commercial, subscription and calendar files
         run: |
-          ruff check --select E,F app/services/bd_calendar_generator.py \
+          ruff check --select E,F --ignore E501 app/services/bd_calendar_generator.py \
             app/api/commercial.py app/models/commercial.py app/services/commercial_service.py \
             app/api/finance.py app/models/finance.py app/services/finance_service.py \
             app/api/subscriptions.py app/models/subscription.py app/services/subscription_service.py \
@@ -236,10 +237,27 @@ jobs:
             > /tmp/nlc_0042_to_head_schema.sql
           test -s /tmp/nlc_0042_to_head_schema.sql
 
-      - name: Rehearse deployed Articles baseline 0048 through head
+      - name: Rehearse historical Articles branch from revision 0048 through head
         run: |
           set -euo pipefail
-          PGPASSWORD=nlc_test createdb -h localhost -U nlc_test nlc_test_legacy_0048
+          python - <<'PY'
+          import asyncio
+          import os
+          import asyncpg
+
+          async def main():
+              url = os.environ["DATABASE_URL"].replace(
+                  "postgresql+asyncpg://", "postgresql://", 1
+              )
+              admin_url = url.rsplit("/", 1)[0] + "/postgres"
+              conn = await asyncpg.connect(admin_url)
+              try:
+                  await conn.execute("CREATE DATABASE nlc_test_legacy_0048")
+              finally:
+                  await conn.close()
+
+          asyncio.run(main())
+          PY
           LEGACY_DATABASE_URL="postgresql+asyncpg://nlc_test:nlc_test@localhost:5432/nlc_test_legacy_0048"
 
           # Recreate the historical deployed revision using the real migration

@@ -324,6 +324,10 @@ async def _committed_active_subscription(
             review_note="PostgreSQL subscription activation integration test",
             cheque_cleared_at=None,
         )
+        # The deferred payment ledger trigger binds the reviewer to the signed
+        # principal active at approval. Commit this actor's transaction before
+        # switching to the client actor for a separate cancellation request.
+        await session.commit()
 
         if cancel_at_period_end:
             await set_rls_context(session, str(client_user_id))

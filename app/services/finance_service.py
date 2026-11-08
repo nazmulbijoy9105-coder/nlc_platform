@@ -52,7 +52,7 @@ def _integrity_constraint_name(error: IntegrityError) -> str | None:
         getattr(diagnostic, "constraint_name", None)
         or getattr(original, "constraint_name", None)
     )
-    if constraint_name:
+    if isinstance(constraint_name, str) and constraint_name:
         return constraint_name
     # asyncpg's UniqueViolationError omits PostgreSQL's constraint_name
     # diagnostic from its public attributes; the trigger includes a stable
@@ -242,7 +242,7 @@ class FinanceService:
                     "This manual payment reference has already been submitted or credited"
                 )
 
-        invoice = await self._locked_invoice(invoice_id, company_id)
+        invoice = await self._locked_invoice(invoice_id, company_id, for_update=False)
         if invoice is None:
             raise FinanceNotFoundError("Invoice not found for this company")
         if invoice.status not in PAYMENTABLE_INVOICE_STATES:
@@ -295,6 +295,15 @@ class FinanceService:
             }:
                 raise FinanceConflictError(
                     "This manual payment reference has already been submitted or credited"
+                ) from exc
+            database_message = str(exc).lower()
+            if "pending payment submissions exceed the invoice outstanding balance" in database_message:
+                raise FinanceConflictError(
+                    "Pending payment submissions already reserve the remaining invoice balance"
+                ) from exc
+            if "invoice is not open for payment submissions" in database_message:
+                raise FinanceConflictError(
+                    "Invoice is no longer open for payment submissions"
                 ) from exc
             raise
         return submission
@@ -549,12 +558,22 @@ class FinanceService:
         return list(result.scalars().all())
 
     async def _locked_invoice(
-        self, invoice_id: uuid.UUID, company_id: uuid.UUID | None = None
+        self,
+        invoice_id: uuid.UUID,
+        company_id: uuid.UUID | None = None,
+        *,
+        for_update: bool = True,
     ) -> Invoice | None:
         query = select(Invoice).where(Invoice.id == invoice_id)
         if company_id is not None:
             query = query.where(Invoice.company_id == company_id)
-        result = await self.db.execute(query.with_for_update())
+        # Customer payment submission runs under a role that may read invoice
+        # balances but is not allowed to UPDATE invoices. PostgreSQL applies
+        # UPDATE RLS to SELECT FOR UPDATE and hides the row. The BEFORE INSERT
+        # reservation trigger takes the authoritative invoice row lock instead.
+        if for_update:
+            query = query.with_for_update()
+        result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
     async def _next_number(self, prefix: str, table: str, column: str) -> str:

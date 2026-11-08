@@ -21,6 +21,8 @@ Business rules:
 import uuid
 from datetime import date
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
@@ -34,8 +36,10 @@ from app.core.dependencies import (
     require_roles,
 )
 from app.models.enums import RiskBand
+from app.models.user import User
 from app.services.company_service import CompanyService
 from app.services.notification_service import ActivityService
+from app.services.rescue_service import RescueService
 
 
 async def _assert_rescue_entitlement(company_id: uuid.UUID, current_user: User, db: AsyncSession) -> None:
@@ -53,8 +57,6 @@ async def _assert_rescue_entitlement(company_id: uuid.UUID, current_user: User, 
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail="This company does not have an active corporate-rescue entitlement.",
         )
-from app.services.rescue_service import RescueService
-
 router = APIRouter()
 
 
@@ -70,10 +72,6 @@ def _require_legal_release() -> None:
                 "receive independent counsel approval and the legal score is released."
             ),
         )
-
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.models.user import User
 
 logger = structlog.get_logger(__name__)
 
