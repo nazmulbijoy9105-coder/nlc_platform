@@ -12,8 +12,8 @@ def test_webhook_reconciliation_reconstructs_schema_but_stays_fail_closed():
     assert "_create_missing_tables()" in migration
     assert "op.create_table(" in migration
     assert "SCHEMA-ONLY RECONSTRUCTION" in migration
-    assert "historical endpoint rows were not restored" in migration
-    assert "historical delivery and retry rows were not restored" in migration
+    assert "Historical endpoint rows were not restored" in migration
+    assert "Historical delivery and retry rows were not restored" in migration
     assert "Historical rescue audit rows were not restored" in migration
     assert "ENABLE ROW LEVEL SECURITY" in migration
     assert "FORCE ROW LEVEL SECURITY" in migration
