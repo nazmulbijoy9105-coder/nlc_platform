@@ -127,6 +127,56 @@ def _agm_profile_evidence(latest_agm) -> dict:
         ),
     }
 
+
+def _charge_event_from_record(charge: CompanyCharge):
+    """Map a persisted charge to the engine without promoting unverified reports."""
+    from app.rule_engine.engine import ChargeEvent
+
+    creation_verified = bool(
+        charge.creation_date_verified and charge.creation_date_evidence_ref
+        and charge.creation_date_verified_at and charge.creation_date_verified_by
+    )
+    form_xviii_verified = bool(
+        charge.form_xviii_filing_status_verified and charge.form_xviii_filing_evidence_ref
+        and charge.form_xviii_verified_at and charge.form_xviii_verified_by
+    )
+    registrability_verified = bool(
+        charge.registrability_verified and charge.registrability_evidence_ref
+        and charge.registrability_verified_at and charge.registrability_verified_by
+    )
+    satisfaction_verified = bool(
+        charge.satisfaction_verified and charge.satisfaction_evidence_ref
+        and charge.satisfaction_verified_at and charge.satisfaction_verified_by
+    )
+    satisfaction_filing_verified = bool(
+        charge.satisfaction_filing_status_verified and charge.satisfaction_filing_evidence_ref
+        and charge.satisfaction_filing_verified_at and charge.satisfaction_filing_verified_by
+    )
+    return ChargeEvent(
+        charge_id=str(charge.id),
+        creation_date=charge.creation_date,
+        charge_type=charge.charge_type,
+        amount_bdt=float(charge.amount_bdt),
+        charge_holder=charge.charge_holder,
+        form_xviii_filed=charge.form_xviii_filed if form_xviii_verified else None,
+        form_xviii_filed_date=charge.form_xviii_filed_date if form_xviii_verified else None,
+        creation_date_verified=creation_verified,
+        creation_date_evidence_ref=charge.creation_date_evidence_ref if creation_verified else None,
+        form_xviii_filing_status_verified=form_xviii_verified,
+        form_xviii_filing_evidence_ref=charge.form_xviii_filing_evidence_ref if form_xviii_verified else None,
+        satisfied=charge.satisfied if satisfaction_verified else None,
+        satisfaction_date=charge.satisfaction_date if satisfaction_verified else None,
+        satisfaction_filed=charge.satisfaction_filed if satisfaction_filing_verified else None,
+        satisfaction_filed_date=charge.satisfaction_filed_date if satisfaction_filing_verified else None,
+        registrable_under_s159=charge.registrable_under_s159 if registrability_verified else None,
+        registrability_verified=registrability_verified,
+        registrability_evidence_ref=charge.registrability_evidence_ref if registrability_verified else None,
+        satisfaction_verified=satisfaction_verified,
+        satisfaction_evidence_ref=charge.satisfaction_evidence_ref if satisfaction_verified else None,
+        satisfaction_filing_status_verified=satisfaction_filing_verified,
+        satisfaction_filing_evidence_ref=charge.satisfaction_filing_evidence_ref if satisfaction_filing_verified else None,
+    )
+
 class CompanyService(BaseService[Company]):
     model = Company
 
@@ -214,6 +264,7 @@ class CompanyService(BaseService[Company]):
             .options(
                 selectinload(Company.directors),
                 selectinload(Company.shareholders),
+                selectinload(Company.charges),
                 selectinload(Company.agms),
                 selectinload(Company.audits),
                 selectinload(Company.annual_returns),
@@ -582,65 +633,7 @@ class CompanyService(BaseService[Company]):
             ))
 
         # ── Mortgage / charge evidence ─────────────────────────────
-        # Reported facts are passed only when the corresponding reviewer
-        # provenance is complete; otherwise the engine receives UNKNOWN.
-        from app.rule_engine.engine import ChargeEvent
-        charge_events = []
-        for charge in company.charges:
-            creation_verified = bool(
-                charge.creation_date_verified
-                and charge.creation_date_evidence_ref
-                and charge.creation_date_verified_at
-                and charge.creation_date_verified_by
-            )
-            form_xviii_verified = bool(
-                charge.form_xviii_filing_status_verified
-                and charge.form_xviii_filing_evidence_ref
-                and charge.form_xviii_verified_at
-                and charge.form_xviii_verified_by
-            )
-            registrability_verified = bool(
-                charge.registrability_verified
-                and charge.registrability_evidence_ref
-                and charge.registrability_verified_at
-                and charge.registrability_verified_by
-            )
-            satisfaction_verified = bool(
-                charge.satisfaction_verified
-                and charge.satisfaction_evidence_ref
-                and charge.satisfaction_verified_at
-                and charge.satisfaction_verified_by
-            )
-            satisfaction_filing_verified = bool(
-                charge.satisfaction_filing_status_verified
-                and charge.satisfaction_filing_evidence_ref
-                and charge.satisfaction_filing_verified_at
-                and charge.satisfaction_filing_verified_by
-            )
-            charge_events.append(ChargeEvent(
-                charge_id=str(charge.id),
-                creation_date=charge.creation_date,
-                charge_type=charge.charge_type,
-                amount_bdt=float(charge.amount_bdt),
-                charge_holder=charge.charge_holder,
-                form_xviii_filed=charge.form_xviii_filed if form_xviii_verified else None,
-                form_xviii_filed_date=charge.form_xviii_filed_date if form_xviii_verified else None,
-                creation_date_verified=creation_verified,
-                creation_date_evidence_ref=charge.creation_date_evidence_ref if creation_verified else None,
-                form_xviii_filing_status_verified=form_xviii_verified,
-                form_xviii_filing_evidence_ref=charge.form_xviii_filing_evidence_ref if form_xviii_verified else None,
-                satisfied=charge.satisfied if satisfaction_verified else None,
-                satisfaction_date=charge.satisfaction_date if satisfaction_verified else None,
-                satisfaction_filed=charge.satisfaction_filed if satisfaction_filing_verified else None,
-                satisfaction_filed_date=charge.satisfaction_filed_date if satisfaction_filing_verified else None,
-                registrable_under_s159=charge.registrable_under_s159 if registrability_verified else None,
-                registrability_verified=registrability_verified,
-                registrability_evidence_ref=charge.registrability_evidence_ref if registrability_verified else None,
-                satisfaction_verified=satisfaction_verified,
-                satisfaction_evidence_ref=charge.satisfaction_evidence_ref if satisfaction_verified else None,
-                satisfaction_filing_status_verified=satisfaction_filing_verified,
-                satisfaction_filing_evidence_ref=charge.satisfaction_filing_evidence_ref if satisfaction_filing_verified else None,
-            ))
+        charge_events = [_charge_event_from_record(charge) for charge in company.charges]
 
         # ── Statutory Registers ───────────────────────────────────
         maintained_registers = [
