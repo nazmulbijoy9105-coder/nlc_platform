@@ -42,11 +42,21 @@ async def test_runtime_role_is_non_bypass_and_has_no_dangerous_privileges(db):
             "SELECT count(*) FROM pg_auth_members m "
             "JOIN pg_roles granted_role ON granted_role.oid = m.roleid "
             "JOIN pg_roles member_role ON member_role.oid = m.member "
-            "WHERE granted_role.rolname = 'nlc_app_role' "
-            "OR member_role.rolname = 'nlc_app_role'"
+            "WHERE member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role') "
+            "OR (granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role') "
+            "AND NOT (member_role.rolsuper OR member_role.rolbypassrls))"
         )
     )
     assert memberships.scalar_one() == 0
+
+    audit_role = await db.execute(
+        text(
+            "SELECT rolcanlogin, rolsuper, rolcreatedb, rolcreaterole, "
+            "rolinherit, rolreplication, rolbypassrls "
+            "FROM pg_roles WHERE rolname = 'nlc_ci_audit_role'"
+        )
+    )
+    assert audit_role.one() == (True, False, False, False, False, False, False)
 
     for privilege in ("TRUNCATE", "TRIGGER", "REFERENCES"):
         result = await db.execute(
