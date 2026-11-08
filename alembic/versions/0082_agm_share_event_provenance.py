@@ -62,6 +62,8 @@ def upgrade() -> None:
         sa.Column("shareholder_id", sa.UUID(), sa.ForeignKey("shareholders.id", ondelete="RESTRICT"), nullable=True),
         sa.Column("recipient_key", sa.String(160), nullable=False),
         sa.Column("recipient_name", sa.String(300), nullable=False),
+        sa.Column("submitted_by", sa.UUID(), sa.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False),
+        sa.Column("submitted_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("entitled_member_verified", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("entitlement_evidence_ref", sa.Text(), nullable=True),
         sa.Column("entitlement_verified_at", sa.DateTime(timezone=True), nullable=True),
@@ -208,6 +210,8 @@ def upgrade() -> None:
                 AND notice_verified IS FALSE
                 AND consent_verified IS FALSE
                 AND omission_verified IS FALSE
+                AND submitted_by = public.nlc_current_user_id()
+                AND submitted_at IS NOT NULL
             )
         """)
         op.execute(f"""
