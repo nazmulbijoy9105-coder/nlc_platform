@@ -79,7 +79,7 @@ DATABASE_URL, _DATABASE_SSL_CONTEXT = normalize_asyncpg_url(
 # ── CONNECTION ────────────────────────────────────────────────────────
 _testing = os.environ.get("TESTING", "false").lower() == "true"
 
-_connect_args = {
+_connect_args: dict[str, object] = {
     "server_settings": {
         "application_name": "nlc_api",
         "timezone": "UTC",
