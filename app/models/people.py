@@ -17,6 +17,9 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
+    CheckConstraint,
+    UniqueConstraint,
     Integer,
     Numeric,
     String,
@@ -257,18 +260,48 @@ class ShareComplianceEvent(FullMixin, Base):
     Filing and certificate statuses have independent verification evidence.
     """
     __tablename__ = "share_compliance_events"
+    __table_args__ = (
+        UniqueConstraint("id", "company_id", name="uq_share_compliance_events_id_company"),
+        CheckConstraint("event_type IN ('ALLOTMENT','CAPITAL_INCREASE','TRANSFER_REGISTRATION')", name="ck_share_compliance_event_type"),
+        CheckConstraint(
+            "(event_type = 'TRANSFER_REGISTRATION' AND share_transfer_id IS NOT NULL) OR "
+            "(event_type IN ('ALLOTMENT','CAPITAL_INCREASE') AND share_transfer_id IS NULL)",
+            name="ck_share_compliance_event_transfer_link",
+        ),
+        CheckConstraint(
+            "NOT event_verified OR (event_evidence_ref IS NOT NULL AND event_verified_at IS NOT NULL AND event_verified_by IS NOT NULL)",
+            name="ck_share_compliance_event_verified_provenance",
+        ),
+        CheckConstraint(
+            "NOT filing_status_verified OR (filing_status IS NOT NULL AND filing_evidence_ref IS NOT NULL AND filing_verified_at IS NOT NULL AND filing_verified_by IS NOT NULL)",
+            name="ck_share_compliance_event_filing_provenance",
+        ),
+        CheckConstraint(
+            "NOT certificate_status_verified OR (certificate_issued IS NOT NULL AND certificate_evidence_ref IS NOT NULL AND certificate_verified_at IS NOT NULL AND certificate_verified_by IS NOT NULL)",
+            name="ck_share_compliance_event_certificate_provenance",
+        ),
+        CheckConstraint(
+            "filing_form IS NULL OR "
+            "(event_type = 'ALLOTMENT' AND filing_form = 'XV') OR "
+            "(event_type = 'CAPITAL_INCREASE' AND filing_form = 'IV')",
+            name="ck_share_compliance_event_filing_form",
+        ),
+        Index("ix_share_compliance_events_company_id", "company_id"),
+        Index("ix_share_compliance_events_share_transfer_id", "share_transfer_id"),
+        Index("ix_share_compliance_events_company_type_date", "company_id", "event_type", "event_date"),
+    )
 
     company_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"),
-        nullable=False, index=True,
+        nullable=False,
     )
     share_transfer_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("share_transfers.id", ondelete="RESTRICT"),
-        nullable=True, index=True,
+        nullable=True,
     )
     event_type: Mapped[str] = mapped_column(String(32), nullable=False)
     event_date: Mapped[date] = mapped_column(Date, nullable=False)
-    event_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    event_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     event_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     event_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     event_verified_by: Mapped[uuid.UUID | None] = mapped_column(
@@ -277,7 +310,7 @@ class ShareComplianceEvent(FullMixin, Base):
 
     filing_form: Mapped[str | None] = mapped_column(String(16), nullable=True)
     filing_status: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    filing_status_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    filing_status_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     filing_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     filing_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     filing_verified_by: Mapped[uuid.UUID | None] = mapped_column(
@@ -286,7 +319,7 @@ class ShareComplianceEvent(FullMixin, Base):
     filing_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     certificate_issued: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    certificate_status_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    certificate_status_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     certificate_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     certificate_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     certificate_verified_by: Mapped[uuid.UUID | None] = mapped_column(
