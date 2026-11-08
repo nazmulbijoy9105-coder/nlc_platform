@@ -395,8 +395,7 @@ class TaskService(BaseService[Task]):
             task,
             task_status=TaskStatus.COMPLETED,
             completed_at=datetime.now(UTC),
-        )
- "
+        ) "
                 "THEN CAST(SPLIT_PART(quotation_number, '-', 3) AS INTEGER) "
                 "ELSE NULL END"
                 "), 0) "
