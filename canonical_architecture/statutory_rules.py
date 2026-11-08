@@ -1282,9 +1282,17 @@ def _legacy_rule(key: str, d: Dict[str, Any]) -> Optional[StatutoryRule]:
 
 for _k, _d in _LEGACY_RULE_DICTS.items():
     if _k not in STATUTORY_RULE_REGISTRY:   # canonical wins on overlap
-        _r = _legacy_rule(_k, _d)
-        if _r is not None:
-            STATUTORY_RULE_REGISTRY[_k] = _r
+        STATUTORY_RULE_REGISTRY[_k] = _legacy_rule(_k, _d)
+
+# Exact parity is a runtime invariant, not a permissive test threshold.
+_EXPECTED_RULE_IDS = frozenset(_LEGACY_RULE_DICTS) | frozenset(rule.rule_id for rule in _RULES)
+if len(_EXPECTED_RULE_IDS) != 85 or set(STATUTORY_RULE_REGISTRY) != _EXPECTED_RULE_IDS:
+    missing = sorted(_EXPECTED_RULE_IDS - set(STATUTORY_RULE_REGISTRY))
+    unexpected = sorted(set(STATUTORY_RULE_REGISTRY) - _EXPECTED_RULE_IDS)
+    raise RuntimeError(
+        f"canonical statutory registry parity failure: expected=85 actual={len(STATUTORY_RULE_REGISTRY)} "
+        f"missing={missing} unexpected={unexpected}"
+    )
 
 def as_dict(rule: StatutoryRule) -> dict:
     """Thin adapter for tests/callers that still expect dict-style access.
