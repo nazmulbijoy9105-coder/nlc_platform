@@ -110,9 +110,6 @@ jobs:
       DATABASE_URL: postgresql+asyncpg://nlc_test:nlc_test@localhost:5432/nlc_test
       DATABASE_URL_TEST: postgresql+asyncpg://nlc_test:nlc_test@localhost:5432/nlc_test
       REDIS_URL: redis://localhost:6379/0
-      JWT_SECRET_KEY: test-secret-key-not-for-production
-      NLC_RLS_HMAC_SECRET: ci-only-rls-hmac-secret-not-for-production-2026
-      APP_DATABASE_URL: postgresql+asyncpg://nlc_app_role:ci-only-nlc-app-role-password@localhost:5432/nlc_test
       REQUIRE_RLS_APP_ROLE: "true"
       ENVIRONMENT: test
 
@@ -132,6 +129,24 @@ jobs:
 
       - name: Compile check
         run: python -m compileall app/
+
+      - name: Generate ephemeral CI security credentials
+        run: |
+          python - <<'PY'
+          import os
+          import secrets
+
+          password = secrets.token_urlsafe(32)
+          values = {
+              "APP_DATABASE_PASSWORD": password,
+              "APP_DATABASE_URL": f"postgresql+asyncpg://nlc_app_role:{password}@localhost:5432/nlc_test",
+              "JWT_SECRET_KEY": secrets.token_urlsafe(48),
+              "NLC_RLS_HMAC_SECRET": secrets.token_hex(32),
+          }
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
+              for key, value in values.items():
+                  env.write(f"{key}={value}\\n")
+          PY
 
       - name: Verify single Alembic head and two fresh PostgreSQL upgrades
         run: |
@@ -192,9 +207,12 @@ jobs:
               )
               conn = await asyncpg.connect(url)
               try:
-                  await conn.execute(
-                      "ALTER ROLE nlc_app_role WITH PASSWORD 'ci-only-nlc-app-role-password'"
+                  password = os.environ["APP_DATABASE_PASSWORD"]
+                  alter_role = await conn.fetchval(
+                      "SELECT format('ALTER ROLE nlc_app_role WITH PASSWORD %L', $1)",
+                      password,
                   )
+                  await conn.execute(alter_role)
               finally:
                   await conn.close()
 
