@@ -6,6 +6,7 @@ import app.rule_engine.engine as engine_module
 
 from app.rule_engine.engine import (
     CompanyProfile,
+    ChargeEvent,
     ComplianceFlag,
     NLCRuleEngine,
     RevenueTier,
@@ -676,3 +677,154 @@ def test_tin_profile_absence_is_review_only_not_a_confirmed_tax_breach():
     assert flag.eval_state == "UNKNOWN"
     assert flag.severity == Severity.NOT_EVALUATED
     assert flag.score_impact == 0
+
+
+def test_missing_charge_satisfaction_status_is_unknown_not_a_breach():
+    charge = ChargeEvent(
+        charge_id="charge-unknown",
+        creation_date=date(2025, 1, 1),
+        charge_type="FIXED",
+        amount_bdt=100000,
+        charge_holder="Test Bank",
+        satisfied=None,
+        registrable_under_s159=True,
+        registrability_verified=True,
+        registrability_evidence_ref="RJSC-CHARGE-001",
+    )
+    result = NLCRuleEngine().evaluate(
+        _profile(charges=[charge]),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "CHG-001")
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.score_impact == 0
+    assert "SATISFACTION_STATUS_UNKNOWN" in flag.detail["unknown_reasons"]
+
+
+def test_verified_charge_satisfaction_uses_twenty_one_day_form_xxviii_deadline():
+    charge = ChargeEvent(
+        charge_id="charge-overdue",
+        creation_date=date(2025, 1, 1),
+        charge_type="FIXED",
+        amount_bdt=100000,
+        charge_holder="Test Bank",
+        satisfied=True,
+        satisfaction_date=date(2026, 10, 1),
+        satisfaction_verified=True,
+        satisfaction_evidence_ref="BANK-SATISFACTION-001",
+        registrable_under_s159=True,
+        registrability_verified=True,
+        registrability_evidence_ref="RJSC-CHARGE-001",
+        satisfaction_filed=False,
+        satisfaction_filing_status_verified=True,
+        satisfaction_filing_evidence_ref="RJSC-SEARCH-001",
+    )
+    result = NLCRuleEngine().evaluate(
+        _profile(charges=[charge]),
+        today=date(2026, 10, 23),
+    )
+    flag = _flag(result, "CHG-001")
+    assert flag.state == RuleState.NON_COMPLIANT
+    assert flag.eval_state == "VIOLATION"
+    assert flag.detail["statutory_deadline"] == "2026-10-22"
+    assert flag.detail["days_overdue"] == 1
+    assert flag.detail["form"] == "Form XXVIII"
+
+
+def test_charge_satisfaction_on_day_twenty_one_is_not_overdue():
+    charge = ChargeEvent(
+        charge_id="charge-due-today",
+        creation_date=date(2025, 1, 1),
+        charge_type="FIXED",
+        amount_bdt=100000,
+        charge_holder="Test Bank",
+        satisfied=True,
+        satisfaction_date=date(2026, 10, 1),
+        satisfaction_verified=True,
+        satisfaction_evidence_ref="BANK-SATISFACTION-002",
+        registrable_under_s159=True,
+        registrability_verified=True,
+        registrability_evidence_ref="RJSC-CHARGE-002",
+        satisfaction_filed=False,
+        satisfaction_filing_status_verified=True,
+        satisfaction_filing_evidence_ref="RJSC-SEARCH-002",
+    )
+    result = NLCRuleEngine().evaluate(
+        _profile(charges=[charge]),
+        today=date(2026, 10, 22),
+    )
+    assert "CHG-001" not in {flag.rule_id for flag in result.flags}
+
+
+def test_unverified_agm_history_is_reported_as_unknown_not_silently_assumed():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            agm_count=0,
+            agm_history_verified=False,
+            agm_history_evidence_ref=None,
+            last_agm_date=None,
+        ),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "AGM-001")
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.score_impact == 0
+
+
+def test_first_agm_deadline_uses_eighteen_calendar_months_not_548_days():
+    profile = _profile(
+        incorporation_date=date(2024, 1, 31),
+        agm_count=0,
+        last_agm_date=None,
+        agm_held_this_cycle=False,
+    )
+    on_deadline = NLCRuleEngine().evaluate(profile, today=date(2025, 7, 31))
+    after_deadline = NLCRuleEngine().evaluate(profile, today=date(2025, 8, 1))
+    assert "AGM-001" not in {flag.rule_id for flag in on_deadline.flags}
+    flag = _flag(after_deadline, "AGM-001")
+    assert flag.detail["deadline"] == "2025-07-31"
+    assert flag.detail["deadline_basis"] == "18_CALENDAR_MONTHS_FROM_INCORPORATION"
+
+
+def test_subsequent_agm_deadline_is_earlier_of_fifteen_months_and_calendar_year_end():
+    engine = NLCRuleEngine(today=date(2026, 1, 1))
+    profile = _profile(last_agm_date=date(2025, 6, 1))
+    assert engine._subsequent_agm_deadline(profile) == date(2026, 9, 1)
+    profile = _profile(last_agm_date=date(2025, 10, 1))
+    assert engine._subsequent_agm_deadline(profile) == date(2026, 12, 31)
+
+
+def test_verified_absence_is_included_in_score_impact_reporting(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    flag = SimpleNamespace(
+        rule_id="AGM-001",
+        state=RuleState.VERIFIED_ABSENT,
+        eval_state="VIOLATION",
+        severity=Severity.RED,
+        score_impact=7,
+        resolved=False,
+        conditional_applies=True,
+    )
+    assert _applied_score_impacts([flag]) == [{"applied": 7, "status": "APPLIED"}]
+
+
+def test_black_label_without_authorised_override_is_only_a_normal_deduction(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
+    flag = SimpleNamespace(
+        rule_id="AGM-001",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+        severity=Severity.BLACK,
+        is_black_override=True,
+        score_impact=9,
+        resolved=False,
+        conditional_applies=True,
+    )
+    assert _applied_score_impacts([flag]) == [{"applied": 9, "status": "APPLIED"}]
