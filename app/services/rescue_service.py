@@ -68,6 +68,15 @@ class RescueService(BaseService[RescuePlan]):
         Creates Tasks from rescue steps for staff assignment.
         Triggers Engagement creation in commercial service.
         """
+        # Service-level guard: callers other than the HTTP route (jobs,
+        # internal services and future endpoints) must not create rescue work
+        # from provisional engine output.
+        from app.rule_engine.engine import legal_score_is_released
+        if not legal_score_is_released():
+            raise PermissionError(
+                "Rescue generation is disabled until statutory scoring is independently approved and released."
+            )
+
         rescue_data = engine_output.rescue_sequence
         if not rescue_data:
             raise ValueError("Engine output has no rescue sequence — company may not be BLACK/RED.")
