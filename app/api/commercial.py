@@ -524,8 +524,8 @@ async def list_tasks(
 async def complete_task(
     task_id: uuid.UUID,
     body: TaskCompleteRequest,
-    company_id: uuid.UUID = Depends(require_company_access("company_id")),
     request: Request,
+    company_id: uuid.UUID = Depends(require_company_access("company_id")),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
