@@ -570,18 +570,18 @@ def get_request_id(request: Request) -> str:
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# RULE ENGINE SINGLETON
+# RULE ENGINE FACTORY
 # ═══════════════════════════════════════════════════════════════════════
 
-_rule_engine_instance = None
-
-
 def get_rule_engine():
-    global _rule_engine_instance
-    if _rule_engine_instance is None:
-        from app.rule_engine import NLCRuleEngine
-        _rule_engine_instance = NLCRuleEngine()
-    return _rule_engine_instance
+    """Return an isolated engine for one evaluation.
+
+    NLCRuleEngine keeps mutable per-evaluation state (flags and evaluation
+    date). Sharing an instance across concurrent requests can mix companies'
+    findings and dates, so production callers must never receive a singleton.
+    """
+    from app.rule_engine import NLCRuleEngine
+    return NLCRuleEngine()
 
 
 async def get_db_for_user(
