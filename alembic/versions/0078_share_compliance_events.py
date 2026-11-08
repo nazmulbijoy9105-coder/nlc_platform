@@ -86,6 +86,14 @@ def upgrade() -> None:
         schema="public",
     )
     op.create_index(
+        "ix_share_compliance_events_company_id",
+        "share_compliance_events", ["company_id"], schema="public",
+    )
+    op.create_index(
+        "ix_share_compliance_events_share_transfer_id",
+        "share_compliance_events", ["share_transfer_id"], schema="public",
+    )
+    op.create_index(
         "ix_share_compliance_events_company_type_date",
         "share_compliance_events", ["company_id", "event_type", "event_date"],
         schema="public",
