@@ -506,7 +506,9 @@ class TestRescue:
         })
 
     @pytest.mark.asyncio
-    async def test_create_rescue_plan_requires_red_band(self, api_client, super_admin_tok, db_company):
+    async def test_create_rescue_plan_requires_red_band(
+        self, api_client, super_admin_tok, db_company
+    ):
         """Automated rescue is withheld while statutory scoring is unreleased."""
         # db_company is GREEN band
         resp = await api_client.post(
@@ -518,7 +520,9 @@ class TestRescue:
         assert "statutory scoring" in resp.json()["detail"]
 
     @pytest.mark.asyncio
-    async def test_create_rescue_plan_for_red_company(self, api_client, super_admin_tok, db, db_company):
+    async def test_create_rescue_plan_for_red_company(
+        self, api_client, super_admin_tok, db, db_company
+    ):
         """Force company to RED band then create rescue plan."""
         from sqlalchemy import update
 
@@ -633,7 +637,9 @@ class TestDocuments:
         assert isinstance(templates, list)
 
     @pytest.mark.asyncio
-    async def test_generate_document_invalid_template(self, api_client, legal_tok, db_company, legal_staff_company_scope):
+    async def test_generate_document_invalid_template(
+        self, api_client, legal_tok, db_company, legal_staff_company_scope
+    ):
     async def test_generate_document_invalid_template(self, api_client, admin_token, db_company):
         resp = await api_client.post(
             "/api/v1/documents/generate",
@@ -657,7 +663,9 @@ class TestDocuments:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_list_documents_for_company(self, api_client, legal_tok, db_company, legal_staff_company_scope):
+    async def test_list_documents_for_company(
+        self, api_client, legal_tok, db_company, legal_staff_company_scope
+    ):
     async def test_list_documents_for_company(self, api_client, admin_token, db_company):
         resp = await api_client.get(
             f"/api/v1/documents/{db_company.id}",
@@ -843,7 +851,9 @@ class TestDocuments:
         assert resp.status_code == 402
 
     @pytest.mark.asyncio
-    async def test_release_requires_approval_first(self, api_client, legal_tok, db, db_company, legal_staff_company_scope):
+    async def test_release_requires_approval_first(
+        self, api_client, legal_tok, db, db_company, legal_staff_company_scope
+    ):
     async def test_release_requires_approval_first(self, api_client, admin_token, db, db_company):
         """Cannot release an unapproved document."""
         from app.models.documents import Document
@@ -1015,7 +1025,9 @@ class TestRules:
 
     @pytest.mark.asyncio
     async def test_get_black_overrides(self, api_client, super_admin_token):
-        resp = await api_client.get("/api/v1/rules/black-overrides", headers=_auth(super_admin_token))
+        resp = await api_client.get(
+            "/api/v1/rules/black-overrides", headers=_auth(super_admin_token)
+        )
         assert resp.status_code == 200
         rules = resp.json()
         assert isinstance(rules, list)
