@@ -379,7 +379,7 @@ def test_affected_agm_and_charge_provenance_matches_seed_engine_and_canonical():
     engine_data, errors = _engine_rule_data()
     assert not errors, errors
     seed_by_id = {row["rule_id"]: row for row in _seed_rows()}
-    affected = ("AGM-001", "AGM-002", "CHG-001")
+    affected = ("AGM-001", "AGM-002", "CAP-002", "CHG-001")
 
     for rule_id in affected:
         seed_basis = _normalise_basis(seed_by_id[rule_id]["statutory_basis"])
