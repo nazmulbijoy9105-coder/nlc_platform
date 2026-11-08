@@ -798,6 +798,13 @@ class TestCapitalRules:
             amount_bdt=500000.0,
             charge_holder="Test Bank Ltd",
             form_xviii_filed=False,
+            creation_date_verified=True,
+            creation_date_evidence_ref="EXECUTED-CHARGE-001",
+            form_xviii_filing_status_verified=True,
+            form_xviii_filing_evidence_ref="RJSC-SEARCH-001",
+            registrable_under_s159=True,
+            registrability_verified=True,
+            registrability_evidence_ref="RJSC-CLASS-001",
         )
         profile = build_profile(charges=[charge])
         output = rule_engine.evaluate(profile)
@@ -811,6 +818,14 @@ class TestCapitalRules:
             amount_bdt=500000.0,
             charge_holder="Test Bank Ltd",
             form_xviii_filed=True,
+            form_xviii_filed_date=date.today() - timedelta(days=20),
+            creation_date_verified=True,
+            creation_date_evidence_ref="EXECUTED-CHARGE-002",
+            form_xviii_filing_status_verified=True,
+            form_xviii_filing_evidence_ref="RJSC-SEARCH-002",
+            registrable_under_s159=True,
+            registrability_verified=True,
+            registrability_evidence_ref="RJSC-CLASS-002",
         )
         profile = build_profile(charges=[charge])
         output = rule_engine.evaluate(profile)

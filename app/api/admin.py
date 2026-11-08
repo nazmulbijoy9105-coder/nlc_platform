@@ -10,7 +10,7 @@ from app.core.dependencies import get_current_user, get_db, get_db_for_user
 from app.models.database import set_admin_context
 from app.models.infrastructure import UserActivityLog
 from app.models.user import User
-from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+from app.rule_engine.engine import legal_score_is_released
 
 router = APIRouter()
 
@@ -116,7 +116,7 @@ async def admin_dashboard(
     try:
         r = await db.execute(select(Company).where(Company.last_evaluated_at.isnot(None)).order_by(Company.last_evaluated_at.desc()).limit(5))
         for co in r.scalars().all():
-            if LEGAL_SCORE_RELEASED and co.current_compliance_score is not None:
+            if legal_score_is_released() and co.current_compliance_score is not None:
                 score = co.current_compliance_score
                 message = f"Evaluation for {co.company_name or 'Unknown'} - Score: {score}/100"
                 activity_type = "EVALUATION" if score >= 50 else "VIOLATION"

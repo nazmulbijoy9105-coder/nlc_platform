@@ -373,3 +373,30 @@ def test_inc005_imports_with_specific_foreign_investment_evidence():
     }
     assert rule.severity.value == "NOT_EVALUATED"
     assert rule.score_impact == 0
+
+
+def test_affected_agm_and_charge_provenance_matches_seed_engine_and_canonical():
+    """The rules changed in this remediation must share one statutory basis."""
+    engine_data, errors = _engine_rule_data()
+    assert not errors, errors
+    seed_by_id = {row["rule_id"]: row for row in _seed_rows()}
+    affected = ("AGM-001", "AGM-002", "CAP-002", "CHG-001")
+
+    for rule_id in affected:
+        seed_basis = _normalise_basis(seed_by_id[rule_id]["statutory_basis"])
+        canonical_basis = _normalise_basis(STATUTORY_RULE_REGISTRY[rule_id].law)
+        engine_bases = {
+            _normalise_basis(value) for value in engine_data.get(rule_id, set())
+        }
+        assert seed_basis == canonical_basis, {
+            "rule_id": rule_id,
+            "seed": seed_by_id[rule_id]["statutory_basis"],
+            "canonical": STATUTORY_RULE_REGISTRY[rule_id].law,
+        }
+        assert seed_basis in engine_bases or any(
+            seed_basis in basis or basis in seed_basis for basis in engine_bases
+        ), {
+            "rule_id": rule_id,
+            "seed": seed_by_id[rule_id]["statutory_basis"],
+            "engine": sorted(engine_data.get(rule_id, set())),
+        }

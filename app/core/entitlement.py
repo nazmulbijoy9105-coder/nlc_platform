@@ -112,6 +112,21 @@ async def _company_contexts(
         from app.models.filings import AGM, AnnualReturn, Audit
         from app.models.infrastructure import StatutoryRegister
 
+        resource_models = {
+            "agm_id": AGM,
+            "audit_id": Audit,
+            "return_id": AnnualReturn,
+            "register_id": StatutoryRegister,
+        }
+        resource_model = resource_models[resource_param]
+        result = await db.execute(
+            select(resource_model.company_id)
+            .where(resource_model.id == resource_id)
+            .limit(1)
+        )
+        company_id = result.scalar_one_or_none()
+        if company_id is None:
+            raise HTTPException(status_code=404, detail="Filing record not found")
         if resource_param == "agm_id":
             result = await db.execute(
                 select(AGM.company_id).where(AGM.id == resource_id).limit(1)

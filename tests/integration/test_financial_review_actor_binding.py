@@ -74,6 +74,11 @@ async def test_approval_requires_allocation_event_for_submission_invoice(
         verified_at=now,
         created_by=db_user.id,
     )
+    # A claim must first be persisted in PENDING_REVIEW. The production
+    # approval service later updates that existing row to APPROVED before it
+    # creates the linked receipt; inserting a new row as APPROVED is forbidden.
+    db.add(submission)
+    await db.flush()
     # The source claim must exist before the receipt's composite FK can bind
     # it. Explicit flush avoids relying on mapper/table ordering in add_all().
     db.add(submission)

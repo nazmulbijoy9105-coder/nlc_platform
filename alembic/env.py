@@ -11,7 +11,7 @@ How it works:
   - Offline mode (--sql flag): generates raw SQL for review
   - autogenerate: compares ORM models to current DB state
 
-IMPORTANT: All 28 ORM models must be imported below so Alembic
+IMPORTANT: All 29 ORM models must be imported below so Alembic
            can detect them during autogenerate. They are imported
            via 'from app.models import *' through Base.metadata.
 """
@@ -95,6 +95,7 @@ from app.models import (  # noqa: F401 — imports are for side-effects
     Audit,
     Base,
     Company,
+    CompanyCharge,
     CompanyUserAccess,
     ComplianceEvent,
     ComplianceFlag,
@@ -165,7 +166,7 @@ def include_object(object, name, type_, reflected, compare_to):
     """
     Control what Alembic includes in autogenerate diff.
     Exclude: PostgreSQL system schemas, views (managed in migrations directly).
-    Include: All 28 tables in public schema.
+    Include: All 29 tables in public schema.
     """
     if type_ == "table" and name.startswith("vw_"):
         # Views are created via raw SQL in migrations, not ORM

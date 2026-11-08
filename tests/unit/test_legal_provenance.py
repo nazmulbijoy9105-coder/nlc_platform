@@ -3,12 +3,23 @@ import pytest
 NLC — GATE E4: Legal Source / Provenance Governance Tests
 Proves that no rule can be marked as VERIFIED without a valid legal source.
 """
+from copy import deepcopy
+
 import pytest
+
 from canonical_architecture.legal_reconciliation import (
     LEGAL_RECONCILIATION,
     get_reconciliation_status,
     verify_provision,
 )
+
+
+@pytest.fixture(autouse=True)
+def restore_legal_reconciliation_registry():
+    snapshot = deepcopy(LEGAL_RECONCILIATION)
+    yield
+    LEGAL_RECONCILIATION.clear()
+    LEGAL_RECONCILIATION.update(snapshot)
 
 
 def test_all_rules_start_as_reconcile():
