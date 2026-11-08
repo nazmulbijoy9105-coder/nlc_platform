@@ -398,6 +398,10 @@ class TaskService(BaseService[Task]):
         task = await self.get_by_id(task_id)
         if not task:
             return None
+        if task.task_status not in {TaskStatus.PENDING, TaskStatus.IN_PROGRESS}:
+            raise CommercialConflictError(
+                f"Cannot complete a task in {task.task_status} state"
+            )
         return await self.update_instance(
             task,
             task_status=TaskStatus.COMPLETED,
