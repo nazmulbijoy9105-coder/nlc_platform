@@ -186,6 +186,7 @@ async def test_task_completion_accepts_completion_note(
     )
     assert response.status_code == 200, response.text
     assert response.json()["status"] == "COMPLETED"
+    assert response.json()["completion_note"] == "Verified complete"
 
     duplicate = await api_client.patch(
         f"/api/v1/commercial/tasks/{created.json()['task_id']}/complete",
