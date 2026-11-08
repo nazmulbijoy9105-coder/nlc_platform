@@ -79,6 +79,54 @@ class TestHealth:
 
 
 # =============================================================================
+# CRON EVALUATION AUTHENTICATION
+# =============================================================================
+
+class TestCronEvaluation:
+
+    @pytest.mark.asyncio
+    async def test_cron_evaluation_fails_closed_when_secret_missing(
+        self, api_client, monkeypatch
+    ):
+        monkeypatch.delenv("CRON_SECRET", raising=False)
+        resp = await api_client.post("/api/v1/admin/cron/evaluate-all")
+        assert resp.status_code == 403
+        assert "CRON_SECRET is not configured" in resp.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_cron_evaluation_disables_weak_secret(
+        self, api_client, monkeypatch
+    ):
+        monkeypatch.setenv("CRON_SECRET", "too-short")
+        resp = await api_client.post(
+            "/api/v1/admin/cron/evaluate-all",
+            headers={"X-Cron-Secret": "too-short"},
+        )
+        assert resp.status_code == 503
+        assert "at least 32 characters" in resp.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_cron_evaluation_rejects_wrong_secret(
+        self, api_client, monkeypatch
+    ):
+        monkeypatch.setenv(
+            "CRON_SECRET", "expected-test-only-cron-secret-with-32-plus-characters"
+        )
+        resp = await api_client.post(
+            "/api/v1/admin/cron/evaluate-all",
+            headers={"X-Cron-Secret": "wrong-test-secret"},
+        )
+        assert resp.status_code == 403
+        assert resp.json()["detail"] == "Invalid cron secret"
+
+    @pytest.mark.asyncio
+    async def test_cron_health_is_public_and_reports_ok(self, api_client):
+        resp = await api_client.get("/api/v1/admin/cron/health")
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "ok"
+
+
+# =============================================================================
 # AUTH ENDPOINTS
 # =============================================================================
 
@@ -258,9 +306,15 @@ class TestCompanies:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_get_dashboard_kpis_requires_staff(self, api_client, admin_token):
-        resp = await api_client.get("/api/v1/companies/dashboard/kpis", headers=_auth(admin_token))
-        assert resp.status_code == 200
+    async def test_get_dashboard_kpis_withholds_unreleased_legal_aggregates(
+        self, api_client, admin_token
+    ):
+        resp = await api_client.get(
+            "/api/v1/companies/dashboard/kpis",
+            headers=_auth(admin_token),
+        )
+        assert resp.status_code == 503
+        assert "Compliance risk aggregates are unavailable" in resp.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_get_compliance_returns_summary(self, api_client, admin_token, db_company):
@@ -453,15 +507,15 @@ class TestRescue:
 
     @pytest.mark.asyncio
     async def test_create_rescue_plan_requires_red_band(self, api_client, super_admin_tok, db_company):
-        """GREEN band company should be rejected for rescue plan."""
+        """Automated rescue is withheld while statutory scoring is unreleased."""
         # db_company is GREEN band
         resp = await api_client.post(
             "/api/v1/rescue/plans",
             headers=_auth(super_admin_tok),
             json={"company_id": str(db_company.id)}
         )
-        assert resp.status_code == 422
-        assert "RED" in resp.json()["detail"] or "BLACK" in resp.json()["detail"]
+        assert resp.status_code == 409
+        assert "statutory scoring" in resp.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_create_rescue_plan_for_red_company(self, api_client, super_admin_tok, db, db_company):
@@ -488,8 +542,8 @@ class TestRescue:
             headers=_auth(super_admin_tok),
             json={"company_id": str(db_company.id)}
         )
-        assert resp.status_code == 422
-        assert "counsel-approved statutory evaluation" in resp.json()["detail"]
+        assert resp.status_code == 409
+        assert "statutory scoring" in resp.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_get_active_plan_not_found(self, api_client, super_admin_tok, db_company):
@@ -497,7 +551,50 @@ class TestRescue:
             f"/api/v1/rescue/plans/{db_company.id}/active",
             headers=_auth(super_admin_tok),
         )
-        assert resp.status_code == 404
+        assert resp.status_code == 503
+        assert "independent counsel approval" in resp.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_client_active_rescue_plan_requires_entitlement(
+        self, api_client, db_client_user, db_company
+    ):
+        """A valid tenant membership does not imply a paid rescue entitlement."""
+        from app.core.security import create_access_token
+
+        client_tok = create_access_token({
+            "sub": str(db_client_user.id),
+            "user_id": str(db_client_user.id),
+            "type": "access",
+            "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email,
+            "company_ids": [str(db_company.id)],
+        })
+        resp = await api_client.get(
+            f"/api/v1/rescue/plans/{db_company.id}/active",
+            headers=_auth(client_tok),
+        )
+        assert resp.status_code == 402
+
+    @pytest.mark.asyncio
+    async def test_client_cannot_use_rescue_entitlement_for_foreign_company(
+        self, api_client, db_client_user, db_other_company
+    ):
+        """Company membership denial remains effective before entitlement checks."""
+        from app.core.security import create_access_token
+
+        client_tok = create_access_token({
+            "sub": str(db_client_user.id),
+            "user_id": str(db_client_user.id),
+            "type": "access",
+            "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email,
+            "company_ids": [],
+        })
+        resp = await api_client.get(
+            f"/api/v1/rescue/plans/{db_other_company.id}/active",
+            headers=_auth(client_tok),
+        )
+        assert resp.status_code == 403
 
     @pytest.mark.asyncio
     async def test_list_rescue_plans(self, api_client, super_admin_tok):
@@ -505,8 +602,8 @@ class TestRescue:
             "/api/v1/rescue/plans",
             headers=_auth(super_admin_tok),
         )
-        assert resp.status_code == 200
-        assert isinstance(resp.json(), list)
+        assert resp.status_code == 503
+        assert "independent counsel approval" in resp.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_rescue_requires_auth(self, api_client):
@@ -536,10 +633,11 @@ class TestDocuments:
         assert isinstance(templates, list)
 
     @pytest.mark.asyncio
-    async def test_generate_document_invalid_template(self, api_client, legal_tok, db_company):
+    async def test_generate_document_invalid_template(self, api_client, legal_tok, db_company, legal_staff_company_scope):
+    async def test_generate_document_invalid_template(self, api_client, admin_token, db_company):
         resp = await api_client.post(
             "/api/v1/documents/generate",
-            headers=_auth(legal_tok),
+            headers=_auth(admin_token),
             json={
                 "company_id": str(db_company.id),
                 "document_type": "AGM_MINUTES",
@@ -559,16 +657,194 @@ class TestDocuments:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_list_documents_for_company(self, api_client, legal_tok, db_company):
+    async def test_list_documents_for_company(self, api_client, legal_tok, db_company, legal_staff_company_scope):
+    async def test_list_documents_for_company(self, api_client, admin_token, db_company):
         resp = await api_client.get(
             f"/api/v1/documents/{db_company.id}",
-            headers=_auth(legal_tok),
+            headers=_auth(admin_token),
         )
         assert resp.status_code == 200
         assert isinstance(resp.json(), list)
 
     @pytest.mark.asyncio
-    async def test_release_requires_approval_first(self, api_client, legal_tok, db, db_company):
+    async def test_client_calendar_and_rjsc_views_require_entitlement(
+        self, api_client, db_client_user, db_company
+    ):
+        from app.core.security import create_access_token
+
+        client_tok = create_access_token({
+            "sub": str(db_client_user.id), "user_id": str(db_client_user.id),
+            "type": "access", "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email, "company_ids": [str(db_company.id)],
+        })
+        headers = _auth(client_tok)
+        paths = [
+            f"/api/v1/calendar/companies/{db_company.id}",
+            f"/api/v1/rjsc-forms/{db_company.id}",
+            f"/api/v1/rjsc-forms/{db_company.id}/pending",
+            f"/api/v1/rjsc-forms/{db_company.id}/overdue",
+        ]
+        for path in paths:
+            resp = await api_client.get(path, headers=headers)
+            assert resp.status_code == 402, (path, resp.status_code, resp.text)
+            calendar_resp = await api_client.post(
+            f"/api/v1/calendar/companies/{db_company.id}/generate",
+            headers=headers,
+        )
+        assert calendar_resp.status_code == 402
+
+    @pytest.mark.asyncio
+    async def test_client_compliance_endpoints_require_entitlement(
+        self, api_client, db_client_user, db_company
+    ):
+        """Tenant membership alone must not grant paid compliance package access."""
+        from app.core.security import create_access_token
+
+        client_tok = create_access_token({
+            "sub": str(db_client_user.id), "user_id": str(db_client_user.id),
+            "type": "access", "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email, "company_ids": [str(db_company.id)],
+        })
+        headers = _auth(client_tok)
+        paths = [
+            f"/api/v1/companies/{db_company.id}/compliance",
+            f"/api/v1/companies/{db_company.id}/flags",
+            f"/api/v1/companies/{db_company.id}/compliance-pdf",
+            f"/api/v1/companies/{db_company.id}/score-history",
+        ]
+        for path in paths:
+            resp = await api_client.get(path, headers=headers)
+            assert resp.status_code == 402, (path, resp.status_code, resp.text)
+    
+    @pytest.mark.asyncio
+    async def test_client_document_templates_require_entitlement(
+        self, api_client, db_client_user
+    ):
+        from app.core.security import create_access_token
+
+        client_tok = create_access_token({
+            "sub": str(db_client_user.id), "user_id": str(db_client_user.id),
+            "type": "access", "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email, "company_ids": [],
+        })
+        resp = await api_client.get(
+            "/api/v1/documents/templates", headers=_auth(client_tok)
+        )
+        assert resp.status_code == 402
+
+    @pytest.mark.asyncio
+    async def test_client_document_portfolio_requires_entitlement(
+        self, api_client, db_client_user
+    ):
+        from app.core.security import create_access_token
+
+        client_tok = create_access_token({
+            "sub": str(db_client_user.id), "user_id": str(db_client_user.id),
+            "type": "access", "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email, "company_ids": [],
+        })
+        resp = await api_client.get(
+            "/api/v1/documents", headers=_auth(client_tok)
+        )
+        assert resp.status_code == 402
+
+    @pytest.mark.asyncio
+    async def test_client_document_list_requires_entitlement(
+        self, api_client, db_client_user, db_company
+    ):
+        """An active company membership does not bypass paid document entitlement."""
+        from app.core.security import create_access_token
+
+        client_tok = create_access_token({
+            "sub": str(db_client_user.id),
+            "user_id": str(db_client_user.id),
+            "type": "access",
+            "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email,
+            "company_ids": [str(db_company.id)],
+        })
+        resp = await api_client.get(
+            f"/api/v1/documents/{db_company.id}",
+            headers=_auth(client_tok),
+        )
+        assert resp.status_code == 402
+
+    @pytest.mark.asyncio
+    async def test_client_document_list_rejects_foreign_company(
+        self, api_client, db_client_user, db_other_company
+    ):
+        """Entitlement checks must not weaken the live tenant membership check."""
+        from app.core.security import create_access_token
+
+        client_tok = create_access_token({
+            "sub": str(db_client_user.id),
+            "user_id": str(db_client_user.id),
+            "type": "access",
+            "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email,
+            "company_ids": [],
+        })
+        resp = await api_client.get(
+            f"/api/v1/documents/{db_other_company.id}",
+            headers=_auth(client_tok),
+        )
+        assert resp.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_client_document_detail_requires_entitlement(
+        self, api_client, db_client_user, db_company, db
+    ):
+        from app.core.security import create_access_token
+        from app.models.documents import Document
+        from app.models.enums import DocumentType
+
+        doc = Document(
+            id=uuid.uuid4(), company_id=db_company.id,
+            document_type=DocumentType.AGM_MINUTES, title="Client-visible document",
+            notes="Approved sample", human_approved=True, in_review_queue=False,
+            auto_sent_blocked=True, is_client_visible=True,
+        )
+        db.add(doc)
+        await db.flush()
+        client_tok = create_access_token({
+            "sub": str(db_client_user.id), "user_id": str(db_client_user.id),
+            "type": "access", "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email, "company_ids": [str(db_company.id)],
+        })
+        resp = await api_client.get(
+            f"/api/v1/documents/detail/{doc.id}", headers=_auth(client_tok)
+        )
+        assert resp.status_code == 402
+
+    @pytest.mark.asyncio
+    async def test_client_document_pdf_requires_entitlement(
+        self, api_client, db_client_user, db_company, db
+    ):
+        from app.core.security import create_access_token
+        from app.models.documents import Document
+        from app.models.enums import DocumentType
+
+        doc = Document(
+            id=uuid.uuid4(), company_id=db_company.id,
+            document_type=DocumentType.AGM_MINUTES, title="Client-visible PDF",
+            notes="Approved sample", human_approved=True, in_review_queue=False,
+            auto_sent_blocked=True, is_client_visible=True,
+        )
+        db.add(doc)
+        await db.flush()
+        client_tok = create_access_token({
+            "sub": str(db_client_user.id), "user_id": str(db_client_user.id),
+            "type": "access", "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email, "company_ids": [str(db_company.id)],
+        })
+        resp = await api_client.get(
+            f"/api/v1/documents/detail/{doc.id}/pdf", headers=_auth(client_tok)
+        )
+        assert resp.status_code == 402
+
+    @pytest.mark.asyncio
+    async def test_release_requires_approval_first(self, api_client, legal_tok, db, db_company, legal_staff_company_scope):
+    async def test_release_requires_approval_first(self, api_client, admin_token, db, db_company):
         """Cannot release an unapproved document."""
         from app.models.documents import Document
         from app.models.enums import DocumentType
@@ -590,14 +866,15 @@ class TestDocuments:
 
         resp = await api_client.post(
             f"/api/v1/documents/detail/{doc.id}/release",
-            headers=_auth(legal_tok),
+            headers=_auth(admin_token),
             json={"release_note": "Attempting to release unapproved doc"}
         )
         assert resp.status_code == 422
         assert "approved" in resp.json()["detail"].lower()
 
     @pytest.mark.asyncio
-    async def test_ai_constitution_article3_enforced(self, api_client, db, legal_tok, db_company):
+    async def test_ai_constitution_article3_enforced(self, api_client, db, legal_tok, db_company, legal_staff_company_scope):
+    async def test_ai_constitution_article3_enforced(self, api_client, db, admin_token, db_company):
         """
         AI Constitution Article 3: Documents must never be auto-sent.
         auto_sent_blocked must always be True on generated documents.
@@ -622,7 +899,7 @@ class TestDocuments:
         # Verify via API
         resp = await api_client.get(
             f"/api/v1/documents/detail/{doc.id}",
-            headers=_auth(legal_tok),
+            headers=_auth(admin_token),
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -803,7 +1080,8 @@ class TestRules:
         if resp.status_code == 200:
             # If rule doesn't exist in test DB (not seeded), 404 is also valid
             pytest.skip("Rules not seeded in test DB")
-        assert resp.status_code in (404, 422)
+        assert resp.status_code == 503
+        assert "legal release gate" in resp.json()["detail"]
 
 
 # =============================================================================
@@ -1070,3 +1348,216 @@ class TestErrorFormat:
         """Every response must include X-Request-ID header."""
         resp = await api_client.get("/api/v1/health/live")
         assert "x-request-id" in resp.headers or "X-Request-ID" in resp.headers
+
+
+
+class TestSubscriptionEntitlementRouteGates:
+    """Customer membership alone must not unlock paid company features."""
+
+    @pytest.mark.asyncio
+    async def test_client_compliance_endpoints_require_paid_entitlement(
+        self, api_client, db_client_user, db_company
+    ):
+        from app.core.security import create_access_token
+
+        token = create_access_token({
+            "sub": str(db_client_user.id),
+            "user_id": str(db_client_user.id),
+            "type": "access",
+            "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email,
+            "company_ids": [str(db_company.id)],
+        })
+        for path in (
+            f"/api/v1/companies/{db_company.id}/compliance",
+            f"/api/v1/companies/{db_company.id}/flags",
+            f"/api/v1/companies/{db_company.id}/compliance-pdf",
+            f"/api/v1/companies/{db_company.id}/score-history",
+        ):
+            response = await api_client.get(path, headers=_auth(token))
+            assert response.status_code == 402, (path, response.status_code, response.text)
+
+    @pytest.mark.asyncio
+    async def test_client_calendar_and_rjsc_routes_require_paid_entitlement(
+        self, api_client, db_client_user, db_company
+    ):
+        from app.core.security import create_access_token
+
+        token = create_access_token({
+            "sub": str(db_client_user.id),
+            "user_id": str(db_client_user.id),
+            "type": "access",
+            "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email,
+            "company_ids": [str(db_company.id)],
+        })
+        headers = _auth(token)
+        for path in (
+            f"/api/v1/calendar/companies/{db_company.id}",
+            f"/api/v1/rjsc-forms/{db_company.id}",
+            f"/api/v1/rjsc-forms/{db_company.id}/pending",
+            f"/api/v1/rjsc-forms/{db_company.id}/overdue",
+        ):
+            response = await api_client.get(path, headers=headers)
+            assert response.status_code == 402, (path, response.status_code, response.text)
+        response = await api_client.post(
+            f"/api/v1/calendar/companies/{db_company.id}/generate",
+            headers=headers,
+        )
+        assert response.status_code == 402
+
+    @pytest.mark.asyncio
+    async def test_client_rescue_route_requires_paid_entitlement(
+        self, api_client, db_client_user, db_company
+    ):
+        from app.core.security import create_access_token
+
+        token = create_access_token({
+            "sub": str(db_client_user.id),
+            "user_id": str(db_client_user.id),
+            "type": "access",
+            "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email,
+            "company_ids": [str(db_company.id)],
+        })
+        response = await api_client.get(
+            f"/api/v1/rescue/plans/{db_company.id}/active",
+            headers=_auth(token),
+        )
+        assert response.status_code == 402
+
+    @pytest.mark.asyncio
+    async def test_client_cannot_use_entitlement_for_foreign_company(
+        self, api_client, db_client_user, db_other_company
+    ):
+        from app.core.security import create_access_token
+
+        token = create_access_token({
+            "sub": str(db_client_user.id),
+            "user_id": str(db_client_user.id),
+            "type": "access",
+            "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email,
+            "company_ids": [],
+        })
+        response = await api_client.get(
+            f"/api/v1/documents/{db_other_company.id}",
+            headers=_auth(token),
+        )
+        assert response.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_legal_staff_requires_assignment_and_paid_entitlement(
+        self, api_client, legal_tok, db_company, legal_staff_company_scope
+    ):
+        response = await api_client.get(
+            f"/api/v1/companies/{db_company.id}/compliance",
+            headers=_auth(legal_tok),
+        )
+        assert response.status_code == 402
+
+        self, api_client, legal_token, db_company, legal_staff_company_scope
+    ):
+        response = await api_client.get(
+            f"/api/v1/companies/{db_company.id}/compliance",
+            headers=_auth(legal_token),
+        )
+        assert response.status_code == 402
+
+    @pytest.mark.asyncio
+    async def test_client_document_pdf_requires_paid_entitlement(
+        self, api_client, db_client_user, db_company, db
+    ):
+        from app.core.security import create_access_token
+        from app.models.documents import Document
+        from app.models.enums import DocumentType
+
+        document = Document(
+            company_id=db_company.id,
+            document_type=DocumentType.OTHER,
+            title="Entitlement gate regression",
+            s3_key="private/entitlement-gate-regression.pdf",
+            human_approved=True,
+            is_client_visible=True,
+        )
+        db.add(document)
+        await db.flush()
+
+        token = create_access_token({
+            "sub": str(db_client_user.id),
+            "user_id": str(db_client_user.id),
+            "type": "access",
+            "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email,
+            "company_ids": [str(db_company.id)],
+        })
+        response = await api_client.get(
+            f"/api/v1/documents/detail/{document.id}/pdf",
+            headers=_auth(token),
+        )
+        assert response.status_code == 402, (response.status_code, response.text)
+
+    @pytest.mark.asyncio
+    async def test_client_filing_routes_require_paid_entitlement(
+        self, api_client, db_client_user, db_company
+    ):
+        from app.core.security import create_access_token
+
+        token = create_access_token({
+            "sub": str(db_client_user.id),
+            "user_id": str(db_client_user.id),
+            "type": "access",
+            "role": "CLIENT_DIRECTOR",
+            "email": db_client_user.email,
+            "company_ids": [str(db_company.id)],
+        })
+        headers = _auth(token)
+        for path in (
+            "/api/v1/filings",
+            f"/api/v1/filings/agm/{db_company.id}",
+            f"/api/v1/filings/audit/{db_company.id}",
+            f"/api/v1/filings/annual-return/{db_company.id}",
+            f"/api/v1/filings/statutory-register/{db_company.id}",
+        ):
+            response = await api_client.get(path, headers=headers)
+            assert response.status_code == 402, (path, response.status_code, response.text)
+
+    @pytest.mark.asyncio
+    async def test_legal_staff_cannot_create_agm_for_unassigned_company(
+        self, api_client, legal_token, legal_staff_company_scope, db_other_company
+    ):
+        response = await api_client.post(
+            "/api/v1/filings/agm",
+            headers=_auth(legal_token),
+            json={
+                "company_id": str(db_other_company.id),
+                "financial_year": 2025,
+                "agm_due_date": "2026-06-30",
+            },
+        )
+        assert response.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_legal_staff_cannot_update_agm_for_unassigned_company(
+        self,
+        api_client,
+        legal_token,
+        legal_staff_company_scope,
+        db_other_company,
+        db,
+    ):
+        from app.services.filing_service import AGMService
+
+        agm = await AGMService(db).create_agm(
+            company_id=db_other_company.id,
+            financial_year=2025,
+            agm_deadline=date(2026, 6, 30),
+        )
+        response = await api_client.patch(
+            f"/api/v1/filings/agm/{agm.id}/held",
+            headers=_auth(legal_token),
+            json={"held_date": "2026-06-30"},
+        )
+        assert response.status_code == 403
+        assert response.status_code in {403, 404}
+

@@ -1,7 +1,7 @@
 """Add explicit legal evidence verification fields.
 
-Revision ID: 0045_legal_evidence_provenance
-Revises: 0044_webhook_schema_reconcile
+Revision ID: 0046_legal_evidence_provenance
+Revises: 0045_agm_held_fields
 """
 from alembic import op
 
@@ -159,78 +159,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute("""
-        ALTER TABLE agms
-        DROP CONSTRAINT IF EXISTS ck_agms_short_notice_consent_provenance,
-        DROP CONSTRAINT IF EXISTS ck_agms_auditor_reappointment_provenance,
-        DROP CONSTRAINT IF EXISTS ck_agms_quorum_verification_provenance,
-        DROP CONSTRAINT IF EXISTS ck_agms_attendance_verification_provenance,
-        DROP CONSTRAINT IF EXISTS ck_agms_quorum_required_positive
-    """)
-    op.execute("ALTER TABLE audits DROP CONSTRAINT IF EXISTS ck_audits_completion_verification_provenance")
-    op.execute("""
-        ALTER TABLE companies
-        DROP CONSTRAINT IF EXISTS ck_companies_agm_extension_verification_provenance,
-        DROP CONSTRAINT IF EXISTS ck_companies_agm_history_verification_provenance,
-        DROP CONSTRAINT IF EXISTS ck_companies_first_auditor_verification_provenance,
-        DROP CONSTRAINT IF EXISTS ck_companies_moa_aoa_verification_provenance,
-        DROP CONSTRAINT IF EXISTS ck_companies_subsidiary_verification_provenance,
-        DROP CONSTRAINT IF EXISTS ck_companies_directors_verification_provenance
-    """)
-    op.execute("""
-        ALTER TABLE agms
-        DROP COLUMN IF EXISTS auditor_reappointment_verified_by,
-        DROP COLUMN IF EXISTS auditor_reappointment_verified_at,
-        DROP COLUMN IF EXISTS auditor_reappointment_evidence_ref,
-        DROP COLUMN IF EXISTS short_notice_consent_verified_by,
-        DROP COLUMN IF EXISTS short_notice_consent_verified_at,
-        DROP COLUMN IF EXISTS short_notice_consent_evidence_ref,
-        DROP COLUMN IF EXISTS short_notice_consent_verified,
-        DROP COLUMN IF EXISTS short_notice_consent_obtained,
-        DROP COLUMN IF EXISTS auditor_reappointment_verified,
-        DROP COLUMN IF EXISTS quorum_verified_by,
-        DROP COLUMN IF EXISTS quorum_verified_at,
-        DROP COLUMN IF EXISTS quorum_evidence_ref,
-        DROP COLUMN IF EXISTS quorum_required_verified,
-        DROP COLUMN IF EXISTS members_present_verified_by,
-        DROP COLUMN IF EXISTS members_present_verified_at,
-        DROP COLUMN IF EXISTS members_present_evidence_ref,
-        DROP COLUMN IF EXISTS members_present_verified
-    """)
-    op.execute("""
-        ALTER TABLE audits
-        DROP COLUMN IF EXISTS audit_completion_verified_by,
-        DROP COLUMN IF EXISTS audit_completion_verified_at,
-        DROP COLUMN IF EXISTS audit_completion_evidence_ref,
-        DROP COLUMN IF EXISTS audit_completion_verified
-    """)
-    op.execute("""
-        ALTER TABLE companies
-        DROP COLUMN IF EXISTS agm_history_verified_by,
-        DROP COLUMN IF EXISTS agm_history_verified_at,
-        DROP COLUMN IF EXISTS agm_history_evidence_ref,
-        DROP COLUMN IF EXISTS agm_history_verified,
-        DROP COLUMN IF EXISTS agm_extension_verified_by,
-        DROP COLUMN IF EXISTS agm_extension_verified_at,
-        DROP COLUMN IF EXISTS agm_extension_evidence_ref,
-        DROP COLUMN IF EXISTS agm_extension_verified,
-        DROP COLUMN IF EXISTS agm_extension_application_date,
-        DROP COLUMN IF EXISTS agm_extension_granted_until,
-        DROP COLUMN IF EXISTS first_auditor_appointment_evidence_ref,
-        DROP COLUMN IF EXISTS first_auditor_appointment_verified_by,
-        DROP COLUMN IF EXISTS first_auditor_appointment_verified_at,
-        DROP COLUMN IF EXISTS first_auditor_appointment_verified,
-        DROP COLUMN IF EXISTS moa_aoa_evidence_ref,
-        DROP COLUMN IF EXISTS moa_aoa_verified_by,
-        DROP COLUMN IF EXISTS moa_aoa_verified_at,
-        DROP COLUMN IF EXISTS moa_aoa_verified,
-        DROP COLUMN IF EXISTS subsidiary_status_evidence_ref,
-        DROP COLUMN IF EXISTS subsidiary_status_verified_by,
-        DROP COLUMN IF EXISTS subsidiary_status_verified_at,
-        DROP COLUMN IF EXISTS subsidiary_status_verified,
-        DROP COLUMN IF EXISTS is_private_subsidiary_of_public_company,
-        DROP COLUMN IF EXISTS directors_verification_evidence_ref,
-        DROP COLUMN IF EXISTS directors_verified_by,
-        DROP COLUMN IF EXISTS directors_verified_at,
-        DROP COLUMN IF EXISTS directors_verified
-    """)
+    # Forward-only: legal evidence and verification provenance are durable
+    # audit data. A rollback must never drop these columns or constraints.
+    pass

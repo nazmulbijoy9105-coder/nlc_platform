@@ -14,10 +14,13 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, date, datetime
 
-from sqlalchemy import func, select, text, update
+from sqlalchemy import func, or_, select, text, update
+from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.orm import selectinload
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.models.company import Company, CompanyUserAccess
+from app.models.charges import CompanyCharge
 from app.models.enums import CompanyStatus, CompanyType, LifecycleStage, RevenueTier, RiskBand
 from app.models.people import Director, Shareholder
 from app.services.base import BaseService
@@ -126,6 +129,56 @@ def _agm_profile_evidence(latest_agm) -> dict:
         ),
     }
 
+
+def _charge_event_from_record(charge: CompanyCharge):
+    """Map a persisted charge to the engine without promoting unverified reports."""
+    from app.rule_engine.engine import ChargeEvent
+
+    creation_verified = bool(
+        charge.creation_date_verified and charge.creation_date_evidence_ref
+        and charge.creation_date_verified_at and charge.creation_date_verified_by
+    )
+    form_xviii_verified = bool(
+        charge.form_xviii_filing_status_verified and charge.form_xviii_filing_evidence_ref
+        and charge.form_xviii_verified_at and charge.form_xviii_verified_by
+    )
+    registrability_verified = bool(
+        charge.registrability_verified and charge.registrability_evidence_ref
+        and charge.registrability_verified_at and charge.registrability_verified_by
+    )
+    satisfaction_verified = bool(
+        charge.satisfaction_verified and charge.satisfaction_evidence_ref
+        and charge.satisfaction_verified_at and charge.satisfaction_verified_by
+    )
+    satisfaction_filing_verified = bool(
+        charge.satisfaction_filing_status_verified and charge.satisfaction_filing_evidence_ref
+        and charge.satisfaction_filing_verified_at and charge.satisfaction_filing_verified_by
+    )
+    return ChargeEvent(
+        charge_id=str(charge.id),
+        creation_date=charge.creation_date,
+        charge_type=charge.charge_type,
+        amount_bdt=float(charge.amount_bdt),
+        charge_holder=charge.charge_holder,
+        form_xviii_filed=charge.form_xviii_filed if form_xviii_verified else None,
+        form_xviii_filed_date=charge.form_xviii_filed_date if form_xviii_verified else None,
+        creation_date_verified=creation_verified,
+        creation_date_evidence_ref=charge.creation_date_evidence_ref if creation_verified else None,
+        form_xviii_filing_status_verified=form_xviii_verified,
+        form_xviii_filing_evidence_ref=charge.form_xviii_filing_evidence_ref if form_xviii_verified else None,
+        satisfied=charge.satisfied if satisfaction_verified else None,
+        satisfaction_date=charge.satisfaction_date if satisfaction_verified else None,
+        satisfaction_filed=charge.satisfaction_filed if satisfaction_filing_verified else None,
+        satisfaction_filed_date=charge.satisfaction_filed_date if satisfaction_filing_verified else None,
+        registrable_under_s159=charge.registrable_under_s159 if registrability_verified else None,
+        registrability_verified=registrability_verified,
+        registrability_evidence_ref=charge.registrability_evidence_ref if registrability_verified else None,
+        satisfaction_verified=satisfaction_verified,
+        satisfaction_evidence_ref=charge.satisfaction_evidence_ref if satisfaction_verified else None,
+        satisfaction_filing_status_verified=satisfaction_filing_verified,
+        satisfaction_filing_evidence_ref=charge.satisfaction_filing_evidence_ref if satisfaction_filing_verified else None,
+    )
+
 class CompanyService(BaseService[Company]):
     model = Company
 
@@ -213,6 +266,7 @@ class CompanyService(BaseService[Company]):
             .options(
                 selectinload(Company.directors),
                 selectinload(Company.shareholders),
+                selectinload(Company.charges),
                 selectinload(Company.agms),
                 selectinload(Company.audits),
                 selectinload(Company.annual_returns),
@@ -250,6 +304,7 @@ class CompanyService(BaseService[Company]):
         search: str | None = None,
         company_ids_filter: list[str] | None = None,
         user_id: uuid.UUID | None = None,
+        include_assigned_staff: bool = False,
     ) -> tuple[list[Company], int]:
         """
         List companies with filters, search, and pagination.
@@ -257,7 +312,7 @@ class CompanyService(BaseService[Company]):
         company_ids_filter: used for client roles (from JWT).
         search: full-text search on company name or registration number.
         """
-        filters = [Company.is_active]
+        filters: list[ColumnElement[bool]] = [Company.is_active.is_(True)]
 
         if risk_band:
             filters.append(Company.current_risk_band == risk_band)  # type: ignore
@@ -275,9 +330,18 @@ class CompanyService(BaseService[Company]):
             filters.append(Company.id.in_(uuids))  # type: ignore
         if user_id is not None:
             accessible_company_ids = select(CompanyUserAccess.company_id).where(
-                CompanyUserAccess.user_id == user_id
+                CompanyUserAccess.user_id == user_id,
+                CompanyUserAccess.is_active.is_(True),
             )
-            filters.append(Company.id.in_(accessible_company_ids))  # type: ignore
+            if include_assigned_staff:
+                filters.append(
+                    or_(
+                        Company.assigned_staff_id == user_id,
+                        Company.id.in_(accessible_company_ids),
+                    )
+                )  # type: ignore
+            else:
+                filters.append(Company.id.in_(accessible_company_ids))  # type: ignore
         if search and search.strip():
             # Use PostgreSQL full-text search on company_name_search vector
             search_term = search.strip()
@@ -408,66 +472,105 @@ class CompanyService(BaseService[Company]):
         """Privileged worker-only global deadline scan; never expose via user API."""
     async def get_risk_distribution(self, user_id: uuid.UUID | None = None) -> list[dict]:
         """Return risk aggregates for the caller's active company memberships only.
+    async def get_risk_distribution(
+        self, user_id: uuid.UUID, *, include_assigned_staff: bool = False
+    ) -> list[dict]:
+        """Return risk distribution for companies the user can currently access.
 
-        A missing user identity fails closed; this method never falls back to
-        the global dashboard view.
+        The global materialized/view aggregate is deliberately not used here:
+        aggregation must happen *after* membership filtering.
         """
         if user_id is None:
-            return []
+            raise ValueError("user_id is required for tenant-scoped risk distribution")
         result = await self.db.execute(
-            text("""
-                SELECT c.current_risk_band AS risk_band,
-                       COUNT(DISTINCT c.id) AS company_count,
-                       ROUND(
-                           COUNT(DISTINCT c.id) * 100.0
-                           / NULLIF(SUM(COUNT(DISTINCT c.id)) OVER (), 0), 1
-                       ) AS percentage
+            text(
+                """
+                SELECT
+                    c.current_risk_band AS risk_band,
+                    COUNT(*) AS company_count,
+                    ROUND(
+                        COUNT(*) * 100.0 / NULLIF(SUM(COUNT(*)) OVER (), 0),
+                        1
+                    ) AS percentage
                 FROM companies c
-                JOIN company_user_access cua
-                  ON cua.company_id = c.id
-                 AND cua.user_id = :user_id
-                 AND cua.is_active = TRUE
                 WHERE c.is_active = TRUE
+                  AND (
+                      (:include_assigned_staff IS TRUE AND c.assigned_staff_id = :user_id)
+                      OR EXISTS (
+                          SELECT 1
+                          FROM company_user_access cua
+                          WHERE cua.company_id = c.id
+                            AND cua.user_id = :user_id
+                            AND cua.is_active = TRUE
+                      )
+                  )
                 GROUP BY c.current_risk_band
                 ORDER BY CASE c.current_risk_band
-                    WHEN 'BLACK' THEN 1 WHEN 'RED' THEN 2
-                    WHEN 'YELLOW' THEN 3 WHEN 'GREEN' THEN 4 ELSE 5 END
-            """),
-            {"user_id": user_id},
+                    WHEN 'BLACK' THEN 1
+                    WHEN 'RED' THEN 2
+                    WHEN 'YELLOW' THEN 3
+                    WHEN 'GREEN' THEN 4
+                    ELSE 5
+                END
+                """
+            ),
+            {"user_id": str(user_id), "include_assigned_staff": include_assigned_staff},
         )
         return [dict(row) for row in result.mappings().all()]
 
-    async def get_upcoming_deadlines(self, days_ahead: int = 30, user_id: uuid.UUID | None = None) -> list[dict]:
-        """Return deadlines only for companies actively assigned to this user."""
+    async def get_upcoming_deadlines(
+        self, days_ahead: int = 30, user_id: uuid.UUID | None = None,
+        *, include_assigned_staff: bool = False,
+    ) -> list[dict]:
+        """Return deadlines scoped to active memberships; no implicit global mode."""
         if user_id is None:
-            return []
+            raise ValueError(
+                "user_id is required; use get_upcoming_deadlines_for_system for worker scans"
+            )
         result = await self.db.execute(
-            text("""
+            text(
+                """
                 SELECT d.*
                 FROM vw_upcoming_deadlines d
-                JOIN company_user_access cua
-                  ON cua.company_id = d.company_id
-                 AND cua.user_id = :user_id
-                 AND cua.is_active = TRUE
-                WHERE d.days_remaining BETWEEN 0 AND :days
-                ORDER BY d.days_remaining, d.company_id
-            """),
-            {"user_id": user_id, "days": days_ahead},
+                WHERE d.days_remaining <= :days
+                  AND (
+                      (:include_assigned_staff IS TRUE AND EXISTS (
+                          SELECT 1 FROM companies c
+                          WHERE c.id = d.company_id
+                            AND c.assigned_staff_id = :user_id
+                      ))
+                      OR EXISTS (
+                          SELECT 1
+                          FROM company_user_access cua
+                          WHERE cua.company_id = d.company_id
+                            AND cua.user_id = :user_id
+                            AND cua.is_active = TRUE
+                      )
+                  )
+                ORDER BY d.days_remaining
+                """
+            ),
+            {"days": days_ahead, "user_id": str(user_id), "include_assigned_staff": include_assigned_staff},
         )
         return [dict(row) for row in result.mappings().all()]
 
     async def get_upcoming_deadlines_for_system(self, days_ahead: int = 30) -> list[dict]:
-        """Unscoped deadline feed for trusted scheduled workers only."""
+        """Privileged worker-only global deadline scan; never expose via user API."""
+        if days_ahead < 0:
+            raise ValueError("days_ahead must be non-negative")
         result = await self.db.execute(
-            text("""
-                SELECT * FROM vw_upcoming_deadlines
-                WHERE days_remaining BETWEEN 0 AND :days
-                ORDER BY days_remaining, company_id
-            """),
+            text(
+                """
+                SELECT d.*
+                FROM vw_upcoming_deadlines d
+                WHERE public.nlc_current_user_principal() = 'ADMIN'
+                  AND d.days_remaining BETWEEN 0 AND :days
+                ORDER BY d.days_remaining
+                """
+            ),
             {"days": days_ahead},
         )
         return [dict(row) for row in result.mappings().all()]
-
     # ── UPDATE ────────────────────────────────────────────────────
 
     async def update_compliance_state(
@@ -552,31 +655,87 @@ class CompanyService(BaseService[Company]):
         director_changes = []
         for d in company.directors:
             from app.rule_engine import DirectorChange
+            form_xii_verified = bool(
+                d.form_xii_status_verified
+                and d.form_xii_filed is not None
+                and d.form_xii_evidence_ref
+                and d.form_xii_verified_at
+                and d.form_xii_verified_by
+            )
+            consent_verified = bool(
+                d.consent_verified
+                and d.consent_filed is not None
+                and d.consent_evidence_ref
+                and d.consent_verified_at
+                and d.consent_verified_by
+            )
             director_changes.append(DirectorChange(
                 director_id=str(d.id),
                 event_type="appointment" if d.director_status.value == "ACTIVE" else "resignation",
                 event_date=d.appointment_date or d.departure_date or date.today(),
-                form_filed=bool(d.appointment_filed_date or d.departure_filed_date),
-                form_filed_date=d.appointment_filed_date or d.departure_filed_date,
+                form_filed=d.form_xii_filed if form_xii_verified else None,
+                form_filed_date=d.form_xii_filed_date if form_xii_verified else None,
                 form_type="XII",
+                form_filed_verified=form_xii_verified,
+                form_filed_evidence_ref=d.form_xii_evidence_ref if form_xii_verified else None,
+                consent_filed=d.consent_filed if consent_verified else None,
+                consent_filed_date=d.consent_filed_date if consent_verified else None,
+                consent_verified=consent_verified,
+                consent_evidence_ref=d.consent_evidence_ref if consent_verified else None,
             ))
 
         # ── Share Transfers ───────────────────────────────────────
+        # Only evidence-bound statuses are passed to the deterministic engine.
         share_transfers = []
         for t in company.share_transfers:
             from app.rule_engine import ShareTransfer as EngineTransfer
+            instrument_verified = bool(
+                t.transfer_instrument_verified and t.transfer_instrument_evidence_ref
+            )
+            stamp_verified = bool(
+                t.stamp_duty_applicability_verified and t.stamp_duty_evidence_ref
+            )
+            board_verified = bool(t.board_approval_verified and t.board_approval_evidence_ref)
+            registration_verified = bool(
+                t.transfer_registered is not None and t.transfer_registration_evidence_ref
+            )
+            refusal_verified = bool(
+                t.registration_refusal_verified and t.refusal_decision_evidence_ref
+            )
+            refusal_notice_verified = bool(
+                t.refusal_notice_verified and t.refusal_notice_evidence_ref
+            )
+            lodgement_verified = bool(
+                t.instrument_lodged_date and t.instrument_lodgement_evidence_ref
+            )
+            articles_verified = bool(t.aoa_restriction_apply is not None and t.articles_clause_evidence_ref)
             share_transfers.append(EngineTransfer(
                 transfer_id=str(t.id),
                 transfer_date=t.transfer_date,  # type: ignore
-                instrument_recorded=bool(t.has_transfer_instrument),
-                stamp_duty_paid=t.stamp_duty_paid,
+                instrument_recorded=t.has_transfer_instrument if instrument_verified else None,
+                form_117_filed=t.form_117_filed if instrument_verified and t.form_117_evidence_ref else None,
+                stamp_duty_paid=t.stamp_duty_paid if stamp_verified else None,
+                stamp_duty_applicability_verified=stamp_verified,
                 stamp_duty_amount=float(t.stamp_duty_amount_bdt) if t.stamp_duty_amount_bdt else None,
-                board_approval=t.board_approval_obtained,
-                board_approval_obtained=t.board_approval_obtained,
-                share_register_updated=t.register_updated,
-                aoa_restriction_apply=t.aoa_restriction_violated,
-                form_117_filed=bool(getattr(t, "form_117_filed", None)) if t is not None else False,  # UNKNOWN until RJSC filings table lookup implemented (TR-007)
+                board_approval=t.board_approval_obtained if board_verified else None,
+                board_approval_obtained=t.board_approval_obtained if board_verified else None,
+                share_register_updated=t.register_updated if t.register_update_verified and t.register_update_evidence_ref else None,
+                aoa_restriction_apply=t.aoa_restriction_apply if articles_verified else None,
+                transfer_registered=t.transfer_registered if registration_verified else None,
+                registration_refused=t.registration_refused if refusal_verified else None,
+                refusal_notice_sent=t.refusal_notice_sent if refusal_notice_verified else None,
+                instrument_lodged_date=t.instrument_lodged_date if lodgement_verified else None,
+                articles_clause_evidence_ref=t.articles_clause_evidence_ref if articles_verified else None,
+                refusal_decision_evidence_ref=t.refusal_decision_evidence_ref if refusal_verified else None,
+                transfer_registration_evidence_ref=t.transfer_registration_evidence_ref if registration_verified else None,
             ))
+
+        # ── Mortgage / charge evidence ─────────────────────────────
+        charge_events = [
+            _charge_event_from_record(charge)
+            for charge in company.charges
+            if charge.is_active
+        ]
 
         # ── Statutory Registers ───────────────────────────────────
         maintained_registers = [
@@ -588,6 +747,7 @@ class CompanyService(BaseService[Company]):
             "company_id":   str(company.id),
             "company_name": company.company_name,
             "company_type": company.company_type,
+            "charges": charge_events,
 
             # Dates
             "incorporation_date":  company.incorporation_date,
@@ -616,7 +776,17 @@ class CompanyService(BaseService[Company]):
             "agm_extension_evidence_ref": company.agm_extension_evidence_ref,
             "agm_extension_verified_at": company.agm_extension_verified_at.date() if company.agm_extension_verified_at else None,
             "agm_extension_verified_by": str(company.agm_extension_verified_by) if company.agm_extension_verified_by else None,
-            "agm_held_this_cycle":        latest_agm.agm_held if latest_agm else False,
+            "agm_held_this_cycle": (
+                latest_agm.agm_held
+                if (
+                    latest_agm is not None
+                    and company.agm_history_verified is True
+                    and bool(company.agm_history_evidence_ref)
+                    and company.agm_history_verified_at is not None
+                    and company.agm_history_verified_by is not None
+                    and latest_agm.agm_date is not None
+                ) else None
+            ),
             "agm_minutes_prepared":       agm_profile_evidence["agm_minutes_prepared"],
 
             # Audit State
@@ -684,7 +854,7 @@ class CompanyService(BaseService[Company]):
             # Capital
             "authorized_capital_bdt":       float(company.authorized_capital_bdt) if company.authorized_capital_bdt else 0.0,
             "paid_up_capital_bdt":          float(company.paid_up_capital_bdt) if company.paid_up_capital_bdt else 0.0,
-            "capital_increase_date":       getattr(company, "capital_increase_date", None),
+            "capital_increase_date":       None,  # unverified event date; legal engine remains NOT_EVALUATED
             "capital_increase_resolution": getattr(company, "capital_increase_resolution", None),
             "charges":                     [],
             # form_viii_filed removed — not a CompanyProfile field
@@ -784,12 +954,12 @@ class CompanyService(BaseService[Company]):
             # RJSC Form Filings
             "form_iii_filed":               getattr(company, "form_iii_filed", False),
             "form_iii_filed_date":          getattr(company, "form_iii_filed_date", None),
-            "form_iv_filed":                getattr(company, "form_iv_filed", False),
-            "form_iv_filed_date":           getattr(company, "form_iv_filed_date", None),
+            "form_iv_filed":                None,  # no evidence-bound Form IV status yet
+            "form_iv_filed_date":           None,
             "form_vi_filed":                getattr(company, "form_vi_filed", None),
             "form_vi_filed_date":           getattr(company, "form_vi_filed_date", None),
-            "form_xv_filed":                getattr(company, "form_xv_filed", None),
-            "form_xv_filed_date":           getattr(company, "form_xv_filed_date", None),
+            "form_xv_filed":                None,  # no evidence-bound Form XV status yet
+            "form_xv_filed_date":           None,
 
             # Annual Return Attachments
             "balance_sheet_attached":       getattr(company, "balance_sheet_attached", False),
@@ -852,7 +1022,7 @@ class CompanyService(BaseService[Company]):
             "auditor_reappointed_at_agm":    agm_profile_evidence["auditor_reappointed_at_agm"],
             "auditor_reappointment_verified": agm_profile_evidence.get("auditor_reappointment_verified", False),
             "auditor_reappointment_evidence_ref": agm_profile_evidence.get("auditor_reappointment_evidence_ref"),
-            "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", False),
+            "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", None),
 
             # Audit Details
             "audit_in_progress":             getattr(company, "audit_in_progress", False),
@@ -865,18 +1035,18 @@ class CompanyService(BaseService[Company]):
             "last_tax_return_filed_year":   getattr(company, "last_tax_return_filed_year", None),
 
             # Shareholders
-            "share_certificates_issued":     getattr(company, "share_certificates_issued", False),
-            "share_certificates_issued_date": getattr(company, "share_certificates_issued_date", None),
+            "share_certificates_issued":     None,  # no evidence-bound certificate status yet
+            "share_certificates_issued_date": None,
 
             # Misc
             "is_dormant":                    getattr(company, "is_dormant", False),
             "aoa_transfer_restriction":       getattr(company, "aoa_transfer_restriction", False),
             "is_fdi_registered":              getattr(company, "is_fdi_registered", False),
-            "last_allotment_date":            getattr(company, "last_allotment_date", None),
+            "last_allotment_date":            None,  # no authenticated allotment event provenance yet
             "registered_office_change_date":  getattr(company, "registered_office_change_date", None),
             "shareholder_change_date":        getattr(company, "shareholder_change_date", None),
             "has_foreign_shareholder":       getattr(company, "has_foreign_shareholder", False),
-            "capital_increase_special_resolution": getattr(company, "capital_increase_special_resolution", False),
+            "capital_increase_special_resolution": None,  # legacy assertion; resolution type requires Articles/source review
             "minimum_directors_met":        getattr(company, "minimum_directors_met", False),
             "registered_office_address":    getattr(company, "registered_office_address", None),
 
@@ -937,8 +1107,8 @@ class CompanyService(BaseService[Company]):
             "fdi_registration_date": company.fdi_registration_date,
             "remittance_amount_usd": float(company.remittance_amount_usd) if company.remittance_amount_usd else 0.0,
             # Form filing status
-            "form_iii_filed": company.form_iii_filed,
-            "form_iv_filed": company.form_iv_filed,
+            "form_iii_filed": None,
+            "form_iv_filed": None,
             # RJSC strike-off
             "rjsc_status": company.rjsc_status or "ACTIVE",
             "rjsc_strike_off_notice_date": company.rjsc_strike_off_notice_date,
@@ -971,7 +1141,38 @@ class CompanyService(BaseService[Company]):
             "director_office_of_profit": company.director_office_of_profit,
             "managing_director_appointment_date": company.managing_director_appointment_date,
             "member_count": company.member_count or 0,
-            "business_commencement_declaration_filed": company.business_commencement_declaration_filed,
+            "business_commencement_declaration_filed": (
+                company.business_commencement_declaration_filed
+                if (
+                    company.business_commencement_declaration_verified
+                    and company.business_commencement_declaration_evidence_ref
+                    and company.business_commencement_declaration_verified_at
+                    and company.business_commencement_declaration_verified_by
+                ) else None
+            ),
+            "business_commencement_declaration_verified": bool(
+                company.business_commencement_declaration_verified
+                and company.business_commencement_declaration_evidence_ref
+                and company.business_commencement_declaration_verified_at
+                and company.business_commencement_declaration_verified_by
+            ),
+            "business_commencement_declaration_evidence_ref": company.business_commencement_declaration_evidence_ref,
+            "section150_prospectus_issued": (
+                company.section150_prospectus_issued
+                if (
+                    company.section150_applicability_verified
+                    and company.section150_applicability_evidence_ref
+                    and company.section150_applicability_verified_at
+                    and company.section150_applicability_verified_by
+                ) else None
+            ),
+            "section150_applicability_verified": bool(
+                company.section150_applicability_verified
+                and company.section150_applicability_evidence_ref
+                and company.section150_applicability_verified_at
+                and company.section150_applicability_verified_by
+            ),
+            "section150_applicability_evidence_ref": company.section150_applicability_evidence_ref,
         })
 
         return profile

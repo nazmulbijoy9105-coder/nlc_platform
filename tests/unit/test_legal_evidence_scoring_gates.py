@@ -1,3 +1,4 @@
+import pytest
 from datetime import date
 from types import SimpleNamespace
 
@@ -5,6 +6,7 @@ import app.rule_engine.engine as engine_module
 
 from app.rule_engine.engine import (
     CompanyProfile,
+    ChargeEvent,
     ComplianceFlag,
     NLCRuleEngine,
     RevenueTier,
@@ -60,7 +62,7 @@ def test_unapproved_black_override_is_excluded_before_override_semantics():
 
     result = _applied_score_impacts([flag])
 
-    assert result == [{"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"}]
+    assert result == [{"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}]
 
 
 def test_unapproved_black_rule_cannot_force_black_score_band():
@@ -86,7 +88,13 @@ def test_unapproved_black_rule_cannot_force_black_score_band():
 
 
 def test_counsel_approved_black_override_is_honoured_by_engine(monkeypatch):
+    # Simulate a separately approved rule and an explicitly authorised release.
+    # The production default remains LEGAL_SCORE_RELEASED=False.
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AUD-003"}))
+    monkeypatch.setattr(
+        engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"AUD-003"})
+    )
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     approved_black = ComplianceFlag(
         rule_id="AUD-003",
         flag_code="AUD-003",
@@ -432,7 +440,10 @@ def test_unverified_agm_history_does_not_create_deadline_violation():
         ),
         today=date(2026, 11, 3),
     )
-    assert not {"AGM-001", "AGM-002"} & {flag.rule_id for flag in result.flags}
+    agm_review = _flag(result, "AGM-001")
+    assert agm_review.state == RuleState.UNKNOWN
+    assert agm_review.eval_state == "UNKNOWN"
+    assert "AGM-002" not in {flag.rule_id for flag in result.flags}
 
 def test_section_81_first_agm_within_18_months_defers_next_agm_to_second_following_year():
     profile = _profile(
@@ -658,3 +669,358 @@ def test_unapproved_black_override_cannot_force_zero_score():
     score = NLCRuleEngine()._calculate_score([unapproved_black], profile)
     assert score.final_score == 100
     assert score.override_applied is False
+
+def test_tin_profile_absence_is_review_only_not_a_confirmed_tax_breach():
+    result = NLCRuleEngine().evaluate(
+        _profile(tin_obtained=False),
+        today=date(2026, 11, 4),
+    )
+    flag = _flag(result, "TAX-001")
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.score_impact == 0
+
+
+def test_missing_charge_satisfaction_status_is_unknown_not_a_breach():
+    charge = ChargeEvent(
+        charge_id="charge-unknown",
+        creation_date=date(2025, 1, 1),
+        charge_type="FIXED",
+        amount_bdt=100000,
+        charge_holder="Test Bank",
+        satisfied=None,
+        registrable_under_s159=True,
+        registrability_verified=True,
+        registrability_evidence_ref="RJSC-CHARGE-001",
+    )
+    result = NLCRuleEngine().evaluate(
+        _profile(charges=[charge]),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "CHG-001")
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.score_impact == 0
+    assert "SATISFACTION_STATUS_UNKNOWN" in flag.detail["unknown_reasons"]
+
+
+def test_verified_charge_satisfaction_uses_twenty_one_day_form_xxviii_deadline():
+    charge = ChargeEvent(
+        charge_id="charge-overdue",
+        creation_date=date(2025, 1, 1),
+        charge_type="FIXED",
+        amount_bdt=100000,
+        charge_holder="Test Bank",
+        satisfied=True,
+        satisfaction_date=date(2026, 10, 1),
+        satisfaction_verified=True,
+        satisfaction_evidence_ref="BANK-SATISFACTION-001",
+        registrable_under_s159=True,
+        registrability_verified=True,
+        registrability_evidence_ref="RJSC-CHARGE-001",
+        satisfaction_filed=False,
+        satisfaction_filing_status_verified=True,
+        satisfaction_filing_evidence_ref="RJSC-SEARCH-001",
+    )
+    result = NLCRuleEngine().evaluate(
+        _profile(charges=[charge]),
+        today=date(2026, 10, 23),
+    )
+    flag = _flag(result, "CHG-001")
+    assert flag.state == RuleState.NON_COMPLIANT
+    assert flag.eval_state == "VIOLATION"
+    assert flag.detail["statutory_deadline"] == "2026-10-22"
+    assert flag.detail["days_overdue"] == 1
+    assert flag.detail["form"] == "Form XXVIII"
+
+
+def test_charge_satisfaction_on_day_twenty_one_is_not_overdue():
+    charge = ChargeEvent(
+        charge_id="charge-due-today",
+        creation_date=date(2025, 1, 1),
+        charge_type="FIXED",
+        amount_bdt=100000,
+        charge_holder="Test Bank",
+        satisfied=True,
+        satisfaction_date=date(2026, 10, 1),
+        satisfaction_verified=True,
+        satisfaction_evidence_ref="BANK-SATISFACTION-002",
+        registrable_under_s159=True,
+        registrability_verified=True,
+        registrability_evidence_ref="RJSC-CHARGE-002",
+        satisfaction_filed=False,
+        satisfaction_filing_status_verified=True,
+        satisfaction_filing_evidence_ref="RJSC-SEARCH-002",
+    )
+    result = NLCRuleEngine().evaluate(
+        _profile(charges=[charge]),
+        today=date(2026, 10, 22),
+    )
+    assert "CHG-001" not in {flag.rule_id for flag in result.flags}
+
+
+def test_unverified_agm_history_is_reported_as_unknown_not_silently_assumed():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            agm_count=0,
+            agm_history_verified=False,
+            agm_history_evidence_ref=None,
+            last_agm_date=None,
+        ),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "AGM-001")
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.score_impact == 0
+
+
+def test_first_agm_deadline_uses_eighteen_calendar_months_not_548_days():
+    profile = _profile(
+        incorporation_date=date(2024, 1, 31),
+        agm_count=0,
+        last_agm_date=None,
+        agm_held_this_cycle=False,
+    )
+    on_deadline = NLCRuleEngine().evaluate(profile, today=date(2025, 7, 31))
+    after_deadline = NLCRuleEngine().evaluate(profile, today=date(2025, 8, 1))
+    assert "AGM-001" not in {flag.rule_id for flag in on_deadline.flags}
+    flag = _flag(after_deadline, "AGM-001")
+    assert flag.detail["deadline"] == "2025-07-31"
+    assert flag.detail["deadline_basis"] == "18_CALENDAR_MONTHS_FROM_INCORPORATION"
+
+
+def test_subsequent_agm_deadline_is_earlier_of_fifteen_months_and_calendar_year_end():
+    engine = NLCRuleEngine(today=date(2026, 1, 1))
+    profile = _profile(last_agm_date=date(2025, 6, 1))
+    assert engine._subsequent_agm_deadline(profile) == date(2026, 9, 1)
+    profile = _profile(last_agm_date=date(2025, 10, 1))
+    assert engine._subsequent_agm_deadline(profile) == date(2026, 12, 31)
+
+
+def test_verified_absence_is_included_in_score_impact_reporting(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    flag = SimpleNamespace(
+        rule_id="AGM-001",
+        state=RuleState.VERIFIED_ABSENT,
+        eval_state="VIOLATION",
+        severity=Severity.RED,
+        score_impact=7,
+        resolved=False,
+        conditional_applies=True,
+    )
+    assert _applied_score_impacts([flag]) == [{"applied": 7, "status": "APPLIED"}]
+
+
+def test_black_label_without_authorised_override_is_only_a_normal_deduction(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
+    flag = SimpleNamespace(
+        rule_id="AGM-001",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+        severity=Severity.BLACK,
+        is_black_override=True,
+        score_impact=9,
+        resolved=False,
+        conditional_applies=True,
+    )
+    assert _applied_score_impacts([flag]) == [{"applied": 9, "status": "APPLIED"}]
+
+
+def test_first_agm_in_incorporation_year_uses_section_81_following_year_exemption():
+    engine = NLCRuleEngine(today=date(2026, 11, 3))
+    profile = _profile(
+        incorporation_date=date(2025, 1, 15),
+        agm_count=1,
+        last_agm_date=date(2025, 1, 15),
+        agm_held_this_cycle=False,
+    )
+    # The first-AGM proviso removes the need for another AGM in 2026.
+    assert engine._subsequent_agm_deadline(profile) == date(2027, 12, 31)
+
+
+def test_missing_charge_registration_evidence_is_unknown_not_an_invented_breach():
+    charge = ChargeEvent(
+        charge_id="charge-registration-unknown",
+        creation_date=date(2025, 1, 1),
+        charge_type="FIXED",
+        amount_bdt=100000,
+        charge_holder="Test Bank",
+        form_xviii_filed=False,
+        registrable_under_s159=True,
+        registrability_verified=True,
+        registrability_evidence_ref="RJSC-CLASS-001",
+    )
+    result = NLCRuleEngine().evaluate(
+        _profile(charges=[charge]),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "CAP-002")
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.severity == Severity.NOT_EVALUATED
+    assert flag.score_impact == 0
+
+
+def test_verified_charge_registration_uses_section_159_twenty_one_day_deadline():
+    charge = ChargeEvent(
+        charge_id="charge-registration-overdue",
+        creation_date=date(2026, 10, 1),
+        charge_type="FIXED",
+        amount_bdt=100000,
+        charge_holder="Test Bank",
+        form_xviii_filed=False,
+        creation_date_verified=True,
+        creation_date_evidence_ref="EXECUTED-CHARGE-001",
+        form_xviii_filing_status_verified=True,
+        form_xviii_filing_evidence_ref="RJSC-SEARCH-003",
+        registrable_under_s159=True,
+        registrability_verified=True,
+        registrability_evidence_ref="RJSC-CLASS-003",
+    )
+    result = NLCRuleEngine().evaluate(
+        _profile(charges=[charge]),
+        today=date(2026, 10, 23),
+    )
+    flag = _flag(result, "CAP-002")
+    assert flag.state == RuleState.NON_COMPLIANT
+    assert flag.eval_state == "VIOLATION"
+    assert flag.detail["statutory_deadline"] == "2026-10-22"
+    assert flag.detail["days_overdue"] == 1
+    assert flag.detail["form"] == "Form XVIII"
+
+
+def test_subsequent_agm_violation_reports_statutory_deadline_and_basis_metadata():
+    profile = _profile(
+        agm_count=1,
+        last_agm_date=date(2025, 6, 1),
+        agm_held_this_cycle=False,
+    )
+    result = NLCRuleEngine().evaluate(profile, today=date(2026, 9, 2))
+    flag = _flag(result, "AGM-002")
+    assert flag.state == RuleState.NON_COMPLIANT
+    assert flag.eval_state == "VIOLATION"
+    assert flag.detail["deadline"] == "2026-09-01"
+    assert flag.detail["basis"] == "15_MONTH_INTERVAL"
+    assert flag.detail["interval_deadline"] == "2026-09-01"
+    assert flag.detail["calendar_year_deadline"] == "2026-12-31"
+    assert flag.detail["statutory_base_deadline"] == "2026-09-01"
+    assert flag.detail["extension_statutory_limit"] == "2026-11-30"
+
+
+def test_verified_black_severity_without_override_authority_does_not_force_zero(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
+    flag = ComplianceFlag(
+        rule_id="AGM-001",
+        flag_code="AGM-001",
+        severity=Severity.BLACK,
+        score_impact=9,
+        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+        description="Verified severe finding, but no override authorisation.",
+        statutory_basis="Test only.",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+        is_black_override=True,
+    )
+    result = NLCRuleEngine()._calculate_score([flag], _profile())
+    assert result.override_applied is False
+    assert result.final_score == 91
+    assert result.black_flag_count == 1
+
+
+def test_late_form_xviii_registration_is_reviewed_not_automatically_treated_as_unfiled():
+    charge = ChargeEvent(
+        charge_id="charge-registration-late",
+        creation_date=date(2026, 10, 1),
+        charge_type="FIXED",
+        amount_bdt=100000,
+        charge_holder="Test Bank",
+        form_xviii_filed=True,
+        form_xviii_filed_date=date(2026, 10, 25),
+        creation_date_verified=True,
+        creation_date_evidence_ref="EXECUTED-CHARGE-LATE",
+        form_xviii_filing_status_verified=True,
+        form_xviii_filing_evidence_ref="RJSC-SEARCH-LATE",
+        registrable_under_s159=True,
+        registrability_verified=True,
+        registrability_evidence_ref="RJSC-CLASS-LATE",
+    )
+    result = NLCRuleEngine().evaluate(
+        _profile(charges=[charge]),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "CAP-002")
+    assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.score_impact == 0
+    assert flag.detail["statutory_deadline"] == "2026-10-22"
+    assert flag.detail["filed_date"] == "2026-10-25"
+    assert flag.detail["days_late"] == 3
+
+
+def test_late_form_xxviii_satisfaction_is_reviewed_not_assumed_cured():
+    charge = ChargeEvent(
+        charge_id="charge-satisfaction-late",
+        creation_date=date(2025, 1, 1),
+        charge_type="FIXED",
+        amount_bdt=100000,
+        charge_holder="Test Bank",
+        satisfied=True,
+        satisfaction_date=date(2026, 10, 1),
+        satisfaction_verified=True,
+        satisfaction_evidence_ref="BANK-SATISFACTION-LATE",
+        registrable_under_s159=True,
+        registrability_verified=True,
+        registrability_evidence_ref="RJSC-CLASS-SAT-LATE",
+        satisfaction_filed=True,
+        satisfaction_filed_date=date(2026, 10, 25),
+        satisfaction_filing_status_verified=True,
+        satisfaction_filing_evidence_ref="RJSC-SEARCH-SAT-LATE",
+    )
+    result = NLCRuleEngine().evaluate(
+        _profile(charges=[charge]),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "CHG-001")
+    assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.score_impact == 0
+    assert flag.detail["statutory_deadline"] == "2026-10-22"
+    assert flag.detail["days_late"] == 3
+
+
+def test_claimed_satisfaction_filing_without_filing_date_is_unknown():
+    charge = ChargeEvent(
+        charge_id="charge-satisfaction-filed-date-missing",
+        creation_date=date(2025, 1, 1),
+        charge_type="FIXED",
+        amount_bdt=100000,
+        charge_holder="Test Bank",
+        satisfied=True,
+        satisfaction_date=date(2026, 10, 1),
+        satisfaction_verified=True,
+        satisfaction_evidence_ref="BANK-SATISFACTION-MISSING-DATE",
+        registrable_under_s159=True,
+        registrability_verified=True,
+        registrability_evidence_ref="RJSC-CLASS-MISSING-DATE",
+        satisfaction_filed=True,
+        satisfaction_filed_date=None,
+        satisfaction_filing_status_verified=True,
+        satisfaction_filing_evidence_ref="RJSC-SEARCH-MISSING-DATE",
+    )
+    result = NLCRuleEngine().evaluate(
+        _profile(charges=[charge]),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "CHG-001")
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.eval_state == "UNKNOWN"
+    assert "SATISFACTION_FILING_DATE_UNKNOWN" in flag.detail["unknown_reasons"]

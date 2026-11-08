@@ -5,6 +5,8 @@ This enforces static inventory parity. It does NOT claim to perform a historical
 approval-regression comparison: that requires a trusted prior-state baseline.
 """
 import ast
+import csv
+import json
 import re
 import sys
 from pathlib import Path
@@ -42,6 +44,23 @@ def _seed_rule_ids(source: str) -> set[str]:
                         and isinstance(value, ast.Constant) and isinstance(value.value, str)):
                     ids.add(value.value)
     return ids
+
+
+
+def _seed_rule_rows(source: str) -> list[dict]:
+    """Return literal seed rule dictionaries for release-policy validation."""
+    tree = ast.parse(source)
+    rows: list[dict] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Dict):
+            continue
+        try:
+            value = ast.literal_eval(node)
+        except (ValueError, TypeError, SyntaxError):
+            continue
+        if isinstance(value, dict) and isinstance(value.get("rule_id"), str):
+            rows.append(value)
+    return rows
 
 
 def main() -> int:
@@ -89,12 +108,130 @@ def main() -> int:
         print(f"FAIL: expected every rule REVIEW_REQUIRED and score_eligible=false; got {review_required}/{len(seed)} and {score_ineligible}/{len(seed)}")
         return 1
 
+    # Fail closed at the data source too: an empty engine allowlist is not
+    # sufficient if the seeder can write scored or BLACK-override rule rows.
+    seed_rows = _seed_rule_rows(seed_path.read_text(encoding="utf-8"))
+    if len(seed_rows) != len(seed):
+        print(f"FAIL: expected {len(seed)} literal seed rows, found {len(seed_rows)}")
+        return 1
+    unsafe_seed_rows = [
+        {
+            "rule_id": row.get("rule_id"),
+            "default_severity": row.get("default_severity"),
+            "score_impact": row.get("score_impact"),
+            "is_black_override": row.get("is_black_override"),
+        }
+        for row in seed_rows
+        if row.get("default_severity") != "NOT_EVALUATED"
+        or row.get("score_impact") != 0
+        or row.get("is_black_override") is not False
+    ]
+    if unsafe_seed_rows:
+        print(f"FAIL: unapproved seed rules must be NOT_EVALUATED / 0 / false: {unsafe_seed_rows}")
+        return 1
+
+    # Keep every maintained catalogue representation aligned with the
+    # unapproved release state. The legacy db_rules.txt is intentionally
+    # excluded because it is a historical production export, not a source.
+    csv_path = Path("docs/legal/NLC_BD_COMPANIES_LAW_RULES_v1.0.csv")
+    json_path = Path("docs/legal/NLC_BD_COMPANIES_LAW_RULES_v1.0.json")
+    canonical_path = Path("canonical_architecture/statutory_rules.py")
+    matrix_path = Path("docs/LEGAL_BASIS_MATRIX.md")
+    for path in (csv_path, json_path, canonical_path, matrix_path):
+        if not path.exists():
+            print(f"FAIL: legal catalogue representation missing: {path}")
+            return 1
+
+    with csv_path.open(encoding="utf-8", newline="") as handle:
+        csv_rows = list(csv.DictReader(handle))
+    csv_ids = {row["rule_id"] for row in csv_rows}
+    if len(csv_rows) != len(seed) or csv_ids != seed:
+        print(f"FAIL: legal CSV inventory mismatch; rows={len(csv_rows)} missing={sorted(seed - csv_ids)} extra={sorted(csv_ids - seed)}")
+        return 1
+    unsafe_csv = [
+        row["rule_id"] for row in csv_rows
+        if row["engine_severity"] != "NOT_EVALUATED"
+        or row["engine_score_impact"] != "0"
+        or row["engine_black_override"].lower() != "false"
+        or row["source_status"] != "NOT_EVALUATED_COUNSEL_REVIEW_REQUIRED"
+        or row["legal_validation"] != "PENDING"
+    ]
+    if unsafe_csv:
+        print(f"FAIL: legal CSV contains unapproved scoring or validation state: {unsafe_csv}")
+        return 1
+
+    catalogue_json = json.loads(json_path.read_text(encoding="utf-8"))
+    json_rows = catalogue_json.get("rules", [])
+    json_ids = {row.get("rule_id") for row in json_rows}
+    if catalogue_json.get("rule_count") != len(seed) or len(json_rows) != len(seed) or json_ids != seed:
+        print(f"FAIL: legal JSON inventory mismatch; rows={len(json_rows)}")
+        return 1
+    unsafe_json = [
+        row.get("rule_id") for row in json_rows
+        if row.get("engine_severity") != "NOT_EVALUATED"
+        or row.get("engine_score_impact") != 0
+        or row.get("engine_black_override") is not False
+        or row.get("source_status") != "NOT_EVALUATED_COUNSEL_REVIEW_REQUIRED"
+        or row.get("legal_validation") != "PENDING"
+    ]
+    if unsafe_json:
+        print(f"FAIL: legal JSON contains unapproved scoring or validation state: {unsafe_json}")
+        return 1
+
+    canonical_source = canonical_path.read_text(encoding="utf-8")
+    canonical_severities = re.findall(r'"severity":\s*"([^"]+)"', canonical_source)
+    canonical_impacts = re.findall(r'"score_impact":\s*(\d+)', canonical_source)
+    if any(value != "NOT_EVALUATED" for value in canonical_severities):
+        print("FAIL: canonical statutory rule registry contains a publishable severity")
+        return 1
+    if any(int(value) != 0 for value in canonical_impacts):
+        print("FAIL: canonical statutory rule registry contains non-zero score impact")
+        return 1
+
+    if re.search(r"Severity\.(?:BLACK|RED|YELLOW|GREEN),\s*\d+", canonical_source):
+        print("FAIL: legacy positional StatutoryRule entries contain publishable severity or score")
+        return 1
+    if re.search(r'"is_black_override":\s*True', canonical_source):
+        print("FAIL: canonical statutory rule registry contains a BLACK override")
+        return 1
+
+    if "_BASE_STATES = (RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT)" not in canonical_source:
+        print("FAIL: canonical rule defaults must remain UNKNOWN / REQUIRES_LAWYER_JUDGMENT")
+        return 1
+    for states_match in re.finditer(r'"evaluation_states":\s*\[([^\]]*)\]', canonical_source):
+        states = states_match.group(1)
+        if "RuleState.COMPLIANT" in states or "RuleState.NON_COMPLIANT" in states:
+            print("FAIL: unapproved canonical rules cannot emit COMPLIANT or NON_COMPLIANT states")
+            return 1
+
+    matrix_rows = [
+        line for line in matrix_path.read_text(encoding="utf-8").splitlines()
+        if re.match(r"^\| [A-Z]{2,5}-\d{3} \|", line)
+    ]
+    if len(matrix_rows) != len(seed) or any(
+        "| NOT_EVALUATED | 0 | no |" not in line for line in matrix_rows
+    ):
+        print("FAIL: LEGAL_BASIS_MATRIX must list all rules as NOT_EVALUATED / 0 / no")
+        return 1
+
     engine_source = engine_path.read_text(encoding="utf-8")
+    seed_source = seed_path.read_text(encoding="utf-8")
+    if re.search(r"UPDATE\s+legal_rules", seed_source, re.IGNORECASE):
+        print("FAIL: seed_rules.py must not update existing legal_rules outside the audited version workflow")
+        return 1
+    if '"NOT_EVALUATED"' not in seed_source:
+        print("FAIL: seed_rules.py must accept NOT_EVALUATED severity")
+        return 1
+
     if not re.search(r"^LEGAL_SCORE_RELEASED:\s*bool\s*=\s*False\s*$", engine_source, re.MULTILINE):
         print("FAIL: legal score release flag is not explicitly disabled")
         return 1
     if not re.search(r"^VERIFIED_RULE_IDS:\s*frozenset\[str\]\s*=\s*frozenset\(\)\s*$", engine_source, re.MULTILINE):
         print("FAIL: verified rule allowlist must remain empty until counsel approval")
+        return 1
+
+    if not re.search(r"^BLACK_OVERRIDE_RULES:\s*set\[str\]\s*=\s*set\(\)\s*$", engine_source, re.MULTILINE):
+        print("FAIL: unapproved legal rule catalogue must not define BLACK overrides")
         return 1
 
     print(f"PASS: all {len(seed)} rules remain REVIEW_REQUIRED and score-ineligible")

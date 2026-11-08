@@ -148,6 +148,16 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
     assert "AGM-001" in page and "RED" in page and "-15 pts" in page
 
 
+def test_endpoint_withholds_pdf_when_legal_score_release_is_disabled(monkeypatch):
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", False)
+
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(PDFReportService(db=None).generate_company_compliance_pdf("any-id"))
+
+    assert exc.value.status_code == 409
+    assert "statutory score release is disabled" in exc.value.detail
+
+
 # --------------------------------------------------------------------------- HTML builder
 
 
@@ -166,6 +176,23 @@ def test_html_builder_handles_empty_flags_and_missing_values():
     assert "20 October 2026" in page
     assert "score-warn" in page
     assert "<img" not in page  # no logo_uri given -> no logo markup
+
+
+def test_html_builder_suppresses_stale_score_flags_and_rescue_while_release_closed(monkeypatch):
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
+    stale_rescue = SimpleNamespace(steps=[SimpleNamespace(title="Sensitive rescue step")])
+
+    page = build_compliance_report_html(
+        COMPANY, FLAGS, WHEN, rescue_plan=stale_rescue
+    )
+
+    assert "NOT EVALUATED" in page
+    assert "85 / 100" not in page
+    assert "AGM-001" not in page
+    assert "AGM overdue" not in page
+    assert "Sensitive rescue step" not in page
+    assert "Score reconciliation" not in page
 
 
 def test_html_builder_includes_logo_only_when_given():

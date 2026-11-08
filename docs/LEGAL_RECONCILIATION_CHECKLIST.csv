@@ -7,8 +7,8 @@ AGM-005,Corporate,"Section 83(12), Companies Act 1994 (Bangladesh)",TBD,RECONCIL
 AGM-006,Corporate,"Section 83, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
 AGM-007,Corporate,"Section 84, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
 AR-001,Corporate,"Section 36, Companies Act 1994 (Bangladesh) – Schedule X",TBD,RECONCILE,PENDING
-AR-002,Corporate,"Sections 36 and 304, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-AR-003,Corporate,"Sections 36 and 304, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
+AR-002,Corporate,"Section 36 and Schedule X; Section 346 is a separate Registrar strike-off process",TBD,RECONCILE,PENDING
+AR-003,Corporate,"Section 36 and Schedule X; Section 346 requires separate Registrar grounds and notice steps",TBD,RECONCILE,PENDING
 AR-004,Corporate,"Section 36, Companies Act 1994 (Bangladesh) – Schedule X",TBD,RECONCILE,PENDING
 AUD-001,Corporate,"Section 210(1), Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
 AUD-002,Corporate,"Section 151, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
@@ -35,9 +35,9 @@ DIR-003,Corporate,"Section 92, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PE
 DIR-004,Corporate,"Section 92, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
 DIR-005,Corporate,"Section 97, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
 DIR-006,Corporate,"Section 98, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-ESC-001,Corporate,"Section 304, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-ESC-002,Corporate,"Section 304, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
-ESC-003,Corporate,"Section 304, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
+ESC-001,Corporate,"Section 346, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
+ESC-002,Corporate,"Section 346, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
+ESC-003,Corporate,"NLC internal risk policy; not a statutory Companies Act consequence",TBD,RECONCILE,PENDING
 ESC-004,Corporate,"Section 196, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
 ESC-005,Corporate,"Section 199, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
 FX-001,Corporate,Foreign Exchange Regulation Act 1947 (Bangladesh),TBD,RECONCILE,PENDING
@@ -61,7 +61,7 @@ STR-001,Corporate,"Section 20, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PE
 STR-002,Corporate,"Section 17, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
 STR-003,Corporate,"Section 18, Companies Act 1994 (Bangladesh)",TBD,RECONCILE,PENDING
 TAX-001,Tax,Income Tax Act 2023 (Bangladesh),TBD,RECONCILE,PENDING
-TAX-002,Tax,Value Added Tax Act 2012 (Bangladesh),TBD,RECONCILE,PENDING
+TAX-002,Tax,"VAT and SD Act 2012 ss.2(48), 2(57), 4, 10; Act 77/2026; Finance Act 96/2026","30 lakh enlistment / 50 lakh registration; 12-month turnover and exclusions; s.4(2) categories; s.10 30-day enlistment application",RECONCILE,PENDING
 TAX-003,Tax,"Income Tax Act 2023, Section 75",TBD,RECONCILE,PENDING
 TAX-004,Tax,"Income Tax Act 2023, Section 74",TBD,RECONCILE,PENDING
 TL-001,Corporate,City Corporation Ordinance 1983 / Pourashava Act 2009,TBD,RECONCILE,PENDING

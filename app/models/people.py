@@ -7,13 +7,14 @@ AI Constitution Article 2: NID/passport are sensitive governance data.
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
     Date,
+    DateTime,
     Enum,
     ForeignKey,
     Integer,
@@ -65,6 +66,20 @@ class Director(FullMixin, Base):
     appointment_filed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     appointment_filing_delayed: Mapped[bool] = mapped_column(Boolean, default=False)
     appointment_delay_days: Mapped[int] = mapped_column(Integer, default=0)
+
+    # ── Evidence-bound statutory filing states ────────────────────
+    form_xii_filed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    form_xii_filed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    form_xii_status_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    form_xii_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    form_xii_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    form_xii_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    consent_filed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    consent_filed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    consent_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    consent_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    consent_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    consent_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
 
     # ── Resignation / Removal ─────────────────────────────────────
     director_status: Mapped[DirectorStatus] = mapped_column(
@@ -176,25 +191,49 @@ class ShareTransfer(FullMixin, Base):
 
     # ── Compliance Checks ─────────────────────────────────────────
     # TR-001: Transfer instrument (Form 117) present?
-    has_transfer_instrument: Mapped[bool] = mapped_column(Boolean, default=True)
+    has_transfer_instrument: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     # TR-002: Stamp duty paid?
-    stamp_duty_paid: Mapped[bool] = mapped_column(Boolean, default=True)
+    stamp_duty_paid: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     stamp_duty_amount_bdt: Mapped[Decimal | None] = mapped_column(
         Numeric(15, 2), nullable=True
     )
     # TR-003: Board approval obtained?
-    board_approval_obtained: Mapped[bool] = mapped_column(Boolean, default=True)
+    board_approval_obtained: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     board_approval_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     # TR-004: Register updated?
-    register_updated: Mapped[bool] = mapped_column(Boolean, default=True)
+    register_updated: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     register_update_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     # TR-005: AoA restriction violation?
-    aoa_restriction_violated: Mapped[bool] = mapped_column(
-        Boolean, default=False,
-        comment="TR-005: BLACK override — AoA transfer restriction violated"
+    aoa_restriction_violated: Mapped[bool | None] = mapped_column(
+        Boolean, nullable=True, default=None,
+        comment="Legacy reported state only; not a legal conclusion or BLACK override"
     )
     is_irregular: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     irregularity_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # ── Evidence-bound transfer facts (None = unknown/unverified) ─
+    transfer_instrument_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    transfer_instrument_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    form_117_filed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    form_117_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    stamp_duty_applicability_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    stamp_duty_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    board_approval_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    board_approval_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    aoa_restriction_apply: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    articles_clause_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    transfer_registered: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    transfer_registration_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    registration_refused: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    registration_refusal_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    refusal_decision_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    refusal_notice_sent: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    refusal_notice_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    refusal_notice_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    instrument_lodged_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    instrument_lodgement_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    register_update_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    register_update_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # ── Relationships ─────────────────────────────────────────────
     company: Mapped[Company] = relationship(
@@ -206,3 +245,55 @@ class ShareTransfer(FullMixin, Base):
             f"<ShareTransfer {self.transferor_name} → {self.transferee_name} "
             f"({self.shares_transferred} shares)>"
         )
+
+
+# ═══════════════════════════════════════════════════════════════════
+# SHARE COMPLIANCE EVENTS — evidence-bound statutory triggers
+# ═══════════════════════════════════════════════════════════════════
+class ShareComplianceEvent(FullMixin, Base):
+    """Verified allotment, capital-increase or transfer-registration event.
+
+    A row is not a legal fact unless its event provenance is verified.
+    Filing and certificate statuses have independent verification evidence.
+    """
+    __tablename__ = "share_compliance_events"
+
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    share_transfer_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("share_transfers.id", ondelete="RESTRICT"),
+        nullable=True, index=True,
+    )
+    event_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    event_date: Mapped[date] = mapped_column(Date, nullable=False)
+    event_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    event_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    event_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    event_verified_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
+    )
+
+    filing_form: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    filing_status: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    filing_status_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    filing_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    filing_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    filing_verified_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
+    )
+    filing_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    certificate_issued: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    certificate_status_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    certificate_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    certificate_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    certificate_verified_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
+    )
+    certificate_issue_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    company: Mapped[Company] = relationship(
+        "Company", back_populates="share_compliance_events"
+    )

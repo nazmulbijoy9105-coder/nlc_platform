@@ -1,3 +1,4 @@
+import pytest
 """API-001: Rule parity test — verify engine, canonical, and API rule sets agree.
 
 Static parity test (no HTTP request needed). Verifies that:
@@ -8,12 +9,11 @@ Static parity test (no HTTP request needed). Verifies that:
 For the full HTTP parity test (GET /api/v1/rules with auth), see
 tests/integration/test_api_rule_parity.py (requires running server).
 """
-from __future__ import annotations
 
 import inspect
 import re
 
-from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY, _LEGACY_RULE_DICTS, _RULES
 
 from app.rule_engine.engine import NLCRuleEngine
 
@@ -27,9 +27,11 @@ def _engine_rule_ids():
 def test_canonical_registry_has_rules():
     """API-001: STATUTORY_RULE_REGISTRY should not be empty."""
     assert len(STATUTORY_RULE_REGISTRY) > 0, "STATUTORY_RULE_REGISTRY is empty"
-    assert len(STATUTORY_RULE_REGISTRY) >= 80, (
-        f"Expected 80+ rules, got {len(STATUTORY_RULE_REGISTRY)}"
+    assert len(STATUTORY_RULE_REGISTRY) == 85, (
+        f"Expected exactly 85 runtime rules, got {len(STATUTORY_RULE_REGISTRY)}"
     )
+    expected_ids = set(_LEGACY_RULE_DICTS) | {rule.rule_id for rule in _RULES}
+    assert set(STATUTORY_RULE_REGISTRY) == expected_ids
 
 
 def test_engine_references_all_canonical_rules():
@@ -53,3 +55,12 @@ def test_canonical_and_engine_rule_counts_are_close():
         f"Rule count difference too large: engine={len(engine_ids)}, "
         f"canonical={len(canonical_ids)}, diff={diff}"
     )
+
+
+def test_legacy_evidence_requirements_are_preserved():
+    """Specific evidence requirements must survive legacy-to-typed conversion."""
+    typed_ids = {rule.rule_id for rule in _RULES}
+    for rule_id, legacy in _LEGACY_RULE_DICTS.items():
+        if rule_id in typed_ids:
+            continue  # explicit typed definitions take precedence
+        assert STATUTORY_RULE_REGISTRY[rule_id].evidence_required == tuple(legacy["evidence_required"])

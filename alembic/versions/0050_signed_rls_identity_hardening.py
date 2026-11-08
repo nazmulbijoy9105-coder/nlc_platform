@@ -37,9 +37,21 @@ COMPANY_TABLES = (
 FINANCIAL_TABLES = ("annual_returns", "audits", "compliance_evaluation_runs")
 SENSITIVE_DOCUMENT_TYPES = ("AUDIT_REPORT", "ANNUAL_RETURN", "DUE_DILIGENCE")
 
+# PostgreSQL views execute with the view owner's privileges by default. These
+# views expose tenant, compliance, deadline and revenue aggregates; all must
+# evaluate underlying table permissions and RLS as the invoking runtime role.
+RLS_VIEWS = (
+    "vw_admin_dashboard_kpis",
+    "vw_company_flag_summary",
+    "vw_risk_distribution",
+    "vw_upcoming_deadlines",
+    "vw_revenue_pipeline",
+)
+
 RLS_TABLES = (
     "companies",
     *COMPANY_TABLES,
+    "rescue_audit_log",
     "compliance_flags",
     "documents",
     "users",
@@ -69,24 +81,138 @@ def upgrade() -> None:
             "applying signed RLS identity hardening"
         )
 
-    # The runtime role is deliberately non-superuser and cannot bypass RLS.
-    # Preserve LOGIN on an existing role; a newly-created role has no password
-    # and must receive its credential out-of-band before runtime cutover.
+    # Roles are provisioned out-of-band by the database administrator.
+    # Schema migrations must never require CREATEROLE or alter login credentials.
+    # Validate exact security attributes before changing any RLS objects.
     op.execute("""
-        DO $role$
+        DO $role_preflight$
+        DECLARE
+            app_role record;
+            audit_role record;
+            migration_role record;
         BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
-                CREATE ROLE nlc_app_role LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
-                    NOINHERIT NOREPLICATION NOBYPASSRLS;
+            -- The SECURITY DEFINER RLS helpers query FORCE-RLS tables whose
+            -- policies call those same helpers. Their owner must bypass RLS
+            -- (or be superuser) to avoid recursive policy evaluation.
+            SELECT rolsuper, rolbypassrls
+              INTO migration_role
+              FROM pg_roles
+             WHERE rolname = current_user;
+
+            IF NOT FOUND THEN
+                RAISE EXCEPTION 'Unable to inspect migration role %', current_user;
+            END IF;
+
+            IF NOT migration_role.rolsuper AND NOT migration_role.rolbypassrls THEN
+                RAISE EXCEPTION
+                    'Migration role % must have BYPASSRLS or SUPERUSER to own the SECURITY DEFINER RLS helpers',
+                    current_user;
+            END IF;
+
+            SELECT rolcanlogin, rolsuper, rolcreatedb, rolcreaterole,
+                   rolinherit, rolreplication, rolbypassrls
+              INTO app_role
+              FROM pg_roles
+             WHERE rolname = 'nlc_app_role';
+
+            IF NOT FOUND THEN
+                RAISE EXCEPTION
+                    'Required role nlc_app_role is missing; provision it out-of-band before migration 0050';
+            END IF;
+
+            IF NOT app_role.rolcanlogin
+               OR app_role.rolsuper
+               OR app_role.rolcreatedb
+               OR app_role.rolcreaterole
+               OR app_role.rolinherit
+               OR app_role.rolreplication
+               OR app_role.rolbypassrls THEN
+                RAISE EXCEPTION
+                    'nlc_app_role has unsafe attributes; require LOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, NOREPLICATION and NOBYPASSRLS';
+            END IF;
+
+            SELECT rolcanlogin, rolsuper, rolcreatedb, rolcreaterole,
+                   rolinherit, rolreplication, rolbypassrls
+              INTO audit_role
+              FROM pg_roles
+             WHERE rolname = 'nlc_ci_audit_role';
+
+            IF NOT FOUND THEN
+                RAISE EXCEPTION
+                    'Required role nlc_ci_audit_role is missing; provision it out-of-band before migration 0050';
+            END IF;
+
+            IF NOT audit_role.rolcanlogin
+               OR audit_role.rolsuper
+               OR audit_role.rolcreatedb
+               OR audit_role.rolcreaterole
+               OR audit_role.rolinherit
+               OR audit_role.rolreplication
+               OR audit_role.rolbypassrls THEN
+                RAISE EXCEPTION
+                    'nlc_ci_audit_role has unsafe attributes; require LOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, NOREPLICATION and NOBYPASSRLS';
+            END IF;
+
+            -- NOINHERIT does not prevent SET ROLE. Restricted runtime roles
+            -- must never be members of another role. Only trusted database
+            -- administrators with SUPERUSER or BYPASSRLS may hold memberships
+            -- in these restricted roles.
+            -- NOINHERIT does not prevent SET ROLE. The application and CI
+            -- audit roles connect directly and must have no membership edges
+            -- in either direction. Privileged administrators do not need to
+            -- assume these runtime identities through role membership.
+            IF EXISTS (
+                SELECT 1
+                  FROM pg_auth_members membership
+                  JOIN pg_roles granted_role ON granted_role.oid = membership.roleid
+                  JOIN pg_roles member_role ON member_role.oid = membership.member
+                 WHERE member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
+                    OR (
+                        granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
+                        AND NOT (member_role.rolsuper OR member_role.rolbypassrls)
+                    )
+            ) THEN
+                RAISE EXCEPTION
+                    'restricted NLC roles may only be granted to trusted SUPERUSER/BYPASSRLS administrators and must not inherit other roles';
             END IF;
         END
-        $role$;
+        $role_preflight$;
     """)
-    op.execute("""
-        ALTER ROLE nlc_app_role NOSUPERUSER NOCREATEDB NOCREATEROLE
-            NOINHERIT NOREPLICATION NOBYPASSRLS
-    """)
-    op.execute("GRANT nlc_app_role TO CURRENT_USER")
+
+    # Validate the complete RLS target inventory before making any schema
+    # changes. A database claiming to be at 0042 but missing a table created
+    # by 0038 must stop for explicit drift reconciliation, not silently skip
+    # or recreate potentially lost audit evidence.
+    bind = op.get_bind()
+    missing_rls_tables = [
+        table
+        for table in RLS_TABLES
+        if bind.execute(
+            sa.text("SELECT to_regclass(:qualified_name)"),
+            {"qualified_name": f"public.{table}"},
+        ).scalar_one() is None
+    ]
+    if missing_rls_tables:
+        raise RuntimeError(
+            "RLS migration preflight found missing expected public tables: "
+            + ", ".join(sorted(missing_rls_tables))
+            + ". Reconcile schema drift and audit evidence before retrying."
+        )
+
+    missing_rls_views = [
+        view
+        for view in RLS_VIEWS
+        if bind.execute(
+            sa.text("SELECT to_regclass(:qualified_name)"),
+            {"qualified_name": f"public.{view}"},
+        ).scalar_one() is None
+    ]
+    if missing_rls_views:
+        raise RuntimeError(
+            "RLS migration preflight found missing expected public views: "
+            + ", ".join(sorted(missing_rls_views))
+            + ". Reconcile the view inventory before retrying."
+        )
 
     op.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
     op.execute("CREATE SCHEMA IF NOT EXISTS nlc_private")
@@ -217,6 +343,59 @@ def upgrade() -> None:
         $function$
     """)
     op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_current_user_is_rule_admin()
+        RETURNS boolean
+        LANGUAGE sql
+        STABLE
+        SECURITY DEFINER
+        SET search_path = pg_catalog, public
+        AS $function$
+            SELECT EXISTS (
+                SELECT 1 FROM public.users u
+                WHERE u.id = public.nlc_current_user_id()
+                  AND u.is_active IS TRUE
+                  AND u.role::text IN ('SUPER_ADMIN', 'ADMIN_STAFF')
+            )
+        $function$
+    """)
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_current_user_is_revenue_staff()
+        RETURNS boolean
+        LANGUAGE sql
+        STABLE
+        SECURITY DEFINER
+        SET search_path = pg_catalog, public
+        AS $function$
+            SELECT COALESCE(
+                public.nlc_current_user_principal() = 'ADMIN'
+                OR EXISTS (
+                    SELECT 1 FROM public.users u
+                    WHERE u.id = public.nlc_current_user_id()
+                      AND u.is_active IS TRUE
+                      AND u.role::text IN ('SUPER_ADMIN', 'ADMIN_STAFF')
+                ),
+                FALSE
+            )
+        $function$
+    """)
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_current_user_is_super_admin()
+        RETURNS boolean
+        LANGUAGE sql
+        STABLE
+        SECURITY DEFINER
+        SET search_path = pg_catalog, public
+        AS $function$
+            SELECT EXISTS (
+                SELECT 1 FROM public.users u
+                WHERE u.id = public.nlc_current_user_id()
+                  AND u.is_active IS TRUE
+                  AND u.role::text = 'SUPER_ADMIN'
+            )
+        $function$
+    """)
+
+    op.execute("""
         CREATE OR REPLACE FUNCTION public.nlc_can_access_company(p_company_id uuid)
         RETURNS boolean
         LANGUAGE sql
@@ -328,6 +507,9 @@ def upgrade() -> None:
         "nlc_current_user_id()",
         "nlc_current_user_context_valid()",
         "nlc_current_user_is_staff()",
+        "nlc_current_user_is_rule_admin()",
+        "nlc_current_user_is_revenue_staff()",
+        "nlc_current_user_is_super_admin()",
         "nlc_can_access_company(uuid)",
         "nlc_can_view_financials_company(uuid)",
         "nlc_can_manage_financials_company(uuid)",
@@ -403,6 +585,35 @@ def upgrade() -> None:
             CREATE POLICY {table}_tenant_delete ON public.{table}
             FOR DELETE USING (public.{write_fn}(company_id))
         """)
+
+    # Rescue audit records are tenant-scoped through their parent plan.
+    # They are append-only: the actor must be the signed current user and
+    # must have edit access to the plan's company.
+    op.execute("""
+        CREATE POLICY rescue_audit_log_tenant_select ON public.rescue_audit_log
+        FOR SELECT
+        USING (
+            EXISTS (
+                SELECT 1
+                FROM public.rescue_plans rp
+                WHERE rp.id = rescue_audit_log.rescue_plan_id
+                  AND public.nlc_can_access_company(rp.company_id)
+            )
+        )
+    """)
+    op.execute("""
+        CREATE POLICY rescue_audit_log_tenant_insert ON public.rescue_audit_log
+        FOR INSERT
+        WITH CHECK (
+            actor_user_id = public.nlc_current_user_id()
+            AND EXISTS (
+                SELECT 1
+                FROM public.rescue_plans rp
+                WHERE rp.id = rescue_audit_log.rescue_plan_id
+                  AND public.nlc_can_edit_company(rp.company_id)
+            )
+        )
+    """)
 
     # Compliance flags may expose tax, audit, annual-return and capital data.
     op.execute("""
@@ -543,6 +754,10 @@ def upgrade() -> None:
         BEFORE UPDATE ON public.users
         FOR EACH ROW EXECUTE FUNCTION public.nlc_protect_user_security_fields()
     """)
+
+    # Trigger execution does not require callers to hold EXECUTE. This
+    # SECURITY DEFINER function must never be callable directly by PUBLIC.
+    op.execute("REVOKE ALL ON FUNCTION public.nlc_protect_user_security_fields() FROM PUBLIC")
 
     op.execute("""
         CREATE POLICY company_user_access_self_read ON public.company_user_access
@@ -738,15 +953,30 @@ def upgrade() -> None:
         CREATE POLICY quotations_company_read ON public.quotations
         FOR SELECT
         USING (
-            public.nlc_current_user_is_staff()
-            OR (company_id IS NOT NULL AND public.nlc_can_access_company(company_id))
+            public.nlc_current_user_is_revenue_staff()
+            OR (
+                NOT public.nlc_current_user_is_staff()
+                AND public.nlc_current_user_id() IS NOT NULL
+                AND EXISTS (
+                    SELECT 1 FROM public.users u
+                    WHERE u.id = public.nlc_current_user_id()
+                      AND u.is_active IS TRUE
+                )
+                AND EXISTS (
+                    SELECT 1 FROM public.company_user_access cua
+                    WHERE cua.company_id = quotations.company_id
+                      AND cua.user_id = public.nlc_current_user_id()
+                      AND cua.is_active IS TRUE
+                      AND cua.can_view_financials IS TRUE
+                )
+            )
         )
     """)
     op.execute("""
         CREATE POLICY quotations_staff_write ON public.quotations
         FOR ALL
-        USING (public.nlc_current_user_is_staff())
-        WITH CHECK (public.nlc_current_user_is_staff())
+        USING (public.nlc_current_user_is_revenue_staff())
+        WITH CHECK (public.nlc_current_user_is_revenue_staff())
     """)
     op.execute("""
         CREATE POLICY document_access_log_actor_tenant_select ON public.document_access_log
@@ -809,10 +1039,15 @@ def upgrade() -> None:
         )
     """)
     op.execute("""
-        CREATE POLICY legal_rules_staff_write ON public.legal_rules
-        FOR ALL
-        USING (public.nlc_current_user_is_staff())
-        WITH CHECK (public.nlc_current_user_is_staff())
+        CREATE POLICY legal_rules_super_admin_insert ON public.legal_rules
+        FOR INSERT
+        WITH CHECK (public.nlc_current_user_is_super_admin())
+    """)
+    op.execute("""
+        CREATE POLICY legal_rules_super_admin_update ON public.legal_rules
+        FOR UPDATE
+        USING (public.nlc_current_user_is_super_admin())
+        WITH CHECK (public.nlc_current_user_is_super_admin())
     """)
     for table in ("sro_registry", "regulatory_rules"):
         op.execute(f"""
@@ -833,13 +1068,31 @@ def upgrade() -> None:
             USING (public.nlc_current_user_is_staff())
             WITH CHECK (public.nlc_current_user_is_staff())
         """)
-    for table in ("legal_rule_versions", "ai_output_log", "ai_prompt_templates", "engagements"):
+    op.execute("""
+        CREATE POLICY legal_rule_versions_rule_admin_read ON public.legal_rule_versions
+        FOR SELECT
+        USING (public.nlc_current_user_is_rule_admin())
+    """)
+    op.execute("""
+        CREATE POLICY legal_rule_versions_super_admin_insert ON public.legal_rule_versions
+        FOR INSERT
+        WITH CHECK (public.nlc_current_user_is_super_admin())
+    """)
+    for table in ("ai_output_log", "ai_prompt_templates"):
         op.execute(f"""
             CREATE POLICY {table}_staff_only ON public.{table}
             FOR ALL
             USING (public.nlc_current_user_is_staff())
             WITH CHECK (public.nlc_current_user_is_staff())
         """)
+    # Engagements contain commercial fees and revenue-pipeline facts. Legal
+    # staff is staff for legal operations, but must not read commercial data.
+    op.execute("""
+        CREATE POLICY engagements_revenue_staff_only ON public.engagements
+        FOR ALL
+        USING (public.nlc_current_user_is_revenue_staff())
+        WITH CHECK (public.nlc_current_user_is_revenue_staff())
+    """)
 
     # Runtime privileges: RLS supplies row scope; SQL grants supply operation
     # scope. TRUNCATE, REFERENCES and TRIGGER are never granted to the app role.
@@ -848,29 +1101,57 @@ def upgrade() -> None:
     op.execute("GRANT USAGE ON SCHEMA public TO nlc_app_role")
     op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO nlc_app_role")
     op.execute("GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO nlc_app_role")
+    # Views owned by a BYPASSRLS migration role must not evaluate underlying
+    # rows with owner privileges. PostgreSQL 15+ security_invoker makes the
+    # caller's SELECT grants and row-level policies apply to the base tables.
+    for view in RLS_VIEWS:
+        op.execute(
+            f"ALTER VIEW public.{view} SET (security_invoker = true)"
+        )
     op.execute("REVOKE TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA public FROM nlc_app_role")
+    op.execute("REVOKE ALL ON TABLE public.rescue_audit_log FROM PUBLIC")
     op.execute("REVOKE ALL ON TABLE public.alembic_version FROM nlc_app_role")
-    for table in ("user_activity_logs", "document_access_log", "compliance_evaluation_runs", "compliance_events", "ai_output_log"):
+    # Rule history is append-only. Only a SUPER_ADMIN may create a version;
+    # no human or service session may rewrite or erase historical snapshots.
+    op.execute("REVOKE DELETE, TRUNCATE ON TABLE public.legal_rules FROM nlc_app_role")
+    op.execute("GRANT SELECT, INSERT, UPDATE ON TABLE public.legal_rules TO nlc_app_role")
+    op.execute("REVOKE UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE public.legal_rule_versions FROM nlc_app_role")
+    op.execute("GRANT SELECT, INSERT ON TABLE public.legal_rule_versions TO nlc_app_role")
+    for table in ("user_activity_logs", "document_access_log", "compliance_evaluation_runs", "compliance_events", "ai_output_log", "rescue_audit_log"):
         op.execute(f"REVOKE UPDATE, DELETE, TRUNCATE ON TABLE public.{table} FROM nlc_app_role")
+
+    # Enforce append-only rule history even if a future grant/policy regresses.
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_reject_legal_rule_version_mutation()
+        RETURNS trigger
+        LANGUAGE plpgsql
+        SECURITY DEFINER
+        SET search_path = pg_catalog, public
+        AS $function$
+        BEGIN
+            RAISE EXCEPTION 'legal_rule_versions is append-only'
+                USING ERRCODE = '55000';
+        END
+        $function$
+    """)
+    op.execute("REVOKE ALL ON FUNCTION public.nlc_reject_legal_rule_version_mutation() FROM PUBLIC")
+    op.execute("DROP TRIGGER IF EXISTS legal_rule_versions_reject_row_mutation ON public.legal_rule_versions")
+    op.execute("""
+        CREATE TRIGGER legal_rule_versions_reject_row_mutation
+        BEFORE UPDATE OR DELETE ON public.legal_rule_versions
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_reject_legal_rule_version_mutation()
+    """)
+    op.execute("DROP TRIGGER IF EXISTS legal_rule_versions_reject_truncate ON public.legal_rule_versions")
+    op.execute("""
+        CREATE TRIGGER legal_rule_versions_reject_truncate
+        BEFORE TRUNCATE ON public.legal_rule_versions
+        FOR EACH STATEMENT EXECUTE FUNCTION public.nlc_reject_legal_rule_version_mutation()
+    """)
 
     # Read-only rule parity is exposed through a narrow view, not tenant tables.
     op.execute("CREATE SCHEMA IF NOT EXISTS audit")
     op.execute("REVOKE ALL ON SCHEMA audit FROM PUBLIC, nlc_app_role")
     op.execute("REVOKE ALL ON audit.active_legal_rule_ids FROM PUBLIC")
-    op.execute("""
-        DO $audit_role$
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_ci_audit_role') THEN
-                CREATE ROLE nlc_ci_audit_role LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
-                    NOINHERIT NOREPLICATION NOBYPASSRLS;
-            END IF;
-        END
-        $audit_role$;
-    """)
-    op.execute("""
-        ALTER ROLE nlc_ci_audit_role NOSUPERUSER NOCREATEDB NOCREATEROLE
-            NOINHERIT NOREPLICATION NOBYPASSRLS
-    """)
     op.execute("GRANT USAGE ON SCHEMA audit TO nlc_ci_audit_role")
     op.execute("GRANT SELECT ON audit.active_legal_rule_ids TO nlc_ci_audit_role")
 

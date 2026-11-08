@@ -31,14 +31,36 @@ if TYPE_CHECKING:
 _APP_DATABASE_URL = os.environ.get("APP_DATABASE_URL", "").strip()
 _MIGRATION_DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 _ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").strip().lower()
-_REQUIRE_RLS_APP_ROLE = os.environ.get(
-    "REQUIRE_RLS_APP_ROLE", "true" if _ENVIRONMENT in {"prod", "production"} else "false"
-).strip().lower() == "true"
+# Render always injects RENDER=true. Treat every Render runtime (including
+# preview/staging services) as deployment-grade: never silently fall back to
+# the privileged migration URL because ENVIRONMENT was omitted or mistyped.
+_RENDER_RUNTIME = os.environ.get("RENDER", "").strip().lower() == "true"
+_PRODUCTION_ENVIRONMENT = _ENVIRONMENT in {"prod", "production"} or _RENDER_RUNTIME
+_RLS_ROLE_SETTING = os.environ.get("REQUIRE_RLS_APP_ROLE")
+if _PRODUCTION_ENVIRONMENT:
+    # A deployment operator must not be able to disable the runtime-role
+    # boundary with an environment override and silently fall back to the
+    # privileged migration URL.
+    if _RLS_ROLE_SETTING is not None and _RLS_ROLE_SETTING.strip().lower() != "true":
+        raise RuntimeError(
+            "REQUIRE_RLS_APP_ROLE cannot be disabled in production; "
+            "the API must use APP_DATABASE_URL as nlc_app_role."
+        )
+    _REQUIRE_RLS_APP_ROLE = True
+else:
+    _REQUIRE_RLS_APP_ROLE = (
+        (_RLS_ROLE_SETTING or "false").strip().lower() == "true"
+    )
 
 if _REQUIRE_RLS_APP_ROLE and not _APP_DATABASE_URL:
     raise RuntimeError(
         "APP_DATABASE_URL is required when REQUIRE_RLS_APP_ROLE=true; "
         "refusing to run the API with a potentially BYPASSRLS migration role."
+    )
+
+if _PRODUCTION_ENVIRONMENT and len(os.environ.get("NLC_RLS_HMAC_SECRET", "")) < 32:
+    raise RuntimeError(
+        "NLC_RLS_HMAC_SECRET must contain at least 32 characters in production/Render"
     )
 
 # AsyncSessionLocal is the runtime application pool. DATABASE_URL remains the
@@ -231,18 +253,77 @@ async def verify_runtime_database_role() -> None:
         row = (
             await connection.execute(
                 text(
-                    "SELECT current_user, rolsuper, rolbypassrls "
+                    "SELECT current_user, rolsuper, rolcreatedb, rolcreaterole, "
+                    "rolinherit, rolreplication, rolbypassrls "
                     "FROM pg_roles WHERE rolname = current_user"
                 )
             )
         ).one_or_none()
-    if row is None:
-        raise RuntimeError("Unable to verify runtime PostgreSQL role")
-    role_name, is_superuser, bypasses_rls = row
-    if role_name != "nlc_app_role" or is_superuser or bypasses_rls:
+        if row is None:
+            raise RuntimeError("Unable to verify runtime PostgreSQL role")
+        (
+            role_name,
+            is_superuser,
+            can_create_db,
+            can_create_role,
+            inherits_roles,
+            can_replicate,
+            bypasses_rls,
+        ) = row
+        memberships: bool = (
+            await connection.execute(
+                text(
+                    "SELECT EXISTS ("
+                    "SELECT 1 FROM pg_auth_members m "
+                    "JOIN pg_roles granted_role ON granted_role.oid = m.roleid "
+                    "JOIN pg_roles member_role ON member_role.oid = m.member "
+                    "WHERE member_role.rolname = current_user "
+                    "OR (granted_role.rolname = current_user "
+                    "AND NOT (member_role.rolsuper OR member_role.rolbypassrls)))"
+                )
+            )
+        ).scalar_one()
+
+    if (
+        role_name != "nlc_app_role"
+        or is_superuser
+        or can_create_db
+        or can_create_role
+        or inherits_roles
+        or can_replicate
+        or bypasses_rls
+        or memberships
+    ):
         raise RuntimeError(
             "Unsafe runtime database role: expected nlc_app_role with "
-            "NOSUPERUSER and NOBYPASSRLS"
+            "NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, "
+            "NOREPLICATION, NOBYPASSRLS, no inherited memberships, and no grants to untrusted roles"
+        )
+
+    # Prove that the runtime secret matches the database's private signing key.
+    # This uses a synthetic UUID inside a transaction and rolls it back; the
+    # API must not become healthy with a mismatched secret that makes every
+    # authenticated RLS query silently fail closed.
+    principal = "00000000-0000-0000-0000-000000000001"
+    async with engine.connect() as connection:
+        await connection.execute(
+            text(
+                "SELECT set_config('app.current_user_id', :uid, true), "
+                "set_config('app.current_user_signature', :signature, true)"
+            ),
+            {"uid": principal, "signature": _rls_signature(principal)},
+        )
+        verified_principal = (
+            await connection.execute(
+                text("SELECT public.nlc_current_user_principal()")
+            )
+        ).scalar_one_or_none()
+        await connection.rollback()
+
+    if verified_principal != principal:
+        raise RuntimeError(
+            "NLC_RLS_HMAC_SECRET does not match the database signing key; "
+            "refusing to start the runtime API"
         )
 
 

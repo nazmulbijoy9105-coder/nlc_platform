@@ -699,15 +699,21 @@ class TestRulesService:
             pytest.skip("Rules not seeded")
 
         black_rules = await svc.get_black_override_rules()
-        assert len(black_rules) >= 4  # V3 expansion added more BLACK rules
         black_ids = {r.rule_id for r in black_rules}
-        assert {"AUD-003", "TR-005", "ESC-002", "ESC-003"}.issubset(black_ids)
-        assert len(black_ids) >= 4  # V3 expansion added more BLACK rules
+        # AUD-003 is NOT_EVALUATED pending counsel review and must never be
+        # returned as an automatic BLACK override.
+        assert {"TR-005", "ESC-002", "ESC-003"}.issubset(black_ids)
+        assert "AUD-003" not in black_ids
+        assert len(black_ids) >= 3
 
     @pytest.mark.asyncio
     async def test_update_rule_creates_version_snapshot(self, db, db_super_admin):
+        from app.models.database import set_rls_context
         from app.services.rules_service import RulesService as LegalRuleService
 
+        # The legal-rule trigger requires the real, signed Super Admin UUID;
+        # an unscoped test-owner session is not a valid human actor.
+        await set_rls_context(db, str(db_super_admin.id))
         svc = LegalRuleService(db)
         rules = await svc.get_all()
         if not rules:

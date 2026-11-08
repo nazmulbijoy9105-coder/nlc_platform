@@ -455,6 +455,32 @@ class TestAnnualReturnRules:
 # MODULE: DIRECTORS (4 rules)
 # =============================================================================
 
+class TestDirectorConsentEvidence:
+    def test_DIR007_is_separate_from_form_xii(self, rule_engine, build_profile, make_director_change):
+        change = make_director_change(
+            days_ago=45,
+            form_filed=True,
+            consent_filed=False,
+            consent_verified=True,
+            consent_evidence_ref="evidence://director/consent-check",
+        )
+        output = rule_engine.evaluate(build_profile(director_changes=[change]))
+        assert_flag_triggered(output, "DIR-007")
+        flag = next(f for f in output.flags if f.rule_id == "DIR-007")
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
+
+    def test_DIR007_does_not_infer_missing_consent_without_verified_evidence(self, rule_engine, build_profile, make_director_change):
+        change = make_director_change(
+            days_ago=45,
+            form_filed=True,
+            consent_filed=False,
+            consent_verified=False,
+            consent_evidence_ref=None,
+        )
+        assert_flag_not_triggered(rule_engine.evaluate(build_profile(director_changes=[change])), "DIR-007")
+
+
 class TestDirectorRules:
     """Tests for DIR-001 through DIR-004."""
 
@@ -515,11 +541,19 @@ class TestShareholderRules:
     def test_SH001_triggers_change_not_in_return(self, rule_engine, build_profile):
         """Share allotment not filed via Form XV → SH-001."""
         profile = build_profile(
-            last_allotment_date=date.today() - timedelta(days=65),
+            last_allotment_date=date.today() - timedelta(days=61),
             form_xv_filed=False,
         )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "SH-001")
+
+    def test_SH001_no_trigger_at_60_day_limit(self, rule_engine, build_profile):
+        profile = build_profile(
+            last_allotment_date=date.today() - timedelta(days=60),
+            form_xv_filed=False,
+        )
+        output = rule_engine.evaluate(profile)
+        assert_flag_not_triggered(output, "SH-001")
 
     def test_SH001_no_trigger_when_filed(self, rule_engine, build_profile):
         profile = build_profile(
@@ -540,94 +574,106 @@ class TestShareholderRules:
 # =============================================================================
 
 class TestTransferRules:
-    """Tests for TR-001 through TR-006. TR-005 is a BLACK override."""
+    """Transfer tests assert evidence-aware review signals, never automatic invalidity."""
 
-    def test_TR001_triggers_no_instrument(self, rule_engine, build_profile, make_share_transfer):
-        """Transfer with no written instrument → TR-001."""
+    def test_TR001_triggers_only_on_explicitly_verified_missing_instrument(self, rule_engine, build_profile, make_share_transfer):
         transfer = make_share_transfer(instrument_recorded=False)
-        profile = build_profile(share_transfers=[transfer])
-        output = rule_engine.evaluate(profile)
+        output = rule_engine.evaluate(build_profile(share_transfers=[transfer]))
         assert_flag_triggered(output, "TR-001")
+        flag = next(f for f in output.flags if f.rule_id == "TR-001")
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
 
-    def test_TR002_triggers_stamp_duty_not_paid(self, rule_engine, build_profile, make_share_transfer):
-        """Transfer without stamp duty payment → TR-002."""
-        transfer = make_share_transfer(stamp_duty_paid=False, stamp_duty_amount=0)
-        profile = build_profile(share_transfers=[transfer])
-        output = rule_engine.evaluate(profile)
+    def test_TR001_unknown_instrument_status_does_not_infer_absence(self, rule_engine, build_profile, make_share_transfer):
+        transfer = make_share_transfer()
+        output = rule_engine.evaluate(build_profile(share_transfers=[transfer]))
+        assert_flag_not_triggered(output, "TR-001")
+
+    def test_TR002_requires_explicit_unpaid_status(self, rule_engine, build_profile, make_share_transfer):
+        transfer = make_share_transfer(stamp_duty_paid=False, stamp_duty_applicability_verified=True, stamp_duty_amount=0)
+        output = rule_engine.evaluate(build_profile(share_transfers=[transfer]))
         assert_flag_triggered(output, "TR-002")
+        flag = next(f for f in output.flags if f.rule_id == "TR-002")
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
 
-    def test_TR005_triggers_void_transfer_no_approval(self, rule_engine, build_profile, make_share_transfer):
-        """Transfer without board approval under an applicable AoA restriction → TR-005."""
-        transfer = make_share_transfer(
-            aoa_restriction_apply=True,
-            board_approval=False,
-            board_approval_obtained=False,
+    def test_TR002_unknown_applicability_does_not_infer_stamp_duty_default(self, rule_engine, build_profile, make_share_transfer):
+        transfer = make_share_transfer(stamp_duty_paid=False, stamp_duty_applicability_verified=False)
+        assert_flag_not_triggered(rule_engine.evaluate(build_profile(share_transfers=[transfer])), "TR-002")
+
+    def test_TR003_only_applies_when_articles_restriction_is_verified(self, rule_engine, build_profile, make_share_transfer):
+        no_restriction = make_share_transfer(aoa_restriction_apply=False, board_approval_obtained=False)
+        assert_flag_not_triggered(rule_engine.evaluate(build_profile(share_transfers=[no_restriction])), "TR-003")
+
+        restricted = make_share_transfer(aoa_restriction_apply=True, board_approval_obtained=False, articles_clause_evidence_ref='evidence://articles/clause')
+        output = rule_engine.evaluate(build_profile(share_transfers=[restricted]))
+        assert_flag_triggered(output, "TR-003")
+        flag = next(f for f in output.flags if f.rule_id == "TR-003")
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
+
+    def test_TR004_only_checks_notice_after_verified_refusal(self, rule_engine, build_profile, make_share_transfer):
+        unrelated = make_share_transfer(share_register_updated=False)
+        assert_flag_not_triggered(rule_engine.evaluate(build_profile(share_transfers=[unrelated])), "TR-004")
+
+        refused = make_share_transfer(
+            registration_refused=True,
+            refusal_notice_sent=False,
+            instrument_lodged_date=date.today() - timedelta(days=31),
+            refusal_decision_evidence_ref='evidence://rjsc/refusal',
         )
-        profile = build_profile(share_transfers=[transfer])
-        output = rule_engine.evaluate(profile)
-        assert_flag_triggered(output, "TR-005")
-
-    def test_TR004_triggers_register_not_updated(self, rule_engine, build_profile, make_share_transfer):
-        """Transfer completed but share register not updated → TR-004."""
-        transfer = make_share_transfer(share_register_updated=False)
-        profile = build_profile(share_transfers=[transfer])
-        output = rule_engine.evaluate(profile)
+        output = rule_engine.evaluate(build_profile(share_transfers=[refused]))
         assert_flag_triggered(output, "TR-004")
+        flag = next(f for f in output.flags if f.rule_id == "TR-004")
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
 
-    @pytest.mark.black
-    def test_TR005_triggers_aoa_violation(self, rule_engine, build_profile, make_share_transfer):
-        """Transfer violating AoA restriction → TR-005 BLACK override."""
+    def test_TR005_is_review_only_not_automatic_void_or_black(self, rule_engine, build_profile, make_share_transfer):
         transfer = make_share_transfer(
             aoa_restriction_apply=True,
             board_approval_obtained=False,
+            transfer_registered=True,
+            articles_clause_evidence_ref='evidence://articles/clause',
+            transfer_registration_evidence_ref='evidence://rjsc/transfer-registration',
         )
-        profile = build_profile(
-            share_transfers=[transfer],
-            aoa_transfer_restriction=True,
-        )
-        output = rule_engine.evaluate(profile)
+        output = rule_engine.evaluate(build_profile(share_transfers=[transfer]))
         assert_flag_triggered(output, "TR-005")
-
-    @pytest.mark.black
-    def test_TR005_unapproved_legal_mapping_does_not_force_black(self, rule_engine, build_profile, make_share_transfer):
-        """TR-005 remains visible but cannot force BLACK before independent legal approval."""
-        transfer = make_share_transfer(
-            aoa_restriction_apply=True,
-            board_approval_obtained=False,
-        )
-        profile = build_profile(share_transfers=[transfer], aoa_transfer_restriction=True)
-        output = rule_engine.evaluate(profile)
-        assert_flag_triggered(output, "TR-005")
+        flag = next(f for f in output.flags if f.rule_id == "TR-005")
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
+        assert flag.is_black_override is False
         assert output.score_breakdown.override_applied is False
-        assert output.score_breakdown.final_score == 100
 
-    def test_TR006_triggers_composite_irregular(self, rule_engine, build_profile, make_share_transfer):
-        """Multiple irregularities in one transfer → TR-006 RED."""
+    def test_TR006_composite_is_review_only(self, rule_engine, build_profile, make_share_transfer):
         transfer = make_share_transfer(
             instrument_recorded=False,
             stamp_duty_paid=False,
-            board_approval=False,
+            stamp_duty_applicability_verified=True,
         )
-        profile = build_profile(share_transfers=[transfer])
-        output = rule_engine.evaluate(profile)
+        output = rule_engine.evaluate(build_profile(share_transfers=[transfer]))
         assert_flag_triggered(output, "TR-006")
+        flag = next(f for f in output.flags if f.rule_id == "TR-006")
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
 
-    def test_no_transfer_flags_when_compliant(self, rule_engine, build_profile, make_share_transfer):
+    def test_no_transfer_flags_when_all_relevant_facts_are_verified_clear(self, rule_engine, build_profile, make_share_transfer):
         transfer = make_share_transfer(
             instrument_recorded=True,
             stamp_duty_paid=True,
-            board_approval=True,
+            board_approval_obtained=True,
             share_register_updated=True,
             aoa_restriction_apply=False,
+            transfer_registered=True,
+            registration_refused=False,
+            refusal_notice_sent=True,
+            transfer_registration_evidence_ref='evidence://rjsc/transfer-registration',
         )
-        profile = build_profile(share_transfers=[transfer])
-        output = rule_engine.evaluate(profile)
+        output = rule_engine.evaluate(build_profile(share_transfers=[transfer]))
         for rule_id in ["TR-001", "TR-002", "TR-003", "TR-004", "TR-005", "TR-006"]:
             assert_flag_not_triggered(output, rule_id)
 
     def test_no_transfer_flags_when_no_transfers(self, rule_engine, build_profile):
-        profile = build_profile(share_transfers=[])
-        output = rule_engine.evaluate(profile)
+        output = rule_engine.evaluate(build_profile(share_transfers=[]))
         for rule_id in ["TR-001", "TR-002", "TR-003", "TR-004", "TR-005", "TR-006"]:
             assert_flag_not_triggered(output, rule_id)
 
@@ -673,7 +719,7 @@ class TestRegisterRules:
         
 
     def test_REG002_triggers_certificate_not_issued(self, rule_engine, build_profile):
-        """Share certificates not issued within 60 days of allotment → SH-002.
+        """Share certificates not issued within 90 days of allotment → SH-002.
         NOTE: Test was originally asserting REG-002, but REG-002 = core registers missing.
         Share certificate non-issuance is SH-002 in the engine.
         """
@@ -752,6 +798,13 @@ class TestCapitalRules:
             amount_bdt=500000.0,
             charge_holder="Test Bank Ltd",
             form_xviii_filed=False,
+            creation_date_verified=True,
+            creation_date_evidence_ref="EXECUTED-CHARGE-001",
+            form_xviii_filing_status_verified=True,
+            form_xviii_filing_evidence_ref="RJSC-SEARCH-001",
+            registrable_under_s159=True,
+            registrability_verified=True,
+            registrability_evidence_ref="RJSC-CLASS-001",
         )
         profile = build_profile(charges=[charge])
         output = rule_engine.evaluate(profile)
@@ -765,6 +818,14 @@ class TestCapitalRules:
             amount_bdt=500000.0,
             charge_holder="Test Bank Ltd",
             form_xviii_filed=True,
+            form_xviii_filed_date=date.today() - timedelta(days=20),
+            creation_date_verified=True,
+            creation_date_evidence_ref="EXECUTED-CHARGE-002",
+            form_xviii_filing_status_verified=True,
+            form_xviii_filing_evidence_ref="RJSC-SEARCH-002",
+            registrable_under_s159=True,
+            registrability_verified=True,
+            registrability_evidence_ref="RJSC-CLASS-002",
         )
         profile = build_profile(charges=[charge])
         output = rule_engine.evaluate(profile)
@@ -933,26 +994,91 @@ class TestScoreBanding:
 
 
 
+class TestSection150Applicability:
+    def test_private_company_is_excluded_from_section_150(self, rule_engine, build_profile):
+        profile = build_profile(
+            company_type="PRIVATE_LIMITED",
+            business_commencement_declaration_filed=False,
+        )
+        assert_flag_not_triggered(rule_engine.evaluate(profile), "INC-007")
+
+    def test_public_company_without_prospectus_is_excluded(self, rule_engine, build_profile):
+        profile = build_profile(
+            company_type="PUBLIC_LIMITED",
+            section150_prospectus_issued=False,
+            business_commencement_declaration_filed=False,
+        )
+        assert_flag_not_triggered(rule_engine.evaluate(profile), "INC-007")
+
+    def test_public_company_requires_verified_section_150_applicability(self, rule_engine, build_profile):
+        profile = build_profile(
+            company_type="PUBLIC_LIMITED",
+            section150_prospectus_issued=True,
+            business_commencement_declaration_filed=False,
+        )
+        assert_flag_not_triggered(rule_engine.evaluate(profile), "INC-007")
+
+    def test_section_150_missing_declaration_evidence_does_not_trigger(self, rule_engine, build_profile):
+        profile = build_profile(
+            company_type="PUBLIC_LIMITED",
+            section150_prospectus_issued=True,
+            section150_applicability_verified=True,
+            section150_applicability_evidence_ref="evidence://section150/applicability",
+            business_commencement_declaration_filed=False,
+        )
+        assert_flag_not_triggered(rule_engine.evaluate(profile), "INC-007")
+
+    def test_verified_section_150_case_is_review_only(self, rule_engine, build_profile):
+        profile = build_profile(
+            company_type="PUBLIC_LIMITED",
+            section150_prospectus_issued=True,
+            section150_applicability_verified=True,
+            section150_applicability_evidence_ref="evidence://section150/applicability",
+            business_commencement_declaration_filed=False,
+            business_commencement_declaration_verified=True,
+            business_commencement_declaration_evidence_ref="evidence://section150/declaration-status",
+        )
+        output = rule_engine.evaluate(profile)
+        assert_flag_triggered(output, "INC-007")
+        flag = next(f for f in output.flags if f.rule_id == "INC-007")
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.score_impact == 0
+        assert not flag.is_black_override
+
+
 class TestInsolvencyRules:
-    """Bankruptcy Act 1997 — BNK-001 to BNK-003."""
+    """Companies Act 1994 Part V winding-up status is review-only."""
 
     def test_BNK001_triggers_winding_up_petition(self, rule_engine, build_profile):
-        """Winding up petition filed → BNK-001 (BLACK)."""
+        """A reported petition creates a review signal, never an automatic BLACK finding."""
         profile = build_profile(winding_up_petition_filed=True)
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "BNK-001")
 
     def test_BNK002_triggers_liquidator_appointed(self, rule_engine, build_profile):
-        """Liquidator appointed → BNK-002 (BLACK)."""
+        """A reported liquidator appointment requires route-specific verification."""
         profile = build_profile(liquidator_appointed=True)
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "BNK-002")
 
     def test_BNK003_triggers_court_ordered_winding_up(self, rule_engine, build_profile):
-        """Court-ordered winding up → BNK-003 (BLACK)."""
+        """A reported court order requires authenticated case verification."""
         profile = build_profile(court_ordered_winding_up=True)
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "BNK-003")
+
+    def test_insolvency_signals_are_never_automatic_black_findings(self, rule_engine, build_profile):
+        for profile in (
+            build_profile(winding_up_petition_filed=True),
+            build_profile(liquidator_appointed=True),
+            build_profile(court_ordered_winding_up=True),
+        ):
+            output = rule_engine.evaluate(profile)
+            flags = [f for f in output.flags if f.rule_id.startswith("BNK-")]
+            assert flags
+            assert all(f.severity == Severity.NOT_EVALUATED for f in flags)
+            assert all(f.score_impact == 0 for f in flags)
+            assert all(not f.is_black_override for f in flags)
 
     def test_no_insolvency_flags_when_compliant(self, rule_engine, build_profile):
         """No insolvency flags when company is solvent."""
@@ -1178,8 +1304,12 @@ class TestUntestedRules:
         assert_flag_triggered(rule_engine.evaluate(profile), "SH-002")
 
     def test_SH003_triggers(self, rule_engine, build_profile):
-        profile = build_profile(capital_increase_date=date.today() - timedelta(days=65), form_iv_filed=False)
+        profile = build_profile(capital_increase_date=date.today() - timedelta(days=16), form_iv_filed=False)
         assert_flag_triggered(rule_engine.evaluate(profile), "SH-003")
+
+    def test_SH003_no_trigger_at_15_day_limit(self, rule_engine, build_profile):
+        profile = build_profile(capital_increase_date=date.today() - timedelta(days=15), form_iv_filed=False)
+        assert_flag_not_triggered(rule_engine.evaluate(profile), "SH-003")
 
     def test_TAX001_triggers(self, rule_engine, build_profile):
         assert_flag_triggered(rule_engine.evaluate(build_profile(tin_obtained=False)), "TAX-001")
@@ -1339,3 +1469,38 @@ class TestVerdictRegression:
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "AR-002")
         assert output.score_breakdown.risk_band.value not in ("RED", "BLACK")
+
+def test_black_override_requires_separate_authorization(
+    monkeypatch, build_profile
+):
+    """A BLACK severity/flag marker alone cannot force a BLACK score."""
+    import app.rule_engine.engine as engine_module
+
+    profile = build_profile()
+    flag = ComplianceFlag(
+        rule_id="INC-003",
+        flag_code="MINIMUM_DIRECTORS_NOT_MET",
+        severity=Severity.BLACK,
+        score_impact=15,
+        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+        description="Test-only verified violation",
+        statutory_basis="Test-only basis",
+        is_black_override=True,
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+    )
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(
+        engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset()
+    )
+    denied = engine_module.NLCRuleEngine()._calculate_score([flag], profile)
+    assert denied.override_applied is False
+    assert denied.final_score > 0
+
+    monkeypatch.setattr(
+        engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"INC-003"})
+    )
+    authorized = engine_module.NLCRuleEngine()._calculate_score([flag], profile)
+    assert authorized.override_applied is True
+    assert authorized.final_score == 0

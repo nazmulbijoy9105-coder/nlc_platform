@@ -1,3 +1,4 @@
+# LEGACY DATABASE EXPORT — provenance/date not verified. This file contains pre-quarantine severity/score values and is not a seed, legal approval record, or current production snapshot. Do not use it to activate rules; reconcile only against a fresh read-only production query and the legal_approval_register.yaml.
 AGM-001|First AGM Default|Section 81, Companies Act 1994 (Bangladesh)|RED|25|f|t
 AGM-002|Subsequent AGM Default|Section 81, Companies Act 1994 (Bangladesh)|YELLOW|20|f|t
 AGM-003|AGM Notice Defective|Companies Act 1994, Section 85|YELLOW|10|f|t
@@ -6,8 +7,8 @@ AGM-005|AGM Quorum Not Met|Section 83, Companies Act 1994 (Bangladesh)|YELLOW|15
 AGM-006|AGM Minutes Not Prepared|Companies Act 1994, Section 83|YELLOW|15|f|t
 AGM-007|AGM Adjourned Without Notice|Companies Act 1994, Section 84|YELLOW|5|f|t
 AR-001|Annual Return Default|Companies Act 1994, Section 119|YELLOW|20|f|t
-AR-002|Annual Return 2-Year Backlog|Companies Act 1994, Sections 119, 304|RED|20|f|t
-AR-003|Annual Return 3-Year Backlog — BLACK ESCALATION|Companies Act 1994, Sections 119, 304|BLACK|20|f|t
+AR-002|Annual Return Backlog — Review Required|Companies Act 1994, Section 36 and Schedule X; Section 346 separate Registrar process|NOT_EVALUATED|0|f|t
+AR-003|Annual Return Backlog — Extended Review Required|Companies Act 1994, Section 36 and Schedule X; Section 346 separate Registrar process|NOT_EVALUATED|0|f|t
 AR-004|Annual Return Filed But Incomplete|Companies Act 1994, Section 119|YELLOW|10|f|t
 AUD-001|First Auditor Not Appointed Within 30 Days|Companies Act 1994, Section 210(1)|RED|20|f|t
 AUD-002|Audit Not Completed Before AGM|Companies Act 1994, Section 151|YELLOW|15|f|t
@@ -34,9 +35,9 @@ DIR-003|Major Director Irregularity — Over 1 Year Unfiled|Companies Act 1994, 
 DIR-004|Departed Director Still Shown as Active|Companies Act 1994, Section 92|RED|15|f|t
 DIR-005|Register of Directors Interests Missing|Companies Act 1994, Section 97|YELLOW|5|f|t
 DIR-006|Register of Contracts Missing|Companies Act 1994, Section 98|YELLOW|5|f|t
-ESC-001|Strike-Off Risk Elevated|Companies Act 1994, Section 304|RED|20|f|t
-ESC-002|Strike-Off Imminent — BLACK OVERRIDE|Companies Act 1994, Section 304|BLACK|30|t|t
-ESC-003|Corporate Rescue Mandatory — BLACK OVERRIDE|Multiple sections, Companies Act 1994 (Bangladesh)|BLACK|30|t|t
+ESC-001|Strike-Off Process Status Requires Verification|Companies Act 1994, Section 346|NOT_EVALUATED|0|f|t
+ESC-002|Strike-Off Status Requires Verification|Companies Act 1994, Section 346|NOT_EVALUATED|0|f|t
+ESC-003|Corporate Rescue Mandatory — BLACK OVERRIDE|NLC internal risk policy; not a statutory Companies Act classification|BLACK|30|t|t
 ESC-004|Voluntary Winding Up|Companies Act 1994, Section 196|BLACK|30|t|t
 ESC-005|Investigation Order Pending|Companies Act 1994, Section 199|RED|20|f|t
 FX-001|Foreign Exchange Violation|Foreign Exchange Regulation Act 1947 (Bangladesh)|RED|15|f|t

@@ -1,6 +1,6 @@
 """
 NEUM LEX COUNSEL — ORM LAYER
-models/__init__.py — Single import point for all 28 ORM models.
+models/__init__.py — Single import point for all 29 ORM models.
 
 Usage:
     from app.models import User, Company, ComplianceFlag, ...
@@ -15,9 +15,21 @@ before Alembic migrations are generated.
 # ── Database infrastructure ─────────────────────────────────────────
 # ── Commercial (Tasks, Engagements, Quotations) ──────────────────────
 from .commercial import Engagement, Quotation, Task
+from .finance import (
+    ClientSubscription,
+    Invoice,
+    InvoiceLine,
+    Payment,
+    PaymentAllocation,
+    PaymentIntent,
+    PaymentLedgerEvent,
+    PaymentProviderEvent,
+    PaymentSubmission,
+)
 
 # ── Companies ────────────────────────────────────────────────────────
 from .company import Company, CompanyUserAccess
+from .charges import CompanyCharge
 
 # ── Compliance (Flags, Score History, Events) ────────────────────────
 from .compliance import (
@@ -79,6 +91,13 @@ from .infrastructure import (
 # ── People (Directors, Shareholders, Transfers) ──────────────────────
 from .people import Director, Shareholder, ShareTransfer
 from .regulatory_rule import RegulatoryRule
+from .subscription import (
+    ClientSubscriptionFeature,
+    SubscriptionEvent,
+    SubscriptionPlan,
+    SubscriptionPlanFeature,
+    SubscriptionPlanPrice,
+)
 
 # ── Rescue (Plans + Steps) ───────────────────────────────────────────
 from .rescue import RescuePlan, RescueStep
@@ -90,7 +109,7 @@ from .rules import LegalRule, LegalRuleVersion
 # ── Users ────────────────────────────────────────────────────────────
 from .user import User
 
-# ── All models (28 tables) for reference ─────────────────────────────
+# ── All models (29 tables) for reference ─────────────────────────────
 __all__ = [
     "AGM",
     "AIOutputLog",
@@ -100,9 +119,16 @@ __all__ = [
     "Audit",
     "Base",
     "Company",
+    "CompanyCharge",
     "CompanyStatus",
     "CompanyType",
     "CompanyUserAccess",
+    "ClientSubscription",
+    "ClientSubscriptionFeature",
+    "SubscriptionEvent",
+    "SubscriptionPlan",
+    "SubscriptionPlanFeature",
+    "SubscriptionPlanPrice",
     "ComplexityLevel",
     "ComplianceCalendarEvent",
     "ComplianceEvent",

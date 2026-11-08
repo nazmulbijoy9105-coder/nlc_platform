@@ -1,0 +1,77 @@
+"""Regression guards for fail-closed schema and role migration preflights."""
+
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def _migration(name: str) -> str:
+    return (
+        ROOT / "alembic" / "versions" / name
+    ).read_text(encoding="utf-8")
+
+
+def test_webhook_and_rescue_reconciliation_refuses_to_replace_missing_evidence():
+    source = _migration("0044_webhook_schema_reconcile.py")
+
+    assert '"webhook_endpoints"' in source
+    assert '"webhook_deliveries"' in source
+    assert '"rescue_audit_log"' in source
+    assert "to_regclass(:qualified_name)" in source
+    assert "Restore/reconcile schema and evidence from a verified backup" in source
+    assert "CREATE TABLE" not in source.upper()
+    assert "CREATE TABLE IF NOT EXISTS" not in source.upper()
+
+
+def test_signed_rls_migration_restricts_memberships_to_trusted_admins():
+    source = _migration("0050_signed_rls_identity_hardening.py")
+
+    assert "nlc_app_role" in source
+    assert "nlc_ci_audit_role" in source
+    assert "rolcanlogin" in source
+    assert "rolinherit" in source
+    assert "rolbypassrls" in source
+    assert "pg_auth_members" in source
+    assert "member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in source
+    assert "granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in source
+    # The migration deliberately applies the stricter invariant: neither
+    # restricted runtime role may grant or receive any role membership.
+    assert "nlc_app_role and nlc_ci_audit_role must have no role memberships in either direction" in source
+    # The restricted runtime roles cannot inherit any other role.
+    # Only trusted database administrators may assume these roles; they
+    # already hold SUPERUSER or BYPASSRLS and do not create an escalation path.
+    assert "NOT (member_role.rolsuper OR member_role.rolbypassrls)" in source
+    assert "restricted NLC roles may only be granted to trusted SUPERUSER/BYPASSRLS administrators" in source
+    # NOINHERIT does not block SET ROLE; neither direction is permitted.
+    assert "must have no role memberships in either direction" in source
+    assert "IF EXISTS (" in source
+    assert "NOT (member_role.rolsuper OR member_role.rolbypassrls)" not in source
+    assert "restricted NLC roles may only be granted to trusted SUPERUSER/BYPASSRLS administrators" not in source
+    # The migration takes the stricter fail-closed position: neither
+    # restricted role may participate in any membership, in either direction.
+    membership_guard = source[source.index("IF EXISTS (", source.index("NOINHERIT does not prevent SET ROLE")):]
+    membership_guard = membership_guard[:membership_guard.index("$role_preflight$")]
+    assert "FROM pg_auth_members membership" in membership_guard
+    assert "granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in membership_guard
+    assert "member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in membership_guard
+    assert "must have no role memberships in either direction" in membership_guard
+    assert "NOT (member_role.rolsuper OR member_role.rolbypassrls)" in source
+    assert "restricted NLC roles may only be granted to trusted SUPERUSER/BYPASSRLS administrators" in source
+
+
+def test_signed_rls_inventory_preflight_runs_before_schema_mutations():
+    source = _migration("0050_signed_rls_identity_hardening.py")
+
+    role_preflight = source.index("DO $role_preflight$")
+    table_inventory = source.index("missing_rls_tables =")
+    view_inventory = source.index("missing_rls_views =")
+    first_schema_mutation = source.index("CREATE EXTENSION IF NOT EXISTS pgcrypto")
+
+    assert role_preflight < table_inventory < view_inventory < first_schema_mutation
+    assert "to_regclass(:qualified_name)" in source
+    assert "RLS migration preflight found missing expected public tables:" in source
+    assert "RLS migration preflight found missing expected public views:" in source
+    assert "will not recreate empty tables" in _migration(
+        "0044_webhook_schema_reconcile.py"
+    )

@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from decimal import Decimal
 
     from .commercial import Engagement, Task
-    from .compliance import ComplianceFlag, ComplianceScoreHistory
+    from .compliance import ComplianceEvaluationRun, ComplianceFlag, ComplianceScoreHistory
     from .documents import AIOutputLog, Document
     from .filings import AGM, AnnualReturn, Audit
     from .infrastructure import Notification, RegisteredOfficeHistory, StatutoryRegister
@@ -206,7 +206,18 @@ class Company(FullMixin, Base):
     director_office_of_profit: Mapped[bool | None] = mapped_column(Boolean, server_default="false", nullable=True)
     managing_director_appointment_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     member_count: Mapped[int | None] = mapped_column(Integer, server_default="0", nullable=True)
-    business_commencement_declaration_filed: Mapped[bool | None] = mapped_column(Boolean, server_default="true", nullable=True)
+    # Section 150 applies only to qualifying public companies. These are
+    # evidence-bound facts; legacy defaults are not treated as proof.
+    business_commencement_declaration_filed: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
+    business_commencement_declaration_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    business_commencement_declaration_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    business_commencement_declaration_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    business_commencement_declaration_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    section150_prospectus_issued: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    section150_applicability_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    section150_applicability_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    section150_applicability_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    section150_applicability_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     tax_return_deadline_extended: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # ── Director Disqualification ────────────────────────────────
@@ -355,6 +366,9 @@ class Company(FullMixin, Base):
     share_transfers: Mapped[list[ShareTransfer]] = relationship(
         "ShareTransfer", back_populates="company", lazy="selectin"
     )
+    charges: Mapped[list["CompanyCharge"]] = relationship(
+        "CompanyCharge", back_populates="company", lazy="selectin"
+    )
     agms: Mapped[list[AGM]] = relationship(
         "AGM", back_populates="company", lazy="selectin",
         order_by="AGM.financial_year.desc()"
@@ -374,7 +388,7 @@ class Company(FullMixin, Base):
         order_by="ComplianceScoreHistory.calculated_at.desc()"
     )
     evaluation_runs: Mapped[list["ComplianceEvaluationRun"]] = relationship(
-        "ComplianceEvaluationRun", back_populates="company", lazy="noload",
+        "ComplianceEvaluationRun", back_populates="company", lazy="raise",
         order_by="ComplianceEvaluationRun.calculated_at.desc()"
     )
     rescue_plans: Mapped[list[RescuePlan]] = relationship(
