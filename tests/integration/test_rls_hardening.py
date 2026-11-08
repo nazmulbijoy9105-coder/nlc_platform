@@ -919,12 +919,15 @@ async def test_company_charges_are_forced_rls_and_financially_scoped(
         "company_charges_tenant_select",
         "company_charges_tenant_insert",
         "company_charges_tenant_update",
-        "company_charges_tenant_delete",
     }
     assert "nlc_can_view_financials_company" in (policy_rows["company_charges_tenant_select"][2] or "")
-    for name in ("company_charges_tenant_insert", "company_charges_tenant_update", "company_charges_tenant_delete"):
+    for name in ("company_charges_tenant_insert", "company_charges_tenant_update"):
         expressions = " ".join(str(value or "") for value in policy_rows[name][2:])
         assert "nlc_can_manage_financials_company" in expressions
+    delete_privilege = await db.execute(
+        text("SELECT has_table_privilege('nlc_app_role', 'public.company_charges', 'DELETE')")
+    )
+    assert delete_privilege.scalar_one() is False
 
     await set_rls_context(db, str(view_user.id))
     hidden = await db.execute(
