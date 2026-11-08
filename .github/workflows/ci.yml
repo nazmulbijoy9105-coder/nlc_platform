@@ -55,7 +55,7 @@ jobs:
             app/services/company_service.py \
             app/services/pdf_report_service.py \
             app/services/rescue_service.py \
-            app/services/commercial_service.py \\
+            app/services/commercial_service.py \
             tests/unit/test_pdf_report_service.py \
             tests/unit/test_rescue_engagement_contract.py
 
