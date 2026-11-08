@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     ForeignKey,
@@ -21,6 +22,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -41,6 +43,21 @@ if TYPE_CHECKING:
 # ═══════════════════════════════════════════════════════════════════
 class AGM(FullMixin, Base):
     __tablename__ = "agms"
+    __table_args__ = (
+        CheckConstraint(
+            "NOT agm_held_verified OR (agm_held_evidence_ref IS NOT NULL "
+            "AND btrim(agm_held_evidence_ref) <> '' AND agm_held_verified_at IS NOT NULL "
+            "AND agm_held_verified_by IS NOT NULL AND (agm_held IS FALSE OR agm_date IS NOT NULL))",
+            name="ck_agms_held_verification_provenance",
+        ),
+        CheckConstraint(
+            "NOT member_register_snapshot_verified OR (member_register_evidence_ref IS NOT NULL "
+            "AND btrim(member_register_evidence_ref) <> '' AND member_register_verified_at IS NOT NULL "
+            "AND member_register_verified_by IS NOT NULL AND entitled_members_count IS NOT NULL "
+            "AND entitled_members_count >= 1)",
+            name="ck_agms_member_register_provenance",
+        ),
+    )
 
     company_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -83,6 +100,17 @@ class AGM(FullMixin, Base):
     is_default: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     delay_days: Mapped[int] = mapped_column(Integer, default=0)
 
+    # ── Held-status evidence ──────────────────────────────────────
+    agm_held_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    agm_held_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    agm_held_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    agm_held_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
+    member_register_snapshot_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    member_register_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    member_register_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    member_register_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
+    entitled_members_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
     # ── Quorum ────────────────────────────────────────────────────
     # AGM-005: quorum not met
     quorum_met: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
@@ -121,9 +149,88 @@ class AGM(FullMixin, Base):
 
     # ── Relationships ─────────────────────────────────────────────
     company: Mapped[Company] = relationship("Company", back_populates="agms")
+    notice_evidence: Mapped[list["AGMNoticeEvidence"]] = relationship(
+        "AGMNoticeEvidence", back_populates="agm", cascade="all, delete-orphan", lazy="selectin"
+    )
 
     def __repr__(self) -> str:
         return f"<AGM company={self.company_id} FY={self.financial_year} held={self.agm_held}>"
+
+
+# ═══════════════════════════════════════════════════════════════════
+# AGM PER-RECIPIENT NOTICE / CONSENT EVIDENCE
+# ═══════════════════════════════════════════════════════════════════
+class AGMNoticeEvidence(FullMixin, Base):
+    """Per-entitled-member service, consent and accidental-omission evidence."""
+    __tablename__ = "agm_notice_evidence"
+    __table_args__ = (
+        UniqueConstraint("agm_id", "recipient_key", name="uq_agm_notice_recipient"),
+        CheckConstraint("notice_delivery_status IN ('SERVED','NOT_SERVED','NOT_RECEIVED','UNKNOWN')", name="ck_agm_notice_delivery_status"),
+        CheckConstraint(
+            "NOT entitled_member_verified OR "
+            "(entitlement_evidence_ref IS NOT NULL AND btrim(entitlement_evidence_ref) <> '' "
+            "AND entitlement_verified_at IS NOT NULL AND entitlement_verified_by IS NOT NULL)",
+            name="ck_agm_notice_entitlement_provenance",
+        ),
+        CheckConstraint("NOT entitled_member_verified OR entitlement_verified_by <> submitted_by", name="ck_agm_notice_entitlement_four_eyes"),
+        CheckConstraint(
+            "NOT notice_verified OR "
+            "(notice_evidence_ref IS NOT NULL AND btrim(notice_evidence_ref) <> '' "
+            "AND notice_delivery_status <> 'UNKNOWN' AND notice_verified_at IS NOT NULL AND notice_verified_by IS NOT NULL)",
+            name="ck_agm_notice_service_provenance",
+        ),
+        CheckConstraint("NOT notice_verified OR notice_verified_by <> submitted_by", name="ck_agm_notice_service_four_eyes"),
+        CheckConstraint(
+            "NOT consent_verified OR "
+            "(consent_given IS NOT NULL AND consent_evidence_ref IS NOT NULL "
+            "AND btrim(consent_evidence_ref) <> '' AND consent_verified_at IS NOT NULL AND consent_verified_by IS NOT NULL)",
+            name="ck_agm_notice_consent_provenance",
+        ),
+        CheckConstraint("NOT consent_verified OR consent_verified_by <> submitted_by", name="ck_agm_notice_consent_four_eyes"),
+        CheckConstraint(
+            "NOT omission_verified OR "
+            "(omission_accidental IS NOT NULL AND omission_evidence_ref IS NOT NULL "
+            "AND btrim(omission_evidence_ref) <> '' AND omission_verified_at IS NOT NULL AND omission_verified_by IS NOT NULL)",
+            name="ck_agm_notice_omission_provenance",
+        ),
+        CheckConstraint("NOT omission_verified OR omission_verified_by <> submitted_by", name="ck_agm_notice_omission_four_eyes"),
+    )
+
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    agm_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("agms.id", ondelete="CASCADE"), nullable=False, index=True)
+    shareholder_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("shareholders.id", ondelete="RESTRICT"), nullable=True)
+    recipient_key: Mapped[str] = mapped_column(String(160), nullable=False)
+    recipient_name: Mapped[str] = mapped_column(String(300), nullable=False)
+    submitted_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    entitled_member_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    entitlement_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    entitlement_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    entitlement_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
+
+    notice_delivery_status: Mapped[str] = mapped_column(String(24), nullable=False, default="UNKNOWN", server_default="UNKNOWN")
+    notice_sent_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    notice_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notice_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    notice_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    notice_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
+
+    consent_given: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    consent_received_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    consent_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    consent_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    consent_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    consent_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
+
+    omission_accidental: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    omission_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    omission_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    omission_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    omission_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
+
+    agm: Mapped[AGM] = relationship("AGM", back_populates="notice_evidence")
+    company: Mapped[Company] = relationship("Company")
 
 
 # ═══════════════════════════════════════════════════════════════════

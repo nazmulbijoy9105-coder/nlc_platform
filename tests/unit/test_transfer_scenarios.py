@@ -8,7 +8,15 @@ from types import SimpleNamespace
 
 import pytest
 
+import app.rule_engine.engine as engine_module
 from app.rule_engine.engine import ComplianceFlag, NLCRuleEngine, RevenueTier, RuleState, Severity
+
+
+@pytest.fixture(autouse=True)
+def _enable_transfer_rule_for_rescue_unit_tests(monkeypatch):
+    # This module tests sequencing, not the production legal-release decision.
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"TR-005"}))
 
 
 def _flag(rule_id="TR-005", *, severity=Severity.RED, state=RuleState.NON_COMPLIANT,

@@ -101,13 +101,15 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("redis_connectivity_failed", error=str(e), note="Celery tasks will fail until Redis is available")
 
-    # Warm the rule engine singleton (loads DB rules into memory)
+    # Verify the rule-engine factory can construct an isolated evaluator.
+    # Per-request instances are required because NLCRuleEngine stores mutable
+    # evaluation state and must never be shared across concurrent companies.
     try:
         from app.core.dependencies import get_rule_engine
         engine_instance = get_rule_engine()
-        logger.info("rule_engine_warmed", engine=type(engine_instance).__name__)
+        logger.info("rule_engine_factory_ready", engine=type(engine_instance).__name__)
     except Exception as e:
-        logger.warning("rule_engine_warm_failed", error=str(e))
+        logger.warning("rule_engine_factory_init_failed", error=str(e))
 
     # Start the scheduler inside the application lifespan. FastAPI ignores
     # legacy on_event handlers when a lifespan context is configured.

@@ -41,7 +41,6 @@ from app.core.dependencies import (
 )
 from app.models.enums import EngagementStatus, RevenueTier, TaskPriority, TaskStatus
 from app.models.user import User
-from app.services.commercial_service import CommercialConflictError, EngagementService, QuotationService, TaskService
 from app.services.commercial_service import (
     CommercialConflictError,
     EngagementService,
@@ -152,6 +151,7 @@ class TaskResponse(BaseModel):
     due_date: str | None
     assigned_to: str | None
     completed_at: str | None
+    completion_note: str | None
     created_at: str
 
 
@@ -207,6 +207,7 @@ def _task_to_response(t) -> TaskResponse:
         due_date=str(t.due_date) if t.due_date else None,
         assigned_to=str(t.assigned_to) if t.assigned_to else None,
         completed_at=t.completed_at.isoformat() if t.completed_at else None,
+        completion_note=t.completion_note,
         created_at=t.created_at.isoformat(),
     )
 
@@ -529,16 +530,22 @@ async def complete_task(
     task_id: uuid.UUID,
     body: TaskCompleteRequest,
     request: Request,
-    company_id: uuid.UUID = Depends(require_company_access("company_id")),
+    company_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    await ensure_staff_company_scope(company_id, current_user, db)
     svc = TaskService(db)
     try:
-        task = await svc.complete_task(task_id=task_id, company_id=company_id)
-        task = await svc.complete_task(task_id=task_id)
+        task = await svc.complete_task(
+            task_id=task_id,
+            company_id=company_id,
+            completion_note=body.completion_note,
+        )
     except CommercialConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
     await ActivityService(db).log(

@@ -26,6 +26,11 @@ def test_missing_agm_record_keeps_attendance_and_auditor_status_unknown():
 
 def test_agm_profile_evidence_comes_from_the_latest_agm_record():
     meeting = SimpleNamespace(
+        agm_held=True,
+        agm_held_verified=True,
+        agm_held_evidence_ref="AGM-HELD-001",
+        agm_held_verified_at=date(2026, 1, 2),
+        agm_held_verified_by="reviewer-001",
         members_present=3,
         auditor_reappointed=False,
         minutes_prepared=True,
@@ -58,7 +63,8 @@ def test_agm_profile_evidence_comes_from_the_latest_agm_record():
     # A stored boolean/document ID is still not a reviewer-verified
     # minute-book finding; the engine must remain fail-closed.
     assert evidence["agm_minutes_prepared"] is None
-    assert evidence["notice_sent_date"] == date(2026, 1, 1)
+    # A raw date is not a verified service record without the complete member roster and notice evidence.
+    assert evidence["notice_sent_date"] is None
     assert evidence["agm_notice_verified_absent"] is None
 
 

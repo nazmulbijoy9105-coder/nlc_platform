@@ -35,33 +35,14 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
-from app.core.entitlement import require_entitlement
-from app.core.company_authorization import ensure_staff_company_scope
 from app.models.enums import RiskBand
 from app.models.user import User
 from app.services.company_service import CompanyService
 from app.services.notification_service import ActivityService
-
-
-async def _assert_rescue_entitlement(company_id: uuid.UUID, current_user: User, db: AsyncSession) -> None:
-    role = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
-    if role in ("SUPER_ADMIN", "ADMIN_STAFF"):
-        return
-    await ensure_staff_company_scope(company_id, current_user, db)
-    from app.services.subscription_service import SubscriptionService
-
-    if not await SubscriptionService(db).has_entitlement(
-        company_id=company_id,
-        feature_code="corporate_rescue",
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail="This company does not have an active corporate-rescue entitlement.",
-        )
 from app.services.rescue_service import RescueService
-
-
-async def _assert_rescue_entitlement(company_id: uuid.UUID, current_user: User, db: AsyncSession) -> None:
+async def _assert_rescue_entitlement(
+    company_id: uuid.UUID, current_user: User, db: AsyncSession
+) -> None:
     role = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
     if role in ("SUPER_ADMIN", "ADMIN_STAFF"):
         return
@@ -76,6 +57,8 @@ async def _assert_rescue_entitlement(company_id: uuid.UUID, current_user: User, 
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail="This company does not have an active corporate-rescue entitlement.",
         )
+
+
 router = APIRouter()
 
 
@@ -343,7 +326,6 @@ async def list_rescue_plans(
         Depends(require_company_access("company_id")),
         Depends(require_entitlement("corporate_rescue")),
     ],
-    dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("corporate_rescue"))],
     summary="Get the active rescue plan for a company",
 )
 async def get_active_plan(

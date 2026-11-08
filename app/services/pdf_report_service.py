@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
+from uuid import UUID
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
@@ -169,7 +170,7 @@ def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue
     elif band == "YELLOW":
         urgency = "<strong>Compliance monitoring recommended.</strong> The company has minor deficiencies that should be addressed to maintain good standing."
     elif band == "NOT_EVALUATED":
-        urgency = "<strong>No statutory compliance score has been released.</strong> The applicable rule corpus is awaiting independent legal approval or sufficient verified evidence. This report is not a compliance certification."
+        urgency = "<strong>Not scored: no statutory compliance score has been released.</strong> The applicable rule corpus is pending independent legal approval or sufficient verified evidence. This report is not a compliance certification."
     else:
         urgency = "<strong>Company is in good compliance standing.</strong> No critical issues detected. Continue regular monitoring."
 
@@ -234,8 +235,9 @@ def _render_rescue_section(rescue_plan: Any) -> str:
             target_step_date = getattr(s, "target_completion_date", None)
             target_step_str = (
                 target_step_date.strftime("%d %b %Y")
-                if hasattr(target_step_date, "strftime")
-                else (target_step_date or "—")
+                if target_step_date is not None
+                and callable(getattr(target_step_date, "strftime", None))
+                else (str(target_step_date) if target_step_date is not None else "—")
             )
             statutory = getattr(s, "statutory_basis", None) or ""
             complexity_val = getattr(s, "complexity", None)
@@ -606,7 +608,7 @@ class PDFReportService:
                 status_code=409,
                 detail="PDF withheld: statutory score release is disabled; no score-bearing compliance report may be issued.",
             )
-        company = await CompanyService(self.db).get_by_id_or_404(company_id)
+        company = await CompanyService(self.db).get_by_id_or_404(UUID(company_id))
 
         # Fetch the active rescue plan (if any) so the PDF includes the
         # 8-step recovery roadmap. GREEN/YELLOW companies have no plan;
