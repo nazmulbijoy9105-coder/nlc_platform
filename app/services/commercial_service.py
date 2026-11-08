@@ -136,7 +136,6 @@ class EngagementService(BaseService[Engagement]):
         engagement_result = await self.db.execute(
             select(Engagement)
             .where(Engagement.id == engagement_id, Engagement.is_active)
-            .where(Engagement.id == engagement_id)
             .with_for_update()
         )
         eng = engagement_result.scalar_one_or_none()
@@ -144,13 +143,6 @@ class EngagementService(BaseService[Engagement]):
             return None
         from app.models.commercial import validate_engagement_transition
         if not validate_engagement_transition(eng.engagement_status, new_status):
-        allowed_transitions = {
-            EngagementStatus.IDENTIFIED: {EngagementStatus.QUOTED, EngagementStatus.CANCELLED},
-            EngagementStatus.QUOTED: {EngagementStatus.CONFIRMED, EngagementStatus.CANCELLED},
-            EngagementStatus.CONFIRMED: {EngagementStatus.IN_PROGRESS, EngagementStatus.CANCELLED},
-            EngagementStatus.IN_PROGRESS: {EngagementStatus.COMPLETED, EngagementStatus.CANCELLED},
-        }
-        if new_status not in allowed_transitions.get(eng.engagement_status, set()):
             raise ValueError(
                 f"Invalid engagement transition: {eng.engagement_status} -> {new_status}"
             )
