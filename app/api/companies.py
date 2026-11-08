@@ -20,7 +20,7 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
-from app.models.company import CompanyUserAccess
+from app.models.company import Company, CompanyUserAccess
 from app.models.charges import CompanyCharge
 from app.models.enums import CompanyStatus, CompanyType, RevenueTier, RiskBand, UserRole
 from app.models.user import User
@@ -628,7 +628,7 @@ async def create_company_charge(
     body: CompanyChargeCreateRequest,
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    company = await db.get(__import__("app.models.company", fromlist=["Company"]).Company, company_id)
+    company = await db.get(Company, company_id)
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found.")
     charge = CompanyCharge(company_id=company_id, **body.model_dump())
@@ -667,13 +667,13 @@ async def verify_company_charge(
 
     updates = body.model_dump(exclude_unset=True)
     verification_groups = (
-        ("creation_date_verified", "creation_date_evidence_ref", ("creation_date",)),
-        ("form_xviii_filing_status_verified", "form_xviii_filing_evidence_ref", ("form_xviii_filed",)),
-        ("registrability_verified", "registrability_evidence_ref", ("registrable_under_s159",)),
-        ("satisfaction_verified", "satisfaction_evidence_ref", ("satisfied",)),
-        ("satisfaction_filing_status_verified", "satisfaction_filing_evidence_ref", ("satisfaction_filed",)),
+        ("creation_date_verified", "creation_date_evidence_ref", "creation_date_verified_at", "creation_date_verified_by", ("creation_date",)),
+        ("form_xviii_filing_status_verified", "form_xviii_filing_evidence_ref", "form_xviii_verified_at", "form_xviii_verified_by", ("form_xviii_filed",)),
+        ("registrability_verified", "registrability_evidence_ref", "registrability_verified_at", "registrability_verified_by", ("registrable_under_s159",)),
+        ("satisfaction_verified", "satisfaction_evidence_ref", "satisfaction_verified_at", "satisfaction_verified_by", ("satisfied",)),
+        ("satisfaction_filing_status_verified", "satisfaction_filing_evidence_ref", "satisfaction_filing_verified_at", "satisfaction_filing_verified_by", ("satisfaction_filed",)),
     )
-    for verified_field, evidence_field, required_facts in verification_groups:
+    for verified_field, evidence_field, verified_at_field, verified_by_field, required_facts in verification_groups:
         if updates.get(verified_field) is True:
             evidence_ref = updates.get(evidence_field, getattr(charge, evidence_field))
             if not evidence_ref or any(
@@ -689,8 +689,8 @@ async def verify_company_charge(
                 raise HTTPException(status_code=422, detail="A satisfied charge requires its satisfaction date.")
             if verified_field == "satisfaction_filing_status_verified" and updates.get("satisfaction_filed", charge.satisfaction_filed) is True and updates.get("satisfaction_filed_date", charge.satisfaction_filed_date) is None:
                 raise HTTPException(status_code=422, detail="A filed Form XXVIII requires its filing date.")
-            updates[f"{verified_field.replace('_verified', '')}_verified_at"] = datetime.now(UTC)
-            updates[f"{verified_field.replace('_verified', '')}_verified_by"] = current_user.id
+            updates[verified_at_field] = datetime.now(UTC)
+            updates[verified_by_field] = current_user.id
 
     for field_name, value in updates.items():
         setattr(charge, field_name, value)
