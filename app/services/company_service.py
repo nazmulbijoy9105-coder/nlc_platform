@@ -27,34 +27,38 @@ from app.services.base import BaseService
 
 
 def _agm_profile_evidence(latest_agm) -> dict:
-    """Expose only AGM facts supported by explicit evidence provenance.
-
-    Raw form values are not automatically verified legal facts. In particular,
-    default zero attendance, default booleans, and a client-entered quorum
-    conclusion must not become a statutory finding.
-    """
+    """Expose AGM facts only when the underlying evidence and reviewer are verified."""
+    empty = {
+        "agm_held_this_cycle": None,
+        "agm_held_this_cycle_verified": False,
+        "members_present_at_agm": None,
+        "agm_attendance_verified": False,
+        "agm_attendance_evidence_ref": None,
+        "agm_quorum_required": None,
+        "agm_quorum_basis_verified": False,
+        "agm_quorum_evidence_ref": None,
+        "agm_quorum_met": None,
+        "auditor_reappointed_at_agm": None,
+        "auditor_reappointment_verified": False,
+        "auditor_reappointment_evidence_ref": None,
+        "agm_minutes_prepared": None,
+        "notice_sent_date": None,
+        "agm_notice_verified_absent": None,
+        "agm_held_without_audit": None,
+        "accounts_adopted_at_agm": None,
+        "short_notice_consent_obtained": None,
+        "short_notice_consent_verified": False,
+        "short_notice_consent_evidence_ref": None,
+    }
     if latest_agm is None:
-        return {
-            "members_present_at_agm": None,
-            "agm_attendance_verified": False,
-            "agm_attendance_evidence_ref": None,
-            "agm_quorum_required": None,
-            "agm_quorum_basis_verified": False,
-            "agm_quorum_evidence_ref": None,
-            "agm_quorum_met": None,
-            "auditor_reappointed_at_agm": None,
-            "auditor_reappointment_verified": False,
-            "auditor_reappointment_evidence_ref": None,
-            "agm_minutes_prepared": None,
-            "notice_sent_date": None,
-            "agm_notice_verified_absent": None,
-            "agm_held_without_audit": None,
-            "accounts_adopted_at_agm": None,
-            "short_notice_consent_obtained": None,
-            "short_notice_consent_verified": False,
-            "short_notice_consent_evidence_ref": None,
-        }
+        return empty
 
+    held_verified = (
+        getattr(latest_agm, "agm_held_verified", False) is True
+        and bool(getattr(latest_agm, "agm_held_evidence_ref", None))
+        and getattr(latest_agm, "agm_held_verified_at", None) is not None
+        and getattr(latest_agm, "agm_held_verified_by", None) is not None
+    )
     attendance_verified = (
         getattr(latest_agm, "members_present_verified", False) is True
         and bool(getattr(latest_agm, "members_present_evidence_ref", None))
@@ -69,8 +73,8 @@ def _agm_profile_evidence(latest_agm) -> dict:
         and getattr(latest_agm, "quorum_required", None) is not None
     )
     quorum_result_verified = (
-        attendance_verified
-        and quorum_basis_verified
+        held_verified and latest_agm.agm_held is True
+        and attendance_verified and quorum_basis_verified
         and getattr(latest_agm, "quorum_met", None) is not None
     )
     auditor_reappointment_verified = (
@@ -79,53 +83,110 @@ def _agm_profile_evidence(latest_agm) -> dict:
         and getattr(latest_agm, "auditor_reappointment_verified_at", None) is not None
         and getattr(latest_agm, "auditor_reappointment_verified_by", None) is not None
     )
-    short_notice_consent_verified = (
-        getattr(latest_agm, "short_notice_consent_verified", False) is True
-        and bool(getattr(latest_agm, "short_notice_consent_evidence_ref", None))
-        and getattr(latest_agm, "short_notice_consent_verified_at", None) is not None
-        and getattr(latest_agm, "short_notice_consent_verified_by", None) is not None
+
+    notice_rows = [row for row in getattr(latest_agm, "notice_evidence", []) if row.is_active]
+    roster_verified = (
+        getattr(latest_agm, "member_register_snapshot_verified", False) is True
+        and bool(getattr(latest_agm, "member_register_evidence_ref", None))
+        and getattr(latest_agm, "member_register_verified_at", None) is not None
+        and getattr(latest_agm, "member_register_verified_by", None) is not None
+        and getattr(latest_agm, "entitled_members_count", None) is not None
+        and latest_agm.entitled_members_count >= 1
     )
-    # No independent minutes-review metadata exists yet; a raw boolean or
-    # attached document ID alone is not a verified finding.
-    minutes_prepared = None
+    recipients_complete = (
+        roster_verified
+        and len(notice_rows) == latest_agm.entitled_members_count
+        and all(
+            row.entitled_member_verified is True
+            and bool(row.entitlement_evidence_ref)
+            and row.entitlement_verified_at is not None
+            and row.entitlement_verified_by is not None
+            for row in notice_rows
+        )
+    )
+    service_verified = (
+        recipients_complete
+        and all(
+            row.notice_verified is True
+            and bool(row.notice_evidence_ref)
+            and row.notice_verified_at is not None
+            and row.notice_verified_by is not None
+            for row in notice_rows
+        )
+    )
+    short_notice_consent_verified = (
+        recipients_complete
+        and all(
+            row.consent_verified is True
+            and row.consent_given is not None
+            and bool(row.consent_evidence_ref)
+            and row.consent_verified_at is not None
+            and row.consent_verified_by is not None
+            for row in notice_rows
+        )
+    )
+    short_notice_consent_obtained = (
+        all(row.consent_given is True for row in notice_rows)
+        if short_notice_consent_verified else None
+    )
+    service_exception_valid = service_verified and all(
+        row.notice_delivery_status in {"SERVED", "NOT_RECEIVED"}
+        or (
+            row.notice_delivery_status == "NOT_SERVED"
+            and row.omission_verified is True
+            and row.omission_accidental is True
+            and bool(row.omission_evidence_ref)
+            and row.omission_verified_at is not None
+            and row.omission_verified_by is not None
+        )
+        for row in notice_rows
+    )
+    verified_notice_dates = [
+        row.notice_sent_date for row in notice_rows
+        if row.notice_delivery_status == "SERVED" and row.notice_sent_date is not None
+    ]
+    notice_sent_date = (
+        max(verified_notice_dates)
+        if service_exception_valid and verified_notice_dates else None
+    )
+    notice_absent = (
+        service_verified
+        and any(
+            row.notice_delivery_status == "NOT_SERVED"
+            and not (
+                row.omission_verified is True
+                and row.omission_accidental is True
+                and bool(row.omission_evidence_ref)
+                and row.omission_verified_at is not None
+                and row.omission_verified_by is not None
+            )
+            for row in notice_rows
+        )
+    )
 
     return {
-        "members_present_at_agm": (
-            getattr(latest_agm, "members_present", None) if attendance_verified else None
-        ),
+        "agm_held_this_cycle": latest_agm.agm_held if held_verified else None,
+        "agm_held_this_cycle_verified": held_verified,
+        "members_present_at_agm": getattr(latest_agm, "members_present", None) if attendance_verified else None,
         "agm_attendance_verified": attendance_verified,
         "agm_attendance_evidence_ref": getattr(latest_agm, "members_present_evidence_ref", None),
-        "agm_quorum_required": (
-            getattr(latest_agm, "quorum_required", None) if quorum_basis_verified else None
-        ),
+        "agm_quorum_required": getattr(latest_agm, "quorum_required", None) if quorum_basis_verified else None,
         "agm_quorum_basis_verified": quorum_basis_verified,
         "agm_quorum_evidence_ref": getattr(latest_agm, "quorum_evidence_ref", None),
-        "agm_quorum_met": (
-            getattr(latest_agm, "quorum_met", None) if quorum_result_verified else None
-        ),
-        "auditor_reappointed_at_agm": (
-            getattr(latest_agm, "auditor_reappointed", None)
-            if auditor_reappointment_verified else None
-        ),
+        "agm_quorum_met": getattr(latest_agm, "quorum_met", None) if quorum_result_verified else None,
+        "auditor_reappointed_at_agm": getattr(latest_agm, "auditor_reappointed", None) if auditor_reappointment_verified else None,
         "auditor_reappointment_verified": auditor_reappointment_verified,
-        "auditor_reappointment_evidence_ref": getattr(
-            latest_agm, "auditor_reappointment_evidence_ref", None
-        ),
-        "agm_minutes_prepared": minutes_prepared,
-        "notice_sent_date": getattr(latest_agm, "notice_sent_date", None),
-        # The legacy notice_missing boolean has no reviewer/evidence metadata.
-        # It is therefore never promoted to verified absence.
-        "agm_notice_verified_absent": None,
-        # These legacy booleans also lack independent verification metadata.
+        "auditor_reappointment_evidence_ref": getattr(latest_agm, "auditor_reappointment_evidence_ref", None),
+        "agm_minutes_prepared": None,
+        "notice_sent_date": notice_sent_date,
+        "agm_notice_verified_absent": notice_absent if service_verified else None,
         "agm_held_without_audit": None,
         "accounts_adopted_at_agm": None,
-        "short_notice_consent_obtained": (
-            getattr(latest_agm, "short_notice_consent_obtained", None)
-            if short_notice_consent_verified else None
-        ),
+        "short_notice_consent_obtained": short_notice_consent_obtained,
         "short_notice_consent_verified": short_notice_consent_verified,
-        "short_notice_consent_evidence_ref": getattr(
-            latest_agm, "short_notice_consent_evidence_ref", None
+        "short_notice_consent_evidence_ref": (
+            ";".join(row.consent_evidence_ref for row in notice_rows)
+            if short_notice_consent_verified else None
         ),
     }
 
