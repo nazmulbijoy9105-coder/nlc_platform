@@ -5,6 +5,7 @@ The engine is parsed as Python syntax. Rule IDs and statutory bases are read
 from the same ComplianceFlag constructor call, not inferred from nearby text.
 """
 import ast
+import csv
 from collections import Counter
 from pathlib import Path
 
@@ -487,3 +488,14 @@ def test_every_provision_is_explicitly_unverified_until_counsel_signoff():
                 "score_impact": rule.score_impact,
             })
     assert not unsafe, unsafe
+
+
+def test_legal_reconciliation_checklist_covers_all_85_unverified_rules():
+    path = ROOT / "docs" / "LEGAL_RECONCILIATION_CHECKLIST.csv"
+    with path.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == EXPECTED
+    assert {row["Rule ID"] for row in rows} == set(STATUTORY_RULE_REGISTRY)
+    assert all(row["Status"] == "RECONCILE" for row in rows)
+    assert all(row["Legal Team Sign-Off"] == "PENDING" for row in rows)
+    assert all(row["Candidate Provision"].startswith("UNVERIFIED CANDIDATE — ") for row in rows)
