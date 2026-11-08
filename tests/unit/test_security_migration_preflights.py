@@ -56,6 +56,8 @@ def test_signed_rls_migration_restricts_memberships_to_trusted_admins():
     assert "granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in membership_guard
     assert "member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in membership_guard
     assert "must have no role memberships in either direction" in membership_guard
+    assert "NOT (member_role.rolsuper OR member_role.rolbypassrls)" in source
+    assert "restricted NLC roles may only be granted to trusted SUPERUSER/BYPASSRLS administrators" in source
 
 
 def test_signed_rls_inventory_preflight_runs_before_schema_mutations():
