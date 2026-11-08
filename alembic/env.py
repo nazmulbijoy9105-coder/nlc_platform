@@ -37,8 +37,6 @@ from sqlalchemy import (
 from sqlalchemy.engine import Connection, make_url
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from app.db_url import is_render_runtime, normalize_asyncpg_url
-
 
 class NLCPostgresqlImpl(PostgresqlImpl):
     """Use a 255-character Alembic revision column for NLC migrations."""
@@ -81,6 +79,8 @@ elif alembic_ddl_impl._impls.get("postgresql") is not NLCPostgresqlImpl:
 # Ensure project root is on sys.path so app.models can be imported
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
+
+from app.db_url import is_render_runtime, normalize_asyncpg_url
 
 # Load project .env before importing app.models.
 # Existing shell environment variables always take precedence.
