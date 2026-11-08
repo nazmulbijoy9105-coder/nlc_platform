@@ -77,7 +77,7 @@ from .enums import (
 )
 
 # ── Filings (AGM, Audit, Annual Return) ──────────────────────────────
-from .filings import AGM, AnnualReturn, Audit
+from .filings import AGM, AGMNoticeEvidence, AnnualReturn, Audit
 
 # ── Infrastructure (Notifications, SRO, Registers, Activity Log) ─────
 from .infrastructure import (
@@ -89,7 +89,7 @@ from .infrastructure import (
 )
 
 # ── People (Directors, Shareholders, Transfers) ──────────────────────
-from .people import Director, Shareholder, ShareTransfer
+from .people import Director, ShareComplianceEvent, Shareholder, ShareTransfer
 from .regulatory_rule import RegulatoryRule
 from .subscription import (
     ClientSubscriptionFeature,
@@ -112,6 +112,7 @@ from .user import User
 # ── All models (29 tables) for reference ─────────────────────────────
 __all__ = [
     "AGM",
+    "AGMNoticeEvidence",
     "AIOutputLog",
     "AIPromptTemplate",
     "AiModel",
@@ -164,6 +165,7 @@ __all__ = [
     "RuleType",
     "SRORegistry",
     "SeverityLevel",
+    "ShareComplianceEvent",
     "ShareTransfer",
     "Shareholder",
     "SroType",
