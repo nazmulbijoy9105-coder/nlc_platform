@@ -399,9 +399,7 @@ class CompanyService(BaseService[Company]):
             }
         return dict(row)
 
-    async def get_risk_distribution(
-        self, user_id: uuid.UUID, *, include_assigned_staff: bool = False
-    ) -> list[dict]:
+    async def get_risk_distribution(self, user_id: uuid.UUID) -> list[dict]:
         """Return risk distribution for companies the user can currently access.
 
         The global materialized/view aggregate is deliberately not used here:
@@ -421,6 +419,71 @@ class CompanyService(BaseService[Company]):
                     ) AS percentage
                 FROM companies c
                 WHERE c.is_active = TRUE
+                  AND EXISTS (
+                      SELECT 1
+                      FROM company_user_access cua
+                      WHERE cua.company_id = c.id
+                        AND cua.user_id = :user_id
+                        AND cua.is_active = TRUE
+                  )
+                GROUP BY c.current_risk_band
+                ORDER BY CASE c.current_risk_band
+                    WHEN 'BLACK' THEN 1
+                    WHEN 'RED' THEN 2
+                    WHEN 'YELLOW' THEN 3
+                    WHEN 'GREEN' THEN 4
+                    ELSE 5
+                END
+                """
+            ),
+            {"user_id": str(user_id)},
+        )
+        return [dict(row) for row in result.mappings().all()]
+
+    async def get_upcoming_deadlines(
+        self, days_ahead: int = 30, user_id: uuid.UUID | None = None
+    ) -> list[dict]:
+        """Return deadlines scoped to active memberships; no implicit global mode."""
+        if user_id is None:
+            raise ValueError(
+                "user_id is required; use get_upcoming_deadlines_for_system for worker scans"
+            )
+        result = await self.db.execute(
+            text(
+                """
+                SELECT d.*
+                FROM vw_upcoming_deadlines d
+                WHERE d.days_remaining <= :days
+                  AND EXISTS (
+                      SELECT 1
+                      FROM company_user_access cua
+                      WHERE cua.company_id = d.company_id
+                        AND cua.user_id = :user_id
+                        AND cua.is_active = TRUE
+                  )
+                ORDER BY d.days_remaining
+                """
+            ),
+            {"days": days_ahead, "user_id": str(user_id)},
+        )
+        return [dict(row) for row in result.mappings().all()]
+
+    async def get_risk_distribution(
+        self, user_id: uuid.UUID, *, include_assigned_staff: bool = False
+    ) -> list[dict]:
+        """Return risk aggregates after filtering to the caller's company scope."""
+        result = await self.db.execute(
+            text(
+                """
+                SELECT
+                    c.current_risk_band AS risk_band,
+                    COUNT(*) AS company_count,
+                    ROUND(
+                        COUNT(*) * 100.0 / NULLIF(SUM(COUNT(*)) OVER (), 0),
+                        1
+                    ) AS percentage
+                FROM companies c
+                WHERE c.is_active IS TRUE
                   AND (
                       (:include_assigned_staff IS TRUE AND c.assigned_staff_id = :user_id)
                       OR EXISTS (
@@ -428,7 +491,7 @@ class CompanyService(BaseService[Company]):
                           FROM company_user_access cua
                           WHERE cua.company_id = c.id
                             AND cua.user_id = :user_id
-                            AND cua.is_active = TRUE
+                            AND cua.is_active IS TRUE
                       )
                   )
                 GROUP BY c.current_risk_band
@@ -446,10 +509,13 @@ class CompanyService(BaseService[Company]):
         return [dict(row) for row in result.mappings().all()]
 
     async def get_upcoming_deadlines(
-        self, days_ahead: int = 30, user_id: uuid.UUID | None = None,
-        *, include_assigned_staff: bool = False,
+        self,
+        days_ahead: int = 30,
+        user_id: uuid.UUID | None = None,
+        *,
+        include_assigned_staff: bool = False,
     ) -> list[dict]:
-        """Return deadlines scoped to active memberships; no implicit global mode."""
+        """Return deadlines scoped to active company memberships."""
         if user_id is None:
             raise ValueError(
                 "user_id is required; use get_upcoming_deadlines_for_system for worker scans"
@@ -471,17 +537,23 @@ class CompanyService(BaseService[Company]):
                           FROM company_user_access cua
                           WHERE cua.company_id = d.company_id
                             AND cua.user_id = :user_id
-                            AND cua.is_active = TRUE
+                            AND cua.is_active IS TRUE
                       )
                   )
                 ORDER BY d.days_remaining
                 """
             ),
-            {"days": days_ahead, "user_id": str(user_id), "include_assigned_staff": include_assigned_staff},
+            {
+                "days": days_ahead,
+                "user_id": str(user_id),
+                "include_assigned_staff": include_assigned_staff,
+            },
         )
         return [dict(row) for row in result.mappings().all()]
 
-    async def get_upcoming_deadlines_for_system(self, days_ahead: int = 30) -> list[dict]:
+    async def get_upcoming_deadlines_for_system(
+        self, days_ahead: int = 30
+    ) -> list[dict]:
         """Privileged worker-only global deadline scan; never expose via user API."""
         if days_ahead < 0:
             raise ValueError("days_ahead must be non-negative")
@@ -498,7 +570,6 @@ class CompanyService(BaseService[Company]):
             {"days": days_ahead},
         )
         return [dict(row) for row in result.mappings().all()]
-    # ── UPDATE ────────────────────────────────────────────────────
 
     async def update_compliance_state(
         self,
