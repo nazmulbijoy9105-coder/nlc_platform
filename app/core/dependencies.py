@@ -393,6 +393,9 @@ def require_company_access(company_id_param: str = "company_id"):
     Legal staff: must be assigned to the company or hold an active company
     access row. Client roles: must hold a live active company membership;
     JWT company_ids are informational and are never trusted for authorization.
+    Platform admins: portfolio-wide access. Legal staff must be assigned
+    to the company or hold an active company access row. Client roles require
+    a live active company membership; JWT company_ids are never trusted.
 
     Usage:
         @router.get("/companies/{company_id}/compliance")
@@ -470,10 +473,28 @@ async def get_client_company_filter(
     if db_role != token.role:
         raise HTTPException(status_code=401, detail="Account permissions changed. Please sign in again.")
 
-    if db_role in ("SUPER_ADMIN", "ADMIN_STAFF", "LEGAL_STAFF"):
+    if db_role in ("SUPER_ADMIN", "ADMIN_STAFF"):
         return None
 
-    from app.models.company import CompanyUserAccess
+    from app.models.company import Company, CompanyUserAccess
+    if db_role == "LEGAL_STAFF":
+        assigned = await db.execute(
+            select(Company.id).where(Company.assigned_staff_id == user.id)
+        )
+        memberships = await db.execute(
+            select(CompanyUserAccess.company_id).where(
+                CompanyUserAccess.user_id == user.id,
+                CompanyUserAccess.is_active.is_(True),
+            )
+        )
+        return [
+            str(company_id)
+            for company_id in dict.fromkeys([
+                *assigned.scalars().all(),
+                *memberships.scalars().all(),
+            ])
+        ]
+
     membership_result = await db.execute(
         select(CompanyUserAccess.company_id).where(
             CompanyUserAccess.user_id == uuid.UUID(token.user_id),
@@ -569,6 +590,8 @@ async def get_db_for_user(
     """
     Yield an authenticated database session with identity-bound RLS context.
 
+    Every human user, including staff, receives an identity-bound UUID context.
+    ADMIN context is reserved for explicitly trusted service/background sessions.
     Every human account keeps its signed user UUID. Only trusted internal
     service operations use the ADMIN principal; staff permissions are derived
     from the active database user row and the relevant RLS helper.
@@ -584,6 +607,9 @@ async def get_db_for_user(
             except (TypeError, ValueError):
                 raise HTTPException(status_code=401, detail="Invalid authenticated user identity.")
 
+            # Keep the signed principal bound to the actual human identity.
+            # RLS helpers derive privileges from the active database role;
+            # a JWT role claim never becomes the trusted ADMIN principal.
             await set_rls_context(session, token.user_id)
 
             result = await session.execute(

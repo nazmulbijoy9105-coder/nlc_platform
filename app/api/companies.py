@@ -248,7 +248,7 @@ async def _financial_access_ids(
     current_user: User,
     company_ids: list[uuid.UUID],
 ) -> set[uuid.UUID]:
-    if current_user.role in (UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF, UserRole.LEGAL_STAFF):
+    if current_user.role in (UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF):
         return set(company_ids)
     if not company_ids:
         return set()
@@ -332,7 +332,7 @@ async def create_company(body: CompanyCreateRequest, request: Request, current_u
     activity = ActivityService(db)
     existing = await svc.get_by_registration_number(body.registration_number)
     if existing:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Company with registration number already exists.")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Company with registration number already exists.")
     company = await svc.create_company(
         company_name=body.company_name, registration_number=body.registration_number,
         incorporation_date=body.incorporation_date, registered_address=body.registered_address,
@@ -435,7 +435,7 @@ async def delete_company(company_id: uuid.UUID, request: Request, current_user: 
     company = await svc.get_by_id_or_404(company_id)
     await svc.soft_delete(company_id)
     await activity.log(action="COMPANY_DELETED", resource_type="company", resource_id=str(company_id), description=f"Company soft-deleted: {company.company_name}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
-    return MessageResponse(message=f"Company deactivated.")
+    return MessageResponse(message="Company deactivated.")
 
 
 @router.post("/{company_id}/evaluate", response_model=ComplianceSummaryResponse, dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_company_access("company_id"))], summary="Trigger compliance evaluation")
@@ -480,7 +480,7 @@ async def resolve_flag(company_id: uuid.UUID, flag_id: uuid.UUID, body: FlagReso
     if not flag:
         raise HTTPException(status_code=404, detail="Flag not found.")
     await activity.log(action="FLAG_RESOLVED", resource_type="compliance_flag", resource_id=str(flag_id), description=f"Flag {flag.rule_id} resolved", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
-    return MessageResponse(message=f"Flag resolved.")
+    return MessageResponse(message="Flag resolved.")
 
 
 @router.post("/{company_id}/flags/{flag_id}/acknowledge", response_model=MessageResponse, dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))], summary="Acknowledge flag")
@@ -489,7 +489,7 @@ async def acknowledge_flag(company_id: uuid.UUID, flag_id: uuid.UUID, current_us
     flag = await svc.acknowledge_flag(flag_id=flag_id, acknowledged_by=current_user.id)
     if not flag:
         raise HTTPException(status_code=404, detail="Flag not found.")
-    return MessageResponse(message=f"Flag acknowledged.")
+    return MessageResponse(message="Flag acknowledged.")
 
 
 @router.get(
@@ -524,6 +524,7 @@ async def get_upcoming_deadlines(days_ahead: int = Query(default=30, ge=7, le=90
         user_id=current_user.id,
         include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF,
     )
+    return await svc.get_upcoming_deadlines(days_ahead=days_ahead, user_id=current_user.id, include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF)
 
 
 @router.get("/dashboard/risk", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Risk distribution")
@@ -534,3 +535,4 @@ async def get_risk_distribution(current_user: User = Depends(get_current_user), 
         user_id=current_user.id,
         include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF,
     )
+    return await svc.get_risk_distribution(user_id=current_user.id, include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF)

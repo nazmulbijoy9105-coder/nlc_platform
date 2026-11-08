@@ -15,6 +15,7 @@ import uuid
 from datetime import UTC, date, datetime
 
 from sqlalchemy import func, or_, select, text, update
+from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -642,7 +643,17 @@ class CompanyService(BaseService[Company]):
             "agm_extension_evidence_ref": company.agm_extension_evidence_ref,
             "agm_extension_verified_at": company.agm_extension_verified_at.date() if company.agm_extension_verified_at else None,
             "agm_extension_verified_by": str(company.agm_extension_verified_by) if company.agm_extension_verified_by else None,
-            "agm_held_this_cycle":        latest_agm.agm_held if latest_agm else False,
+            "agm_held_this_cycle": (
+                latest_agm.agm_held
+                if (
+                    latest_agm is not None
+                    and company.agm_history_verified is True
+                    and bool(company.agm_history_evidence_ref)
+                    and company.agm_history_verified_at is not None
+                    and company.agm_history_verified_by is not None
+                    and latest_agm.agm_date is not None
+                ) else None
+            ),
             "agm_minutes_prepared":       agm_profile_evidence["agm_minutes_prepared"],
 
             # Audit State
@@ -878,7 +889,7 @@ class CompanyService(BaseService[Company]):
             "auditor_reappointed_at_agm":    agm_profile_evidence["auditor_reappointed_at_agm"],
             "auditor_reappointment_verified": agm_profile_evidence.get("auditor_reappointment_verified", False),
             "auditor_reappointment_evidence_ref": agm_profile_evidence.get("auditor_reappointment_evidence_ref"),
-            "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", False),
+            "accounts_adopted_at_agm":       getattr(company, "accounts_adopted_at_agm", None),
 
             # Audit Details
             "audit_in_progress":             getattr(company, "audit_in_progress", False),

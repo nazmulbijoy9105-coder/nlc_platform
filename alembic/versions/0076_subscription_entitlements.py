@@ -562,5 +562,6 @@ def downgrade() -> None:
     # Refuse the operation so recovery must use a verified restore/rebuild plan.
     raise RuntimeError(
         "0076_subscription_entitlements is forward-only; restore a verified backup "
+        "0074_subscription_entitlements is forward-only; restore a verified backup "
         "or apply a reviewed forward migration instead of downgrading."
     )

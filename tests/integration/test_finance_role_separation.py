@@ -10,7 +10,6 @@ from sqlalchemy.exc import DBAPIError
 from app.models.database import set_rls_context
 
 
-@pytest.mark.asyncio
 async def test_legal_staff_is_not_finance_staff_under_signed_rls(api_client, db, db_company):
     from app.models.company import CompanyUserAccess
     from app.models.enums import UserRole
