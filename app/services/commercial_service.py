@@ -560,32 +560,3 @@ class TaskService(BaseService[Task]):
             task_status=TaskStatus.COMPLETED,
             completed_at=datetime.now(UTC),
         )
-        self,
-        task_id: uuid.UUID,
-        company_id: uuid.UUID,
-    ) -> Task | None:
-        """Complete only a task belonging to the already-authorized company."""
-        from datetime import datetime
-        task_result = await self.db.execute(
-            select(Task).where(Task.id == task_id, Task.is_active).with_for_update()
-            select(Task)
-            .where(
-                Task.id == task_id,
-                Task.company_id == company_id,
-                Task.is_active.is_(True),
-            )
-            .where(Task.id == task_id)
-            .with_for_update()
-        )
-        task = task_result.scalar_one_or_none()
-        if not task:
-            return None
-        if task.task_status not in {TaskStatus.PENDING, TaskStatus.IN_PROGRESS}:
-            raise CommercialConflictError(
-                f"Cannot complete a task in {task.task_status} state"
-            )
-        return await self.update_instance(
-            task,
-            task_status=TaskStatus.COMPLETED,
-            completed_at=datetime.now(UTC),
-        )
