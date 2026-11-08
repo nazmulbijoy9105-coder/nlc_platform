@@ -1122,7 +1122,7 @@ async def test_activity_logs_are_company_scoped_for_legal_staff_and_actor_bound_
             )
 
     # Nor can the real actor attach an event to an unassigned company.
-    with pytest.raises(Exception):
+    with pytest.raises(DBAPIError):
         async with db.begin_nested():
             await ActivityService(db).log(
                 user_id=legal_user.id,
