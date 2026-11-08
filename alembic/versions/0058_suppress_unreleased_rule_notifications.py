@@ -89,12 +89,8 @@ def upgrade() -> None:
         $function$
     """)
     op.execute("REVOKE ALL ON FUNCTION public.nlc_require_legal_rule_version_snapshot() FROM PUBLIC")
-    op.execute("DROP TRIGGER IF EXISTS legal_rules_require_version_snapshot ON public.legal_rules")
-    op.execute("""
-        CREATE TRIGGER legal_rules_require_version_snapshot
-        BEFORE UPDATE ON public.legal_rules
-        FOR EACH ROW EXECUTE FUNCTION public.nlc_require_legal_rule_version_snapshot()
-    """)
+    # The version-snapshot trigger is installed by the merged-head migration
+    # after all historical rule-correction branches have completed.
 
     op.execute("""
         CREATE OR REPLACE FUNCTION public.nlc_reject_legal_rule_delete()
