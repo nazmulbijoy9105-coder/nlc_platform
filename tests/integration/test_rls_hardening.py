@@ -852,3 +852,30 @@ async def test_legal_staff_cannot_read_engagements_quotations_or_revenue_pipelin
         text("SELECT count(*) FROM public.vw_revenue_pipeline")
     )
     assert revenue_rows.scalar_one() == 0
+
+
+@pytest.mark.asyncio
+async def test_client_cannot_escalate_own_role_or_reactivate_account(db, db_client_user):
+    """RLS self-row updates must not permit privilege/activation escalation."""
+    from sqlalchemy.exc import DBAPIError
+    from app.models.enums import UserRole
+
+    await set_rls_context(db, str(db_client_user.id))
+
+    # The users_self_update policy is intentionally row-scoped. The database
+    # trigger must independently reject changes to authorization attributes.
+    with pytest.raises(DBAPIError, match="Only a verified SUPER_ADMIN"):
+        async with db.begin_nested():
+            await db.execute(
+                text("UPDATE public.users SET role = :role WHERE id = :user_id"),
+                {"role": UserRole.SUPER_ADMIN.value, "user_id": db_client_user.id},
+            )
+
+    with pytest.raises(DBAPIError, match="Only a verified SUPER_ADMIN"):
+        async with db.begin_nested():
+            await db.execute(
+                text("UPDATE public.users SET is_active = TRUE WHERE id = :user_id"),
+                {"user_id": db_client_user.id},
+            )
+
+    await db.rollback()
