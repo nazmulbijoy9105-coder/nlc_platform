@@ -301,6 +301,8 @@ class QuotationService(BaseService[Quotation]):
             EngagementStatus.IDENTIFIED,
             EngagementStatus.QUOTED,
         }:
+            raise CommercialConflictError("A quotation can only be created for an identified or quoted engagement.")
+        from decimal import Decimal
             raise CommercialConflictError(
                 "A quotation can only be created for an identified or quoted engagement."
             )
@@ -361,6 +363,12 @@ class QuotationService(BaseService[Quotation]):
         result = await self.db.execute(
             text(
                 "SELECT COALESCE(MAX("
+                "CAST(SUBSTRING(quotation_number FROM :suffix_start) AS INTEGER)"
+                "), 0) + 1 "
+                "FROM quotations "
+                "WHERE quotation_number LIKE :pattern "
+                "AND SUBSTRING(quotation_number FROM :suffix_start) ~ '^[0-9]+
+                "AND SUBSTRING(quotation_number FROM :suffix_start) ~ '^[0-9]+$'"
                 "CASE "
                 "WHEN SPLIT_PART(quotation_number, '-', 3) ~ '^[0-9]+$' "
                 "THEN CAST(SPLIT_PART(quotation_number, '-', 3) AS INTEGER) "
@@ -444,6 +452,11 @@ class QuotationService(BaseService[Quotation]):
         if q.status == "ACCEPTED":
             return q
         if q.status not in {"DRAFT", "SENT"}:
+            raise CommercialConflictError(f"Cannot accept a quotation in {q.status} state.")
+        if q.valid_until < date.today():
+            raise CommercialConflictError("An expired quotation cannot be accepted; issue a renewed quotation.")
+        if q.valid_until is None or q.valid_until < date.today():
+            raise CommercialConflictError("A quotation without a valid expiry date or with an expired date cannot be accepted; issue a renewed quotation.")
             raise CommercialConflictError(f"Cannot accept a quotation in {q.status} state")
         if q.valid_until is not None and q.valid_until < date.today():
             raise CommercialConflictError("Quotation has expired")

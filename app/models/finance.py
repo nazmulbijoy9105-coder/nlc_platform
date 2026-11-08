@@ -273,7 +273,16 @@ class PaymentProviderEvent(UUIDPrimaryKeyMixin, Base):
 class ClientSubscription(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "client_subscriptions"
     __table_args__ = (
+        UniqueConstraint("id", "company_id", name="uq_client_subscriptions_id_company"),
+        ForeignKeyConstraint(
+            ["invoice_id", "company_id"],
+            ["invoices.id", "invoices.company_id"],
+            ondelete="RESTRICT",
+            name="fk_client_subscriptions_invoice_company",
+        ),
         CheckConstraint("amount_bdt >= 0", name="ck_subscription_amount_nonnegative"),
+        CheckConstraint("tax_bdt >= 0", name="ck_client_subscription_tax_nonnegative"),
+        CheckConstraint("grace_days BETWEEN 0 AND 30", name="ck_client_subscription_grace_days"),
         CheckConstraint("billing_interval IN ('MONTHLY','QUARTERLY','ANNUAL','ONE_TIME')", name="ck_subscription_billing_interval"),
         CheckConstraint("status IN ('PENDING','ACTIVE','PAST_DUE','CANCELLED','EXPIRED','SUSPENDED')", name="ck_subscription_status"),
         CheckConstraint("currency = 'BDT'", name="ck_subscription_currency_bdt"),
@@ -301,6 +310,8 @@ class ClientSubscription(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     plan_name: Mapped[str] = mapped_column(String(120), nullable=False)
     billing_interval: Mapped[str] = mapped_column(String(16), nullable=False)
     amount_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    tax_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False, default=Decimal("0.00"), server_default="0")
+    tax_policy_reference: Mapped[str | None] = mapped_column(Text, nullable=True)
     tax_bdt: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False, default=Decimal("0.00"))
     tax_policy_reference: Mapped[str | None] = mapped_column(Text, nullable=True)
     invoice_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
@@ -317,4 +328,12 @@ class ClientSubscription(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     renews_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     auto_renew: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    invoice_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    grace_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    grace_ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    suspension_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    activated_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)

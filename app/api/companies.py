@@ -519,6 +519,11 @@ async def get_dashboard_kpis(current_user: User = Depends(get_current_user), db:
 async def get_upcoming_deadlines(days_ahead: int = Query(default=30, ge=7, le=90), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     _require_legal_dashboard_release(deadlines=True)
     svc = CompanyService(db)
+    return await svc.get_upcoming_deadlines(
+        days_ahead=days_ahead,
+        user_id=current_user.id,
+        include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF,
+    )
     return await svc.get_upcoming_deadlines(days_ahead=days_ahead, user_id=current_user.id, include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF)
 
 
@@ -526,4 +531,8 @@ async def get_upcoming_deadlines(days_ahead: int = Query(default=30, ge=7, le=90
 async def get_risk_distribution(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     _require_legal_dashboard_release()
     svc = CompanyService(db)
+    return await svc.get_risk_distribution(
+        user_id=current_user.id,
+        include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF,
+    )
     return await svc.get_risk_distribution(user_id=current_user.id, include_assigned_staff=current_user.role == UserRole.LEGAL_STAFF)
