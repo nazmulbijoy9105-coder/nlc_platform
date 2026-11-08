@@ -40,7 +40,7 @@ CUSTOMER_BILLING_READ_ROLES = [
 CUSTOMER_BILLING_WRITE_ROLES = [
     "CLIENT_DIRECTOR", "ADMIN_STAFF", "SUPER_ADMIN"
 ]
-OFFLINE_METHOD = Literal["BANK_TRANSFER", "CASH", "CHEQUE"]
+OFFLINE_METHOD = Literal["BANK_TRANSFER", "CASH", "CHEQUE", "BKASH_MANUAL", "NAGAD_MANUAL"]
 
 
 def _require_timezone_offset(value: datetime | None, field_name: str) -> datetime | None:
