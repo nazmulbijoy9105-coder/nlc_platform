@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException, Request
 
-from app.db_url import normalize_asyncpg_url
+from app.db_url import is_render_runtime, normalize_asyncpg_url
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
@@ -36,7 +36,7 @@ _ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").strip().lower()
 # Render always injects RENDER=true. Treat every Render runtime (including
 # preview/staging services) as deployment-grade: never silently fall back to
 # the privileged migration URL because ENVIRONMENT was omitted or mistyped.
-_RENDER_RUNTIME = os.environ.get("RENDER", "").strip().lower() == "true"
+_RENDER_RUNTIME = is_render_runtime(os.environ)
 _PRODUCTION_ENVIRONMENT = _ENVIRONMENT in {"prod", "production"} or _RENDER_RUNTIME
 _RLS_ROLE_SETTING = os.environ.get("REQUIRE_RLS_APP_ROLE")
 if _PRODUCTION_ENVIRONMENT:
