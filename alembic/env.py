@@ -80,7 +80,7 @@ elif alembic_ddl_impl._impls.get("postgresql") is not NLCPostgresqlImpl:
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.db_url import is_render_runtime, normalize_asyncpg_url
+from app.db_url import is_render_runtime, prepare_asyncpg_connection
 
 # Load project .env before importing app.models.
 # Existing shell environment variables always take precedence.
@@ -331,16 +331,13 @@ async def run_async_migrations() -> None:
     environment = os.environ.get("ENVIRONMENT", "").strip().lower()
     require_tls = is_render or environment in {"prod", "production"}
 
-    # Keep Alembic's connection policy identical to the API's policy:
-    # normalize asyncpg-incompatible libpq URL parameters and pass a verified
-    # SSLContext explicitly. Render and production must never connect in cleartext.
-    db_url, ssl_context = normalize_asyncpg_url(
+    # Keep Alembic's connection policy explicit and fail closed:
+    # strip libpq-only URL parameters, then pass a verified SSLContext through
+    # SQLAlchemy's asyncpg connect_args. Neon and Render must never use plaintext.
+    db_url, connect_args = prepare_asyncpg_connection(
         get_database_url(),
         require_tls=require_tls,
     )
-    connect_args: dict[str, object] = {}
-    if ssl_context is not None:
-        connect_args["ssl"] = ssl_context
 
     configuration["sqlalchemy.url"] = db_url
     connectable = async_engine_from_config(
