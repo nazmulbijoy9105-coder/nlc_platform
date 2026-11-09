@@ -526,6 +526,27 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 key: {"max_deduction": cap, "prefixes": list(prefixes)}
                 for key, (cap, prefixes) in sorted(CATEGORY_CAPS.items())
             },
+            "score_model_semantics": (
+                "HEADLINE_SCORE_IS_100_MINUS_CAPPED_CATEGORY_DEDUCTIONS; "
+                "MODULE_SCORES_ARE_NON_ADDITIVE_DIAGNOSTICS"
+            ),
+            "module_score_maxima": {
+                "agm": 20,
+                "audit": 20,
+                "annual_return": 20,
+                "director": 10,
+                "shareholding": 10,
+                "capital": 5,
+                "office": 5,
+                "register": 5,
+                "tax": 5,
+                "bankruptcy": 5,
+                "labour": 5,
+                "bsec": 5,
+                "foreign_exchange": 5,
+                "escalation": 5,
+                "total_diagnostic_maximum": 125,
+            },
             "module_scores": {
                 "agm": sb.agm_score,
                 "audit": sb.audit_score,
