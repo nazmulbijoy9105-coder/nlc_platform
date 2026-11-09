@@ -483,6 +483,12 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
         previous_hash = previous_result.scalar_one_or_none()
         applied_impacts = _applied_score_impacts(output.flags)
+        dispositions = getattr(output, "rescue_dispositions", None) or []
+        disposition_by_flag = {
+            item.get("flag_code"): item
+            for item in dispositions
+            if item.get("flag_code")
+        }
         flags_snapshot = []
         for flag, applied in zip(output.flags, applied_impacts):
             severity_value = getattr(flag.severity, "value", flag.severity)
@@ -494,9 +500,15 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 ),
                 "OTHER",
             )
+            rescue_disposition = disposition_by_flag.get(
+                getattr(flag, "flag_code", None), {}
+            )
             flags_snapshot.append({
                 "rule_id": flag.rule_id,
                 "severity": severity_value,
+                "rescue_disposition": rescue_disposition.get("disposition"),
+                "rescue_reason": rescue_disposition.get("reason"),
+                "rescue_id": rescue_disposition.get("rescue_id"),
                 "category": rule_category,
                 "score_impact": int(flag.score_impact or 0),
                 "score_impact_applied": int(applied["applied"]),
