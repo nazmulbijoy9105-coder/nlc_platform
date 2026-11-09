@@ -26,7 +26,10 @@ async def test_administrator_kpis_use_authorized_portfolio_scope(monkeypatch, ro
     user_id = uuid.uuid4()
     _KPIService.received_user_ids = []
     monkeypatch.setattr(companies_api, "ComplianceService", _KPIService)
-    monkeypatch.setattr(companies_api, "_require_legal_dashboard_release", lambda: None)
+    monkeypatch.setattr(
+        companies_api, "_require_legal_dashboard_release",
+        lambda: pytest.fail("KPI endpoint must serve evidence metrics before legal score release"),
+    )
 
     result = await companies_api.get_dashboard_kpis(
         current_user=SimpleNamespace(id=user_id, role=role),
@@ -79,13 +82,13 @@ class _EvidenceKPIDB:
     async def execute(self, query, params=None):
         sql = str(query)
         self.calls.append((sql, params))
-        if "COUNT(DISTINCT c.id)" in sql:
-            return _ScalarResult(1)
         if "GROUP BY cf.evaluation_state" in sql:
             return _MappingResult([
                 {"evaluation_state": "UNKNOWN", "item_count": 3, "company_count": 1},
                 {"evaluation_state": "VIOLATION", "item_count": 1, "company_count": 1},
             ])
+        if "COUNT(DISTINCT c.id)" in sql:
+            return _ScalarResult(1)
         return _ScalarResult(2)
 
 
