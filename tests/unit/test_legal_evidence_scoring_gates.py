@@ -344,6 +344,43 @@ def test_section_94_verified_disqualification_is_not_automatic_black():
     assert flag.is_black_override is False
     assert "DEF-001" not in VERIFIED_RULE_IDS
 
+def test_released_score_uses_one_category_cap_formula_for_all_paths(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module,
+        "VERIFIED_RULE_IDS",
+        frozenset({"AGM-001", "AGM-002", "INC-003", "INC-004", "AUD-001"}),
+    )
+    profile = _profile()
+    flags = [
+        ComplianceFlag(
+            rule_id=rule_id,
+            flag_code=rule_id,
+            severity=Severity.RED,
+            score_impact=impact,
+            revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+            description="Test-only confirmed finding.",
+            statutory_basis="Test only; no legal approval implied.",
+            state=RuleState.NON_COMPLIANT,
+            eval_state="VIOLATION",
+        )
+        for rule_id, impact in (
+            ("AGM-001", 20),
+            ("AGM-002", 20),
+            ("INC-003", 15),
+            ("INC-004", 20),
+            ("AUD-001", 30),
+        )
+    ]
+
+    engine = NLCRuleEngine()
+    breakdown = engine._calculate_score(flags, profile)
+
+    # AGM=30, DIR=25 and AUD=25 after category caps: 100 - 80 = 20.
+    assert breakdown.raw_total == 20
+    assert engine._calculate_raw_score(flags) == breakdown.raw_total
+
+
 def test_pre_score_and_authoritative_raw_score_use_identical_category_caps():
     profile = _profile()
     flags = [
