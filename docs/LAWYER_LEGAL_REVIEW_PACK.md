@@ -1,3 +1,6 @@
+
+> **Historical review pack — do not distribute as current (10 November 2026).** This pack describes a 75-rule, v2.1 snapshot. The current register has 85 rules awaiting review and zero approved IDs. Prepare a new review pack from the current canonical rule dossier and approval register before any counsel review. See [STATUS_AND_GAP_REGISTER_2026-11-10.md](STATUS_AND_GAP_REGISTER_2026-11-10.md).
+
 # NLC Platform — Lawyer Legal Review Pack
 
 **Status:** PENDING LEGAL REVIEW  
