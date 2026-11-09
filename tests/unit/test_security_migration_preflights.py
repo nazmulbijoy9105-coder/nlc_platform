@@ -35,11 +35,27 @@ def test_signed_rls_migration_restricts_memberships_to_trusted_admins():
     assert "rolinherit" in source
     assert "rolbypassrls" in source
     assert "pg_auth_members" in source
+    assert "current_setting('server_version_num')::int < 160000" in source
+    assert "0050 requires PostgreSQL 16+ (pg_auth_members.inherit_option/set_option)" in source
     assert "member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in source
     assert "granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')" in source
-    assert "nlc_app_role and nlc_ci_audit_role must have no role memberships in either direction" in source
+    assert "member_role.rolname = 'neondb_owner'" in source
+    assert "grantor_role.rolname = 'cloud_admin'" in source
+    assert "membership.admin_option IS TRUE" in source
+    assert "membership.inherit_option IS FALSE" in source
+    assert "membership.set_option IS FALSE" in source
+    assert "AND NOT (" in source
+    assert "nlc_app_role and nlc_ci_audit_role have an unapproved role membership" in source
     assert "NOT (member_role.rolsuper OR member_role.rolbypassrls)" not in source
-    assert "restricted NLC roles may only be granted to trusted SUPERUSER/BYPASSRLS administrators" not in source
+
+def test_out_of_band_role_provisioning_enforces_noinherit():
+    source = (ROOT / "scripts" / "provision_nlc_roles.sql").read_text(encoding="utf-8")
+
+    assert "ALTER ROLE nlc_app_role" in source
+    assert "ALTER ROLE nlc_ci_audit_role" in source
+    assert source.count("NOINHERIT") == 2
+    assert "BYPASSRLS" in source
+    assert "CREATEROLE" in source
 
 
 def test_signed_rls_inventory_preflight_runs_before_schema_mutations():
