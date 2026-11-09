@@ -690,7 +690,7 @@ class TestRulesService:
         assert rule.is_active is True
 
     @pytest.mark.asyncio
-    async def test_get_black_override_rules_returns_4(self, db):
+    async def test_get_black_override_rules_stays_empty_until_legal_release(self, db):
         from app.services.rules_service import RulesService as LegalRuleService
 
         svc = LegalRuleService(db)
@@ -699,12 +699,10 @@ class TestRulesService:
             pytest.skip("Rules not seeded")
 
         black_rules = await svc.get_black_override_rules()
-        black_ids = {r.rule_id for r in black_rules}
-        # AUD-003 is NOT_EVALUATED pending counsel review and must never be
-        # returned as an automatic BLACK override.
-        assert {"TR-005", "ESC-002", "ESC-003"}.issubset(black_ids)
-        assert "AUD-003" not in black_ids
-        assert len(black_ids) >= 3
+        # Migration 0090 quarantines every rule as NOT_EVALUATED / PENDING.
+        # No statutory BLACK override may be active before independent legal
+        # verification and the explicit legal scoring release gate.
+        assert black_rules == []
 
     @pytest.mark.asyncio
     async def test_update_rule_creates_version_snapshot(self, db, db_super_admin):
