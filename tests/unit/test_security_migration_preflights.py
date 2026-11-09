@@ -73,3 +73,16 @@ def test_signed_rls_inventory_preflight_runs_before_schema_mutations():
     assert "SCHEMA-ONLY RECONSTRUCTION" in _migration(
         "0044_webhook_schema_reconcile.py"
     )
+
+def test_recurring_neon_membership_audit_uses_the_same_narrow_exemption():
+    source = (ROOT / "scripts" / "audit_nlc_role_memberships.sql").read_text(
+        encoding="utf-8"
+    )
+
+    assert "current_setting('server_version_num')::int < 160000" in source
+    assert "member_role.rolname = 'neondb_owner'" in source
+    assert "grantor_role.rolname = 'cloud_admin'" in source
+    assert "membership.admin_option IS TRUE" in source
+    assert "membership.inherit_option IS FALSE" in source
+    assert "membership.set_option IS FALSE" in source
+    assert "NLC role membership audit failed" in source
