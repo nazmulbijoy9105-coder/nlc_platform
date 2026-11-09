@@ -21,6 +21,43 @@ def upgrade() -> None:
             "ADD VALUE IF NOT EXISTS 'SUPPRESSED'"
         )
 
+    # 0050 protects client notification updates with a trigger. Administrative
+    # migration writes must use the same signed identity contract as staff;
+    # never bypass or disable the trigger. The context is transaction-local.
+    op.execute(
+        """
+        DO $migration_identity$
+        DECLARE
+            stored_secret TEXT;
+        BEGIN
+            SELECT secret
+              INTO stored_secret
+              FROM nlc_private.rls_signing_key
+             WHERE singleton IS TRUE;
+
+            IF stored_secret IS NULL OR length(stored_secret) < 32 THEN
+                RAISE EXCEPTION
+                    '0058 requires the provisioned NLC RLS signing key for notification suppression';
+            END IF;
+
+            PERFORM set_config('app.current_user_id', 'ADMIN', TRUE);
+            PERFORM set_config(
+                'app.current_user_signature',
+                encode(
+                    public.hmac(
+                        convert_to('ADMIN', 'UTF8'),
+                        convert_to(stored_secret, 'UTF8'),
+                        'sha256'
+                    ),
+                    'hex'
+                ),
+                TRUE
+            );
+        END
+        $migration_identity$
+        """
+    )
+
     # Rule IDs use the stable PREFIX-000 convention. Also suppress pending
     # generic legal alerts and any notification linked to a compliance flag.
     # Unrelated payment/subscription/operational notices remain untouched.
@@ -41,6 +78,16 @@ def upgrade() -> None:
                )
                OR related_flag_id IS NOT NULL
            )
+        """
+    )
+
+    # Clear the verified migration identity immediately after the privileged
+    # write. Transaction-local settings also expire at transaction end.
+    op.execute(
+        """
+        SELECT
+            set_config('app.current_user_id', '', TRUE),
+            set_config('app.current_user_signature', '', TRUE)
         """
     )
 
