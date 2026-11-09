@@ -467,6 +467,9 @@ class EngineOutput:
     rescue_sequence: List[Dict[str, Any]]
     fdi_module_active: bool
     tax_module_active: bool
+    # One auditable disposition for every engine finding, including no-action
+    # reasons and evidence/release-gate blocks.
+    rescue_dispositions: List[Dict[str, Any]] = field(default_factory=list)
 
 # ═══════════════════════════════════════════════════════════════════════
 # BANGLADESH COMPANIES ACT 1994 CONSTANTS
@@ -660,6 +663,9 @@ class NLCRuleEngine:
         stage = self._determine_lifecycle_stage(company)
         score = self._calculate_score(self._flags, company)
         rescue = self._generate_rescue_sequence(company, self._flags, score)
+        rescue_dispositions = self._build_rescue_dispositions(
+            self._flags, score, rescue
+        )
 
         fdi_active = company.has_foreign_shareholder or company.is_fdi_registered
         tax_active = not company.tin_obtained or not company.vat_registered
@@ -675,6 +681,7 @@ class NLCRuleEngine:
             rescue_sequence=rescue,
             fdi_module_active=fdi_active,
             tax_module_active=tax_active,
+            rescue_dispositions=rescue_dispositions,
         )
 
     # ───────────────────────────────────────────────────────────────────
@@ -3358,14 +3365,70 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     # RESCUE & LIFECYCLE SEQUENCING
     # ───────────────────────────────────────────────────────────────────
+    @staticmethod
+    def _build_rescue_dispositions(
+        flags: List[ComplianceFlag],
+        score: ScoreBreakdown,
+        rescue_sequence: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """Produce exactly one auditable action/no-action disposition per finding."""
+        step_by_rule: Dict[str, Dict[str, Any]] = {}
+        for step in rescue_sequence:
+            for rule_id in step.get("related_rules", []):
+                step_by_rule[rule_id] = step
+
+        dispositions: List[Dict[str, Any]] = []
+        for flag in flags:
+            state = getattr(getattr(flag, "state", None), "value", getattr(flag, "state", None))
+            eval_state = getattr(flag, "eval_state", None)
+            severity = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
+            step = step_by_rule.get(flag.rule_id)
+
+            if getattr(flag, "resolved", False):
+                disposition, reason = "NO_ACTION", "FINDING_RESOLVED"
+            elif not getattr(flag, "conditional_applies", True):
+                disposition, reason = "NO_ACTION", "RULE_NOT_APPLICABLE"
+            elif state not in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) or eval_state != "VIOLATION":
+                disposition, reason = "WAITING_EVIDENCE", "NO_CONFIRMED_VIOLATION"
+            elif not legal_score_is_released():
+                disposition, reason = "BLOCKED", "LEGAL_SCORE_NOT_RELEASED"
+            elif flag.rule_id not in VERIFIED_RULE_IDS:
+                disposition, reason = "BLOCKED", "RULE_NOT_IN_VERIFIED_ALLOWLIST"
+            elif score.risk_band not in (Severity.RED, Severity.BLACK):
+                disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
+            elif severity not in (Severity.RED.value, Severity.BLACK.value):
+                disposition, reason = "NO_ACTION", "FINDING_SEVERITY_BELOW_RESCUE_THRESHOLD"
+            elif step is not None:
+                disposition, reason = "ACTION_REQUIRED", "CONFIRMED_RESCUE_STEP"
+            elif flag.rule_id == "TAX-004":
+                disposition, reason = "WAITING_EVIDENCE", "MISSED_TAX_QUARTERS_NOT_ESTABLISHED"
+            else:
+                disposition, reason = "BLOCKED", "RESCUE_STEP_NOT_GENERATED"
+
+            dispositions.append({
+                "rule_id": flag.rule_id,
+                "flag_code": getattr(flag, "flag_code", None),
+                "state": state,
+                "eval_state": eval_state,
+                "severity": severity,
+                "disposition": disposition,
+                "reason": reason,
+                "rescue_id": step.get("rescue_id") if step is not None else None,
+            })
+
+        return dispositions
+
     def _generate_rescue_sequence(self, c: CompanyProfile, flags: List[ComplianceFlag], score: ScoreBreakdown) -> List[Dict[str, Any]]:
-        flags = [f for f in flags if getattr(f, "eval_state", "VIOLATION") != "UNKNOWN"]  # F3: exclude UNKNOWN from rescue
         """R-014: Generate rescue steps only from active, verified findings.
 
         TAX-004 is aggregated into one step because its missed-quarter details
         describe one remediation item. Missing quarter evidence does not itself
         establish a missed payment.
         """
+        flags = [
+            f for f in flags
+            if getattr(f, "eval_state", "VIOLATION") != "UNKNOWN"
+        ]
         active = [
             f for f in flags
             if not f.resolved and f.conditional_applies
