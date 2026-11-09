@@ -853,28 +853,85 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
 
     async def get_dashboard_kpis(self, user_id=None) -> dict:
-        """Aggregate KPIs; never expose legacy bands while statutory scoring is withheld."""
+        """Return legal risk KPIs only after release; otherwise return evidence-review metrics.
+
+        The unreleased path deliberately does not read or aggregate current_risk_band.
+        Evaluation-state counts are operational review signals, not legal findings.
+        """
         from app.rule_engine.engine import legal_score_is_released
+
         if not legal_score_is_released():
-            if user_id:
-                total_query = text(
-                    "SELECT COUNT(*) FROM companies WHERE assigned_staff_id = :uid AND is_active = true"
-                )
-                total_result = await self.db.execute(total_query, {"uid": str(user_id)})
-            else:
-                total_result = await self.db.execute(
-                    text("SELECT COUNT(*) FROM companies WHERE is_active = true")
-                )
-            total = int(total_result.scalar_one() or 0)
-            return {
-                "total_companies": total,
-                "green_count": 0,
-                "yellow_count": 0,
-                "red_black_count": 0,
-                "not_evaluated_count": total,
-                "upcoming_deadlines": 0,
+            scope = " AND assigned_staff_id = CAST(:uid AS uuid)" if user_id else ""
+            params = {"uid": str(user_id)} if user_id else {}
+
+            total_result = await self.db.execute(
+                text(
+                    "SELECT COUNT(*) FROM companies "
+                    "WHERE is_active = true" + scope
+                ),
+                params,
+            )
+            total_companies = int(total_result.scalar_one() or 0)
+
+            review_result = await self.db.execute(
+                text(
+                    """
+                    SELECT
+                        cf.evaluation_state,
+                        COUNT(*)::integer AS item_count,
+                        COUNT(DISTINCT c.id)::integer AS company_count
+                    FROM companies AS c
+                    JOIN compliance_flags AS cf
+                      ON cf.company_id = c.id
+                     AND cf.flag_status = 'ACTIVE'
+                    WHERE c.is_active = true
+                    """
+                    + (" AND c.assigned_staff_id = CAST(:uid AS uuid)" if user_id else "")
+                    + """
+                    GROUP BY cf.evaluation_state
+                    ORDER BY cf.evaluation_state
+                    """
+                ),
+                params,
+            )
+            rows = review_result.mappings().all()
+            state_counts = {
+                str(row["evaluation_state"]): int(row["item_count"] or 0)
+                for row in rows
             }
-        # If user_id is provided, filter by it; otherwise return global stats
+            active_review_items = sum(state_counts.values())
+            company_result = await self.db.execute(
+                text(
+                    """
+                    SELECT COUNT(DISTINCT c.id)::integer
+                    FROM companies AS c
+                    JOIN compliance_flags AS cf
+                      ON cf.company_id = c.id
+                     AND cf.flag_status = 'ACTIVE'
+                    WHERE c.is_active = true
+                    """
+                    + (" AND c.assigned_staff_id = CAST(:uid AS uuid)" if user_id else "")
+                ),
+                params,
+            )
+            companies_with_review_items = int(company_result.scalar_one() or 0)
+
+            return {
+                "dashboard_mode": "EVIDENCE_REVIEW",
+                "statutory_score_release_status": "NOT_RELEASED",
+                "statutory_risk_aggregates_available": False,
+                "total_companies": total_companies,
+                "green_count": None,
+                "yellow_count": None,
+                "red_black_count": None,
+                "not_evaluated_count": total_companies,
+                "companies_with_review_items": companies_with_review_items,
+                "active_review_items": active_review_items,
+                "evaluation_state_counts": state_counts,
+                "upcoming_deadlines": None,
+            }
+
+        # Released statutory risk aggregates are available only on the approved path.
         if user_id:
             query = text("""
                 SELECT
@@ -900,4 +957,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
             """)
             result = await self.db.execute(query)
         row = result.mappings().one_or_none()
-        return dict(row) if row else {}
+        result_dict = dict(row) if row else {}
+        result_dict.update({
+            "dashboard_mode": "STATUTORY_RISK",
+            "statutory_score_release_status": "RELEASED",
+            "statutory_risk_aggregates_available": True,
+        })
+        return result_dict
