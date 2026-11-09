@@ -16,9 +16,13 @@ from datetime import date, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-# F3 UNKNOWN policy constants (legal fix 2026-10-30)
-UNKNOWN_COVERAGE_CAP = 5   # max total points withheld for unknown facts
-UNKNOWN_COVERAGE_PER = 1   # points withheld per UNKNOWN flag
+# Legacy F3 constants retained for source/test compatibility only.
+# Current scoring policy does NOT deduct points for UNKNOWN facts: UNKNOWN
+# findings are excluded from scoring and represented through profile-input
+# completeness. Do not activate these constants without a separately approved
+# scoring specification and regression suite.
+UNKNOWN_COVERAGE_CAP = 5
+UNKNOWN_COVERAGE_PER = 1
 
 
 logger = logging.getLogger("nlc.rule_engine")
