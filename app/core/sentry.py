@@ -19,7 +19,7 @@ _SENSITIVE_KEY_PARTS = (
     "credential",
     "privatekey",
 )
-_BEARER_PATTERN = re.compile(r"(?i)\\bBearer\\s+[A-Za-z0-9._~+/-]+=*")
+_BEARER_PATTERN = re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/-]+=*")
 
 
 def _key_text(value: Any) -> str:
