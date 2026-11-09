@@ -54,6 +54,9 @@ async def test_legal_staff_kpis_include_only_assigned_companies(
         totp_enabled=False,
     )
     db.add(legal_user)
+    # Persist the referenced user before updating the company FK; without
+    # this flush PostgreSQL may receive the company UPDATE first.
+    await db.flush()
     db_company.assigned_staff_id = legal_user.id
     await db.flush()
 
