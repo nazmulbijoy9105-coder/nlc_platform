@@ -1093,6 +1093,42 @@ class TestRules:
         assert "legal release gate" in resp.json()["detail"]
 
 
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("rule_id", ["SH-001", "SH-002"])
+    async def test_rule_list_and_detail_keep_same_identity_without_unapproved_conclusions(
+        self, api_client, super_admin_token, rule_id
+    ):
+        listed = await api_client.get("/api/v1/rules")
+        assert listed.status_code == 200
+        list_rows = {item["rule_id"]: item for item in listed.json()}
+        assert rule_id in list_rows
+
+        detail = await api_client.get(
+            f"/api/v1/rules/{rule_id}",
+            headers=_auth(super_admin_token),
+        )
+        assert detail.status_code == 200
+        detail_row = detail.json()
+        list_row = list_rows[rule_id]
+
+        assert detail_row["rule_id"] == list_row["rule_id"] == rule_id
+        assert detail_row["rule_name"] == list_row["rule_name"]
+        assert detail_row["statutory_basis"] == list_row["statutory_basis"]
+        assert detail_row["description"] == list_row["description"]
+
+        # Unapproved legal metadata is intentionally withheld from API users.
+        for item in (list_row, detail_row):
+            assert item["statutory_basis"].startswith("NOT VALIDATED")
+            assert "Review prompt only" in item["description"]
+            assert "No breach" in item["description"]
+            assert item["verification_status"] == "PENDING"
+            assert item["default_severity"] == "NOT_EVALUATED"
+            assert item["score_impact"] == 0
+            assert item["is_black_override"] is False
+            assert item["is_active"] is False
+
+
 # =============================================================================
 # ADMIN ENDPOINTS
 # =============================================================================
