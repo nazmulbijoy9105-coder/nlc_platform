@@ -98,6 +98,11 @@ STATUTORY_RESCUE_REGISTRY: Dict[str, RescueDef] = {r.triggered_by: r for r in _R
 if len(STATUTORY_RESCUE_REGISTRY) != len(_RESCUES):
     raise RuntimeError("duplicate triggered_by in rescue registry")
 
+# Legacy conversion failures are retained as explicit diagnostics. They must
+# never disappear behind a broad exception handler or be mistaken for a
+# complete rescue corpus.
+RESCUE_REGISTRY_REJECTIONS: Dict[str, str] = {}
+
 
 @dataclass(frozen=True)
 class RescueStep:
@@ -1451,37 +1456,120 @@ _LEGACY_RESCUE_DICTS: Dict[str, Dict[str, Any]] = {
 
 # --- NLC: merge legacy dict rescues into the typed registry (no overwrite) ---
 def _merge_legacy_rescues() -> None:
-    """Convert _LEGACY_RESCUE_DICTS entries to RescueDef and merge.
-    Canonical typed entries from _RESCUES always win on key collision.
+    """Convert legacy entries without silently dropping malformed mappings.
+
+    Canonical typed entries in _RESCUES always win on key collision. Invalid
+    legacy entries remain visible in RESCUE_REGISTRY_REJECTIONS so release
+    checks can fail closed until they are corrected.
     """
     from canonical_architecture.statutory_rules import ProvisionStatus
     import dataclasses as _dc
+
     if not _dc.is_dataclass(RescueDef):
-        return
+        raise RuntimeError("RescueDef must remain a dataclass")
     if "_LEGACY_RESCUE_DICTS" not in globals():
-        return
-    _valid = {f.name for f in _dc.fields(RescueDef)}
-    for _rid, _entry in list(_LEGACY_RESCUE_DICTS.items()):
-        if _rid in STATUTORY_RESCUE_REGISTRY:
+        raise RuntimeError("legacy rescue dictionary is unavailable")
+
+    required = (
+        "rescue_id", "triggered_by", "objective", "statutory_actions",
+        "authority", "service_workflow", "deadline_basis",
+        "notification_required", "verification",
+    )
+    valid_fields = {item.name for item in _dc.fields(RescueDef)}
+
+    for rescue_key, raw_entry in list(_LEGACY_RESCUE_DICTS.items()):
+        if rescue_key in STATUTORY_RESCUE_REGISTRY:
             continue
-        if not isinstance(_entry, dict):
+        if not isinstance(raw_entry, dict):
+            RESCUE_REGISTRY_REJECTIONS[rescue_key] = "entry must be a dictionary"
             continue
-        entry = dict(_entry)
-        if "deadline_status" not in entry:
-            entry["deadline_status"] = ProvisionStatus.RECONCILE
-        filtered = {k: v for k, v in entry.items() if k in _valid}
-        filtered.setdefault("deadline_status", ProvisionStatus.RECONCILE)
-        filtered.setdefault("prerequisites", ())
-        if "statutory_actions" in filtered and isinstance(filtered["statutory_actions"], list):
-            filtered["statutory_actions"] = tuple(filtered["statutory_actions"])
-        if "prerequisites" in filtered and isinstance(filtered["prerequisites"], list):
-            filtered["prerequisites"] = tuple(filtered["prerequisites"])
+
+        entry = dict(raw_entry)
+        entry.setdefault("deadline_status", ProvisionStatus.RECONCILE)
+        entry.setdefault("prerequisites", ())
+        actions = entry.get("statutory_actions")
+        if isinstance(actions, list):
+            entry["statutory_actions"] = tuple(actions)
+        prerequisites = entry.get("prerequisites")
+        if isinstance(prerequisites, list):
+            entry["prerequisites"] = tuple(prerequisites)
+
+        missing = [
+            name for name in required
+            if name not in entry or entry[name] is None
+        ]
+        if missing:
+            RESCUE_REGISTRY_REJECTIONS[rescue_key] = (
+                "missing required fields: " + ", ".join(missing)
+            )
+            continue
+
+        text_fields = (
+            "rescue_id", "triggered_by", "objective", "authority",
+            "service_workflow", "deadline_basis", "verification",
+        )
+        empty = [
+            name for name in text_fields
+            if not isinstance(entry[name], str) or not entry[name].strip()
+        ]
+        if empty:
+            RESCUE_REGISTRY_REJECTIONS[rescue_key] = (
+                "required text fields must be non-empty strings: " + ", ".join(empty)
+            )
+            continue
+        if entry["triggered_by"] != rescue_key:
+            RESCUE_REGISTRY_REJECTIONS[rescue_key] = (
+                f"triggered_by mismatch: {entry['triggered_by']!r}"
+            )
+            continue
+        if (
+            not isinstance(entry["statutory_actions"], (list, tuple))
+            or not entry["statutory_actions"]
+            or any(not isinstance(action, str) or not action.strip()
+                   for action in entry["statutory_actions"])
+        ):
+            RESCUE_REGISTRY_REJECTIONS[rescue_key] = (
+                "statutory_actions must contain at least one non-empty string"
+            )
+            continue
+        if not isinstance(entry["notification_required"], bool):
+            RESCUE_REGISTRY_REJECTIONS[rescue_key] = (
+                "notification_required must be a boolean"
+            )
+            continue
+
+        filtered = {key: value for key, value in entry.items()
+                    if key in valid_fields}
         try:
-            STATUTORY_RESCUE_REGISTRY[_rid] = RescueDef(**filtered)
-        except TypeError:
-            pass
+            STATUTORY_RESCUE_REGISTRY[rescue_key] = RescueDef(**filtered)
+        except (TypeError, ValueError) as exc:
+            RESCUE_REGISTRY_REJECTIONS[rescue_key] = (
+                f"{type(exc).__name__}: {exc}"
+            )
 
 _merge_legacy_rescues()
+
+
+def validate_rescue_registry(expected_rule_ids=None) -> tuple[str, ...]:
+    """Return release-blocking registry defects in a deterministic order."""
+    errors = [
+        f"{rule_id}: {reason}"
+        for rule_id, reason in sorted(RESCUE_REGISTRY_REJECTIONS.items())
+    ]
+    for rule_id, rescue in sorted(STATUTORY_RESCUE_REGISTRY.items()):
+        if rescue.triggered_by != rule_id:
+            errors.append(f"{rule_id}: triggered_by does not match registry key")
+        if not rescue.statutory_actions or any(
+            not isinstance(action, str) or not action.strip()
+            for action in rescue.statutory_actions
+        ):
+            errors.append(f"{rule_id}: statutory_actions are incomplete")
+        if expected_rule_ids is not None and rule_id not in expected_rule_ids:
+            errors.append(f"{rule_id}: rescue has no matching statutory rule")
+    if expected_rule_ids is not None:
+        for rule_id in sorted(set(expected_rule_ids) - set(STATUTORY_RESCUE_REGISTRY)):
+            errors.append(f"{rule_id}: missing rescue definition")
+    return tuple(errors)
 
 
 def rescue_as_dict(rd: "RescueDef") -> dict:
