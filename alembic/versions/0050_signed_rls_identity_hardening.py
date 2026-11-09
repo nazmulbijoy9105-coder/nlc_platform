@@ -91,6 +91,13 @@ def upgrade() -> None:
             audit_role record;
             migration_role record;
         BEGIN
+            -- PostgreSQL 16 adds inherit_option and set_option to pg_auth_members.
+            -- Fail clearly before referencing those columns on older servers.
+            IF current_setting('server_version_num')::int < 160000 THEN
+                RAISE EXCEPTION
+                    '0050 requires PostgreSQL 16+ (pg_auth_members.inherit_option/set_option)';
+            END IF;
+
             -- The SECURITY DEFINER RLS helpers query FORCE-RLS tables whose
             -- policies call those same helpers. Their owner must bypass RLS
             -- (or be superuser) to avoid recursive policy evaluation.
@@ -153,19 +160,31 @@ def upgrade() -> None:
                     'nlc_ci_audit_role has unsafe attributes; require LOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, NOREPLICATION and NOBYPASSRLS';
             END IF;
 
-            -- NOINHERIT does not prevent SET ROLE. Restricted runtime
-            -- identities connect directly and must never grant or receive
-            -- memberships in either direction.
+            -- NOINHERIT does not prevent SET ROLE. The only tolerated Neon
+            -- control-plane row is the documented cloud_admin admin-only grant
+            -- to neondb_owner. Every other membership involving either NLC
+            -- role remains a hard failure.
             IF EXISTS (
                 SELECT 1
                   FROM pg_auth_members membership
                   JOIN pg_roles granted_role ON granted_role.oid = membership.roleid
                   JOIN pg_roles member_role ON member_role.oid = membership.member
-                 WHERE member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
-                    OR granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
+                  JOIN pg_roles grantor_role ON grantor_role.oid = membership.grantor
+                 WHERE (
+                        member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
+                     OR granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
+                 )
+                   AND NOT (
+                        member_role.rolname = 'neondb_owner'
+                    AND granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
+                    AND grantor_role.rolname = 'cloud_admin'
+                    AND membership.admin_option IS TRUE
+                    AND membership.inherit_option IS FALSE
+                    AND membership.set_option IS FALSE
+                   )
             ) THEN
                 RAISE EXCEPTION
-                    'nlc_app_role and nlc_ci_audit_role must have no role memberships in either direction';
+                    'nlc_app_role and nlc_ci_audit_role have an unapproved role membership';
             END IF;
         END
         $role_preflight$;
