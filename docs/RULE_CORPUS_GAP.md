@@ -1,3 +1,6 @@
+
+> **Historical snapshot — superseded (10 November 2026).** The September 2026 75-engine/46-seed gap is not the current catalogue status. The latest recorded comparison is 85 engine / 85 seed / 85 API / 75 production DB; see [STATUS_AND_GAP_REGISTER_2026-11-10.md](STATUS_AND_GAP_REGISTER_2026-11-10.md). Do not use the old 29-rule gap as a current task list.
+
 # Rule Corpus Gap Report
 Date: 2026-09-29
 Branch: fix/legal-engine-audit-corrections

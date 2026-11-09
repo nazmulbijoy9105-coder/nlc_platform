@@ -1,3 +1,6 @@
+
+> **Historical investigation — superseded for operational instructions (10 November 2026).** Do not execute migration, SQL or repair recommendations in this report without revalidating the current schema, migration graph and rule registry. Preserve this file as historical provenance. See [STATUS_AND_GAP_REGISTER_2026-11-10.md](STATUS_AND_GAP_REGISTER_2026-11-10.md).
+
 # Rule-Identity Discrepancies: Seed Data vs Engine
 
 ## Summary

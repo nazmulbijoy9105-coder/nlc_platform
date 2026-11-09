@@ -1,3 +1,6 @@
+
+> **Historical snapshot — superseded (10 November 2026).** The claim that 82 rules were verified is not authoritative and conflicts with the current approval register: 85 records are REVIEW_REQUIRED, score_eligible=false, and approved_rule_ids is empty. Do not add IDs to VERIFIED_RULE_IDS based on this document. See [STATUS_AND_GAP_REGISTER_2026-11-10.md](STATUS_AND_GAP_REGISTER_2026-11-10.md).
+
 # NLC Legal Review — Pending Citation Questions
 
 ## Purpose
