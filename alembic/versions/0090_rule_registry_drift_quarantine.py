@@ -181,6 +181,7 @@ def upgrade() -> None:
         USING (public.nlc_current_user_is_finance_staff())
     """)
     op.execute(f"REVOKE ALL ON TABLE public.{AUDIT_TABLE} FROM PUBLIC")
+    op.execute(f"REVOKE ALL ON TABLE public.{AUDIT_TABLE} FROM nlc_app_role")
     op.execute(f"GRANT SELECT ON TABLE public.{AUDIT_TABLE} TO nlc_app_role")
 
     op.execute("""
