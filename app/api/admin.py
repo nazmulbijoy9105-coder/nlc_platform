@@ -397,7 +397,10 @@ async def cron_evaluate_all(
         try:
             from app.services.compliance_service import ComplianceService
             svc = ComplianceService(db)
-            result = await svc.evaluate_company(company_id)  # type: ignore
+            # Isolate each company in a savepoint. A failed flush must not leave
+            # the shared session in PendingRollbackError for every later company.
+            async with db.begin_nested():
+                result = await svc.evaluate_company(company_id)  # type: ignore
             evaluated += 1
             results.append({
                 "company_id": str(company_id),
