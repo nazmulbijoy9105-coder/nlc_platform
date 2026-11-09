@@ -293,7 +293,12 @@ class ComplianceService(BaseService[ComplianceFlag]):
         Persist all evaluation results to DB atomically.
         Order: resolve old flags → insert new flags → score snapshot → update company.
         """
-        from app.rule_engine.engine import VERIFIED_RULE_IDS, legal_score_is_released
+        from app.rule_engine.engine import (
+            CATEGORY_CAPS,
+            _COVERAGE_FIELDS,
+            VERIFIED_RULE_IDS,
+            legal_score_is_released,
+        )
 
         engine_version = str(getattr(output, "engine_version", "") or "").strip()
         if not engine_version or engine_version.lower() == "unknown":
@@ -477,7 +482,6 @@ class ComplianceService(BaseService[ComplianceFlag]):
             .limit(1)
         )
         previous_hash = previous_result.scalar_one_or_none()
-        from app.rule_engine.engine import CATEGORY_CAPS
         applied_impacts = _applied_score_impacts(output.flags)
         flags_snapshot = []
         for flag, applied in zip(output.flags, applied_impacts):
