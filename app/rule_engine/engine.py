@@ -3386,9 +3386,28 @@ class NLCRuleEngine:
 
             if getattr(flag, "resolved", False):
                 disposition, reason = "NO_ACTION", "FINDING_RESOLVED"
-            elif not getattr(flag, "conditional_applies", True):
+            elif (
+                not getattr(flag, "conditional_applies", True)
+                or state == RuleState.NOT_APPLICABLE.value
+            ):
                 disposition, reason = "NO_ACTION", "RULE_NOT_APPLICABLE"
-            elif state not in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) or eval_state != "VIOLATION":
+            elif state == RuleState.COMPLIANT.value or eval_state == "COMPLIANT":
+                disposition, reason = "NO_ACTION", "FINDING_COMPLIANT"
+            elif (
+                state in (
+                    RuleState.UNKNOWN.value,
+                    RuleState.CONDITIONAL.value,
+                    RuleState.CONTRADICTORY.value,
+                    RuleState.DISPUTED.value,
+                    RuleState.REQUIRES_LAWYER_JUDGMENT.value,
+                )
+                or eval_state == "UNKNOWN"
+            ):
+                disposition, reason = "WAITING_EVIDENCE", f"FINDING_STATE_{state}"
+            elif state not in (
+                RuleState.NON_COMPLIANT.value,
+                RuleState.VERIFIED_ABSENT.value,
+            ) or eval_state != "VIOLATION":
                 disposition, reason = "WAITING_EVIDENCE", "NO_CONFIRMED_VIOLATION"
             elif not legal_score_is_released():
                 disposition, reason = "BLOCKED", "LEGAL_SCORE_NOT_RELEASED"
