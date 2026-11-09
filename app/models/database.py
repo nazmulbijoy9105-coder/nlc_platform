@@ -284,7 +284,8 @@ async def verify_runtime_database_role() -> None:
                     "SELECT 1 FROM pg_auth_members m "
                     "JOIN pg_roles granted_role ON granted_role.oid = m.roleid "
                     "JOIN pg_roles member_role ON member_role.oid = m.member "
-                    "WHERE member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role') "
+                    "JOIN pg_roles grantor_role ON grantor_role.oid = m.grantor "
+                    "WHERE (member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role') "
                     "OR granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')) "
                     "AND NOT ("
                     "member_role.rolname = 'neondb_owner' "
@@ -293,7 +294,7 @@ async def verify_runtime_database_role() -> None:
                     "AND m.admin_option IS TRUE "
                     "AND m.inherit_option IS FALSE "
                     "AND m.set_option IS FALSE)"
-                )
+                    ")"                )
             )
         ).scalar_one()
 
