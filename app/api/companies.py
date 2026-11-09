@@ -615,7 +615,14 @@ async def get_score_history(company_id: uuid.UUID, months: int = Query(default=1
 async def get_dashboard_kpis(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     _require_legal_dashboard_release()
     svc = ComplianceService(db)
-    return await svc.get_dashboard_kpis(user_id=current_user.id)
+    # Administrators see the portfolio permitted by their signed database
+    # context; legal staff remain restricted to their assigned companies.
+    user_id = (
+        current_user.id
+        if current_user.role == UserRole.LEGAL_STAFF
+        else None
+    )
+    return await svc.get_dashboard_kpis(user_id=user_id)
 
 
 @router.get("/dashboard/deadlines", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Upcoming deadlines")
