@@ -1,3 +1,6 @@
+
+> **Historical snapshot — not the current issue register (10 November 2026).** This file contains duplicate API-001 entries and observations tied to an older main SHA/PR state. Revalidate every item against current code, tests, database target and workflow evidence before acting. Do not use its historical migration/deployment facts as current. See [STATUS_AND_GAP_REGISTER_2026-11-10.md](STATUS_AND_GAP_REGISTER_2026-11-10.md).
+
 # NLC Production-Readiness Open-Issues Register
 
 Last reviewed: 2026-11-03
