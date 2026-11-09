@@ -91,6 +91,13 @@ def upgrade() -> None:
             audit_role record;
             migration_role record;
         BEGIN
+            -- PostgreSQL 16 adds inherit_option and set_option to pg_auth_members.
+            -- Fail clearly before referencing those columns on older servers.
+            IF current_setting('server_version_num')::int < 160000 THEN
+                RAISE EXCEPTION
+                    '0050 requires PostgreSQL 16+ (pg_auth_members.inherit_option/set_option)';
+            END IF;
+
             -- The SECURITY DEFINER RLS helpers query FORCE-RLS tables whose
             -- policies call those same helpers. Their owner must bypass RLS
             -- (or be superuser) to avoid recursive policy evaluation.
@@ -151,13 +158,6 @@ def upgrade() -> None:
                OR audit_role.rolbypassrls THEN
                 RAISE EXCEPTION
                     'nlc_ci_audit_role has unsafe attributes; require LOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, NOREPLICATION and NOBYPASSRLS';
-            END IF;
-
-            -- PostgreSQL 16 adds inherit_option and set_option to pg_auth_members.
-            -- Fail clearly before referencing those columns on older servers.
-            IF current_setting('server_version_num')::int < 160000 THEN
-                RAISE EXCEPTION
-                    '0050 requires PostgreSQL 16+ (pg_auth_members.inherit_option/set_option)';
             END IF;
 
             -- NOINHERIT does not prevent SET ROLE. The only tolerated Neon
