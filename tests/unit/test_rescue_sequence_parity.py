@@ -58,6 +58,69 @@ def _seq(flags, band=Severity.RED):
     return NLCRuleEngine._generate_rescue_sequence(None, None, flags, score)
 
 
+def _dispositions(flags, band=Severity.RED, steps=None):
+    score = SimpleNamespace(risk_band=band)
+    return NLCRuleEngine._build_rescue_dispositions(flags, score, steps or [])
+
+
+def test_each_finding_gets_exactly_one_rescue_disposition():
+    findings = [
+        _flag("AGM-001"),
+        _flag("AGM-002", state=RuleState.UNKNOWN),
+        _flag("AUD-001", resolved=True),
+        _flag("AUD-002", applies=False),
+    ]
+
+    result = _dispositions(findings, steps=_seq([findings[0]]))
+
+    assert len(result) == len(findings)
+    assert [item["rule_id"] for item in result] == [
+        finding.rule_id for finding in findings
+    ]
+    assert result[0]["disposition"] == "ACTION_REQUIRED"
+    assert result[1]["disposition"] == "WAITING_EVIDENCE"
+    assert result[1]["reason"] == "NO_CONFIRMED_VIOLATION"
+    assert result[2]["reason"] == "FINDING_RESOLVED"
+    assert result[3]["reason"] == "RULE_NOT_APPLICABLE"
+
+
+def test_confirmed_finding_is_blocked_when_legal_score_release_is_closed(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
+    finding = _flag("AGM-001")
+
+    result = _dispositions([finding])
+
+    assert result[0]["disposition"] == "BLOCKED"
+    assert result[0]["reason"] == "LEGAL_SCORE_NOT_RELEASED"
+
+
+def test_yellow_finding_has_explicit_no_action_reason_in_red_plan():
+    finding = _flag("AGM-001", severity=Severity.YELLOW)
+
+    result = _dispositions([finding], band=Severity.RED)
+
+    assert result[0]["disposition"] == "NO_ACTION"
+    assert result[0]["reason"] == "FINDING_SEVERITY_BELOW_RESCUE_THRESHOLD"
+
+
+def test_red_finding_has_no_rescue_when_company_band_is_below_red():
+    finding = _flag("AGM-001")
+
+    result = _dispositions([finding], band=Severity.YELLOW)
+
+    assert result[0]["disposition"] == "NO_ACTION"
+    assert result[0]["reason"] == "RISK_BAND_BELOW_RESCUE_THRESHOLD"
+
+
+def test_tax004_without_established_quarters_is_waiting_for_evidence():
+    finding = _flag("TAX-004", detail={"quarters": []})
+
+    result = _dispositions([finding], steps=_seq([finding]))
+
+    assert result[0]["disposition"] == "WAITING_EVIDENCE"
+    assert result[0]["reason"] == "MISSED_TAX_QUARTERS_NOT_ESTABLISHED"
+
+
 def test_gate_returns_empty_below_red():
     for band in (Severity.GREEN, Severity.YELLOW, Severity.NOT_EVALUATED):
         assert _seq([_flag("AGM-001")], band) == []
