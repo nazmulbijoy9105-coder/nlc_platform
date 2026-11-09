@@ -3173,46 +3173,51 @@ class NLCRuleEngine:
         return "GREEN"
 
 
+    def _eligible_scoring_flags(
+        self, flags: List[ComplianceFlag]
+    ) -> List[ComplianceFlag]:
+        """Return only active, confirmed findings admitted by the legal gate."""
+        return [
+            flag for flag in flags
+            if not flag.resolved
+            and flag.conditional_applies
+            and flag.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
+            and flag.eval_state == "VIOLATION"
+            and legal_score_is_released()
+            and flag.rule_id in VERIFIED_RULE_IDS
+        ]
+
+    @staticmethod
+    def _category_deductions(
+        scored: List[ComplianceFlag],
+    ) -> Dict[str, int]:
+        """Apply one authoritative prefix map and per-category cap."""
+        totals = {category: 0 for category in CATEGORY_CAPS}
+        for flag in scored:
+            matches = [
+                category
+                for category, (_, prefixes) in CATEGORY_CAPS.items()
+                if flag.rule_id.startswith(prefixes)
+            ]
+            if len(matches) > 1:
+                raise ValueError(
+                    f"Rule {flag.rule_id} maps to multiple scoring categories: {matches}"
+                )
+            if matches:
+                totals[matches[0]] += flag.score_impact
+        return {
+            category: min(total, CATEGORY_CAPS[category][0])
+            for category, total in totals.items()
+        }
+
+    @staticmethod
+    def _score_from_deductions(deductions: Dict[str, int]) -> int:
+        return max(0, min(100, 100 - sum(deductions.values())))
+
     def _calculate_raw_score(self, flags: List[ComplianceFlag]) -> int:
-        """Return the same capped 100-point raw score used by _calculate_score.
-
-        Escalation rules call this before generating ESC flags, so it must use
-        the exact same verified-rule gate, category buckets and caps as the
-        authoritative scorer. A separate 125-point scaling formula caused
-        different pre-score and final-score results for identical findings.
-        """
-        active = [f for f in flags if not f.resolved and f.conditional_applies]
-        violations = [
-            f for f in active
-            if f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
-            and f.eval_state == "VIOLATION"
-        ]
-        scored = [
-            f for f in violations
-            if legal_score_is_released() and f.rule_id in VERIFIED_RULE_IDS
-        ]
-
-        deductions = {
-            "TAX": sum(f.score_impact for f in scored if f.rule_id.startswith(("TAX-", "VAT-"))),
-            "AGM": sum(f.score_impact for f in scored if f.rule_id.startswith("AGM-")),
-            "AUD": sum(f.score_impact for f in scored if f.rule_id.startswith("AUD-")),
-            "RET": sum(f.score_impact for f in scored if f.rule_id.startswith("AR-")),
-            "DIR": sum(f.score_impact for f in scored if f.rule_id.startswith(("DIR-", "INC-", "DEF-", "TL-", "BOD-", "MEM-"))),
-            "SHR": sum(f.score_impact for f in scored if f.rule_id.startswith(("SH-", "TR-"))),
-            "CAP": sum(f.score_impact for f in scored if f.rule_id.startswith(("CAP-", "STR-", "CHG-", "ACC-"))),
-            "OFF": sum(f.score_impact for f in scored if f.rule_id.startswith("OFF-")),
-            "REG": sum(f.score_impact for f in scored if f.rule_id.startswith("REG-")),
-            "BNK": sum(f.score_impact for f in scored if f.rule_id.startswith("BNK-")),
-            "LBR": sum(f.score_impact for f in scored if f.rule_id.startswith("LBR-")),
-            "BSEC": sum(f.score_impact for f in scored if f.rule_id.startswith("BSEC-")),
-            "FX": sum(f.score_impact for f in scored if f.rule_id.startswith("FX-")),
-            "ESC": sum(f.score_impact for f in scored if f.rule_id.startswith("ESC-")),
-        }
-        capped = {
-            key: min(value, CATEGORY_CAPS[key][0])
-            for key, value in deductions.items()
-        }
-        return max(0, min(100, 100 - sum(capped.values())))
+        """Calculate the pre-escalation score using the authoritative formula."""
+        scored = self._eligible_scoring_flags(flags)
+        return self._score_from_deductions(self._category_deductions(scored))
 
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
         active = [f for f in flags if not f.resolved and f.conditional_applies]
@@ -3222,48 +3227,25 @@ class NLCRuleEngine:
             and f.eval_state == "VIOLATION"
         ]
 
-        # P0 GATE: Only verified rules contribute to the authoritative score.
-        # Unverified rules still generate flags for visibility but their
-        # score_impact is excluded from deductions.
-        scored = [
-            f for f in violations
-            if legal_score_is_released() and f.rule_id in VERIFIED_RULE_IDS
-        ]
-
-        tax_ded = sum(f.score_impact for f in scored if f.rule_id.startswith(("TAX-", "VAT-")))
-        agm_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("AGM-"))
-        aud_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("AUD-"))
-        ret_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("AR-"))
-        dir_ded = sum(f.score_impact for f in scored if f.rule_id.startswith(("DIR-", "INC-", "DEF-", "TL-", "BOD-", "MEM-")))
-        shr_ded = sum(f.score_impact for f in scored if f.rule_id.startswith(("SH-", "TR-")))
-        cap_ded = sum(f.score_impact for f in scored if f.rule_id.startswith(("CAP-", "STR-", "CHG-", "ACC-")))
-        off_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("OFF-"))
-        reg_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("REG-"))
-        bnk_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("BNK-"))
-        lbr_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("LBR-"))
-        bsec_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("BSEC-"))
-        fx_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("FX-"))
-        esc_ded = sum(f.score_impact for f in scored if f.rule_id.startswith("ESC-"))
-
-        # 100-point model v2: cap each category, then subtract from 100
-        tax_ded = min(tax_ded, CATEGORY_CAPS["TAX"][0])
-        agm_ded = min(agm_ded, CATEGORY_CAPS["AGM"][0])
-        aud_ded = min(aud_ded, CATEGORY_CAPS["AUD"][0])
-        ret_ded = min(ret_ded, CATEGORY_CAPS["RET"][0])
-        dir_ded = min(dir_ded, CATEGORY_CAPS["DIR"][0])
-        shr_ded = min(shr_ded, CATEGORY_CAPS["SHR"][0])
-        cap_ded = min(cap_ded, CATEGORY_CAPS["CAP"][0])
-        off_ded = min(off_ded, CATEGORY_CAPS["OFF"][0])
-        reg_ded = min(reg_ded, CATEGORY_CAPS["REG"][0])
-        bnk_ded = min(bnk_ded, CATEGORY_CAPS["BNK"][0])
-        lbr_ded = min(lbr_ded, CATEGORY_CAPS["LBR"][0])
-        bsec_ded = min(bsec_ded, CATEGORY_CAPS["BSEC"][0])
-        fx_ded = min(fx_ded, CATEGORY_CAPS["FX"][0])
-        esc_ded = min(esc_ded, CATEGORY_CAPS["ESC"][0])
-
-        raw = max(0, min(100, 100 - (tax_ded + agm_ded + aud_ded + ret_ded + dir_ded
-                                     + shr_ded + cap_ded + off_ded + reg_ded + bnk_ded
-                                     + lbr_ded + bsec_ded + fx_ded + esc_ded)))
+        # One eligibility filter and one category-cap implementation are
+        # shared with the pre-escalation score to prevent calculation drift.
+        scored = self._eligible_scoring_flags(flags)
+        deductions = self._category_deductions(scored)
+        tax_ded = deductions["TAX"]
+        agm_ded = deductions["AGM"]
+        aud_ded = deductions["AUD"]
+        ret_ded = deductions["RET"]
+        dir_ded = deductions["DIR"]
+        shr_ded = deductions["SHR"]
+        cap_ded = deductions["CAP"]
+        off_ded = deductions["OFF"]
+        reg_ded = deductions["REG"]
+        bnk_ded = deductions["BNK"]
+        lbr_ded = deductions["LBR"]
+        bsec_ded = deductions["BSEC"]
+        fx_ded = deductions["FX"]
+        esc_ded = deductions["ESC"]
+        raw = self._score_from_deductions(deductions)
         
         override = False
         reason = None
@@ -3396,10 +3378,9 @@ class NLCRuleEngine:
         if score.risk_band not in (Severity.RED, Severity.BLACK):
             return []
 
-        # P1 RESCUE COVERAGE FIX: Every NON_COMPLIANT flag must receive a
-        # rescue step (or a documented reason why no action is required).
-        # The audit flagged that 5 flags produced only 2 rescue steps.
-        # We now include YELLOW severity flags in addition to RED/BLACK.
+        # Rescue is generated only for confirmed RED/BLACK findings.
+        # YELLOW findings remain visible in compliance reporting and do not
+        # receive a rescue workflow under the current policy.
         actionable = [
             f for f in active
             if legal_score_is_released()
