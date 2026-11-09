@@ -1,3 +1,6 @@
+
+> **Historical snapshot — superseded for current release status (10 November 2026).** The statement “Engineering / rule-parity: GO” is not a production-release approval. Current status is in [STATUS_AND_GAP_REGISTER_2026-11-10.md](STATUS_AND_GAP_REGISTER_2026-11-10.md). The current legal approval register has zero approved rule IDs; statutory scoring remains NOT RELEASED. Retain this file for audit history; do not rely on its historical verification counts as current approval.
+
 # Legal Audit Summary – ILRMF Engine
 
 **Date:** 2026-11-02  
