@@ -49,6 +49,7 @@ from app.api import (
     webhooks,
 )
 from app.core.config import get_settings
+from app.core.sentry import sentry_before_send
 from app.tasks.scheduler import start_scheduler, stop_scheduler
 
 if TYPE_CHECKING:
@@ -276,12 +277,14 @@ async def validation_exception_handler(
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Catch-all for unexpected 500s. Never leaks stack traces to client."""
     request_id = getattr(request.state, "request_id", None)
-    logger.exception(
+    # Do not emit exception locals: request scope locals can contain
+    # Authorization/Cookie headers. Sentry retains a separately scrubbed trace.
+    logger.error(
         "unhandled_exception",
         path=request.url.path,
         method=request.method,
         request_id=request_id,
-        exc_info=exc,
+        error_type=type(exc).__name__,
     )
     return JSONResponse(
         status_code=500,
@@ -310,7 +313,8 @@ if _sentry_dsn:
             dsn=_sentry_dsn,
             environment=_os.environ.get("ENVIRONMENT", "development"),
             traces_sample_rate=0.1,
-            before_send=lambda event, hint: event,
+            send_default_pii=False,
+            before_send=sentry_before_send,
         )
         print("Sentry initialized")
     except Exception as _sentry_err:

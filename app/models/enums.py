@@ -81,6 +81,7 @@ class FlagStatus(enum.StrEnum):
     RESOLVED     = "RESOLVED"
     ACKNOWLEDGED = "ACKNOWLEDGED"
     ESCALATED    = "ESCALATED"
+    DUPLICATE    = "DUPLICATE"
 
 
 class TaskPriority(enum.StrEnum):

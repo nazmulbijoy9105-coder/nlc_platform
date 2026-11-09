@@ -13,6 +13,7 @@ on:
       - fix/scoring-release-boundary-20261108
       - fix/canonical-scoring-release-head-20261108
       - fix/canonical-legal-rule-seed-sync-20261108
+      - fix/compliance-flag-idempotency-and-sentry-privacy-20261110
   pull_request:
     branches:
       - main
@@ -426,7 +427,7 @@ jobs:
           printf '%s\n' "$FINAL_MARKER"
           HEAD_REVISION="$(alembic heads | awk 'NR == 1 {print $1}')"
           grep -q "$HEAD_REVISION" <<< "$FINAL_MARKER"
-          grep -q "0088_strict_activity_log_actor_tenant" <<< "$FINAL_MARKER"
+          grep -q "0089_unique_active_compliance_flags" <<< "$FINAL_MARKER"
 
       - name: Upload isolated migration rehearsal schema
         uses: actions/upload-artifact@v4

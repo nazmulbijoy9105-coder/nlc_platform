@@ -101,6 +101,13 @@ class ComplianceFlag(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         default=FlagStatus.ACTIVE,
         nullable=False,
     )
+    # Links preserved duplicate records to the canonical active flag.
+    # DUPLICATE is an administrative record state, not legal resolution.
+    duplicate_of_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("compliance_flags.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
     triggered_date: Mapped[date] = mapped_column(Date, nullable=False)
     resolved_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     resolved_by: Mapped[uuid.UUID | None] = mapped_column(

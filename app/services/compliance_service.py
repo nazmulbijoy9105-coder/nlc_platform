@@ -363,11 +363,14 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
             # Check if this flag already exists as ACTIVE
             existing = await self.db.execute(
-                select(ComplianceFlag).where(
+                select(ComplianceFlag)
+                .where(
                     ComplianceFlag.company_id == company_id,
                     ComplianceFlag.rule_id == flag.rule_id,
                     ComplianceFlag.flag_status == FlagStatus.ACTIVE,
                 )
+                .order_by(ComplianceFlag.created_at.asc(), ComplianceFlag.id.asc())
+                .limit(1)
             )
             existing_flag = existing.scalar_one_or_none()
             if existing_flag:
