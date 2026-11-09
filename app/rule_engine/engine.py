@@ -16,9 +16,13 @@ from datetime import date, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-# F3 UNKNOWN policy constants (legal fix 2026-10-30)
-UNKNOWN_COVERAGE_CAP = 5   # max total points withheld for unknown facts
-UNKNOWN_COVERAGE_PER = 1   # points withheld per UNKNOWN flag
+# Legacy F3 constants retained for source/test compatibility only.
+# Current scoring policy does NOT deduct points for UNKNOWN facts: UNKNOWN
+# findings are excluded from scoring and represented through profile-input
+# completeness. Do not activate these constants without a separately approved
+# scoring specification and regression suite.
+UNKNOWN_COVERAGE_CAP = 5
+UNKNOWN_COVERAGE_PER = 1
 
 
 logger = logging.getLogger("nlc.rule_engine")
@@ -454,6 +458,8 @@ class ScoreBreakdown:
     fx_score: int | None = 0
     escalation_score: int | None = 0
     score_hash: str = ""
+    category_deductions: Dict[str, int] = field(default_factory=dict)
+    coverage_basis: str = "WEIGHTED_PROFILE_INPUT_COMPLETENESS"
 
 @dataclass
 class EngineOutput:
@@ -605,9 +611,13 @@ _COVERAGE_FIELDS: dict[str, float] = {
 
 
 def _input_coverage(company) -> float:
-    """Weighted fraction of high-signal profile fields with data.
-    Tri-state booleans (None=unknown, True/False=known) count as known when
-    False — a real negative answer is not missing data."""
+    """Weighted completeness of selected company-profile input fields.
+
+    This is NOT the fraction of statutory rules evaluated or verified. It is
+    an input-data completeness indicator only. Tri-state booleans (None=
+    unknown, True/False=known) count as known when False; director count is
+    counted only when independently RJSC-verified.
+    """
     total_weight = sum(_COVERAGE_FIELDS.values())
     known_weight = 0.0
     for field_name, weight in _COVERAGE_FIELDS.items():
@@ -3155,7 +3165,8 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     def _score_to_band(self, raw: int, *, force_black: bool = False, coverage: float = 1.0) -> str:
         """Map a raw score to a risk band string.
-        coverage = fraction of rules that had data to evaluate (0.0 to 1.0).
+        coverage is weighted company-profile input completeness (0.0 to 1.0),
+        not statutory-rule coverage or legal verification completeness.
         Below 0.5 → NOT_EVALUATED — UNLESS force_black is set, in which case
         we have confirmed BLACK findings and the company is definitively in
         trouble, not 'unknown'. Prevents the rescue_sequence generator from
@@ -3313,6 +3324,13 @@ class NLCRuleEngine:
             "engine_version": RULE_ENGINE_VERSION,
             "ilrmf_version": ILRMF_VERSION,
             "verified_rule_ids": sorted(VERIFIED_RULE_IDS),
+            "category_caps": {
+                key: {"max_deduction": cap, "prefixes": list(prefixes)}
+                for key, (cap, prefixes) in sorted(CATEGORY_CAPS.items())
+            },
+            "profile_coverage_weights": dict(sorted(_COVERAGE_FIELDS.items())),
+            "coverage_basis": "WEIGHTED_PROFILE_INPUT_COMPLETENESS",
+            "category_deductions": deductions,
             "legal_score_release_switch": LEGAL_SCORE_RELEASED,
             "legal_score_released": legal_score_is_released(),
             "flags": flag_signatures,
@@ -3352,7 +3370,9 @@ class NLCRuleEngine:
             bsec_score=max(0, 5 - bsec_ded),
             fx_score=max(0, 5 - fx_ded),
             escalation_score=max(0, 5 - esc_ded),
-            score_hash=score_hash
+            score_hash=score_hash,
+            category_deductions=deductions,
+            coverage_basis="WEIGHTED_PROFILE_INPUT_COMPLETENESS",
         )
 
     # ───────────────────────────────────────────────────────────────────
