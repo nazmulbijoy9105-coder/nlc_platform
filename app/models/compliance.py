@@ -93,6 +93,9 @@ class ComplianceFlag(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     # ── Status ────────────────────────────────────────────────────
+    # Mirrors the rule engine's evaluation classification. This is distinct
+    # from legal score release and must never be inferred from severity.
+    evaluation_state: Mapped[str] = mapped_column(String(32), nullable=False)
     flag_status: Mapped[FlagStatus] = mapped_column(
         Enum(FlagStatus, name="flag_status"),
         default=FlagStatus.ACTIVE,
