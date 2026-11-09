@@ -295,6 +295,34 @@ def test_every_unapproved_seed_rule_is_fail_closed():
 
 
 
+def test_legacy_rescue_merge_has_no_silent_rejections():
+    from canonical_architecture.statutory_rescue import (
+        RESCUE_REGISTRY_REJECTIONS,
+        validate_rescue_registry,
+    )
+
+    assert not RESCUE_REGISTRY_REJECTIONS, RESCUE_REGISTRY_REJECTIONS
+    assert not validate_rescue_registry(STATUTORY_RULE_REGISTRY), (
+        validate_rescue_registry(STATUTORY_RULE_REGISTRY)
+    )
+
+
+def test_every_rescue_definition_has_complete_typed_actions():
+    for rule_id, rescue in STATUTORY_RESCUE_REGISTRY.items():
+        assert rescue.triggered_by == rule_id
+        assert rescue.rescue_id.strip()
+        assert rescue.objective.strip()
+        assert rescue.authority.strip()
+        assert rescue.service_workflow.strip()
+        assert rescue.deadline_basis.strip()
+        assert rescue.verification.strip()
+        assert rescue.statutory_actions
+        assert all(
+            isinstance(action, str) and action.strip()
+            for action in rescue.statutory_actions
+        )
+
+
 def test_rescue_registry_has_no_duplicate_trigger_ids():
     import ast
 
