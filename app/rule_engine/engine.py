@@ -3221,11 +3221,6 @@ class NLCRuleEngine:
 
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
         active = [f for f in flags if not f.resolved and f.conditional_applies]
-        violations = [
-            f for f in active
-            if f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
-            and f.eval_state == "VIOLATION"
-        ]
 
         # One eligibility filter and one category-cap implementation are
         # shared with the pre-escalation score to prevent calculation drift.
