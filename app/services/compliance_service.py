@@ -878,8 +878,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     """
                     SELECT
                         cf.evaluation_state,
-                        COUNT(*)::integer AS item_count,
-                        COUNT(DISTINCT c.id)::integer AS company_count
+                        COUNT(*)::integer AS item_count
                     FROM companies AS c
                     JOIN compliance_flags AS cf
                       ON cf.company_id = c.id
