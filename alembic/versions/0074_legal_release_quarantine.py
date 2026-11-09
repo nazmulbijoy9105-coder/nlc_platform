@@ -46,6 +46,7 @@ def upgrade() -> None:
             company_count INTEGER := 0;
             active_flag_count INTEGER := 0;
             notification_count INTEGER := 0;
+            stored_secret TEXT;
         BEGIN
             UPDATE public.companies
                SET current_compliance_score = NULL,
@@ -69,6 +70,34 @@ def upgrade() -> None:
              WHERE flag_status = 'ACTIVE';
             GET DIAGNOSTICS active_flag_count = ROW_COUNT;
 
+            -- The notification guard permits administrative changes only
+            -- for a cryptographically verified staff principal. Use the
+            -- migration's transaction-local ADMIN identity; never disable
+            -- the trigger or widen client permissions.
+            SELECT secret
+              INTO stored_secret
+              FROM nlc_private.rls_signing_key
+             WHERE singleton IS TRUE;
+
+            IF stored_secret IS NULL OR length(stored_secret) < 32 THEN
+                RAISE EXCEPTION
+                    '0074 requires the provisioned NLC RLS signing key for notification quarantine';
+            END IF;
+
+            PERFORM set_config('app.current_user_id', 'ADMIN', TRUE);
+            PERFORM set_config(
+                'app.current_user_signature',
+                encode(
+                    public.hmac(
+                        convert_to('ADMIN', 'UTF8'),
+                        convert_to(stored_secret, 'UTF8'),
+                        'sha256'
+                    ),
+                    'hex'
+                ),
+                TRUE
+            );
+
             -- Fail closed: preserve only explicitly operational notification
             -- namespaces. Unknown and legal/deadline notifications are suppressed.
             UPDATE public.notifications
@@ -90,6 +119,10 @@ def upgrade() -> None:
                    )
                );
             GET DIAGNOSTICS notification_count = ROW_COUNT;
+
+            -- Do not leave migration authority active for subsequent SQL.
+            PERFORM set_config('app.current_user_id', '', TRUE);
+            PERFORM set_config('app.current_user_signature', '', TRUE);
 
             INSERT INTO audit.legal_release_quarantine_events (
                 migration_revision,
