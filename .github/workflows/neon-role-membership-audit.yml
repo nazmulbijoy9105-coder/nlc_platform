@@ -1,0 +1,33 @@
+name: Neon role membership audit
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit-role-memberships:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Audit Neon role memberships
+        env:
+          NEON_ROLE_AUDIT_DATABASE_URL: ${{ secrets.NEON_ROLE_AUDIT_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${NEON_ROLE_AUDIT_DATABASE_URL}" ]]; then
+            echo "::error::Configure NEON_ROLE_AUDIT_DATABASE_URL with a read-only credential for the intended Neon branch/database."
+            exit 1
+          fi
+          psql "${NEON_ROLE_AUDIT_DATABASE_URL}" \
+            -X -v ON_ERROR_STOP=1 \
+            -f scripts/audit_nlc_role_memberships.sql
