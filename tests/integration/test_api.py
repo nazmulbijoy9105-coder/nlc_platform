@@ -617,6 +617,37 @@ class TestRescue:
         assert "independent counsel approval" in resp.json()["detail"]
 
     @pytest.mark.asyncio
+    async def test_existing_rescue_detail_mutation_and_engagement_are_withheld_until_release(
+        self, api_client, super_admin_tok
+    ):
+        """Legacy rescue records cannot be read or changed while legal release is closed."""
+        plan_id = "00000000-0000-4000-8000-000000000001"
+        headers = _auth(super_admin_tok)
+
+        detail = await api_client.get(
+            f"/api/v1/rescue/plans/detail/{plan_id}",
+            headers=headers,
+        )
+        assert detail.status_code == 503
+        assert "independent counsel approval" in detail.json()["detail"]
+
+        update_step = await api_client.patch(
+            f"/api/v1/rescue/plans/{plan_id}/steps/1",
+            headers=headers,
+            json={"status": "IN_PROGRESS"},
+        )
+        assert update_step.status_code == 503
+        assert "independent counsel approval" in update_step.json()["detail"]
+
+        engagement = await api_client.post(
+            f"/api/v1/rescue/plans/{plan_id}/engagement",
+            headers=headers,
+            json={"confirmed_fee_bdt": 1000},
+        )
+        assert engagement.status_code == 503
+        assert "independent counsel approval" in engagement.json()["detail"]
+
+    @pytest.mark.asyncio
     async def test_rescue_requires_auth(self, api_client):
         resp = await api_client.get("/api/v1/rescue/plans")
         assert resp.status_code == 401
