@@ -3393,9 +3393,9 @@ class NLCRuleEngine:
     ) -> List[Dict[str, Any]]:
         """Produce exactly one auditable action/no-action disposition per finding."""
         step_by_rule: Dict[str, Dict[str, Any]] = {}
-        for step in rescue_sequence:
-            for rule_id in step.get("related_rules", []):
-                step_by_rule[rule_id] = step
+        for rescue_step in rescue_sequence:
+            for rule_id in rescue_step.get("related_rules", []):
+                step_by_rule[rule_id] = rescue_step
 
         dispositions: List[Dict[str, Any]] = []
         for flag in flags:
