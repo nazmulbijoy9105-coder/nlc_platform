@@ -178,7 +178,12 @@ class ComplianceService(BaseService[ComplianceFlag]):
         """
         from app.core.dependencies import get_rule_engine
         from app.rule_engine import CompanyProfile
-        from app.rule_engine.engine import VERIFIED_RULE_IDS, legal_score_is_released
+        from app.rule_engine.engine import (
+            CATEGORY_CAPS,
+            _COVERAGE_FIELDS,
+            VERIFIED_RULE_IDS,
+            legal_score_is_released,
+        )
         from app.services.company_service import CompanyService
 
         # ── Step 1: Build profile ──────────────────────────────────
@@ -288,7 +293,12 @@ class ComplianceService(BaseService[ComplianceFlag]):
         Persist all evaluation results to DB atomically.
         Order: resolve old flags → insert new flags → score snapshot → update company.
         """
-        from app.rule_engine.engine import VERIFIED_RULE_IDS, legal_score_is_released
+        from app.rule_engine.engine import (
+            CATEGORY_CAPS,
+            _COVERAGE_FIELDS,
+            VERIFIED_RULE_IDS,
+            legal_score_is_released,
+        )
 
         engine_version = str(getattr(output, "engine_version", "") or "").strip()
         if not engine_version or engine_version.lower() == "unknown":
@@ -472,7 +482,6 @@ class ComplianceService(BaseService[ComplianceFlag]):
             .limit(1)
         )
         previous_hash = previous_result.scalar_one_or_none()
-        from app.rule_engine.engine import CATEGORY_CAPS
         applied_impacts = _applied_score_impacts(output.flags)
         dispositions = getattr(output, "rescue_dispositions", None) or []
         disposition_by_flag = {
@@ -514,15 +523,70 @@ class ComplianceService(BaseService[ComplianceFlag]):
         flags_snapshot = jsonable_encoder(flags_snapshot)
         sb = output.score_breakdown
         score_breakdown_snapshot = None if score_for_current is None else {
+            "engine_version": engine_version,
+            "ilrmf_version": str(getattr(output, "ilrmf_version", "") or ""),
+            "score_hash": sb.score_hash,
             "raw_total": sb.raw_total,
             "final_score": score_for_current,
-            "agm_score": sb.agm_score,
-            "audit_score": sb.audit_score,
-            "return_score": sb.return_score,
-            "director_score": sb.director_score,
-            "shareholding_score": sb.shareholding_score,
             "risk_band": risk_band.value,
+            "exposure_band": getattr(sb.exposure_band, "value", sb.exposure_band),
+            "revenue_tier": getattr(sb.revenue_tier, "value", sb.revenue_tier),
             "override_applied": sb.override_applied,
+            "override_reason": sb.override_reason,
+            "category_deductions": dict(sb.category_deductions or {}),
+            "category_caps": {
+                key: {"max_deduction": cap, "prefixes": list(prefixes)}
+                for key, (cap, prefixes) in sorted(CATEGORY_CAPS.items())
+            },
+            "score_model_semantics": (
+                "HEADLINE_SCORE_IS_100_MINUS_CAPPED_CATEGORY_DEDUCTIONS; "
+                "MODULE_SCORES_ARE_NON_ADDITIVE_DIAGNOSTICS"
+            ),
+            "module_score_maxima": {
+                "agm": 20,
+                "audit": 20,
+                "annual_return": 20,
+                "director": 10,
+                "shareholding": 10,
+                "capital": 5,
+                "office": 5,
+                "register": 5,
+                "tax": 5,
+                "bankruptcy": 5,
+                "labour": 5,
+                "bsec": 5,
+                "foreign_exchange": 5,
+                "escalation": 5,
+                "total_diagnostic_maximum": 125,
+            },
+            "module_scores": {
+                "agm": sb.agm_score,
+                "audit": sb.audit_score,
+                "annual_return": sb.return_score,
+                "director": sb.director_score,
+                "shareholding": sb.shareholding_score,
+                "capital": sb.capital_score,
+                "office": sb.office_score,
+                "register": sb.register_score,
+                "tax": sb.tax_score,
+                "bankruptcy": sb.bankruptcy_score,
+                "labour": sb.labour_score,
+                "bsec": sb.bsec_score,
+                "foreign_exchange": sb.fx_score,
+                "escalation": sb.escalation_score,
+            },
+            "coverage": {
+                "value": sb.coverage,
+                "basis": sb.coverage_basis,
+                "weights": dict(sorted(_COVERAGE_FIELDS.items())),
+            },
+            "flag_counts": {
+                "active": sb.active_flag_count,
+                "black": sb.black_flag_count,
+                "red": sb.red_flag_count,
+                "yellow": sb.yellow_flag_count,
+                "green": sb.green_flag_count,
+            },
         }
         hash_material = json.dumps(
             {

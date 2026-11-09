@@ -378,6 +378,12 @@ def test_released_score_uses_one_category_cap_formula_for_all_paths(monkeypatch)
 
     # AGM=30, DIR=25 and AUD=25 after category caps: 100 - 80 = 20.
     assert breakdown.raw_total == 20
+    assert breakdown.category_deductions == {
+        "TAX": 0, "AGM": 30, "AUD": 25, "RET": 0, "DIR": 25,
+        "SHR": 0, "CAP": 0, "OFF": 0, "REG": 0, "BNK": 0,
+        "LBR": 0, "BSEC": 0, "FX": 0, "ESC": 0,
+    }
+    assert breakdown.coverage_basis == "WEIGHTED_PROFILE_INPUT_COMPLETENESS"
     assert engine._calculate_raw_score(flags) == breakdown.raw_total
 
 
@@ -523,6 +529,34 @@ def test_unverified_or_late_agm_extension_never_suppresses_into_false_default():
     flag = _flag(result, "AGM-002")
     assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
     assert flag.score_impact == 0
+
+def test_profile_coverage_is_not_mislabelled_as_rule_coverage():
+    profile = _profile(
+        last_agm_date=None,
+        last_audit_signed_date=None,
+        last_return_filed_year=None,
+        first_auditor_appointed=False,
+        tin_obtained=False,
+        current_director_count=2,
+        directors_verified=False,
+        member_count=None,
+    )
+
+    # Known False tri-state values count as supplied inputs (2 of 9 weight).
+    assert engine_module._input_coverage(profile) == pytest.approx(2 / 9)
+
+
+def test_score_hash_commits_to_category_cap_configuration(monkeypatch):
+    profile = _profile()
+    engine = NLCRuleEngine()
+    before = engine.evaluate(profile, today=date(2026, 11, 3))
+    monkeypatch.setitem(
+        engine_module.CATEGORY_CAPS, "AGM", (29, ("AGM-",))
+    )
+    after = engine.evaluate(profile, today=date(2026, 11, 3))
+
+    assert before.score_breakdown.score_hash != after.score_breakdown.score_hash
+
 
 def test_score_hash_changes_when_evidence_inputs_change():
     engine = NLCRuleEngine()
