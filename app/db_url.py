@@ -80,3 +80,33 @@ def normalize_asyncpg_url(
     # Default context verifies the certificate chain and hostname. Never
     # disable certificate validation to make a deployment connect.
     return normalized, ssl.create_default_context()
+
+
+def prepare_asyncpg_connection(
+    raw_url: str,
+    *,
+    require_tls: bool,
+) -> tuple[str, dict[str, ssl.SSLContext]]:
+    """Prepare a sanitized asyncpg URL and fail-closed TLS connect arguments.
+
+    Neon always requires TLS, even if deployment detection is unavailable.
+    Production callers can require TLS for non-Neon PostgreSQL endpoints too.
+    """
+    normalized_url, ssl_context = normalize_asyncpg_url(
+        raw_url,
+        require_tls=require_tls,
+    )
+    host = (make_url(normalized_url).host or "").strip().lower().rstrip(".")
+    is_neon_endpoint = host == "neon.tech" or host.endswith(".neon.tech")
+
+    if (require_tls or is_neon_endpoint) and not isinstance(
+        ssl_context, ssl.SSLContext
+    ):
+        # Never allow a future URL-normalization regression to silently turn
+        # a production/Neon migration connection into plaintext.
+        raise RuntimeError(
+            "TLS is required for this migration database, but no verified "
+            "SSLContext was prepared."
+        )
+
+    return normalized_url, ({"ssl": ssl_context} if ssl_context is not None else {})
