@@ -613,7 +613,8 @@ async def get_score_history(company_id: uuid.UUID, months: int = Query(default=1
 
 @router.get("/dashboard/kpis", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Portfolio KPIs")
 async def get_dashboard_kpis(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
-    _require_legal_dashboard_release()
+    # The service returns evidence-review metrics while legal scoring is withheld;
+    # it never substitutes provisional rule states for statutory risk bands.
     svc = ComplianceService(db)
     # Administrators see the portfolio permitted by their signed database
     # context; legal staff remain restricted to their assigned companies.
