@@ -69,6 +69,8 @@ def test_each_finding_gets_exactly_one_rescue_disposition():
         _flag("AGM-002", state=RuleState.UNKNOWN),
         _flag("AUD-001", resolved=True),
         _flag("AUD-002", applies=False),
+        _flag("ESC-001", state=RuleState.COMPLIANT),
+        _flag("ESC-003", state=RuleState.NOT_APPLICABLE),
     ]
 
     result = _dispositions(findings, steps=_seq([findings[0]]))
@@ -79,9 +81,11 @@ def test_each_finding_gets_exactly_one_rescue_disposition():
     ]
     assert result[0]["disposition"] == "ACTION_REQUIRED"
     assert result[1]["disposition"] == "WAITING_EVIDENCE"
-    assert result[1]["reason"] == "NO_CONFIRMED_VIOLATION"
+    assert result[1]["reason"] == "FINDING_STATE_UNKNOWN"
     assert result[2]["reason"] == "FINDING_RESOLVED"
     assert result[3]["reason"] == "RULE_NOT_APPLICABLE"
+    assert result[4]["reason"] == "FINDING_COMPLIANT"
+    assert result[5]["reason"] == "RULE_NOT_APPLICABLE"
 
 
 def test_confirmed_finding_is_blocked_when_legal_score_release_is_closed(monkeypatch):
