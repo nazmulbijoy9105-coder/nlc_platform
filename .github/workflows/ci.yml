@@ -427,7 +427,7 @@ jobs:
           printf '%s\n' "$FINAL_MARKER"
           HEAD_REVISION="$(alembic heads | awk 'NR == 1 {print $1}')"
           grep -q "$HEAD_REVISION" <<< "$FINAL_MARKER"
-          grep -q "0089_unique_active_compliance_flags" <<< "$FINAL_MARKER"
+          grep -q "0090_rule_registry_drift_quarantine" <<< "$FINAL_MARKER"
 
       - name: Upload isolated migration rehearsal schema
         uses: actions/upload-artifact@v4
