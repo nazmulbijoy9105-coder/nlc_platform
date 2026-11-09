@@ -378,6 +378,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 existing_flag.exposure_band = (
                     getattr(flag, "exposure_band", None) if approved else None
                 )
+                existing_flag.evaluation_state = str(
+                    getattr(flag, "eval_state", "LEGACY_UNCLASSIFIED")
+                )
                 self.db.add(existing_flag)
             else:
                 # New flag
@@ -405,6 +408,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     ),
                     revenue_tier=RevenueTier(flag.revenue_tier.value if hasattr(flag.revenue_tier, 'value') else flag.revenue_tier),
                     flag_status=FlagStatus.ACTIVE,
+                    evaluation_state=str(
+                        getattr(flag, "eval_state", "LEGACY_UNCLASSIFIED")
+                    ),
                     triggered_date=today,
                     description=(
                         flag.description
