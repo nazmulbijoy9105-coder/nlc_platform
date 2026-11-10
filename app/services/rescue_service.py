@@ -40,7 +40,7 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
     from app.rule_engine.engine import PRODUCT_SCORING_RULE_IDS, legal_score_is_released
 
     if not legal_score_is_released():
-        raise PermissionError("Rescue generation is disabled until statutory scoring is released.")
+        raise PermissionError("Rescue generation is disabled while product scoring is disabled.")
 
     evaluated_company_id = getattr(engine_output, "company_id", None)
     if evaluated_company_id is None or not str(evaluated_company_id).strip():
