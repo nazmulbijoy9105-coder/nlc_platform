@@ -65,7 +65,7 @@ def test_super_admin_black_override_catalogue_remains_visible_when_scoring_is_di
 
     assert len(result) == 1
     assert result[0].product_scoring_enabled is False
-    assert result[0].is_black_override is False
+    assert result[0].is_black_override is True
     assert result[0].verification_status == "PENDING"
 
 
