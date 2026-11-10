@@ -140,3 +140,56 @@ async def test_calendar_does_not_persist_unverified_or_inapplicable_trigger(
 
     service = calendar_service.ComplianceCalendarService(db)
     assert await service.generate_approved_events(db_company.id, [definition]) == []
+
+
+
+async def test_calendar_rejects_caller_forged_definition_even_for_approved_event_type(
+    db, db_company, monkeypatch
+):
+    from dataclasses import replace
+
+    from app.models.enums import CalendarEventType
+    from app.services import compliance_calendar as calendar_service
+    from app.services.legal_deadline_engine import DeadlineRule
+
+    approved = calendar_service.CalendarEventDefinition(
+        event_type=CalendarEventType.FIRST_AGM,
+        title="Approved fixture event",
+        period_label="APPROVED-2026",
+        rule=DeadlineRule(
+            rule_id="TEST-CAL-APPROVED",
+            source_citation="Fixture-only source, section 1",
+            source_version="fixture-v1",
+            effective_from=date(2020, 1, 1),
+            effective_to=None,
+            offset=10,
+            unit="DAYS",
+            approved=True,
+        ),
+        trigger_date=date(2026, 1, 1),
+        applicable=True,
+        trigger_evidence_verified=True,
+        trigger_evidence_ref="fixture:evidence:approved",
+    )
+    forged = replace(
+        approved,
+        title="Caller-invented statutory event",
+        period_label="FORGED-2026",
+    )
+    monkeypatch.setattr(calendar_service, "LEGAL_CALENDAR_RELEASED", True)
+    monkeypatch.setattr(
+        calendar_service,
+        "VERIFIED_CALENDAR_EVENT_TYPES",
+        frozenset({CalendarEventType.FIRST_AGM.value}),
+    )
+    monkeypatch.setattr(
+        calendar_service, "VERIFIED_CALENDAR_RULE_IDS", frozenset({"TEST-CAL-APPROVED"})
+    )
+    monkeypatch.setattr(
+        calendar_service, "APPROVED_CALENDAR_EVENT_DEFINITIONS", (approved,)
+    )
+
+    service = calendar_service.ComplianceCalendarService(db)
+    with pytest.raises(PermissionError, match="exact counsel-approved"):
+        await service.generate_approved_events(db_company.id, [forged])
+    assert not any(isinstance(item, ComplianceCalendarEvent) for item in db.new)
