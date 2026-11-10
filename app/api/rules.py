@@ -71,7 +71,8 @@ class RuleResponse(BaseModel):
     rule_type: str
     statutory_basis: str
     description: str
-    default_severity: str
+    default_severity: str | None
+    product_scoring_enabled: bool = Field(description="Whether the product scoring configuration includes this rule; separate from legal citation verification.")
     score_impact: int
     revenue_tier: str
     is_black_override: bool
@@ -131,7 +132,12 @@ def _rule_to_response(rule) -> RuleResponse:
             rule.description if score_eligible
             else "Informational catalogue entry only. No score deduction is applied."
         ),
-        default_severity=str(rule.default_severity) if score_eligible else "NOT_EVALUATED",
+        default_severity=(
+            None
+            if str(getattr(rule.default_severity, "value", rule.default_severity)).upper() == "NOT_EVALUATED"
+            else str(getattr(rule.default_severity, "value", rule.default_severity))
+        ) if score_eligible else None,
+        product_scoring_enabled=score_eligible,
         score_impact=rule.score_impact if score_eligible else 0,
         revenue_tier=str(rule.revenue_tier) if score_eligible else "COMPLIANCE_PACKAGE",
         is_black_override=(rule.is_black_override and rule.rule_id in VERIFIED_RULE_IDS) if score_eligible else False,
