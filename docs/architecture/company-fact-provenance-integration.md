@@ -9,7 +9,7 @@ Only two trust levels are used:
 - `USER_ASSERTED`: no document is claimed; always disclosed as not independently verified.
 - `AUTHORIZED_DOCUMENT_BACKED`: references an existing active `documents` row and its recorded `created_by` / `created_at`. Upload alone leaves verification `UNVERIFIED`.
 
-A document-backed fact can become `VERIFIED` only through the staff verification endpoint. Rejected and superseded decisions remain explicit. AI-generated drafts are rejected as source evidence. Fact changes are append-only: a new row points to the previous row through `supersedes_fact_id`; database triggers prevent edits to source/value/uploader fields after creation. The same validated `CompanyFact` value object is shared by the persistence adapter and obligation-finding provenance contract.
+A document-backed fact can become `VERIFIED` only through the staff verification endpoint. Rejected and superseded decisions remain explicit. AI-generated drafts are rejected as source evidence. Fact changes are append-only: a new row points to the previous row through `supersedes_fact_id`; a unique constraint prevents two successors branching from one version. Database insert guards verify that the referenced vault document is active, non-AI-generated, belongs to the same company, and has the exact recorded uploader and creation timestamp. Source references for document-backed facts are generated from the document ID, not supplied by the caller. Database triggers prevent edits to source/value/uploader fields after creation. The same validated `CompanyFact` value object is shared by the persistence adapter and obligation-finding provenance contract.
 
 ## API
 
