@@ -19,6 +19,121 @@ from app.rule_engine.engine import legal_score_is_released
 
 router = APIRouter()
 
+@router.get("/domain-events")
+async def list_domain_event_operations(
+    status_filter: str = Query(default="all", alias="status", pattern="^(all|pending|dispatched|dead_lettered)$"),
+    limit: int = Query(default=50, ge=1, le=200),
+    admin=Depends(require_super_admin),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Super-admin event operations view; intentionally excludes event payloads."""
+    from sqlalchemy import func
+
+    from app.models.domain_event import DomainEventOutbox
+
+    await set_admin_context(db)
+    pending = await db.scalar(
+        select(func.count()).select_from(DomainEventOutbox).where(
+            DomainEventOutbox.processed_at.is_(None),
+            DomainEventOutbox.dead_lettered_at.is_(None),
+        )
+    )
+    dispatched = await db.scalar(
+        select(func.count()).select_from(DomainEventOutbox).where(
+            DomainEventOutbox.processed_at.is_not(None),
+        )
+    )
+    dead_lettered = await db.scalar(
+        select(func.count()).select_from(DomainEventOutbox).where(
+            DomainEventOutbox.dead_lettered_at.is_not(None),
+        )
+    )
+    query = select(DomainEventOutbox).order_by(
+        DomainEventOutbox.occurred_at.desc()
+    )
+    if status_filter == "pending":
+        query = query.where(
+            DomainEventOutbox.processed_at.is_(None),
+            DomainEventOutbox.dead_lettered_at.is_(None),
+        )
+    elif status_filter == "dispatched":
+        query = query.where(DomainEventOutbox.processed_at.is_not(None))
+    elif status_filter == "dead_lettered":
+        query = query.where(DomainEventOutbox.dead_lettered_at.is_not(None))
+    result = await db.execute(query.limit(limit))
+    rows = result.scalars().all()
+    return {
+        "counts": {
+            "pending": int(pending or 0),
+            "dispatched": int(dispatched or 0),
+            "dead_lettered": int(dead_lettered or 0),
+        },
+        "events": [
+            {
+                "id": str(row.id),
+                "company_id": str(row.company_id),
+                "event_type": row.event_type,
+                "aggregate_type": row.aggregate_type,
+                "aggregate_id": str(row.aggregate_id),
+                "occurred_at": row.occurred_at.isoformat(),
+                "attempts": row.attempts,
+                "processed_at": row.processed_at.isoformat() if row.processed_at else None,
+                "dead_lettered_at": row.dead_lettered_at.isoformat() if row.dead_lettered_at else None,
+                "dead_letter_reason": row.dead_letter_reason,
+                "replay_count": row.replay_count,
+                "last_error": row.last_error,
+            }
+            for row in rows
+        ],
+    }
+
+
+@router.post("/domain-events/{event_id}/replay")
+async def replay_dead_lettered_domain_event(
+    event_id: str,
+    admin=Depends(require_super_admin),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Requeue only an unprocessed dead-letter event; never rewrite its payload."""
+    import uuid
+
+    from app.models.domain_event import DomainEventOutbox
+
+    try:
+        parsed_id = uuid.UUID(event_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid event UUID.") from exc
+
+    await set_admin_context(db)
+    result = await db.execute(
+        select(DomainEventOutbox)
+        .where(DomainEventOutbox.id == parsed_id)
+        .with_for_update()
+    )
+    event = result.scalar_one_or_none()
+    if event is None:
+        raise HTTPException(status_code=404, detail="Domain event not found.")
+    if event.processed_at is not None:
+        raise HTTPException(status_code=409, detail="A dispatched event cannot be replayed from the dead-letter queue.")
+    if event.dead_lettered_at is None:
+        raise HTTPException(status_code=409, detail="Only dead-lettered events can be replayed.")
+
+    now = datetime.now(UTC)
+    event.dead_lettered_at = None
+    event.dead_letter_reason = None
+    event.attempts = 0
+    event.available_at = now
+    event.last_error = None
+    event.last_replayed_at = now
+    event.replay_count += 1
+    await db.commit()
+    return {
+        "event_id": str(event.id),
+        "status": "queued_for_replay",
+        "replay_count": event.replay_count,
+    }
+
+
 
 async def require_admin(current_user=Depends(get_current_user)):
     role = current_user.role if hasattr(current_user, "role") else current_user.get("role", "")
