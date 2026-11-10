@@ -214,16 +214,25 @@ class TestComplianceService:
         """Integration: build profile → run engine → persist → verify."""
         from app.services.compliance_service import ComplianceService
 
-        # Mock rule engine to avoid complex setup
-        score_breakdown = SimpleNamespace(
+        # Use the production result contract so added scoring fields fail
+        # immediately at fixture construction instead of deep in persistence.
+        from app.rule_engine.engine import (
+            ExposureBand,
+            RevenueTier,
+            ScoreBreakdown,
+            Severity,
+        )
+
+        score_breakdown = ScoreBreakdown(
             final_score=90,
-            risk_band="GREEN",
-            exposure_band="LOW",
+            risk_band=Severity.GREEN,
+            exposure_band=ExposureBand.LOW,
             override_applied=False,
             override_reason=None,
             black_flag_count=0,
             red_flag_count=0,
             yellow_flag_count=0,
+            green_flag_count=0,
             active_flag_count=0,
             score_hash="abc123",
             raw_total=90,
@@ -242,7 +251,7 @@ class TestComplianceService:
             fx_score=0,
             escalation_score=0,
             coverage=1.0,
-            revenue_tier="COMPLIANCE_PACKAGE",
+            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
         )
         mock_output = SimpleNamespace(
             flags=[],
