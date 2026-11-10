@@ -2,6 +2,7 @@
 
 from app.rule_engine.engine import (
     CORE_REGISTERS,
+    REQUIRED_REGISTERS,
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
 )
@@ -29,6 +30,7 @@ def test_legacy_rule_ids_are_preserved():
 
 def test_reg002_is_limited_to_internal_records():
     assert set(CORE_REGISTERS) == {"members", "charges", "minutes_agm"}
+    assert "directors" not in REQUIRED_REGISTERS
     mapping = EVIDENCE_REGISTRY["REG-002"]
     assert mapping.source_section == "S34/S89/S174"
     assert "REGISTER_OF_MEMBERS_ENTRY" in mapping.primary_evidence
