@@ -86,9 +86,12 @@ class ObligationState:
                 raise ValueError("COMPLIANT requires an applicable obligation")
             if self.evidence is not EvidenceState.VERIFIED_PRESENT:
                 raise ValueError("COMPLIANT requires verified-present evidence")
-        if self.status in (ObligationStatus.WAIVED, ObligationStatus.EXEMPTED):
-            if self.applicability is Applicability.APPLIES:
-                raise ValueError("waived/exempted status cannot contradict APPLIES")
+        if self.status is ObligationStatus.EXEMPTED:
+            if self.applicability is not Applicability.DOES_NOT_APPLY:
+                raise ValueError("EXEMPTED requires DOES_NOT_APPLY applicability")
+        if self.status is ObligationStatus.WAIVED:
+            if self.applicability is not Applicability.APPLIES:
+                raise ValueError("WAIVED requires an otherwise applicable obligation")
         if self.applicability is Applicability.DOES_NOT_APPLY and self.status in (
             ObligationStatus.OVERDUE, ObligationStatus.FILED_LATE
         ):
