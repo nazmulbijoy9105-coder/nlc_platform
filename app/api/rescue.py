@@ -209,8 +209,8 @@ async def create_rescue_plan(
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
-    # Verify company exists and enforce assigned legal-staff scope.
-    await ensure_staff_company_scope(body.company_id, current_user, db)
+    # Verify company exists, assigned legal-staff scope and company-specific rescue entitlement.
+    await _assert_rescue_entitlement(body.company_id, current_user, db)
     company = await company_svc.get_by_id_or_404(body.company_id)
 
     # Enforce: rescue plans only for RED or BLACK companies
