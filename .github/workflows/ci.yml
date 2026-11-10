@@ -474,7 +474,9 @@ jobs:
             tests/integration/test_financial_review_actor_binding.py \
             tests/integration/test_finance_wallet_reference_integrity.py \
             tests/integration/test_finance_cross_table_wallet_reference_guard.py \
-            tests/integration/test_agm_share_event_rls.py -q -rs --tb=short
+            tests/integration/test_agm_share_event_rls.py \
+            tests/unit/test_rjsc_forms_idor.py \
+            tests/unit/test_service_data_leak.py -q -rs --tb=short
 
   docker-runtime-smoke:
     runs-on: ubuntu-latest
