@@ -1168,16 +1168,25 @@ class TestRules:
         assert detail_row["statutory_basis"] == list_row["statutory_basis"]
         assert detail_row["description"] == list_row["description"]
 
-        # Unapproved legal metadata is intentionally withheld from API users.
+        # Product scoring eligibility is independent of the legal-verification
+        # metadata. SH-001 is score-bearing; SH-002 is informational only.
         for item in (list_row, detail_row):
-            assert item["statutory_basis"].startswith("NOT VALIDATED")
-            assert "Review prompt only" in item["description"]
-            assert "No breach" in item["description"]
             assert item["verification_status"] == "PENDING"
-            assert item["default_severity"] == "NOT_EVALUATED"
-            assert item["score_impact"] == 0
+            assert item["verified_at"] is None
+            assert item["statutory_effective_date"] is None
             assert item["is_black_override"] is False
-            assert item["is_active"] is False
+            if rule_id == "SH-001":
+                assert not item["statutory_basis"].startswith("NOT VALIDATED")
+                assert "Review prompt only" not in item["description"]
+                assert item["default_severity"] != "NOT_EVALUATED"
+                assert item["score_impact"] > 0
+                assert item["is_active"] is True
+            else:
+                assert "Not part of the product scoring allowlist" in item["statutory_basis"]
+                assert "Informational catalogue entry only" in item["description"]
+                assert item["default_severity"] == "NOT_EVALUATED"
+                assert item["score_impact"] == 0
+                assert item["is_active"] is False
 
 
 # =============================================================================
