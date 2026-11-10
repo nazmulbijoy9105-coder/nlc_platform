@@ -66,6 +66,16 @@ class ComplianceCalendarEvent(FullMixin, Base):
     is_statutory: Mapped[bool] = mapped_column(Boolean, default=True)
     statutory_basis: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
+    # Immutable legal provenance for every generated statutory event.
+    legal_rule_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    legal_source_citation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    legal_source_version: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    legal_effective_from: Mapped[date | None] = mapped_column(Date, nullable=True)
+    legal_effective_to: Mapped[date | None] = mapped_column(Date, nullable=True)
+    legal_trigger_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    trigger_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    legal_manifest_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     evidence_document_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
