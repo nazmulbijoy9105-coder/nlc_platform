@@ -749,6 +749,13 @@ async def create_user_asserted_company_fact(
         observed_on=body.observed_on,
         source_reference=body.source_reference,
     )
+    await ActivityService(db).log(
+        action="COMPANY_FACT_ASSERTED",
+        resource_type="company_fact",
+        resource_id=str(fact.id),
+        description=f"User-asserted company fact {fact.fact_key} recorded for company {company_id}.",
+        actor_user_id=current_user.id,
+    )
     return fact_response(fact)
 
 
@@ -775,6 +782,16 @@ async def create_document_backed_company_fact(
         actor_id=current_user.id,
         observed_on=body.observed_on,
         source_reference=body.source_reference,
+    )
+    await ActivityService(db).log(
+        action="COMPANY_FACT_DOCUMENT_LINKED",
+        resource_type="company_fact",
+        resource_id=str(fact.id),
+        description=(
+            f"Company fact {fact.fact_key} linked to existing vault document "
+            f"{document_id} for company {fact.company_id}; verification remains UNVERIFIED."
+        ),
+        actor_user_id=current_user.id,
     )
     return fact_response(fact)
 
