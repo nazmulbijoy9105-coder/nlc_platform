@@ -57,8 +57,10 @@ def test_super_admin_black_override_catalogue_remains_visible_when_scoring_is_di
         def __init__(self, db):
             self.db = db
 
-        async def get_black_override_rules(self):
-            return [_rule(rule_id="INC-003")]
+        async def get_all(self):
+            # The legacy database row still has is_black_override=False; the
+            # product-owned allowlist is the authoritative override setting.
+            return [_rule(rule_id="INC-003", is_black_override=False)]
 
     monkeypatch.setattr(rules_api, "RulesService", FakeRulesService)
     result = asyncio.run(rules_api.get_black_overrides(current_user=None, db=object()))
