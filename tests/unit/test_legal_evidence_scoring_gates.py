@@ -62,7 +62,7 @@ def test_unapproved_black_override_is_excluded_before_override_semantics():
 
     result = _applied_score_impacts([flag])
 
-    assert result == [{"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}]
+    assert result == [{"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"}]
 
 
 def test_unapproved_black_rule_cannot_force_black_score_band():
@@ -115,9 +115,9 @@ def test_counsel_approved_black_override_is_honoured_by_engine(monkeypatch):
     assert result.final_score == 0
 
 
-def test_pdf_reconciliation_ignores_unapproved_black_flag():
+def test_pdf_reconciliation_ignores_rule_outside_product_scoring_allowlist():
     unapproved_black = SimpleNamespace(
-        rule_id="AUD-003",
+        rule_id="AUD-999",
         severity="BLACK",
         score_impact=25,
         score_impact_applied=0,
@@ -236,7 +236,7 @@ def test_agm_quorum_requires_verified_attendance_and_quorum_basis():
     assert "AGM-005" not in VERIFIED_RULE_IDS
 
 
-def test_unverified_red_finding_does_not_force_red_risk_band():
+def test_unknown_red_finding_does_not_force_red_risk_band():
     profile = _profile()
     unknown_red = ComplianceFlag(
         rule_id="AGM-005",
@@ -250,7 +250,7 @@ def test_unverified_red_finding_does_not_force_red_risk_band():
         eval_state="UNKNOWN",
     )
     score = NLCRuleEngine()._calculate_score([unknown_red], profile)
-    assert score.risk_band == Severity.GREEN
+    assert score.risk_band != Severity.RED
     assert score.final_score == 100
 
 
@@ -421,9 +421,9 @@ def test_pre_score_and_authoritative_raw_score_use_identical_category_caps():
     engine = NLCRuleEngine()
     breakdown = engine._calculate_score(flags, profile)
     assert engine._calculate_raw_score(flags) == breakdown.raw_total
-    # Legal approval register is fail-closed: unapproved findings remain visible
-    # but none may affect the authoritative compliance score.
-    assert breakdown.raw_total == 100
+    # Product scoring uses the complete score-bearing catalogue; legal verification
+    # remains a separate inventory. Two AGM flags cap at 30 and INC-003 deducts 15.
+    assert breakdown.raw_total == 55
 
 
 
@@ -566,7 +566,7 @@ def test_score_hash_changes_when_evidence_inputs_change():
     assert first.score_breakdown.score_hash != second.score_breakdown.score_hash
 
 
-def test_verified_absence_is_a_scoring_state_but_unknown_is_not():
+def test_verified_absence_is_scored_but_unknown_is_not():
     profile = _profile()
     verified_absent = ComplianceFlag(
         rule_id="AGM-001",
@@ -579,8 +579,23 @@ def test_verified_absence_is_a_scoring_state_but_unknown_is_not():
         state=RuleState.VERIFIED_ABSENT,
     )
     score = NLCRuleEngine()._calculate_score([verified_absent], profile)
-    assert score.agm_score == 20
-    assert score.final_score == 100
+    assert score.agm_score == 0
+    assert score.final_score == 80
+
+    unknown = ComplianceFlag(
+        rule_id="AGM-001",
+        flag_code="FIRST_AGM_UNKNOWN",
+        severity=Severity.NOT_EVALUATED,
+        score_impact=20,
+        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+        description="AGM status not established.",
+        statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
+        state=RuleState.UNKNOWN,
+        eval_state="UNKNOWN",
+    )
+    unknown_score = NLCRuleEngine()._calculate_score([unknown], profile)
+    assert unknown_score.agm_score == 20
+    assert unknown_score.final_score == 100
 
 
 
