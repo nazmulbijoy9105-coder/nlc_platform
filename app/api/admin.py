@@ -50,7 +50,7 @@ async def list_domain_event_operations(
     """Super-admin event operations view; intentionally excludes event payloads."""
     from sqlalchemy import func
 
-    from app.models.domain_event import DomainEventOutbox
+    from app.models.domain_event import DomainEventConsumption, DomainEventOutbox
 
     await set_admin_context(db)
     pending = await db.scalar(
@@ -62,6 +62,7 @@ async def list_domain_event_operations(
     dispatched = await db.scalar(
         select(func.count()).select_from(DomainEventOutbox).where(
             DomainEventOutbox.processed_at.is_not(None),
+            DomainEventOutbox.dead_lettered_at.is_(None),
         )
     )
     dead_lettered = await db.scalar(
@@ -82,7 +83,22 @@ async def list_domain_event_operations(
     elif status_filter == "dead_lettered":
         query = query.where(DomainEventOutbox.dead_lettered_at.is_not(None))
     result = await db.execute(query.limit(limit))
-    rows = result.scalars().all()
+    rows = list(result.scalars().all())
+    event_ids = [row.id for row in rows]
+    receipts: dict[uuid.UUID, list[dict[str, str]]] = {}
+    if event_ids:
+        receipt_result = await db.execute(
+            select(
+                DomainEventConsumption.event_id,
+                DomainEventConsumption.consumer_name,
+                DomainEventConsumption.processed_at,
+            ).where(DomainEventConsumption.event_id.in_(event_ids))
+        )
+        for event_id, consumer_name, processed_at in receipt_result.all():
+            receipts.setdefault(event_id, []).append({
+                "consumer": consumer_name,
+                "processed_at": processed_at.isoformat(),
+            })
     return {
         "counts": {
             "pending": int(pending or 0),
@@ -103,6 +119,7 @@ async def list_domain_event_operations(
                 "dead_letter_reason": row.dead_letter_reason,
                 "replay_count": row.replay_count,
                 "last_error": row.last_error,
+                "consumer_receipts": receipts.get(row.id, []),
             }
             for row in rows
         ],
