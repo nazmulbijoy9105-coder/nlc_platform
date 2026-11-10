@@ -7,6 +7,7 @@ from canonical_architecture.scoring_spec import (
     SCORING_SPEC_VERSION,
     allocate_flag_deductions,
     category_deductions_from_flags,
+    duplicate_event_indices,
     score_from_category_deductions,
 )
 
@@ -67,3 +68,17 @@ def test_unknown_category_never_receives_an_applied_deduction():
     assert score_from_category_deductions(
         category_deductions_from_flags(findings)
     ) == 90
+
+
+def test_explicit_shared_scoring_event_key_prevents_duplicate_penalty():
+    findings = [
+        ("DIR-001", 15, "director-change-2026-01"),
+        ("AGM-001", 30, "director-change-2026-01"),
+        ("AGM-002", 20, "separate-agm-default"),
+    ]
+    assert duplicate_event_indices(findings) == {0}
+    assert allocate_flag_deductions(findings) == [0, 30, 20]
+    deductions = category_deductions_from_flags(findings)
+    assert deductions["DIR"] == 0
+    assert deductions["AGM"] == 50
+    assert score_from_category_deductions(deductions) == 50
