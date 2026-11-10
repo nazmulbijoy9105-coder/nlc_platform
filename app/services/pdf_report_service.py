@@ -34,6 +34,7 @@ from app.services.pdf_render import (
     safe_filename_part,
 )
 from app.services.rescue_service import RescueService
+from canonical_architecture.scoring_spec import allocate_flag_deductions
 
 REPORT_TZ = ZoneInfo("Asia/Dhaka")
 LOGO_FILE = "nlc_logo.png"
@@ -366,17 +367,20 @@ def _verified_flag_score(flags: Any) -> tuple[int, bool]:
 
 
 def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
-    """Render raw deductions, category caps, and applied deductions.
+    """Render and strictly reconcile persisted per-finding score allocations.
 
-    Evaluation snapshots preserve both nominal score_impact and the actual
-    score_impact_applied. Use nominal impact to show cap reductions, and use
-    the persisted applied impact to reconcile the final score.
+    A category cap alone is not enough to validate a snapshot: the global
+    100-point budget and explicit shared-event suppression can also reduce an
+    individual finding. Recompute the exact allocation using the same
+    versioned scoring specification used by the evaluation pipeline.
     """
     if not _legal_score_is_released() or band in ("BLACK", "NOT_EVALUATED"):
         return ""
 
     cat_deductions: dict[str, dict] = {}
     duplicate_rows: list[str] = []
+    allocation_rows: list[tuple[str, int, str | None, bool, int]] = []
+
     for f in (flags or []):
         rule_id = getattr(f, "rule_id", "") or ""
         if rule_id not in PRODUCT_SCORING_RULE_IDS:
@@ -389,13 +393,6 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
             "DUPLICATE_EVENT_SUPPRESSED",
         ):
             continue
-        if scoring_status == "DUPLICATE_EVENT_SUPPRESSED":
-            duplicate_rows.append(
-                f'<div style="font-size:10px;color:#555;padding:2px 0;">'
-                f'Duplicate finding suppressed from scoring: {esc(rule_id)}'
-                f'</div>'
-            )
-            continue
 
         raw_impact = max(0, int(getattr(f, "score_impact", 0) or 0))
         has_applied_metadata = hasattr(f, "score_impact_applied")
@@ -404,6 +401,24 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
             if has_applied_metadata
             else raw_impact
         )
+        detail = getattr(f, "detail", None)
+        event_key = (
+            detail.get("scoring_event_key")
+            if isinstance(detail, dict)
+            else None
+        )
+        allocation_rows.append((
+            rule_id, raw_impact, event_key, has_applied_metadata, applied_impact
+        ))
+
+        if scoring_status == "DUPLICATE_EVENT_SUPPRESSED":
+            duplicate_rows.append(
+                f'<div style="font-size:10px;color:#555;padding:2px 0;">'
+                f'Duplicate finding suppressed from scoring: {esc(rule_id)}'
+                f'</div>'
+            )
+            continue
+
         if raw_impact == 0 and applied_impact == 0:
             continue
 
@@ -437,25 +452,42 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
     if not cat_deductions and not duplicate_rows:
         return ""
 
+    # New snapshots carry applied-impact metadata for every eligible finding.
+    # Recompute each allocation, including global-budget and duplicate-event
+    # effects, then reject any persisted per-finding disagreement.
+    if allocation_rows and all(row[3] for row in allocation_rows):
+        expected = allocate_flag_deductions([
+            (rule_id, raw_impact, event_key)
+            for rule_id, raw_impact, event_key, _, _ in allocation_rows
+        ])
+        for row, expected_applied in zip(allocation_rows, expected):
+            rule_id, _, _, _, persisted_applied = row
+            if persisted_applied != expected_applied:
+                raise ScoreReconciliationError(
+                    f"PDF finding reconciliation mismatch for {rule_id}: "
+                    f"persisted_applied={persisted_applied}, "
+                    f"expected_applied={expected_applied}"
+                )
+
     cap_rows = list(duplicate_rows)
     effective_total = 0
     for cat_name, data in sorted(cat_deductions.items()):
         raw = data["raw"]
         cap = data["cap"]
-        expected_effective = min(raw, cap)
+        maximum_allowed = min(raw, cap)
 
         if data["has_complete_applied_metadata"]:
             effective = data["applied"]
-            if effective < 0 or effective > expected_effective:
+            if effective < 0 or effective > maximum_allowed:
                 raise ScoreReconciliationError(
                     f"PDF category reconciliation mismatch for {cat_name}: "
                     f"raw={raw}, cap={cap}, persisted_applied={effective}, "
-                    f"maximum_allowed={expected_effective}"
+                    f"maximum_allowed={maximum_allowed}"
                 )
         else:
             # Compatibility for older snapshots that predate applied-impact
             # metadata. New evaluation snapshots always carry this value.
-            effective = expected_effective
+            effective = maximum_allowed
 
         effective_total += effective
         if raw > cap:
