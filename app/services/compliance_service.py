@@ -135,7 +135,7 @@ def _applied_score_impacts(flags) -> list[dict]:
     for (index, _, _), applied in zip(eligible, allocations):
         results[index] = {
             "applied": applied,
-            "status": "APPLIED" if applied else "GLOBAL_OR_CATEGORY_CAP_REACHED",
+            "status": "APPLIED" if applied else "CATEGORY_CAP_REACHED",
         }
     return results
 
