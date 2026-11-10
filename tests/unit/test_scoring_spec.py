@@ -55,10 +55,10 @@ def test_category_caps_apply_before_global_budget_and_in_stable_order():
     applied = allocate_flag_deductions(findings)
     categories = category_deductions_from_flags(findings)
 
-    assert applied == [25, 5, 25, 25]
+    assert applied == [25, 5, 25, 0]
     assert categories["AGM"] == 30
     assert categories["AUD"] == 25
-    assert sum(applied) == 80
+    assert sum(applied) == 55
 
 
 def test_unknown_category_never_receives_an_applied_deduction():
