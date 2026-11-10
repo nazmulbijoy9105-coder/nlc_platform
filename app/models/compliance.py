@@ -21,6 +21,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -122,7 +123,7 @@ class ComplianceFlag(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         comment="Structured explanation: delay_days, calculation_basis, etc."
     )
     fact_provenance_snapshot: Mapped[list[dict]] = mapped_column(
-        JSONB, nullable=False, default=list, server_default="[]",
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"),
         comment="Immutable source/trust/verification snapshot for every fact used by this finding; [] means legacy or no facts attached."
     )
 
@@ -262,7 +263,7 @@ class ComplianceEvaluationRun(UUIDPrimaryKeyMixin, Base):
         JSONB, nullable=False, default=list, server_default="[]"
     )
     fact_provenance_snapshot: Mapped[list[dict]] = mapped_column(
-        JSONB, nullable=False, default=list, server_default="[]",
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"),
         comment="Immutable union of fact provenance used during this evaluation run."
     )
     score_breakdown_snapshot: Mapped[dict | None] = mapped_column(
