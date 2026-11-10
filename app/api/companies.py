@@ -543,7 +543,7 @@ async def get_company_lifecycle_activity(
         "company.share_transfer.changed": "Share transfer recorded",
         "company.registered_office.changed": "Registered office changed",
         "company.charge.recorded": "Company charge recorded",
-        "company.charge.evidence_verified": "Company charge evidence reviewed",
+        "company.charge.evidence_state_changed": "Company charge evidence reviewed",
         "filing.receipt.recorded": "Filing receipt recorded",
         "evidence.verification.completed": "Evidence verification completed",
         "company.fact.asserted": "Company fact recorded",
