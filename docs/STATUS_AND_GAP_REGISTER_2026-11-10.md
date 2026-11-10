@@ -110,7 +110,7 @@ For each rule, preserve applicability, exceptions, evidence provenance, effectiv
 | P0 | Runtime and audit security | Exactly scoped RLS policies, actor/tenant provenance, append-only audit evidence, and role privilege verification. |
 | P1 | Workflows and reports | End-to-end tests for onboarding, AGM, audit, returns, evidence, rescue, approvals and report/evaluation snapshot consistency. |
 | P1 | Operations | Verified restore, worker lifecycle, health/readiness semantics, alert thresholds/destinations and delivery tests. |
-| P1 | Frontend/backend parity | Evidence-review language, API response contracts, authorization, loading/error states and no misleading risk cards while release is closed. |
+| P1 | Frontend/backend parity | Product-scoring UI/API parity, explicit pending legal-verification metadata, authorization, loading/error states and no conflation of product scoring with legal certification. |
 | P1 | Repository hygiene | Reference-aware unused-file audit across all related repositories; classify candidates before deletion. |
 
 A workstream is not closed because a file exists or a test was once reported green. Closure must cite the exact current commit, command/workflow, environment, result and any relevant legal/operational evidence.
@@ -118,10 +118,10 @@ A workstream is not closed because a file exists or a test was once reported gre
 ## 8. Explicit non-actions
 
 This register does not:
-- approve any legal rule or enable `LEGAL_SCORE_RELEASED`;
+- approve any legal rule or alter the separate legal-verification inventory;
 - change `approved_rule_ids`, `VERIFIED_RULE_IDS` or legal calendar release;
 - authorize production SQL, migrations, grants, role changes, data repair or deployment;
 - claim all legal sources/amendments are current;
 - claim the platform is production-ready.
 
-**Current posture: engineering remediation and evidence review continue; statutory scoring remains NOT RELEASED.**
+**Current posture: product scoring is enabled in this branch; legal verification remains pending; calendar release remains separate and unchanged.**
