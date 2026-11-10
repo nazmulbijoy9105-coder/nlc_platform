@@ -944,13 +944,18 @@ class TestEscalationRules:
 # =============================================================================
 
 
-    def test_ESC003_counts_only_active_black_flags(self, rule_engine, build_profile):
+    def test_ESC003_counts_only_active_black_flags(self, monkeypatch, rule_engine, build_profile):
         """ESC-003 uses same filter as _calculate_score for counting BLACK flags.
 
         _run_escalation_rules must filter on not resolved and conditional_applies,
         matching _calculate_score's active flag filter. This prevents ESC-003
         from counting flags that would be filtered out in score calculation.
         """
+        # This regression isolates the no-override policy while checking the
+        # escalation counter's active-finding filter.
+        monkeypatch.setattr(
+            "app.rule_engine.engine.AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset()
+        )
         # Create 2 genuine BLACK override conditions
         profile = build_profile(
             agm_held_this_cycle=True,
@@ -1273,8 +1278,11 @@ class TestEngineIntegrity:
         assert output.score_breakdown.final_score == 100
         assert output.score_breakdown.risk_band == Severity.GREEN
 
-    def test_product_score_does_not_force_black_without_authorized_override(self, rule_engine, build_profile):
+    def test_product_score_does_not_force_black_without_authorized_override(self, monkeypatch, rule_engine, build_profile):
         """Product deductions do not force BLACK without a separately authorised override."""
+        monkeypatch.setattr(
+            "app.rule_engine.engine.AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset()
+        )
         profile = build_profile(
             current_director_count=0,
             directors_verified=True,
