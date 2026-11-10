@@ -29,7 +29,7 @@ from app.models.user import User
 from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
-from app.services.compliance_calendar import LEGAL_CALENDAR_RELEASED
+from app.services.compliance_calendar import calendar_manifest_is_released
 from app.services.notification_service import ActivityService
 from app.services.pdf_report_service import PDFReportService
 
@@ -43,7 +43,7 @@ logger = structlog.get_logger(__name__)
 
 def _require_legal_dashboard_release(*, deadlines: bool = False) -> None:
     """Do not expose cached statutory risk or deadline aggregates before release."""
-    if deadlines and not LEGAL_CALENDAR_RELEASED:
+    if deadlines and not calendar_manifest_is_released():
         raise HTTPException(
             status_code=503,
             detail=(

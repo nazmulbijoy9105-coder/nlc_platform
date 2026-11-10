@@ -28,7 +28,9 @@ from app.services.legal_deadline_engine import (
 # exact event allowlist are completed. Tests may inject approved definitions.
 LEGAL_CALENDAR_RELEASED = False
 VERIFIED_CALENDAR_EVENT_TYPES: frozenset[str] = frozenset()
+VERIFIED_CALENDAR_RULE_IDS: frozenset[str] = frozenset()
 VERIFIED_PENALTY_EVENT_TYPES: frozenset[str] = frozenset()
+VERIFIED_PENALTY_RULE_IDS: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,11 +51,50 @@ class CalendarEventDefinition:
 
 # Populated only from the reviewed, versioned legal event manifest.
 APPROVED_CALENDAR_EVENT_DEFINITIONS: tuple[CalendarEventDefinition, ...] = ()
+# Exact source-versioned penalty objects are registered here only after legal
+# review. A caller-created PenaltyRule with approved=True is not approval.
+APPROVED_PENALTY_RULES: tuple[tuple[str, PenaltyRule], ...] = ()
+
+def calendar_manifest_is_released() -> bool:
+    """True only for a non-empty, internally consistent approved event manifest."""
+    if (
+        LEGAL_CALENDAR_RELEASED is not True
+        or not VERIFIED_CALENDAR_EVENT_TYPES
+        or not VERIFIED_CALENDAR_RULE_IDS
+        or not APPROVED_CALENDAR_EVENT_DEFINITIONS
+    ):
+        return False
+
+    keys: set[tuple[str, str]] = set()
+    for definition in APPROVED_CALENDAR_EVENT_DEFINITIONS:
+        if (
+            not isinstance(definition, CalendarEventDefinition)
+            or not isinstance(definition.event_type, CalendarEventType)
+            or not isinstance(definition.rule, DeadlineRule)
+            or definition.event_type.value not in VERIFIED_CALENDAR_EVENT_TYPES
+            or definition.rule.rule_id not in VERIFIED_CALENDAR_RULE_IDS
+            or definition.rule.approved is not True
+            or not isinstance(definition.title, str)
+            or not definition.title.strip()
+            or not isinstance(definition.period_label, str)
+            or not definition.period_label.strip()
+            or (definition.holidays and not (
+                definition.holiday_calendar_version
+                and definition.holiday_source_citation
+            ))
+        ):
+            return False
+        key = (definition.event_type.value, definition.period_label)
+        if key in keys:
+            return False
+        keys.add(key)
+    return True
+
 
 
 def _generate_calendar(company: Company) -> list[dict]:
     """Legacy compatibility function: never synthesizes statutory dates."""
-    if not LEGAL_CALENDAR_RELEASED or not VERIFIED_CALENDAR_EVENT_TYPES:
+    if not calendar_manifest_is_released():
         return []
     return []
 
@@ -69,12 +110,14 @@ class ComplianceCalendarService:
     ) -> list[ComplianceCalendarEvent]:
         """Calculate and persist approved events with source/evidence provenance.
 
-        This method is intentionally unavailable until the global release gate
-        and the event-type allowlist are both set by a reviewed release.
+        This method is intentionally unavailable until the global release gate,
+        rule/event allowlists and exact approved event manifest are released.
         Definitions are explicit inputs, not inferred from company defaults.
         """
-        if not LEGAL_CALENDAR_RELEASED or not VERIFIED_CALENDAR_EVENT_TYPES:
+        if not calendar_manifest_is_released():
             raise PermissionError("Statutory calendar generation is not released.")
+        if not definitions:
+            raise PermissionError("No counsel-approved calendar event definitions are registered.")
         result = await self.db.execute(
             select(Company).where(Company.id == company_id)
         )
@@ -84,11 +127,28 @@ class ComplianceCalendarService:
 
         persisted: list[ComplianceCalendarEvent] = []
         for definition in definitions:
+            if (
+                not isinstance(definition, CalendarEventDefinition)
+                or not isinstance(definition.event_type, CalendarEventType)
+                or not isinstance(definition.rule, DeadlineRule)
+            ):
+                raise PermissionError("Calendar input is not a registered event definition.")
             event_type = definition.event_type.value
-            if event_type not in VERIFIED_CALENDAR_EVENT_TYPES:
-                raise PermissionError(f"Calendar event type is not approved: {event_type}")
-            if not isinstance(definition.trigger_evidence_ref, str) or not definition.trigger_evidence_ref.strip():
-                raise ValueError("A verified trigger evidence reference is required")
+            if (
+                event_type not in VERIFIED_CALENDAR_EVENT_TYPES
+                or definition.rule.rule_id not in VERIFIED_CALENDAR_RULE_IDS
+                or definition.rule.approved is not True
+                or definition not in APPROVED_CALENDAR_EVENT_DEFINITIONS
+            ):
+                raise PermissionError(
+                    "Calendar definition is not an exact counsel-approved "
+                    "event/rule manifest entry."
+                )
+            if (
+                not isinstance(definition.trigger_evidence_ref, str)
+                or not definition.trigger_evidence_ref.strip()
+            ):
+                continue
             if definition.holidays and not (
                 definition.holiday_calendar_version
                 and definition.holiday_source_citation
@@ -193,7 +253,7 @@ class ComplianceCalendarService:
         include_past_days: int = 365,
         include_future_days: int = 365,
     ) -> list[dict]:
-        if not LEGAL_CALENDAR_RELEASED or not VERIFIED_CALENDAR_EVENT_TYPES:
+        if not calendar_manifest_is_released():
             return []
         result = await self.db.execute(
             select(Company).where(Company.id == company_id)
@@ -265,7 +325,12 @@ def calculate_rule_penalty(
     trigger_evidence_verified: bool,
 ) -> Decimal | None:
     """Apply only an explicitly approved penalty rule for an approved event type."""
-    if event_type not in VERIFIED_PENALTY_EVENT_TYPES:
+    if (
+        event_type not in VERIFIED_PENALTY_EVENT_TYPES
+        or rule.rule_id not in VERIFIED_PENALTY_RULE_IDS
+        or rule.approved is not True
+        or (event_type, rule) not in APPROVED_PENALTY_RULES
+    ):
         return None
     return calculate_approved_penalty(
         rule,

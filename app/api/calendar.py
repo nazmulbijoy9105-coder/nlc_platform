@@ -12,14 +12,13 @@ from app.core.dependencies import (
 )
 from app.services.compliance_calendar import (
     ComplianceCalendarService,
-    LEGAL_CALENDAR_RELEASED,
-    VERIFIED_CALENDAR_EVENT_TYPES,
     APPROVED_CALENDAR_EVENT_DEFINITIONS,
+    calendar_manifest_is_released,
 )
 
 
 def _require_calendar_release() -> None:
-    if not LEGAL_CALENDAR_RELEASED or not VERIFIED_CALENDAR_EVENT_TYPES:
+    if not calendar_manifest_is_released():
         raise HTTPException(
             status_code=503,
             detail=(
@@ -43,8 +42,6 @@ async def generate_calendar(
     if current_user.role == "LEGAL_STAFF":
         await ensure_staff_company_scope(company_id, current_user, db)
     _require_calendar_release()
-    if current_user.role == "LEGAL_STAFF":
-        await ensure_staff_company_scope(company_id, current_user, db)
     service = ComplianceCalendarService(db)
     generated = await service.generate_approved_events(
         company_id,

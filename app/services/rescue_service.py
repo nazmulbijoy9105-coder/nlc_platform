@@ -41,46 +41,84 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
 
     if not legal_score_is_released():
         raise PermissionError("Rescue generation is disabled until statutory scoring is released.")
-    if expected_company_id is not None and str(getattr(engine_output, "company_id", "")) != str(expected_company_id):
+
+    evaluated_company_id = getattr(engine_output, "company_id", None)
+    if evaluated_company_id is None or not str(evaluated_company_id).strip():
+        raise PermissionError("Rescue evaluation is missing its tenant/company identity.")
+    if (
+        expected_company_id is not None
+        and str(evaluated_company_id) != str(expected_company_id)
+    ):
         raise PermissionError("Rescue evaluation company does not match the requested tenant.")
+
     score = getattr(engine_output, "score_breakdown", None)
     final_score = getattr(score, "final_score", None)
-    if not isinstance(final_score, int) or not 0 <= final_score <= 100:
+    if isinstance(final_score, bool) or not isinstance(final_score, int) or not 0 <= final_score <= 100:
         raise ValueError("Rescue requires a valid released score from 0 to 100.")
-    risk_band = getattr(getattr(score, "risk_band", None), "value", getattr(score, "risk_band", None))
+    risk_value = getattr(score, "risk_band", None)
+    risk_band = getattr(risk_value, "value", risk_value)
     if risk_band not in ("RED", "BLACK"):
         raise ValueError("Rescue requires a released RED or BLACK evaluation.")
 
-    flags = getattr(engine_output, "flags", None) or []
+    flags = getattr(engine_output, "flags", None)
+    if not isinstance(flags, (list, tuple)):
+        raise PermissionError("Rescue evaluation findings are missing or malformed.")
+
+    flags_by_rule: dict[str, list[object]] = {}
     eligible: set[str] = set()
     for flag in flags:
-        state = getattr(getattr(flag, "state", None), "value", getattr(flag, "state", None))
-        eval_state = getattr(flag, "eval_state", "VIOLATION")
+        rule_id = getattr(flag, "rule_id", None)
+        if not isinstance(rule_id, str) or not rule_id.strip():
+            continue
+        flags_by_rule.setdefault(rule_id, []).append(flag)
+
+        state_value = getattr(flag, "state", None)
+        state = getattr(state_value, "value", state_value)
+        eval_value = getattr(flag, "eval_state", "VIOLATION")
+        eval_state = getattr(eval_value, "value", eval_value)
+        severity_value = getattr(flag, "severity", None)
+        severity = getattr(severity_value, "value", severity_value)
+        score_impact = getattr(flag, "score_impact", 0)
+
         if (
-            not getattr(flag, "resolved", False)
-            and getattr(flag, "conditional_applies", True)
-            and flag.rule_id in VERIFIED_RULE_IDS
+            getattr(flag, "resolved", None) is False
+            and getattr(flag, "conditional_applies", None) is True
+            and rule_id in VERIFIED_RULE_IDS
             and state in ("NON_COMPLIANT", "VERIFIED_ABSENT")
             and eval_state == "VIOLATION"
-            and getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None)) in ("RED", "BLACK")
-            and int(getattr(flag, "score_impact", 0)) > 0
+            and severity in ("RED", "BLACK")
+            and isinstance(score_impact, int)
+            and not isinstance(score_impact, bool)
+            and score_impact > 0
         ):
-            eligible.add(flag.rule_id)
+            eligible.add(rule_id)
 
-    sequence = getattr(engine_output, "rescue_sequence", None) or []
-    if not sequence:
+    sequence = getattr(engine_output, "rescue_sequence", None)
+    if not isinstance(sequence, list) or not sequence:
         raise ValueError("No counsel-released rescue sequence exists.")
+
     referenced: set[str] = set()
     for step in sequence:
+        if not isinstance(step, dict):
+            raise ValueError("Every rescue action must be a structured rule-linked object.")
         related = step.get("related_rules")
-        if not isinstance(related, list) or not related:
+        if (
+            not isinstance(related, list)
+            or not related
+            or any(not isinstance(rule_id, str) or not rule_id.strip() for rule_id in related)
+        ):
             raise ValueError("Every rescue action must identify its triggering rule IDs.")
-        step_rules = {str(rule_id) for rule_id in related}
-        if not step_rules.issubset(eligible):
-            raise PermissionError(
-                "Rescue action references a rule without a released, active, evidence-supported finding."
-            )
+        step_rules = set(related)
+        if len(step_rules) != len(related):
+            raise ValueError("Rescue action contains duplicate rule references.")
+        for rule_id in step_rules:
+            if len(flags_by_rule.get(rule_id, [])) != 1 or rule_id not in eligible:
+                raise PermissionError(
+                    "Rescue action references a rule without one unique, released, "
+                    "active, evidence-supported finding for this tenant."
+                )
         referenced.update(step_rules)
+
     if not referenced:
         raise ValueError("Rescue sequence has no eligible statutory finding.")
     return frozenset(referenced)
