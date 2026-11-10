@@ -9,6 +9,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.company import Company
 from app.models.company_fact import CompanyFact
 from app.models.documents import Document
 
@@ -39,6 +40,9 @@ class CompanyFactService:
         normalized_key = fact_key.strip()
         if not normalized_key:
             raise HTTPException(status_code=422, detail="fact_key cannot be blank.")
+        await self.db.execute(
+            select(Company.id).where(Company.id == company_id).with_for_update()
+        )
         previous_id = await self._latest_fact_id(company_id, normalized_key)
         fact = CompanyFact(
             company_id=company_id, fact_key=normalized_key, fact_value=fact_value,
@@ -74,6 +78,9 @@ class CompanyFactService:
         normalized_key = fact_key.strip()
         if not normalized_key:
             raise HTTPException(status_code=422, detail="fact_key cannot be blank.")
+        await self.db.execute(
+            select(Company.id).where(Company.id == document.company_id).with_for_update()
+        )
         previous_id = await self._latest_fact_id(document.company_id, normalized_key)
         fact = CompanyFact(
             company_id=document.company_id,
