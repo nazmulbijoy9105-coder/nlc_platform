@@ -22,7 +22,6 @@ REASSESSMENT_EVENTS = {
     "filing.agm.recorded",
     "filing.agm.held_recorded",
     "filing.annual_return.recorded",
-    "filing.annual_return.filed",
     "company.director.changed",
     "company.shareholder.changed",
     "company.share_transfer.changed",
@@ -31,7 +30,7 @@ REASSESSMENT_EVENTS = {
     "company.charge.evidence_verified",
 }
 
-FILING_RECEIPT_EVENTS = {"filing.receipt.recorded"}
+FILING_RECEIPT_EVENTS = {"filing.receipt.recorded", "filing.annual_return.filed"}
 EVIDENCE_VERIFICATION_EVENTS = {"evidence.verification.completed"}
 
 
