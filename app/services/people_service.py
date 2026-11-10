@@ -311,6 +311,16 @@ class ShareTransferService(BaseService[ShareTransfer]):
         transfer_status = (
             TransferStatus.IRREGULAR if is_irregular else TransferStatus.COMPLETE
         )
+        if any(
+            value is None
+            for value in (
+                has_transfer_instrument,
+                stamp_duty_paid,
+                board_approval_obtained,
+                register_updated,
+            )
+        ) and not is_irregular:
+            transfer_status = TransferStatus.PENDING_REVIEW
         if aoa_restriction_violated:
             transfer_status = TransferStatus.VOID
 
