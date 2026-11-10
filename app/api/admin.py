@@ -118,7 +118,11 @@ async def list_domain_event_operations(
                 "occurred_at": row.occurred_at.isoformat(),
                 "attempts": row.attempts,
                 "processed_at": row.processed_at.isoformat() if row.processed_at else None,
-                "dead_lettered_at": row.dead_lettered_at.isoformat() if row.dead_lettered_at else None,
+                "dead_lettered_at": (
+                    row.dead_lettered_at.isoformat()
+                    if row.dead_lettered_at
+                    else None
+                ),
                 "dead_letter_reason": row.dead_letter_reason,
                 "replay_count": row.replay_count,
                 "last_error": row.last_error,
