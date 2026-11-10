@@ -538,14 +538,22 @@ async def get_company_lifecycle_activity(
         .limit(limit)
     )
     labels = {
+        "company.created": "Company record created",
         "company.director.changed": "Director record changed",
         "company.shareholder.changed": "Shareholder record changed",
         "company.share_transfer.changed": "Share transfer recorded",
         "company.registered_office.changed": "Registered office changed",
         "company.charge.recorded": "Company charge recorded",
         "company.charge.evidence_state_changed": "Company charge evidence reviewed",
+        "filing.agm.recorded": "AGM record created",
+        "filing.agm.held_recorded": "AGM recorded as held",
+        "filing.annual_return.recorded": "Annual return record created",
+        "filing.annual_return.filed": "Annual return filing receipt recorded",
         "filing.receipt.recorded": "Filing receipt recorded",
         "evidence.verification.completed": "Evidence verification completed",
+        "evidence.document.generated": "Document draft generated",
+        "evidence.document.approved": "Document draft approved",
+        "evidence.document.released": "Document released",
         "company.fact.asserted": "Company fact recorded",
         "company.fact.verified": "Company fact reviewed",
         "deadline.calendar.generated": "Compliance deadline updated",
