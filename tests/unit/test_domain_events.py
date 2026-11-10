@@ -104,7 +104,6 @@ def test_lifecycle_event_contracts_route_to_deterministic_consumers() -> None:
         DomainEventType.SHARE_TRANSFER_CHANGED,
         DomainEventType.REGISTERED_OFFICE_CHANGED,
         DomainEventType.COMPANY_CHARGE_RECORDED,
-        DomainEventType.COMPANY_CHARGE_VERIFIED,
     }.issubset(REASSESSMENT_EVENTS)
     assert {
         DomainEventType.FILING_RECEIPT_RECORDED,
@@ -113,6 +112,7 @@ def test_lifecycle_event_contracts_route_to_deterministic_consumers() -> None:
     assert {
         DomainEventType.EVIDENCE_VERIFICATION_COMPLETED,
         DomainEventType.COMPANY_FACT_VERIFIED,
+        DomainEventType.COMPANY_CHARGE_VERIFIED,
     }.issubset(EVIDENCE_VERIFICATION_EVENTS)
     assert MAX_DISPATCH_ATTEMPTS == 8
     assert consume_filing_receipt_event.name == (
