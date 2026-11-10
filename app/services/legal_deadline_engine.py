@@ -36,6 +36,10 @@ class DeadlineRule:
             raise ValueError("rule_id is required")
         if not self.source_citation.strip() or not self.source_version.strip():
             raise ValueError("exact legal source and source version are required")
+        if self.unit not in ("DAYS", "CLEAR_DAYS", "MONTHS", "YEARS"):
+            raise ValueError(f"unsupported deadline unit: {self.unit}")
+        if self.adjustment not in ("NONE", "FOLLOWING", "PRECEDING"):
+            raise ValueError(f"unsupported business-day adjustment: {self.adjustment}")
         if self.offset < 0:
             raise ValueError("offset cannot be negative")
         if self.effective_to is not None and self.effective_to < self.effective_from:
