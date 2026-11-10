@@ -90,7 +90,7 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
     # assessment so the PDF must reconcile its single approved finding.
     monkeypatch.setattr("app.services.pdf_report_service.LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
-        "app.services.pdf_report_service.VERIFIED_RULE_IDS",
+        "app.services.pdf_report_service.PRODUCT_SCORING_RULE_IDS",
         frozenset({"AGM-001"}),
     )
     captured = {}
@@ -181,7 +181,7 @@ def test_html_builder_handles_empty_flags_and_missing_values():
 
 def test_html_builder_suppresses_stale_score_flags_and_rescue_while_release_closed(monkeypatch):
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", False)
-    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset())
     stale_rescue = SimpleNamespace(steps=[SimpleNamespace(title="Sensitive rescue step")])
 
     page = build_compliance_report_html(
