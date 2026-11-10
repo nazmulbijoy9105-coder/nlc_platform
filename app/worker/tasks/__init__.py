@@ -23,7 +23,11 @@ from app.worker.tasks.core import (
     trigger_rescue_reevaluation,
 )
 from app.worker.tasks.notify import deliver_pending_notifications
-from app.worker.tasks.domain_events import dispatch_domain_event_outbox
+from app.worker.tasks.domain_events import (
+    consume_evidence_verification_event,
+    consume_filing_receipt_event,
+    dispatch_domain_event_outbox,
+)
 
 __all__ = [
     "cleanup_expired_notifications",
@@ -31,6 +35,8 @@ __all__ = [
     "database_health_check",
     "deliver_pending_notifications",
     "dispatch_domain_event_outbox",
+    "consume_evidence_verification_event",
+    "consume_filing_receipt_event",
     "evaluate_all_companies",
     "evaluate_company_compliance",
     "generate_ai_document_async",
