@@ -26,7 +26,7 @@ class DomainEventType:
     SHARE_TRANSFER_CHANGED = "company.share_transfer.changed"
     REGISTERED_OFFICE_CHANGED = "company.registered_office.changed"
     COMPANY_CHARGE_RECORDED = "company.charge.recorded"
-    COMPANY_CHARGE_VERIFIED = "company.charge.evidence_verified"
+    COMPANY_CHARGE_EVIDENCE_CHANGED = "company.charge.evidence_state_changed"
     FILING_RECEIPT_RECORDED = "filing.receipt.recorded"
     EVIDENCE_VERIFICATION_COMPLETED = "evidence.verification.completed"
 
