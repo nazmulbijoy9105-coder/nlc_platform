@@ -10,7 +10,7 @@ from uuid import UUID
 
 class _StrEnum(str, Enum):
     def __str__(self) -> str:
-        return self.value
+        return str(self.value)
 
 
 class FactTrustLevel(_StrEnum):
