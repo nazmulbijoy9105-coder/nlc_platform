@@ -28,10 +28,12 @@ def test_unapproved_statutory_penalties_are_never_estimated():
 
 
 def test_calendar_api_returns_unavailable_not_an_empty_no_deadline_claim(monkeypatch):
-    monkeypatch.setattr(calendar_api, "LEGAL_CALENDAR_RELEASED", False)
-    monkeypatch.setattr(calendar_api, "VERIFIED_CALENDAR_EVENT_TYPES", frozenset())
-    monkeypatch.setattr(calendar_api, "VERIFIED_CALENDAR_RULE_IDS", frozenset())
-    monkeypatch.setattr(calendar_api, "APPROVED_CALENDAR_EVENT_DEFINITIONS", ())
+    from app.services import compliance_calendar as calendar_service
+
+    monkeypatch.setattr(calendar_service, "LEGAL_CALENDAR_RELEASED", False)
+    monkeypatch.setattr(calendar_service, "VERIFIED_CALENDAR_EVENT_TYPES", frozenset())
+    monkeypatch.setattr(calendar_service, "VERIFIED_CALENDAR_RULE_IDS", frozenset())
+    monkeypatch.setattr(calendar_service, "APPROVED_CALENDAR_EVENT_DEFINITIONS", ())
     try:
         calendar_api._require_calendar_release()
     except HTTPException as exc:
@@ -44,7 +46,7 @@ def test_calendar_api_returns_unavailable_not_an_empty_no_deadline_claim(monkeyp
 def test_customer_facing_dashboard_deadlines_fail_closed(monkeypatch):
     import app.api.companies as companies_api
 
-    monkeypatch.setattr(companies_api, "LEGAL_CALENDAR_RELEASED", False)
+    monkeypatch.setattr(companies_api, "calendar_manifest_is_released", lambda: False)
     try:
         companies_api._require_legal_dashboard_release(deadlines=True)
     except HTTPException as exc:
@@ -175,6 +177,8 @@ def test_source_specific_penalty_service_requires_event_type_allowlist(monkeypat
 
 
 def test_calendar_release_requires_exact_nonempty_approved_manifest(monkeypatch):
+    from app.services import compliance_calendar as calendar_service
+
     monkeypatch.setattr(calendar_service, "LEGAL_CALENDAR_RELEASED", True)
     monkeypatch.setattr(calendar_service, "VERIFIED_CALENDAR_EVENT_TYPES", frozenset({"FIRST_AGM"}))
     monkeypatch.setattr(calendar_service, "VERIFIED_CALENDAR_RULE_IDS", frozenset({"AGM-001"}))
