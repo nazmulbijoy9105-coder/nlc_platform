@@ -310,6 +310,17 @@ class CompanyService(BaseService[Company]):
                 self.db.add(shareholder)
 
         await self.db.flush()
+        from app.services.domain_events import DomainEventType, publish_domain_event
+        await publish_domain_event(
+            self.db, company_id=company.id,
+            event_type=DomainEventType.COMPANY_CREATED,
+            aggregate_type="company", aggregate_id=company.id, actor_id=created_by,
+            payload={"company_type": str(company.company_type),
+                     "incorporation_date": incorporation_date.isoformat(),
+                     "financial_year_end": financial_year_end.isoformat(),
+                     "initial_director_count": len(initial_directors or []),
+                     "initial_shareholder_count": len(initial_shareholders or [])},
+        )
         await self.db.refresh(company)
         return company
 
