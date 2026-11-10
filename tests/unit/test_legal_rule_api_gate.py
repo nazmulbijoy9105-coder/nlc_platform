@@ -42,6 +42,11 @@ def test_product_authorized_black_override_does_not_require_legal_verification(m
     assert response.is_black_override is True
     assert response.is_active is True
     assert response.verification_status == "PENDING"
+    assert response.verified_at is None
+    assert response.statutory_effective_date is None
+    assert response.statutory_basis == "Section 81, Companies Act 1994"
+    assert response.description == "Unverified statutory proposition."
+
 
 def test_super_admin_black_override_catalogue_remains_visible_when_scoring_is_disabled(monkeypatch):
     monkeypatch.setattr(rules_api, "LEGAL_SCORE_RELEASED", False)
@@ -62,10 +67,6 @@ def test_super_admin_black_override_catalogue_remains_visible_when_scoring_is_di
     assert result[0].product_scoring_enabled is False
     assert result[0].is_black_override is False
     assert result[0].verification_status == "PENDING"
-    assert response.verified_at is None
-    assert response.statutory_effective_date is None
-    assert response.statutory_basis == "Section 81, Companies Act 1994"
-    assert response.description == "Unverified statutory proposition."
 
 
 def test_unlisted_black_override_is_not_authorized_by_product_release_alone(monkeypatch):
