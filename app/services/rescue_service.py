@@ -35,13 +35,18 @@ from app.services.base import BaseService
 logger = logging.getLogger("nlc.rescue")
 
 
-def validate_rescue_engine_output(engine_output) -> frozenset[str]:
+def validate_rescue_engine_output(engine_output, *, expected_company_id=None) -> frozenset[str]:
     """Reject rescue work not traceable to released, evidenced rule findings."""
     from app.rule_engine.engine import VERIFIED_RULE_IDS, legal_score_is_released
 
     if not legal_score_is_released():
         raise PermissionError("Rescue generation is disabled until statutory scoring is released.")
+    if expected_company_id is not None and str(getattr(engine_output, "company_id", "")) != str(expected_company_id):
+        raise PermissionError("Rescue evaluation company does not match the requested tenant.")
     score = getattr(engine_output, "score_breakdown", None)
+    final_score = getattr(score, "final_score", None)
+    if not isinstance(final_score, int) or not 0 <= final_score <= 100:
+        raise ValueError("Rescue requires a valid released score from 0 to 100.")
     risk_band = getattr(getattr(score, "risk_band", None), "value", getattr(score, "risk_band", None))
     if risk_band not in ("RED", "BLACK"):
         raise ValueError("Rescue requires a released RED or BLACK evaluation.")
@@ -57,6 +62,7 @@ def validate_rescue_engine_output(engine_output) -> frozenset[str]:
             and flag.rule_id in VERIFIED_RULE_IDS
             and state in ("NON_COMPLIANT", "VERIFIED_ABSENT")
             and eval_state == "VIOLATION"
+            and getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None)) in ("RED", "BLACK")
             and int(getattr(flag, "score_impact", 0)) > 0
         ):
             eligible.add(flag.rule_id)
@@ -121,7 +127,9 @@ class RescueService(BaseService[RescuePlan]):
             raise PermissionError(
                 "Rescue generation is disabled until statutory scoring is independently approved and released."
             )
-        source_rule_ids = validate_rescue_engine_output(engine_output)
+        source_rule_ids = validate_rescue_engine_output(
+            engine_output, expected_company_id=company_id
+        )
 
         rescue_data = engine_output.rescue_sequence
 
