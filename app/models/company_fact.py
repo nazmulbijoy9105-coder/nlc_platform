@@ -52,7 +52,7 @@ class CompanyFact(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "(verification_status <> 'VERIFIED' AND verified_by IS NULL AND verified_at IS NULL)",
             name="ck_company_fact_verification_actor",
         ),
-        Index("ix_company_facts_company_key_current", "company_id", "fact_key", "is_current"),
+        Index("ix_company_facts_company_key_created", "company_id", "fact_key", "created_at"),
     )
 
     company_id: Mapped[uuid.UUID] = mapped_column(
@@ -85,7 +85,6 @@ class CompanyFact(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     verification_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    is_current: Mapped[bool] = mapped_column(nullable=False, default=True, server_default="true")
     supersedes_fact_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("company_facts.id", ondelete="RESTRICT"), nullable=True
     )
