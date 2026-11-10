@@ -29,6 +29,8 @@ from app.services.legal_deadline_engine import (
 LEGAL_CALENDAR_RELEASED = False
 VERIFIED_CALENDAR_EVENT_TYPES: frozenset[str] = frozenset()
 VERIFIED_PENALTY_EVENT_TYPES: frozenset[str] = frozenset()
+
+
 @dataclass(frozen=True, slots=True)
 class CalendarEventDefinition:
     event_type: CalendarEventType
