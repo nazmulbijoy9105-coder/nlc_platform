@@ -61,3 +61,13 @@ async def test_publish_domain_event_rejects_missing_contract_fields() -> None:
 
     db.add.assert_not_called()
     db.flush.assert_not_awaited()
+
+
+def test_domain_event_dispatcher_is_registered_and_scheduled() -> None:
+    from app.worker.beat_schedule import BEAT_SCHEDULE
+    from app.worker.tasks.domain_events import dispatch_domain_event_outbox
+
+    assert dispatch_domain_event_outbox.name == "app.worker.tasks.dispatch_domain_event_outbox"
+    schedule = BEAT_SCHEDULE["dispatch-domain-event-outbox"]
+    assert schedule["task"] == dispatch_domain_event_outbox.name
+    assert schedule["kwargs"]["batch_size"] == 100
