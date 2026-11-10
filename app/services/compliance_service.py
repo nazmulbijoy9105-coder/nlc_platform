@@ -648,7 +648,6 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "engine_version": engine_version,
             "ilrmf_version": str(getattr(output, "ilrmf_version", "") or ""),
             "score_hash": sb.score_hash,
-            "scoring_spec_version": SCORING_SPEC_VERSION,
             "raw_total": sb.raw_total,
             "final_score": score_for_current,
             "risk_band": risk_band.value,
