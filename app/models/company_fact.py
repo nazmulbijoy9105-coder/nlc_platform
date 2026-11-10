@@ -34,8 +34,16 @@ class CompanyFact(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             name="ck_company_fact_trust_source",
         ),
         CheckConstraint(
+            "trust_level IN ('USER_ASSERTED', 'AUTHORIZED_DOCUMENT_BACKED')",
+            name="ck_company_fact_trust_level",
+        ),
+        CheckConstraint(
+            "verification_status IN ('UNVERIFIED', 'VERIFIED', 'REJECTED', 'SUPERSEDED')",
+            name="ck_company_fact_verification_status",
+        ),
+        CheckConstraint(
             "(verification_status = 'VERIFIED' AND verified_by IS NOT NULL "
-            "AND verified_at IS NOT NULL) OR "
+            "AND verified_at IS NOT NULL AND trust_level = 'AUTHORIZED_DOCUMENT_BACKED') OR "
             "(verification_status <> 'VERIFIED' AND verified_by IS NULL AND verified_at IS NULL)",
             name="ck_company_fact_verification_actor",
         ),
