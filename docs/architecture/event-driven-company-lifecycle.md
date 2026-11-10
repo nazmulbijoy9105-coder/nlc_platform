@@ -57,12 +57,12 @@ member so generated rescue tasks have an operational owner when one is configure
 Deadline events route to the existing deadline-warning scanner; generated AI
 documents route to the existing human-review queue.
 
-Filing receipts have a dedicated `consume_filing_receipt_event` consumer.
-Evidence verification has a dedicated `consume_evidence_verification_event`
-consumer. Each consumer claims the pair (event UUID, consumer name) in
-`domain_event_consumptions` under a unique database constraint and performs its
-compliance reevaluation in the same transaction. A repeated delivery therefore
-does not repeat that consumer's database side effect.
+Company lifecycle changes use `consume_company_lifecycle_event`; filing receipts
+use `consume_filing_receipt_event`; evidence verification uses
+`consume_evidence_verification_event`. Each consumer claims the pair (event UUID,
+consumer name) in `domain_event_consumptions` under a unique database constraint
+and performs its compliance reevaluation in the same transaction. A repeated
+delivery therefore does not repeat that consumer's database side effect.
 
 Delivery is at-least-once. The dispatcher uses stable task IDs and bounded
 exponential retry. Dispatch attempts are capped at eight; terminal failures are
