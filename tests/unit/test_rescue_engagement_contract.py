@@ -122,7 +122,7 @@ async def test_generate_rescue_plan_passes_engagement_id_to_create(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_generate_rescue_plan_rejects_when_product_scoring_is_disabled():
+async def test_generate_rescue_plan_rejects_when_product_scoring_is_disabled(monkeypatch):
     from app.services.rescue_service import RescueService
 
     import app.rule_engine.engine as engine_module
