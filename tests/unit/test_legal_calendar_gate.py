@@ -137,7 +137,7 @@ def test_source_specific_penalty_service_requires_event_type_allowlist(monkeypat
     monkeypatch.setattr(
         calendar_service, "VERIFIED_PENALTY_RULE_IDS", frozenset({"PEN-TEST-03"})
     )
-    monkeypatch.setattr(calendar_service, "APPROVED_PENALTY_RULES", (rule,))
+    monkeypatch.setattr(calendar_service, "APPROVED_PENALTY_RULES", (("FIRST_AGM", rule),))
     assert calendar_service.calculate_rule_penalty(
         rule,
         event_type="FIRST_AGM",
@@ -163,6 +163,22 @@ def test_source_specific_penalty_service_requires_event_type_allowlist(monkeypat
     ) is None
     from dataclasses import replace
     forged = replace(rule, fixed_amount=Decimal("999"))
+
+    monkeypatch.setattr(
+        calendar_service,
+        "VERIFIED_PENALTY_EVENT_TYPES",
+        frozenset({"FIRST_AGM", "ANNUAL_RETURN"}),
+    )
+    assert calendar_service.calculate_rule_penalty(
+        rule,
+        event_type="ANNUAL_RETURN",
+        days_overdue=20,
+        due_date=date(2026, 1, 1),
+        trigger_date=date(2026, 1, 1),
+        as_of=date(2026, 1, 21),
+        applicable=True,
+        trigger_evidence_verified=True,
+    ) is None
     assert calendar_service.calculate_rule_penalty(
         forged,
         event_type="FIRST_AGM",
