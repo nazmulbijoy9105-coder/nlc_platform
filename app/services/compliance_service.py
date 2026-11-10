@@ -200,7 +200,6 @@ class ComplianceService(BaseService[ComplianceFlag]):
         fact_result = await self.db.execute(
             select(CompanyFact).where(
                 CompanyFact.company_id == company_id,
-                CompanyFact.is_current.is_(True),
             ).order_by(CompanyFact.created_at.asc(), CompanyFact.id.asc())
         )
         latest_facts: dict[str, CompanyFact] = {}
