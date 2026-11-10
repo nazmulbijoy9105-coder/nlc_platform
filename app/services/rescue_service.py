@@ -228,22 +228,6 @@ class RescueService(BaseService[RescuePlan]):
         # Reload with steps
         await self.db.refresh(plan)
 
-        # Auto-create commercial engagement if one wasn't passed in.
-        # Engagement failure must NOT fail the rescue plan save — the plan
-        # exists; ops can create the engagement manually if needed.
-        if engagement_id is None:
-            try:
-                await self.create_engagement_from_rescue(
-                    company_id=company_id,
-                    rescue_plan=plan,
-                    created_by=created_by,
-                )
-            except Exception as e:
-                logger.error(
-                    "engagement_creation_failed plan_id=%s company_id=%s error=%s",
-                    plan.id, company_id, e, exc_info=True,
-                )
-
         # Eager-load all relationships the response serializer will access.
         # Without this, accessing plan.steps / plan.company in _plan_to_response
         # triggers lazy-load IO outside an async greenlet context -> MissingGreenlet.
@@ -432,21 +416,43 @@ class RescueService(BaseService[RescuePlan]):
 
     async def create_engagement_from_rescue(
         self,
-        company_id: uuid.UUID,
+        *,
         rescue_plan: RescuePlan,
+        confirmed_fee_bdt: float,
+        payment_terms: str | None = None,
         created_by: uuid.UUID | None = None,
     ) -> Engagement:
         """
-        Create a revenue engagement when a rescue plan is generated.
-        _create_engagement_from_rescue stub implementation.
-        AI Constitution Article 2.2: Revenue data visible to admin only.
-        Returns the created Engagement and links it back to the rescue plan.
+        Explicit admin-triggered commercial engagement creation.
+        Rescue-plan generation never calls this method. The supplied fee is
+        recorded on the rescue plan and as the engagement's initial estimate;
+        payment terms are retained in the admin-only engagement notes.
         """
+        from decimal import Decimal
+        from app.models.commercial import Engagement as EngagementModel
         from app.services.commercial_service import EngagementService
 
+        if confirmed_fee_bdt <= 0:
+            raise ValueError("The engagement fee must be greater than zero.")
+
+        # Make the endpoint idempotent if the plan is already linked.
+        if rescue_plan.engagement_id is not None:
+            existing = await self.db.execute(
+                select(EngagementModel).where(
+                    EngagementModel.id == rescue_plan.engagement_id,
+                    EngagementModel.company_id == rescue_plan.company_id,
+                    EngagementModel.is_active.is_(True),
+                )
+            )
+            linked = existing.scalar_one_or_none()
+            if linked is not None:
+                return linked
+            raise ValueError("The rescue plan contains a stale engagement link.")
+
+        fee = Decimal(str(confirmed_fee_bdt)).quantize(Decimal("0.01"))
         eng_svc = EngagementService(self.db)
         engagement = await eng_svc.create(
-            company_id=company_id,
+            company_id=rescue_plan.company_id,
             engagement_title=rescue_plan.plan_name,
             engagement_type="CORPORATE_RESCUE",
             engagement_status=EngagementStatus.IDENTIFIED,
@@ -456,9 +462,11 @@ class RescueService(BaseService[RescuePlan]):
             rescue_plan_id=rescue_plan.id,
             identified_date=date.today(),
             assigned_staff_id=rescue_plan.assigned_staff_id,
+            estimated_fee_bdt=fee,
+            notes=(f"Payment terms: {payment_terms}" if payment_terms else None),
         )
-        # Link engagement back to the rescue plan
         rescue_plan.engagement_id = engagement.id
+        rescue_plan.confirmed_fee_bdt = fee
         self.db.add(rescue_plan)
         await self.db.flush()
         return engagement
