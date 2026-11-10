@@ -41,6 +41,10 @@ def upgrade() -> None:
             name="ck_company_fact_trust_source",
         ),
         sa.CheckConstraint(
+            "length(btrim(fact_key)) > 0",
+            name="ck_company_fact_fact_key_nonempty",
+        ),
+        sa.CheckConstraint(
             "trust_level IN ('USER_ASSERTED', 'AUTHORIZED_DOCUMENT_BACKED')",
             name="ck_company_fact_trust_level",
         ),
