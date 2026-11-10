@@ -12,10 +12,7 @@ from app.core.dependencies import (
 )
 from app.services.compliance_calendar import (
     ComplianceCalendarService,
-    LEGAL_CALENDAR_RELEASED,
-    VERIFIED_CALENDAR_EVENT_TYPES,
     APPROVED_CALENDAR_EVENT_DEFINITIONS,
-    VERIFIED_CALENDAR_RULE_IDS,
     calendar_manifest_is_released,
 )
 
