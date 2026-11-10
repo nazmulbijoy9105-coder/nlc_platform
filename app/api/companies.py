@@ -24,6 +24,8 @@ from app.core.dependencies import (
 )
 from app.models.company import Company, CompanyUserAccess
 from app.models.charges import CompanyCharge
+from app.models.infrastructure import RegisteredOfficeHistory
+from app.services.domain_events import DomainEventType, publish_domain_event
 from app.models.enums import CompanyStatus, CompanyType, RevenueTier, RiskBand, UserRole
 from app.models.user import User
 from app.rule_engine.engine import (
@@ -534,9 +536,41 @@ async def update_company(company_id: uuid.UUID, body: CompanyUpdateRequest, requ
         mapped_data["is_manufacturing"] = body.is_manufacturing
     for _non_model in ("is_fdi_registered", "is_dormant"):
         mapped_data.pop(_non_model, None)
+    existing_company = await db.get(Company, company_id)
+    previous_registered_address = existing_company.registered_address if existing_company else None
     company = await svc.update_by_id(company_id, **mapped_data)
     if not company:
         raise HTTPException(status_code=404, detail="Company not found.")
+    if (
+        "registered_address" in mapped_data
+        and mapped_data["registered_address"] != previous_registered_address
+    ):
+        changed_on = date.today()
+        await db.execute(
+            __import__("sqlalchemy").update(RegisteredOfficeHistory)
+            .where(
+                RegisteredOfficeHistory.company_id == company_id,
+                RegisteredOfficeHistory.is_current.is_(True),
+            )
+            .values(is_current=False)
+        )
+        office = RegisteredOfficeHistory(
+            company_id=company_id,
+            address=mapped_data["registered_address"],
+            effective_date=changed_on,
+            change_date=changed_on,
+            is_current=True,
+        )
+        db.add(office)
+        await db.flush()
+        await publish_domain_event(
+            db, company_id=company_id,
+            event_type=DomainEventType.REGISTERED_OFFICE_CHANGED,
+            aggregate_type="registered_office_history", aggregate_id=office.id,
+            actor_id=current_user.id,
+            payload={"change": "address_updated", "effective_date": changed_on.isoformat(),
+                     "rjsc_filing_recorded": False},
+        )
     await activity.log(action="COMPANY_UPDATED", resource_type="company", resource_id=str(company_id), description=f"Updated fields: {list(mapped_data.keys())}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     return _company_to_response(company)
 
@@ -709,6 +743,14 @@ async def create_company_charge(
                 detail="A charge with this reference already exists for the company.",
             ) from exc
         raise
+    await publish_domain_event(
+        db, company_id=company_id,
+        event_type=DomainEventType.COMPANY_CHARGE_RECORDED,
+        aggregate_type="company_charge", aggregate_id=charge.id,
+        actor_id=current_user.id,
+        payload={"change": "recorded", "creation_date": charge.creation_date.isoformat(),
+                 "evidence_state": "UNVERIFIED"},
+    )
     await ActivityService(db).log(
         actor_user_id=current_user.id,
         company_id=company_id,
@@ -822,6 +864,23 @@ async def verify_company_charge(
     for field_name, value in updates.items():
         setattr(charge, field_name, value)
     await db.flush()
+    verified_groups = [
+        field for field in (
+            "creation_date_verified",
+            "form_xviii_filing_status_verified",
+            "registrability_verified",
+            "satisfaction_verified",
+            "satisfaction_filing_status_verified",
+        ) if updates.get(field) is True
+    ]
+    await publish_domain_event(
+        db, company_id=company_id,
+        event_type=DomainEventType.COMPANY_CHARGE_VERIFIED,
+        aggregate_type="company_charge", aggregate_id=charge.id,
+        actor_id=current_user.id,
+        payload={"change": "evidence_state_updated", "changed_fields": sorted(updates),
+                 "verified_groups": verified_groups},
+    )
     await ActivityService(db).log(
         actor_user_id=current_user.id,
         company_id=company_id,
