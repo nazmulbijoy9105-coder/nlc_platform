@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from app.models.domain_event import DomainEventOutbox
+from app.models.domain_event import DomainEventConsumption, DomainEventOutbox
 from app.services.domain_events import DomainEventType, publish_domain_event
 
 
@@ -86,3 +86,53 @@ def test_domain_event_outbox_indexes_reference_real_timestamp_columns() -> None:
     assert "occurred_at" in column_names
     assert "created_at" not in column_names
     assert indexed_columns <= column_names
+
+
+def test_lifecycle_event_contracts_route_to_deterministic_consumers() -> None:
+    from app.worker.tasks.domain_events import (
+        EVIDENCE_VERIFICATION_EVENTS,
+        FILING_RECEIPT_EVENTS,
+        MAX_DISPATCH_ATTEMPTS,
+        REASSESSMENT_EVENTS,
+        consume_evidence_verification_event,
+        consume_filing_receipt_event,
+    )
+
+    assert {
+        DomainEventType.DIRECTOR_CHANGED,
+        DomainEventType.SHAREHOLDER_CHANGED,
+        DomainEventType.SHARE_TRANSFER_CHANGED,
+        DomainEventType.REGISTERED_OFFICE_CHANGED,
+        DomainEventType.COMPANY_CHARGE_RECORDED,
+        DomainEventType.COMPANY_CHARGE_VERIFIED,
+    }.issubset(REASSESSMENT_EVENTS)
+    assert FILING_RECEIPT_EVENTS == {DomainEventType.FILING_RECEIPT_RECORDED}
+    assert EVIDENCE_VERIFICATION_EVENTS == {
+        DomainEventType.EVIDENCE_VERIFICATION_COMPLETED
+    }
+    assert MAX_DISPATCH_ATTEMPTS == 8
+    assert consume_filing_receipt_event.name == (
+        "app.worker.tasks.consume_filing_receipt_event"
+    )
+    assert consume_evidence_verification_event.name == (
+        "app.worker.tasks.consume_evidence_verification_event"
+    )
+
+
+def test_event_consumption_has_database_unique_idempotency_boundary() -> None:
+    constraints = {
+        tuple(column.name for column in constraint.columns)
+        for constraint in DomainEventConsumption.__table__.constraints
+        if hasattr(constraint, "columns") and constraint.__class__.__name__ == "UniqueConstraint"
+    }
+    assert ("event_id", "consumer_name") in constraints
+
+
+def test_outbox_exposes_dead_letter_and_replay_metadata() -> None:
+    columns = set(DomainEventOutbox.__table__.columns.keys())
+    assert {
+        "dead_lettered_at",
+        "dead_letter_reason",
+        "replay_count",
+        "last_replayed_at",
+    }.issubset(columns)
