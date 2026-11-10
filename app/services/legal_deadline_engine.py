@@ -154,6 +154,7 @@ def calculate_approved_penalty(
     rule: PenaltyRule,
     *,
     days_overdue: int,
+    trigger_date: date,
     as_of: date,
     applicable: bool,
     trigger_evidence_verified: bool,
@@ -164,8 +165,9 @@ def calculate_approved_penalty(
         or not applicable
         or not trigger_evidence_verified
         or days_overdue < 0
-        or as_of < rule.effective_from
-        or (rule.effective_to is not None and as_of > rule.effective_to)
+        or trigger_date < rule.effective_from
+        or (rule.effective_to is not None and trigger_date > rule.effective_to)
+        or as_of < trigger_date
     ):
         return None
     chargeable_days = max(0, days_overdue - rule.grace_days)
