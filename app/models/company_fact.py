@@ -114,4 +114,8 @@ class CompanyFact(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "verified_at": self.verified_at.isoformat() if self.verified_at else None,
             "verification_note": self.verification_note,
             "disclosure": disclosure,
+            "scope_note": (
+                "This is the set of current company facts supplied to the evaluation; "
+                "it is not yet a rule-specific causal mapping."
+            ),
         }
