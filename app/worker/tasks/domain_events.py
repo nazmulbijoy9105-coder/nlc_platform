@@ -209,39 +209,83 @@ async def _consume_and_reevaluate(
             "duplicate": False,
         }
 
+async def _mark_consumer_dead_letter(event_id: str, error: Exception) -> None:
+    from app.models.database import AsyncSessionLocal, set_admin_context
+    from app.models.domain_event import DomainEventOutbox
+
+    async with AsyncSessionLocal() as db:
+        await set_admin_context(db)
+        result = await db.execute(
+            select(DomainEventOutbox)
+            .where(DomainEventOutbox.id == uuid.UUID(event_id))
+            .with_for_update()
+        )
+        event = result.scalar_one_or_none()
+        if event is not None:
+            now = datetime.now(UTC)
+            event.dead_lettered_at = now
+            event.dead_letter_reason = str(error)[:2000]
+            event.last_error = str(error)[:2000]
+            event.locked_at = None
+            await db.commit()
+
+
+def _run_consumer_task(
+    task: Any,
+    event_id: str,
+    *,
+    consumer_name: str,
+    allowed_event_types: set[str],
+) -> dict[str, Any]:
+    from app.worker.tasks.core import run_async
+
+    try:
+        return run_async(
+            _consume_and_reevaluate(
+                event_id,
+                consumer_name=consumer_name,
+                allowed_event_types=allowed_event_types,
+            )
+        )
+    except Exception as exc:
+        if task.request.retries >= MAX_DISPATCH_ATTEMPTS - 1:
+            run_async(_mark_consumer_dead_letter(event_id, exc))
+            raise
+        retry_delay = min(30 * (2 ** task.request.retries), 1800)
+        raise task.retry(exc=exc, countdown=retry_delay)
+
+
 @celery_app.task(
+    bind=True,
     name="app.worker.tasks.consume_filing_receipt_event",
     queue="compliance",
+    max_retries=MAX_DISPATCH_ATTEMPTS - 1,
     time_limit=300,
     soft_time_limit=270,
 )
-def consume_filing_receipt_event(event_id: str) -> dict[str, Any]:
+def consume_filing_receipt_event(self, event_id: str) -> dict[str, Any]:
     """Consume a filing-receipt event once; it does not authenticate RJSC itself."""
-    from app.worker.tasks.core import run_async
-
-    return run_async(
-        _consume_and_reevaluate(
-            event_id,
-            consumer_name="filing_receipt_v1",
-            allowed_event_types=FILING_RECEIPT_EVENTS,
-        )
+    return _run_consumer_task(
+        self,
+        event_id,
+        consumer_name="filing_receipt_v1",
+        allowed_event_types=FILING_RECEIPT_EVENTS,
     )
 
 
 @celery_app.task(
+    bind=True,
     name="app.worker.tasks.consume_evidence_verification_event",
     queue="compliance",
+    max_retries=MAX_DISPATCH_ATTEMPTS - 1,
     time_limit=300,
     soft_time_limit=270,
 )
-def consume_evidence_verification_event(event_id: str) -> dict[str, Any]:
+def consume_evidence_verification_event(self, event_id: str) -> dict[str, Any]:
     """Consume a staff verification decision once and refresh deterministic compliance."""
-    from app.worker.tasks.core import run_async
-
-    return run_async(
-        _consume_and_reevaluate(
-            event_id,
-            consumer_name="evidence_verification_v1",
-            allowed_event_types=EVIDENCE_VERIFICATION_EVENTS,
-        )
+    return _run_consumer_task(
+        self,
+        event_id,
+        consumer_name="evidence_verification_v1",
+        allowed_event_types=EVIDENCE_VERIFICATION_EVENTS,
     )
