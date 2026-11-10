@@ -29,13 +29,7 @@ from app.models.user import User
 from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
-from app.services.compliance_calendar import (
-    LEGAL_CALENDAR_RELEASED,
-    VERIFIED_CALENDAR_EVENT_TYPES,
-    VERIFIED_CALENDAR_RULE_IDS,
-    APPROVED_CALENDAR_EVENT_DEFINITIONS,
-    calendar_manifest_is_released,
-)
+from app.services.compliance_calendar import calendar_manifest_is_released
 from app.services.notification_service import ActivityService
 from app.services.pdf_report_service import PDFReportService
 
