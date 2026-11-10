@@ -107,6 +107,11 @@ class CompanyFactService:
             raise HTTPException(status_code=404, detail="Company fact not found.")
         if fact.trust_level != "AUTHORIZED_DOCUMENT_BACKED" or fact.document_id is None:
             raise HTTPException(status_code=422, detail="Only document-backed facts can be document-verified.")
+        successor = await self.db.execute(
+            select(CompanyFact.id).where(CompanyFact.supersedes_fact_id == fact.id).limit(1)
+        )
+        if successor.scalar_one_or_none() is not None:
+            raise HTTPException(status_code=409, detail="A newer fact version already supersedes this record.")
         if decision == "VERIFIED":
             doc_result = await self.db.execute(
                 select(Document.id).where(
@@ -138,7 +143,10 @@ class CompanyFactService:
         latest: dict[str, CompanyFact] = {}
         for fact in result.scalars().all():
             latest.setdefault(fact.fact_key, fact)
-        return list(latest.values())
+        return [
+            fact for fact in latest.values()
+            if fact.verification_status not in {"REJECTED", "SUPERSEDED"}
+        ]
 
 
 def fact_response(fact: CompanyFact) -> dict[str, Any]:
