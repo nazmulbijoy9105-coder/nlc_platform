@@ -41,9 +41,11 @@ from app.core.dependencies import (
     require_roles,
 )
 from app.core.entitlement import require_entitlement
-from app.models.user import User
 from app.models.filings import AGM, AGMNoticeEvidence
 from app.models.people import ShareComplianceEvent, Shareholder, ShareTransfer
+from app.models.user import User
+from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+from app.services.compliance_calendar import LEGAL_CALENDAR_RELEASED
 from app.services.domain_events import DomainEventType, publish_domain_event
 from app.services.filing_service import (
     AGMService,
@@ -52,8 +54,6 @@ from app.services.filing_service import (
     StatutoryRegisterService,
 )
 from app.services.notification_service import ActivityService
-from app.rule_engine.engine import LEGAL_SCORE_RELEASED
-from app.services.compliance_calendar import LEGAL_CALENDAR_RELEASED
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
