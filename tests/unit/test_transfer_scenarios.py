@@ -14,7 +14,7 @@ from app.rule_engine.engine import ComplianceFlag, NLCRuleEngine, RevenueTier, R
 
 @pytest.fixture(autouse=True)
 def _enable_transfer_rule_for_rescue_unit_tests(monkeypatch):
-    # This module tests sequencing, not the production legal-release decision.
+    # This module tests sequencing with a narrowly scoped product scoring allowlist.
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"TR-005"}))
 
