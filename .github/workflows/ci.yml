@@ -493,18 +493,26 @@ jobs:
 
           root = ET.parse("/tmp/nlc-security-tests.xml").getroot()
           cases = root.findall(".//testcase")
-          targets = ("test_rjsc_forms_idor.py", "test_service_data_leak.py")
-          selected = [case for case in cases if any(
-              target in case.get("file", "") or target in case.get("classname", "")
-              for target in targets
-          )]
-          skipped = [case for case in selected if case.find("skipped") is not None]
-          if not selected:
-              raise SystemExit("No RJSC IDOR/data-leak tests were collected")
+          expected = {
+              "test_401_without_auth_token",
+              "test_403_for_client_view_only_role",
+              "test_403_for_client_director_role",
+              "test_404_for_nonexistent_form_id",
+              "test_422_for_invalid_form_id_format",
+              "test_200_for_authorized_staff",
+              "test_filed_by_audit_trail_is_recorded",
+              "test_user_cannot_mark_other_companys_filing",
+              "test_unverified_zero_director_records_do_not_trigger_inc003_and_agm_unknown",
+          }
+          collected = {case.get("name", "").split("[", 1)[0] for case in cases}
+          missing = sorted(expected - collected)
+          if missing:
+              raise SystemExit(f"Security tests were not collected: {', '.join(missing)}")
+          skipped = [case for case in cases if case.find("skipped") is not None]
           if skipped:
               names = ", ".join(case.get("name", "<unnamed>") for case in skipped)
-              raise SystemExit(f"Security tests must not skip: {names}")
-          print(f"Verified {len(selected)} PostgreSQL-backed security tests; zero skips.")
+              raise SystemExit(f"PostgreSQL security suite must not skip: {names}")
+          print(f"Verified all {len(expected)} required PostgreSQL security tests; zero skips.")
           PY
 
       - name: Upload combined integration and security coverage
