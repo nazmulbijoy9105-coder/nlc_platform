@@ -924,7 +924,7 @@ async def verify_company_charge(
     ]
     await publish_domain_event(
         db, company_id=company_id,
-        event_type=DomainEventType.COMPANY_CHARGE_VERIFIED,
+        event_type=DomainEventType.COMPANY_CHARGE_EVIDENCE_CHANGED,
         aggregate_type="company_charge", aggregate_id=charge.id,
         actor_id=current_user.id,
         payload={"change": "evidence_state_updated", "changed_fields": sorted(updates),
