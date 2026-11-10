@@ -92,7 +92,7 @@ class AGMService(BaseService[AGM]):
         ):
             quorum_met = members_present >= quorum_required
 
-        return await self.create(
+        agm_record = await self.create(
             company_id=company_id,
             financial_year=financial_year,
             agm_type=agm_type,
@@ -116,6 +116,16 @@ class AGMService(BaseService[AGM]):
             is_default=is_default,
             delay_days=delay_days,
         )
+        from app.services.domain_events import DomainEventType, publish_domain_event
+        await publish_domain_event(
+            self.db, company_id=company_id,
+            event_type=DomainEventType.AGM_RECORDED,
+            aggregate_type="agm", aggregate_id=agm_record.id, actor_id=created_by,
+            payload={"financial_year": financial_year, "agm_type": agm_type,
+                     "agm_deadline": agm_deadline.isoformat() if agm_deadline else None,
+                     "agm_held": agm_held, "agm_date": agm_date.isoformat() if agm_date else None},
+        )
+        return agm_record
 
     async def get_for_company(
         self,
@@ -409,7 +419,7 @@ class AnnualReturnService(BaseService[AnnualReturn]):
             is_default = True
             delay_days = (date.today() - filing_deadline).days
 
-        return await self.create(
+        annual_return = await self.create(
             company_id=company_id,
             financial_year=financial_year,
             filing_deadline=filing_deadline,
@@ -422,6 +432,26 @@ class AnnualReturnService(BaseService[AnnualReturn]):
             filing_fee_paid_bdt=filing_fee_paid_bdt,
             late_fee_paid_bdt=late_fee_paid_bdt,
         )
+        from app.services.domain_events import DomainEventType, publish_domain_event
+        await publish_domain_event(
+            self.db, company_id=company_id,
+            event_type=DomainEventType.ANNUAL_RETURN_RECORDED,
+            aggregate_type="annual_return", aggregate_id=annual_return.id,
+            payload={"financial_year": financial_year,
+                     "filing_deadline": filing_deadline.isoformat() if filing_deadline else None,
+                     "filed_date": filed_date.isoformat() if filed_date else None,
+                     "is_complete": is_complete},
+        )
+        if filed_date is not None:
+            await publish_domain_event(
+                self.db, company_id=company_id,
+                event_type=DomainEventType.ANNUAL_RETURN_FILED,
+                aggregate_type="annual_return", aggregate_id=annual_return.id,
+                payload={"financial_year": financial_year,
+                         "filed_date": filed_date.isoformat(),
+                         "rjsc_receipt_present": bool(rjsc_receipt_number)},
+            )
+        return annual_return
 
     async def get_for_company(self, company_id: uuid.UUID) -> list[AnnualReturn]:
         """Get all annual returns for a company, ordered by year desc."""
@@ -466,7 +496,7 @@ class AnnualReturnService(BaseService[AnnualReturn]):
             is_default = True
             delay_days = (filed_date - annual_return.filing_deadline).days
 
-        return await self.update_instance(
+        updated_return = await self.update_instance(
             annual_return,
             filed_date=filed_date,
             rjsc_receipt_number=rjsc_receipt_number,
@@ -477,6 +507,17 @@ class AnnualReturnService(BaseService[AnnualReturn]):
             is_complete=is_complete,
             missing_attachments=missing_attachments,
         )
+        if updated_return is not None:
+            from app.services.domain_events import DomainEventType, publish_domain_event
+            await publish_domain_event(
+                self.db, company_id=updated_return.company_id,
+                event_type=DomainEventType.ANNUAL_RETURN_FILED,
+                aggregate_type="annual_return", aggregate_id=updated_return.id,
+                payload={"financial_year": updated_return.financial_year,
+                         "filed_date": filed_date.isoformat(),
+                         "rjsc_receipt_present": bool(rjsc_receipt_number)},
+            )
+        return updated_return
 
     @staticmethod
     def calculate_filing_deadline(agm_date: date) -> date:
