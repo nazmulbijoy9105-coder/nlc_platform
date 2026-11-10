@@ -123,34 +123,37 @@ class MessageResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 def _rule_to_response(rule) -> RuleResponse:
-    score_eligible = LEGAL_SCORE_RELEASED and rule.rule_id in PRODUCT_SCORING_RULE_IDS
+    scoring_catalogue_member = rule.rule_id in PRODUCT_SCORING_RULE_IDS
+    product_scoring_enabled = LEGAL_SCORE_RELEASED and scoring_catalogue_member
     legally_verified = rule.rule_id in VERIFIED_RULE_IDS
     return RuleResponse(
         rule_id=rule.rule_id,
         rule_name=rule.rule_name,
         rule_type=str(rule.rule_type),
         statutory_basis=(
-            rule.statutory_basis if score_eligible
-            else "Not part of the product scoring allowlist; no score deduction is applied."
+            rule.statutory_basis if scoring_catalogue_member
+            else "Informational catalogue entry; no score deduction is applied."
         ),
         description=(
-            rule.description if score_eligible
+            rule.description if scoring_catalogue_member
             else "Informational catalogue entry only. No score deduction is applied."
         ),
         default_severity=(
             None
             if str(getattr(rule.default_severity, "value", rule.default_severity)).upper() == "NOT_EVALUATED"
             else str(getattr(rule.default_severity, "value", rule.default_severity))
-        ) if score_eligible else None,
-        product_scoring_enabled=score_eligible,
-        score_impact=rule.score_impact if score_eligible else 0,
-        revenue_tier=str(rule.revenue_tier) if score_eligible else "COMPLIANCE_PACKAGE",
-        # This reports configured product policy even when customer scoring is
-        # temporarily disabled; product_scoring_enabled separately controls execution.
+        ) if scoring_catalogue_member else None,
+        product_scoring_enabled=product_scoring_enabled,
+        score_impact=rule.score_impact if scoring_catalogue_member else 0,
+        revenue_tier=str(rule.revenue_tier) if scoring_catalogue_member else "COMPLIANCE_PACKAGE",
+        # Catalogue configuration remains visible while score publication is paused.
+        # This field describes product policy, not independent legal verification.
         is_black_override=(
-            rule.is_black_override and rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+            rule.is_black_override
+            and scoring_catalogue_member
+            and rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         ),
-        is_active=bool(rule.is_active and score_eligible),
+        is_active=bool(rule.is_active and scoring_catalogue_member),
         verification_status=rule.verification_status if legally_verified else "PENDING",
         verified_at=rule.verified_at.isoformat() if legally_verified and rule.verified_at else None,
         statutory_effective_date=(
@@ -220,8 +223,7 @@ async def get_rule_summary(
         by_severity[r.default_severity] = by_severity.get(r.default_severity, 0) + 1
         if r.is_active and r.rule_id in PRODUCT_SCORING_RULE_IDS:
             active_count += 1
-            if LEGAL_SCORE_RELEASED:
-                total_max_deduction += r.score_impact
+            total_max_deduction += r.score_impact
         if (
             r.is_black_override
             and r.rule_id in PRODUCT_SCORING_RULE_IDS
