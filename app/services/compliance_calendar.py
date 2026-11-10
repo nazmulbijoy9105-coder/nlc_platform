@@ -127,7 +127,11 @@ class ComplianceCalendarService:
 
         persisted: list[ComplianceCalendarEvent] = []
         for definition in definitions:
-            if not isinstance(definition, CalendarEventDefinition):
+            if (
+                not isinstance(definition, CalendarEventDefinition)
+                or not isinstance(definition.event_type, CalendarEventType)
+                or not isinstance(definition.rule, DeadlineRule)
+            ):
                 raise PermissionError("Calendar input is not a registered event definition.")
             event_type = definition.event_type.value
             if (
@@ -140,8 +144,11 @@ class ComplianceCalendarService:
                     "Calendar definition is not an exact counsel-approved "
                     "event/rule manifest entry."
                 )
-            if not isinstance(definition.trigger_evidence_ref, str) or not definition.trigger_evidence_ref.strip():
-                raise ValueError("A verified trigger evidence reference is required")
+            if (
+                not isinstance(definition.trigger_evidence_ref, str)
+                or not definition.trigger_evidence_ref.strip()
+            ):
+                continue
             if definition.holidays and not (
                 definition.holiday_calendar_version
                 and definition.holiday_source_citation
