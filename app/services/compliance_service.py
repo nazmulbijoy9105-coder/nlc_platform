@@ -250,7 +250,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         ]
         used_facts = []
         for fact in current_facts:
-            if fact.fact_key in profile_data:
+            if fact.fact_key in profile_data and fact.fact_key not in {"company_id", "company_name"}:
                 profile_data[fact.fact_key] = _coerce_company_fact_value(
                     fact.fact_key, fact.fact_value, CompanyProfile
                 )
@@ -693,6 +693,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "engine_version": engine_version,
                 "trigger_source": trigger_source,
                 "flags_snapshot": flags_snapshot,
+                "fact_provenance_snapshot": fact_provenance_snapshot,
                 "score_breakdown_snapshot": score_breakdown_snapshot,
             },
             sort_keys=True,
