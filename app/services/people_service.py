@@ -221,8 +221,12 @@ class ShareholderService(BaseService[Shareholder]):
             self.db, company_id=company_id,
             event_type=DomainEventType.SHAREHOLDER_CHANGED,
             aggregate_type="shareholder", aggregate_id=shareholder.id,
-            payload={"change": "added", "shares_held": shares_held,
-                     "share_class": share_class, "effective_date": effective_date.isoformat() if effective_date else None},
+            payload={
+                "change": "added",
+                "shares_held": shares_held,
+                "share_class": share_class,
+                "effective_date": effective_date.isoformat() if effective_date else None,
+            },
         )
         return shareholder
 
