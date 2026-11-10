@@ -106,6 +106,7 @@ def upgrade() -> None:
         WITH CHECK (
             public.nlc_current_user_is_staff()
             AND public.nlc_can_access_company(company_id)
+            AND (verified_by IS NULL OR verified_by = public.nlc_current_user_id())
         )
     """)
     op.execute("GRANT SELECT, INSERT, UPDATE ON TABLE public.company_facts TO nlc_app_role")
