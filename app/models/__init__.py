@@ -30,7 +30,7 @@ from .finance import (
 # ── Companies ────────────────────────────────────────────────────────
 from .company import Company, CompanyUserAccess
 from .company_fact import CompanyFact
-from .domain_event import DomainEventOutbox
+from .domain_event import DomainEventConsumption, DomainEventOutbox
 from .charges import CompanyCharge
 
 # ── Compliance (Flags, Score History, Events) ────────────────────────
@@ -124,6 +124,7 @@ __all__ = [
     "Company",
     "CompanyFact",
     "DomainEventOutbox",
+    "DomainEventConsumption",
     "CompanyCharge",
     "CompanyStatus",
     "CompanyType",
