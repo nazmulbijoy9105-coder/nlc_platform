@@ -145,9 +145,11 @@ def _rule_to_response(rule) -> RuleResponse:
         product_scoring_enabled=score_eligible,
         score_impact=rule.score_impact if score_eligible else 0,
         revenue_tier=str(rule.revenue_tier) if score_eligible else "COMPLIANCE_PACKAGE",
+        # This reports configured product policy even when customer scoring is
+        # temporarily disabled; product_scoring_enabled separately controls execution.
         is_black_override=(
             rule.is_black_override and rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
-        ) if score_eligible else False,
+        ),
         is_active=bool(rule.is_active and score_eligible),
         verification_status=rule.verification_status if legally_verified else "PENDING",
         verified_at=rule.verified_at.isoformat() if legally_verified and rule.verified_at else None,
