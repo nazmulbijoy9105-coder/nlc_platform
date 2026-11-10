@@ -18,7 +18,6 @@ MAX_DISPATCH_ATTEMPTS = 8
 REASSESSMENT_EVENTS = {
     "company.created",
     "company.fact.asserted",
-    "company.fact.verified",
     "filing.agm.recorded",
     "filing.agm.held_recorded",
     "filing.annual_return.recorded",
@@ -27,11 +26,13 @@ REASSESSMENT_EVENTS = {
     "company.share_transfer.changed",
     "company.registered_office.changed",
     "company.charge.recorded",
-    "company.charge.evidence_verified",
 }
 
 FILING_RECEIPT_EVENTS = {"filing.receipt.recorded", "filing.annual_return.filed"}
-EVIDENCE_VERIFICATION_EVENTS = {"evidence.verification.completed"}
+EVIDENCE_VERIFICATION_EVENTS = {
+    "evidence.verification.completed",
+    "company.fact.verified",
+}
 
 
 @celery_app.task(
