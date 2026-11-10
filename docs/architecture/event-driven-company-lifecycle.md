@@ -49,8 +49,12 @@ shareholder, transferor, transferee, charge-holder or office-address values.
 Celery task `app.worker.tasks.dispatch_domain_event_outbox` drains pending rows
 with `FOR UPDATE SKIP LOCKED` and is scheduled once per minute. Company, people,
 share, office, charge and filing mutations trigger deterministic company
-reevaluation. Deadline events route to the existing deadline-warning scanner;
-generated AI documents route to the existing human-review queue.
+reevaluation. That evaluation updates the existing compliance findings and,
+when released rule-engine output requires rescue, creates/refreshes the existing
+rescue plan. New rescue plans inherit the company's configured assigned staff
+member so generated rescue tasks have an operational owner when one is configured.
+Deadline events route to the existing deadline-warning scanner; generated AI
+documents route to the existing human-review queue.
 
 Filing receipts have a dedicated `consume_filing_receipt_event` consumer.
 Evidence verification has a dedicated `consume_evidence_verification_event`
