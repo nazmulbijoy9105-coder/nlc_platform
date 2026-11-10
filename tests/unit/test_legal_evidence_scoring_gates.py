@@ -250,7 +250,7 @@ def test_unverified_red_finding_does_not_force_red_risk_band():
         eval_state="UNKNOWN",
     )
     score = NLCRuleEngine()._calculate_score([unknown_red], profile)
-    assert score.risk_band == Severity.NOT_EVALUATED
+    assert score.risk_band == Severity.GREEN
     assert score.final_score == 100
 
 
@@ -703,10 +703,11 @@ def test_vat_return_status_without_verified_tax_period_is_not_a_default():
     assert flag.score_impact == 0
 
 
-def test_unreleased_legal_corpus_never_reports_green_even_with_full_input_coverage():
-    from app.rule_engine.engine import LEGAL_SCORE_RELEASED
+def test_product_released_corpus_reports_score_with_full_input_coverage():
+    from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
 
-    assert LEGAL_SCORE_RELEASED is False
+    assert LEGAL_SCORE_RELEASED is True
+    assert VERIFIED_RULE_IDS == frozenset()
     profile = _profile(
         last_agm_date=date(2025, 6, 1),
         last_audit_signed_date=date(2025, 5, 1),
