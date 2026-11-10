@@ -102,3 +102,46 @@ def fact_provenance_payload(fact: CompanyFact) -> dict[str, Any]:
         "verification_note": fact.verification_note,
         "finding_disclosure": fact.finding_disclosure,
     }
+
+
+def coerce_company_profile_fact_value(fact_key: str, value: Any) -> Any:
+    """Validate JSON fact values against the declared scalar CompanyProfile field type."""
+    from typing import get_args, get_type_hints
+
+    from app.rule_engine import CompanyProfile
+
+    if value is None:
+        return None
+    annotation = get_type_hints(CompanyProfile).get(fact_key)
+    if annotation is None:
+        raise ValueError(f"Unsupported CompanyProfile fact key: {fact_key}")
+    candidates = get_args(annotation) or (annotation,)
+    if datetime in candidates and isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError as exc:
+            raise ValueError(f"Company fact {fact_key} must be an ISO datetime.") from exc
+    if date in candidates and isinstance(value, str):
+        try:
+            return date.fromisoformat(value)
+        except ValueError as exc:
+            raise ValueError(f"Company fact {fact_key} must be an ISO date.") from exc
+    if bool in candidates and not isinstance(value, bool):
+        if isinstance(value, str) and value.strip().lower() in {"true", "false"}:
+            return value.strip().lower() == "true"
+        raise ValueError(f"Company fact {fact_key} must be a boolean.")
+    if int in candidates and (isinstance(value, bool) or not isinstance(value, int)):
+        if isinstance(value, float) and not value.is_integer():
+            raise ValueError(f"Company fact {fact_key} must be an integer.")
+        try:
+            return int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Company fact {fact_key} must be an integer.") from exc
+    if float in candidates and not isinstance(value, (int, float)):
+        try:
+            return float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Company fact {fact_key} must be numeric.") from exc
+    if str in candidates and not isinstance(value, str):
+        raise ValueError(f"Company fact {fact_key} must be a string.")
+    return value
