@@ -376,6 +376,7 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
         return ""
 
     cat_deductions: dict[str, dict] = {}
+    duplicate_rows: list[str] = []
     for f in (flags or []):
         rule_id = getattr(f, "rule_id", "") or ""
         if rule_id not in PRODUCT_SCORING_RULE_IDS:
@@ -385,7 +386,15 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
         if scoring_status is not None and scoring_status not in (
             "APPLIED",
             "CATEGORY_CAP_REACHED",
+            "DUPLICATE_EVENT_SUPPRESSED",
         ):
+            continue
+        if scoring_status == "DUPLICATE_EVENT_SUPPRESSED":
+            duplicate_rows.append(
+                f'<div style="font-size:10px;color:#555;padding:2px 0;">'
+                f'Duplicate finding suppressed from scoring: {esc(rule_id)}'
+                f'</div>'
+            )
             continue
 
         raw_impact = max(0, int(getattr(f, "score_impact", 0) or 0))
@@ -425,10 +434,10 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
             data["has_complete_applied_metadata"] and has_applied_metadata
         )
 
-    if not cat_deductions:
+    if not cat_deductions and not duplicate_rows:
         return ""
 
-    cap_rows = []
+    cap_rows = list(duplicate_rows)
     effective_total = 0
     for cat_name, data in sorted(cat_deductions.items()):
         raw = data["raw"]
@@ -480,7 +489,7 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
 def _flag_impact_label(flag: Any) -> str:
     rule_id = getattr(flag, "rule_id", "") or ""
     if not _legal_score_is_released() or rule_id not in PRODUCT_SCORING_RULE_IDS:
-        return "Not scored — pending independent legal approval"
+        return "Not scored — excluded from product scoring"
     applied = getattr(
         flag,
         "score_impact_applied",
