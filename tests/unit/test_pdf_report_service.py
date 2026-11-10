@@ -153,7 +153,7 @@ def test_endpoint_withholds_pdf_when_legal_score_release_is_disabled(monkeypatch
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", False)
 
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(PDFReportService(db=None).generate_company_compliance_pdf("any-id"))
+        asyncio.run(PDFReportService(db=None).generate_company_compliance_pdf("00000000-0000-4000-8000-000000000001"))
 
     assert exc.value.status_code == 409
     assert "statutory score release is disabled" in exc.value.detail
@@ -364,7 +364,7 @@ def test_endpoint_rejects_score_snapshot_mismatch(monkeypatch):
             return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
 
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(PDFReportService(db=FakeDB()).generate_company_compliance_pdf("any-id"))
+        asyncio.run(PDFReportService(db=FakeDB()).generate_company_compliance_pdf("00000000-0000-4000-8000-000000000001"))
     assert exc.value.status_code == 409
 
 
@@ -376,5 +376,5 @@ def test_endpoint_rejects_missing_snapshot(monkeypatch):
             return SimpleNamespace(scalar_one_or_none=lambda: None)
 
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(PDFReportService(db=FakeDB()).generate_company_compliance_pdf("any-id"))
+        asyncio.run(PDFReportService(db=FakeDB()).generate_company_compliance_pdf("00000000-0000-4000-8000-000000000001"))
     assert exc.value.status_code == 409
