@@ -62,3 +62,13 @@ def test_user_asserted_fact_discloses_unverified_origin() -> None:
     assert payload["trust_level"] == "USER_ASSERTED"
     assert payload["document_id"] is None
     assert "not independently verified" in payload["disclosure"]
+
+
+def test_persisted_fact_converts_to_shared_finding_provenance_contract() -> None:
+    fact = _document_fact()
+    record = fact.to_fact_record()
+
+    assert record.fact_key == fact.fact_key
+    assert record.asserted_by == str(fact.asserted_by)
+    assert record.trust_level.value == "AUTHORIZED_DOCUMENT_BACKED"
+    assert "has not yet been verified" in record.finding_disclosure
