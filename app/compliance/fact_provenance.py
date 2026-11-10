@@ -41,6 +41,7 @@ class CompanyFact:
     verified_by: str | None = None
     verified_at: datetime | None = None
     verification_note: str | None = None
+    record_id: str | None = None
 
     def __post_init__(self) -> None:
         if not self.fact_key.strip() or not self.asserted_by.strip():
@@ -86,6 +87,7 @@ class CompanyFact:
 def fact_provenance_payload(fact: CompanyFact) -> dict[str, Any]:
     """JSON-safe provenance copied into immutable finding/evaluation snapshots."""
     return {
+        "fact_id": fact.record_id,
         "fact_key": fact.fact_key,
         "trust_level": fact.trust_level.value,
         "asserted_by": fact.asserted_by,
