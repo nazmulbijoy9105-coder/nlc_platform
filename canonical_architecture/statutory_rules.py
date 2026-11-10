@@ -606,9 +606,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "REG-001": {
         "rule_id": "REG-001",
         "legal_domain": "Corporate",
-        "law": "Section 34, Companies Act 1994 (Bangladesh)",
-        "requirement": "One or more of 7 mandatory statutory registers not maintained at registered office. Required: Members (Sec 34), Directors (Sec 90), Charges (Sec 87), Transfers (Sec 108), Debentures (Sec 90), AGM Minutes (Sec 83), Board Minutes (Sec 90). Failure is criminal offence; officers personally liable.",
-        "provision": "UNVERIFIED CANDIDATE — Section 34, Companies Act 1994 (Bangladesh)",
+        "law": "Companies Act 1994 (Bangladesh) and applicable Articles; individual register duties require their own statutory mapping",
+        "requirement": "Non-core statutory register inventory is incomplete. Director particulars/Form XII are a separate RJSC filing obligation evaluated by DIR-001 under Section 115 and are not counted as an internal register.",
+        "provision": "UNVERIFIED CANDIDATE — Companies Act 1994 (Bangladesh) and applicable Articles; individual register duties require their own statutory mapping",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
