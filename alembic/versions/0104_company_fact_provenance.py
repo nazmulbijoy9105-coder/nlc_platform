@@ -1,0 +1,232 @@
+"""persist company fact provenance and finding snapshots
+
+Revision ID: 0104_company_fact_provenance
+Revises: 0093_verified_rule_audit_view, b10c91ac6860
+"""
+from alembic import op
+import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
+
+revision = "0104_company_fact_provenance"
+down_revision = ("0093_verified_rule_audit_view", "b10c91ac6860")
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -> None:
+    op.create_table(
+        "company_facts",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
+        sa.Column("company_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("fact_key", sa.String(120), nullable=False),
+        sa.Column("fact_value", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column("trust_level", sa.String(40), nullable=False),
+        sa.Column("asserted_by", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False),
+        sa.Column("observed_on", sa.Date(), nullable=False),
+        sa.Column("source_reference", sa.Text(), nullable=True),
+        sa.Column("document_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="RESTRICT"), nullable=True),
+        sa.Column("authorized_uploader_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="RESTRICT"), nullable=True),
+        sa.Column("uploaded_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("verification_status", sa.String(20), nullable=False, server_default="UNVERIFIED"),
+        sa.Column("verified_by", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="RESTRICT"), nullable=True),
+        sa.Column("verified_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("verification_note", sa.Text(), nullable=True),
+        sa.Column("supersedes_fact_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("company_facts.id", ondelete="RESTRICT"), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.CheckConstraint(
+            "(trust_level = 'USER_ASSERTED' AND document_id IS NULL AND authorized_uploader_id IS NULL AND uploaded_at IS NULL) OR "
+            "(trust_level = 'AUTHORIZED_DOCUMENT_BACKED' AND document_id IS NOT NULL AND authorized_uploader_id IS NOT NULL AND uploaded_at IS NOT NULL AND source_reference IS NOT NULL AND length(btrim(source_reference)) > 0)",
+            name="ck_company_fact_trust_source",
+        ),
+        sa.CheckConstraint(
+            "length(btrim(fact_key)) > 0",
+            name="ck_company_fact_fact_key_nonempty",
+        ),
+        sa.CheckConstraint(
+            "trust_level IN ('USER_ASSERTED', 'AUTHORIZED_DOCUMENT_BACKED')",
+            name="ck_company_fact_trust_level",
+        ),
+        sa.CheckConstraint(
+            "verification_status IN ('UNVERIFIED', 'VERIFIED', 'REJECTED', 'SUPERSEDED')",
+            name="ck_company_fact_verification_status",
+        ),
+        sa.UniqueConstraint("supersedes_fact_id", name="uq_company_facts_single_successor"),
+        sa.CheckConstraint(
+            "(verification_status = 'VERIFIED' AND verified_by IS NOT NULL AND verified_at IS NOT NULL "
+            "AND trust_level = 'AUTHORIZED_DOCUMENT_BACKED') OR "
+            "(verification_status <> 'VERIFIED' AND verified_by IS NULL AND verified_at IS NULL)",
+            name="ck_company_fact_verification_actor",
+        ),
+    )
+    op.create_index("ix_company_facts_company_id", "company_facts", ["company_id"])
+    op.create_index("ix_company_facts_fact_key", "company_facts", ["fact_key"])
+    op.create_index("ix_company_facts_company_key_created", "company_facts", ["company_id", "fact_key", "created_at"])
+
+    # Reuse the existing signed identity and tenant-access functions. The app
+    # role cannot read or write facts outside its company membership/assignment.
+    bind = op.get_bind()
+    required_helpers = (
+        "public.nlc_current_user_id()",
+        "public.nlc_current_user_is_staff()",
+        "public.nlc_can_access_company(uuid)",
+        "public.nlc_can_edit_company(uuid)",
+    )
+    missing = [
+        helper for helper in required_helpers
+        if bind.execute(
+            sa.text("SELECT to_regprocedure(:signature)"),
+            {"signature": helper},
+        ).scalar_one() is None
+    ]
+    if missing:
+        raise RuntimeError(
+            "Company-fact RLS requires existing signed identity helpers: "
+            + ", ".join(missing)
+        )
+    op.execute("ALTER TABLE public.company_facts ENABLE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE public.company_facts FORCE ROW LEVEL SECURITY")
+    op.execute("""
+        CREATE POLICY company_facts_tenant_read
+        ON public.company_facts FOR SELECT
+        USING (public.nlc_can_access_company(company_id))
+    """)
+    op.execute("""
+        CREATE POLICY company_facts_actor_insert
+        ON public.company_facts FOR INSERT
+        WITH CHECK (
+            asserted_by = public.nlc_current_user_id()
+            AND public.nlc_can_edit_company(company_id)
+            AND public.nlc_can_access_company(company_id)
+        )
+    """)
+    op.execute("""
+        CREATE POLICY company_facts_staff_verification_update
+        ON public.company_facts FOR UPDATE
+        USING (
+            public.nlc_current_user_is_staff()
+            AND public.nlc_can_access_company(company_id)
+        )
+        WITH CHECK (
+            public.nlc_current_user_is_staff()
+            AND public.nlc_can_access_company(company_id)
+            AND (verified_by IS NULL OR verified_by = public.nlc_current_user_id())
+        )
+    """)
+    op.execute("GRANT SELECT, INSERT, UPDATE ON TABLE public.company_facts TO nlc_app_role")
+    op.execute("REVOKE DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE public.company_facts FROM nlc_app_role")
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_company_fact_validate_insert()
+        RETURNS trigger
+        LANGUAGE plpgsql
+        SET search_path = pg_catalog, public
+        AS $function$
+        DECLARE
+            parent_company_id uuid;
+            parent_fact_key text;
+            source_company_id uuid;
+            source_uploader_id uuid;
+            source_uploaded_at timestamptz;
+            source_is_ai_generated boolean;
+            source_is_active boolean;
+        BEGIN
+            IF NEW.trust_level = 'AUTHORIZED_DOCUMENT_BACKED' THEN
+                SELECT company_id, created_by, created_at, ai_generated, is_active
+                  INTO source_company_id, source_uploader_id, source_uploaded_at,
+                       source_is_ai_generated, source_is_active
+                  FROM public.documents
+                 WHERE id = NEW.document_id;
+                IF NOT FOUND
+                   OR source_company_id IS DISTINCT FROM NEW.company_id
+                   OR source_uploader_id IS DISTINCT FROM NEW.authorized_uploader_id
+                   OR source_uploaded_at IS DISTINCT FROM NEW.uploaded_at
+                   OR source_is_ai_generated IS NOT FALSE
+                   OR source_is_active IS NOT TRUE
+                   OR NEW.source_reference IS DISTINCT FROM ('document:' || NEW.document_id::text) THEN
+                    RAISE EXCEPTION 'Document-backed company fact must match an active non-AI vault document and its recorded uploader/time';
+                END IF;
+            END IF;
+            IF NEW.supersedes_fact_id IS NOT NULL THEN
+                SELECT company_id, fact_key
+                  INTO parent_company_id, parent_fact_key
+                  FROM public.company_facts
+                 WHERE id = NEW.supersedes_fact_id;
+                IF NOT FOUND
+                   OR parent_company_id IS DISTINCT FROM NEW.company_id
+                   OR parent_fact_key IS DISTINCT FROM NEW.fact_key THEN
+                    RAISE EXCEPTION 'A superseded fact must belong to the same company and fact key';
+                END IF;
+            END IF;
+            RETURN NEW;
+        END;
+        $function$
+    """)
+    op.execute("""
+        CREATE TRIGGER trg_company_facts_insert_guard
+        BEFORE INSERT ON public.company_facts
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_company_fact_validate_insert()
+    """)
+    op.execute("REVOKE ALL ON FUNCTION public.nlc_company_fact_validate_insert() FROM PUBLIC")
+    op.execute("GRANT EXECUTE ON FUNCTION public.nlc_company_fact_validate_insert() TO nlc_app_role")
+
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_company_fact_immutable_fields()
+        RETURNS trigger
+        LANGUAGE plpgsql
+        SET search_path = pg_catalog, public
+        AS $function$
+        BEGIN
+            IF NEW.id IS DISTINCT FROM OLD.id
+               OR NEW.company_id IS DISTINCT FROM OLD.company_id
+               OR NEW.fact_key IS DISTINCT FROM OLD.fact_key
+               OR NEW.fact_value IS DISTINCT FROM OLD.fact_value
+               OR NEW.trust_level IS DISTINCT FROM OLD.trust_level
+               OR NEW.asserted_by IS DISTINCT FROM OLD.asserted_by
+               OR NEW.observed_on IS DISTINCT FROM OLD.observed_on
+               OR NEW.source_reference IS DISTINCT FROM OLD.source_reference
+               OR NEW.document_id IS DISTINCT FROM OLD.document_id
+               OR NEW.authorized_uploader_id IS DISTINCT FROM OLD.authorized_uploader_id
+               OR NEW.uploaded_at IS DISTINCT FROM OLD.uploaded_at
+               OR NEW.supersedes_fact_id IS DISTINCT FROM OLD.supersedes_fact_id
+               OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+                RAISE EXCEPTION 'Company fact source fields are immutable; create a superseding fact version';
+            END IF;
+            RETURN NEW;
+        END;
+        $function$
+    """)
+    op.execute("""
+        CREATE TRIGGER trg_company_facts_immutable_source
+        BEFORE UPDATE ON public.company_facts
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_company_fact_immutable_fields()
+    """)
+    op.execute("REVOKE ALL ON FUNCTION public.nlc_company_fact_immutable_fields() FROM PUBLIC")
+    op.execute("GRANT EXECUTE ON FUNCTION public.nlc_company_fact_immutable_fields() TO nlc_app_role")
+
+    # Legacy findings have no reconstructable provenance; [] means unknown, not verified.
+    op.add_column(
+        "compliance_flags",
+        sa.Column("fact_provenance_snapshot", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default=sa.text("'[]'::jsonb")),
+    )
+    op.add_column(
+        "compliance_evaluation_runs",
+        sa.Column("fact_provenance_snapshot", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default=sa.text("'[]'::jsonb")),
+    )
+
+
+def downgrade() -> None:
+    op.drop_column("compliance_evaluation_runs", "fact_provenance_snapshot")
+    op.drop_column("compliance_flags", "fact_provenance_snapshot")
+    op.drop_index("ix_company_facts_company_key_created", table_name="company_facts")
+    op.drop_index("ix_company_facts_fact_key", table_name="company_facts")
+    op.drop_index("ix_company_facts_company_id", table_name="company_facts")
+    op.execute("DROP TRIGGER IF EXISTS trg_company_facts_immutable_source ON public.company_facts")
+    op.execute("DROP TRIGGER IF EXISTS trg_company_facts_insert_guard ON public.company_facts")
+    op.execute("DROP FUNCTION IF EXISTS public.nlc_company_fact_validate_insert()")
+    op.execute("DROP FUNCTION IF EXISTS public.nlc_company_fact_immutable_fields()")
+    op.execute("DROP POLICY IF EXISTS company_facts_staff_verification_update ON public.company_facts")
+    op.execute("DROP POLICY IF EXISTS company_facts_actor_insert ON public.company_facts")
+    op.execute("DROP POLICY IF EXISTS company_facts_tenant_read ON public.company_facts")
+    op.execute("ALTER TABLE public.company_facts NO FORCE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE public.company_facts DISABLE ROW LEVEL SECURITY")
+    op.drop_table("company_facts")
