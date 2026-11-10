@@ -82,18 +82,12 @@ def duplicate_event_indices(items: Iterable[ScoringItem]) -> set[int]:
     for indices in grouped.values():
         if len(indices) < 2:
             continue
-        winner = min(
-            indices,
-            key=lambda index: (
-                -rows[index][1],
-                (
-                    category_rank[category_for_rule(rows[index][0])]
-                    if category_for_rule(rows[index][0]) is not None
-                    else len(CATEGORY_ORDER)
-                ),
-                rows[index][0],
-            ),
-        )
+        def winner_key(index: int) -> tuple[int, int, str]:
+            category = category_for_rule(rows[index][0])
+            rank = category_rank[category] if category is not None else len(CATEGORY_ORDER)
+            return (-rows[index][1], rank, rows[index][0])
+
+        winner = min(indices, key=winner_key)
         suppressed.update(index for index in indices if index != winner)
     return suppressed
 
