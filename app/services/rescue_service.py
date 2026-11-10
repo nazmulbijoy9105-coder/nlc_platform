@@ -95,7 +95,7 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
 
     sequence = getattr(engine_output, "rescue_sequence", None)
     if not isinstance(sequence, list) or not sequence:
-        raise ValueError("No counsel-released rescue sequence exists.")
+        raise ValueError("No product-released rescue sequence exists.")
 
     referenced: set[str] = set()
     for step in sequence:
