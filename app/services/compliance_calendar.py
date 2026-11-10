@@ -29,10 +29,6 @@ from app.services.legal_deadline_engine import (
 LEGAL_CALENDAR_RELEASED = False
 VERIFIED_CALENDAR_EVENT_TYPES: frozenset[str] = frozenset()
 VERIFIED_PENALTY_EVENT_TYPES: frozenset[str] = frozenset()
-# Populated only from the reviewed, versioned legal event manifest.
-APPROVED_CALENDAR_EVENT_DEFINITIONS: tuple[CalendarEventDefinition, ...] = ()
-
-
 @dataclass(frozen=True, slots=True)
 class CalendarEventDefinition:
     event_type: CalendarEventType
@@ -45,6 +41,10 @@ class CalendarEventDefinition:
     trigger_evidence_ref: str
     description: str | None = None
     holidays: frozenset[date] = frozenset()
+
+
+# Populated only from the reviewed, versioned legal event manifest.
+APPROVED_CALENDAR_EVENT_DEFINITIONS: tuple[CalendarEventDefinition, ...] = ()
 
 
 def _generate_calendar(company: Company) -> list[dict]:
