@@ -382,7 +382,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 existing_flag.score_impact = flag.score_impact if approved else 0
                 existing_flag.statutory_basis = (
                     flag.statutory_basis if approved
-                    else "NOT VALIDATED — independent counsel review required"
+                    else "Excluded from the product scoring allowlist."
                 )
                 existing_flag.description = (
                     flag.description if approved
