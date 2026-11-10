@@ -26,7 +26,7 @@ from app.models.company import Company, CompanyUserAccess
 from app.models.charges import CompanyCharge
 from app.models.enums import CompanyStatus, CompanyType, RevenueTier, RiskBand, UserRole
 from app.models.user import User
-from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS, PRODUCT_SCORING_RULE_IDS
+from app.rule_engine.engine import LEGAL_SCORE_RELEASED, PRODUCT_SCORING_RULE_IDS
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
 from app.services.compliance_calendar import calendar_manifest_is_released
