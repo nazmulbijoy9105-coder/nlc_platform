@@ -1189,3 +1189,32 @@ def test_excluded_and_unknown_findings_have_zero_score_deduction(monkeypatch):
         {"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"},
         {"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"},
     ]
+
+
+def test_pdf_reconciliation_accepts_global_cap_allocations(monkeypatch):
+    import app.services.pdf_report_service as pdf_module
+    from canonical_architecture.scoring_spec import allocate_flag_deductions
+
+    rule_impacts = [
+        ("TAX-001", 15), ("AGM-001", 30), ("AUD-001", 25),
+        ("AR-002", 20), ("DIR-001", 25), ("SH-001", 20),
+        ("CAP-001", 15), ("OFF-001", 10), ("REG-001", 10),
+        ("BNK-001", 20), ("LBR-001", 10), ("BSEC-001", 15),
+        ("FX-001", 10), ("ESC-001", 15),
+    ]
+    applied = allocate_flag_deductions(rule_impacts)
+    monkeypatch.setattr(pdf_module, "PRODUCT_SCORING_RULE_IDS", frozenset(
+        rule_id for rule_id, _ in rule_impacts
+    ))
+    flags = [
+        SimpleNamespace(
+            rule_id=rule_id,
+            score_impact=impact,
+            score_impact_applied=deduction,
+            scoring_status="APPLIED" if deduction else "CATEGORY_CAP_REACHED",
+        )
+        for (rule_id, impact), deduction in zip(rule_impacts, applied)
+    ]
+    html = _render_score_reconciliation(flags, 0, "RED")
+    assert "effective deductions -100 pts" in html
+    assert "indicated score 0/100" in html
