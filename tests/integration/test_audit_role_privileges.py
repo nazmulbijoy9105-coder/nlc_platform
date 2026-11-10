@@ -37,6 +37,26 @@ async def test_rule_parity_role_is_login_and_can_read_only_the_audit_view():
         assert role["rolreplication"] is False
         assert role["rolbypassrls"] is False
 
+        # The audit inventory must never equate is_active with legal review.
+        # Verify this as the migration/test administrator before assuming the
+        # intentionally isolated audit role (which cannot read public tables).
+        view_definition = await connection.fetchval(
+            "SELECT pg_get_viewdef('audit.active_legal_rule_ids'::regclass, true)"
+        )
+        normalized_view = " ".join(view_definition.lower().split())
+        assert "verification_status" in normalized_view
+        assert "verified" in normalized_view
+        pending_active_rule_count = await connection.fetchval(
+            """
+            SELECT count(*)
+            FROM audit.active_legal_rule_ids AS visible
+            JOIN public.legal_rules AS rule USING (rule_id)
+            WHERE rule.verification_status <> 'VERIFIED'
+               OR rule.is_active IS NOT TRUE
+            """
+        )
+        assert pending_active_rule_count == 0
+
         # The CI database administrator can assume the dedicated role to
         # verify its effective grants without exposing its password.
         await connection.execute("SET ROLE nlc_ci_audit_role")
