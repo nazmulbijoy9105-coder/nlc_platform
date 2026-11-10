@@ -53,7 +53,7 @@ class CalendarEventDefinition:
 APPROVED_CALENDAR_EVENT_DEFINITIONS: tuple[CalendarEventDefinition, ...] = ()
 # Exact source-versioned penalty objects are registered here only after legal
 # review. A caller-created PenaltyRule with approved=True is not approval.
-APPROVED_PENALTY_RULES: tuple[PenaltyRule, ...] = ()
+APPROVED_PENALTY_RULES: tuple[tuple[str, PenaltyRule], ...] = ()
 
 def calendar_manifest_is_released() -> bool:
     """True only for a non-empty, internally consistent approved event manifest."""
@@ -322,7 +322,7 @@ def calculate_rule_penalty(
         event_type not in VERIFIED_PENALTY_EVENT_TYPES
         or rule.rule_id not in VERIFIED_PENALTY_RULE_IDS
         or rule.approved is not True
-        or rule not in APPROVED_PENALTY_RULES
+        or (event_type, rule) not in APPROVED_PENALTY_RULES
     ):
         return None
     return calculate_approved_penalty(
