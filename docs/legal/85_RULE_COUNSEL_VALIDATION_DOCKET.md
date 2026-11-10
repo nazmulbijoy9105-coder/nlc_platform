@@ -1230,8 +1230,8 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### REG-001 — Statutory Registers Incomplete
 
-- **Catalogue anchor:** Section 34, Companies Act 1994 (Bangladesh)
-- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 34, Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Companies Act 1994 (Bangladesh) and applicable Articles; individual register duties require their own statutory mapping
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Companies Act 1994 (Bangladesh) and applicable Articles; individual register duties require their own statutory mapping
 
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
@@ -1249,8 +1249,8 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### REG-002 — Core Statutory Registers Missing
 
-- **Catalogue anchor:** Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh)
-- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Sections 34, 89, 174, Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Sections 34, 89, 174, Companies Act 1994 (Bangladesh)
 
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
