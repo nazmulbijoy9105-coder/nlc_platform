@@ -144,6 +144,8 @@ class CompanyFactService:
             raise HTTPException(status_code=404, detail="Company fact not found.")
         if fact.trust_level != "AUTHORIZED_DOCUMENT_BACKED" or fact.document_id is None:
             raise HTTPException(status_code=422, detail="Only document-backed facts can be document-verified.")
+        if fact.verification_status == "SUPERSEDED":
+            raise HTTPException(status_code=409, detail="A superseded fact cannot be re-verified; create a new fact version.")
         successor = await self.db.execute(
             select(CompanyFact.id).where(CompanyFact.supersedes_fact_id == fact.id).limit(1)
         )
