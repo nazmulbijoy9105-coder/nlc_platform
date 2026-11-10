@@ -852,21 +852,6 @@ class NLCRuleEngine:
                         detail={"current_count": count, "required": required,
                                 "private_subsidiary_of_public_company": c.is_private_subsidiary_of_public_company},
                     ))
-        if (c.company_type == "PRIVATE_LIMITED" and c.directors_verified
-                and c.current_director_count is not None
-                and c.current_director_count < 2):  # RULE-001: only fire when verified against RJSC
-            self._add_flag(ComplianceFlag(
-                rule_id="INC-003",
-                flag_code="MINIMUM_DIRECTORS_NOT_MET",
-                severity=Severity.BLACK,
-                score_impact=15,
-                is_black_override=True,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="Private company has insufficient directors. Section 90(2) requires minimum 2 directors.",
-                statutory_basis="Sections 90(1) and 90(2), Companies Act 1994 (Bangladesh)",
-                detail={"current_count": c.current_director_count, "required": 2}
-            ))
-
         if c.paid_up_capital_bdt > c.authorized_capital_bdt:
             self._add_flag(ComplianceFlag(
                 rule_id="INC-004",
