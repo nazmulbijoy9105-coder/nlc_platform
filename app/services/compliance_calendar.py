@@ -87,6 +87,20 @@ class ComplianceCalendarService:
             raise PermissionError("Statutory calendar generation is not released.")
         if not definitions:
             raise PermissionError("No counsel-approved calendar event definitions are registered.")
+        if any(
+            not isinstance(item, CalendarEventDefinition)
+            or item.event_type.value not in VERIFIED_CALENDAR_EVENT_TYPES
+            or item.rule.rule_id not in VERIFIED_CALENDAR_RULE_IDS
+            or item.rule.approved is not True
+            for item in APPROVED_CALENDAR_EVENT_DEFINITIONS
+        ):
+            raise PermissionError("The registered calendar manifest is incomplete or inconsistent.")
+        approved_keys = [
+            (item.event_type.value, item.period_label)
+            for item in APPROVED_CALENDAR_EVENT_DEFINITIONS
+        ]
+        if len(approved_keys) != len(set(approved_keys)):
+            raise PermissionError("The approved calendar manifest contains duplicate event keys.")
         result = await self.db.execute(
             select(Company).where(Company.id == company_id)
         )
@@ -96,6 +110,8 @@ class ComplianceCalendarService:
 
         persisted: list[ComplianceCalendarEvent] = []
         for definition in definitions:
+            if not isinstance(definition, CalendarEventDefinition):
+                raise PermissionError("Calendar input is not a registered event definition.")
             event_type = definition.event_type.value
             if (
                 event_type not in VERIFIED_CALENDAR_EVENT_TYPES
