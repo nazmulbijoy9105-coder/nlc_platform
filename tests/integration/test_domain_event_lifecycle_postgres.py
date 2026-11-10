@@ -205,6 +205,33 @@ async def test_outbox_rls_returns_only_companies_in_signed_user_scope(db_for_use
     assert set(visible.scalars().all()) == {visible_company.id}
 
 
+@pytest.mark.asyncio
+async def test_consumer_receipts_are_forced_admin_worker_only(db):
+    policies = await db.execute(
+        text(
+            "SELECT policyname, qual, with_check FROM pg_policies "
+            "WHERE schemaname='public' AND tablename='domain_event_consumptions'"
+        )
+    )
+    rows = policies.fetchall()
+    assert len(rows) == 1
+    assert rows[0][0] == "domain_event_consumptions_admin_only"
+    assert "nlc_current_user_principal" in (rows[0][1] or "")
+    assert "'ADMIN'" in (rows[0][1] or "")
+    assert "'ADMIN'" in (rows[0][2] or "")
+
+    flags = await db.execute(
+        text(
+            "SELECT c.relrowsecurity, c.relforcerowsecurity "
+            "FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "
+            "WHERE n.nspname='public' AND c.relname='domain_event_consumptions'"
+        )
+    )
+    enabled, forced = flags.one()
+    assert enabled is True
+    assert forced is True
+
+
 def test_domain_event_processing_migration_is_linear_and_at_head():
     alembic_ini = Path(__file__).resolve().parents[2] / "alembic.ini"
     script = ScriptDirectory.from_config(Config(str(alembic_ini)))
