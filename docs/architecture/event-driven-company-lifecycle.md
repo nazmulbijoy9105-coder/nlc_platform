@@ -74,14 +74,19 @@ consumers; they are not treated as proof of filing or legal verification.
 
 ## Remaining vertical-slice work
 
-1. Add dedicated consumers for deadline-created/rescheduled, filing-receipt and
-   evidence-verification events, with idempotency and dead-letter handling.
+1. Add dedicated consumers for filing-receipt and evidence-verification events,
+   with idempotency and dead-letter handling.
 2. Add event-driven generation of obligation instances and owned UNKNOWN-applicability
    resolution tasks, retaining the existing rule/effective-date provenance.
 3. Add director, shareholder, share-transfer, registered-office and charge events.
 4. Add end-to-end tests proving one transaction creates the source row and outbox
    event, dispatcher retries safely, and downstream effects remain tenant-isolated.
 5. Add operator visibility for pending, retried and failed events, plus replay tooling.
+
+Deadline-generation events enqueue the existing deadline-warning scanner, which
+continues to enforce its own calendar release gate and notification deduplication.
+Document approval/release events are currently retained as audit events; they do not
+create facts or compliance findings automatically.
 
 The current delivery is the shared integration backbone and initial connected
 vertical slice; it does not claim that every remaining consumer or lifecycle domain
