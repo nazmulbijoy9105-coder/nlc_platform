@@ -210,8 +210,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
             if fact.verification_status not in {"REJECTED", "SUPERSEDED"}
         ]
         used_facts = []
+        profile_field_names = {
+            field.name for field in dataclass_fields(CompanyProfile)
+        } - {"company_id", "company_name"}
         for fact in current_facts:
-            if fact.fact_key in profile_data and fact.fact_key not in {"company_id", "company_name"}:
+            if fact.fact_key in profile_field_names:
                 profile_data[fact.fact_key] = coerce_company_profile_fact_value(fact.fact_key, fact.fact_value)
                 used_facts.append(fact)
         fact_provenance_snapshot = [
