@@ -14,6 +14,7 @@ from app.services.compliance_calendar import (
     ComplianceCalendarService,
     LEGAL_CALENDAR_RELEASED,
     VERIFIED_CALENDAR_EVENT_TYPES,
+    APPROVED_CALENDAR_EVENT_DEFINITIONS,
 )
 
 
@@ -45,12 +46,20 @@ async def generate_calendar(
     if current_user.role == "LEGAL_STAFF":
         await ensure_staff_company_scope(company_id, current_user, db)
     service = ComplianceCalendarService(db)
+    generated = await service.generate_approved_events(
+        company_id,
+        list(APPROVED_CALENDAR_EVENT_DEFINITIONS),
+    )
     events = await service.get_calendar(
         company_id,
         include_past_days=0,
         include_future_days=years_ahead * 366,
     )
-    return {"message": f"Generated {len(events)} events", "count": len(events)}
+    return {
+        "message": f"Generated or refreshed {len(generated)} approved events",
+        "count": len(generated),
+        "events": events,
+    }
 
 
 @router.get(
