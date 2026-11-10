@@ -89,6 +89,7 @@ def fact_provenance_payload(fact: CompanyFact) -> dict[str, Any]:
     return {
         "fact_id": fact.record_id,
         "fact_key": fact.fact_key,
+        "fact_value": fact.value,
         "trust_level": fact.trust_level.value,
         "asserted_by": fact.asserted_by,
         "observed_on": fact.observed_on.isoformat(),
