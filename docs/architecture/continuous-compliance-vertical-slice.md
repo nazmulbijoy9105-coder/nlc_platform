@@ -33,10 +33,18 @@ COMPLIANT (on time) nor OVERDUE (still unfiled).
 
 ## Fact provenance and applicability work
 
-Every fact used by an assessment carries one of these trust levels:
-USER_ASSERTED and AUTHORIZED_DOCUMENT_BACKED. Findings retain the fact keys,
-source references, trust level and observation date. User-asserted facts remain visible
-as unverified inputs; they cannot silently become RJSC-confirmed.
+Every newly captured company fact carries one of exactly two trust levels:
+USER_ASSERTED or AUTHORIZED_DOCUMENT_BACKED. A manual vault upload is not
+automatically verified and is not an authenticated RJSC feed. Verification records
+the reviewer and timestamp against the existing document reference.
+
+The database-backed implementation is described in
+[company-fact-provenance-integration.md](company-fact-provenance-integration.md).
+Compliance flags and immutable evaluation runs retain the set of explicit fact
+records supplied as evaluation inputs. The current implementation does not yet
+map each individual rule finding to the exact subset of profile fields read by
+that rule; this limitation is disclosed with the snapshot. Legacy profile fields
+without fact records are explicitly labelled unattributed/unknown, never verified.
 
 Every UNKNOWN applicability state creates a resolution task with an owner, due date,
 questionnaire key, document-request key and escalation interval. The default task
@@ -70,8 +78,10 @@ production findings are enabled.
 
 1. Capture incorporation date, company type, one-person/small-company facts where
    relevant, financial year, AGM history, auditor appointment and annual-return history.
-2. Attach provenance to every fact: user assertion, uploaded document, or RJSC-
-   confirmed source. Record source and observation date.
+2. Capture each fact as USER_ASSERTED or AUTHORIZED_DOCUMENT_BACKED. For
+   document-backed facts, reference the existing document-vault row and preserve
+   its recorded uploader and upload timestamp. Manual RJSC uploads are not
+   represented as an authenticated RJSC confirmation. Record source and observation date.
 3. Resolve applicability. Unknowns create owned questionnaire/document tasks with
    expiry and escalation. Do not turn unknown into absence or breach.
 4. Select the rule version effective on the relevant legal date and require the
@@ -107,7 +117,9 @@ production findings are enabled.
 - APPLIES + NOT_PROVIDED + OVERDUE is representable.
 - FILED_LATE requires verified evidence and a date after the deadline.
 - VERIFIED_ABSENT requires a named source and check date.
-- Each fact carries trust level, source reference and observation date.
+- Each newly captured fact carries trust level, source reference and observation date.
+- Legacy profile inputs without a fact record are disclosed as unattributed/unknown.
+- Evaluation and finding snapshots retain the explicit fact input provenance.
 - Unknown applicability has owner, deadline, questionnaire and document request.
 - Each finding pins legal date, rule version and catalogue version.
 - PENDING/DISPUTED rules cannot generate approved legal findings.
