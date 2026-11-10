@@ -117,7 +117,7 @@ class NotificationService(BaseService[Notification]):
             failure_reason=(
                 None
                 if legal_alert_eligible
-                else "Suppressed at creation: legal rule is not counsel-approved for release."
+                else "Suppressed at creation: notification is not eligible under product release and notification policy."
             ),
             scheduled_for=scheduled_for or datetime.now(UTC),
             days_until_deadline=days_until_deadline,
@@ -134,8 +134,8 @@ class NotificationService(BaseService[Notification]):
         _process_flag_notifications stub implementation.
         """
         # A provisional RED/BLACK engine label is not an authorised legal
-        # alert. Do not notify customers until the statutory score release
-        # gate is open and the rule is in the internally source-checked set.
+        # alert. Do not notify customers until product scoring is released and the
+        # rule is in the product scoring allowlist with a confirmed violation.
         from app.rule_engine.engine import PRODUCT_SCORING_RULE_IDS, RuleState, legal_score_is_released
 
         if not legal_score_is_released():
