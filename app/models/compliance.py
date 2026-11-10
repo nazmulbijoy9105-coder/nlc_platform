@@ -121,6 +121,10 @@ class ComplianceFlag(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         JSONB, nullable=True,
         comment="Structured explanation: delay_days, calculation_basis, etc."
     )
+    fact_provenance_snapshot: Mapped[list[dict]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default="[]",
+        comment="Immutable source/trust/verification snapshot for every fact used by this finding; [] means legacy or no facts attached."
+    )
 
     # ── Notification ─────────────────────────────────────────────
     notification_sent: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -256,6 +260,10 @@ class ComplianceEvaluationRun(UUIDPrimaryKeyMixin, Base):
     )
     flags_snapshot: Mapped[list[dict]] = mapped_column(
         JSONB, nullable=False, default=list, server_default="[]"
+    )
+    fact_provenance_snapshot: Mapped[list[dict]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default="[]",
+        comment="Immutable union of fact provenance used during this evaluation run."
     )
     score_breakdown_snapshot: Mapped[dict | None] = mapped_column(
         JSONB, nullable=True
