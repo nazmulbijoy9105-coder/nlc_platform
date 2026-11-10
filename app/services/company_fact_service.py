@@ -38,10 +38,14 @@ class CompanyFactService:
             )
         annotation = get_type_hints(CompanyProfile).get(normalized)
         candidates = get_args(annotation) or (annotation,)
-        if any(
-            candidate in (list, dict, set, tuple)
-            or get_origin(candidate) in (list, dict, set, tuple)
-            for candidate in candidates
+        if (
+            annotation in (list, dict, set, tuple)
+            or get_origin(annotation) in (list, dict, set, tuple)
+            or any(
+                candidate in (list, dict, set, tuple)
+                or get_origin(candidate) in (list, dict, set, tuple)
+                for candidate in candidates
+            )
         ):
             raise HTTPException(
                 status_code=422,
