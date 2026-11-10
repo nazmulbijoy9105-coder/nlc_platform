@@ -41,6 +41,8 @@ from app.models.enums import (
 from app.services.base import BaseService
 from app.services.notification_service import NotificationService
 
+from canonical_architecture.scoring_spec import allocate_flag_deductions, category_for_rule, SCORING_SPEC_VERSION
+
 logger = logging.getLogger("nlc.compliance")
 
 
@@ -73,42 +75,39 @@ def _has_rescue_output(output) -> bool:
 
 
 def _applied_score_impacts(flags) -> list[dict]:
-    """Reconcile nominal flag impacts with the verified-rule gate and caps.
+    """Reconcile every finding to the same versioned score allocation as the engine.
 
-    The returned value is aligned by index with the original flags list so
-    repeated rule IDs cannot overwrite one another.
+    Returned entries remain aligned to the original flags. Only confirmed,
+    active, product-eligible findings enter the allocation; per-category caps
+    and the global 100-point budget are both applied by scoring_spec.
     """
     from app.rule_engine.engine import (
         AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
-        CATEGORY_CAPS,
         PRODUCT_SCORING_RULE_IDS,
         RuleState,
         legal_score_is_released,
     )
 
-    remaining = {name: cap[0] for name, cap in CATEGORY_CAPS.items()}
-    results = []
-    for flag in flags:
+    results: list[dict] = [{} for _ in flags]
+    eligible: list[tuple[int, str, int]] = []
+    for index, flag in enumerate(flags):
         state = getattr(flag, "state", None)
         active = not getattr(flag, "resolved", False) and getattr(flag, "conditional_applies", True)
         if not active:
-            results.append({"applied": 0, "status": "INACTIVE"})
+            results[index] = {"applied": 0, "status": "INACTIVE"}
             continue
         confirmed_violation = (
             state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and getattr(flag, "eval_state", "VIOLATION") == "VIOLATION"
         )
         if not confirmed_violation:
-            results.append({"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"})
+            results[index] = {"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"}
             continue
-
-        # The global release gate takes precedence over per-rule eligibility:
-        # while release is closed, no rule has an applied score impact.
         if not legal_score_is_released():
-            results.append({"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"})
+            results[index] = {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
             continue
         if flag.rule_id not in PRODUCT_SCORING_RULE_IDS:
-            results.append({"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"})
+            results[index] = {"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"}
             continue
 
         severity_value = getattr(
@@ -117,30 +116,27 @@ def _applied_score_impacts(flags) -> list[dict]:
             getattr(flag, "severity", None),
         )
         authorised_black_override = (
-            flag.rule_id in PRODUCT_SCORING_RULE_IDS
-            and flag.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+            flag.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
             and getattr(flag, "is_black_override", False) is True
             and severity_value == "BLACK"
         )
         if authorised_black_override:
-            results.append({"applied": 0, "status": "BLACK_OVERRIDE_APPLIED"})
+            results[index] = {"applied": 0, "status": "BLACK_OVERRIDE_APPLIED"}
             continue
 
-        category = next(
-            (name for name, (_, prefixes) in CATEGORY_CAPS.items()
-             if flag.rule_id.startswith(prefixes)),
-            None,
-        )
-        if category is None:
-            results.append({"applied": 0, "status": "NO_SCORING_CATEGORY"})
+        if category_for_rule(flag.rule_id) is None:
+            results[index] = {"applied": 0, "status": "NO_SCORING_CATEGORY"}
             continue
+        eligible.append((index, flag.rule_id, max(0, int(flag.score_impact or 0))))
 
-        applied = min(max(0, int(flag.score_impact)), remaining[category])
-        remaining[category] -= applied
-        results.append({
+    allocations = allocate_flag_deductions(
+        (rule_id, impact) for _, rule_id, impact in eligible
+    )
+    for (index, _, _), applied in zip(eligible, allocations):
+        results[index] = {
             "applied": applied,
-            "status": "APPLIED" if applied else "CATEGORY_CAP_REACHED",
-        })
+            "status": "APPLIED" if applied else "GLOBAL_OR_CATEGORY_CAP_REACHED",
+        }
     return results
 
 
