@@ -728,7 +728,7 @@ class CompanyFactDocumentRequest(BaseModel):
 
 
 class CompanyFactVerificationRequest(BaseModel):
-    decision: str = Field(pattern="^(VERIFIED|REJECTED|SUPERSEDED)$")
+    decision: str = Field(pattern="^(VERIFIED|REJECTED)$")
     note: str | None = None
 
 
