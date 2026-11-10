@@ -72,7 +72,7 @@ async def test_company_facts_use_signed_tenant_rls_and_immutable_source_fields(d
     trigger_names = {row[0] for row in triggers.fetchall()}
     assert {
         "trg_company_facts_immutable_source",
-        "trg_company_facts_supersession_guard",
+        "trg_company_facts_insert_guard",
     }.issubset(trigger_names)
 
 
