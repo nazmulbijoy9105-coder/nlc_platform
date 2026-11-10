@@ -607,7 +607,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "REG-001",
         "legal_domain": "Corporate",
         "law": "Companies Act 1994 (Bangladesh) and applicable Articles; individual register duties require their own statutory mapping",
-        "requirement": "Non-core statutory register inventory is incomplete. Director particulars/Form XII are a separate RJSC filing obligation evaluated by DIR-001 under Section 115 and are not counted as an internal register.",
+        "requirement": "Non-core statutory register inventory is incomplete. The Form XII return/notification to RJSC under Section 115(2) is evaluated separately by DIR-001; that filing status does not establish maintenance of the internal directors' register required by Section 115(1), nor does this aggregate inventory prove an individual statutory default.",
         "provision": "UNVERIFIED CANDIDATE — Companies Act 1994 (Bangladesh) and applicable Articles; individual register duties require their own statutory mapping",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
