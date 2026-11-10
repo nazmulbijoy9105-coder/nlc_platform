@@ -57,7 +57,6 @@ class CompanyFactService:
             .where(
                 CompanyFact.company_id == company_id,
                 CompanyFact.fact_key == fact_key,
-                CompanyFact.is_current.is_(True),
             )
             .order_by(CompanyFact.created_at.desc(), CompanyFact.id.desc())
             .limit(1)
@@ -175,7 +174,7 @@ class CompanyFactService:
     async def list_current(self, company_id: uuid.UUID) -> list[CompanyFact]:
         result = await self.db.execute(
             select(CompanyFact)
-            .where(CompanyFact.company_id == company_id, CompanyFact.is_current.is_(True))
+            .where(CompanyFact.company_id == company_id)
             .order_by(CompanyFact.fact_key, CompanyFact.created_at.desc(), CompanyFact.id.desc())
         )
         latest: dict[str, CompanyFact] = {}
@@ -193,6 +192,5 @@ def fact_response(fact: CompanyFact) -> dict[str, Any]:
         "company_id": str(fact.company_id),
         "fact_value": fact.fact_value,
         "verification_note": fact.verification_note,
-        "is_current": fact.is_current,
     })
     return payload
