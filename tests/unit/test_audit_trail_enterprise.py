@@ -1,8 +1,5 @@
 """Audit Trail enterprise tests."""
 
-import pytest
-
-
 class TestAuditTrailEnterprise:
     """Verify enterprise-grade audit trail."""
 
@@ -28,11 +25,9 @@ class TestAuditTrailEnterprise:
         assert 'action' in cols
 
     def test_retention_cleanup_task_exists(self):
-        try:
-            from app.worker.tasks import cleanup_old_activity_logs
-            assert cleanup_old_activity_logs is not None
-        except ImportError:
-            pytest.skip("cleanup_old_activity_logs not yet implemented")
+        from app.worker.tasks import cleanup_old_activity_logs
+
+        assert cleanup_old_activity_logs is not None
 
     def test_score_history_has_unique_constraint(self):
         from app.models.compliance import ComplianceScoreHistory
@@ -41,12 +36,12 @@ class TestAuditTrailEnterprise:
         assert len(uq) >= 1
 
     def test_beat_schedule_has_cleanup(self):
-        try:
-            from app.worker.beat_schedule import beat_schedule
-            s = beat_schedule if isinstance(beat_schedule, dict) else beat_schedule.__dict__
-            assert any('cleanup' in str(v).lower() for v in s.values())
-        except ImportError:
-            pytest.skip("beat_schedule not yet implemented")
+        from app.worker.beat_schedule import BEAT_SCHEDULE
+
+        assert any(
+            entry["task"] == "app.worker.tasks.cleanup_old_activity_logs"
+            for entry in BEAT_SCHEDULE.values()
+        )
 
     def test_no_delete_methods_on_activity_service(self):
         from app.services.notification_service import ActivityService
@@ -65,9 +60,9 @@ class TestAuditTrailEnterprise:
         assert "activity-logs/export" in content or "csv" in content.lower()
 
     def test_beat_schedule_has_daily_eval(self):
-        try:
-            from app.worker.beat_schedule import beat_schedule
-            s = beat_schedule if isinstance(beat_schedule, dict) else beat_schedule.__dict__
-            assert any('evaluate' in str(v).lower() or 'compliance' in str(v).lower() for v in s.values())
-        except ImportError:
-            pytest.skip("beat_schedule not yet implemented")
+        from app.worker.beat_schedule import BEAT_SCHEDULE
+
+        assert any(
+            entry["task"] == "app.worker.tasks.evaluate_all_companies"
+            for entry in BEAT_SCHEDULE.values()
+        )
