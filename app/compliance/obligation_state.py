@@ -182,3 +182,24 @@ class ObligationFinding:
             or f.verification_status is not FactVerificationStatus.VERIFIED
             for f in self.facts
         )
+
+    @property
+    def fact_basis_disclosure(self) -> tuple[str, ...]:
+        """Human-readable trust disclosures to render alongside every finding."""
+        disclosures: list[str] = []
+        for fact in self.facts:
+            if fact.trust_level is FactTrustLevel.USER_ASSERTED:
+                disclosures.append(
+                    f"{fact.fact_key}: user-asserted; not independently verified."
+                )
+            elif fact.verification_status is FactVerificationStatus.VERIFIED:
+                disclosures.append(
+                    f"{fact.fact_key}: authorized document-backed; checked by "
+                    f"{fact.verified_by} at {fact.verified_at}."
+                )
+            else:
+                disclosures.append(
+                    f"{fact.fact_key}: authorized document-backed upload; "
+                    "verification is pending or unresolved."
+                )
+        return tuple(disclosures)
