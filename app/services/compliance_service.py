@@ -64,6 +64,45 @@ def _company_profile_kwargs(profile_data: dict, profile_cls) -> dict:
     return {key: value for key, value in normalized.items() if key in accepted}
 
 
+def _coerce_company_fact_value(fact_key: str, value, profile_cls):
+    """Coerce JSON fact values to the declared CompanyProfile field type."""
+    from typing import get_args, get_origin, get_type_hints
+
+    if value is None:
+        return None
+    annotation = get_type_hints(profile_cls).get(fact_key)
+    if annotation is None:
+        return value
+    candidates = get_args(annotation) or (annotation,)
+    if datetime in candidates and isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError as exc:
+            raise ValueError(f"Company fact {fact_key} must be an ISO datetime.") from exc
+    if date in candidates and isinstance(value, str):
+        try:
+            return date.fromisoformat(value)
+        except ValueError as exc:
+            raise ValueError(f"Company fact {fact_key} must be an ISO date.") from exc
+    if bool in candidates and not isinstance(value, bool):
+        if isinstance(value, str) and value.strip().lower() in {"true", "false"}:
+            return value.strip().lower() == "true"
+        raise ValueError(f"Company fact {fact_key} must be a boolean.")
+    if int in candidates and (isinstance(value, bool) or not isinstance(value, int)):
+        try:
+            return int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Company fact {fact_key} must be an integer.") from exc
+    if float in candidates and not isinstance(value, (int, float)):
+        try:
+            return float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Company fact {fact_key} must be numeric.") from exc
+    if str in candidates and not isinstance(value, str):
+        raise ValueError(f"Company fact {fact_key} must be a string.")
+    return value
+
+
 def _has_rescue_output(output) -> bool:
     """Whether the engine produced rescue steps (informational only).
     Do NOT use this to decide whether a company needs rescue — use
@@ -212,7 +251,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
         used_facts = []
         for fact in current_facts:
             if fact.fact_key in profile_data:
-                profile_data[fact.fact_key] = fact.fact_value
+                profile_data[fact.fact_key] = _coerce_company_fact_value(
+                    fact.fact_key, fact.fact_value, CompanyProfile
+                )
                 used_facts.append(fact)
         fact_provenance_snapshot = [
             fact.provenance_payload() for fact in used_facts
