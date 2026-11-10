@@ -41,6 +41,7 @@ from app.core.dependencies import (
 from app.models.enums import DocumentType
 from app.models.user import User
 from app.services.document_service import DocumentService, PromptTemplateService
+from app.services.company_fact_service import CompanyFactService, fact_response
 from app.services.notification_service import ActivityService
 
 logger = structlog.get_logger(__name__)
@@ -711,7 +712,6 @@ async def get_pdf_url(
 # COMPANY FACT PROVENANCE — existing document vault, same tenant authorization
 # ---------------------------------------------------------------------------
 
-from app.services.company_fact_service import CompanyFactService, fact_response
 
 
 class CompanyFactAssertionRequest(BaseModel):
