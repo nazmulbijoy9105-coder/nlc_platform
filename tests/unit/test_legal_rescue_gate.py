@@ -100,3 +100,20 @@ def test_rescue_service_rejects_unlinked_steps_and_non_red_black_risk(monkeypatc
             flags=[flag],
             rescue_sequence=[{"title": "Unlinked remediation"}],
         ))
+
+
+def test_rescue_service_rejects_cross_tenant_engine_output(monkeypatch):
+    from types import SimpleNamespace
+
+    from app.services.rescue_service import validate_rescue_engine_output
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    output = SimpleNamespace(
+        company_id="company-A",
+        score_breakdown=SimpleNamespace(risk_band="RED", final_score=40),
+        flags=[],
+        rescue_sequence=[{"title": "Remediate", "related_rules": ["AGM-001"]}],
+    )
+    with pytest.raises(PermissionError):
+        validate_rescue_engine_output(output, expected_company_id="company-B")
