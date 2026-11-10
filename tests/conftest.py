@@ -111,7 +111,10 @@ async def test_engine():
             await conn.execute(text("SELECT 1"))
     except Exception as e:
         message = f"Test database not reachable: {e}. Run: make migrate (test DB)"
-        if os.getenv("CI", "").lower() == "true":
+        if (
+            os.getenv("CI", "").lower() == "true"
+            and os.getenv("DATABASE_URL_TEST")
+        ):
             pytest.fail(message, pytrace=False)
         pytest.skip(message)
 
