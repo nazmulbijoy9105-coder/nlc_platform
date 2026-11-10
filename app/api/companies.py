@@ -35,7 +35,7 @@ from app.services.pdf_report_service import PDFReportService
 
 
 def _legal_score_is_released() -> bool:
-    """Require both the release switch and a non-empty approved rule set."""
+    """Require the product release switch and a non-empty scoring allowlist."""
     return LEGAL_SCORE_RELEASED is True and bool(PRODUCT_SCORING_RULE_IDS)
 
 logger = structlog.get_logger(__name__)
