@@ -10,7 +10,7 @@ from decimal import Decimal
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -547,7 +547,7 @@ async def update_company(company_id: uuid.UUID, body: CompanyUpdateRequest, requ
     ):
         changed_on = date.today()
         await db.execute(
-            __import__("sqlalchemy").update(RegisteredOfficeHistory)
+            update(RegisteredOfficeHistory)
             .where(
                 RegisteredOfficeHistory.company_id == company_id,
                 RegisteredOfficeHistory.is_current.is_(True),
