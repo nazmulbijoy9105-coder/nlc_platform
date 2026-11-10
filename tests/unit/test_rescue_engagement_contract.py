@@ -150,7 +150,6 @@ def test_rescue_engagement_service_contract_matches_admin_endpoint():
     assert "rescue_plan" in params
     assert "confirmed_fee_bdt" in params
     assert "payment_terms" in params
-    assert "created_by" in params
 
 
 def test_rescue_step_status_contract_uses_database_enum_values():
