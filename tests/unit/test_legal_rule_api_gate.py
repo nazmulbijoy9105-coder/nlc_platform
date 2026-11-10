@@ -1,4 +1,4 @@
-"""Public legal-rule catalogue must not publish unapproved legal assertions."""
+"""Product scoring eligibility and legal-verification metadata stay independent."""
 
 from datetime import datetime
 from types import SimpleNamespace
@@ -29,15 +29,16 @@ def _rule(**overrides):
     return SimpleNamespace(**values)
 
 
-def test_product_scoring_catalogue_shows_rules_but_keeps_legal_verification_pending(monkeypatch):
+def test_product_authorized_black_override_does_not_require_legal_verification(monkeypatch):
     monkeypatch.setattr(rules_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset())
-    monkeypatch.setattr(rules_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    response = rules_api._rule_to_response(_rule())
+    monkeypatch.setattr(rules_api, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(rules_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
+    response = rules_api._rule_to_response(_rule(rule_id="INC-003"))
 
     assert response.default_severity == "RED"
     assert response.score_impact == 20
-    assert response.is_black_override is False
+    assert response.is_black_override is True
     assert response.is_active is True
     assert response.verification_status == "PENDING"
     assert response.verified_at is None
@@ -46,9 +47,10 @@ def test_product_scoring_catalogue_shows_rules_but_keeps_legal_verification_pend
     assert response.description == "Unverified statutory proposition."
 
 
-def test_rule_catalogue_does_not_conflate_product_eligibility_with_legal_verification(monkeypatch):
+def test_unlisted_black_override_is_not_authorized_by_product_release_alone(monkeypatch):
     monkeypatch.setattr(rules_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset())
+    monkeypatch.setattr(rules_api, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
     monkeypatch.setattr(rules_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     response = rules_api._rule_to_response(_rule())
 
