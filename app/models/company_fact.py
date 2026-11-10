@@ -114,6 +114,7 @@ class CompanyFact(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             verified_by=str(self.verified_by) if self.verified_by else None,
             verified_at=self.verified_at,
             verification_note=self.verification_note,
+            record_id=str(self.id),
         )
 
     def provenance_payload(self) -> dict[str, Any]:
