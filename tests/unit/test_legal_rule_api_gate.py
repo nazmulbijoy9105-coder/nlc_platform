@@ -29,28 +29,31 @@ def _rule(**overrides):
     return SimpleNamespace(**values)
 
 
-def test_public_rule_catalogue_masks_unapproved_legal_content(monkeypatch):
+def test_product_scoring_catalogue_shows_rules_but_keeps_legal_verification_pending(monkeypatch):
     monkeypatch.setattr(rules_api, "LEGAL_SCORE_RELEASED", False)
     monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset())
-    response = rules_api._rule_to_response(_rule())
-
-    assert response.default_severity == "NOT_EVALUATED"
-    assert response.score_impact == 0
-    assert response.is_black_override is False
-    assert response.is_active is False
-    assert response.verification_status == "PENDING"
-    assert response.verified_at is None
-    assert response.statutory_effective_date is None
-    assert "NOT VALIDATED" in response.statutory_basis
-    assert "No breach" in response.description
-
-
-def test_public_rule_catalogue_only_releases_explicitly_approved_rule(monkeypatch):
-    monkeypatch.setattr(rules_api, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(rules_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     response = rules_api._rule_to_response(_rule())
 
     assert response.default_severity == "RED"
     assert response.score_impact == 20
-    assert response.is_black_override is True
+    assert response.is_black_override is False
     assert response.is_active is True
+    assert response.verification_status == "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED"
+    assert response.verified_at is None
+    assert response.statutory_effective_date is None
+    assert response.statutory_basis == "Section 81, Companies Act 1994"
+    assert response.description == "Unverified statutory proposition."
+
+
+def test_rule_catalogue_does_not_conflate_product_eligibility_with_legal_verification(monkeypatch):
+    monkeypatch.setattr(rules_api, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset())
+    monkeypatch.setattr(rules_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    response = rules_api._rule_to_response(_rule())
+
+    assert response.default_severity == "RED"
+    assert response.score_impact == 20
+    assert response.is_black_override is False
+    assert response.is_active is True
+    assert response.verification_status == "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED"
