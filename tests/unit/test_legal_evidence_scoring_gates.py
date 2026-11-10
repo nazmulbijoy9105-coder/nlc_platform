@@ -15,6 +15,7 @@ from app.rule_engine.engine import (
     VERIFIED_RULE_IDS,
 )
 from app.services.compliance_service import _applied_score_impacts
+from canonical_architecture.scoring_spec import CATEGORY_ORDER, category_for_rule
 from app.services.pdf_report_service import _render_score_reconciliation
 
 
@@ -1150,9 +1151,12 @@ def test_customer_score_components_reconcile_with_per_finding_api_allocations(mo
     assert sum(score.category_deductions.values()) == 100
     assert score.final_score == 0
     assert 100 - sum(score.category_deductions.values()) == score.final_score
-    assert [item["applied"] for item in per_finding] == [
-        min(item["applied"], 100) for item in per_finding
-    ]
+    by_category = {category: 0 for category in CATEGORY_ORDER}
+    for flag, item in zip(flags, per_finding):
+        category = category_for_rule(flag.rule_id)
+        if category is not None:
+            by_category[category] += item["applied"]
+    assert by_category == score.category_deductions
 
 
 def test_excluded_and_unknown_findings_have_zero_score_deduction(monkeypatch):
