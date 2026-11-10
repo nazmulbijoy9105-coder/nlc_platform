@@ -163,7 +163,7 @@ class RescueService(BaseService[RescuePlan]):
         from app.rule_engine.engine import legal_score_is_released
         if not legal_score_is_released():
             raise PermissionError(
-                "Rescue generation is disabled until product scoring is enabled."
+                "Rescue generation is disabled because product scoring is disabled."
             )
         source_rule_ids = validate_rescue_engine_output(
             engine_output, expected_company_id=company_id
