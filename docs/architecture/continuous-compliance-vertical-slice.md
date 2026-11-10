@@ -34,7 +34,7 @@ COMPLIANT (on time) nor OVERDUE (still unfiled).
 ## Fact provenance and applicability work
 
 Every fact used by an assessment carries one of these trust levels:
-USER_ASSERTED, DOCUMENT_BACKED, RJSC_CONFIRMED. Findings retain the fact keys,
+USER_ASSERTED and AUTHORIZED_DOCUMENT_BACKED. Findings retain the fact keys,
 source references, trust level and observation date. User-asserted facts remain visible
 as unverified inputs; they cannot silently become RJSC-confirmed.
 
