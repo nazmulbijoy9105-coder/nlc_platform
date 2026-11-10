@@ -44,6 +44,7 @@ from app.core.entitlement import require_entitlement
 from app.models.user import User
 from app.models.filings import AGM, AGMNoticeEvidence
 from app.models.people import ShareComplianceEvent, Shareholder, ShareTransfer
+from app.services.domain_events import DomainEventType, publish_domain_event
 from app.services.filing_service import (
     AGMService,
     AnnualReturnService,
@@ -500,6 +501,15 @@ async def mark_agm_filed(
         "is_filed": True,
     }
     updated = await svc.update_by_id(agm_id, update_data)  # type: ignore
+    await db.flush()
+    await publish_domain_event(
+        db, company_id=updated.company_id,
+        event_type=DomainEventType.FILING_RECEIPT_RECORDED,
+        aggregate_type="agm", aggregate_id=updated.id,
+        actor_id=current_user.id,
+        payload={"filing_type": "AGM", "filed_date": body.filed_date.isoformat(),
+                 "receipt_reference_present": bool(body.rjsc_acknowledgment_number)},
+    )
     _dispatch_reevaluation(updated.company_id, "AGM_FILED")  # type: ignore
     return _agm_to_response(updated)
 
@@ -664,6 +674,15 @@ async def mark_return_filed(
     if not annual_return:
         raise HTTPException(status_code=404, detail="Annual return record not found.")
 
+    await db.flush()
+    await publish_domain_event(
+        db, company_id=annual_return.company_id,
+        event_type=DomainEventType.FILING_RECEIPT_RECORDED,
+        aggregate_type="annual_return", aggregate_id=annual_return.id,
+        actor_id=current_user.id,
+        payload={"filing_type": "ANNUAL_RETURN", "filed_date": body.filed_date.isoformat(),
+                 "receipt_reference_present": bool(body.rjsc_acknowledgment_number)},
+    )
     await activity.log(
         action="ANNUAL_RETURN_FILED",
         resource_type="annual_return",
@@ -1069,6 +1088,15 @@ async def verify_share_compliance_event(
     for key, value in updates.items():
         setattr(event, key, value)
     await db.flush()
+    await publish_domain_event(
+        db, company_id=event.company_id,
+        event_type=DomainEventType.EVIDENCE_VERIFICATION_COMPLETED,
+        aggregate_type="share_compliance_event", aggregate_id=event.id,
+        actor_id=current_user.id,
+        payload={"verification_scope": "share_event", "event_verified": True,
+                 "filing_status_verified": event.filing_status_verified,
+                 "certificate_status_verified": event.certificate_status_verified},
+    )
     await db.refresh(event)
     return _share_event_response(event)
 
