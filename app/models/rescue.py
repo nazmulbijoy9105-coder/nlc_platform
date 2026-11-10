@@ -22,7 +22,7 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -68,6 +68,10 @@ class RescuePlan(FullMixin, Base):
         comment="Risk band that triggered rescue (RED or BLACK)"
     )
     initial_score: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_rule_ids: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list,
+        comment="Released statutory rule IDs supporting this rescue plan",
+    )
     years_in_default: Mapped[int] = mapped_column(Integer, default=0)
 
     # ── Status ────────────────────────────────────────────────────

@@ -82,3 +82,50 @@ def test_legacy_calendar_generator_cannot_emit_unverified_deadlines():
         assert "independently approved" in str(exc)
     else:
         raise AssertionError("legacy calendar generator must remain disabled")
+
+
+def test_source_specific_penalty_service_requires_event_type_allowlist(monkeypatch):
+    from datetime import date
+    from decimal import Decimal
+
+    from app.services import compliance_calendar as calendar_service
+    from app.services.legal_deadline_engine import PenaltyRule
+
+    rule = PenaltyRule(
+        rule_id="PEN-TEST-03",
+        source_citation="Fixture-only source",
+        source_version="fixture-v1",
+        effective_from=date(2025, 1, 1),
+        effective_to=None,
+        liable_person="company",
+        fixed_amount=Decimal("100"),
+        approved=True,
+    )
+    monkeypatch.setattr(
+        calendar_service, "VERIFIED_PENALTY_EVENT_TYPES", frozenset()
+    )
+    assert calendar_service.calculate_rule_penalty(
+        rule,
+        event_type="FIRST_AGM",
+        days_overdue=20,
+        due_date=date(2026, 1, 1),
+        trigger_date=date(2026, 1, 1),
+        as_of=date(2026, 1, 21),
+        applicable=True,
+        trigger_evidence_verified=True,
+    ) is None
+    monkeypatch.setattr(
+        calendar_service,
+        "VERIFIED_PENALTY_EVENT_TYPES",
+        frozenset({"FIRST_AGM"}),
+    )
+    assert calendar_service.calculate_rule_penalty(
+        rule,
+        event_type="FIRST_AGM",
+        days_overdue=20,
+        due_date=date(2026, 1, 1),
+        trigger_date=date(2026, 1, 1),
+        as_of=date(2026, 1, 21),
+        applicable=True,
+        trigger_evidence_verified=True,
+    ) == Decimal("100.00")

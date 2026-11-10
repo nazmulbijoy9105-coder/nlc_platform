@@ -86,8 +86,21 @@ async def test_generate_rescue_plan_passes_engagement_id_to_create(monkeypatch):
         return_value=MagicMock(scalar_one=Mock(return_value=created_plan))
     )
 
+    flag = MagicMock()
+    flag.rule_id = "AUD-003"
+    flag.resolved = False
+    flag.conditional_applies = True
+    flag.state = "NON_COMPLIANT"
+    flag.eval_state = "VIOLATION"
+    flag.severity = "RED"
+    flag.score_impact = 10
+
     engine_output = MagicMock()
-    engine_output.rescue_sequence = [{"title": "Test rescue step"}]
+    engine_output.company_id = company_id
+    engine_output.flags = [flag]
+    engine_output.rescue_sequence = [
+        {"title": "Test rescue step", "related_rules": ["AUD-003"]}
+    ]
     engine_output.score_breakdown = MagicMock(
         final_score=50,
         risk_band="RED",
