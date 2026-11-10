@@ -12,9 +12,11 @@ from app.worker.celery_app import celery_app
 logger = logging.getLogger(__name__)
 
 REASSESSMENT_EVENTS = {
+    "company.created",
     "company.fact.asserted",
     "company.fact.verified",
     "filing.agm.recorded",
+    "filing.agm.held_recorded",
     "filing.agm.held_recorded",
     "filing.annual_return.recorded",
     "filing.annual_return.filed",
