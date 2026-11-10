@@ -66,7 +66,7 @@ def _company_profile_kwargs(profile_data: dict, profile_cls) -> dict:
 
 def _coerce_company_fact_value(fact_key: str, value, profile_cls):
     """Coerce JSON fact values to the declared CompanyProfile field type."""
-    from typing import get_args, get_origin, get_type_hints
+    from typing import get_args, get_type_hints
 
     if value is None:
         return None
