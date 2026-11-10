@@ -173,6 +173,8 @@ class ComplianceCalendarService:
         include_past_days: int = 365,
         include_future_days: int = 365,
     ) -> list[dict]:
+        if not LEGAL_CALENDAR_RELEASED or not VERIFIED_CALENDAR_EVENT_TYPES:
+            return []
         result = await self.db.execute(
             select(Company).where(Company.id == company_id)
         )
@@ -236,6 +238,7 @@ def calculate_rule_penalty(
     *,
     event_type: str,
     days_overdue: int,
+    trigger_date: date,
     as_of: date,
     applicable: bool,
     trigger_evidence_verified: bool,
@@ -246,6 +249,7 @@ def calculate_rule_penalty(
     return calculate_approved_penalty(
         rule,
         days_overdue=days_overdue,
+        trigger_date=trigger_date,
         as_of=as_of,
         applicable=applicable,
         trigger_evidence_verified=trigger_evidence_verified,
