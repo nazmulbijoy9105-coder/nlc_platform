@@ -37,7 +37,7 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.CheckConstraint(
             "(trust_level = 'USER_ASSERTED' AND document_id IS NULL AND authorized_uploader_id IS NULL AND uploaded_at IS NULL) OR "
-            "(trust_level = 'AUTHORIZED_DOCUMENT_BACKED' AND document_id IS NOT NULL AND authorized_uploader_id IS NOT NULL AND uploaded_at IS NOT NULL)",
+            "(trust_level = 'AUTHORIZED_DOCUMENT_BACKED' AND document_id IS NOT NULL AND authorized_uploader_id IS NOT NULL AND uploaded_at IS NOT NULL AND source_reference IS NOT NULL AND length(btrim(source_reference)) > 0)",
             name="ck_company_fact_trust_source",
         ),
         sa.CheckConstraint(
