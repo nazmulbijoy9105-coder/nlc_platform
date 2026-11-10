@@ -420,7 +420,6 @@ class RescueService(BaseService[RescuePlan]):
         rescue_plan: RescuePlan,
         confirmed_fee_bdt: float,
         payment_terms: str | None = None,
-        created_by: uuid.UUID | None = None,
     ) -> Engagement:
         """
         Explicit admin-triggered commercial engagement creation.
