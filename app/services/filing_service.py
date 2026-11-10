@@ -209,7 +209,7 @@ class AGMService(BaseService[AGM]):
         # perform legal verification. Preserve omitted raw values, but revoke
         # any prior verification markers so changed meeting data cannot inherit
         # stale evidence approval.
-        return await self.update_instance(
+        updated_agm = await self.update_instance(
             agm,
             agm_held=True,
             agm_date=agm_date,
@@ -252,6 +252,21 @@ class AGMService(BaseService[AGM]):
             is_default=is_default,
             delay_days=delay_days,
         )
+        if updated_agm is not None:
+            from app.services.domain_events import DomainEventType, publish_domain_event
+            await publish_domain_event(
+                self.db, company_id=updated_agm.company_id,
+                event_type=DomainEventType.AGM_HELD_RECORDED,
+                aggregate_type="agm", aggregate_id=updated_agm.id,
+                payload={"financial_year": updated_agm.financial_year,
+                         "agm_date": agm_date.isoformat(),
+                         "members_present_recorded": members_present is not None,
+                         "quorum_required": quorum_required,
+                         "quorum_met": quorum_met,
+                         "quorum_basis": quorum_basis,
+                         "held_evidence_verified": False},
+            )
+        return updated_agm
 
     @staticmethod
     def _add_calendar_months(source: date, months: int) -> date:
