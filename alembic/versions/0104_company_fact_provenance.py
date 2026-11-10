@@ -51,6 +51,7 @@ def upgrade() -> None:
             "verification_status IN ('UNVERIFIED', 'VERIFIED', 'REJECTED', 'SUPERSEDED')",
             name="ck_company_fact_verification_status",
         ),
+        sa.UniqueConstraint("supersedes_fact_id", name="uq_company_facts_single_successor"),
         sa.CheckConstraint(
             "(verification_status = 'VERIFIED' AND verified_by IS NOT NULL AND verified_at IS NOT NULL "
             "AND trust_level = 'AUTHORIZED_DOCUMENT_BACKED') OR "
@@ -115,6 +116,39 @@ def upgrade() -> None:
     op.execute("GRANT SELECT, INSERT, UPDATE ON TABLE public.company_facts TO nlc_app_role")
     op.execute("REVOKE DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE public.company_facts FROM nlc_app_role")
     op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_company_fact_validate_supersession()
+        RETURNS trigger
+        LANGUAGE plpgsql
+        SET search_path = pg_catalog, public
+        AS $function$
+        DECLARE
+            parent_company_id uuid;
+            parent_fact_key text;
+        BEGIN
+            IF NEW.supersedes_fact_id IS NOT NULL THEN
+                SELECT company_id, fact_key
+                  INTO parent_company_id, parent_fact_key
+                  FROM public.company_facts
+                 WHERE id = NEW.supersedes_fact_id;
+                IF NOT FOUND
+                   OR parent_company_id IS DISTINCT FROM NEW.company_id
+                   OR parent_fact_key IS DISTINCT FROM NEW.fact_key THEN
+                    RAISE EXCEPTION 'A superseded fact must belong to the same company and fact key';
+                END IF;
+            END IF;
+            RETURN NEW;
+        END;
+        $function$
+    """)
+    op.execute("""
+        CREATE TRIGGER trg_company_facts_supersession_guard
+        BEFORE INSERT ON public.company_facts
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_company_fact_validate_supersession()
+    """)
+    op.execute("REVOKE ALL ON FUNCTION public.nlc_company_fact_validate_supersession() FROM PUBLIC")
+    op.execute("GRANT EXECUTE ON FUNCTION public.nlc_company_fact_validate_supersession() TO nlc_app_role")
+
+    op.execute("""
         CREATE OR REPLACE FUNCTION public.nlc_company_fact_immutable_fields()
         RETURNS trigger
         LANGUAGE plpgsql
@@ -166,6 +200,8 @@ def downgrade() -> None:
     op.drop_index("ix_company_facts_fact_key", table_name="company_facts")
     op.drop_index("ix_company_facts_company_id", table_name="company_facts")
     op.execute("DROP TRIGGER IF EXISTS trg_company_facts_immutable_source ON public.company_facts")
+    op.execute("DROP TRIGGER IF EXISTS trg_company_facts_supersession_guard ON public.company_facts")
+    op.execute("DROP FUNCTION IF EXISTS public.nlc_company_fact_validate_supersession()")
     op.execute("DROP FUNCTION IF EXISTS public.nlc_company_fact_immutable_fields()")
     op.execute("DROP POLICY IF EXISTS company_facts_staff_verification_update ON public.company_facts")
     op.execute("DROP POLICY IF EXISTS company_facts_actor_insert ON public.company_facts")
