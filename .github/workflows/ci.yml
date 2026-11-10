@@ -71,6 +71,9 @@ jobs:
 
       - name: Compile check
         run: python -m compileall app/ canonical_architecture/
+      - name: Application import smoke check
+        run: |
+          python -c "import app.api.admin; import app.main; print('app.api.admin and app.main imports OK')"
 
       - name: Validate backup tooling syntax
         run: |
