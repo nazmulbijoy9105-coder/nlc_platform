@@ -518,11 +518,13 @@ REQUIRED_REGISTERS = [
 # Form XII separately when a director appointment/change event exists.
 CORE_REGISTERS = ["members", "charges", "minutes_agm"]
 
-# Explicit counsel-authorized BLACK override allowlist. A rule being
-# marked BLACK in engine code is not sufficient authority to force a BLACK
-# score. Keep this empty until each rule has independent approval recorded
-# in the signed legal approval register and the release process authorizes it.
-AUTHORIZED_BLACK_OVERRIDE_RULE_IDS: frozenset[str] = frozenset()
+# Product-owner-authorized BLACK override allowlist. A BLACK label alone is
+# never sufficient: the rule must also be in the product scoring allowlist and
+# the finding must be active, applicable, evidence-supported and a violation.
+# INC-003 is the only engine rule currently emitted with is_black_override=True
+# as a company-law finding. ESC-003 is an internal escalation surcharge, not a
+# source finding, and is intentionally excluded from PRODUCT_SCORING_RULE_IDS.
+AUTHORIZED_BLACK_OVERRIDE_RULE_IDS: frozenset[str] = frozenset({"INC-003"})
 
 # Backward-compatible alias; never use this set to grant authorization.
 BLACK_OVERRIDE_RULES: set[str] = set()
@@ -3035,9 +3037,10 @@ class NLCRuleEngine:
         #
         # Evidence gating: Section 94 findings require structured grounds,
         # director identity, authoritative evidence, effective date and current
-        # status. DEF-001 is not a BLACK override and is excluded from scoring
-        # pending independent legal approval. Unpaid-call threshold is DISPUTED
-        # across official Bengali and English/case materials.
+        # status. DEF-001 remains in the product scoring catalogue, but an
+        # individual finding remains NOT_EVALUATED until its required facts and
+        # evidence are present. The unpaid-call threshold is DISPUTED across
+        # official Bengali and English/case materials.
         # ═════════════════════════════════════════════════════════════════
 
         VALID_GROUNDS = {
@@ -3257,7 +3260,7 @@ class NLCRuleEngine:
     def _eligible_scoring_flags(
         self, flags: List[ComplianceFlag]
     ) -> List[ComplianceFlag]:
-        """Return only active, confirmed findings admitted by the legal gate."""
+        """Return active, confirmed findings admitted by product release and evidence rules."""
         return [
             flag for flag in flags
             if not flag.resolved
@@ -3395,6 +3398,7 @@ class NLCRuleEngine:
             "scoring_spec_version": SCORING_SPEC_VERSION,
             "verified_rule_ids": sorted(VERIFIED_RULE_IDS),
             "product_scoring_rule_ids": sorted(PRODUCT_SCORING_RULE_IDS),
+            "authorized_black_override_rule_ids": sorted(AUTHORIZED_BLACK_OVERRIDE_RULE_IDS),
             "category_caps": {
                 key: {"max_deduction": cap, "prefixes": list(prefixes)}
                 for key, (cap, prefixes) in sorted(CATEGORY_CAPS.items())
