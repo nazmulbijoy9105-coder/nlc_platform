@@ -294,6 +294,20 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 for index, f in enumerate(output.flags)
                 if score_is_released and f.rule_id in PRODUCT_SCORING_RULE_IDS
             ],
+            "excluded_rule_findings": [
+                {
+                    "rule_id": flag.rule_id,
+                    "legal_state": getattr(flag.state, "value", flag.state),
+                    "evaluation_state": getattr(flag.eval_state, "value", flag.eval_state),
+                    "risk_severity": flag.severity,
+                    "description": flag.description,
+                    "statutory_basis": flag.statutory_basis,
+                    "score_impact_applied": 0,
+                    "scoring_status": applied_impacts[index]["status"],
+                }
+                for index, flag in enumerate(output.flags)
+                if score_is_released and flag.rule_id not in PRODUCT_SCORING_RULE_IDS
+            ],
             "score_breakdown": {
                 "risk_band": public_risk_band,
                 "scoring_spec_version": SCORING_SPEC_VERSION,
