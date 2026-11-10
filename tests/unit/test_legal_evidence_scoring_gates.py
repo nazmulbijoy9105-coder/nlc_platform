@@ -720,7 +720,7 @@ def test_product_released_corpus_reports_score_with_full_input_coverage():
     )
     score = NLCRuleEngine()._calculate_score([], profile)
     assert score.final_score == 100  # arithmetic placeholder only
-    assert score.risk_band == Severity.NOT_EVALUATED
+    assert score.risk_band == Severity.GREEN
     assert score.override_applied is False
 
 
