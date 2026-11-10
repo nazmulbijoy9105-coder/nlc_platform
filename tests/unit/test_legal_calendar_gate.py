@@ -108,6 +108,7 @@ def test_source_specific_penalty_service_requires_event_type_allowlist(monkeypat
         rule,
         event_type="FIRST_AGM",
         days_overdue=20,
+        due_date=date(2026, 1, 1),
         trigger_date=date(2026, 1, 1),
         as_of=date(2026, 1, 21),
         applicable=True,
