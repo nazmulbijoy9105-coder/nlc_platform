@@ -37,7 +37,7 @@ from app.services.rescue_service import RescueService
 from canonical_architecture.scoring_spec import allocate_flag_deductions
 
 REPORT_TZ = ZoneInfo("Asia/Dhaka")
-LOGO_FILE = "nlc_logo.png"
+LOGO_FILE = "nlc_logo.svg"
 
 
 class ScoreReconciliationError(ValueError):
