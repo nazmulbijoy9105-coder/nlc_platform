@@ -106,7 +106,7 @@ def test_product_allowlisted_findings_are_shown_as_score_deductions_while_legal_
         WHEN,
     )
     assert "-20 pts" in page
-    assert "pending independent legal approval" in page
+    assert "Product scoring may be disabled" in page
     assert "Score reconciliation" not in page
     assert "Score reconciliation" not in page
 
