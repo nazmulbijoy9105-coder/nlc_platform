@@ -64,7 +64,7 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
     if not isinstance(flags, (list, tuple)):
         raise PermissionError("Rescue evaluation findings are missing or malformed.")
 
-    flags_by_rule: dict[str, list] = {}
+    flags_by_rule: dict[str, list[object]] = {}
     eligible: set[str] = set()
     for flag in flags:
         rule_id = getattr(flag, "rule_id", None)
