@@ -306,7 +306,7 @@ class MessageResponse(BaseModel):
 
 
 def _flag_to_response(flag) -> FlagResponse:
-    approved = _legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS
+    approved = _legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
     severity = getattr(flag.severity, "value", flag.severity)
     return FlagResponse(
         flag_id=str(flag.id),
