@@ -675,14 +675,6 @@ async def mark_return_filed(
         raise HTTPException(status_code=404, detail="Annual return record not found.")
 
     await db.flush()
-    await publish_domain_event(
-        db, company_id=annual_return.company_id,
-        event_type=DomainEventType.FILING_RECEIPT_RECORDED,
-        aggregate_type="annual_return", aggregate_id=annual_return.id,
-        actor_id=current_user.id,
-        payload={"filing_type": "ANNUAL_RETURN", "filed_date": body.filed_date.isoformat(),
-                 "receipt_reference_present": bool(body.rjsc_acknowledgment_number)},
-    )
     await activity.log(
         action="ANNUAL_RETURN_FILED",
         resource_type="annual_return",
