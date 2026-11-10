@@ -60,6 +60,15 @@ def test_days_and_clear_days_are_explicitly_different():
     ) == date(2026, 1, 12)
 
 
+def test_clear_days_always_excludes_trigger_day_once():
+    assert calculate_deadline(
+        rule(unit="CLEAR_DAYS", offset=10, exclude_trigger_day=True),
+        trigger_date=date(2026, 1, 1),
+        applicable=True,
+        trigger_evidence_verified=True,
+    ) == date(2026, 1, 12)
+
+
 def test_calendar_month_clamps_end_of_month():
     assert calculate_deadline(
         rule(unit="MONTHS", offset=1),
@@ -104,6 +113,8 @@ def test_rule_effective_interval_is_enforced():
         {"source_citation": ""},
         {"source_version": ""},
         {"offset": -1},
+        {"unit": "FORTNIGHTS"},
+        {"adjustment": "AUTOMATIC"},
         {"effective_from": date(2026, 1, 1), "effective_to": date(2025, 12, 31)},
     ],
 )
