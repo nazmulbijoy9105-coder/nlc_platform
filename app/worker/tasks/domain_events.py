@@ -49,6 +49,7 @@ def dispatch_domain_event_outbox(self, batch_size: int = 100) -> dict[str, Any]:
         from app.worker.tasks.core import (
             evaluate_company_compliance,
             process_ai_review_queue,
+            queue_deadline_warning_notifications,
         )
 
         now = datetime.now(UTC)
@@ -80,6 +81,13 @@ def dispatch_domain_event_outbox(self, batch_size: int = 100) -> dict[str, Any]:
                             task_id=f"domain-event-{event.id}",
                         )
                         queued += 1
+                    elif event.event_type == "deadline.calendar.generated":
+                        queue_deadline_warning_notifications.apply_async(
+                            kwargs={"warning_days": [30, 15, 7, 3, 1]},
+                            queue="notifications",
+                            task_id=f"domain-event-{event.id}",
+                        )
+                        queued += 1
                     elif event.event_type == "evidence.document.generated":
                         process_ai_review_queue.apply_async(
                             kwargs={"alert_threshold_hours": 0},
@@ -87,8 +95,8 @@ def dispatch_domain_event_outbox(self, batch_size: int = 100) -> dict[str, Any]:
                             task_id=f"domain-event-{event.id}",
                         )
                         queued += 1
-                    # Deadline and document approval/release events remain
-                    # durable and queryable for their dedicated consumers.
+                    # Approval/release events are retained for audit and do
+                    # not themselves assert statutory evidence or compliance.
                     event.processed_at = datetime.now(UTC)
                     event.locked_at = None
                     event.last_error = None
