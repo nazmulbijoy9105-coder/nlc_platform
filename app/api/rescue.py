@@ -255,15 +255,26 @@ async def create_rescue_plan(
             ),
         )
 
-    plan = await rescue_svc.generate_rescue_plan(  # type: ignore
-        company_id=body.company_id,
-        engine_output=engine_output,
-        created_by=current_user.id,
-        assigned_staff_id=body.assigned_staff_id,
-        estimated_fee_bdt=body.estimated_fee_bdt,
-        target_completion_date=date.fromisoformat(body.target_completion_date) if body.target_completion_date else None,
-        engagement_id=None,  # RES-010: explicit linkage, populated by service
-    )
+    try:
+        plan = await rescue_svc.generate_rescue_plan(  # type: ignore
+            company_id=body.company_id,
+            engine_output=engine_output,
+            created_by=current_user.id,
+            assigned_staff_id=body.assigned_staff_id,
+            estimated_fee_bdt=body.estimated_fee_bdt,
+            target_completion_date=date.fromisoformat(body.target_completion_date) if body.target_completion_date else None,
+            engagement_id=None,  # RES-010: explicit linkage, populated by service
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Rescue generation rejected: the evaluation is not authorized for this tenant or released rule set.",
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Rescue generation rejected: {exc}",
+        ) from exc
 
     await activity.log(
         action="RESCUE_PLAN_CREATED",
@@ -305,8 +316,7 @@ async def list_rescue_plans(
 
     query = select(RescuePlan).options(selectinload(RescuePlan.steps))
     if company_id is not None:
-        if current_user.role == "LEGAL_STAFF":
-            await ensure_staff_company_scope(company_id, current_user, db)
+        await _assert_rescue_entitlement(company_id, current_user, db)
         query = query.where(RescuePlan.company_id == company_id)
     elif current_user.role not in ("SUPER_ADMIN", "ADMIN_STAFF"):
         raise HTTPException(status_code=403, detail="Portfolio-wide rescue plan access is restricted to platform administrators.")
@@ -335,11 +345,8 @@ async def get_active_plan(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    if current_user.role == "LEGAL_STAFF":
-        await ensure_staff_company_scope(company_id, current_user, db)
     _require_legal_release()
-    if current_user.role == "LEGAL_STAFF":
-        await ensure_staff_company_scope(company_id, current_user, db)
+    await _assert_rescue_entitlement(company_id, current_user, db)
     rescue_svc = RescueService(db)
     company_svc = CompanyService(db)
 
@@ -488,6 +495,7 @@ async def create_engagement_from_rescue(
     activity = ActivityService(db)
 
     plan = await rescue_svc.get_by_id_or_404(plan_id)
+    await _assert_rescue_entitlement(plan.company_id, current_user, db)
     engagement = await rescue_svc.create_engagement_from_rescue(  # type: ignore
         rescue_plan=plan,
         confirmed_fee_bdt=body.confirmed_fee_bdt,
