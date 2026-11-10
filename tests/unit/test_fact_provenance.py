@@ -95,6 +95,7 @@ def test_verified_document_fact_carries_verifier_and_finding_disclosure():
     assert fact.is_verified_document_fact
     payload = fact_provenance_payload(fact)
     assert payload["trust_level"] == "AUTHORIZED_DOCUMENT_BACKED"
+    assert payload["fact_value"] == "2020-01-01"
     assert payload["verified_by"] == "reviewer-1"
     assert "checked by the recorded verifier" in payload["finding_disclosure"]
 
