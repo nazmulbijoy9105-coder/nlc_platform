@@ -153,15 +153,24 @@ class CompanyFactService:
             raise HTTPException(status_code=409, detail="A newer fact version already supersedes this record.")
         if decision == "VERIFIED":
             doc_result = await self.db.execute(
-                select(Document.id).where(
+                select(Document).where(
                     Document.id == fact.document_id,
                     Document.company_id == fact.company_id,
                     Document.is_active.is_(True),
                     Document.ai_generated.is_(False),
                 )
             )
-            if doc_result.scalar_one_or_none() is None:
+            source_document = doc_result.scalar_one_or_none()
+            if source_document is None:
                 raise HTTPException(status_code=409, detail="Source document is no longer an active eligible vault document.")
+            if (
+                source_document.created_by != fact.authorized_uploader_id
+                or source_document.created_at != fact.uploaded_at
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail="Source document uploader or upload timestamp no longer matches the recorded fact provenance.",
+                )
             fact.verified_by = reviewer_id
             fact.verified_at = datetime.now(timezone.utc)
         else:
