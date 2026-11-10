@@ -2098,10 +2098,10 @@ class NLCRuleEngine:
             ))
 
         if core_missing:
-            # P1 LEGAL FIX: Distinguish internal register-keeping from RJSC filing.
-            # The audit flagged that Section 115 is a FILING obligation (particulars
-            # of directors to RJSC), NOT an internal register-keeping provision.
-            # We now separate the two concepts in the description.
+            # Section 115(1) requires the internal directors' register;
+            # Section 115(2) separately requires the prescribed Registrar return
+            # and change notification (Form XII). DIR-001 evaluates the filing
+            # duty only; filing status does not prove the internal register exists.
             severity = Severity.RED  # legal: REG-002 downgraded BLACK -> RED
 
             # Categorize missing items by legal obligation type
