@@ -330,7 +330,7 @@ def _flag_to_response(flag) -> FlagResponse:
         severity=str(severity) if score_eligible else "NOT_EVALUATED",
         score_impact=int(flag.score_impact or 0) if score_eligible else 0,
         status=flag.flag_status.value if hasattr(flag.flag_status, "value") else str(flag.flag_status),
-        legal_review_status="APPROVED_FOR_RELEASE" if legally_verified else "PENDING_COUNSEL_REVIEW",
+        legal_review_status="LEGALLY_VERIFIED" if legally_verified else "NOT_LEGALLY_VERIFIED",
         is_black_override=(
             bool(getattr(flag, "is_black_override", False))
             and flag.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
