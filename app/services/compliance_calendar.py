@@ -43,6 +43,8 @@ class CalendarEventDefinition:
     trigger_evidence_ref: str
     description: str | None = None
     holidays: frozenset[date] = frozenset()
+    holiday_calendar_version: str | None = None
+    holiday_source_citation: str | None = None
 
 
 # Populated only from the reviewed, versioned legal event manifest.
@@ -87,6 +89,13 @@ class ComplianceCalendarService:
                 raise PermissionError(f"Calendar event type is not approved: {event_type}")
             if not isinstance(definition.trigger_evidence_ref, str) or not definition.trigger_evidence_ref.strip():
                 raise ValueError("A verified trigger evidence reference is required")
+            if definition.holidays and not (
+                definition.holiday_calendar_version
+                and definition.holiday_source_citation
+            ):
+                raise ValueError(
+                    "Holiday dates require a versioned holiday calendar source citation"
+                )
             due_date = calculate_deadline(
                 definition.rule,
                 trigger_date=definition.trigger_date,
@@ -110,6 +119,15 @@ class ComplianceCalendarService:
                 "trigger_evidence_ref": definition.trigger_evidence_ref,
                 "due_date": due_date.isoformat(),
                 "event_type": event_type,
+                "title": definition.title,
+                "period_label": definition.period_label,
+                "offset": definition.rule.offset,
+                "unit": definition.rule.unit,
+                "adjustment": definition.rule.adjustment,
+                "exclude_trigger_day": definition.rule.exclude_trigger_day,
+                "holidays": sorted(day.isoformat() for day in definition.holidays),
+                "holiday_calendar_version": definition.holiday_calendar_version,
+                "holiday_source_citation": definition.holiday_source_citation,
             }
             manifest_hash = hashlib.sha256(
                 json.dumps(manifest_payload, sort_keys=True, separators=(",", ":")).encode()
