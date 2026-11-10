@@ -94,7 +94,7 @@ def test_product_scoring_flag_is_visible_without_claiming_legal_verification():
     assert response.severity == "BLACK"
     assert response.score_impact == 20
     assert response.is_black_override is False
-    assert response.legal_review_status == "PENDING_COUNSEL_REVIEW"
+    assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
     assert response.rule_name == "Provisional AGM evidence flag"
 
 
@@ -119,7 +119,7 @@ def test_product_scoring_flag_remains_legally_pending_after_product_release(monk
 
     assert response.severity == "RED"
     assert response.score_impact == 15
-    assert response.legal_review_status == "PENDING_COUNSEL_REVIEW"
+    assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
 
 
 def test_flag_summary_separates_pending_review_from_released_findings(monkeypatch):
