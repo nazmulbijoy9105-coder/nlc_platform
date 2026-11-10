@@ -22,3 +22,8 @@ def test_invalid_date_fact_is_rejected_before_rule_evaluation() -> None:
             "not-a-date",
             CompanyProfile,
         )
+
+
+def test_null_is_rejected_for_non_nullable_profile_field() -> None:
+    with pytest.raises(ValueError, match="cannot be null"):
+        coerce_company_profile_fact_value("company_type", None)
