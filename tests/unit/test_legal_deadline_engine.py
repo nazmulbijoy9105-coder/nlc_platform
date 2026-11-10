@@ -90,7 +90,7 @@ def test_leap_day_year_clamps_to_february_28():
 def test_explicit_holiday_and_weekend_adjustment():
     assert calculate_deadline(
         rule(offset=0, adjustment="FOLLOWING"),
-        trigger_date=date(2026, 1, 2),  # Friday
+        trigger_date=date(2026, 1, 3),  # Saturday; Monday is an explicit holiday
         applicable=True,
         trigger_evidence_verified=True,
         holidays=frozenset({date(2026, 1, 5)}),
