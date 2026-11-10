@@ -44,7 +44,7 @@ def test_not_evaluated_company_does_not_expose_placeholder_score():
 
 def test_released_company_score_is_visible_only_when_release_switch_is_enabled(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", {"AGM-001"})
+    monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
 
     response = _company_to_response(_company(88, "GREEN"))
 
@@ -99,7 +99,7 @@ def test_unapproved_flag_severity_and_score_impact_are_not_presented_as_legal_fi
 
 def test_counsel_approved_flag_is_visible_after_release_switch(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", {"AGM-001"})
+    monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
     flag = SimpleNamespace(
         id=uuid4(),
         rule_id="AGM-001",
@@ -128,7 +128,7 @@ def test_flag_summary_separates_pending_review_from_released_findings(monkeypatc
     from app.services.compliance_service import ComplianceService
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", {"AGM-001"})
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
     summary_result = MagicMock()
     summary_result.mappings.return_value.one_or_none.return_value = {"total_active": 2}
     flags_result = MagicMock()
@@ -146,7 +146,7 @@ def test_flag_summary_separates_pending_review_from_released_findings(monkeypatc
 
 def test_release_switch_without_verified_rule_ids_still_hides_company_score(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", set())
+    monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", set())
 
     response = _company_to_response(_company(88, "GREEN"))
 
