@@ -69,9 +69,11 @@ async def test_company_facts_use_signed_tenant_rls_and_immutable_source_fields(d
             "AND tgrelid='public.company_facts'::regclass"
         )
     )
-    assert "trg_company_facts_immutable_source" in {
-        row[0] for row in triggers.fetchall()
-    }
+    trigger_names = {row[0] for row in triggers.fetchall()}
+    assert {
+        "trg_company_facts_immutable_source",
+        "trg_company_facts_supersession_guard",
+    }.issubset(trigger_names)
 
 
 def test_company_fact_migration_merges_to_one_head():
