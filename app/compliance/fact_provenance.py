@@ -117,6 +117,7 @@ def fact_provenance_payload(fact: CompanyFact) -> dict[str, Any]:
         "verified_at": fact.verified_at.isoformat() if fact.verified_at else None,
         "verification_note": fact.verification_note,
         "finding_disclosure": fact.finding_disclosure,
+        "disclosure": fact.finding_disclosure,
     }
 
 
