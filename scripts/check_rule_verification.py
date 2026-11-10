@@ -223,7 +223,7 @@ def main() -> int:
         print("FAIL: seed_rules.py must accept NOT_EVALUATED severity")
         return 1
 
-    if not re.search(r"^LEGAL_SCORE_RELEASED:\\s*bool\\s*=\\s*True\\s*$", engine_source, re.MULTILINE):
+    if not re.search(r"^LEGAL_SCORE_RELEASED:\s*bool\s*=\s*True\s*$", engine_source, re.MULTILINE):
         print("FAIL: product scoring release flag is not enabled")
         return 1
     if not re.search(r"^VERIFIED_RULE_IDS:\s*frozenset\[str\]\s*=\s*frozenset\(\)\s*$", engine_source, re.MULTILINE):
