@@ -53,8 +53,8 @@ def dispatch_domain_event_outbox(self, batch_size: int = 100) -> dict[str, Any]:
     """Dispatch committed events; poison events move to a visible dead-letter state.
 
     Broker publication and the outbox state update cannot be one distributed
-    transaction. Stable task IDs reduce duplicate delivery; consumer receipts
-    provide the database idempotency boundary for receipt/evidence consumers.
+    transaction. Stable task IDs aid traceability; database consumer receipts
+    provide the idempotency boundary for lifecycle, receipt and evidence work.
     """
     if batch_size < 1 or batch_size > 500:
         raise ValueError("batch_size must be between 1 and 500")
