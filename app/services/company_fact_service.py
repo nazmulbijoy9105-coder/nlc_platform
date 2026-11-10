@@ -6,6 +6,7 @@ from datetime import date, datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -68,7 +69,8 @@ class CompanyFactService:
         actor_id: uuid.UUID, observed_on: date, source_reference: str | None = None,
     ) -> CompanyFact:
         normalized_key = self._normalize_fact_key(fact_key)
-        fact_value = coerce_company_profile_fact_value(normalized_key, fact_value)
+        coerce_company_profile_fact_value(normalized_key, fact_value)
+        fact_value = jsonable_encoder(fact_value)
         await self.db.execute(
             select(Company.id).where(Company.id == company_id).with_for_update()
         )
