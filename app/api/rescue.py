@@ -130,6 +130,7 @@ class RescuePlanResponse(BaseModel):
     assigned_staff_id: str | None
     target_completion_date: str | None
     engagement_id: str | None
+    source_rule_ids: list[str] = []
     steps: list[RescueStepResponse]
     created_at: str
     updated_at: str
@@ -171,6 +172,7 @@ def _plan_to_response(plan, company=None) -> RescuePlanResponse:
         assigned_staff_id=str(plan.assigned_staff_id) if plan.assigned_staff_id else None,
         target_completion_date=str(plan.target_completion_date) if plan.target_completion_date else None,
         engagement_id=str(plan.engagement_id) if getattr(plan, "engagement_id", None) else None,
+        source_rule_ids=list(getattr(plan, "source_rule_ids", None) or []),
         steps=[_step_to_response(s) for s in (plan.steps or [])],
         created_at=plan.created_at.isoformat(),
         updated_at=plan.updated_at.isoformat(),
