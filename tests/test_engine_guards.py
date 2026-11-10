@@ -189,3 +189,13 @@ if __name__ == "__main__":
             print(f"FAIL {fn.__name__}: {exc}")
     print(f"{'ALL-PASS' if failed == 0 else 'FAILED'} ({len(fns) - failed}/{len(fns)})")
     sys.exit(1 if failed else 0)
+
+
+def test_product_scoring_allowlist_is_full_and_separate_from_legal_verification():
+    mod = _load_module()
+    scoring_ids = set(mod.PRODUCT_SCORING_RULE_IDS)
+    assert len(scoring_ids) == 82
+    assert not (scoring_ids & set(FORBIDDEN_RULE_IDS))
+    assert mod.LEGAL_SCORE_RELEASED is True
+    assert mod.VERIFIED_RULE_IDS == frozenset()
+    assert mod.legal_score_is_released() is True
