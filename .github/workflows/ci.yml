@@ -46,7 +46,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-asyncio pytest-cov==7.1.0 pytest-cov==7.1.0
+          pip install pytest pytest-asyncio pytest-cov==7.1.0
 
       - name: Compile check
         run: python -m compileall app/
@@ -206,7 +206,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-asyncio
+          pip install pytest pytest-asyncio pytest-cov==7.1.0
 
       - name: Compile check
         run: python -m compileall app/
