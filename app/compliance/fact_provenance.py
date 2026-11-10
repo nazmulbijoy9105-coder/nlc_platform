@@ -110,12 +110,14 @@ def coerce_company_profile_fact_value(fact_key: str, value: Any) -> Any:
 
     from app.rule_engine import CompanyProfile
 
-    if value is None:
-        return None
     annotation = get_type_hints(CompanyProfile).get(fact_key)
     if annotation is None:
         raise ValueError(f"Unsupported CompanyProfile fact key: {fact_key}")
     candidates = get_args(annotation) or (annotation,)
+    if value is None:
+        if type(None) in candidates:
+            return None
+        raise ValueError(f"Company fact {fact_key} cannot be null.")
     if datetime in candidates and isinstance(value, str):
         try:
             return datetime.fromisoformat(value)
