@@ -81,7 +81,7 @@ def test_pending_rule_cannot_generate_findings():
 
 def test_finding_pins_versions_legal_date_and_fact_provenance():
     fact = FactProvenance(
-        "financial_year_end", FactTrustLevel.DOCUMENT_BACKED,
+        "financial_year_end", FactTrustLevel.AUTHORIZED_DOCUMENT_BACKED,
         "uploaded:audited-accounts-2025.pdf", date(2026, 3, 1),
     )
     finding = ObligationFinding(
