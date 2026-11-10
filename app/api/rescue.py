@@ -422,6 +422,8 @@ async def update_rescue_step(
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
+    from app.models.enums import RescueStepStatus
+
     valid_statuses = tuple(item.value for item in RescueStepStatus)
     if body.status not in valid_statuses:
         raise HTTPException(
@@ -429,7 +431,6 @@ async def update_rescue_step(
             detail=f"Invalid status '{body.status}'. Must be one of: {valid_statuses}",
         )
 
-    from app.models.enums import RescueStepStatus
     plan = await rescue_svc.get_by_id_or_404(plan_id)
     await ensure_staff_company_scope(plan.company_id, current_user, db, additional_staff_id=plan.assigned_staff_id)
     await _assert_rescue_entitlement(plan.company_id, current_user, db)
