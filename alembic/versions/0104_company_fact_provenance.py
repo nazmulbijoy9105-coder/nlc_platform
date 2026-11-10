@@ -116,7 +116,7 @@ def upgrade() -> None:
     op.execute("GRANT SELECT, INSERT, UPDATE ON TABLE public.company_facts TO nlc_app_role")
     op.execute("REVOKE DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE public.company_facts FROM nlc_app_role")
     op.execute("""
-        CREATE OR REPLACE FUNCTION public.nlc_company_fact_validate_supersession()
+        CREATE OR REPLACE FUNCTION public.nlc_company_fact_validate_insert()
         RETURNS trigger
         LANGUAGE plpgsql
         SET search_path = pg_catalog, public
@@ -162,12 +162,12 @@ def upgrade() -> None:
         $function$
     """)
     op.execute("""
-        CREATE TRIGGER trg_company_facts_supersession_guard
+        CREATE TRIGGER trg_company_facts_insert_guard
         BEFORE INSERT ON public.company_facts
-        FOR EACH ROW EXECUTE FUNCTION public.nlc_company_fact_validate_supersession()
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_company_fact_validate_insert()
     """)
-    op.execute("REVOKE ALL ON FUNCTION public.nlc_company_fact_validate_supersession() FROM PUBLIC")
-    op.execute("GRANT EXECUTE ON FUNCTION public.nlc_company_fact_validate_supersession() TO nlc_app_role")
+    op.execute("REVOKE ALL ON FUNCTION public.nlc_company_fact_validate_insert() FROM PUBLIC")
+    op.execute("GRANT EXECUTE ON FUNCTION public.nlc_company_fact_validate_insert() TO nlc_app_role")
 
     op.execute("""
         CREATE OR REPLACE FUNCTION public.nlc_company_fact_immutable_fields()
@@ -221,8 +221,8 @@ def downgrade() -> None:
     op.drop_index("ix_company_facts_fact_key", table_name="company_facts")
     op.drop_index("ix_company_facts_company_id", table_name="company_facts")
     op.execute("DROP TRIGGER IF EXISTS trg_company_facts_immutable_source ON public.company_facts")
-    op.execute("DROP TRIGGER IF EXISTS trg_company_facts_supersession_guard ON public.company_facts")
-    op.execute("DROP FUNCTION IF EXISTS public.nlc_company_fact_validate_supersession()")
+    op.execute("DROP TRIGGER IF EXISTS trg_company_facts_insert_guard ON public.company_facts")
+    op.execute("DROP FUNCTION IF EXISTS public.nlc_company_fact_validate_insert()")
     op.execute("DROP FUNCTION IF EXISTS public.nlc_company_fact_immutable_fields()")
     op.execute("DROP POLICY IF EXISTS company_facts_staff_verification_update ON public.company_facts")
     op.execute("DROP POLICY IF EXISTS company_facts_actor_insert ON public.company_facts")
