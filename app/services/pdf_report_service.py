@@ -23,7 +23,7 @@ from app.rule_engine.engine import (
     AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
     CATEGORY_CAPS,
     LEGAL_SCORE_RELEASED,
-    VERIFIED_RULE_IDS,
+    PRODUCT_SCORING_RULE_IDS,
     RuleState,
 )
 from app.services.company_service import CompanyService
@@ -151,7 +151,7 @@ def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue
     """Generate a brief executive summary paragraph based on the company's status."""
     flag_count = len(flags) if flags else 0
     def verified_severity(flag):
-        if getattr(flag, "rule_id", "") not in VERIFIED_RULE_IDS:
+        if getattr(flag, "rule_id", "") not in PRODUCT_SCORING_RULE_IDS:
             return None
         return getattr(
             getattr(flag, "severity", None),
@@ -305,7 +305,7 @@ def _render_rescue_section(rescue_plan: Any) -> str:
 
 def _legal_score_is_released() -> bool:
     """Mirror the engine's two-part release gate using this module's testable inputs."""
-    return LEGAL_SCORE_RELEASED is True and bool(VERIFIED_RULE_IDS)
+    return LEGAL_SCORE_RELEASED is True and bool(PRODUCT_SCORING_RULE_IDS)
 
 
 def _verified_flag_score(flags: Any) -> tuple[int, bool]:
@@ -328,7 +328,7 @@ def _verified_flag_score(flags: Any) -> tuple[int, bool]:
             not active
             or state not in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             or eval_state != "VIOLATION"
-            or rule_id not in VERIFIED_RULE_IDS
+            or rule_id not in PRODUCT_SCORING_RULE_IDS
         ):
             continue
 
@@ -378,7 +378,7 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
     cat_deductions: dict[str, dict] = {}
     for f in (flags or []):
         rule_id = getattr(f, "rule_id", "") or ""
-        if rule_id not in VERIFIED_RULE_IDS:
+        if rule_id not in PRODUCT_SCORING_RULE_IDS:
             continue
 
         scoring_status = getattr(f, "scoring_status", None)
@@ -475,7 +475,7 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
 
 def _flag_impact_label(flag: Any) -> str:
     rule_id = getattr(flag, "rule_id", "") or ""
-    if not _legal_score_is_released() or rule_id not in VERIFIED_RULE_IDS:
+    if not _legal_score_is_released() or rule_id not in PRODUCT_SCORING_RULE_IDS:
         return "Not scored — pending independent legal approval"
     applied = getattr(
         flag,
