@@ -510,10 +510,13 @@ CAPITAL_INCREASE_NOTICE_DEADLINE_DAYS = 15  # Section 56: notice of increase
 SPECIAL_RESOLUTION_DEADLINE_DAYS = 15  # Companies Act 1994, Section 88 (15 days)
 
 REQUIRED_REGISTERS = [
-    "members", "directors", "charges", "transfers", "debentures",
+    "members", "charges", "transfers", "debentures",
     "minutes_agm", "minutes_board",
 ]
-CORE_REGISTERS = ["members", "directors", "charges", "minutes_agm"]
+# Director particulars are an RJSC filing event under Section 115, not an
+# internal register inferred from maintained_registers. DIR-001 evaluates
+# Form XII separately when a director appointment/change event exists.
+CORE_REGISTERS = ["members", "charges", "minutes_agm"]
 
 # Explicit counsel-authorized BLACK override allowlist. A rule being
 # marked BLACK in engine code is not sufficient authority to force a BLACK
@@ -1687,20 +1690,26 @@ class NLCRuleEngine:
                 self._add_flag(ComplianceFlag(
                     rule_id=rule_id,
                     flag_code=flag_code,
-                    severity=Severity.NOT_EVALUATED,
-                    score_impact=0,
+                    severity=Severity.YELLOW,
+                    score_impact=10,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=(
-                        f"Reported Form XII filing is not verified {delay} days after "
-                        f"the {change.event_type} event. Section 115(2) provides a "
-                        "14-day filing period; verify the event, liable filer, actual "
-                        "RJSC record, extension/correction and current law before any "
-                        "default or penalty conclusion."
+                        f"Verified RJSC filing evidence shows no Form XII filing "
+                        f"{delay} days after the {change.event_type} event. "
+                        "Section 115(2) provides a 14-day filing period. This is "
+                        "a filing-default assessment only; it does not invalidate "
+                        "the director appointment or determine a penalty."
                     ),
                     statutory_basis="Section 115(2), Companies Act 1994 (Bangladesh)",
-                    detail={"director_id": change.director_id, "delay": delay, "type": change.event_type},
-                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
-                    eval_state="UNKNOWN",
+                    detail={
+                        "director_id": change.director_id,
+                        "delay": delay,
+                        "type": change.event_type,
+                        "filing_status_verified": True,
+                        "filing_evidence_ref": change.form_filed_evidence_ref,
+                    },
+                    state=RuleState.NON_COMPLIANT,
+                    eval_state="VIOLATION",
                 ))
 
                 # >365 days is an NLC internal escalation threshold, not a
@@ -2071,25 +2080,25 @@ class NLCRuleEngine:
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description=f"{len(non_core_missing)} non-core register(s) missing: {', '.join(non_core_missing)}.",
-                statutory_basis="Section 34, Companies Act 1994 (Bangladesh)",
+                statutory_basis=(
+                    "Companies Act 1994 (Bangladesh) and applicable Articles; "
+                    "individual register duties require their own statutory mapping"
+                ),
                 detail={"missing": non_core_missing}
             ))
 
         if core_missing:
-            # P1 LEGAL FIX: Distinguish internal register-keeping from RJSC filing.
-            # The audit flagged that Section 115 is a FILING obligation (particulars
-            # of directors to RJSC), NOT an internal register-keeping provision.
-            # We now separate the two concepts in the description.
+            # Section 115(1) requires the internal directors' register;
+            # Section 115(2) separately requires the prescribed Registrar return
+            # and change notification (Form XII). DIR-001 evaluates the filing
+            # duty only; filing status does not prove the internal register exists.
             severity = Severity.RED  # legal: REG-002 downgraded BLACK -> RED
 
             # Categorize missing items by legal obligation type
             internal_registers = []
-            rjsc_filings = []
             for r in core_missing:
                 if r in ("members", "charges", "minutes_agm", "minutes_board"):
                     internal_registers.append(r)
-                elif r == "directors":
-                    rjsc_filings.append(r)
 
             parts = []
             if "members" in internal_registers:
@@ -2098,8 +2107,6 @@ class NLCRuleEngine:
                 parts.append("Charges register (Sec 174 — internal)")
             if "minutes_agm" in internal_registers or "minutes_board" in internal_registers:
                 parts.append("Meeting minutes (Sec 89 — internal)")
-            if "directors" in rjsc_filings:
-                parts.append("Director particulars filing (Sec 115 — RJSC filing)")
 
             self._add_flag(ComplianceFlag(
                 rule_id="REG-002",
@@ -2110,15 +2117,17 @@ class NLCRuleEngine:
                 description=(
                     f"Core statutory records missing: {', '.join(core_missing)}. "
                     f"Legal basis: {'; '.join(parts)}. "
-                    f"Note: internal register-keeping (Sec 34/89/174) is distinct "
-                    f"from RJSC filing obligations (Sec 115/163-165). "
-                    f"Each missing item is an independent legal obligation."
+                    f"Director particulars/Form XII are evaluated separately by DIR-001 "
+                    f"under Section 115; they are not inferred from the internal "
+                    f"register inventory. Each missing internal record is assessed "
+                    f"independently."
                 ),
-                statutory_basis="Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Sections 34, 89, 174, Companies Act 1994 (Bangladesh)",
                 detail={
                     "missing_core": core_missing,
                     "internal_registers": internal_registers,
-                    "rjsc_filings": rjsc_filings,
+                    "rjsc_filings": [],
+                    "director_filing_rule_id": "DIR-001",
                     "obligation_types_distinguished": True,
                 }
             ))

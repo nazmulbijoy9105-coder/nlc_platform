@@ -15,7 +15,7 @@ import re
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import and_, not_, or_, select
+from sqlalchemy import and_, or_, select
 
 if TYPE_CHECKING:
     from app.models.infrastructure import UserActivityLog
@@ -342,12 +342,16 @@ class NotificationService(BaseService[Notification]):
         operational_prefix = Notification.notification_type.op("~")(
             r"^(BILLING_|PAYMENT_|SUBSCRIPTION_|ACCOUNT_SECURITY_)"
         )
-        legal_type_pattern = Notification.notification_type.op("~")(
-            r"(COMPLIANCE|LEGAL|RISK|RULE_ALERT|TAX_|VAT_|AGM_|BSEC_|LABOUR_|LABOR_|TRADE_LICENCE_|TRADE_LICENSE_)"
+        legal_type_tokens = (
+            "COMPLIANCE", "LEGAL", "RISK", "RULE_ALERT", "TAX_", "VAT_",
+            "AGM_", "BSEC_", "LABOUR_", "LABOR_", "TRADE_LICENCE_", "TRADE_LICENSE_",
         )
         eligible_operational = and_(
             Notification.related_flag_id.is_(None),
-            not_(legal_type_pattern),
+            *(
+                Notification.notification_type.not_like(f"%{token}%")
+                for token in legal_type_tokens
+            ),
             or_(
                 Notification.notification_type.in_(NON_LEGAL_OPERATIONAL_NOTIFICATION_TYPES),
                 operational_prefix,
