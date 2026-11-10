@@ -34,6 +34,7 @@ from app.services.compliance_calendar import (
     VERIFIED_CALENDAR_EVENT_TYPES,
     VERIFIED_CALENDAR_RULE_IDS,
     APPROVED_CALENDAR_EVENT_DEFINITIONS,
+    calendar_manifest_is_released,
 )
 from app.services.notification_service import ActivityService
 from app.services.pdf_report_service import PDFReportService
@@ -48,12 +49,7 @@ logger = structlog.get_logger(__name__)
 
 def _require_legal_dashboard_release(*, deadlines: bool = False) -> None:
     """Do not expose cached statutory risk or deadline aggregates before release."""
-    if deadlines and (
-        LEGAL_CALENDAR_RELEASED is not True
-        or not VERIFIED_CALENDAR_EVENT_TYPES
-        or not VERIFIED_CALENDAR_RULE_IDS
-        or not APPROVED_CALENDAR_EVENT_DEFINITIONS
-    ):
+    if deadlines and not calendar_manifest_is_released():
         raise HTTPException(
             status_code=503,
             detail=(
