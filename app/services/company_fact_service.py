@@ -69,7 +69,10 @@ class CompanyFactService:
     ) -> CompanyFact:
         normalized_key = self._normalize_fact_key(fact_key)
         try:
+            try:
             coerce_company_profile_fact_value(normalized_key, fact_value)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         fact_value = jsonable_encoder(fact_value)
