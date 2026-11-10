@@ -559,7 +559,7 @@ async def get_company_lifecycle_activity(
             "status": (
                 "attention_required"
                 if event.dead_lettered_at is not None
-                else "completed"
+                else "dispatched"
                 if event.processed_at is not None
                 else "pending"
             ),
