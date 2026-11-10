@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import Iterable
 
+ScoringItem = tuple[str, int] | tuple[str, int, str | None]
+
 SCORING_SPEC_VERSION = "2.0.0"
 SCORING_BASE = 100
 CATEGORY_ORDER = (
@@ -48,7 +50,7 @@ def category_for_rule(rule_id: str) -> str | None:
     return matches[0] if matches else None
 
 
-def _normalise_item(item: tuple) -> tuple[str, int, str | None]:
+def _normalise_item(item: ScoringItem) -> tuple[str, int, str | None]:
     if len(item) == 2:
         rule_id, impact = item
         event_key = None
@@ -61,7 +63,7 @@ def _normalise_item(item: tuple) -> tuple[str, int, str | None]:
     )
 
 
-def duplicate_event_indices(items: Iterable[tuple]) -> set[int]:
+def duplicate_event_indices(items: Iterable[ScoringItem]) -> set[int]:
     """Return suppressed indices for explicit shared scoring_event_key values.
 
     Only an explicit scoring_event_key deduplicates. A generic event_id is not
@@ -92,7 +94,7 @@ def duplicate_event_indices(items: Iterable[tuple]) -> set[int]:
     return suppressed
 
 
-def allocate_flag_deductions(items: Iterable[tuple]) -> list[int]:
+def allocate_flag_deductions(items: Iterable[ScoringItem]) -> list[int]:
     """Allocate per-finding deductions, preserving input order.
 
     Per-category caps apply first. A single global budget of 100 then applies
@@ -129,7 +131,7 @@ def allocate_flag_deductions(items: Iterable[tuple]) -> list[int]:
     return applied
 
 
-def category_deductions_from_flags(items: Iterable[tuple]) -> dict[str, int]:
+def category_deductions_from_flags(items: Iterable[ScoringItem]) -> dict[str, int]:
     rows = list(items)
     allocated = allocate_flag_deductions(rows)
     totals = {name: 0 for name in CATEGORY_ORDER}
