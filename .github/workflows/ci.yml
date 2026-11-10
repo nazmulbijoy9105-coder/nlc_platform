@@ -105,13 +105,26 @@ jobs:
             alembic/versions/0088_strict_activity_log_actor_tenant.py \
             alembic/versions/0082_agm_share_event_provenance.py
 
-      - name: Type-check scoring release services
+      - name: Type-check scoring and statutory release services
         run: |
           mypy app/services/company_service.py \
             app/services/pdf_report_service.py \
             app/services/rescue_service.py \
             app/services/filing_service.py \
+            app/services/compliance_calendar.py \
+            app/services/legal_deadline_engine.py \
             app/rule_engine/engine.py
+          ruff check --select E4,E7,E9,F \
+            app/services/compliance_calendar.py \
+            app/services/legal_deadline_engine.py \
+            app/api/calendar.py app/api/rescue.py \
+            app/models/compliance_calendar.py app/models/rescue.py \
+            tests/unit/test_legal_deadline_engine.py \
+            tests/unit/test_legal_calendar_gate.py \
+            tests/unit/test_legal_rescue_gate.py \
+            tests/integration/test_compliance_calendar.py \
+            alembic/versions/0091_calendar_legal_provenance.py \
+            alembic/versions/0092_rescue_source_rule_ids.py
 
       - name: Verify single Alembic head
         run: |
