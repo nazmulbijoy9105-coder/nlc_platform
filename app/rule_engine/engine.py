@@ -3486,7 +3486,7 @@ class NLCRuleEngine:
             elif not legal_score_is_released():
                 disposition, reason = "BLOCKED", "LEGAL_SCORE_NOT_RELEASED"
             elif flag.rule_id not in PRODUCT_SCORING_RULE_IDS:
-                disposition, reason = "BLOCKED", "RULE_NOT_IN_VERIFIED_ALLOWLIST"
+                disposition, reason = "BLOCKED", "RULE_NOT_IN_PRODUCT_SCORING_ALLOWLIST"
             elif score.risk_band not in (Severity.RED, Severity.BLACK):
                 disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
             elif severity not in (Severity.RED.value, Severity.BLACK.value):
