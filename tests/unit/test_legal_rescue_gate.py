@@ -34,10 +34,12 @@ def test_rescue_service_requires_released_rule_findings_and_rule_linked_steps(mo
         conditional_applies=True,
         state="NON_COMPLIANT",
         eval_state="VIOLATION",
+        severity="RED",
         score_impact=5,
     )
     output = SimpleNamespace(
-        score_breakdown=SimpleNamespace(risk_band="RED"),
+        company_id="company-1",
+        score_breakdown=SimpleNamespace(risk_band="RED", final_score=40),
         flags=[flag],
         rescue_sequence=[{"title": "Remediate AGM", "related_rules": ["AGM-001"]}],
     )
@@ -60,7 +62,8 @@ def test_rescue_service_rejects_unknown_or_unapproved_rule_links(monkeypatch):
         score_impact=0,
     )
     output = SimpleNamespace(
-        score_breakdown=SimpleNamespace(risk_band="BLACK"),
+        company_id="company-1",
+        score_breakdown=SimpleNamespace(risk_band="BLACK", final_score=10),
         flags=[unknown_flag],
         rescue_sequence=[{"title": "Remediate", "related_rules": ["AGM-001"]}],
     )
@@ -85,13 +88,15 @@ def test_rescue_service_rejects_unlinked_steps_and_non_red_black_risk(monkeypatc
     )
     with pytest.raises(ValueError):
         validate_rescue_engine_output(SimpleNamespace(
-            score_breakdown=SimpleNamespace(risk_band="YELLOW"),
+            company_id="company-1",
+            score_breakdown=SimpleNamespace(risk_band="YELLOW", final_score=80),
             flags=[flag],
             rescue_sequence=[{"title": "Remediate", "related_rules": ["AGM-001"]}],
         ))
     with pytest.raises(ValueError):
         validate_rescue_engine_output(SimpleNamespace(
-            score_breakdown=SimpleNamespace(risk_band="RED"),
+            company_id="company-1",
+            score_breakdown=SimpleNamespace(risk_band="RED", final_score=40),
             flags=[flag],
             rescue_sequence=[{"title": "Unlinked remediation"}],
         ))
