@@ -175,10 +175,11 @@ def test_source_specific_penalty_service_requires_event_type_allowlist(monkeypat
 
 
 def test_calendar_release_requires_exact_nonempty_approved_manifest(monkeypatch):
-    monkeypatch.setattr(calendar_api, "LEGAL_CALENDAR_RELEASED", True)
-    monkeypatch.setattr(calendar_api, "VERIFIED_CALENDAR_EVENT_TYPES", frozenset({"FIRST_AGM"}))
-    monkeypatch.setattr(calendar_api, "VERIFIED_CALENDAR_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(calendar_api, "APPROVED_CALENDAR_EVENT_DEFINITIONS", ())
+    monkeypatch.setattr(calendar_service, "LEGAL_CALENDAR_RELEASED", True)
+    monkeypatch.setattr(calendar_service, "VERIFIED_CALENDAR_EVENT_TYPES", frozenset({"FIRST_AGM"}))
+    monkeypatch.setattr(calendar_service, "VERIFIED_CALENDAR_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(calendar_service, "APPROVED_CALENDAR_EVENT_DEFINITIONS", ())
+
     try:
         calendar_api._require_calendar_release()
     except HTTPException as exc:
