@@ -345,8 +345,9 @@ async def get_active_plan(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    if current_user.role == "LEGAL_STAFF":
+        await ensure_staff_company_scope(company_id, current_user, db)
     _require_legal_release()
-    await _assert_rescue_entitlement(company_id, current_user, db)
     rescue_svc = RescueService(db)
     company_svc = CompanyService(db)
 
