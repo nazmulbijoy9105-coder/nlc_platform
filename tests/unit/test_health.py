@@ -107,3 +107,48 @@ async def test_full_health_handles_celery_probe_exception(monkeypatch):
     assert response.status_code == status.HTTP_200_OK
     assert b'"status":"degraded"' in response.body
     assert b"Celery check skipped" in response.body
+
+
+@pytest.mark.asyncio
+async def test_s3_check_reports_unconfigured_as_ok(monkeypatch):
+    monkeypatch.setattr(health.settings, "aws_s3_bucket", None)
+
+    result = await health._check_s3()
+
+    assert result.status == "ok"
+    assert "not configured" in result.detail.lower()
+
+
+def test_celery_check_reports_healthy_worker(monkeypatch):
+    from app.worker import celery_app
+
+    monkeypatch.setattr(
+        celery_app,
+        "check_worker_health",
+        lambda: {
+            "status": "healthy",
+            "active_workers": 1,
+            "active_tasks": 2,
+        },
+    )
+
+    result = health._check_celery_workers()
+
+    assert result.status == "ok"
+    assert "Responding workers: 1" in result.detail
+    assert "active tasks: 2" in result.detail
+
+
+def test_celery_check_degrades_when_no_workers_respond(monkeypatch):
+    from app.worker import celery_app
+
+    monkeypatch.setattr(
+        celery_app,
+        "check_worker_health",
+        lambda: {"status": "no_workers"},
+    )
+
+    result = health._check_celery_workers()
+
+    assert result.status == "degraded"
+    assert "No responding Celery workers" in result.detail
