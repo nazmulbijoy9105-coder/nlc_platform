@@ -119,7 +119,6 @@ jobs:
             alembic/versions/0091_calendar_legal_provenance.py \
             alembic/versions/0092_rescue_source_rule_ids.py \
             alembic/versions/0093_verified_rule_audit_view.py
-            app/rule_engine/engine.py
 
       - name: Verify single Alembic head
         run: |
