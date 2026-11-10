@@ -435,8 +435,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "BLACK" if score <= 29 else "RED" if score <= 49 else "YELLOW" if score <= 69 else "GREEN"
             )
         # Defense in depth: persistence independently enforces the
-        # counsel-approved release switch; a provisional engine band cannot
-        # publish a numeric score while legal approval is disabled.
+        # product-controlled release switch; a provisional engine band cannot
+        # publish a numeric score while product scoring is disabled.
         if not legal_score_is_released():
             risk_band = RiskBand.NOT_EVALUATED
         score_for_current = (
@@ -521,7 +521,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     statutory_basis=(
                         flag.statutory_basis
                         if legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
-                        else "NOT VALIDATED — independent counsel review required"
+                        else "Product scoring is disabled or this rule is outside the scoring allowlist."
                     ),
                     severity=SeverityLevel(flag.severity)
                     if legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
