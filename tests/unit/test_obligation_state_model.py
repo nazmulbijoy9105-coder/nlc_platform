@@ -124,3 +124,37 @@ def test_waived_and_exempted_are_distinct_statuses():
         ObligationState(
             Applicability.APPLIES, EvidenceState.NOT_PROVIDED, ObligationStatus.EXEMPTED,
         )
+
+
+def test_uploaded_but_unverified_fact_is_marked_unverified_in_finding():
+    fact = FactProvenance(
+        "agm_minutes", FactTrustLevel.AUTHORIZED_DOCUMENT_BACKED,
+        "upload:agm-minutes-2025", date(2026, 11, 11),
+        verification_status=FactVerificationStatus.UNVERIFIED,
+        document_id="doc-1", authorized_uploader_id="company-admin-1",
+        uploaded_at="2026-11-11T10:00:00+00:00",
+    )
+    finding = ObligationFinding(
+        "agm-2025", "AGM-001", "2.1", "bd-company-law-2026.11",
+        date(2025, 12, 31), (fact,),
+        ObligationState(
+            Applicability.APPLIES, EvidenceState.NOT_PROVIDED, ObligationStatus.OVERDUE,
+        ),
+    )
+    assert finding.contains_unverified_facts
+    assert "verification is pending" in finding.fact_basis_disclosure[0]
+
+
+def test_user_asserted_fact_is_disclosed_on_finding():
+    fact = FactProvenance(
+        "incorporation_date", FactTrustLevel.USER_ASSERTED,
+        "company-onboarding", date(2026, 11, 11),
+    )
+    finding = ObligationFinding(
+        "agm-first", "AGM-001", "2.1", "bd-company-law-2026.11",
+        date(2026, 11, 11), (fact,),
+        ObligationState(
+            Applicability.APPLIES, EvidenceState.NOT_PROVIDED, ObligationStatus.OVERDUE,
+        ),
+    )
+    assert "user-asserted" in finding.fact_basis_disclosure[0]
