@@ -91,7 +91,7 @@ class RescuePlanCreateRequest(BaseModel):
 
 
 class RescueStepUpdateRequest(BaseModel):
-    status: str = Field(description="PENDING | IN_PROGRESS | COMPLETED | BLOCKED")
+    status: str = Field(description="PENDING | IN_PROGRESS | COMPLETE | BLOCKED")
     completion_notes: str | None = None
     completion_document_id: uuid.UUID | None = None
 
@@ -406,7 +406,7 @@ async def get_rescue_plan(
     dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))],
     summary="Update the status of a rescue step",
     description=(
-        "Updating Step 8 to COMPLETED automatically triggers compliance re-evaluation "
+        "Updating the final rescue step to COMPLETE automatically triggers compliance re-evaluation "
         "via Celery (AI Constitution: deterministic rule engine, not AI)."
     ),
 )
@@ -422,7 +422,7 @@ async def update_rescue_step(
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
-    valid_statuses = ("PENDING", "IN_PROGRESS", "COMPLETE", "BLOCKED")
+    valid_statuses = tuple(item.value for item in RescueStepStatus)
     if body.status not in valid_statuses:
         raise HTTPException(
             status_code=400,
@@ -497,7 +497,7 @@ async def create_engagement_from_rescue(
 
     plan = await rescue_svc.get_by_id_or_404(plan_id)
     await _assert_rescue_entitlement(plan.company_id, current_user, db)
-    engagement = await rescue_svc.create_engagement_from_rescue(  # type: ignore
+    engagement = await rescue_svc.create_engagement_from_rescue(
         rescue_plan=plan,
         confirmed_fee_bdt=body.confirmed_fee_bdt,
         payment_terms=body.payment_terms,
