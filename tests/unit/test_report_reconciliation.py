@@ -30,7 +30,7 @@ def _enable_authorized_score_for_report_test(monkeypatch, rule_ids):
     # fixture. Production defaults remain unreleased and fail closed.
     monkeypatch.setattr("app.services.pdf_report_service.LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
-        "app.services.pdf_report_service.VERIFIED_RULE_IDS",
+        "app.services.pdf_report_service.PRODUCT_SCORING_RULE_IDS",
         frozenset(rule_ids),
     )
 
