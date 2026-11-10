@@ -132,3 +132,21 @@ def test_product_scoring_is_released_without_legal_verification_allowlist(monkey
     assert engine_module.legal_score_is_released() is True
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert result.final_score == 75
+
+
+def test_product_owner_black_override_does_not_require_legal_verification(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
+    flag = _engine_flag(rule_id="INC-003", severity=Severity.BLACK, black=True)
+
+    result = NLCRuleEngine(today=date(2026, 11, 5))._calculate_score(
+        [flag], CompanyProfile(company_id="x", company_name="Test")
+    )
+
+    assert engine_module.legal_score_is_released() is True
+    assert engine_module.VERIFIED_RULE_IDS == frozenset()
+    assert engine_module.AUTHORIZED_BLACK_OVERRIDE_RULE_IDS == frozenset({"INC-003"})
+    assert result.override_applied is True
+    assert result.black_flag_count == 1
+    assert result.final_score == 0
