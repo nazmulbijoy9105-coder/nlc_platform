@@ -17,14 +17,34 @@ class CompanyFactService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
+    async def _latest_fact_id(
+        self, company_id: uuid.UUID, fact_key: str
+    ) -> uuid.UUID | None:
+        result = await self.db.execute(
+            select(CompanyFact.id)
+            .where(
+                CompanyFact.company_id == company_id,
+                CompanyFact.fact_key == fact_key,
+                CompanyFact.is_current.is_(True),
+            )
+            .order_by(CompanyFact.created_at.desc(), CompanyFact.id.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
     async def assert_fact(
         self, *, company_id: uuid.UUID, fact_key: str, fact_value: Any,
         actor_id: uuid.UUID, observed_on: date, source_reference: str | None = None,
     ) -> CompanyFact:
+        normalized_key = fact_key.strip()
+        if not normalized_key:
+            raise HTTPException(status_code=422, detail="fact_key cannot be blank.")
+        previous_id = await self._latest_fact_id(company_id, normalized_key)
         fact = CompanyFact(
-            company_id=company_id, fact_key=fact_key.strip(), fact_value=fact_value,
+            company_id=company_id, fact_key=normalized_key, fact_value=fact_value,
             trust_level="USER_ASSERTED", asserted_by=actor_id, observed_on=observed_on,
             source_reference=source_reference, verification_status="UNVERIFIED",
+            supersedes_fact_id=previous_id,
         )
         self.db.add(fact)
         await self.db.flush()
@@ -51,9 +71,13 @@ class CompanyFactService:
                 status_code=422,
                 detail="The source document has no recorded uploader/timestamp and cannot establish document provenance.",
             )
+        normalized_key = fact_key.strip()
+        if not normalized_key:
+            raise HTTPException(status_code=422, detail="fact_key cannot be blank.")
+        previous_id = await self._latest_fact_id(document.company_id, normalized_key)
         fact = CompanyFact(
             company_id=document.company_id,
-            fact_key=fact_key.strip(),
+            fact_key=normalized_key,
             fact_value=fact_value,
             trust_level="AUTHORIZED_DOCUMENT_BACKED",
             asserted_by=actor_id,
@@ -63,6 +87,7 @@ class CompanyFactService:
             authorized_uploader_id=document.created_by,
             uploaded_at=document.created_at,
             verification_status="UNVERIFIED",
+            supersedes_fact_id=previous_id,
         )
         self.db.add(fact)
         await self.db.flush()
@@ -108,9 +133,12 @@ class CompanyFactService:
         result = await self.db.execute(
             select(CompanyFact)
             .where(CompanyFact.company_id == company_id, CompanyFact.is_current.is_(True))
-            .order_by(CompanyFact.fact_key, CompanyFact.created_at.desc())
+            .order_by(CompanyFact.fact_key, CompanyFact.created_at.desc(), CompanyFact.id.desc())
         )
-        return list(result.scalars().all())
+        latest: dict[str, CompanyFact] = {}
+        for fact in result.scalars().all():
+            latest.setdefault(fact.fact_key, fact)
+        return list(latest.values())
 
 
 def fact_response(fact: CompanyFact) -> dict[str, Any]:
