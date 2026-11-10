@@ -1,6 +1,7 @@
 import csv
 import io
 import time
+import uuid
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -14,8 +15,8 @@ from app.core.security import hash_password, validate_password_strength
 from app.models.database import set_admin_context
 from app.models.infrastructure import UserActivityLog
 from app.models.user import User
-from app.services.user_service import UserService
 from app.rule_engine.engine import legal_score_is_released
+from app.services.user_service import UserService
 
 router = APIRouter()
 
@@ -140,8 +141,6 @@ async def replay_dead_lettered_domain_event(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     """Requeue only an unprocessed dead-letter event; never rewrite its payload."""
-    import uuid
-
     from app.models.domain_event import DomainEventOutbox
 
     try:
