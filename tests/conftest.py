@@ -110,7 +110,10 @@ async def test_engine():
             # Quick connectivity check
             await conn.execute(text("SELECT 1"))
     except Exception as e:
-        pytest.skip(f"Test database not reachable: {e}. Run: make migrate (test DB)")
+        message = f"Test database not reachable: {e}. Run: make migrate (test DB)"
+        if os.getenv("CI", "").lower() == "true":
+            pytest.fail(message, pytrace=False)
+        pytest.skip(message)
 
     # Build/upgrade schema from migrations (idempotent: no-op when already at head).
     # Subprocess avoids event-loop clashes with the async alembic/env.py.
