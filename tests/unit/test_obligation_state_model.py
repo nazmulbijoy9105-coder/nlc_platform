@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timezone
 
 import pytest
 
@@ -82,8 +82,15 @@ def test_pending_rule_cannot_generate_findings():
 
 def test_finding_pins_versions_legal_date_and_fact_provenance():
     fact = FactProvenance(
-        "financial_year_end", FactTrustLevel.AUTHORIZED_DOCUMENT_BACKED,
-        "uploaded:audited-accounts-2025.pdf", date(2026, 3, 1),
+        fact_key="financial_year_end",
+        value="2025-12-31",
+        trust_level=FactTrustLevel.AUTHORIZED_DOCUMENT_BACKED,
+        asserted_by="company-admin-1",
+        observed_on=date(2026, 3, 1),
+        source_reference="uploaded:audited-accounts-2025.pdf",
+        document_id="doc-annual-accounts",
+        authorized_uploader_id="company-admin-1",
+        uploaded_at=datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc),
     )
     finding = ObligationFinding(
         "annual-return-2025", "AR-001", "1.0", "bd-company-law-2026.11",
@@ -99,8 +106,12 @@ def test_finding_pins_versions_legal_date_and_fact_provenance():
 
 def test_user_asserted_fact_is_flagged_on_finding():
     fact = FactProvenance(
-        "has_employees", FactTrustLevel.USER_ASSERTED,
-        "company-onboarding-questionnaire", date(2026, 11, 11),
+        fact_key="has_employees",
+        value=True,
+        trust_level=FactTrustLevel.USER_ASSERTED,
+        asserted_by="company-admin-1",
+        source_reference="company-onboarding-questionnaire",
+        observed_on=date(2026, 11, 11),
     )
     finding = ObligationFinding(
         "labour-registration", "LBR-001", "1.0", "bd-company-law-2026.11",
@@ -128,11 +139,16 @@ def test_waived_and_exempted_are_distinct_statuses():
 
 def test_uploaded_but_unverified_fact_is_marked_unverified_in_finding():
     fact = FactProvenance(
-        "agm_minutes", FactTrustLevel.AUTHORIZED_DOCUMENT_BACKED,
-        "upload:agm-minutes-2025", date(2026, 11, 11),
+        fact_key="agm_minutes",
+        value={"document": "agm-minutes-2025"},
+        trust_level=FactTrustLevel.AUTHORIZED_DOCUMENT_BACKED,
+        asserted_by="company-admin-1",
+        source_reference="upload:agm-minutes-2025",
+        observed_on=date(2026, 11, 11),
         verification_status=FactVerificationStatus.UNVERIFIED,
-        document_id="doc-1", authorized_uploader_id="company-admin-1",
-        uploaded_at="2026-11-11T10:00:00+00:00",
+        document_id="doc-1",
+        authorized_uploader_id="company-admin-1",
+        uploaded_at=datetime(2026, 11, 11, 10, 0, tzinfo=timezone.utc),
     )
     finding = ObligationFinding(
         "agm-2025", "AGM-001", "2.1", "bd-company-law-2026.11",
@@ -147,8 +163,12 @@ def test_uploaded_but_unverified_fact_is_marked_unverified_in_finding():
 
 def test_user_asserted_fact_is_disclosed_on_finding():
     fact = FactProvenance(
-        "incorporation_date", FactTrustLevel.USER_ASSERTED,
-        "company-onboarding", date(2026, 11, 11),
+        fact_key="incorporation_date",
+        value="2020-01-01",
+        trust_level=FactTrustLevel.USER_ASSERTED,
+        asserted_by="company-admin-1",
+        source_reference="company-onboarding",
+        observed_on=date(2026, 11, 11),
     )
     finding = ObligationFinding(
         "agm-first", "AGM-001", "2.1", "bd-company-law-2026.11",
