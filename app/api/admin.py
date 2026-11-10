@@ -21,7 +21,11 @@ router = APIRouter()
 
 @router.get("/domain-events")
 async def list_domain_event_operations(
-    status_filter: str = Query(default="all", alias="status", pattern="^(all|pending|dispatched|dead_lettered)$"),
+    status_filter: str = Query(
+        default="all",
+        alias="status",
+        pattern="^(all|pending|dispatched|dead_lettered)$",
+    ),
     limit: int = Query(default=50, ge=1, le=200),
     admin=Depends(require_super_admin),
     db: AsyncSession = Depends(get_db_for_user),
@@ -125,11 +129,12 @@ async def replay_dead_lettered_domain_event(
     event.last_error = None
     event.last_replayed_at = now
     event.replay_count += 1
+    replay_count = event.replay_count
     await db.commit()
     return {
         "event_id": str(event.id),
         "status": "queued_for_replay",
-        "replay_count": event.replay_count,
+        "replay_count": replay_count,
     }
 
 
