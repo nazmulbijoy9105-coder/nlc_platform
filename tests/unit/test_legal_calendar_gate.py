@@ -7,10 +7,6 @@ from app.services.compliance_calendar import (
     LEGAL_CALENDAR_RELEASED,
     VERIFIED_CALENDAR_EVENT_TYPES,
     VERIFIED_PENALTY_EVENT_TYPES,
-    APPROVED_CALENDAR_EVENT_DEFINITIONS,
-    APPROVED_PENALTY_RULES,
-    VERIFIED_CALENDAR_RULE_IDS,
-    VERIFIED_PENALTY_RULE_IDS,
     _generate_calendar,
     calculate_penalty,
 )
@@ -151,11 +147,34 @@ def test_source_specific_penalty_service_requires_event_type_allowlist(monkeypat
         trigger_evidence_verified=True,
     ) == Decimal("100.00")
 
+    # A registered rule is still rejected when the event is not applicable
+    # or the caller mutates any source/formula field.
+    assert calendar_service.calculate_rule_penalty(
+        rule,
+        event_type="FIRST_AGM",
+        days_overdue=20,
+        due_date=date(2026, 1, 1),
+        trigger_date=date(2026, 1, 1),
+        as_of=date(2026, 1, 21),
+        applicable=False,
+        trigger_evidence_verified=True,
+    ) is None
+    from dataclasses import replace
+    forged = replace(rule, fixed_amount=Decimal("999"))
+    assert calendar_service.calculate_rule_penalty(
+        forged,
+        event_type="FIRST_AGM",
+        days_overdue=20,
+        due_date=date(2026, 1, 1),
+        trigger_date=date(2026, 1, 1),
+        as_of=date(2026, 1, 21),
+        applicable=True,
+        trigger_evidence_verified=True,
+    ) is None
+
 
 
 def test_calendar_release_requires_exact_nonempty_approved_manifest(monkeypatch):
-    from app.services import compliance_calendar as calendar_service
-
     monkeypatch.setattr(calendar_api, "LEGAL_CALENDAR_RELEASED", True)
     monkeypatch.setattr(calendar_api, "VERIFIED_CALENDAR_EVENT_TYPES", frozenset({"FIRST_AGM"}))
     monkeypatch.setattr(calendar_api, "VERIFIED_CALENDAR_RULE_IDS", frozenset({"AGM-001"}))
