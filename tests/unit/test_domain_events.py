@@ -106,7 +106,10 @@ def test_lifecycle_event_contracts_route_to_deterministic_consumers() -> None:
         DomainEventType.COMPANY_CHARGE_RECORDED,
         DomainEventType.COMPANY_CHARGE_VERIFIED,
     }.issubset(REASSESSMENT_EVENTS)
-    assert FILING_RECEIPT_EVENTS == {DomainEventType.FILING_RECEIPT_RECORDED}
+    assert {
+        DomainEventType.FILING_RECEIPT_RECORDED,
+        DomainEventType.ANNUAL_RETURN_FILED,
+    }.issubset(FILING_RECEIPT_EVENTS)
     assert EVIDENCE_VERIFICATION_EVENTS == {
         DomainEventType.EVIDENCE_VERIFICATION_COMPLETED
     }
