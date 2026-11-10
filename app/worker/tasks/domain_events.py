@@ -32,7 +32,7 @@ FILING_RECEIPT_EVENTS = {"filing.receipt.recorded", "filing.annual_return.filed"
 EVIDENCE_VERIFICATION_EVENTS = {
     "evidence.verification.completed",
     "company.fact.verified",
-    "company.charge.evidence_verified",
+    "company.charge.evidence_state_changed",
 }
 
 
