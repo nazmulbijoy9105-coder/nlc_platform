@@ -108,7 +108,7 @@ def _applied_score_impacts(flags) -> list[dict]:
             results.append({"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"})
             continue
         if flag.rule_id not in PRODUCT_SCORING_RULE_IDS:
-            results.append({"applied": 0, "status": "EXCLUDED_UNVERIFIED_RULE"})
+            results.append({"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"})
             continue
 
         severity_value = getattr(
