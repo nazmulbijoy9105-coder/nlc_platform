@@ -205,7 +205,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
         latest_facts: dict[str, CompanyFact] = {}
         for fact in fact_result.scalars().all():
             latest_facts.setdefault(fact.fact_key, fact)
-        current_facts = list(latest_facts.values())
+        current_facts = [
+            fact for fact in latest_facts.values()
+            if fact.verification_status not in {"REJECTED", "SUPERSEDED"}
+        ]
         used_facts = []
         for fact in current_facts:
             if fact.fact_key in profile_data:
