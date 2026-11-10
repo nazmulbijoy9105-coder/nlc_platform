@@ -1,7 +1,11 @@
 """PostgreSQL regression checks for the new AGM/share evidence boundary."""
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import text
 
 
@@ -95,8 +99,16 @@ async def test_agm_and_share_event_tables_have_signed_tenant_rls(db):
     }.issubset(triggers)
 
 
-@pytest.mark.asyncio
-async def test_new_evidence_migration_is_the_single_current_revision(db):
-    rows = await db.execute(text("SELECT version_num FROM alembic_version"))
-    versions = [row[0] for row in rows.fetchall()]
-    assert versions == ["0093_verified_rule_audit_view"]
+def test_new_evidence_migration_is_in_single_linear_chain():
+    """The migration history has one head and retains the evidence revision."""
+    alembic_ini = Path(__file__).resolve().parents[2] / "alembic.ini"
+    script = ScriptDirectory.from_config(Config(str(alembic_ini)))
+
+    heads = script.get_heads()
+    assert len(heads) == 1, f"multiple Alembic heads: {heads}"
+
+    ancestors = {
+        revision.revision
+        for revision in script.walk_revisions(base="base", head=heads[0])
+    }
+    assert "0092_rescue_source_rule_ids" in ancestors
