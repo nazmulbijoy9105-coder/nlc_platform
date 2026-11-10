@@ -93,7 +93,7 @@ def event_loop():
 
 
 @pytest_asyncio.fixture(scope="session")
-async def test_engine():
+async def test_engine(request):
     """
     Async engine pointing at nlc_test database.
     NullPool ensures no connection leaks between tests.
@@ -104,13 +104,28 @@ async def test_engine():
         poolclass=NullPool,
     )
 
+    # These files prove tenant authorization and must never silently skip in CI.
+    security_test_files = {"test_rjsc_forms_idor.py", "test_service_data_leak.py"}
+    security_tests_selected = any(
+        getattr(item, "path", None) is not None
+        and item.path.name in security_test_files
+        for item in request.session.items
+    )
+    ci_security_run = os.getenv("CI", "").lower() == "true" and security_tests_selected
+
     # Run migrations on test DB
     try:
         async with engine.begin() as conn:
             # Quick connectivity check
             await conn.execute(text("SELECT 1"))
     except Exception as e:
-        pytest.skip(f"Test database not reachable: {e}. Run: make migrate (test DB)")
+        message = f"Test database not reachable: {e}. Run: make migrate (test DB)"
+        if ci_security_run or (
+            os.getenv("CI", "").lower() == "true"
+            and os.getenv("DATABASE_URL_TEST")
+        ):
+            pytest.fail(message, pytrace=False)
+        pytest.skip(message)
 
     # Build/upgrade schema from migrations (idempotent: no-op when already at head).
     # Subprocess avoids event-loop clashes with the async alembic/env.py.

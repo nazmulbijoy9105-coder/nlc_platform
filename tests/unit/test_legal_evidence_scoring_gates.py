@@ -15,6 +15,7 @@ from app.rule_engine.engine import (
     VERIFIED_RULE_IDS,
 )
 from app.services.compliance_service import _applied_score_impacts
+from canonical_architecture.scoring_spec import CATEGORY_ORDER, category_for_rule
 from app.services.pdf_report_service import _render_score_reconciliation
 
 
@@ -63,6 +64,55 @@ def test_unapproved_black_override_is_excluded_before_override_semantics():
     result = _applied_score_impacts([flag])
 
     assert result == [{"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"}]
+
+
+def test_compliance_service_persists_exact_deduplicated_category_allocations(monkeypatch):
+    monkeypatch.setattr(
+        engine_module,
+        "PRODUCT_SCORING_RULE_IDS",
+        frozenset({"DIR-001", "AGM-001", "AGM-002"}),
+    )
+    monkeypatch.setattr(engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+
+    flags = [
+        SimpleNamespace(
+            rule_id="DIR-001",
+            state=RuleState.NON_COMPLIANT,
+            eval_state="VIOLATION",
+            severity=Severity.RED,
+            resolved=False,
+            conditional_applies=True,
+            score_impact=15,
+            detail={"scoring_event_key": "director-change-2026-01"},
+        ),
+        SimpleNamespace(
+            rule_id="AGM-001",
+            state=RuleState.NON_COMPLIANT,
+            eval_state="VIOLATION",
+            severity=Severity.RED,
+            resolved=False,
+            conditional_applies=True,
+            score_impact=30,
+            detail={"scoring_event_key": "director-change-2026-01"},
+        ),
+        SimpleNamespace(
+            rule_id="AGM-002",
+            state=RuleState.NON_COMPLIANT,
+            eval_state="VIOLATION",
+            severity=Severity.RED,
+            resolved=False,
+            conditional_applies=True,
+            score_impact=20,
+            detail={"scoring_event_key": "separate-agm-default"},
+        ),
+    ]
+
+    assert _applied_score_impacts(flags) == [
+        {"applied": 0, "status": "DUPLICATE_EVENT_SUPPRESSED"},
+        {"applied": 30, "status": "APPLIED"},
+        {"applied": 0, "status": "CATEGORY_CAP_REACHED"},
+    ]
 
 
 def test_unapproved_black_rule_cannot_force_black_score_band():
@@ -1111,3 +1161,137 @@ def test_claimed_satisfaction_filing_without_filing_date_is_unknown():
     assert flag.state == RuleState.UNKNOWN
     assert flag.eval_state == "UNKNOWN"
     assert "SATISFACTION_FILING_DATE_UNKNOWN" in flag.detail["unknown_reasons"]
+
+
+def test_customer_score_components_reconcile_with_per_finding_api_allocations(monkeypatch):
+    rule_impacts = [
+        ("TAX-001", 15), ("AGM-001", 30), ("AUD-001", 25),
+        ("AR-002", 20), ("DIR-001", 25), ("SH-001", 20),
+        ("CAP-001", 15), ("OFF-001", 10), ("REG-001", 10),
+        ("BNK-001", 20), ("LBR-001", 10), ("BSEC-001", 15),
+        ("FX-001", 10), ("ESC-001", 15),
+    ]
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module,
+        "PRODUCT_SCORING_RULE_IDS",
+        frozenset(rule_id for rule_id, _ in rule_impacts),
+    )
+    flags = [
+        ComplianceFlag(
+            rule_id=rule_id,
+            flag_code=f"EVENT-{index}",
+            severity=Severity.RED,
+            score_impact=impact,
+            revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+            description="Verified test-only finding.",
+            statutory_basis="Test fixture only.",
+            state=RuleState.NON_COMPLIANT,
+            eval_state="VIOLATION",
+            detail={"event_id": f"event-{index}"},
+        )
+        for index, (rule_id, impact) in enumerate(rule_impacts)
+    ]
+    engine = NLCRuleEngine()
+    score = engine._calculate_score(flags, _profile())
+    per_finding = _applied_score_impacts(flags)
+
+    assert sum(item["applied"] for item in per_finding) == 100
+    assert sum(score.category_deductions.values()) == 100
+    assert score.final_score == 0
+    assert 100 - sum(score.category_deductions.values()) == score.final_score
+    by_category = {category: 0 for category in CATEGORY_ORDER}
+    for flag, item in zip(flags, per_finding):
+        category = category_for_rule(flag.rule_id)
+        if category is not None:
+            by_category[category] += item["applied"]
+    assert by_category == score.category_deductions
+
+
+def test_excluded_and_unknown_findings_have_zero_score_deduction(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    excluded = ComplianceFlag(
+        rule_id="AGM-999",
+        flag_code="EXCLUDED",
+        severity=Severity.RED,
+        score_impact=30,
+        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+        description="Excluded rule.",
+        statutory_basis="Test only.",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+    )
+    unknown = ComplianceFlag(
+        rule_id="AGM-001",
+        flag_code="UNKNOWN",
+        severity=Severity.RED,
+        score_impact=20,
+        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+        description="Unknown evidence.",
+        statutory_basis="Test only.",
+        state=RuleState.UNKNOWN,
+        eval_state="UNKNOWN",
+    )
+    applied = _applied_score_impacts([excluded, unknown])
+    assert applied == [
+        {"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"},
+        {"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"},
+    ]
+
+
+def test_pdf_reconciliation_accepts_global_cap_allocations(monkeypatch):
+    import app.services.pdf_report_service as pdf_module
+    from canonical_architecture.scoring_spec import allocate_flag_deductions
+
+    rule_impacts = [
+        ("TAX-001", 15), ("AGM-001", 30), ("AUD-001", 25),
+        ("AR-002", 20), ("DIR-001", 25), ("SH-001", 20),
+        ("CAP-001", 15), ("OFF-001", 10), ("REG-001", 10),
+        ("BNK-001", 20), ("LBR-001", 10), ("BSEC-001", 15),
+        ("FX-001", 10), ("ESC-001", 15),
+    ]
+    applied = allocate_flag_deductions(rule_impacts)
+    monkeypatch.setattr(pdf_module, "PRODUCT_SCORING_RULE_IDS", frozenset(
+        rule_id for rule_id, _ in rule_impacts
+    ))
+    flags = [
+        SimpleNamespace(
+            rule_id=rule_id,
+            score_impact=impact,
+            score_impact_applied=deduction,
+            scoring_status="APPLIED" if deduction else "CATEGORY_CAP_REACHED",
+        )
+        for (rule_id, impact), deduction in zip(rule_impacts, applied)
+    ]
+    html = _render_score_reconciliation(flags, 0, "RED")
+    assert "effective deductions -100 pts" in html
+    assert "indicated score 0/100" in html
+
+
+def test_api_marks_duplicate_scoring_event_as_suppressed(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"DIR-001", "AGM-001"})
+    )
+    flags = [
+        ComplianceFlag(
+            rule_id="DIR-001", flag_code="DIRECTOR-FILING",
+            severity=Severity.RED, score_impact=15,
+            revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+            description="Same scoring event.", statutory_basis="Test only.",
+            state=RuleState.NON_COMPLIANT, eval_state="VIOLATION",
+            detail={"scoring_event_key": "director-change-42"},
+        ),
+        ComplianceFlag(
+            rule_id="AGM-001", flag_code="DUPLICATE-DIRECTOR-FILING",
+            severity=Severity.RED, score_impact=30,
+            revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+            description="Same scoring event.", statutory_basis="Test only.",
+            state=RuleState.NON_COMPLIANT, eval_state="VIOLATION",
+            detail={"scoring_event_key": "director-change-42"},
+        ),
+    ]
+    applied = _applied_score_impacts(flags)
+    assert applied[0] == {"applied": 0, "status": "DUPLICATE_EVENT_SUPPRESSED"}
+    assert applied[1] == {"applied": 30, "status": "APPLIED"}

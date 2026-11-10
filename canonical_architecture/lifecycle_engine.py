@@ -84,6 +84,7 @@ class CanonicalLifecycleEngine:
             if hasattr(rescue_def, "rescue_id"):
                 steps.append({
                     "rescue_id": rescue_def.rescue_id,
+                    "related_rules": [rule_id],
                     "actions": list(getattr(rescue_def, "statutory_actions", ())),
                     "service": getattr(rescue_def, "service_workflow", ""),
                     "deadline": getattr(rescue_def, "deadline_basis", ""),
@@ -91,6 +92,7 @@ class CanonicalLifecycleEngine:
             elif isinstance(rescue_def, dict):
                 steps.append({
                     "rescue_id": rescue_def.get("rescue_id"),
+                    "related_rules": [rule_id],
                     "actions": rescue_def.get("statutory_actions", []),
                     "service": rescue_def.get("service_workflow", ""),
                     "deadline": rescue_def.get("deadline_basis", ""),

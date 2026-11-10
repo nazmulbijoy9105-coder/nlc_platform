@@ -1,7 +1,7 @@
 """RES-015: Parity test — engine rescue sequence vs canonical rescue planner.
 
 Verifies that NLCRuleEngine._generate_rescue_sequence and
-canonical_architecture.lifecycle_engine.LifecycleEngine.generate_rescue_plan
+canonical_architecture.lifecycle_engine.CanonicalLifecycleEngine.generate_rescue_plan
 produce consistent step sequences for the same set of active findings.
 """
 from __future__ import annotations
@@ -37,12 +37,10 @@ def _engine_steps(flags, band=Severity.RED):
 
 def _canonical_steps(rule_ids):
     """Get step sequence from the canonical lifecycle_engine planner."""
-    try:
-        from canonical_architecture.lifecycle_engine import LifecycleEngine
-        planner = LifecycleEngine()
-        return planner.generate_rescue_plan(rule_ids)
-    except Exception as exc:
-        pytest.skip(f"Canonical planner not available: {exc}")
+    from canonical_architecture.lifecycle_engine import CanonicalLifecycleEngine
+
+    planner = CanonicalLifecycleEngine()
+    return planner.generate_rescue_plan(rule_ids)
 
 
 def _rule_ids(steps):
@@ -83,8 +81,7 @@ def test_engine_and_canonical_produce_same_step_count(rule_ids, band):
     flags = [_flag(rid, severity=band) for rid in rule_ids]
     engine_steps = _engine_steps(flags, band)
     canonical_steps = _canonical_steps(rule_ids)
-    if not canonical_steps:
-        pytest.skip("Canonical planner returned no steps")
+    assert canonical_steps, f"Canonical planner returned no steps for {rule_ids}"
     assert len(engine_steps) == len(canonical_steps), (
         f"Step count mismatch for {rule_ids}: "
         f"engine={len(engine_steps)}, canonical={len(canonical_steps)}"

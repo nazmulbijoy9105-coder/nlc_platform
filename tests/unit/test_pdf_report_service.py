@@ -57,17 +57,22 @@ def _require_logo():
         pytest.skip(f"app/static/brand/{LOGO_FILE} is not present")
 
 
-def _pdf_contains(pdf: bytes, marker: bytes) -> bool:
-    """True if marker appears in the raw PDF or in any zlib-compressed stream."""
-    if marker in pdf:
-        return True
+def _pdf_decompressed_streams(pdf: bytes) -> list[bytes]:
+    """Return all zlib-compressed PDF stream payloads for structural assertions."""
+    streams = []
     for match in re.finditer(rb"stream\r?\n(.*?)\r?\nendstream", pdf, re.S):
         try:
-            if marker in zlib.decompress(match.group(1)):
-                return True
+            streams.append(zlib.decompress(match.group(1)))
         except zlib.error:
             continue
-    return False
+    return streams
+
+
+def _pdf_contains(pdf: bytes, marker: bytes) -> bool:
+    """True if marker appears in the raw PDF or in any zlib-compressed stream."""
+    return marker in pdf or any(
+        marker in stream for stream in _pdf_decompressed_streams(pdf)
+    )
 
 
 def _patch_services(monkeypatch, company=COMPANY, flags=FLAGS):
@@ -235,7 +240,9 @@ def test_safe_fetcher_serves_the_logo():
     fetcher = pdf_render.make_safe_fetcher()
     response = fetcher(pdf_render.asset_uri(LOGO_FILE))
     try:
-        assert response.read(8) == b"\x89PNG\r\n\x1a\n"
+        payload = response.read()
+        assert payload.lstrip().startswith(b"<svg")
+        assert b"Neum Lex Counsel" in payload
     finally:
         response.close()
 
@@ -285,13 +292,27 @@ def test_real_render_does_not_embed_local_files(tmp_path):
 def test_real_render_of_branded_report_includes_the_logo():
     _require_weasyprint()
     _require_logo()
-    page = build_compliance_report_html(
-        COMPANY, [], WHEN, logo_uri=pdf_render.asset_uri(LOGO_FILE)
+    logo_uri = pdf_render.asset_uri(LOGO_FILE)
+    branded_page = build_compliance_report_html(
+        COMPANY, [], WHEN, logo_uri=logo_uri
     )
-    pdf = pdf_render.render_html_to_pdf(page)
-    assert pdf.startswith(b"%PDF")
-    assert b"/Subtype /Image" in pdf
-    assert b"EmbeddedFile" not in pdf
+    unbranded_page = build_compliance_report_html(COMPANY, [], WHEN)
+
+    branded_pdf = pdf_render.render_html_to_pdf(branded_page)
+    unbranded_pdf = pdf_render.render_html_to_pdf(unbranded_page)
+
+    assert branded_pdf.startswith(b"%PDF")
+    assert unbranded_pdf.startswith(b"%PDF")
+    assert b"EmbeddedFile" not in branded_pdf
+
+    # SVG is emitted as vector drawing operators, not necessarily as an
+    # /Image XObject. Its rendered paths must add substantial page-stream
+    # content relative to the identical report with branding omitted.
+    branded_streams = _pdf_decompressed_streams(branded_pdf)
+    unbranded_streams = _pdf_decompressed_streams(unbranded_pdf)
+    assert branded_streams
+    assert sum(map(len, branded_streams)) > sum(map(len, unbranded_streams)) + 100
+    assert branded_streams != unbranded_streams
 
 
 def test_real_render_with_logo_still_blocks_injected_markup(tmp_path):

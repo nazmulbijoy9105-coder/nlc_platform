@@ -43,6 +43,8 @@ from app.models.enums import (
 from app.services.base import BaseService
 from app.services.notification_service import NotificationService
 
+from canonical_architecture.scoring_spec import allocate_flag_deductions, category_for_rule, duplicate_event_indices, SCORING_SPEC_VERSION
+
 logger = logging.getLogger("nlc.compliance")
 
 
@@ -75,42 +77,39 @@ def _has_rescue_output(output) -> bool:
 
 
 def _applied_score_impacts(flags) -> list[dict]:
-    """Reconcile nominal flag impacts with the verified-rule gate and caps.
+    """Reconcile every finding to the same versioned score allocation as the engine.
 
-    The returned value is aligned by index with the original flags list so
-    repeated rule IDs cannot overwrite one another.
+    Returned entries remain aligned to the original flags. Only confirmed,
+    active, product-eligible findings enter the allocation; per-category caps
+    and the global 100-point budget are both applied by scoring_spec.
     """
     from app.rule_engine.engine import (
         AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
-        CATEGORY_CAPS,
         PRODUCT_SCORING_RULE_IDS,
         RuleState,
         legal_score_is_released,
     )
 
-    remaining = {name: cap[0] for name, cap in CATEGORY_CAPS.items()}
-    results = []
-    for flag in flags:
+    results: list[dict] = [{} for _ in flags]
+    eligible: list[tuple[int, str, int, str | None]] = []
+    for index, flag in enumerate(flags):
         state = getattr(flag, "state", None)
         active = not getattr(flag, "resolved", False) and getattr(flag, "conditional_applies", True)
         if not active:
-            results.append({"applied": 0, "status": "INACTIVE"})
+            results[index] = {"applied": 0, "status": "INACTIVE"}
             continue
         confirmed_violation = (
             state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and getattr(flag, "eval_state", "VIOLATION") == "VIOLATION"
         )
         if not confirmed_violation:
-            results.append({"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"})
+            results[index] = {"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"}
             continue
-
-        # The global release gate takes precedence over per-rule eligibility:
-        # while release is closed, no rule has an applied score impact.
         if not legal_score_is_released():
-            results.append({"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"})
+            results[index] = {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
             continue
         if flag.rule_id not in PRODUCT_SCORING_RULE_IDS:
-            results.append({"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"})
+            results[index] = {"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"}
             continue
 
         severity_value = getattr(
@@ -119,30 +118,43 @@ def _applied_score_impacts(flags) -> list[dict]:
             getattr(flag, "severity", None),
         )
         authorised_black_override = (
-            flag.rule_id in PRODUCT_SCORING_RULE_IDS
-            and flag.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+            flag.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
             and getattr(flag, "is_black_override", False) is True
             and severity_value == "BLACK"
         )
         if authorised_black_override:
-            results.append({"applied": 0, "status": "BLACK_OVERRIDE_APPLIED"})
+            results[index] = {"applied": 0, "status": "BLACK_OVERRIDE_APPLIED"}
             continue
 
-        category = next(
-            (name for name, (_, prefixes) in CATEGORY_CAPS.items()
-             if flag.rule_id.startswith(prefixes)),
-            None,
+        if category_for_rule(flag.rule_id) is None:
+            results[index] = {"applied": 0, "status": "NO_SCORING_CATEGORY"}
+            continue
+        detail = getattr(flag, "detail", None)
+        scoring_event_key = (
+            detail.get("scoring_event_key") if isinstance(detail, dict) else None
         )
-        if category is None:
-            results.append({"applied": 0, "status": "NO_SCORING_CATEGORY"})
-            continue
+        eligible.append((
+            index,
+            flag.rule_id,
+            max(0, int(flag.score_impact or 0)),
+            scoring_event_key,
+        ))
 
-        applied = min(max(0, int(flag.score_impact)), remaining[category])
-        remaining[category] -= applied
-        results.append({
+    allocation_items = [
+        (rule_id, impact, event_key)
+        for _, rule_id, impact, event_key in eligible
+    ]
+    allocations = allocate_flag_deductions(allocation_items)
+    duplicate_indices = duplicate_event_indices(allocation_items)
+    for local_index, ((index, _, _, _), applied) in enumerate(zip(eligible, allocations)):
+        results[index] = {
             "applied": applied,
-            "status": "APPLIED" if applied else "CATEGORY_CAP_REACHED",
-        })
+            "status": (
+                "DUPLICATE_EVENT_SUPPRESSED"
+                if local_index in duplicate_indices
+                else "APPLIED" if applied else "CATEGORY_CAP_REACHED"
+            ),
+        }
     return results
 
 
@@ -272,16 +284,44 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
 
         applied_impacts = _applied_score_impacts(output.flags)
+        applied_total = sum(item["applied"] for item in applied_impacts)
+        category_deductions = dict(output.score_breakdown.category_deductions or {})
+        category_total = sum(category_deductions.values())
+        if score_is_released and category_total != applied_total:
+            raise ValueError(
+                "Scoring reconciliation failed: per-finding applied deductions "
+                f"({applied_total}) do not match category deductions ({category_total})."
+            )
+        override_adjustment = (
+            max(0, 100 - category_total - int(api_score or 0))
+            if score_is_released else None
+        )
+        score_reconciliation = {
+            "scoring_spec_version": SCORING_SPEC_VERSION,
+            "base_score": 100 if score_is_released else None,
+            "category_deductions": category_deductions if score_is_released else None,
+            "total_applied_category_deduction": category_total if score_is_released else None,
+            "risk_policy_override_adjustment": override_adjustment,
+            "final_score": api_score,
+            "reconciles": (
+                100 - category_total - int(override_adjustment or 0) == api_score
+                if score_is_released else None
+            ),
+            "diagnostic_module_scores_are_additive": False,
+        }
 
         return {
             "company_id":    str(company_id),
             "score":         api_score,
+            "scoring_spec_version": SCORING_SPEC_VERSION,
+            "score_reconciliation": score_reconciliation,
             "raw_total":     api_raw_total,
             "risk_band":     public_risk_band,
+            "risk_band_semantics": "NLC_INTERNAL_RISK_CLASSIFICATION_NOT_LEGAL_LIABILITY",
             "exposure_band": output.score_breakdown.exposure_band if score_is_released else None,
             "legal_evaluation_status": (
                 "RELEASED" if score_is_released
-                else "NOT_EVALUATED_COUNSEL_REVIEW_PENDING"
+                else "NOT_EVALUATED_PRODUCT_SCORING_DISABLED"
             ),
             # Unapproved rule triggers are retained only in the internal
             # audit store. They are not exposed as customer-facing flags.
@@ -289,6 +329,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 {
                     "rule_id": f.rule_id,
                     "severity": f.severity,
+                    "risk_severity": f.severity,
+                    "legal_state": getattr(f.state, "value", f.state),
+                    "evaluation_state": getattr(f.eval_state, "value", f.eval_state),
                     "description": f.description,
                     "score_impact": f.score_impact,
                     "score_impact_applied": applied_impacts[index]["applied"],
@@ -303,8 +346,25 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 for index, f in enumerate(output.flags)
                 if score_is_released and f.rule_id in PRODUCT_SCORING_RULE_IDS
             ],
+            "excluded_rule_findings": [
+                {
+                    "rule_id": flag.rule_id,
+                    "legal_state": getattr(flag.state, "value", flag.state),
+                    "evaluation_state": getattr(flag.eval_state, "value", flag.eval_state),
+                    "risk_severity": flag.severity,
+                    "description": flag.description,
+                    "statutory_basis": flag.statutory_basis,
+                    "score_impact_applied": 0,
+                    "scoring_eligibility": "EXCLUDED_FROM_PRODUCT_SCORING",
+                    "scoring_status": applied_impacts[index]["status"],
+                }
+                for index, flag in enumerate(output.flags)
+                if score_is_released and flag.rule_id not in PRODUCT_SCORING_RULE_IDS
+            ],
             "score_breakdown": {
                 "risk_band": public_risk_band,
+                "scoring_spec_version": SCORING_SPEC_VERSION,
+                "category_deductions": category_deductions if score_is_released else None,
                 "agm_score":         output.score_breakdown.agm_score if score_is_released else None,
                 "audit_score":       output.score_breakdown.audit_score if score_is_released else None,
                 "return_score":      output.score_breakdown.return_score if score_is_released else None,
@@ -585,6 +645,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         sb = output.score_breakdown
         score_breakdown_snapshot = None if score_for_current is None else {
             "engine_version": engine_version,
+            "scoring_spec_version": SCORING_SPEC_VERSION,
             "ilrmf_version": str(getattr(output, "ilrmf_version", "") or ""),
             "score_hash": sb.score_hash,
             "raw_total": sb.raw_total,
@@ -595,6 +656,20 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "override_applied": sb.override_applied,
             "override_reason": sb.override_reason,
             "category_deductions": dict(sb.category_deductions or {}),
+            "total_applied_category_deduction": sum((sb.category_deductions or {}).values()),
+            "risk_policy_override_adjustment": (
+                max(0, 100 - sum((sb.category_deductions or {}).values()) - int(score_for_current))
+                if sb.override_applied and score_for_current is not None else 0
+            ),
+            "score_reconciles": (
+                100 - sum((sb.category_deductions or {}).values())
+                - (
+                    max(0, 100 - sum((sb.category_deductions or {}).values()) - int(score_for_current))
+                    if score_for_current is not None else 0
+                ) == score_for_current
+                if score_for_current is not None else None
+            ),
+            "diagnostic_module_scores_are_additive": False,
             "category_caps": {
                 key: {"max_deduction": cap, "prefixes": list(prefixes)}
                 for key, (cap, prefixes) in sorted(CATEGORY_CAPS.items())
@@ -620,6 +695,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "escalation": 5,
                 "total_diagnostic_maximum": 125,
             },
+            "diagnostic_module_score_semantics": "NON_ADDITIVE_DIAGNOSTICS_NOT_HEADLINE_SCORE_COMPONENTS",
             "module_scores": {
                 "agm": sb.agm_score,
                 "audit": sb.audit_score,

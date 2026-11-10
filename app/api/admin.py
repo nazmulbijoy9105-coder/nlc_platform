@@ -1,15 +1,20 @@
+import csv
+import io
 import time
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, EmailStr
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db, get_db_for_user
+from app.core.security import hash_password, validate_password_strength
 from app.models.database import set_admin_context
 from app.models.infrastructure import UserActivityLog
 from app.models.user import User
+from app.services.user_service import UserService
 from app.rule_engine.engine import legal_score_is_released
 
 router = APIRouter()
@@ -167,8 +172,7 @@ class UserCreateResponse(BaseModel):
     full_name: str
     role: str
     is_active: bool
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 @router.get("/users", response_model=list[UserListItem])
@@ -263,14 +267,6 @@ async def reactivate_user(user_id: str, admin=Depends(require_admin), db: AsyncS
     await db.commit()
     return {"id": user_id, "is_active": True}
 
-
-import csv
-import io
-
-from fastapi.responses import StreamingResponse
-
-from app.core.security import hash_password, validate_password_strength
-from app.services.user_service import UserService
 
 # ---------------------------------------------------------------------------
 # COMPANY ACCESS MANAGEMENT (SUPER_ADMIN ONLY)

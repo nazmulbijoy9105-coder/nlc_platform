@@ -1,8 +1,5 @@
 """Audit trail integrity tests — Article 6 compliance."""
 
-import pytest
-
-
 class TestAuditTrail:
     def test_activity_log_model_exists(self):
         from app.models.infrastructure import UserActivityLog
@@ -15,11 +12,9 @@ class TestAuditTrail:
         assert hasattr(ComplianceScoreHistory, '__tablename__')
 
     def test_retention_period_configured(self):
-        try:
-            from app.worker.tasks import cleanup_old_activity_logs
-            assert cleanup_old_activity_logs is not None
-        except ImportError:
-            pytest.skip("cleanup_old_activity_logs not yet implemented")
+        from app.worker.tasks import cleanup_old_activity_logs
+
+        assert cleanup_old_activity_logs is not None
 
     def test_compliance_event_model_exists(self):
         from app.models.compliance import ComplianceEvent

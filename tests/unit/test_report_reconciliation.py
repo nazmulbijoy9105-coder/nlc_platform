@@ -6,6 +6,7 @@ import pytest
 
 from app.services.pdf_report_service import ScoreReconciliationError, build_compliance_report_html
 from app.services.rescue_service import _derive_plan_target
+from canonical_architecture.scoring_spec import allocate_flag_deductions
 
 WHEN = datetime(2026, 10, 30, 12, 0, 0)
 
@@ -145,6 +146,37 @@ def test_real_evaluation_snapshot_reconciles_nominal_and_applied_impacts(monkeyp
     assert "raw deduction 12 pts capped to 10 pts" in page
     assert "effective deductions -25 pts" in page
     assert "indicated score 75/100" in page
+
+
+
+def test_global_budget_allocation_reconciles_each_persisted_finding(monkeypatch):
+    findings = [
+        ("TAX-001", 15), ("AGM-001", 30), ("AUD-001", 25),
+        ("AR-002", 20), ("DIR-001", 25), ("SH-001", 20),
+        ("CAP-001", 15), ("OFF-001", 10), ("REG-001", 10),
+        ("BNK-001", 20), ("LBR-001", 10), ("BSEC-001", 15),
+        ("FX-001", 10), ("ESC-001", 15),
+    ]
+    applied = allocate_flag_deductions(findings)
+    _enable_authorized_score_for_report_test(
+        monkeypatch, {rule_id for rule_id, _ in findings}
+    )
+    snapshot_flags = [
+        SimpleNamespace(
+            rule_id=rule_id,
+            severity="YELLOW",
+            description="d",
+            score_impact=impact,
+            score_impact_applied=allocated,
+            scoring_status="APPLIED" if allocated else "CATEGORY_CAP_REACHED",
+            detail={},
+        )
+        for (rule_id, impact), allocated in zip(findings, applied)
+    ]
+
+    page = build_compliance_report_html(_company(score=0), snapshot_flags, WHEN)
+    assert "effective deductions -100 pts" in page
+    assert "indicated score 0/100" in page
 
 
 def test_snapshot_applied_impact_mismatch_is_rejected(monkeypatch):
