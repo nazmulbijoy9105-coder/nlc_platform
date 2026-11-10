@@ -3270,7 +3270,15 @@ class NLCRuleEngine:
     ) -> Dict[str, int]:
         """Apply one authoritative prefix map and per-category cap."""
         return category_deductions_from_flags(
-            (flag.rule_id, flag.score_impact) for flag in scored
+            (
+                flag.rule_id,
+                flag.score_impact,
+                (
+                    flag.detail.get("scoring_event_key")
+                    if isinstance(flag.detail, dict) else None
+                ),
+            )
+            for flag in scored
         )
 
     @staticmethod
