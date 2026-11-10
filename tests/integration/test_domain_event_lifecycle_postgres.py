@@ -16,6 +16,11 @@ from app.models.domain_event import DomainEventConsumption, DomainEventOutbox
 from app.models.enums import CompanyStatus, CompanyType, DirectorStatus, RiskBand
 from app.models.people import Director
 from app.services.domain_events import DomainEventType, publish_domain_event
+from app.services.people_service import (
+    DirectorService,
+    ShareholderService,
+    ShareTransferService,
+)
 
 
 pytestmark = [pytest.mark.integration]
@@ -49,6 +54,49 @@ async def test_company_change_and_outbox_event_rollback_together(db, db_company)
 
     assert await db.get(Director, director_id) is None
     assert await db.get(DomainEventOutbox, event_id) is None
+
+
+@pytest.mark.asyncio
+async def test_people_services_emit_compact_company_lifecycle_events(db, db_company):
+    director = await DirectorService(db).appoint_director(
+        db_company.id,
+        full_name="Private Person",
+        appointment_date=date(2026, 1, 5),
+        nid_number="DO-NOT-COPY-INTO-EVENT",
+    )
+    shareholder = await ShareholderService(db).add_shareholder(
+        db_company.id,
+        shareholder_name="Private Shareholder",
+        shares_held=100,
+        effective_date=date(2026, 1, 5),
+        nid_or_reg_number="DO-NOT-COPY-INTO-EVENT",
+    )
+    transfer = await ShareTransferService(db).record_transfer(
+        db_company.id,
+        transferor_name="Private Transferor",
+        transferee_name="Private Transferee",
+        shares_transferred=25,
+        transfer_date=date(2026, 2, 1),
+    )
+
+    result = await db.execute(
+        select(DomainEventOutbox).where(
+            DomainEventOutbox.aggregate_id.in_(
+                [director.id, shareholder.id, transfer.id]
+            )
+        )
+    )
+    events = {event.aggregate_id: event for event in result.scalars().all()}
+
+    assert events[director.id].event_type == DomainEventType.DIRECTOR_CHANGED
+    assert events[shareholder.id].event_type == DomainEventType.SHAREHOLDER_CHANGED
+    assert events[transfer.id].event_type == DomainEventType.SHARE_TRANSFER_CHANGED
+    serialized_payloads = str([event.payload for event in events.values()])
+    assert "DO-NOT-COPY-INTO-EVENT" not in serialized_payloads
+    assert "Private Person" not in serialized_payloads
+    assert "Private Shareholder" not in serialized_payloads
+    assert "Private Transferor" not in serialized_payloads
+    assert "Private Transferee" not in serialized_payloads
 
 
 @pytest.mark.asyncio
