@@ -68,7 +68,9 @@ class DomainEventOutbox(UUIDPrimaryKeyMixin, Base):
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    dead_lettered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    dead_lettered_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     dead_letter_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     replay_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     last_replayed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
