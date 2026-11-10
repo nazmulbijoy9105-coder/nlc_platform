@@ -27,7 +27,7 @@ MALICIOUS_NAME = (
     '<link rel="attachment" href="file:///etc/passwd">Acme & Sons "Ltd"'
 )
 COMPANY = SimpleNamespace(
-    id="test-company-id",
+    id="00000000-0000-4000-8000-000000000001",
     company_name=MALICIOUS_NAME,
     registration_number="C-1\r\nX-Evil: 1/2020",
     current_compliance_score=85,
