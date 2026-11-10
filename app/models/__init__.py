@@ -29,6 +29,7 @@ from .finance import (
 
 # ── Companies ────────────────────────────────────────────────────────
 from .company import Company, CompanyUserAccess
+from .company_fact import CompanyFact
 from .charges import CompanyCharge
 
 # ── Compliance (Flags, Score History, Events) ────────────────────────
@@ -120,6 +121,7 @@ __all__ = [
     "Audit",
     "Base",
     "Company",
+    "CompanyFact",
     "CompanyCharge",
     "CompanyStatus",
     "CompanyType",
