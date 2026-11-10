@@ -569,7 +569,8 @@ VERIFIED_RULE_IDS: frozenset[str] = frozenset()
 # Product-controlled scoring eligibility. This allowlist determines which
 # catalogue rules participate in deterministic product scoring; it does not
 # assert independent legal verification or change each rule's review status.
-# Keep this list synchronized with the canonical 85-rule engine catalogue.
+# Keep this list synchronized with the canonical catalogue's score-bearing rules.
+# AR-001 and SH-002 are informational; ESC-003 is the surcharge itself, not a finding.
 PRODUCT_SCORING_RULE_IDS: frozenset[str] = frozenset({
     "ACC-001",
     "ACC-002",
@@ -581,7 +582,6 @@ PRODUCT_SCORING_RULE_IDS: frozenset[str] = frozenset({
     "AGM-005",
     "AGM-006",
     "AGM-007",
-    "AR-001",
     "AR-002",
     "AR-003",
     "AR-004",
@@ -618,7 +618,6 @@ PRODUCT_SCORING_RULE_IDS: frozenset[str] = frozenset({
     "DIR-010",
     "ESC-001",
     "ESC-002",
-    "ESC-003",
     "ESC-004",
     "ESC-005",
     "FX-001",
@@ -637,7 +636,6 @@ PRODUCT_SCORING_RULE_IDS: frozenset[str] = frozenset({
     "REG-002",
     "REG-003",
     "SH-001",
-    "SH-002",
     "SH-003",
     "STR-001",
     "STR-002",
@@ -658,15 +656,9 @@ PRODUCT_SCORING_RULE_IDS: frozenset[str] = frozenset({
     "VAT-003",
 })
 
-# Release remains disabled until the complete applicable rule corpus has named,
-# independent current-law approval recorded in the signed, versioned register.
-# Internal source checking is not independent counsel approval.
-# Release remains disabled until the applicable corpus has named, independent
-# current-law approval recorded in the signed, versioned legal approval register.
+# Product owner-controlled release switch. This enables the deterministic
+# product scoring model; it is not a legal-verification or certification claim.
 LEGAL_SCORE_RELEASED: bool = True
-# Fail-closed release gate: internal source checking is not legal approval.
-# Only after counsel approves current law, applicability, exceptions, evidence
-# standards and effective dates may this flag be changed to True.
 
 def legal_score_is_released() -> bool:
     """Return whether product-controlled scoring is enabled and has rules."""
