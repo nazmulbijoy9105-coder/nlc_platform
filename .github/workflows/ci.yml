@@ -49,7 +49,7 @@ jobs:
           pip install pytest pytest-asyncio pytest-cov==7.1.0
 
       - name: Compile check
-        run: python -m compileall app/
+        run: python -m compileall app/ canonical_architecture/
 
       - name: Validate backup tooling syntax
         run: |
@@ -64,7 +64,11 @@ jobs:
             app/services/rescue_service.py \
             app/services/commercial_service.py \
             tests/unit/test_pdf_report_service.py \
-            tests/unit/test_rescue_engagement_contract.py
+            tests/unit/test_rescue_engagement_contract.py \
+            app/services/compliance_service.py canonical_architecture/scoring_spec.py \
+            canonical_architecture/legal_coverage.py tests/unit/test_scoring_spec.py \
+            tests/unit/test_legal_coverage_taxonomy.py \
+            tests/unit/test_legal_evidence_scoring_gates.py
 
       - name: Type-check scoring release-boundary services
         run: |
@@ -113,7 +117,8 @@ jobs:
             app/services/filing_service.py \
             app/services/compliance_calendar.py \
             app/services/legal_deadline_engine.py \
-            app/rule_engine/engine.py
+            app/rule_engine/engine.py \
+            canonical_architecture/scoring_spec.py canonical_architecture/legal_coverage.py
           ruff check --select E4,E7,E9,F \
             app/services/compliance_calendar.py \
             app/services/legal_deadline_engine.py \
