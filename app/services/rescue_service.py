@@ -37,7 +37,7 @@ logger = logging.getLogger("nlc.rescue")
 
 def validate_rescue_engine_output(engine_output, *, expected_company_id=None) -> frozenset[str]:
     """Reject rescue work not traceable to released, evidenced rule findings."""
-    from app.rule_engine.engine import VERIFIED_RULE_IDS, legal_score_is_released
+    from app.rule_engine.engine import PRODUCT_SCORING_RULE_IDS, legal_score_is_released
 
     if not legal_score_is_released():
         raise PermissionError("Rescue generation is disabled until statutory scoring is released.")
@@ -83,7 +83,7 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
         if (
             getattr(flag, "resolved", None) is False
             and getattr(flag, "conditional_applies", None) is True
-            and rule_id in VERIFIED_RULE_IDS
+            and rule_id in PRODUCT_SCORING_RULE_IDS
             and state in ("NON_COMPLIANT", "VERIFIED_ABSENT")
             and eval_state == "VIOLATION"
             and severity in ("RED", "BLACK")
@@ -163,7 +163,7 @@ class RescueService(BaseService[RescuePlan]):
         from app.rule_engine.engine import legal_score_is_released
         if not legal_score_is_released():
             raise PermissionError(
-                "Rescue generation is disabled until statutory scoring is independently approved and released."
+                "Rescue generation is disabled until product scoring is enabled."
             )
         source_rule_ids = validate_rescue_engine_output(
             engine_output, expected_company_id=company_id
