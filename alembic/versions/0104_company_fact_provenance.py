@@ -31,7 +31,6 @@ def upgrade() -> None:
         sa.Column("verified_by", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="RESTRICT"), nullable=True),
         sa.Column("verified_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("verification_note", sa.Text(), nullable=True),
-        sa.Column("is_current", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column("supersedes_fact_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("company_facts.id", ondelete="RESTRICT"), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
@@ -61,7 +60,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_company_facts_company_id", "company_facts", ["company_id"])
     op.create_index("ix_company_facts_fact_key", "company_facts", ["fact_key"])
-    op.create_index("ix_company_facts_company_key_current", "company_facts", ["company_id", "fact_key", "is_current"])
+    op.create_index("ix_company_facts_company_key_created", "company_facts", ["company_id", "fact_key", "created_at"])
 
     # Reuse the existing signed identity and tenant-access functions. The app
     # role cannot read or write facts outside its company membership/assignment.
@@ -133,7 +132,6 @@ def upgrade() -> None:
                OR NEW.document_id IS DISTINCT FROM OLD.document_id
                OR NEW.authorized_uploader_id IS DISTINCT FROM OLD.authorized_uploader_id
                OR NEW.uploaded_at IS DISTINCT FROM OLD.uploaded_at
-               OR NEW.is_current IS DISTINCT FROM OLD.is_current
                OR NEW.supersedes_fact_id IS DISTINCT FROM OLD.supersedes_fact_id
                OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
                 RAISE EXCEPTION 'Company fact source fields are immutable; create a superseding fact version';
@@ -164,7 +162,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_column("compliance_evaluation_runs", "fact_provenance_snapshot")
     op.drop_column("compliance_flags", "fact_provenance_snapshot")
-    op.drop_index("ix_company_facts_company_key_current", table_name="company_facts")
+    op.drop_index("ix_company_facts_company_key_created", table_name="company_facts")
     op.drop_index("ix_company_facts_fact_key", table_name="company_facts")
     op.drop_index("ix_company_facts_company_id", table_name="company_facts")
     op.execute("DROP TRIGGER IF EXISTS trg_company_facts_immutable_source ON public.company_facts")
