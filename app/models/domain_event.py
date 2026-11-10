@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import (
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
@@ -32,6 +33,7 @@ class DomainEventOutbox(UUIDPrimaryKeyMixin, Base):
 
     __tablename__ = "domain_event_outbox"
     __table_args__ = (
+        CheckConstraint("replay_count >= 0", name="ck_domain_event_replay_count_nonnegative"),
         Index(
             "ix_domain_event_outbox_pending",
             "processed_at",
