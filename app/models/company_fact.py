@@ -89,37 +89,41 @@ class CompanyFact(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         UUID(as_uuid=True), ForeignKey("company_facts.id", ondelete="RESTRICT"), nullable=True
     )
 
-    def provenance_payload(self) -> dict[str, Any]:
-        """Stable JSON snapshot copied into each finding/evaluation."""
-        if self.trust_level == "USER_ASSERTED":
-            disclosure = "User-asserted company information; not independently verified."
-        elif self.verification_status == "VERIFIED":
-            disclosure = "Authorized document-backed fact checked by the recorded verifier."
-        elif self.verification_status == "REJECTED":
-            disclosure = "Supporting document was reviewed and rejected; fact is unverified."
-        elif self.verification_status == "SUPERSEDED":
-            disclosure = "Supporting document/fact was superseded; use the current fact record."
-        else:
-            disclosure = "Based on an authorized document upload that has not yet been verified."
-        return {
-            "fact_id": str(self.id),
-            "fact_key": self.fact_key,
-            "trust_level": self.trust_level,
-            "asserted_by": str(self.asserted_by),
-            "observed_on": self.observed_on.isoformat(),
-            "source_reference": self.source_reference,
-            "document_id": str(self.document_id) if self.document_id else None,
-            "authorized_uploader_id": (
+    def to_fact_record(self):
+        """Convert the ORM row to the shared, validated provenance value object."""
+        from app.compliance.fact_provenance import (
+            CompanyFact as CompanyFactRecord,
+            FactTrustLevel,
+            FactVerificationStatus,
+        )
+
+        return CompanyFactRecord(
+            fact_key=self.fact_key,
+            value=self.fact_value,
+            trust_level=FactTrustLevel(self.trust_level),
+            asserted_by=str(self.asserted_by),
+            observed_on=self.observed_on,
+            source_reference=self.source_reference,
+            document_id=str(self.document_id) if self.document_id else None,
+            authorized_uploader_id=(
                 str(self.authorized_uploader_id) if self.authorized_uploader_id else None
             ),
-            "uploaded_at": self.uploaded_at.isoformat() if self.uploaded_at else None,
-            "verification_status": self.verification_status,
-            "verified_by": str(self.verified_by) if self.verified_by else None,
-            "verified_at": self.verified_at.isoformat() if self.verified_at else None,
-            "verification_note": self.verification_note,
-            "disclosure": disclosure,
-            "scope_note": (
-                "This is the set of current company facts supplied to the evaluation; "
-                "it is not yet a rule-specific causal mapping."
-            ),
-        }
+            uploaded_at=self.uploaded_at,
+            verification_status=FactVerificationStatus(self.verification_status),
+            verified_by=str(self.verified_by) if self.verified_by else None,
+            verified_at=self.verified_at,
+            verification_note=self.verification_note,
+        )
+
+    def provenance_payload(self) -> dict[str, Any]:
+        """Stable JSON snapshot copied into each finding/evaluation."""
+        from app.compliance.fact_provenance import fact_provenance_payload
+
+        payload = fact_provenance_payload(self.to_fact_record())
+        payload["fact_id"] = str(self.id)
+        payload["scope_note"] = (
+            "This is the set of current company facts supplied to the evaluation; "
+            "it is not yet a rule-specific causal mapping."
+        )
+        return payload
+
