@@ -90,6 +90,7 @@ def test_domain_event_outbox_indexes_reference_real_timestamp_columns() -> None:
 
 def test_lifecycle_event_contracts_route_to_deterministic_consumers() -> None:
     from app.worker.tasks.domain_events import (
+        AUDIT_ONLY_EVENTS,
         EVIDENCE_VERIFICATION_EVENTS,
         FILING_RECEIPT_EVENTS,
         MAX_DISPATCH_ATTEMPTS,
@@ -115,6 +116,10 @@ def test_lifecycle_event_contracts_route_to_deterministic_consumers() -> None:
         DomainEventType.COMPANY_FACT_VERIFIED,
         DomainEventType.COMPANY_CHARGE_EVIDENCE_CHANGED,
     }.issubset(EVIDENCE_VERIFICATION_EVENTS)
+    assert AUDIT_ONLY_EVENTS == {
+        "evidence.document.approved",
+        "evidence.document.released",
+    }
     assert MAX_DISPATCH_ATTEMPTS == 8
     assert consume_company_lifecycle_event.name == (
         "app.worker.tasks.consume_company_lifecycle_event"
