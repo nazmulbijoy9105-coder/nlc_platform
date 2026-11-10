@@ -273,7 +273,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "exposure_band": output.score_breakdown.exposure_band if score_is_released else None,
             "legal_evaluation_status": (
                 "RELEASED" if score_is_released
-                else "NOT_EVALUATED_COUNSEL_REVIEW_PENDING"
+                else "NOT_EVALUATED_PRODUCT_SCORING_DISABLED"
             ),
             # Unapproved rule triggers are retained only in the internal
             # audit store. They are not exposed as customer-facing flags.
