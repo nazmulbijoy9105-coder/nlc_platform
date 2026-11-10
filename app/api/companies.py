@@ -618,7 +618,7 @@ async def update_company(company_id: uuid.UUID, body: CompanyUpdateRequest, requ
             aggregate_type="registered_office_history", aggregate_id=office.id,
             actor_id=current_user.id,
             payload={"change": "address_updated", "effective_date": changed_on.isoformat(),
-                     "rjsc_filing_recorded": False},
+                     "rjsc_filing_status": "UNKNOWN"},
         )
     await activity.log(action="COMPANY_UPDATED", resource_type="company", resource_id=str(company_id), description=f"Updated fields: {list(mapped_data.keys())}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     return _company_to_response(company)
