@@ -1548,7 +1548,7 @@ def test_black_override_requires_separate_authorization(
         eval_state="VIOLATION",
     )
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
     monkeypatch.setattr(
         engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset()
     )
