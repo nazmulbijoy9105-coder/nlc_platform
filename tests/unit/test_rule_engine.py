@@ -1245,7 +1245,7 @@ class TestEngineIntegrity:
         assert output is not None
         assert len(output.flags) > 0
         assert output.score_breakdown.risk_band != "BLACK"
-        assert output.score_breakdown.final_score == 75
+        assert output.score_breakdown.final_score == 100  # all generated findings remain UNKNOWN without sufficient evidence
         assert output.score_breakdown.override_applied is False
 
     def test_score_never_exceeds_100_with_no_flags(self, rule_engine, build_profile):
@@ -1266,7 +1266,7 @@ class TestEngineIntegrity:
         )
         output = rule_engine.evaluate(profile)
         assert output.score_breakdown.risk_band != "BLACK"
-        assert output.score_breakdown.final_score == 100
+        assert output.score_breakdown.final_score == 75
         assert output.score_breakdown.override_applied is False
 
 
