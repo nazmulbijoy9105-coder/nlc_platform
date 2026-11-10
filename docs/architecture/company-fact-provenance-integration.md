@@ -9,7 +9,7 @@ Only two trust levels are used:
 - `USER_ASSERTED`: no document is claimed; always disclosed as not independently verified.
 - `AUTHORIZED_DOCUMENT_BACKED`: references an existing active `documents` row and its recorded `created_by` / `created_at`. Upload alone leaves verification `UNVERIFIED`.
 
-A document-backed fact can become `VERIFIED` only through the staff verification endpoint. Rejected and superseded decisions remain explicit. AI-generated drafts are rejected as source evidence.
+A document-backed fact can become `VERIFIED` only through the staff verification endpoint. Rejected and superseded decisions remain explicit. AI-generated drafts are rejected as source evidence. Fact changes are append-only: a new row points to the previous row through `supersedes_fact_id`; database triggers prevent edits to source/value/uploader fields after creation. The same validated `CompanyFact` value object is shared by the persistence adapter and obligation-finding provenance contract.
 
 ## API
 
@@ -18,9 +18,11 @@ A document-backed fact can become `VERIFIED` only through the staff verification
 - `GET /api/v1/documents/facts/company/{company_id}`: list current facts and disclosures.
 - `POST /api/v1/documents/facts/{fact_id}/verify`: staff-only verification decision, restricted to assigned company scope.
 
+The assertion endpoints accept scalar `CompanyProfile` fields only (dates, numbers, booleans and strings); identity fields are read-only, and structured collections such as director histories require a dedicated typed workflow.
+
 ## Tenant and audit controls
 
-The new table uses the existing signed RLS helpers, enables and forces row-level security, binds inserts to the signed actor, scopes reads and updates to company access, permits verification updates only to staff, and revokes DELETE from the runtime role. It does not create a second upload store or a parallel document authorization system.
+The new table uses the existing signed RLS helpers, enables and forces row-level security, binds inserts to the signed actor, scopes reads and updates to company access, permits verification updates only to staff, and revokes DELETE from the runtime role. A database trigger prevents updates to source facts, values, document links, uploader identity and supersession links; only staff verification metadata can change. It does not create a second upload store or a parallel document authorization system.
 
 ## Findings and legacy data
 
