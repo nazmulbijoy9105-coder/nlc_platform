@@ -275,6 +275,20 @@ class TestComplianceService:
         assert result["risk_band"] == "GREEN"
         mock_engine.evaluate.assert_called_once()
 
+        # The evaluation-run JSONB snapshot persists the full score contract,
+        # including category deductions; no schema migration is required.
+        from sqlalchemy import select
+        from app.models.compliance import ComplianceEvaluationRun
+
+        persisted_result = await db.execute(
+            select(ComplianceEvaluationRun)
+            .where(ComplianceEvaluationRun.company_id == db_company.id)
+            .order_by(ComplianceEvaluationRun.calculated_at.desc())
+            .limit(1)
+        )
+        persisted_run = persisted_result.scalar_one()
+        assert persisted_run.score_breakdown_snapshot["category_deductions"] == {}
+
 
 # =============================================================================
 # USER SERVICE
