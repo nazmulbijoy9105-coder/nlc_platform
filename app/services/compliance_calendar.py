@@ -83,7 +83,7 @@ class ComplianceCalendarService:
             event_type = definition.event_type.value
             if event_type not in VERIFIED_CALENDAR_EVENT_TYPES:
                 raise PermissionError(f"Calendar event type is not approved: {event_type}")
-            if not definition.trigger_evidence_ref.strip():
+            if not isinstance(definition.trigger_evidence_ref, str) or not definition.trigger_evidence_ref.strip():
                 raise ValueError("A verified trigger evidence reference is required")
             due_date = calculate_deadline(
                 definition.rule,
@@ -136,10 +136,14 @@ class ComplianceCalendarService:
                     is_statutory=True,
                 )
                 self.db.add(event)
-            elif event.status not in (
+            elif event.status in (
                 CalendarEventStatus.COMPLETED,
                 CalendarEventStatus.WAIVED,
             ):
+                # Completed/waived records are immutable audit history.
+                persisted.append(event)
+                continue
+            else:
                 event.title = definition.title
                 event.description = definition.description
                 event.due_date = due_date
