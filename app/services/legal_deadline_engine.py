@@ -99,7 +99,9 @@ def calculate_deadline(
     else:
         base = trigger_date + timedelta(days=1) if rule.exclude_trigger_day else trigger_date
 
-    if rule.unit == "DAYS":
+    if rule.unit == "CLEAR_DAYS":
+        pass  # due was computed above using the clear-day convention.
+    elif rule.unit == "DAYS":
         due = base + timedelta(days=rule.offset)
     elif rule.unit == "MONTHS":
         due = _add_months(base, rule.offset)
