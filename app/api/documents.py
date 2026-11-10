@@ -729,6 +729,7 @@ class CompanyFactVerificationRequest(BaseModel):
 @router.post(
     "/facts/company/{company_id}",
     dependencies=[
+        Depends(require_roles("CLIENT_DIRECTOR", "LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN")),
         Depends(require_company_access("company_id")),
         Depends(require_entitlement("document_management")),
     ],
@@ -753,6 +754,9 @@ async def create_user_asserted_company_fact(
 
 @router.post(
     "/facts/document/{document_id}",
+    dependencies=[
+        Depends(require_roles("CLIENT_DIRECTOR", "LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN")),
+    ],
     summary="Attach a company fact to an existing document-vault record",
 )
 async def create_document_backed_company_fact(
