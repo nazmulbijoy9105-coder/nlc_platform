@@ -184,6 +184,22 @@ class ObligationFinding:
         )
 
     @property
+    def fact_provenance_snapshot(self) -> tuple[dict[str, str | None], ...]:
+        """Serializable immutable provenance to persist with the finding."""
+        return tuple({
+            "fact_key": fact.fact_key,
+            "trust_level": fact.trust_level.value,
+            "verification_status": fact.verification_status.value,
+            "source_reference": fact.source_reference,
+            "observed_on": fact.observed_on.isoformat(),
+            "document_id": fact.document_id,
+            "authorized_uploader_id": fact.authorized_uploader_id,
+            "uploaded_at": fact.uploaded_at,
+            "verified_by": fact.verified_by,
+            "verified_at": fact.verified_at,
+        } for fact in self.facts)
+
+    @property
     def fact_basis_disclosure(self) -> tuple[str, ...]:
         """Human-readable trust disclosures to render alongside every finding."""
         disclosures: list[str] = []
