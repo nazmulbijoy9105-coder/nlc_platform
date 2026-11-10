@@ -1111,3 +1111,77 @@ def test_claimed_satisfaction_filing_without_filing_date_is_unknown():
     assert flag.state == RuleState.UNKNOWN
     assert flag.eval_state == "UNKNOWN"
     assert "SATISFACTION_FILING_DATE_UNKNOWN" in flag.detail["unknown_reasons"]
+
+
+def test_customer_score_components_reconcile_with_per_finding_api_allocations(monkeypatch):
+    rule_impacts = [
+        ("TAX-001", 15), ("AGM-001", 30), ("AUD-001", 25),
+        ("AR-002", 20), ("DIR-001", 25), ("SH-001", 20),
+        ("CAP-001", 15), ("OFF-001", 10), ("REG-001", 10),
+        ("BNK-001", 20), ("LBR-001", 10), ("BSEC-001", 15),
+        ("FX-001", 10), ("ESC-001", 15),
+    ]
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module,
+        "PRODUCT_SCORING_RULE_IDS",
+        frozenset(rule_id for rule_id, _ in rule_impacts),
+    )
+    flags = [
+        ComplianceFlag(
+            rule_id=rule_id,
+            flag_code=f"EVENT-{index}",
+            severity=Severity.RED,
+            score_impact=impact,
+            revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+            description="Verified test-only finding.",
+            statutory_basis="Test fixture only.",
+            state=RuleState.NON_COMPLIANT,
+            eval_state="VIOLATION",
+            detail={"event_id": f"event-{index}"},
+        )
+        for index, (rule_id, impact) in enumerate(rule_impacts)
+    ]
+    engine = NLCRuleEngine()
+    score = engine._calculate_score(flags, _profile())
+    per_finding = _applied_score_impacts(flags)
+
+    assert sum(item["applied"] for item in per_finding) == 100
+    assert sum(score.category_deductions.values()) == 100
+    assert score.final_score == 0
+    assert 100 - sum(score.category_deductions.values()) == score.final_score
+    assert [item["applied"] for item in per_finding] == [
+        min(item["applied"], 100) for item in per_finding
+    ]
+
+
+def test_excluded_and_unknown_findings_have_zero_score_deduction(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    excluded = ComplianceFlag(
+        rule_id="AGM-999",
+        flag_code="EXCLUDED",
+        severity=Severity.RED,
+        score_impact=30,
+        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+        description="Excluded rule.",
+        statutory_basis="Test only.",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+    )
+    unknown = ComplianceFlag(
+        rule_id="AGM-001",
+        flag_code="UNKNOWN",
+        severity=Severity.RED,
+        score_impact=20,
+        revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+        description="Unknown evidence.",
+        statutory_basis="Test only.",
+        state=RuleState.UNKNOWN,
+        eval_state="UNKNOWN",
+    )
+    applied = _applied_score_impacts([excluded, unknown])
+    assert applied == [
+        {"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"},
+        {"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"},
+    ]
