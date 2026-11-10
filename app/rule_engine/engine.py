@@ -3395,6 +3395,7 @@ class NLCRuleEngine:
             "engine_version": RULE_ENGINE_VERSION,
             "ilrmf_version": ILRMF_VERSION,
             "verified_rule_ids": sorted(VERIFIED_RULE_IDS),
+            "product_scoring_rule_ids": sorted(PRODUCT_SCORING_RULE_IDS),
             "category_caps": {
                 key: {"max_deduction": cap, "prefixes": list(prefixes)}
                 for key, (cap, prefixes) in sorted(CATEGORY_CAPS.items())
