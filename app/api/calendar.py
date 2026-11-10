@@ -15,11 +15,17 @@ from app.services.compliance_calendar import (
     LEGAL_CALENDAR_RELEASED,
     VERIFIED_CALENDAR_EVENT_TYPES,
     APPROVED_CALENDAR_EVENT_DEFINITIONS,
+    VERIFIED_CALENDAR_RULE_IDS,
 )
 
 
 def _require_calendar_release() -> None:
-    if not LEGAL_CALENDAR_RELEASED or not VERIFIED_CALENDAR_EVENT_TYPES:
+    if (
+        LEGAL_CALENDAR_RELEASED is not True
+        or not VERIFIED_CALENDAR_EVENT_TYPES
+        or not VERIFIED_CALENDAR_RULE_IDS
+        or not APPROVED_CALENDAR_EVENT_DEFINITIONS
+    ):
         raise HTTPException(
             status_code=503,
             detail=(
@@ -43,8 +49,6 @@ async def generate_calendar(
     if current_user.role == "LEGAL_STAFF":
         await ensure_staff_company_scope(company_id, current_user, db)
     _require_calendar_release()
-    if current_user.role == "LEGAL_STAFF":
-        await ensure_staff_company_scope(company_id, current_user, db)
     service = ComplianceCalendarService(db)
     generated = await service.generate_approved_events(
         company_id,
