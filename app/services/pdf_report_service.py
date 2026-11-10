@@ -437,11 +437,11 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
 
         if data["has_complete_applied_metadata"]:
             effective = data["applied"]
-            if effective != expected_effective:
+            if effective < 0 or effective > expected_effective:
                 raise ScoreReconciliationError(
                     f"PDF category reconciliation mismatch for {cat_name}: "
                     f"raw={raw}, cap={cap}, persisted_applied={effective}, "
-                    f"expected_applied={expected_effective}"
+                    f"maximum_allowed={expected_effective}"
                 )
         else:
             # Compatibility for older snapshots that predate applied-impact
@@ -457,7 +457,11 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
                 f'</div>'
             )
 
-    indicated_score = max(0, 100 - effective_total)
+    if effective_total > 100:
+        raise ScoreReconciliationError(
+            f"PDF applied category deductions exceed global score budget: {effective_total}"
+        )
+    indicated_score = 100 - effective_total
     if indicated_score != score:
         raise ScoreReconciliationError(
             f"PDF score reconciliation mismatch: displayed={score}, indicated={indicated_score}"
