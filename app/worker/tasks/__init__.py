@@ -22,13 +22,13 @@ from app.worker.tasks.core import (
     sync_sro_registry,
     trigger_rescue_reevaluation,
 )
-from app.worker.tasks.notify import deliver_pending_notifications
 from app.worker.tasks.domain_events import (
     consume_company_lifecycle_event,
     consume_evidence_verification_event,
     consume_filing_receipt_event,
     dispatch_domain_event_outbox,
 )
+from app.worker.tasks.notify import deliver_pending_notifications
 
 __all__ = [
     "cleanup_expired_notifications",
