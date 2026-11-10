@@ -157,57 +157,57 @@ async def _consume_and_reevaluate(
     consumer_name: str,
     allowed_event_types: set[str],
 ) -> dict[str, Any]:
-    """Claim once and reevaluate in the same transaction as the receipt insert."""
+    """Claim once and reevaluate in the same database transaction as the receipt."""
     from app.models.database import AsyncSessionLocal, set_admin_context
     from app.models.domain_event import DomainEventConsumption, DomainEventOutbox
     from app.services.compliance_service import ComplianceService
 
     parsed_event_id = uuid.UUID(event_id)
     async with AsyncSessionLocal() as db:
+        # set_admin_context starts the worker's signed transaction context;
+        # keep the claim and domain side effect in that same transaction.
         await set_admin_context(db)
-        async with db.begin():
-            event_result = await db.execute(
-                select(DomainEventOutbox)
-                .where(DomainEventOutbox.id == parsed_event_id)
-                .with_for_update()
-            )
-            event = event_result.scalar_one_or_none()
-            if event is None:
-                raise ValueError("Domain event does not exist.")
-            if event.event_type not in allowed_event_types:
-                raise ValueError("Event type is not valid for this consumer.")
+        event_result = await db.execute(
+            select(DomainEventOutbox)
+            .where(DomainEventOutbox.id == parsed_event_id)
+            .with_for_update()
+        )
+        event = event_result.scalar_one_or_none()
+        if event is None:
+            raise ValueError("Domain event does not exist.")
+        if event.event_type not in allowed_event_types:
+            raise ValueError("Event type is not valid for this consumer.")
 
-            claim = await db.execute(
-                pg_insert(DomainEventConsumption)
-                .values(
-                    event_id=event.id,
-                    company_id=event.company_id,
-                    consumer_name=consumer_name,
-                    outcome={"compliance_reevaluation": "completed"},
-                )
-                .on_conflict_do_nothing(
-                    index_elements=["event_id", "consumer_name"]
-                )
-                .returning(DomainEventConsumption.id)
-            )
-            consumption_id = claim.scalar_one_or_none()
-            if consumption_id is None:
-                return {
-                    "event_id": event_id,
-                    "consumer": consumer_name,
-                    "duplicate": True,
-                }
-
-            await ComplianceService(db).evaluate_company(
+        claim = await db.execute(
+            pg_insert(DomainEventConsumption)
+            .values(
+                event_id=event.id,
                 company_id=event.company_id,
-                trigger_source=f"DOMAIN_EVENT_CONSUMER:{consumer_name}",
+                consumer_name=consumer_name,
+                outcome={"compliance_reevaluation": "completed"},
             )
+            .on_conflict_do_nothing(index_elements=["event_id", "consumer_name"])
+            .returning(DomainEventConsumption.id)
+        )
+        consumption_id = claim.scalar_one_or_none()
+        if consumption_id is None:
+            await db.rollback()
             return {
                 "event_id": event_id,
                 "consumer": consumer_name,
-                "duplicate": False,
+                "duplicate": True,
             }
 
+        await ComplianceService(db).evaluate_company(
+            company_id=event.company_id,
+            trigger_source=f"DOMAIN_EVENT_CONSUMER:{consumer_name}",
+        )
+        await db.commit()
+        return {
+            "event_id": event_id,
+            "consumer": consumer_name,
+            "duplicate": False,
+        }
 
 @celery_app.task(
     name="app.worker.tasks.consume_filing_receipt_event",
