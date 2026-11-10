@@ -20,7 +20,7 @@ from app.compliance.fact_provenance import (
 
 class _StrEnum(str, Enum):
     def __str__(self) -> str:
-        return self.value
+        return str(self.value)
 
 
 class Applicability(_StrEnum):
