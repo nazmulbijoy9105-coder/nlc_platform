@@ -199,7 +199,8 @@ class TestAGMRules:
             members_present_at_agm=3,
         )
         output = rule_engine.evaluate(profile)
-    
+        assert_flag_not_triggered(output, "AGM-005")
+
     def test_AGM005_large_private_company_requires_three_members(self, rule_engine, build_profile):
         """A private company with more than six members needs three present by default."""
         profile = build_profile(
@@ -222,7 +223,8 @@ class TestAGMRules:
             agm_held_this_cycle=True,
         )
         output = rule_engine.evaluate(profile)
-    
+        assert_flag_not_triggered(output, "AGM-005")
+
     def test_AGM005_small_private_company_default_quorum_is_two(self, rule_engine, build_profile):
         profile = build_profile(
             member_count=6,
@@ -230,7 +232,8 @@ class TestAGMRules:
             agm_held_this_cycle=True,
         )
         output = rule_engine.evaluate(profile)
-    
+        assert_flag_not_triggered(output, "AGM-005")
+
     def test_AGM005_missing_member_count_is_not_evaluated(self, rule_engine, build_profile):
         profile = build_profile(
             member_count=None,
@@ -754,7 +757,7 @@ class TestRegisterRules:
             maintained_registers=["members", "directors", "charges", "transfers", "debentures", "mortgages"],
         )
         output = rule_engine.evaluate(profile)
-        
+        assert_flag_not_triggered(output, "REG-004")
 
     def test_REG002_triggers_certificate_not_issued(self, rule_engine, build_profile):
         """Share certificates not issued within 90 days of allotment → SH-002.
