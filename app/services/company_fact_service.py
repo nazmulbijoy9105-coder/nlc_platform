@@ -148,6 +148,18 @@ class CompanyFactService:
         fact = result.scalar_one_or_none()
         if fact is None:
             raise HTTPException(status_code=404, detail="Company fact not found.")
+
+        # Serialize verification against concurrent fact-version creation.
+        # Fact writers take the same company-row lock before linking a successor.
+        await self.db.execute(
+            select(Company.id).where(Company.id == fact.company_id).with_for_update()
+        )
+        locked_result = await self.db.execute(
+            select(CompanyFact).where(CompanyFact.id == fact_id).with_for_update()
+        )
+        fact = locked_result.scalar_one_or_none()
+        if fact is None:
+            raise HTTPException(status_code=404, detail="Company fact not found.")
         if fact.trust_level != "AUTHORIZED_DOCUMENT_BACKED" or fact.document_id is None:
             raise HTTPException(status_code=422, detail="Only document-backed facts can be document-verified.")
         if fact.verification_status == "SUPERSEDED":
