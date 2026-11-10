@@ -89,6 +89,14 @@ class CompanyFactService:
         )
         self.db.add(fact)
         await self.db.flush()
+        from app.services.domain_events import DomainEventType, publish_domain_event
+        await publish_domain_event(
+            self.db, company_id=company_id,
+            event_type=DomainEventType.COMPANY_FACT_ASSERTED,
+            aggregate_type="company_fact", aggregate_id=fact.id, actor_id=actor_id,
+            payload={"fact_key": normalized_key, "trust_level": fact.trust_level,
+                     "verification_status": fact.verification_status},
+        )
         await self.db.refresh(fact)
         return fact
 
@@ -138,6 +146,15 @@ class CompanyFactService:
         )
         self.db.add(fact)
         await self.db.flush()
+        from app.services.domain_events import DomainEventType, publish_domain_event
+        await publish_domain_event(
+            self.db, company_id=document.company_id,
+            event_type=DomainEventType.COMPANY_FACT_ASSERTED,
+            aggregate_type="company_fact", aggregate_id=fact.id, actor_id=actor_id,
+            payload={"fact_key": normalized_key, "trust_level": fact.trust_level,
+                     "verification_status": fact.verification_status,
+                     "source_document_id": str(document.id)},
+        )
         await self.db.refresh(fact)
         return fact
 
@@ -201,6 +218,13 @@ class CompanyFactService:
         fact.verification_status = decision
         fact.verification_note = note
         await self.db.flush()
+        from app.services.domain_events import DomainEventType, publish_domain_event
+        await publish_domain_event(
+            self.db, company_id=fact.company_id,
+            event_type=DomainEventType.COMPANY_FACT_VERIFIED,
+            aggregate_type="company_fact", aggregate_id=fact.id, actor_id=reviewer_id,
+            payload={"fact_key": fact.fact_key, "verification_status": decision},
+        )
         await self.db.refresh(fact)
         return fact
 

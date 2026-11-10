@@ -96,6 +96,21 @@ BEAT_SCHEDULE = {
         "description": "Process pending notifications queue (email, WhatsApp, dashboard)",
     },
 
+    # ── TRANSACTIONAL DOMAIN EVENT OUTBOX ─────────────────────────────
+    # Drain committed company/fact/filing/evidence events continuously.
+    # The dispatcher uses row locks and bounded retries; event handlers
+    # enqueue idempotent downstream work rather than mutating source records.
+    "dispatch-domain-event-outbox": {
+        "task": "app.worker.tasks.dispatch_domain_event_outbox",
+        "schedule": crontab(minute="*/1"),
+        "options": {
+            "queue": "maintenance",
+            "expires": 55,
+        },
+        "kwargs": {"batch_size": 100},
+        "description": "Dispatch transactional company lifecycle domain events",
+    },
+
     # ── AI REVIEW QUEUE ALERTS ────────────────────────────────────────
     # Checks for AI-generated documents waiting for human review.
     # Sends an alert to NLC legal staff if documents have been waiting

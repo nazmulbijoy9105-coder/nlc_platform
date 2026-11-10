@@ -201,6 +201,8 @@ class ComplianceCalendarService:
                 )
             )
             event = existing_result.scalar_one_or_none()
+            was_created = event is None
+            previous_due_date = event.due_date if event is not None else None
             if event is None:
                 event = ComplianceCalendarEvent(
                     company_id=company_id,
@@ -241,6 +243,23 @@ class ComplianceCalendarService:
             event.legal_trigger_date = definition.trigger_date
             event.trigger_evidence_ref = definition.trigger_evidence_ref
             event.legal_manifest_sha256 = manifest_hash
+
+            # Flush the aggregate before publishing its event. SQLAlchemy assigns
+            # Python-side UUID defaults during flush, so event.id is otherwise
+            # still None for a newly added calendar row.
+            await self.db.flush()
+
+            if was_created or previous_due_date != due_date:
+                from app.services.domain_events import DomainEventType, publish_domain_event
+                await publish_domain_event(
+                    self.db, company_id=company_id,
+                    event_type=DomainEventType.DEADLINES_GENERATED,
+                    aggregate_type="compliance_calendar_event", aggregate_id=event.id,
+                    payload={"event_type": event_type, "period_label": definition.period_label,
+                             "due_date": due_date.isoformat(), "legal_rule_id": definition.rule.rule_id,
+                             "manifest_sha256": manifest_hash,
+                             "change": "created" if was_created else "rescheduled"},
+                )
             persisted.append(event)
 
         await self.db.flush()

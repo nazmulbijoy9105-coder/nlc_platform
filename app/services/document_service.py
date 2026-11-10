@@ -173,6 +173,15 @@ class DocumentService(BaseService[Document]):
             created_by=requested_by,
         )
 
+        from app.services.domain_events import DomainEventType, publish_domain_event
+        await publish_domain_event(
+            self.db, company_id=company_id,
+            event_type=DomainEventType.DOCUMENT_GENERATED,
+            aggregate_type="document", aggregate_id=document.id, actor_id=requested_by,
+            payload={"document_type": str(document_type), "ai_generated": True,
+                     "human_approved": False, "client_visible": False},
+        )
+
         # ── Step 8: Upload to S3 (async background) ───────────────
         try:
             s3_key = await _upload_to_s3(
@@ -211,7 +220,7 @@ class DocumentService(BaseService[Document]):
         notes = doc.notes or ""
         if approval_note and approval_note.strip():
             notes = (notes + "\n" if notes else "") + f"Approval: {approval_note.strip()}"
-        return await self.update_instance(
+        updated_doc = await self.update_instance(
             doc,
             human_approved=True,
             approved_by=approved_by,
@@ -219,6 +228,16 @@ class DocumentService(BaseService[Document]):
             in_review_queue=False,
             notes=notes or None,
         )
+        if updated_doc is not None:
+            from app.services.domain_events import DomainEventType, publish_domain_event
+            await publish_domain_event(
+                self.db, company_id=updated_doc.company_id,
+                event_type=DomainEventType.DOCUMENT_APPROVED,
+                aggregate_type="document", aggregate_id=updated_doc.id, actor_id=approved_by,
+                payload={"document_type": str(updated_doc.document_type),
+                         "human_approved": True, "client_visible": False},
+            )
+        return updated_doc
 
     async def release_to_client(
         self,
@@ -241,12 +260,23 @@ class DocumentService(BaseService[Document]):
         notes = doc.notes or ""
         if release_note and release_note.strip():
             notes = (notes + "\n" if notes else "") + f"Release: {release_note.strip()}"
-        return await self.update_instance(
+        updated_doc = await self.update_instance(
             doc,
             is_client_visible=True,
             client_released_at=datetime.now(UTC),
             notes=notes or None,
         )
+        if updated_doc is not None:
+            from app.services.domain_events import DomainEventType, publish_domain_event
+            await publish_domain_event(
+                self.db, company_id=updated_doc.company_id,
+                event_type=DomainEventType.DOCUMENT_RELEASED,
+                aggregate_type="document", aggregate_id=updated_doc.id, actor_id=released_by,
+                payload={"document_type": str(updated_doc.document_type),
+                         "human_approved": bool(updated_doc.human_approved),
+                         "client_visible": True},
+            )
+        return updated_doc
 
     # ── Access & Download ─────────────────────────────────────────
 

@@ -89,6 +89,24 @@ async def test_approved_calendar_definition_persists_legal_provenance(
     events = await service.generate_approved_events(db_company.id, [definition])
     assert len(events) == 1
     event = events[0]
+    assert event.id is not None
+
+    # The outbox event must point to the persisted calendar aggregate, not a
+    # missing pre-flush UUID.
+    from sqlalchemy import select
+    from app.models.domain_event import DomainEventOutbox
+
+    outbox_result = await db.execute(
+        select(DomainEventOutbox).where(
+            DomainEventOutbox.event_type == "deadline.calendar.generated",
+            DomainEventOutbox.aggregate_type == "compliance_calendar_event",
+            DomainEventOutbox.aggregate_id == event.id,
+        )
+    )
+    outbox_event = outbox_result.scalar_one()
+    assert outbox_event.company_id == db_company.id
+    assert outbox_event.payload["change"] == "created"
+
     assert event.due_date == date(2026, 1, 11)
     assert event.legal_rule_id == "TEST-CAL-001"
     assert event.legal_source_version == "fixture-v1"
