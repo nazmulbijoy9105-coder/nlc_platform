@@ -154,6 +154,7 @@ def calculate_approved_penalty(
     rule: PenaltyRule,
     *,
     days_overdue: int,
+    due_date: date,
     trigger_date: date,
     as_of: date,
     applicable: bool,
@@ -165,6 +166,8 @@ def calculate_approved_penalty(
         or not applicable
         or not trigger_evidence_verified
         or days_overdue < 0
+        or as_of < due_date
+        or (as_of - due_date).days != days_overdue
         or trigger_date < rule.effective_from
         or (rule.effective_to is not None and trigger_date > rule.effective_to)
         or as_of < trigger_date
