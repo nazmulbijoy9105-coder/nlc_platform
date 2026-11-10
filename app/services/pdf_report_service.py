@@ -128,14 +128,14 @@ def _render_band_legend(current_band: str) -> str:
 
     Includes NOT_EVALUATED for companies with insufficient data (coverage < 0.5).
     """
-    # Risk band is the worst independently approved finding severity,
-    # not a numeric score range. A numeric range must not imply legal approval.
+    # Risk band is the worst product-released, evidence-supported finding severity,
+    # not a numeric score range. Product scoring does not imply legal certification.
     bands = [
-        ("GREEN", "No verified adverse finding", "Screening only"),
-        ("YELLOW", "Verified monitoring finding", "Review"),
-        ("RED", "Verified material finding", "Action required"),
-        ("BLACK", "Verified critical override", "Critical"),
-        ("NOT_EVALUATED", "Insufficient evidence", "No score released"),
+        ("GREEN", "No active adverse finding", "Routine monitoring"),
+        ("YELLOW", "Active monitoring finding", "Review"),
+        ("RED", "Active material finding", "Action required"),
+        ("BLACK", "Active critical override", "Critical"),
+        ("NOT_EVALUATED", "Insufficient evidence or scoring disabled", "No score released"),
     ]
     items = []
     for band_name, score_range, label in bands:
@@ -171,7 +171,7 @@ def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue
     elif band == "YELLOW":
         urgency = "<strong>Compliance monitoring recommended.</strong> The company has minor deficiencies that should be addressed to maintain good standing."
     elif band == "NOT_EVALUATED":
-        urgency = "<strong>Not scored: no statutory compliance score has been released.</strong> The applicable rule corpus is pending independent legal approval or sufficient verified evidence. This report is not a compliance certification."
+        urgency = "<strong>Not evaluated: no customer-facing score is available.</strong> Product scoring may be disabled, or the company facts and evidence may be insufficient for evaluation. This report is not a compliance certification."
     else:
         urgency = "<strong>Company is in good compliance standing.</strong> No critical issues detected. Continue regular monitoring."
 
