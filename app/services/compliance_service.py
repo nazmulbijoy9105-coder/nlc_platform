@@ -203,12 +203,26 @@ class ComplianceService(BaseService[ComplianceFlag]):
             ).order_by(CompanyFact.created_at.asc(), CompanyFact.id.asc())
         )
         current_facts = list(fact_result.scalars().all())
+        used_facts = []
         for fact in current_facts:
             if fact.fact_key in profile_data:
                 profile_data[fact.fact_key] = fact.fact_value
+                used_facts.append(fact)
         fact_provenance_snapshot = [
-            fact.provenance_payload() for fact in current_facts
+            fact.provenance_payload() for fact in used_facts
         ]
+        untracked_profile_fields = sorted(
+            set(profile_data) - {fact.fact_key for fact in used_facts}
+        )
+        if untracked_profile_fields:
+            fact_provenance_snapshot.append({
+                "record_type": "UNATTRIBUTED_PROFILE_FIELDS",
+                "fields": untracked_profile_fields,
+                "disclosure": (
+                    "Some legacy company-profile inputs have no explicit source record. "
+                    "Their origin and verification status are unknown; do not treat them as verified."
+                ),
+            })
 
         # Convert dict to CompanyProfile dataclass
         try:
