@@ -239,11 +239,12 @@ def main() -> int:
             scoring_ids = set(ast.literal_eval(node.value.args[0]))
             break
     forbidden_scoring_ids = {"AR-001", "SH-002", "ESC-003"}
-    if (len(scoring_ids) != 82 or not scoring_ids.issubset(seed)
-            or scoring_ids & forbidden_scoring_ids):
+    expected_scoring_ids = seed - forbidden_scoring_ids
+    if scoring_ids != expected_scoring_ids:
         print(
             f"FAIL: product scoring allowlist mismatch; count={len(scoring_ids)} "
-            f"invalid={sorted(scoring_ids & forbidden_scoring_ids)}"
+            f"missing={sorted(expected_scoring_ids - scoring_ids)} "
+            f"extra={sorted(scoring_ids - expected_scoring_ids)}"
         )
         return 1
 
