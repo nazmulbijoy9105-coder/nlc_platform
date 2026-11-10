@@ -125,12 +125,11 @@ def _rule_to_response(rule) -> RuleResponse:
         rule_type=str(rule.rule_type),
         statutory_basis=(
             rule.statutory_basis if score_eligible
-            else "NOT VALIDATED — independent Bangladesh-qualified counsel review required"
+            else "Not part of the product scoring allowlist; no score deduction is applied."
         ),
         description=(
             rule.description if score_eligible
-            else "Review prompt only. This rule is not approved for legal determinations. "
-                 "No breach, liability, penalty or compliance status is determined."
+            else "Informational catalogue entry only. No score deduction is applied."
         ),
         default_severity=str(rule.default_severity) if score_eligible else "NOT_EVALUATED",
         score_impact=rule.score_impact if score_eligible else 0,
