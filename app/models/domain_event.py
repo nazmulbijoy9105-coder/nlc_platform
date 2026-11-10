@@ -53,7 +53,9 @@ class DomainEventOutbox(UUIDPrimaryKeyMixin, Base):
     event_type: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     aggregate_type: Mapped[str] = mapped_column(String(80), nullable=False)
     aggregate_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
-    schema_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    schema_version: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
+    )
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     correlation_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     occurred_at: Mapped[datetime] = mapped_column(
