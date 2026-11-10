@@ -941,6 +941,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     COUNT(*) FILTER (WHERE current_risk_band = 'GREEN') as green_count,
                     COUNT(*) FILTER (WHERE current_risk_band = 'YELLOW') as yellow_count,
                     COUNT(*) FILTER (WHERE current_risk_band IN ('RED', 'BLACK')) as red_black_count,
+                    COUNT(*) FILTER (WHERE current_risk_band = 'NOT_EVALUATED') as not_evaluated_count,
                     0 as upcoming_deadlines
                 FROM companies
                 WHERE assigned_staff_id = :uid AND is_active = true
