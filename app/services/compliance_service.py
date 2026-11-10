@@ -393,7 +393,6 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "rescue_sequence": output.rescue_sequence if score_is_released else None,
             "engine_version":  output.engine_version,
             "ilrmf_version":   output.ilrmf_version,
-            "scoring_spec_version": SCORING_SPEC_VERSION,
         }
 
     async def _persist_evaluation(
@@ -646,6 +645,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         sb = output.score_breakdown
         score_breakdown_snapshot = None if score_for_current is None else {
             "engine_version": engine_version,
+            "scoring_spec_version": SCORING_SPEC_VERSION,
             "ilrmf_version": str(getattr(output, "ilrmf_version", "") or ""),
             "score_hash": sb.score_hash,
             "raw_total": sb.raw_total,
