@@ -501,7 +501,6 @@ async def create_engagement_from_rescue(
         rescue_plan=plan,
         confirmed_fee_bdt=body.confirmed_fee_bdt,
         payment_terms=body.payment_terms,
-        created_by=current_user.id,
     )
     if not engagement:
         raise HTTPException(status_code=404, detail="Rescue plan not found.")
