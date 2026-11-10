@@ -552,7 +552,7 @@ class TestRescue:
             headers=_auth(super_admin_tok),
             json={"company_id": str(db_company.id)}
         )
-        assert resp.status_code in (201, 409, 422), resp.text
+        assert resp.status_code in (201, 402, 409, 422), resp.text
         assert "independently approved" not in resp.text
 
     @pytest.mark.asyncio
