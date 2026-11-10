@@ -132,7 +132,7 @@ jobs:
             --ignore=tests/unit/test_rjsc_forms_idor.py \
             --ignore=tests/unit/test_service_data_leak.py \
             --cov=app --cov-report=term-missing \
-            --cov-report=xml:coverage-unit.xml --cov-fail-under=56.0
+            --cov-report=xml:coverage-unit.xml --cov-fail-under=57.0
 
       - name: Upload unit coverage report
         if: always()
