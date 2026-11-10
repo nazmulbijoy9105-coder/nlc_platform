@@ -36,7 +36,7 @@ jobs:
             BASE_SHA="$(git rev-parse "${GITHUB_SHA}^")"
           fi
           mapfile -t PY_FILES < <(
-            git diff --name-only "${BASE_SHA}" "${GITHUB_SHA}" -- '*.py' |
+            git diff --name-only --diff-filter=ACMR "${BASE_SHA}" "${GITHUB_SHA}" -- '*.py' |
               grep -E '^(app|tests|canonical_architecture)/' || true
           )
           if (("${#PY_FILES[@]}" > 0)); then
