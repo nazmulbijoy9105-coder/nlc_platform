@@ -2097,7 +2097,6 @@ class NLCRuleEngine:
 
             # Categorize missing items by legal obligation type
             internal_registers = []
-            rjsc_filings = []
             for r in core_missing:
                 if r in ("members", "charges", "minutes_agm", "minutes_board"):
                     internal_registers.append(r)
