@@ -724,7 +724,7 @@ def test_product_released_corpus_reports_score_with_full_input_coverage():
     assert score.override_applied is False
 
 
-def test_unapproved_black_override_cannot_force_zero_score():
+def test_black_severity_without_authorised_override_does_not_force_zero_score():
     profile = _profile()
     unapproved_black = ComplianceFlag(
         rule_id="INC-003",
@@ -739,7 +739,7 @@ def test_unapproved_black_override_cannot_force_zero_score():
         is_black_override=True,
     )
     score = NLCRuleEngine()._calculate_score([unapproved_black], profile)
-    assert score.final_score == 100
+    assert score.final_score == 85
     assert score.override_applied is False
 
 def test_tin_profile_absence_is_review_only_not_a_confirmed_tax_breach():
