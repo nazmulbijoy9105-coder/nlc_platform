@@ -1,5 +1,6 @@
 """Product scoring eligibility and legal-verification metadata stay independent."""
 
+import asyncio
 from datetime import datetime
 from types import SimpleNamespace
 
@@ -41,6 +42,26 @@ def test_product_authorized_black_override_does_not_require_legal_verification(m
     assert response.is_black_override is True
     assert response.is_active is True
     assert response.verification_status == "PENDING"
+
+def test_super_admin_black_override_catalogue_remains_visible_when_scoring_is_disabled(monkeypatch):
+    monkeypatch.setattr(rules_api, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(rules_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(rules_api, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"INC-003"}))
+
+    class FakeRulesService:
+        def __init__(self, db):
+            self.db = db
+
+        async def get_black_override_rules(self):
+            return [_rule(rule_id="INC-003")]
+
+    monkeypatch.setattr(rules_api, "RulesService", FakeRulesService)
+    result = asyncio.run(rules_api.get_black_overrides(current_user=None, db=object()))
+
+    assert len(result) == 1
+    assert result[0].product_scoring_enabled is False
+    assert result[0].is_black_override is False
+    assert result[0].verification_status == "PENDING"
     assert response.verified_at is None
     assert response.statutory_effective_date is None
     assert response.statutory_basis == "Section 81, Companies Act 1994"
