@@ -109,3 +109,17 @@ def test_user_asserted_fact_is_flagged_on_finding():
         ),
     )
     assert finding.contains_unverified_facts
+
+def test_waived_and_exempted_are_distinct_statuses():
+    waived = ObligationState(
+        Applicability.APPLIES, EvidenceState.NOT_PROVIDED, ObligationStatus.WAIVED,
+    )
+    assert waived.applicability is Applicability.APPLIES
+    exempted = ObligationState(
+        Applicability.DOES_NOT_APPLY, EvidenceState.NOT_PROVIDED, ObligationStatus.EXEMPTED,
+    )
+    assert exempted.applicability is Applicability.DOES_NOT_APPLY
+    with pytest.raises(ValueError, match="EXEMPTED requires"):
+        ObligationState(
+            Applicability.APPLIES, EvidenceState.NOT_PROVIDED, ObligationStatus.EXEMPTED,
+        )
