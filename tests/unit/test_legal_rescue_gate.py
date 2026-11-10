@@ -12,7 +12,7 @@ def test_rescue_workflow_is_blocked_when_product_scoring_is_disabled(monkeypatch
     with pytest.raises(HTTPException) as exc:
         _require_legal_release()
     assert exc.value.status_code == 503
-    assert "product scoring release" in exc.value.detail
+    assert "product scoring is disabled" in exc.value.detail
 
 
 def test_rescue_workflow_gate_opens_when_product_scoring_is_enabled(monkeypatch):
