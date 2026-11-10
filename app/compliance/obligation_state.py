@@ -10,7 +10,12 @@ from dataclasses import dataclass
 from datetime import date
 from enum import Enum
 
-from app.compliance.fact_provenance import FactTrustLevel, FactVerificationStatus
+from app.compliance.fact_provenance import (
+    CompanyFact as FactProvenance,
+    FactTrustLevel,
+    FactVerificationStatus,
+    fact_provenance_payload,
+)
 
 
 class _StrEnum(str, Enum):
@@ -40,30 +45,6 @@ class ObligationStatus(_StrEnum):
     DISPUTED = "DISPUTED"
     WAIVED = "WAIVED"
     EXEMPTED = "EXEMPTED"
-
-
-@dataclass(frozen=True)
-class FactProvenance:
-    fact_key: str
-    trust_level: FactTrustLevel
-    source_reference: str
-    observed_on: date
-    verification_status: FactVerificationStatus = FactVerificationStatus.UNVERIFIED
-    document_id: str | None = None
-    authorized_uploader_id: str | None = None
-    uploaded_at: str | None = None
-    verified_by: str | None = None
-    verified_at: str | None = None
-
-    def __post_init__(self) -> None:
-        if not self.fact_key.strip() or not self.source_reference.strip():
-            raise ValueError("fact_key and source_reference are required")
-        if self.trust_level is FactTrustLevel.AUTHORIZED_DOCUMENT_BACKED:
-            if not all((self.document_id, self.authorized_uploader_id, self.uploaded_at)):
-                raise ValueError("document-backed finding facts require document and uploader provenance")
-        if self.verification_status is FactVerificationStatus.VERIFIED:
-            if not self.verified_by or not self.verified_at:
-                raise ValueError("verified finding facts require verifier and timestamp")
 
 
 @dataclass(frozen=True)
@@ -186,36 +167,12 @@ class ObligationFinding:
     @property
     def fact_provenance_snapshot(self) -> tuple[dict[str, str | None], ...]:
         """Serializable immutable provenance to persist with the finding."""
-        return tuple({
-            "fact_key": fact.fact_key,
-            "trust_level": fact.trust_level.value,
-            "verification_status": fact.verification_status.value,
-            "source_reference": fact.source_reference,
-            "observed_on": fact.observed_on.isoformat(),
-            "document_id": fact.document_id,
-            "authorized_uploader_id": fact.authorized_uploader_id,
-            "uploaded_at": fact.uploaded_at,
-            "verified_by": fact.verified_by,
-            "verified_at": fact.verified_at,
-        } for fact in self.facts)
+        return tuple(fact_provenance_payload(fact) for fact in self.facts)
 
     @property
     def fact_basis_disclosure(self) -> tuple[str, ...]:
         """Human-readable trust disclosures to render alongside every finding."""
-        disclosures: list[str] = []
-        for fact in self.facts:
-            if fact.trust_level is FactTrustLevel.USER_ASSERTED:
-                disclosures.append(
-                    f"{fact.fact_key}: user-asserted; not independently verified."
-                )
-            elif fact.verification_status is FactVerificationStatus.VERIFIED:
-                disclosures.append(
-                    f"{fact.fact_key}: authorized document-backed; checked by "
-                    f"{fact.verified_by} at {fact.verified_at}."
-                )
-            else:
-                disclosures.append(
-                    f"{fact.fact_key}: authorized document-backed upload; "
-                    "verification is pending or unresolved."
-                )
-        return tuple(disclosures)
+        return tuple(
+            f"{fact.fact_key}: {fact.finding_disclosure}"
+            for fact in self.facts
+        )
