@@ -124,7 +124,7 @@ jobs:
             tests/unit/test_legal_rescue_gate.py \
             tests/integration/test_compliance_calendar.py \
             alembic/versions/0091_calendar_legal_provenance.py \
-            alembic/versions/0092_rescue_source_rule_ids.py
+            alembic/versions/0092_rescue_source_rule_ids.py \\
             alembic/versions/0093_verified_rule_audit_view.py
 
       - name: Verify single Alembic head
