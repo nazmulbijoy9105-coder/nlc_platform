@@ -13,6 +13,7 @@ from sqlalchemy import (
     Index,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -53,6 +54,7 @@ class CompanyFact(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             name="ck_company_fact_verification_actor",
         ),
         Index("ix_company_facts_company_key_created", "company_id", "fact_key", "created_at"),
+        UniqueConstraint("supersedes_fact_id", name="uq_company_facts_single_successor"),
     )
 
     company_id: Mapped[uuid.UUID] = mapped_column(
