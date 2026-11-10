@@ -16,16 +16,12 @@ from app.services.compliance_calendar import (
     VERIFIED_CALENDAR_EVENT_TYPES,
     APPROVED_CALENDAR_EVENT_DEFINITIONS,
     VERIFIED_CALENDAR_RULE_IDS,
+    calendar_manifest_is_released,
 )
 
 
 def _require_calendar_release() -> None:
-    if (
-        LEGAL_CALENDAR_RELEASED is not True
-        or not VERIFIED_CALENDAR_EVENT_TYPES
-        or not VERIFIED_CALENDAR_RULE_IDS
-        or not APPROVED_CALENDAR_EVENT_DEFINITIONS
-    ):
+    if not calendar_manifest_is_released():
         raise HTTPException(
             status_code=503,
             detail=(
