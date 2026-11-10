@@ -70,8 +70,7 @@ def _require_legal_release() -> None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=(
-                "Rescue plans are withheld until the underlying legal rules "
-                "product scoring is enabled."
+                "Rescue plans are withheld because product scoring is disabled."
             ),
         )
 
