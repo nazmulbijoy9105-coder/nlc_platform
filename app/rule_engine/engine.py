@@ -16,6 +16,13 @@ from datetime import date, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from canonical_architecture.scoring_spec import (
+    CATEGORY_CAPS,
+    SCORING_SPEC_VERSION,
+    category_deductions_from_flags,
+    score_from_category_deductions,
+)
+
 # Legacy F3 constants retained for source/test compatibility only.
 # Current scoring policy does NOT deduct points for UNKNOWN facts: UNKNOWN
 # findings are excluded from scoring and represented through profile-input
@@ -460,6 +467,7 @@ class ScoreBreakdown:
     score_hash: str = ""
     category_deductions: Dict[str, int] = field(default_factory=dict)
     coverage_basis: str = "WEIGHTED_PROFILE_INPUT_COMPLETENESS"
+    scoring_spec_version: str = SCORING_SPEC_VERSION
 
 @dataclass
 class EngineOutput:
@@ -516,25 +524,7 @@ AUTHORIZED_BLACK_OVERRIDE_RULE_IDS: frozenset[str] = frozenset()
 # Backward-compatible alias; never use this set to grant authorization.
 BLACK_OVERRIDE_RULES: set[str] = set()
 
-# 100-point scoring model v2 - per-category deduction caps.
-# key -> (max_deduction, rule_id_prefixes). UNKNOWN states never reach the
-# deduction phase (violations are NON_COMPLIANT only).
-CATEGORY_CAPS: dict[str, tuple[int, tuple[str, ...]]] = {
-    "TAX":  (15, ("TAX-", "VAT-")),
-    "AGM":  (30, ("AGM-",)),
-    "AUD":  (25, ("AUD-",)),
-    "RET":  (20, ("AR-",)),
-    "DIR":  (25, ("DIR-", "INC-", "DEF-", "TL-", "BOD-", "MEM-")),
-    "SHR":  (20, ("SH-", "TR-")),
-    "CAP":  (15, ("CAP-", "STR-", "CHG-", "ACC-")),
-    "OFF":  (10, ("OFF-",)),
-    "REG":  (10, ("REG-",)),
-    "BNK":  (20, ("BNK-",)),
-    "LBR":  (10, ("LBR-",)),
-    "BSEC": (15, ("BSEC-",)),
-    "FX":   (10, ("FX-",)),
-    "ESC":  (15, ("ESC-",)),
-}
+# Authoritative category caps and allocation live in canonical_architecture.scoring_spec.
 
 # ═══════════════════════════════════════════════════════════════════════
 # PRODUCT SCORING RELEASE AND LEGAL VERIFICATION STATUS
@@ -3274,27 +3264,13 @@ class NLCRuleEngine:
         scored: List[ComplianceFlag],
     ) -> Dict[str, int]:
         """Apply one authoritative prefix map and per-category cap."""
-        totals = {category: 0 for category in CATEGORY_CAPS}
-        for flag in scored:
-            matches = [
-                category
-                for category, (_, prefixes) in CATEGORY_CAPS.items()
-                if flag.rule_id.startswith(prefixes)
-            ]
-            if len(matches) > 1:
-                raise ValueError(
-                    f"Rule {flag.rule_id} maps to multiple scoring categories: {matches}"
-                )
-            if matches:
-                totals[matches[0]] += flag.score_impact
-        return {
-            category: min(total, CATEGORY_CAPS[category][0])
-            for category, total in totals.items()
-        }
+        return category_deductions_from_flags(
+            (flag.rule_id, flag.score_impact) for flag in scored
+        )
 
     @staticmethod
     def _score_from_deductions(deductions: Dict[str, int]) -> int:
-        return max(0, min(100, 100 - sum(deductions.values())))
+        return score_from_category_deductions(deductions)
 
     def _calculate_raw_score(self, flags: List[ComplianceFlag]) -> int:
         """Calculate the pre-escalation score using the authoritative formula."""
@@ -3394,6 +3370,7 @@ class NLCRuleEngine:
             "evaluation_date": self.today.isoformat(),
             "engine_version": RULE_ENGINE_VERSION,
             "ilrmf_version": ILRMF_VERSION,
+            "scoring_spec_version": SCORING_SPEC_VERSION,
             "verified_rule_ids": sorted(VERIFIED_RULE_IDS),
             "product_scoring_rule_ids": sorted(PRODUCT_SCORING_RULE_IDS),
             "category_caps": {
@@ -3445,6 +3422,7 @@ class NLCRuleEngine:
             score_hash=score_hash,
             category_deductions=deductions,
             coverage_basis="WEIGHTED_PROFILE_INPUT_COMPLETENESS",
+            scoring_spec_version=SCORING_SPEC_VERSION,
         )
 
     # ───────────────────────────────────────────────────────────────────
