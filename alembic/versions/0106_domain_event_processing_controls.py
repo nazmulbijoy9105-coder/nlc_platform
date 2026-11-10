@@ -43,7 +43,10 @@ def upgrade() -> None:
 
     op.create_table(
         "domain_event_consumptions",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
+        sa.Column(
+            "id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False,
+            server_default=sa.text("uuid_generate_v4()"),
+        ),
         sa.Column(
             "event_id",
             postgresql.UUID(as_uuid=True),
