@@ -397,7 +397,7 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
         raw_impact = max(0, int(getattr(f, "score_impact", 0) or 0))
         has_applied_metadata = hasattr(f, "score_impact_applied")
         applied_impact = (
-            max(0, int(getattr(f, "score_impact_applied", 0) or 0))
+            int(getattr(f, "score_impact_applied", 0) or 0)
             if has_applied_metadata
             else raw_impact
         )
@@ -455,7 +455,12 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
     # New snapshots carry applied-impact metadata for every eligible finding.
     # Recompute each allocation, including global-budget and duplicate-event
     # effects, then reject any persisted per-finding disagreement.
-    if allocation_rows and all(row[3] for row in allocation_rows):
+    metadata_presence = [row[3] for row in allocation_rows]
+    if any(metadata_presence) and not all(metadata_presence):
+        raise ScoreReconciliationError(
+            "PDF snapshot contains incomplete per-finding applied-impact metadata"
+        )
+    if allocation_rows and all(metadata_presence):
         expected = allocate_flag_deductions([
             (rule_id, raw_impact, event_key)
             for rule_id, raw_impact, event_key, _, _ in allocation_rows
