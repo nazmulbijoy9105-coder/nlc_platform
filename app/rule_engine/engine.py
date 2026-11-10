@@ -502,10 +502,13 @@ CAPITAL_INCREASE_NOTICE_DEADLINE_DAYS = 15  # Section 56: notice of increase
 SPECIAL_RESOLUTION_DEADLINE_DAYS = 15  # Companies Act 1994, Section 88 (15 days)
 
 REQUIRED_REGISTERS = [
-    "members", "directors", "charges", "transfers", "debentures",
+    "members", "charges", "transfers", "debentures",
     "minutes_agm", "minutes_board",
 ]
-CORE_REGISTERS = ["members", "directors", "charges", "minutes_agm"]
+# Director particulars are an RJSC filing event under Section 115, not an
+# internal register inferred from maintained_registers. DIR-001 evaluates
+# Form XII separately when a director appointment/change event exists.
+CORE_REGISTERS = ["members", "charges", "minutes_agm"]
 
 # Explicit counsel-authorized BLACK override allowlist. A rule being
 # marked BLACK in engine code is not sufficient authority to force a BLACK
@@ -2098,8 +2101,6 @@ class NLCRuleEngine:
             for r in core_missing:
                 if r in ("members", "charges", "minutes_agm", "minutes_board"):
                     internal_registers.append(r)
-                elif r == "directors":
-                    rjsc_filings.append(r)
 
             parts = []
             if "members" in internal_registers:
@@ -2108,8 +2109,6 @@ class NLCRuleEngine:
                 parts.append("Charges register (Sec 174 — internal)")
             if "minutes_agm" in internal_registers or "minutes_board" in internal_registers:
                 parts.append("Meeting minutes (Sec 89 — internal)")
-            if "directors" in rjsc_filings:
-                parts.append("Director particulars filing (Sec 115 — RJSC filing)")
 
             self._add_flag(ComplianceFlag(
                 rule_id="REG-002",
@@ -2120,15 +2119,17 @@ class NLCRuleEngine:
                 description=(
                     f"Core statutory records missing: {', '.join(core_missing)}. "
                     f"Legal basis: {'; '.join(parts)}. "
-                    f"Note: internal register-keeping (Sec 34/89/174) is distinct "
-                    f"from RJSC filing obligations (Sec 115/163-165). "
-                    f"Each missing item is an independent legal obligation."
+                    f"Director particulars/Form XII are evaluated separately by DIR-001 "
+                    f"under Section 115; they are not inferred from the internal "
+                    f"register inventory. Each missing internal record is assessed "
+                    f"independently."
                 ),
-                statutory_basis="Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh)",
+                statutory_basis="Sections 34, 89, 174, Companies Act 1994 (Bangladesh)",
                 detail={
                     "missing_core": core_missing,
                     "internal_registers": internal_registers,
-                    "rjsc_filings": rjsc_filings,
+                    "rjsc_filings": [],
+                    "director_filing_rule_id": "DIR-001",
                     "obligation_types_distinguished": True,
                 }
             ))
