@@ -144,7 +144,7 @@ async def test_queue_notification_stores_unapproved_rule_alert_as_suppressed(mon
 
     kwargs = service.create.await_args.kwargs
     assert kwargs["notification_status"] == NotificationStatus.SUPPRESSED
-    assert "not counsel-approved" in kwargs["failure_reason"]
+    assert "not eligible under product release" in kwargs["failure_reason"]
 
 
 @pytest.mark.asyncio
