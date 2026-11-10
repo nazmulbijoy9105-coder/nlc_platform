@@ -149,8 +149,7 @@ def _rule_to_response(rule) -> RuleResponse:
         # Catalogue configuration remains visible while score publication is paused.
         # This field describes product policy, not independent legal verification.
         is_black_override=(
-            rule.is_black_override
-            and scoring_catalogue_member
+            scoring_catalogue_member
             and rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         ),
         is_active=bool(rule.is_active and scoring_catalogue_member),
@@ -225,8 +224,7 @@ async def get_rule_summary(
             active_count += 1
             total_max_deduction += r.score_impact
         if (
-            r.is_black_override
-            and r.rule_id in PRODUCT_SCORING_RULE_IDS
+            r.rule_id in PRODUCT_SCORING_RULE_IDS
             and r.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         ):
             black_overrides += 1
@@ -250,7 +248,7 @@ async def get_rule_summary(
     "/black-overrides",
     response_model=list[RuleResponse],
     summary="List all BLACK override rules",
-    description="Returns all rules where is_black_override=True; the set is data-driven and may change through governed rule updates.",
+    description="Returns BLACK override rules enabled by the product-owner authorization allowlist.",
     dependencies=[Depends(require_roles("SUPER_ADMIN"))],
 )
 async def get_black_overrides(
@@ -258,8 +256,13 @@ async def get_black_overrides(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     svc = RulesService(db)
-    rules = await svc.get_black_override_rules()
-    return [_rule_to_response(r) for r in rules]
+    rules = await svc.get_all()
+    return [
+        _rule_to_response(rule)
+        for rule in rules
+        if rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+        and rule.rule_id in PRODUCT_SCORING_RULE_IDS
+    ]
 
 
 # ---------------------------------------------------------------------------
