@@ -781,7 +781,6 @@ async def create_document_backed_company_fact(
         fact_value=body.fact_value,
         actor_id=current_user.id,
         observed_on=body.observed_on,
-        source_reference=body.source_reference,
     )
     await ActivityService(db).log(
         action="COMPANY_FACT_DOCUMENT_LINKED",
