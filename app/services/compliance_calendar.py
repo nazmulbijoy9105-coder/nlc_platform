@@ -28,7 +28,9 @@ from app.services.legal_deadline_engine import (
 # exact event allowlist are completed. Tests may inject approved definitions.
 LEGAL_CALENDAR_RELEASED = False
 VERIFIED_CALENDAR_EVENT_TYPES: frozenset[str] = frozenset()
+VERIFIED_CALENDAR_RULE_IDS: frozenset[str] = frozenset()
 VERIFIED_PENALTY_EVENT_TYPES: frozenset[str] = frozenset()
+VERIFIED_PENALTY_RULE_IDS: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +51,9 @@ class CalendarEventDefinition:
 
 # Populated only from the reviewed, versioned legal event manifest.
 APPROVED_CALENDAR_EVENT_DEFINITIONS: tuple[CalendarEventDefinition, ...] = ()
+# Exact source-versioned penalty objects are registered here only after legal
+# review. A caller-created PenaltyRule with approved=True is not approval.
+APPROVED_PENALTY_RULES: tuple[PenaltyRule, ...] = ()
 
 
 def _generate_calendar(company: Company) -> list[dict]:
@@ -73,8 +78,15 @@ class ComplianceCalendarService:
         and the event-type allowlist are both set by a reviewed release.
         Definitions are explicit inputs, not inferred from company defaults.
         """
-        if not LEGAL_CALENDAR_RELEASED or not VERIFIED_CALENDAR_EVENT_TYPES:
+        if (
+            LEGAL_CALENDAR_RELEASED is not True
+            or not VERIFIED_CALENDAR_EVENT_TYPES
+            or not VERIFIED_CALENDAR_RULE_IDS
+            or not APPROVED_CALENDAR_EVENT_DEFINITIONS
+        ):
             raise PermissionError("Statutory calendar generation is not released.")
+        if not definitions:
+            raise PermissionError("No counsel-approved calendar event definitions are registered.")
         result = await self.db.execute(
             select(Company).where(Company.id == company_id)
         )
@@ -85,8 +97,16 @@ class ComplianceCalendarService:
         persisted: list[ComplianceCalendarEvent] = []
         for definition in definitions:
             event_type = definition.event_type.value
-            if event_type not in VERIFIED_CALENDAR_EVENT_TYPES:
-                raise PermissionError(f"Calendar event type is not approved: {event_type}")
+            if (
+                event_type not in VERIFIED_CALENDAR_EVENT_TYPES
+                or definition.rule.rule_id not in VERIFIED_CALENDAR_RULE_IDS
+                or definition.rule.approved is not True
+                or definition not in APPROVED_CALENDAR_EVENT_DEFINITIONS
+            ):
+                raise PermissionError(
+                    "Calendar definition is not an exact counsel-approved "
+                    "event/rule manifest entry."
+                )
             if not isinstance(definition.trigger_evidence_ref, str) or not definition.trigger_evidence_ref.strip():
                 raise ValueError("A verified trigger evidence reference is required")
             if definition.holidays and not (
@@ -265,7 +285,12 @@ def calculate_rule_penalty(
     trigger_evidence_verified: bool,
 ) -> Decimal | None:
     """Apply only an explicitly approved penalty rule for an approved event type."""
-    if event_type not in VERIFIED_PENALTY_EVENT_TYPES:
+    if (
+        event_type not in VERIFIED_PENALTY_EVENT_TYPES
+        or rule.rule_id not in VERIFIED_PENALTY_RULE_IDS
+        or rule.approved is not True
+        or rule not in APPROVED_PENALTY_RULES
+    ):
         return None
     return calculate_approved_penalty(
         rule,
