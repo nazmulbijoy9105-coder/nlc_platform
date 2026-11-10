@@ -74,7 +74,9 @@ def calendar_manifest_is_released() -> bool:
             or definition.event_type.value not in VERIFIED_CALENDAR_EVENT_TYPES
             or definition.rule.rule_id not in VERIFIED_CALENDAR_RULE_IDS
             or definition.rule.approved is not True
+            or not isinstance(definition.title, str)
             or not definition.title.strip()
+            or not isinstance(definition.period_label, str)
             or not definition.period_label.strip()
             or (definition.holidays and not (
                 definition.holiday_calendar_version
