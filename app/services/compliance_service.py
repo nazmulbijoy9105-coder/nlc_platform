@@ -269,6 +269,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "score_reconciliation": score_reconciliation,
             "raw_total":     api_raw_total,
             "risk_band":     public_risk_band,
+            "risk_band_semantics": "NLC_INTERNAL_RISK_CLASSIFICATION_NOT_LEGAL_LIABILITY",
             "exposure_band": output.score_breakdown.exposure_band if score_is_released else None,
             "legal_evaluation_status": (
                 "RELEASED" if score_is_released
@@ -280,6 +281,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 {
                     "rule_id": f.rule_id,
                     "severity": f.severity,
+                    "risk_severity": f.severity,
+                    "legal_state": getattr(f.state, "value", f.state),
+                    "evaluation_state": getattr(f.eval_state, "value", f.eval_state),
                     "description": f.description,
                     "score_impact": f.score_impact,
                     "score_impact_applied": applied_impacts[index]["applied"],
@@ -619,6 +623,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "escalation": 5,
                 "total_diagnostic_maximum": 125,
             },
+            "diagnostic_module_score_semantics": "NON_ADDITIVE_DIAGNOSTICS_NOT_HEADLINE_SCORE_COMPONENTS",
             "module_scores": {
                 "agm": sb.agm_score,
                 "audit": sb.audit_score,
