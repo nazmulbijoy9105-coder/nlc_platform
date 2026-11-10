@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from enum import Enum
 from typing import Any
+from uuid import UUID
 
 
 class _StrEnum(str, Enum):
@@ -84,12 +85,26 @@ class CompanyFact:
         return "Based on an authorized upload that has not yet been verified."
 
 
+def _json_safe_fact_value(value: Any) -> Any:
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, Enum):
+        return value.value
+    if isinstance(value, dict):
+        return {str(key): _json_safe_fact_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe_fact_value(item) for item in value]
+    return value
+
+
 def fact_provenance_payload(fact: CompanyFact) -> dict[str, Any]:
     """JSON-safe provenance copied into immutable finding/evaluation snapshots."""
     return {
         "fact_id": fact.record_id,
         "fact_key": fact.fact_key,
-        "fact_value": fact.value,
+        "fact_value": _json_safe_fact_value(fact.value),
         "trust_level": fact.trust_level.value,
         "asserted_by": fact.asserted_by,
         "observed_on": fact.observed_on.isoformat(),
