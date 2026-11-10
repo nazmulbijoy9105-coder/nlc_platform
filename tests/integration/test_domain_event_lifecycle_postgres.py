@@ -13,7 +13,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.models.company import Company, CompanyUserAccess
 from app.models.domain_event import DomainEventConsumption, DomainEventOutbox
-from app.models.enums import CompanyStatus, CompanyType, DirectorStatus, RiskBand
+from app.models.enums import CompanyStatus, CompanyType, DirectorStatus, RiskBand, TransferStatus
 from app.models.people import Director
 from app.services.domain_events import DomainEventType, publish_domain_event
 from app.services.people_service import (
@@ -78,6 +78,13 @@ async def test_people_services_emit_compact_company_lifecycle_events(db, db_comp
         shares_transferred=25,
         transfer_date=date(2026, 2, 1),
     )
+    # No evidence was supplied, so statutory status facts must remain UNKNOWN
+    # and the transfer must not be represented as fully reviewed.
+    assert transfer.has_transfer_instrument is None
+    assert transfer.stamp_duty_paid is None
+    assert transfer.board_approval_obtained is None
+    assert transfer.register_updated is None
+    assert transfer.transfer_status == TransferStatus.PENDING_REVIEW
 
     result = await db.execute(
         select(DomainEventOutbox).where(
