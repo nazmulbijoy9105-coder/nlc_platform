@@ -52,16 +52,14 @@ def _require_legal_dashboard_release(*, deadlines: bool = False) -> None:
         raise HTTPException(
             status_code=503,
             detail=(
-                "Statutory deadlines are unavailable pending rule-level legal "
-                "validation, company-specific applicability and independent counsel approval."
+                "Statutory deadlines are unavailable because the product calendar release is disabled or its manifest is incomplete."
             ),
         )
     if not deadlines and not _legal_score_is_released():
         raise HTTPException(
             status_code=503,
             detail=(
-                "Compliance risk aggregates are unavailable while statutory score "
-                "release is disabled pending independent legal approval."
+                "Compliance risk aggregates are unavailable while product scoring is disabled."
             ),
         )
 
