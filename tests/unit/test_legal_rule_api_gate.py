@@ -30,7 +30,7 @@ def _rule(**overrides):
 
 
 def test_product_scoring_catalogue_shows_rules_but_keeps_legal_verification_pending(monkeypatch):
-    monkeypatch.setattr(rules_api, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(rules_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(rules_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     response = rules_api._rule_to_response(_rule())
@@ -56,4 +56,4 @@ def test_rule_catalogue_does_not_conflate_product_eligibility_with_legal_verific
     assert response.score_impact == 20
     assert response.is_black_override is False
     assert response.is_active is True
-    assert response.verification_status == "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED"
+    assert response.verification_status == "PENDING"
