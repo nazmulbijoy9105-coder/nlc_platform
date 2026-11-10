@@ -2,6 +2,7 @@ from datetime import date
 
 import pytest
 
+from app.compliance.fact_provenance import FactVerificationStatus
 from app.compliance.obligation_state import (
     Applicability, ApplicabilityResolutionTask, EvidenceState, FactProvenance,
     FactTrustLevel, LegalRuleSnapshot, ObligationFinding, ObligationState,
