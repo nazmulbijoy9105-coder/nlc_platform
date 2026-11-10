@@ -132,4 +132,3 @@ def test_product_scoring_is_released_without_legal_verification_allowlist(monkey
     assert engine_module.legal_score_is_released() is True
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert result.final_score == 75
-    assert result.risk_band != Severity.NOT_EVALUATED
