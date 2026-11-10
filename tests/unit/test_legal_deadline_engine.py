@@ -148,6 +148,7 @@ def test_approved_penalty_respects_grace_cap_and_effective_dates():
     assert calculate_approved_penalty(
         candidate,
         days_overdue=4,
+        due_date=date(2025, 12, 28),
         trigger_date=date(2025, 12, 1),
         as_of=date(2026, 1, 1),
         applicable=True,
@@ -156,6 +157,7 @@ def test_approved_penalty_respects_grace_cap_and_effective_dates():
     assert calculate_approved_penalty(
         candidate,
         days_overdue=30,
+        due_date=date(2025, 12, 2),
         trigger_date=date(2025, 12, 1),
         as_of=date(2026, 1, 1),
         applicable=True,
@@ -184,6 +186,7 @@ def test_penalty_fails_closed_without_approval_applicability_or_evidence():
     )
     args = dict(
         days_overdue=10,
+        due_date=date(2025, 12, 22),
         trigger_date=date(2025, 12, 1),
         as_of=date(2026, 1, 1),
         applicable=True,
