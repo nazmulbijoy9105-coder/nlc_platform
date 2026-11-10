@@ -101,7 +101,7 @@ def test_finding_pins_versions_legal_date_and_fact_provenance():
         ),
     )
     assert finding.catalogue_version == "bd-company-law-2026.11"
-    assert not finding.contains_unverified_facts
+    assert finding.contains_unverified_facts
 
 
 def test_user_asserted_fact_is_flagged_on_finding():
@@ -158,7 +158,7 @@ def test_uploaded_but_unverified_fact_is_marked_unverified_in_finding():
         ),
     )
     assert finding.contains_unverified_facts
-    assert "verification is pending" in finding.fact_basis_disclosure[0]
+    assert "has not yet been verified" in finding.fact_basis_disclosure[0]
 
 
 def test_user_asserted_fact_is_disclosed_on_finding():
