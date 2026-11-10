@@ -89,7 +89,7 @@ def test_unapproved_black_rule_cannot_force_black_score_band():
 
 def test_counsel_approved_black_override_is_honoured_by_engine(monkeypatch):
     # Simulate a separately approved rule and an explicitly authorised release.
-    # The production default remains LEGAL_SCORE_RELEASED=False.
+    # Product scoring is enabled independently of the legal-verification inventory.
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
     monkeypatch.setattr(
         engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"AUD-003"})
@@ -890,7 +890,7 @@ def test_verified_absence_is_included_in_score_impact_reporting(monkeypatch):
 
 def test_black_label_without_authorised_override_is_only_a_normal_deduction(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
     flag = SimpleNamespace(
         rule_id="AGM-001",
