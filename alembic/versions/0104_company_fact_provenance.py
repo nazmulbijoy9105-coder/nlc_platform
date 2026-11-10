@@ -115,6 +115,40 @@ def upgrade() -> None:
     """)
     op.execute("GRANT SELECT, INSERT, UPDATE ON TABLE public.company_facts TO nlc_app_role")
     op.execute("REVOKE DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE public.company_facts FROM nlc_app_role")
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_company_fact_immutable_fields()
+        RETURNS trigger
+        LANGUAGE plpgsql
+        SET search_path = pg_catalog, public
+        AS $function$
+        BEGIN
+            IF NEW.id IS DISTINCT FROM OLD.id
+               OR NEW.company_id IS DISTINCT FROM OLD.company_id
+               OR NEW.fact_key IS DISTINCT FROM OLD.fact_key
+               OR NEW.fact_value IS DISTINCT FROM OLD.fact_value
+               OR NEW.trust_level IS DISTINCT FROM OLD.trust_level
+               OR NEW.asserted_by IS DISTINCT FROM OLD.asserted_by
+               OR NEW.observed_on IS DISTINCT FROM OLD.observed_on
+               OR NEW.source_reference IS DISTINCT FROM OLD.source_reference
+               OR NEW.document_id IS DISTINCT FROM OLD.document_id
+               OR NEW.authorized_uploader_id IS DISTINCT FROM OLD.authorized_uploader_id
+               OR NEW.uploaded_at IS DISTINCT FROM OLD.uploaded_at
+               OR NEW.is_current IS DISTINCT FROM OLD.is_current
+               OR NEW.supersedes_fact_id IS DISTINCT FROM OLD.supersedes_fact_id
+               OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+                RAISE EXCEPTION 'Company fact source fields are immutable; create a superseding fact version';
+            END IF;
+            RETURN NEW;
+        END;
+        $function$
+    """)
+    op.execute("""
+        CREATE TRIGGER trg_company_facts_immutable_source
+        BEFORE UPDATE ON public.company_facts
+        FOR EACH ROW EXECUTE FUNCTION public.nlc_company_fact_immutable_fields()
+    """)
+    op.execute("REVOKE ALL ON FUNCTION public.nlc_company_fact_immutable_fields() FROM PUBLIC")
+    op.execute("GRANT EXECUTE ON FUNCTION public.nlc_company_fact_immutable_fields() TO nlc_app_role")
 
     # Legacy findings have no reconstructable provenance; [] means unknown, not verified.
     op.add_column(
@@ -133,6 +167,8 @@ def downgrade() -> None:
     op.drop_index("ix_company_facts_company_key_current", table_name="company_facts")
     op.drop_index("ix_company_facts_fact_key", table_name="company_facts")
     op.drop_index("ix_company_facts_company_id", table_name="company_facts")
+    op.execute("DROP TRIGGER IF EXISTS trg_company_facts_immutable_source ON public.company_facts")
+    op.execute("DROP FUNCTION IF EXISTS public.nlc_company_fact_immutable_fields()")
     op.execute("DROP POLICY IF EXISTS company_facts_staff_verification_update ON public.company_facts")
     op.execute("DROP POLICY IF EXISTS company_facts_actor_insert ON public.company_facts")
     op.execute("DROP POLICY IF EXISTS company_facts_tenant_read ON public.company_facts")
