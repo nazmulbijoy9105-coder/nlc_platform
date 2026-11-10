@@ -110,9 +110,10 @@ def test_lifecycle_event_contracts_route_to_deterministic_consumers() -> None:
         DomainEventType.FILING_RECEIPT_RECORDED,
         DomainEventType.ANNUAL_RETURN_FILED,
     }.issubset(FILING_RECEIPT_EVENTS)
-    assert EVIDENCE_VERIFICATION_EVENTS == {
-        DomainEventType.EVIDENCE_VERIFICATION_COMPLETED
-    }
+    assert {
+        DomainEventType.EVIDENCE_VERIFICATION_COMPLETED,
+        DomainEventType.COMPANY_FACT_VERIFIED,
+    }.issubset(EVIDENCE_VERIFICATION_EVENTS)
     assert MAX_DISPATCH_ATTEMPTS == 8
     assert consume_filing_receipt_event.name == (
         "app.worker.tasks.consume_filing_receipt_event"
