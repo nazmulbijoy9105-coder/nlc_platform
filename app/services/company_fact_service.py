@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.company import Company
 from app.models.company_fact import CompanyFact
 from app.models.documents import Document
+from app.compliance.fact_provenance import coerce_company_profile_fact_value
 
 
 class CompanyFactService:
@@ -67,6 +68,7 @@ class CompanyFactService:
         actor_id: uuid.UUID, observed_on: date, source_reference: str | None = None,
     ) -> CompanyFact:
         normalized_key = self._normalize_fact_key(fact_key)
+        fact_value = coerce_company_profile_fact_value(normalized_key, fact_value)
         await self.db.execute(
             select(Company.id).where(Company.id == company_id).with_for_update()
         )
@@ -103,6 +105,7 @@ class CompanyFactService:
                 detail="The source document has no recorded uploader/timestamp and cannot establish document provenance.",
             )
         normalized_key = self._normalize_fact_key(fact_key)
+        fact_value = coerce_company_profile_fact_value(normalized_key, fact_value)
         await self.db.execute(
             select(Company.id).where(Company.id == document.company_id).with_for_update()
         )
