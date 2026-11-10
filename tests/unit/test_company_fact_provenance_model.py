@@ -68,6 +68,7 @@ def test_persisted_fact_converts_to_shared_finding_provenance_contract() -> None
     fact = _document_fact()
     record = fact.to_fact_record()
 
+    assert record.record_id == str(fact.id)
     assert record.fact_key == fact.fact_key
     assert record.asserted_by == str(fact.asserted_by)
     assert record.trust_level.value == "AUTHORIZED_DOCUMENT_BACKED"
