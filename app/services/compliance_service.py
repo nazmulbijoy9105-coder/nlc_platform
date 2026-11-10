@@ -303,6 +303,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "description": flag.description,
                     "statutory_basis": flag.statutory_basis,
                     "score_impact_applied": 0,
+                    "scoring_eligibility": "EXCLUDED_FROM_PRODUCT_SCORING",
                     "scoring_status": applied_impacts[index]["status"],
                 }
                 for index, flag in enumerate(output.flags)
