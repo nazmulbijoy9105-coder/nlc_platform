@@ -793,9 +793,14 @@ class ComplianceService(BaseService[ComplianceFlag]):
                         logger.warning(f'Rescue plan out of sync with findings for company {company_id}; plan has progress, not regenerated')
             if not existing_plan:
                 try:
+                    assigned_staff_result = await self.db.execute(
+                        select(Company.assigned_staff_id).where(Company.id == company_id)
+                    )
+                    assigned_staff_id = assigned_staff_result.scalar_one_or_none()
                     await rescue_svc.generate_rescue_plan(
                         company_id=company_id,
                         engine_output=output,
+                        assigned_staff_id=assigned_staff_id,
                         created_by=getattr(self, '_current_user_id', None),
                         engagement_id=None,  # RES-010: explicit linkage, populated by service
                     )
