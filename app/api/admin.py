@@ -79,7 +79,10 @@ async def list_domain_event_operations(
             DomainEventOutbox.dead_lettered_at.is_(None),
         )
     elif status_filter == "dispatched":
-        query = query.where(DomainEventOutbox.processed_at.is_not(None))
+        query = query.where(
+            DomainEventOutbox.processed_at.is_not(None),
+            DomainEventOutbox.dead_lettered_at.is_(None),
+        )
     elif status_filter == "dead_lettered":
         query = query.where(DomainEventOutbox.dead_lettered_at.is_not(None))
     result = await db.execute(query.limit(limit))
