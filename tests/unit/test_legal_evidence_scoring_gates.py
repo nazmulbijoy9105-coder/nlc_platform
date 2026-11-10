@@ -90,7 +90,7 @@ def test_unapproved_black_rule_cannot_force_black_score_band():
 def test_counsel_approved_black_override_is_honoured_by_engine(monkeypatch):
     # Simulate a separately approved rule and an explicitly authorised release.
     # The production default remains LEGAL_SCORE_RELEASED=False.
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AUD-003"}))
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
     monkeypatch.setattr(
         engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"AUD-003"})
     )
@@ -348,7 +348,7 @@ def test_released_score_uses_one_category_cap_formula_for_all_paths(monkeypatch)
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
         engine_module,
-        "VERIFIED_RULE_IDS",
+        "PRODUCT_SCORING_RULE_IDS",
         frozenset({"AGM-001", "AGM-002", "INC-003", "INC-004", "AUD-001"}),
     )
     profile = _profile()
@@ -875,7 +875,7 @@ def test_subsequent_agm_deadline_is_earlier_of_fifteen_months_and_calendar_year_
 
 def test_verified_absence_is_included_in_score_impact_reporting(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     flag = SimpleNamespace(
         rule_id="AGM-001",
         state=RuleState.VERIFIED_ABSENT,
