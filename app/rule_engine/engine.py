@@ -3257,6 +3257,11 @@ class NLCRuleEngine:
             and flag.eval_state == "VIOLATION"
             and legal_score_is_released()
             and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+            and not (
+                flag.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+                and flag.is_black_override
+                and flag.severity == Severity.BLACK
+            )
         ]
 
     @staticmethod
