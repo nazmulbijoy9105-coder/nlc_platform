@@ -19,6 +19,23 @@ from app.rule_engine.engine import legal_score_is_released
 
 router = APIRouter()
 
+async def require_admin(current_user=Depends(get_current_user)):
+    role = current_user.role if hasattr(current_user, "role") else current_user.get("role", "")
+    if str(role) not in ("SUPER_ADMIN", "ADMIN_STAFF"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
+
+
+async def require_super_admin(current_user=Depends(get_current_user)):
+    """Require SUPER_ADMIN role only — returns 403 for ADMIN_STAFF."""
+    role = current_user.role if hasattr(current_user, "role") else current_user.get("role", "")
+    if str(role) != "SUPER_ADMIN":
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    return current_user
+
+
+
+
 @router.get("/domain-events")
 async def list_domain_event_operations(
     status_filter: str = Query(
@@ -136,23 +153,6 @@ async def replay_dead_lettered_domain_event(
         "status": "queued_for_replay",
         "replay_count": replay_count,
     }
-
-
-
-async def require_admin(current_user=Depends(get_current_user)):
-    role = current_user.role if hasattr(current_user, "role") else current_user.get("role", "")
-    if str(role) not in ("SUPER_ADMIN", "ADMIN_STAFF"):
-        raise HTTPException(status_code=403, detail="Admin access required")
-    return current_user
-
-
-async def require_super_admin(current_user=Depends(get_current_user)):
-    """Require SUPER_ADMIN role only — returns 403 for ADMIN_STAFF."""
-    role = current_user.role if hasattr(current_user, "role") else current_user.get("role", "")
-    if str(role) != "SUPER_ADMIN":
-        raise HTTPException(status_code=403, detail="Super admin access required")
-    return current_user
-
 
 
 
