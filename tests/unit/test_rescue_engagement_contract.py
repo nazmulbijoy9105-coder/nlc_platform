@@ -77,6 +77,7 @@ async def test_generate_rescue_plan_passes_engagement_id_to_create(monkeypatch):
     svc.create = AsyncMock(return_value=created_plan)
     svc._create_step = AsyncMock(return_value=MagicMock())
     svc._create_tasks_from_steps = AsyncMock()
+    svc.create_engagement_from_rescue = AsyncMock()
 
     # generate_rescue_plan refetches the plan with selectinload() at the end
     # (to avoid MissingGreenlet on lazy-loaded plan.steps / plan.company in
@@ -117,6 +118,7 @@ async def test_generate_rescue_plan_passes_engagement_id_to_create(monkeypatch):
     create_kwargs = svc.create.await_args.kwargs
     assert create_kwargs["company_id"] == company_id
     assert create_kwargs["engagement_id"] == test_engagement_id
+    svc.create_engagement_from_rescue.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -138,3 +140,22 @@ async def test_generate_rescue_plan_rejects_when_legal_score_release_is_closed()
     db.execute.assert_not_awaited()
     svc.create = AsyncMock()
     svc.create.assert_not_awaited()
+
+
+def test_rescue_engagement_service_contract_matches_admin_endpoint():
+    """The explicit admin endpoint's fee/payment fields are accepted by the service."""
+    from app.services.rescue_service import RescueService
+
+    params = inspect.signature(RescueService.create_engagement_from_rescue).parameters
+    assert "rescue_plan" in params
+    assert "confirmed_fee_bdt" in params
+    assert "payment_terms" in params
+
+
+def test_rescue_step_status_contract_uses_database_enum_values():
+    """The API's documented public status vocabulary matches the persisted enum."""
+    from app.models.enums import RescueStepStatus
+
+    assert {item.value for item in RescueStepStatus} == {
+        "PENDING", "IN_PROGRESS", "COMPLETE", "BLOCKED"
+    }

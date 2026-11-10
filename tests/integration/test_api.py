@@ -653,6 +653,33 @@ class TestRescue:
         assert resp.status_code == 401
 
 
+    @pytest.mark.asyncio
+    async def test_legal_staff_cannot_create_commercial_engagement_from_rescue(
+        self, api_client, legal_token
+    ):
+        """Commercial engagement creation is an explicit admin-only operation."""
+        plan_id = "00000000-0000-4000-8000-000000000001"
+        response = await api_client.post(
+            f"/api/v1/rescue/plans/{plan_id}/engagement",
+            headers=_auth(legal_token),
+            json={"confirmed_fee_bdt": 1000, "payment_terms": "Test terms"},
+        )
+        assert response.status_code == 403, response.text
+
+    @pytest.mark.asyncio
+    async def test_admin_engagement_creation_still_obeys_legal_release_gate(
+        self, api_client, super_admin_tok
+    ):
+        """Admin privileges do not silently bypass the product's release gate."""
+        plan_id = "00000000-0000-4000-8000-000000000001"
+        response = await api_client.post(
+            f"/api/v1/rescue/plans/{plan_id}/engagement",
+            headers=_auth(super_admin_tok),
+            json={"confirmed_fee_bdt": 1000, "payment_terms": "Test terms"},
+        )
+        assert response.status_code == 503, response.text
+
+
 # =============================================================================
 # DOCUMENT ENDPOINTS
 # =============================================================================
