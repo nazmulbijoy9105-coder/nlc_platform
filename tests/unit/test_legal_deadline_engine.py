@@ -121,3 +121,75 @@ def test_rule_effective_interval_is_enforced():
 def test_incomplete_or_invalid_rule_definition_is_rejected(overrides):
     with pytest.raises(ValueError):
         rule(**overrides)
+
+
+
+def test_approved_penalty_respects_grace_cap_and_effective_dates():
+    from decimal import Decimal
+
+    from app.services.legal_deadline_engine import (
+        PenaltyRule,
+        calculate_approved_penalty,
+    )
+
+    candidate = PenaltyRule(
+        rule_id="PEN-TEST-01",
+        source_citation="Fixture-only statute section",
+        source_version="fixture-v1",
+        effective_from=date(2025, 1, 1),
+        effective_to=date(2026, 12, 31),
+        liable_person="company",
+        fixed_amount=Decimal("100"),
+        per_day_amount=Decimal("10"),
+        grace_days=5,
+        cap_amount=Decimal("250"),
+        approved=True,
+    )
+    assert calculate_approved_penalty(
+        candidate,
+        days_overdue=4,
+        as_of=date(2026, 1, 1),
+        applicable=True,
+        trigger_evidence_verified=True,
+    ) == Decimal("100.00")
+    assert calculate_approved_penalty(
+        candidate,
+        days_overdue=30,
+        as_of=date(2026, 1, 1),
+        applicable=True,
+        trigger_evidence_verified=True,
+    ) == Decimal("250.00")
+
+
+def test_penalty_fails_closed_without_approval_applicability_or_evidence():
+    from decimal import Decimal
+
+    from app.services.legal_deadline_engine import (
+        PenaltyRule,
+        calculate_approved_penalty,
+    )
+
+    candidate = PenaltyRule(
+        rule_id="PEN-TEST-02",
+        source_citation="Fixture-only statute section",
+        source_version="fixture-v1",
+        effective_from=date(2025, 1, 1),
+        effective_to=None,
+        liable_person="director",
+        fixed_amount=Decimal("50"),
+        approved=False,
+    )
+    args = dict(
+        days_overdue=10,
+        as_of=date(2026, 1, 1),
+        applicable=True,
+        trigger_evidence_verified=True,
+    )
+    assert calculate_approved_penalty(candidate, **args) is None
+    approved = PenaltyRule(**{**candidate.__dict__, "approved": True})
+    assert calculate_approved_penalty(
+        approved, **{**args, "applicable": False}
+    ) is None
+    assert calculate_approved_penalty(
+        approved, **{**args, "trigger_evidence_verified": False}
+    ) is None
