@@ -35,6 +35,51 @@ from app.services.base import BaseService
 logger = logging.getLogger("nlc.rescue")
 
 
+def validate_rescue_engine_output(engine_output) -> frozenset[str]:
+    """Reject rescue work not traceable to released, evidenced rule findings."""
+    from app.rule_engine.engine import VERIFIED_RULE_IDS, legal_score_is_released
+
+    if not legal_score_is_released():
+        raise PermissionError("Rescue generation is disabled until statutory scoring is released.")
+    score = getattr(engine_output, "score_breakdown", None)
+    risk_band = getattr(getattr(score, "risk_band", None), "value", getattr(score, "risk_band", None))
+    if risk_band not in ("RED", "BLACK"):
+        raise ValueError("Rescue requires a released RED or BLACK evaluation.")
+
+    flags = getattr(engine_output, "flags", None) or []
+    eligible: set[str] = set()
+    for flag in flags:
+        state = getattr(getattr(flag, "state", None), "value", getattr(flag, "state", None))
+        eval_state = getattr(flag, "eval_state", "VIOLATION")
+        if (
+            not getattr(flag, "resolved", False)
+            and getattr(flag, "conditional_applies", True)
+            and flag.rule_id in VERIFIED_RULE_IDS
+            and state in ("NON_COMPLIANT", "VERIFIED_ABSENT")
+            and eval_state == "VIOLATION"
+            and int(getattr(flag, "score_impact", 0)) > 0
+        ):
+            eligible.add(flag.rule_id)
+
+    sequence = getattr(engine_output, "rescue_sequence", None) or []
+    if not sequence:
+        raise ValueError("No counsel-released rescue sequence exists.")
+    referenced: set[str] = set()
+    for step in sequence:
+        related = step.get("related_rules")
+        if not isinstance(related, list) or not related:
+            raise ValueError("Every rescue action must identify its triggering rule IDs.")
+        step_rules = {str(rule_id) for rule_id in related}
+        if not step_rules.issubset(eligible):
+            raise PermissionError(
+                "Rescue action references a rule without a released, active, evidence-supported finding."
+            )
+        referenced.update(step_rules)
+    if not referenced:
+        raise ValueError("Rescue sequence has no eligible statutory finding.")
+    return frozenset(referenced)
+
+
 def _derive_plan_target(explicit: date | None, steps: list) -> date | None:
     """F2a: explicit caller target wins; else the max step target; else None."""
     if explicit is not None:
@@ -76,10 +121,9 @@ class RescueService(BaseService[RescuePlan]):
             raise PermissionError(
                 "Rescue generation is disabled until statutory scoring is independently approved and released."
             )
+        source_rule_ids = validate_rescue_engine_output(engine_output)
 
         rescue_data = engine_output.rescue_sequence
-        if not rescue_data:
-            raise ValueError("Engine output has no rescue sequence — company may not be BLACK/RED.")
 
         # Deactivate existing active plan
         await self.db.execute(
@@ -111,6 +155,7 @@ class RescueService(BaseService[RescuePlan]):
             assigned_staff_id=assigned_staff_id,
             created_by=created_by,
             engagement_id=engagement_id,
+            source_rule_ids=sorted(source_rule_ids),
             quoted_fee_bdt=estimated_fee_bdt,
             target_completion_date=target_completion_date,
         )
