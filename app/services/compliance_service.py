@@ -41,7 +41,7 @@ from app.models.enums import (
 from app.services.base import BaseService
 from app.services.notification_service import NotificationService
 
-from canonical_architecture.scoring_spec import allocate_flag_deductions, category_for_rule, SCORING_SPEC_VERSION
+from canonical_architecture.scoring_spec import allocate_flag_deductions, category_for_rule, duplicate_event_indices, SCORING_SPEC_VERSION
 
 logger = logging.getLogger("nlc.compliance")
 
@@ -89,7 +89,7 @@ def _applied_score_impacts(flags) -> list[dict]:
     )
 
     results: list[dict] = [{} for _ in flags]
-    eligible: list[tuple[int, str, int]] = []
+    eligible: list[tuple[int, str, int, str | None]] = []
     for index, flag in enumerate(flags):
         state = getattr(flag, "state", None)
         active = not getattr(flag, "resolved", False) and getattr(flag, "conditional_applies", True)
@@ -127,15 +127,31 @@ def _applied_score_impacts(flags) -> list[dict]:
         if category_for_rule(flag.rule_id) is None:
             results[index] = {"applied": 0, "status": "NO_SCORING_CATEGORY"}
             continue
-        eligible.append((index, flag.rule_id, max(0, int(flag.score_impact or 0))))
+        detail = getattr(flag, "detail", None)
+        scoring_event_key = (
+            detail.get("scoring_event_key") if isinstance(detail, dict) else None
+        )
+        eligible.append((
+            index,
+            flag.rule_id,
+            max(0, int(flag.score_impact or 0)),
+            scoring_event_key,
+        ))
 
-    allocations = allocate_flag_deductions(
-        (rule_id, impact) for _, rule_id, impact in eligible
-    )
-    for (index, _, _), applied in zip(eligible, allocations):
+    allocation_items = [
+        (rule_id, impact, event_key)
+        for _, rule_id, impact, event_key in eligible
+    ]
+    allocations = allocate_flag_deductions(allocation_items)
+    duplicate_indices = duplicate_event_indices(allocation_items)
+    for local_index, ((index, _, _, _), applied) in enumerate(zip(eligible, allocations)):
         results[index] = {
             "applied": applied,
-            "status": "APPLIED" if applied else "CATEGORY_CAP_REACHED",
+            "status": (
+                "DUPLICATE_EVENT_SUPPRESSED"
+                if local_index in duplicate_indices
+                else "APPLIED" if applied else "CATEGORY_CAP_REACHED"
+            ),
         }
     return results
 
