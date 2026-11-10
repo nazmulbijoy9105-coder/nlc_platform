@@ -27,7 +27,7 @@ def _flag(rid, sev, imp):
 
 def _enable_authorized_score_for_report_test(monkeypatch, rule_ids):
     # Arithmetic/report rendering tests opt into an isolated approved-rule
-    # fixture. Production defaults remain unreleased and fail closed.
+    # fixture. Product scoring release is enabled; legal verification remains separate.
     monkeypatch.setattr("app.services.pdf_report_service.LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
         "app.services.pdf_report_service.PRODUCT_SCORING_RULE_IDS",
