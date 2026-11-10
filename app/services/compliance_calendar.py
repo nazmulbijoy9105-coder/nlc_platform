@@ -29,6 +29,8 @@ from app.services.legal_deadline_engine import (
 LEGAL_CALENDAR_RELEASED = False
 VERIFIED_CALENDAR_EVENT_TYPES: frozenset[str] = frozenset()
 VERIFIED_PENALTY_EVENT_TYPES: frozenset[str] = frozenset()
+# Populated only from the reviewed, versioned legal event manifest.
+APPROVED_CALENDAR_EVENT_DEFINITIONS: tuple[CalendarEventDefinition, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,7 +175,33 @@ class ComplianceCalendarService:
         company = result.scalar_one_or_none()
         if company is None:
             return []
-        return _generate_calendar(company)
+        today = date.today()
+        event_result = await self.db.execute(
+            select(ComplianceCalendarEvent).where(
+                ComplianceCalendarEvent.company_id == company_id,
+                ComplianceCalendarEvent.due_date >= today - timedelta(days=include_past_days),
+                ComplianceCalendarEvent.due_date <= today + timedelta(days=include_future_days),
+            ).order_by(ComplianceCalendarEvent.due_date.asc())
+        )
+        events = event_result.scalars().all()
+        return [
+            {
+                "id": str(event.id),
+                "company_id": str(event.company_id),
+                "event_type": event.event_type.value,
+                "title": event.title,
+                "description": event.description,
+                "due_date": event.due_date.isoformat(),
+                "period_label": event.period_label,
+                "status": event.status.value,
+                "is_statutory": event.is_statutory,
+                "statutory_basis": event.statutory_basis,
+                "legal_rule_id": event.legal_rule_id,
+                "legal_source_version": event.legal_source_version,
+                "legal_manifest_sha256": event.legal_manifest_sha256,
+            }
+            for event in events
+        ]
 
     async def get_upcoming(self, company_id, days_ahead: int = 30) -> list[dict]:
         return await self.get_calendar(
