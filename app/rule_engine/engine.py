@@ -537,40 +537,20 @@ CATEGORY_CAPS: dict[str, tuple[int, tuple[str, ...]]] = {
 }
 
 # ═══════════════════════════════════════════════════════════════════════
-# P0 PRODUCTION GATE: Verified Rule IDs
+# PRODUCT SCORING RELEASE AND LEGAL VERIFICATION STATUS
 # ═══════════════════════════════════════════════════════════════════════
-# Only rules in this set contribute to the authoritative compliance score.
-# Unverified rules still generate flags (for visibility) but their
-# score_impact is excluded from _calculate_score() and _calculate_raw_score().
+# Product scoring eligibility is controlled by PRODUCT_SCORING_RULE_IDS and
+# LEGAL_SCORE_RELEASED. This is a product configuration, not a representation
+# that every rule has independent legal verification.
 #
-# Rationale: statutory citations for these 38 rules have undergone an
-# internal source check against the Companies Act 1994 (Bangladesh) text.
-# This is not independent legal approval or a complete amendment review.
-# Rules not yet internally verified
-# (AUD-*, SH-*, TR-002~006, ESC-003~005, TAX-*, LBR-*, BNK-*, FX-*,
-# BSEC-*) require lawyer review before they can influence the score.
-#
-# No BLACK override is exempt from independent legal approval. A critical
-# severity label cannot bypass the global release gate or the exact rule-ID
-# allowlist.
-# Candidate scoring allowlist copied from the main-branch internal source-check register.
-# These 38 IDs have an internal statutory-source check only. This is NOT
-# independent legal approval and must never be represented as such.
-# The set allows deterministic scoring mechanics to be exercised in tests and
-# diagnostic calculations, but no score, risk band, BLACK override, or rescue
-# classification is released to users while LEGAL_SCORE_RELEASED is False.
-# Exclusions (including AGM-005, AUD-*, TAX-*, LBR-*, BNK-*, FX-*, BSEC-*,
-# disputed DEF-001 and unreviewed share-transfer/filing rules) remain provisional.
-# The production allowlist is intentionally empty until each applicable rule
-# has named, independent current-law approval in the signed approval register.
-# Internal source triage or engine/seed parity is not legal approval.
+# VERIFIED_RULE_IDS remains the separate legal-verification inventory. It is
+# intentionally empty while the approval register remains pending. Do not
+# infer legal verification from product scoring eligibility.
 VERIFIED_RULE_IDS: frozenset[str] = frozenset()
 
-# Product-controlled scoring eligibility. This allowlist determines which
-# catalogue rules participate in deterministic product scoring; it does not
-# assert independent legal verification or change each rule's review status.
-# Keep this list synchronized with the canonical catalogue's score-bearing rules.
-# AR-001 and SH-002 are informational; ESC-003 is the surcharge itself, not a finding.
+# Product scoring allowlist: every score-bearing rule in the 85-rule catalogue.
+# AR-001 and SH-002 are informational; ESC-003 is the surcharge itself, not a
+# finding, so those three IDs are intentionally excluded.
 PRODUCT_SCORING_RULE_IDS: frozenset[str] = frozenset({
     "ACC-001",
     "ACC-002",
@@ -656,14 +636,14 @@ PRODUCT_SCORING_RULE_IDS: frozenset[str] = frozenset({
     "VAT-003",
 })
 
-# Product owner-controlled release switch. This enables the deterministic
-# product scoring model; it is not a legal-verification or certification claim.
+# Product owner-controlled release switch. This enables deterministic product
+# scoring; it is not a legal-verification or certification claim.
 LEGAL_SCORE_RELEASED: bool = True
+
 
 def legal_score_is_released() -> bool:
     """Return whether product-controlled scoring is enabled and has rules."""
     return LEGAL_SCORE_RELEASED is True and bool(PRODUCT_SCORING_RULE_IDS)
-
 
 
 REVENUE_TIER_MAP = {
