@@ -92,14 +92,15 @@ def calculate_deadline(
     if rule.effective_to is not None and trigger_date > rule.effective_to:
         return None
 
-    base = trigger_date + timedelta(days=1) if rule.exclude_trigger_day else trigger_date
+    if rule.unit == "CLEAR_DAYS":
+        # Clear-day counting excludes the trigger day by definition; the due
+        # date follows the final clear day. Do not apply exclude_trigger_day twice.
+        due = trigger_date + timedelta(days=rule.offset + 1)
+    else:
+        base = trigger_date + timedelta(days=1) if rule.exclude_trigger_day else trigger_date
 
     if rule.unit == "DAYS":
         due = base + timedelta(days=rule.offset)
-    elif rule.unit == "CLEAR_DAYS":
-        # The trigger day and the terminal due day are excluded from the
-        # counted interval; the deadline is the day after the clear-day span.
-        due = base + timedelta(days=rule.offset + 1)
     elif rule.unit == "MONTHS":
         due = _add_months(base, rule.offset)
     elif rule.unit == "YEARS":
