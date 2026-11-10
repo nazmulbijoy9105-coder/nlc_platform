@@ -59,7 +59,6 @@ def dispatch_domain_event_outbox(self, batch_size: int = 100) -> dict[str, Any]:
         from app.models.database import AsyncSessionLocal, set_admin_context
         from app.models.domain_event import DomainEventOutbox
         from app.worker.tasks.core import (
-            evaluate_company_compliance,
             process_ai_review_queue,
             queue_deadline_warning_notifications,
         )
@@ -86,13 +85,10 @@ def dispatch_domain_event_outbox(self, batch_size: int = 100) -> dict[str, Any]:
                 event.attempts += 1
                 try:
                     if event.event_type in REASSESSMENT_EVENTS:
-                        evaluate_company_compliance.apply_async(
-                            kwargs={
-                                "company_id": str(event.company_id),
-                                "trigger_source": f"DOMAIN_EVENT:{event.event_type}",
-                            },
+                        consume_company_lifecycle_event.apply_async(
+                            kwargs={"event_id": str(event.id)},
                             queue="compliance",
-                            task_id=f"domain-event-{event.id}",
+                            task_id=f"domain-event-{event.id}-lifecycle",
                         )
                         queued += 1
                     elif event.event_type in FILING_RECEIPT_EVENTS:
@@ -254,6 +250,24 @@ def _run_consumer_task(
             raise
         retry_delay = min(30 * (2 ** task.request.retries), 1800)
         raise task.retry(exc=exc, countdown=retry_delay)
+
+
+@celery_app.task(
+    bind=True,
+    name="app.worker.tasks.consume_company_lifecycle_event",
+    queue="compliance",
+    max_retries=MAX_DISPATCH_ATTEMPTS - 1,
+    time_limit=300,
+    soft_time_limit=270,
+)
+def consume_company_lifecycle_event(self, event_id: str) -> dict[str, Any]:
+    """Apply one lifecycle event's compliance update exactly once per consumer."""
+    return _run_consumer_task(
+        self,
+        event_id,
+        consumer_name="company_lifecycle_v1",
+        allowed_event_types=REASSESSMENT_EVENTS,
+    )
 
 
 @celery_app.task(
