@@ -243,6 +243,12 @@ class ComplianceCalendarService:
             event.legal_trigger_date = definition.trigger_date
             event.trigger_evidence_ref = definition.trigger_evidence_ref
             event.legal_manifest_sha256 = manifest_hash
+
+            # Flush the aggregate before publishing its event. SQLAlchemy assigns
+            # Python-side UUID defaults during flush, so event.id is otherwise
+            # still None for a newly added calendar row.
+            await self.db.flush()
+
             if was_created or previous_due_date != due_date:
                 from app.services.domain_events import DomainEventType, publish_domain_event
                 await publish_domain_event(
