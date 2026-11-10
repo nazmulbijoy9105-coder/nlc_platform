@@ -2090,15 +2090,18 @@ class NLCRuleEngine:
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description=f"{len(non_core_missing)} non-core register(s) missing: {', '.join(non_core_missing)}.",
-                statutory_basis="Section 34, Companies Act 1994 (Bangladesh)",
+                statutory_basis=(
+                    "Companies Act 1994 (Bangladesh) and applicable Articles; "
+                    "individual register duties require their own statutory mapping"
+                ),
                 detail={"missing": non_core_missing}
             ))
 
         if core_missing:
-            # P1 LEGAL FIX: Distinguish internal register-keeping from RJSC filing.
-            # The audit flagged that Section 115 is a FILING obligation (particulars
-            # of directors to RJSC), NOT an internal register-keeping provision.
-            # We now separate the two concepts in the description.
+            # Section 115(1) requires the internal directors' register;
+            # Section 115(2) separately requires the prescribed Registrar return
+            # and change notification (Form XII). DIR-001 evaluates the filing
+            # duty only; filing status does not prove the internal register exists.
             severity = Severity.RED  # legal: REG-002 downgraded BLACK -> RED
 
             # Categorize missing items by legal obligation type

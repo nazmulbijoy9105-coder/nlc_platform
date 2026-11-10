@@ -31,6 +31,8 @@ from sqlalchemy import select, text, update
 
 from app.models.company import Company
 from app.models.compliance import ComplianceEvaluationRun, ComplianceFlag, ComplianceScoreHistory
+from app.models.company_fact import CompanyFact
+from app.compliance.fact_provenance import coerce_company_profile_fact_value
 from app.models.enums import (
     ExposureBand,
     FlagStatus,
@@ -179,8 +181,6 @@ class ComplianceService(BaseService[ComplianceFlag]):
         from app.core.dependencies import get_rule_engine
         from app.rule_engine import CompanyProfile
         from app.rule_engine.engine import (
-            CATEGORY_CAPS,
-            _COVERAGE_FIELDS,
             PRODUCT_SCORING_RULE_IDS,
             legal_score_is_released,
         )
@@ -192,9 +192,54 @@ class ComplianceService(BaseService[ComplianceFlag]):
         if not profile_data:
             raise ValueError(f"Company {company_id} not found or inactive.")
 
+        # Current versioned facts override same-key legacy profile values. Every
+        # evaluation and finding receives the exact explicit fact inputs plus
+        # a disclosure/value snapshot for legacy profile inputs without provenance.
+        fact_result = await self.db.execute(
+            select(CompanyFact).where(
+                CompanyFact.company_id == company_id,
+            ).order_by(CompanyFact.fact_key.asc(), CompanyFact.created_at.desc(), CompanyFact.id.desc())
+        )
+        latest_facts: dict[str, CompanyFact] = {}
+        for fact in fact_result.scalars().all():
+            latest_facts.setdefault(fact.fact_key, fact)
+        current_facts = [
+            fact for fact in latest_facts.values()
+            if fact.verification_status not in {"REJECTED", "SUPERSEDED"}
+        ]
+        used_facts = []
+        profile_field_names = {
+            field.name for field in dataclass_fields(CompanyProfile)
+        } - {"company_id", "company_name"}
+        for fact in current_facts:
+            if fact.fact_key in profile_field_names:
+                profile_data[fact.fact_key] = coerce_company_profile_fact_value(fact.fact_key, fact.fact_value)
+                used_facts.append(fact)
+        fact_provenance_snapshot = [
+            fact.provenance_payload() for fact in used_facts
+        ]
+        normalized_profile_data = _company_profile_kwargs(profile_data, CompanyProfile)
+        untracked_profile_fields = sorted(
+            set(normalized_profile_data)
+            - {fact.fact_key for fact in used_facts}
+            - {"company_id", "company_name"}
+        )
+        if untracked_profile_fields:
+            fact_provenance_snapshot.append({
+                "record_type": "UNATTRIBUTED_PROFILE_FIELDS",
+                "fields": untracked_profile_fields,
+                "field_values": jsonable_encoder({
+                    key: normalized_profile_data[key] for key in untracked_profile_fields
+                }),
+                "disclosure": (
+                    "Some legacy company-profile inputs have no explicit source record. "
+                    "Their origin and verification status are unknown; do not treat them as verified."
+                ),
+            })
+
         # Convert dict to CompanyProfile dataclass
         try:
-            profile = CompanyProfile(**_company_profile_kwargs(profile_data, CompanyProfile))
+            profile = CompanyProfile(**normalized_profile_data)
         except TypeError as exc:
             raise ValueError(f"CompanyProfile assembly failed: {exc}") from exc
 
@@ -214,7 +259,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
         api_raw_total = output.score_breakdown.raw_total if score_is_released else None
 
         # ── Step 3: Persist results ────────────────────────────────
-        await self._persist_evaluation(company_id, output, trigger_source)
+        await self._persist_evaluation(
+            company_id, output, trigger_source,
+            fact_provenance_snapshot=fact_provenance_snapshot,
+        )
 
         logger.info(
             f"[Compliance] Evaluated company={company_id} | "
@@ -247,6 +295,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "scoring_status": applied_impacts[index]["status"],
                     "revenue_tier": f.revenue_tier,
                     "statutory_basis": f.statutory_basis,
+                    "fact_provenance_snapshot": fact_provenance_snapshot,
+                    "fact_basis_disclosure": [
+                        item["disclosure"] for item in fact_provenance_snapshot
+                    ],
                 }
                 for index, f in enumerate(output.flags)
                 if score_is_released and f.rule_id in PRODUCT_SCORING_RULE_IDS
@@ -288,6 +340,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         company_id: uuid.UUID,
         output,  # EngineOutput from C_rule_engine.py
         trigger_source: str,
+        fact_provenance_snapshot: list[dict] | None = None,
     ) -> None:
         """
         Persist all evaluation results to DB atomically.
@@ -300,6 +353,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             legal_score_is_released,
         )
 
+        fact_provenance_snapshot = fact_provenance_snapshot or []
         engine_version = str(getattr(output, "engine_version", "") or "").strip()
         if not engine_version or engine_version.lower() == "unknown":
             raise ValueError("Evaluation cannot be persisted without a concrete engine version.")
@@ -394,6 +448,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 existing_flag.evaluation_state = str(
                     getattr(flag, "eval_state", "LEGACY_UNCLASSIFIED")
                 )
+                existing_flag.fact_provenance_snapshot = fact_provenance_snapshot
                 self.db.add(existing_flag)
             else:
                 # New flag
@@ -431,6 +486,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                         else "Internal review signal only. No legal conclusion, breach, liability, penalty or compliance status is determined."
                     ),
                     detail=getattr(flag, "detail", None),
+                    fact_provenance_snapshot=fact_provenance_snapshot,
                     notification_sent=False,
                 )
                 self.db.add(new_flag)
@@ -521,6 +577,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "statutory_basis": getattr(flag, "statutory_basis", None),
                 "eval_state": getattr(getattr(flag, "eval_state", None), "value", getattr(flag, "eval_state", None)),
                 "state": getattr(getattr(flag, "state", None), "value", getattr(flag, "state", None)),
+                "fact_provenance_snapshot": fact_provenance_snapshot,
+                "fact_basis_disclosure": [item["disclosure"] for item in fact_provenance_snapshot],
             })
 
         flags_snapshot = jsonable_encoder(flags_snapshot)
@@ -601,6 +659,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "engine_version": engine_version,
                 "trigger_source": trigger_source,
                 "flags_snapshot": flags_snapshot,
+                "fact_provenance_snapshot": fact_provenance_snapshot,
                 "score_breakdown_snapshot": score_breakdown_snapshot,
             },
             sort_keys=True,
@@ -626,6 +685,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             active_flags_count=len(output.flags),
             black_flags_count=black_flags,
             flags_snapshot=flags_snapshot,
+            fact_provenance_snapshot=fact_provenance_snapshot,
             score_breakdown_snapshot=score_breakdown_snapshot,
         )
         self.db.add(evaluation_run)
