@@ -894,7 +894,7 @@ class TestEscalationRules:
         assert_flag_triggered(output, "ESC-002")
 
     @pytest.mark.black
-    def test_ESC002_forces_black_band(self, rule_engine, black_band_profile):
+    def test_ESC002_does_not_force_black_without_authorized_override(self, rule_engine, black_band_profile):
         output = rule_engine.evaluate(black_band_profile)
         # ESC-002 or ESC-003 should force BLACK
         has_black_override = any(
@@ -903,7 +903,8 @@ class TestEscalationRules:
             for f in output.flags
         )
         assert has_black_override is False
-        assert output.score_breakdown.final_score == 100
+        assert output.score_breakdown.final_score == 70
+        assert output.score_breakdown.risk_band != Severity.BLACK
         assert output.score_breakdown.override_applied is False
 
     @pytest.mark.black
@@ -947,11 +948,11 @@ class TestEscalationRules:
         )
         output = rule_engine.evaluate(profile)
 
-        # Unapproved legal rules cannot trigger automatic rescue escalation.
+        # ESC-003 is an escalation marker, not a score-bearing finding.
         esc003_fired = any(f.rule_id == "ESC-003" for f in output.flags)
         assert esc003_fired is False
         assert output.score_breakdown.override_applied is False
-        assert output.score_breakdown.final_score == 100
+        assert output.score_breakdown.final_score == 55
 
 class TestScoreBanding:
     """Verify score → band mapping is correct and non-overlapping."""
@@ -1244,18 +1245,18 @@ class TestEngineIntegrity:
         assert output is not None
         assert len(output.flags) > 0
         assert output.score_breakdown.risk_band != "BLACK"
-        assert output.score_breakdown.final_score == 100
+        assert output.score_breakdown.final_score == 100  # all generated findings remain UNKNOWN without sufficient evidence
         assert output.score_breakdown.override_applied is False
 
     def test_score_never_exceeds_100_with_no_flags(self, rule_engine, build_profile):
-        """Arithmetic placeholder may be 100, but legal band remains NOT_EVALUATED."""
+        """A complete, finding-free profile receives the released product score."""
         profile = build_profile()
         output = rule_engine.evaluate(profile)
         assert output.score_breakdown.final_score == 100
-        assert output.score_breakdown.risk_band == Severity.NOT_EVALUATED
+        assert output.score_breakdown.risk_band == Severity.GREEN
 
-    def test_rescue_plan_generated_for_black_company(self, rule_engine, build_profile):
-        """BLACK band company is correctly identified with score <= 29."""
+    def test_product_score_does_not_force_black_without_authorized_override(self, rule_engine, build_profile):
+        """Product deductions do not force BLACK without a separately authorised override."""
         profile = build_profile(
             current_director_count=0,
             directors_verified=True,
@@ -1265,7 +1266,7 @@ class TestEngineIntegrity:
         )
         output = rule_engine.evaluate(profile)
         assert output.score_breakdown.risk_band != "BLACK"
-        assert output.score_breakdown.final_score == 100
+        assert output.score_breakdown.final_score == 75
         assert output.score_breakdown.override_applied is False
 
 
@@ -1516,11 +1517,11 @@ class TestVerdictRegression:
         output = rule_engine.evaluate(profile, today=date(2026, 10, 1))
         assert_flag_triggered(output, "TAX-003")
 
-    def test_unverified_red_flag_does_not_escalate_band(self, rule_engine, build_profile):
+    def test_product_eligible_red_flag_escalates_band(self, rule_engine, build_profile):
         profile = build_profile(trade_license_expiry=date.today() - timedelta(days=100))
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "TL-002")
-        assert output.score_breakdown.risk_band.value != "RED"
+        assert output.score_breakdown.risk_band.value == "RED"
 
     def test_strike_off_risk_flag_escalates_band(self, rule_engine, build_profile):
         profile = build_profile(unfiled_returns_count=2)
@@ -1548,7 +1549,7 @@ def test_black_override_requires_separate_authorization(
         eval_state="VIOLATION",
     )
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
     monkeypatch.setattr(
         engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset()
     )

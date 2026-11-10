@@ -20,7 +20,7 @@ def _enable_release_for_rescue_sequence_unit_tests(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
         engine_module,
-        "VERIFIED_RULE_IDS",
+        "PRODUCT_SCORING_RULE_IDS",
         frozenset({
             "AGM-001", "AGM-002", "AUD-001", "AUD-002", "AUD-003",
             "TR-005", "TR-006", "ESC-002", "TR-001", "TR-004",
@@ -240,7 +240,7 @@ def test_missing_mapping_for_actionable_finding_is_explicit(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
         engine_module,
-        "VERIFIED_RULE_IDS",
+        "PRODUCT_SCORING_RULE_IDS",
         frozenset({"NO-SUCH-RULE"}),
     )
     with pytest.raises(ValueError, match="Missing statutory rescue mapping"):

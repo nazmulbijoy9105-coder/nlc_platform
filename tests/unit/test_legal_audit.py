@@ -19,7 +19,6 @@ from datetime import date, timedelta
 
 
 from app.rule_engine.engine import (
-    VERIFIED_RULE_IDS,
     ChargeEvent,
     CompanyProfile,
     NLCRuleEngine,
@@ -192,9 +191,8 @@ class TestScoringEngine:
             incorporation_date=date(2020, 1, 1),  # old enough for AUD-001
         )
         result = NLCRuleEngine().evaluate(c)
-        # Raw score should reflect verified rule deductions only
-        # REG-002: -12, AUD-001: -10 (if AUD-001 is verified... it's NOT)
-        # AUD-001 is NOT in VERIFIED_RULE_IDS, so only REG-002 counts
+        # Raw score reflects product-allowlisted findings; legal verification status
+        # remains a separate audit field and does not control product scoring.
         assert result.score_breakdown.raw_total <= 100
         assert result.score_breakdown.raw_total >= 0
 

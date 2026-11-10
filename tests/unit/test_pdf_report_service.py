@@ -27,7 +27,7 @@ MALICIOUS_NAME = (
     '<link rel="attachment" href="file:///etc/passwd">Acme & Sons "Ltd"'
 )
 COMPANY = SimpleNamespace(
-    id="test-company-id",
+    id="00000000-0000-4000-8000-000000000001",
     company_name=MALICIOUS_NAME,
     registration_number="C-1\r\nX-Evil: 1/2020",
     current_compliance_score=85,
@@ -90,7 +90,7 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
     # assessment so the PDF must reconcile its single approved finding.
     monkeypatch.setattr("app.services.pdf_report_service.LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
-        "app.services.pdf_report_service.VERIFIED_RULE_IDS",
+        "app.services.pdf_report_service.PRODUCT_SCORING_RULE_IDS",
         frozenset({"AGM-001"}),
     )
     captured = {}
@@ -153,7 +153,7 @@ def test_endpoint_withholds_pdf_when_legal_score_release_is_disabled(monkeypatch
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", False)
 
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(PDFReportService(db=None).generate_company_compliance_pdf("any-id"))
+        asyncio.run(PDFReportService(db=None).generate_company_compliance_pdf("00000000-0000-4000-8000-000000000001"))
 
     assert exc.value.status_code == 409
     assert "statutory score release is disabled" in exc.value.detail
@@ -181,7 +181,7 @@ def test_html_builder_handles_empty_flags_and_missing_values():
 
 def test_html_builder_suppresses_stale_score_flags_and_rescue_while_release_closed(monkeypatch):
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", False)
-    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset())
     stale_rescue = SimpleNamespace(steps=[SimpleNamespace(title="Sensitive rescue step")])
 
     page = build_compliance_report_html(
@@ -364,7 +364,7 @@ def test_endpoint_rejects_score_snapshot_mismatch(monkeypatch):
             return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
 
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(PDFReportService(db=FakeDB()).generate_company_compliance_pdf("any-id"))
+        asyncio.run(PDFReportService(db=FakeDB()).generate_company_compliance_pdf("00000000-0000-4000-8000-000000000001"))
     assert exc.value.status_code == 409
 
 
@@ -376,5 +376,5 @@ def test_endpoint_rejects_missing_snapshot(monkeypatch):
             return SimpleNamespace(scalar_one_or_none=lambda: None)
 
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(PDFReportService(db=FakeDB()).generate_company_compliance_pdf("any-id"))
+        asyncio.run(PDFReportService(db=FakeDB()).generate_company_compliance_pdf("00000000-0000-4000-8000-000000000001"))
     assert exc.value.status_code == 409

@@ -34,7 +34,7 @@ from app.core.dependencies import (
     require_roles,
 )
 from app.models.enums import SeverityLevel
-from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
+from app.rule_engine.engine import LEGAL_SCORE_RELEASED, PRODUCT_SCORING_RULE_IDS, VERIFIED_RULE_IDS
 from app.models.user import User
 from app.services.notification_service import ActivityService
 from app.services.rules_service import RulesService
@@ -71,7 +71,8 @@ class RuleResponse(BaseModel):
     rule_type: str
     statutory_basis: str
     description: str
-    default_severity: str
+    default_severity: str | None
+    product_scoring_enabled: bool = Field(description="Whether the product scoring configuration includes this rule; separate from legal citation verification.")
     score_impact: int
     revenue_tier: str
     is_black_override: bool
@@ -117,30 +118,35 @@ class MessageResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 def _rule_to_response(rule) -> RuleResponse:
-    approved = LEGAL_SCORE_RELEASED and rule.rule_id in VERIFIED_RULE_IDS
+    score_eligible = LEGAL_SCORE_RELEASED and rule.rule_id in PRODUCT_SCORING_RULE_IDS
+    legally_verified = rule.rule_id in VERIFIED_RULE_IDS
     return RuleResponse(
         rule_id=rule.rule_id,
         rule_name=rule.rule_name,
         rule_type=str(rule.rule_type),
         statutory_basis=(
-            rule.statutory_basis if approved
-            else "NOT VALIDATED — independent Bangladesh-qualified counsel review required"
+            rule.statutory_basis if score_eligible
+            else "Not part of the product scoring allowlist; no score deduction is applied."
         ),
         description=(
-            rule.description if approved
-            else "Review prompt only. This rule is not approved for legal determinations. "
-                 "No breach, liability, penalty or compliance status is determined."
+            rule.description if score_eligible
+            else "Informational catalogue entry only. No score deduction is applied."
         ),
-        default_severity=str(rule.default_severity) if approved else "NOT_EVALUATED",
-        score_impact=rule.score_impact if approved else 0,
-        revenue_tier=str(rule.revenue_tier) if approved else "COMPLIANCE_PACKAGE",
-        is_black_override=rule.is_black_override if approved else False,
-        is_active=bool(rule.is_active and approved),
-        verification_status=rule.verification_status if approved else "PENDING",
-        verified_at=rule.verified_at.isoformat() if approved and rule.verified_at else None,
+        default_severity=(
+            None
+            if str(getattr(rule.default_severity, "value", rule.default_severity)).upper() == "NOT_EVALUATED"
+            else str(getattr(rule.default_severity, "value", rule.default_severity))
+        ) if score_eligible else None,
+        product_scoring_enabled=score_eligible,
+        score_impact=rule.score_impact if score_eligible else 0,
+        revenue_tier=str(rule.revenue_tier) if score_eligible else "COMPLIANCE_PACKAGE",
+        is_black_override=(rule.is_black_override and rule.rule_id in VERIFIED_RULE_IDS) if score_eligible else False,
+        is_active=bool(rule.is_active and score_eligible),
+        verification_status=rule.verification_status if legally_verified else "PENDING",
+        verified_at=rule.verified_at.isoformat() if legally_verified and rule.verified_at else None,
         statutory_effective_date=(
             rule.statutory_effective_date.isoformat()
-            if approved and rule.statutory_effective_date else None
+            if legally_verified and rule.statutory_effective_date else None
         ),
         version=rule.rule_version,
         created_at=rule.created_at.isoformat(),

@@ -7,11 +7,13 @@
 
 ## 1. Release posture
 
-**Statutory scoring: NOT RELEASED. Evidence-review mode only.**
+**Product scoring: RELEASE ENABLED by product configuration. Legal verification: PENDING.**
 
-The current source has `LEGAL_SCORE_RELEASED = False` and an empty `VERIFIED_RULE_IDS` set. The legal approval register has `approved_rule_ids: []`; its 85 rule records remain `REVIEW_REQUIRED` and `score_eligible: false`. Keep these controls unchanged.
+The product release branch sets `LEGAL_SCORE_RELEASED = True` and enables the 82 score-bearing rules in `PRODUCT_SCORING_RULE_IDS`. AR-001 and SH-002 remain informational; ESC-003 is the internal surcharge/escalation rule and is not itself a scored finding.
 
-The platform must not present candidate engine findings, candidate severity, score impact, BLACK override metadata, or risk bands as approved legal conclusions. Missing evidence is not proof of statutory non-compliance. AI-generated drafts remain subject to human review and approval.
+`VERIFIED_RULE_IDS` remains empty. The legal approval register still has `approved_rule_ids: []`, with 85 records `REVIEW_REQUIRED` and `score_eligible: false`. Product scoring eligibility must not be represented as independent legal certification or counsel approval. The three non-scoring catalogue rules remain excluded by design.
+
+This is an application scoring release, not a legal opinion or certification. Missing evidence remains UNKNOWN rather than proof of statutory non-compliance. AI-generated drafts remain subject to human review and approval. See [Product-controlled scoring release](release/PRODUCT_CONTROLLED_SCORING_RELEASE_2026-11-10.md) for the exact configuration and data/deployment scope.
 
 This document is an engineering status record, not a legal opinion, counsel sign-off, production-readiness certificate, or permission to migrate/deploy.
 
@@ -108,7 +110,7 @@ For each rule, preserve applicability, exceptions, evidence provenance, effectiv
 | P0 | Runtime and audit security | Exactly scoped RLS policies, actor/tenant provenance, append-only audit evidence, and role privilege verification. |
 | P1 | Workflows and reports | End-to-end tests for onboarding, AGM, audit, returns, evidence, rescue, approvals and report/evaluation snapshot consistency. |
 | P1 | Operations | Verified restore, worker lifecycle, health/readiness semantics, alert thresholds/destinations and delivery tests. |
-| P1 | Frontend/backend parity | Evidence-review language, API response contracts, authorization, loading/error states and no misleading risk cards while release is closed. |
+| P1 | Frontend/backend parity | Product-scoring UI/API parity, explicit pending legal-verification metadata, authorization, loading/error states and no conflation of product scoring with legal certification. |
 | P1 | Repository hygiene | Reference-aware unused-file audit across all related repositories; classify candidates before deletion. |
 
 A workstream is not closed because a file exists or a test was once reported green. Closure must cite the exact current commit, command/workflow, environment, result and any relevant legal/operational evidence.
@@ -116,10 +118,10 @@ A workstream is not closed because a file exists or a test was once reported gre
 ## 8. Explicit non-actions
 
 This register does not:
-- approve any legal rule or enable `LEGAL_SCORE_RELEASED`;
+- approve any legal rule or alter the separate legal-verification inventory;
 - change `approved_rule_ids`, `VERIFIED_RULE_IDS` or legal calendar release;
 - authorize production SQL, migrations, grants, role changes, data repair or deployment;
 - claim all legal sources/amendments are current;
 - claim the platform is production-ready.
 
-**Current posture: engineering remediation and evidence review continue; statutory scoring remains NOT RELEASED.**
+**Current posture: product scoring is enabled in this branch; legal verification remains pending; calendar release remains separate and unchanged.**

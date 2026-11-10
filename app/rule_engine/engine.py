@@ -537,49 +537,113 @@ CATEGORY_CAPS: dict[str, tuple[int, tuple[str, ...]]] = {
 }
 
 # ═══════════════════════════════════════════════════════════════════════
-# P0 PRODUCTION GATE: Verified Rule IDs
+# PRODUCT SCORING RELEASE AND LEGAL VERIFICATION STATUS
 # ═══════════════════════════════════════════════════════════════════════
-# Only rules in this set contribute to the authoritative compliance score.
-# Unverified rules still generate flags (for visibility) but their
-# score_impact is excluded from _calculate_score() and _calculate_raw_score().
+# Product scoring eligibility is controlled by PRODUCT_SCORING_RULE_IDS and
+# LEGAL_SCORE_RELEASED. This is a product configuration, not a representation
+# that every rule has independent legal verification.
 #
-# Rationale: statutory citations for these 38 rules have undergone an
-# internal source check against the Companies Act 1994 (Bangladesh) text.
-# This is not independent legal approval or a complete amendment review.
-# Rules not yet internally verified
-# (AUD-*, SH-*, TR-002~006, ESC-003~005, TAX-*, LBR-*, BNK-*, FX-*,
-# BSEC-*) require lawyer review before they can influence the score.
-#
-# No BLACK override is exempt from independent legal approval. A critical
-# severity label cannot bypass the global release gate or the exact rule-ID
-# allowlist.
-# Candidate scoring allowlist copied from the main-branch internal source-check register.
-# These 38 IDs have an internal statutory-source check only. This is NOT
-# independent legal approval and must never be represented as such.
-# The set allows deterministic scoring mechanics to be exercised in tests and
-# diagnostic calculations, but no score, risk band, BLACK override, or rescue
-# classification is released to users while LEGAL_SCORE_RELEASED is False.
-# Exclusions (including AGM-005, AUD-*, TAX-*, LBR-*, BNK-*, FX-*, BSEC-*,
-# disputed DEF-001 and unreviewed share-transfer/filing rules) remain provisional.
-# The production allowlist is intentionally empty until each applicable rule
-# has named, independent current-law approval in the signed approval register.
-# Internal source triage or engine/seed parity is not legal approval.
+# VERIFIED_RULE_IDS remains the separate legal-verification inventory. It is
+# intentionally empty while the approval register remains pending. Do not
+# infer legal verification from product scoring eligibility.
 VERIFIED_RULE_IDS: frozenset[str] = frozenset()
 
-# Release remains disabled until the complete applicable rule corpus has named,
-# independent current-law approval recorded in the signed, versioned register.
-# Internal source checking is not independent counsel approval.
-# Release remains disabled until the applicable corpus has named, independent
-# current-law approval recorded in the signed, versioned legal approval register.
-LEGAL_SCORE_RELEASED: bool = False
-# Fail-closed release gate: internal source checking is not legal approval.
-# Only after counsel approves current law, applicability, exceptions, evidence
-# standards and effective dates may this flag be changed to True.
+# Product scoring allowlist: every score-bearing rule in the 85-rule catalogue.
+# AR-001 and SH-002 are informational; ESC-003 is the surcharge itself, not a
+# finding, so those three IDs are intentionally excluded.
+PRODUCT_SCORING_RULE_IDS: frozenset[str] = frozenset({
+    "ACC-001",
+    "ACC-002",
+    "ACC-003",
+    "AGM-001",
+    "AGM-002",
+    "AGM-003",
+    "AGM-004",
+    "AGM-005",
+    "AGM-006",
+    "AGM-007",
+    "AR-002",
+    "AR-003",
+    "AR-004",
+    "AUD-001",
+    "AUD-002",
+    "AUD-003",
+    "AUD-004",
+    "AUD-005",
+    "BNK-001",
+    "BNK-002",
+    "BNK-003",
+    "BOD-001",
+    "BOD-002",
+    "BOD-003",
+    "BSEC-001",
+    "BSEC-002",
+    "BSEC-003",
+    "BSEC-004",
+    "CAP-001",
+    "CAP-002",
+    "CAP-003",
+    "CAP-004",
+    "CHG-001",
+    "DEF-001",
+    "DEF-002",
+    "DIR-001",
+    "DIR-002",
+    "DIR-003",
+    "DIR-004",
+    "DIR-005",
+    "DIR-006",
+    "DIR-007",
+    "DIR-008",
+    "DIR-010",
+    "ESC-001",
+    "ESC-002",
+    "ESC-004",
+    "ESC-005",
+    "FX-001",
+    "INC-001",
+    "INC-003",
+    "INC-004",
+    "INC-005",
+    "INC-006",
+    "INC-007",
+    "LBR-001",
+    "LBR-002",
+    "LBR-003",
+    "MEM-001",
+    "OFF-001",
+    "REG-001",
+    "REG-002",
+    "REG-003",
+    "SH-001",
+    "SH-003",
+    "STR-001",
+    "STR-002",
+    "STR-003",
+    "TAX-001",
+    "TAX-002",
+    "TAX-003",
+    "TAX-004",
+    "TL-001",
+    "TL-002",
+    "TR-001",
+    "TR-002",
+    "TR-003",
+    "TR-004",
+    "TR-005",
+    "TR-006",
+    "VAT-002",
+    "VAT-003",
+})
+
+# Product owner-controlled release switch. This enables deterministic product
+# scoring; it is not a legal-verification or certification claim.
+LEGAL_SCORE_RELEASED: bool = True
+
 
 def legal_score_is_released() -> bool:
-    """The global switch and a non-empty counsel-approved rule set are both required."""
-    return LEGAL_SCORE_RELEASED is True and bool(VERIFIED_RULE_IDS)
-
+    """Return whether product-controlled scoring is enabled and has rules."""
+    return LEGAL_SCORE_RELEASED is True and bool(PRODUCT_SCORING_RULE_IDS)
 
 
 REVENUE_TIER_MAP = {
@@ -3132,7 +3196,7 @@ class NLCRuleEngine:
 
         pre_score = self._calculate_raw_score(self._flags)
         has_black_override = any(
-            f.rule_id in VERIFIED_RULE_IDS
+            f.rule_id in PRODUCT_SCORING_RULE_IDS
             and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
             and f.is_black_override
             and f.severity == Severity.BLACK
@@ -3144,7 +3208,7 @@ class NLCRuleEngine:
         if legal_score_is_released() and (pre_score <= 29 or has_black_override):
             black_count = len([
                 f for f in self._flags
-                if f.rule_id in VERIFIED_RULE_IDS
+                if f.rule_id in PRODUCT_SCORING_RULE_IDS
                 and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
                 and f.is_black_override
                 and f.severity == Severity.BLACK
@@ -3202,7 +3266,7 @@ class NLCRuleEngine:
             and flag.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and flag.eval_state == "VIOLATION"
             and legal_score_is_released()
-            and flag.rule_id in VERIFIED_RULE_IDS
+            and flag.rule_id in PRODUCT_SCORING_RULE_IDS
         ]
 
     @staticmethod
@@ -3267,7 +3331,7 @@ class NLCRuleEngine:
         if legal_score_is_released():
             critical = [
                 f for f in active
-                if f.rule_id in VERIFIED_RULE_IDS
+                if f.rule_id in PRODUCT_SCORING_RULE_IDS
                 and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
                 and f.is_black_override
                 and f.severity == Severity.BLACK
@@ -3281,7 +3345,7 @@ class NLCRuleEngine:
 
         coverage = _input_coverage(company)
         # A 100-point arithmetic placeholder is not a compliance certification.
-        # Keep the band NOT_EVALUATED until the full legal corpus is independently approved.
+        # Keep the band NOT_EVALUATED when product input coverage is insufficient.
         score_band = (
             Severity(self._score_to_band(final, force_black=bool(critical), coverage=coverage))
             if legal_score_is_released() else Severity.NOT_EVALUATED
@@ -3294,7 +3358,7 @@ class NLCRuleEngine:
             max_flag_severity = Severity.GREEN
             for f in active:
                 if (
-                    f.rule_id in VERIFIED_RULE_IDS
+                    f.rule_id in PRODUCT_SCORING_RULE_IDS
                     and (
                         f.severity == Severity.RED
                         or (
@@ -3331,6 +3395,7 @@ class NLCRuleEngine:
             "engine_version": RULE_ENGINE_VERSION,
             "ilrmf_version": ILRMF_VERSION,
             "verified_rule_ids": sorted(VERIFIED_RULE_IDS),
+            "product_scoring_rule_ids": sorted(PRODUCT_SCORING_RULE_IDS),
             "category_caps": {
                 key: {"max_deduction": cap, "prefixes": list(prefixes)}
                 for key, (cap, prefixes) in sorted(CATEGORY_CAPS.items())
@@ -3368,10 +3433,10 @@ class NLCRuleEngine:
             revenue_tier=REVENUE_TIER_MAP[band],
             active_flag_count=len(active),
             coverage=coverage,
-            black_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
-            red_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.RED and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
-            yellow_flag_count=len([f for f in active if f.severity == Severity.YELLOW and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
-            green_flag_count=len([f for f in active if f.severity == Severity.GREEN and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            black_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            red_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.severity == Severity.RED and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            yellow_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.severity == Severity.YELLOW and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            green_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.severity == Severity.GREEN and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             bankruptcy_score=max(0, 5 - bnk_ded),
             labour_score=max(0, 5 - lbr_ded),
             bsec_score=max(0, 5 - bsec_ded),
@@ -3431,7 +3496,7 @@ class NLCRuleEngine:
                 disposition, reason = "WAITING_EVIDENCE", "NO_CONFIRMED_VIOLATION"
             elif not legal_score_is_released():
                 disposition, reason = "BLOCKED", "LEGAL_SCORE_NOT_RELEASED"
-            elif flag.rule_id not in VERIFIED_RULE_IDS:
+            elif flag.rule_id not in PRODUCT_SCORING_RULE_IDS:
                 disposition, reason = "BLOCKED", "RULE_NOT_IN_VERIFIED_ALLOWLIST"
             elif score.risk_band not in (Severity.RED, Severity.BLACK):
                 disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
@@ -3481,7 +3546,7 @@ class NLCRuleEngine:
         actionable = [
             f for f in active
             if legal_score_is_released()
-            and f.rule_id in VERIFIED_RULE_IDS
+            and f.rule_id in PRODUCT_SCORING_RULE_IDS
             and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and f.eval_state == "VIOLATION"
             and f.severity in (Severity.RED, Severity.BLACK)

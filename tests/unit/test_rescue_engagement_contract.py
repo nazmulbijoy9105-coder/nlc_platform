@@ -122,16 +122,19 @@ async def test_generate_rescue_plan_passes_engagement_id_to_create(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_generate_rescue_plan_rejects_when_legal_score_release_is_closed():
+async def test_generate_rescue_plan_rejects_when_product_scoring_is_disabled(monkeypatch):
     from app.services.rescue_service import RescueService
 
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
     db = MagicMock()
     db.execute = AsyncMock()
     svc = RescueService(db=db)
     engine_output = MagicMock()
     engine_output.rescue_sequence = [{"title": "Must not persist"}]
 
-    with pytest.raises(PermissionError, match="independently approved and released"):
+    with pytest.raises(PermissionError, match="product scoring is disabled"):
         await svc.generate_rescue_plan(
             company_id=uuid.uuid4(),
             engine_output=engine_output,

@@ -26,7 +26,12 @@ from app.models.company import Company, CompanyUserAccess
 from app.models.charges import CompanyCharge
 from app.models.enums import CompanyStatus, CompanyType, RevenueTier, RiskBand, UserRole
 from app.models.user import User
-from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
+from app.rule_engine.engine import (
+    AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
+    LEGAL_SCORE_RELEASED,
+    PRODUCT_SCORING_RULE_IDS,
+    VERIFIED_RULE_IDS,
+)
 from app.services.company_service import CompanyService
 from app.services.compliance_service import ComplianceService
 from app.services.compliance_calendar import calendar_manifest_is_released
@@ -35,8 +40,8 @@ from app.services.pdf_report_service import PDFReportService
 
 
 def _legal_score_is_released() -> bool:
-    """Require both the release switch and a non-empty approved rule set."""
-    return LEGAL_SCORE_RELEASED is True and bool(VERIFIED_RULE_IDS)
+    """Require the product release switch and a non-empty scoring allowlist."""
+    return LEGAL_SCORE_RELEASED is True and bool(PRODUCT_SCORING_RULE_IDS)
 
 logger = structlog.get_logger(__name__)
 
@@ -306,25 +311,30 @@ class MessageResponse(BaseModel):
 
 
 def _flag_to_response(flag) -> FlagResponse:
-    approved = _legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS
+    score_eligible = (
+        _legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+    )
+    legally_verified = flag.rule_id in VERIFIED_RULE_IDS
     severity = getattr(flag.severity, "value", flag.severity)
     return FlagResponse(
         flag_id=str(flag.id),
         rule_id=flag.rule_id,
         rule_name=(
             (getattr(flag, "description", flag.flag_code) or flag.flag_code)
-            if approved
+            if score_eligible
             else (
-                "Pending counsel review: internal review signal only. This rule is not "
-                "approved for legal determinations. No breach, liability, penalty or "
-                "compliance status is determined; obtain independent Bangladesh-qualified counsel review."
+                "Pending product scoring review: internal review signal only. "
+                "No breach, liability, penalty or compliance status is determined."
             )
         ),
-        severity=str(severity) if approved else "NOT_EVALUATED",
-        score_impact=int(flag.score_impact or 0) if approved else 0,
+        severity=str(severity) if score_eligible else "NOT_EVALUATED",
+        score_impact=int(flag.score_impact or 0) if score_eligible else 0,
         status=flag.flag_status.value if hasattr(flag.flag_status, "value") else str(flag.flag_status),
-        legal_review_status="APPROVED_FOR_RELEASE" if approved else "PENDING_COUNSEL_REVIEW",
-        is_black_override=bool(getattr(flag, "is_black_override", False)) if approved else False,
+        legal_review_status="LEGALLY_VERIFIED" if legally_verified else "NOT_LEGALLY_VERIFIED",
+        is_black_override=(
+            bool(getattr(flag, "is_black_override", False))
+            and flag.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+        ),
         triggered_at=flag.triggered_date.isoformat() if flag.triggered_date else "",
         resolved_at=flag.resolved_date.isoformat() if getattr(flag, "resolved_date", None) else None,
         resolution_note=getattr(flag, "resolution_notes", None),

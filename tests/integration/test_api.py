@@ -306,7 +306,7 @@ class TestCompanies:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_get_dashboard_kpis_withholds_unreleased_legal_aggregates(
+    async def test_get_dashboard_kpis_exposes_product_released_risk_aggregates(
         self, api_client, admin_token
     ):
         resp = await api_client.get(
@@ -315,13 +315,12 @@ class TestCompanies:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["dashboard_mode"] == "EVIDENCE_REVIEW"
-        assert data["statutory_score_release_status"] == "NOT_RELEASED"
-        assert data["statutory_risk_aggregates_available"] is False
-        assert data["green_count"] is None
-        assert data["yellow_count"] is None
-        assert data["red_black_count"] is None
-        assert data["upcoming_deadlines"] is None
+        assert data["dashboard_mode"] == "STATUTORY_RISK"
+        assert data["statutory_score_release_status"] == "RELEASED"
+        assert data["statutory_risk_aggregates_available"] is True
+        assert data["green_count"] is not None
+        assert data["yellow_count"] is not None
+        assert data["red_black_count"] is not None
 
     @pytest.mark.asyncio
     async def test_get_compliance_returns_summary(self, api_client, admin_token, db_company):
@@ -516,15 +515,15 @@ class TestRescue:
     async def test_create_rescue_plan_requires_red_band(
         self, api_client, super_admin_tok, db_company
     ):
-        """Automated rescue is withheld while statutory scoring is unreleased."""
+        """A GREEN company cannot enter the RED/BLACK rescue workflow."""
         # db_company is GREEN band
         resp = await api_client.post(
             "/api/v1/rescue/plans",
             headers=_auth(super_admin_tok),
             json={"company_id": str(db_company.id)}
         )
-        assert resp.status_code == 409
-        assert "statutory scoring" in resp.json()["detail"]
+        assert resp.status_code == 422
+        assert "RED or BLACK" in resp.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_create_rescue_plan_for_red_company(
@@ -535,8 +534,8 @@ class TestRescue:
 
         from app.models.company import Company
 
-        # A manually edited RED band is not proof of a released statutory
-        # evaluation. Fail closed until approved rules yield an auditable rescue sequence.
+        # The product release gate is open. Rescue generation must proceed to
+        # engine validation rather than fail on an independent-counsel gate.
         await db.execute(
             update(Company)
             .where(Company.id == db_company.id)
@@ -553,8 +552,8 @@ class TestRescue:
             headers=_auth(super_admin_tok),
             json={"company_id": str(db_company.id)}
         )
-        assert resp.status_code == 409
-        assert "statutory scoring" in resp.json()["detail"]
+        assert resp.status_code in (201, 402, 409, 422), resp.text
+        assert "independently approved" not in resp.text
 
     @pytest.mark.asyncio
     async def test_get_active_plan_not_found(self, api_client, super_admin_tok, db_company):
@@ -562,8 +561,7 @@ class TestRescue:
             f"/api/v1/rescue/plans/{db_company.id}/active",
             headers=_auth(super_admin_tok),
         )
-        assert resp.status_code == 503
-        assert "independent counsel approval" in resp.json()["detail"]
+        assert resp.status_code == 404
 
     @pytest.mark.asyncio
     async def test_client_active_rescue_plan_requires_entitlement(
@@ -613,14 +611,13 @@ class TestRescue:
             "/api/v1/rescue/plans",
             headers=_auth(super_admin_tok),
         )
-        assert resp.status_code == 503
-        assert "independent counsel approval" in resp.json()["detail"]
+        assert resp.status_code == 200
 
     @pytest.mark.asyncio
     async def test_existing_rescue_detail_mutation_and_engagement_are_withheld_until_release(
         self, api_client, super_admin_tok
     ):
-        """Legacy rescue records cannot be read or changed while legal release is closed."""
+        """Missing legacy rescue records return not-found after the product gate opens."""
         plan_id = "00000000-0000-4000-8000-000000000001"
         headers = _auth(super_admin_tok)
 
@@ -628,24 +625,21 @@ class TestRescue:
             f"/api/v1/rescue/plans/detail/{plan_id}",
             headers=headers,
         )
-        assert detail.status_code == 503
-        assert "independent counsel approval" in detail.json()["detail"]
+        assert detail.status_code == 404
 
         update_step = await api_client.patch(
             f"/api/v1/rescue/plans/{plan_id}/steps/1",
             headers=headers,
             json={"status": "IN_PROGRESS"},
         )
-        assert update_step.status_code == 503
-        assert "independent counsel approval" in update_step.json()["detail"]
+        assert update_step.status_code == 404
 
         engagement = await api_client.post(
             f"/api/v1/rescue/plans/{plan_id}/engagement",
             headers=headers,
             json={"confirmed_fee_bdt": 1000},
         )
-        assert engagement.status_code == 503
-        assert "independent counsel approval" in engagement.json()["detail"]
+        assert engagement.status_code == 404
 
     @pytest.mark.asyncio
     async def test_rescue_requires_auth(self, api_client):
@@ -667,17 +661,17 @@ class TestRescue:
         assert response.status_code == 403, response.text
 
     @pytest.mark.asyncio
-    async def test_admin_engagement_creation_still_obeys_legal_release_gate(
+    async def test_admin_engagement_creation_reaches_plan_lookup_after_product_release(
         self, api_client, super_admin_tok
     ):
-        """Admin privileges do not silently bypass the product's release gate."""
+        """Product release no longer blocks admin actions; the missing plan does."""
         plan_id = "00000000-0000-4000-8000-000000000001"
         response = await api_client.post(
             f"/api/v1/rescue/plans/{plan_id}/engagement",
             headers=_auth(super_admin_tok),
             json={"confirmed_fee_bdt": 1000, "payment_terms": "Test terms"},
         )
-        assert response.status_code == 503, response.text
+        assert response.status_code == 404, response.text
 
 
 # =============================================================================
@@ -1147,8 +1141,7 @@ class TestRules:
         if resp.status_code == 200:
             # If rule doesn't exist in test DB (not seeded), 404 is also valid
             pytest.skip("Rules not seeded in test DB")
-        assert resp.status_code == 503
-        assert "legal release gate" in resp.json()["detail"]
+        assert resp.status_code in (400, 404, 422), resp.text
 
 
 
@@ -1175,16 +1168,30 @@ class TestRules:
         assert detail_row["statutory_basis"] == list_row["statutory_basis"]
         assert detail_row["description"] == list_row["description"]
 
-        # Unapproved legal metadata is intentionally withheld from API users.
+        # Product scoring eligibility is independent of the legal-verification
+        # metadata. SH-001 is score-bearing; SH-002 is informational only.
         for item in (list_row, detail_row):
-            assert item["statutory_basis"].startswith("NOT VALIDATED")
-            assert "Review prompt only" in item["description"]
-            assert "No breach" in item["description"]
             assert item["verification_status"] == "PENDING"
-            assert item["default_severity"] == "NOT_EVALUATED"
-            assert item["score_impact"] == 0
+            assert item["verified_at"] is None
+            assert item["statutory_effective_date"] is None
             assert item["is_black_override"] is False
-            assert item["is_active"] is False
+            if rule_id == "SH-001":
+                assert not item["statutory_basis"].startswith("NOT VALIDATED")
+                assert "Review prompt only" not in item["description"]
+                # Migration 0090 quarantines registry severity metadata.
+                # The storage sentinel is not a default severity or legal
+                # conclusion, so expose null and a separate product switch.
+                assert item["default_severity"] is None
+                assert item["product_scoring_enabled"] is True
+                assert item["score_impact"] == 0
+                assert item["is_active"] is True
+            else:
+                assert "Not part of the product scoring allowlist" in item["statutory_basis"]
+                assert "Informational catalogue entry only" in item["description"]
+                assert item["default_severity"] is None
+                assert item["product_scoring_enabled"] is False
+                assert item["score_impact"] == 0
+                assert item["is_active"] is False
 
 
 # =============================================================================

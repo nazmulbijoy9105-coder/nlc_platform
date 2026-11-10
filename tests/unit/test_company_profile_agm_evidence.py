@@ -195,9 +195,9 @@ def test_verified_zero_directors_triggers_minimum_director_rule():
     assert "INC-003" in {flag.rule_id for flag in result.flags}
 
 
-def test_score_impact_reporting_respects_verified_rule_gate_and_category_caps(monkeypatch):
+def test_score_impact_reporting_respects_product_release_gate_and_category_caps(monkeypatch):
     # Simulate an internally source-checked rule while the release gate is closed.
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
     flags = [
         SimpleNamespace(
@@ -288,7 +288,7 @@ def test_black_override_is_reported_separately_from_category_deduction():
 
     assert _applied_score_impacts([flag])[0] == {
         "applied": 0,
-        "status": "LEGAL_SCORE_NOT_RELEASED",
+        "status": "EXCLUDED_FROM_PRODUCT_SCORING",
     }
 
 

@@ -223,19 +223,37 @@ def main() -> int:
         print("FAIL: seed_rules.py must accept NOT_EVALUATED severity")
         return 1
 
-    if not re.search(r"^LEGAL_SCORE_RELEASED:\s*bool\s*=\s*False\s*$", engine_source, re.MULTILINE):
-        print("FAIL: legal score release flag is not explicitly disabled")
+    if not re.search(r"^LEGAL_SCORE_RELEASED:\s*bool\s*=\s*True\s*$", engine_source, re.MULTILINE):
+        print("FAIL: product scoring release flag is not enabled")
         return 1
     if not re.search(r"^VERIFIED_RULE_IDS:\s*frozenset\[str\]\s*=\s*frozenset\(\)\s*$", engine_source, re.MULTILINE):
         print("FAIL: verified rule allowlist must remain empty until counsel approval")
+        return 1
+
+    engine_tree = ast.parse(engine_source)
+    scoring_ids: set[str] = set()
+    for node in ast.walk(engine_tree):
+        if (isinstance(node, ast.AnnAssign)
+                and isinstance(node.target, ast.Name)
+                and node.target.id == "PRODUCT_SCORING_RULE_IDS"):
+            scoring_ids = set(ast.literal_eval(node.value.args[0]))
+            break
+    forbidden_scoring_ids = {"AR-001", "SH-002", "ESC-003"}
+    expected_scoring_ids = seed - forbidden_scoring_ids
+    if scoring_ids != expected_scoring_ids:
+        print(
+            f"FAIL: product scoring allowlist mismatch; count={len(scoring_ids)} "
+            f"missing={sorted(expected_scoring_ids - scoring_ids)} "
+            f"extra={sorted(scoring_ids - expected_scoring_ids)}"
+        )
         return 1
 
     if not re.search(r"^BLACK_OVERRIDE_RULES:\s*set\[str\]\s*=\s*set\(\)\s*$", engine_source, re.MULTILINE):
         print("FAIL: unapproved legal rule catalogue must not define BLACK overrides")
         return 1
 
-    print(f"PASS: all {len(seed)} rules remain REVIEW_REQUIRED and score-ineligible")
-    print("PASS: statutory scoring release flag is disabled and verified allowlist is empty")
+    print(f"PASS: {len(seed)} catalogue rules match engine, seed and legal register")
+    print(f"PASS: {len(scoring_ids)} product scoring rules are enabled; legal verification register remains separate")
     return 0
 
 

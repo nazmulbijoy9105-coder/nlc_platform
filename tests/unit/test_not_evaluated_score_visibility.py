@@ -25,14 +25,13 @@ def _company(score, band):
     )
 
 
-def test_legacy_stored_company_score_is_hidden_while_release_is_disabled():
+def test_legacy_stored_company_score_is_visible_after_product_release():
     response = _company_to_response(_company(88, "GREEN"))
 
-    assert response.band == "NOT_EVALUATED"
-    assert response.compliance_score is None
+    assert response.band == "GREEN"
+    assert response.compliance_score == 88
     assert response.violation_count == 0
     assert response.active_flags == 0
-    assert response.black_flags == response.red_flags == response.yellow_flags == 0
 
 
 def test_not_evaluated_company_does_not_expose_placeholder_score():
@@ -44,7 +43,7 @@ def test_not_evaluated_company_does_not_expose_placeholder_score():
 
 def test_released_company_score_is_visible_only_when_release_switch_is_enabled(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", {"AGM-001"})
+    monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
 
     response = _company_to_response(_company(88, "GREEN"))
 
@@ -52,7 +51,7 @@ def test_released_company_score_is_visible_only_when_release_switch_is_enabled(m
     assert response.compliance_score == 88
 
 
-def test_legacy_score_history_is_hidden_without_mutating_the_database_record():
+def test_historical_score_history_is_visible_without_mutating_the_database_record():
     item = {
         "month": "2026-10-01",
         "score": 72,
@@ -66,14 +65,16 @@ def test_legacy_score_history_is_hidden_without_mutating_the_database_record():
 
     response = _score_history_to_response(item)
 
-    assert response.score is None
-    assert response.risk_band == "NOT_EVALUATED"
-    assert response.black_flags == response.red_flags == response.yellow_flags == 0
-    assert response.active_flags == 0
+    assert response.score == 72
+    assert response.risk_band == "GREEN"
+    assert response.black_flags == 1
+    assert response.red_flags == 1
+    assert response.yellow_flags == 1
+    assert response.active_flags == 3
     assert item["score"] == 72  # Preserve immutable historical evidence.
 
 
-def test_unapproved_flag_severity_and_score_impact_are_not_presented_as_legal_findings():
+def test_product_scoring_flag_is_visible_without_claiming_legal_verification():
     flag = SimpleNamespace(
         id=uuid4(),
         rule_id="AGM-001",
@@ -90,16 +91,16 @@ def test_unapproved_flag_severity_and_score_impact_are_not_presented_as_legal_fi
 
     response = _flag_to_response(flag)
 
-    assert response.severity == "NOT_EVALUATED"
-    assert response.score_impact == 0
+    assert response.severity == "BLACK"
+    assert response.score_impact == 20
     assert response.is_black_override is False
-    assert response.legal_review_status == "PENDING_COUNSEL_REVIEW"
-    assert response.rule_name.startswith("Pending counsel review:")
+    assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
+    assert response.rule_name == "Provisional AGM evidence flag"
 
 
-def test_counsel_approved_flag_is_visible_after_release_switch(monkeypatch):
+def test_product_scoring_flag_remains_legally_pending_after_product_release(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", {"AGM-001"})
+    monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
     flag = SimpleNamespace(
         id=uuid4(),
         rule_id="AGM-001",
@@ -118,7 +119,7 @@ def test_counsel_approved_flag_is_visible_after_release_switch(monkeypatch):
 
     assert response.severity == "RED"
     assert response.score_impact == 15
-    assert response.legal_review_status == "APPROVED_FOR_RELEASE"
+    assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
 
 
 def test_flag_summary_separates_pending_review_from_released_findings(monkeypatch):
@@ -128,7 +129,7 @@ def test_flag_summary_separates_pending_review_from_released_findings(monkeypatc
     from app.services.compliance_service import ComplianceService
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", {"AGM-001"})
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
     summary_result = MagicMock()
     summary_result.mappings.return_value.one_or_none.return_value = {"total_active": 2}
     flags_result = MagicMock()
@@ -144,9 +145,9 @@ def test_flag_summary_separates_pending_review_from_released_findings(monkeypatc
     assert result["pending_review_flags"] == 2
 
 
-def test_release_switch_without_verified_rule_ids_still_hides_company_score(monkeypatch):
+def test_release_switch_without_product_scoring_rules_hides_company_score(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", set())
+    monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", set())
 
     response = _company_to_response(_company(88, "GREEN"))
 

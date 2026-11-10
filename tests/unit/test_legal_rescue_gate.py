@@ -1,4 +1,4 @@
-"""Rescue workflow must stay blocked while legal scoring is unreleased."""
+"""Rescue workflow follows product scoring release and rule eligibility."""
 
 import pytest
 from fastapi import HTTPException
@@ -7,17 +7,17 @@ import app.rule_engine.engine as engine_module
 from app.api.rescue import _require_legal_release
 
 
-def test_rescue_workflow_is_blocked_without_independent_legal_release(monkeypatch):
+def test_rescue_workflow_is_blocked_when_product_scoring_is_disabled(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
     with pytest.raises(HTTPException) as exc:
         _require_legal_release()
     assert exc.value.status_code == 503
-    assert "independent counsel approval" in exc.value.detail
+    assert "product scoring is disabled" in exc.value.detail
 
 
-def test_rescue_workflow_gate_opens_only_when_release_flag_and_verified_rules_exist(monkeypatch):
+def test_rescue_workflow_gate_opens_when_product_scoring_is_enabled(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     _require_legal_release()
 
 
@@ -27,7 +27,7 @@ def test_rescue_service_requires_released_rule_findings_and_rule_linked_steps(mo
     from app.services.rescue_service import validate_rescue_engine_output
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     flag = SimpleNamespace(
         rule_id="AGM-001",
         resolved=False,
@@ -52,7 +52,7 @@ def test_rescue_service_rejects_unknown_or_unapproved_rule_links(monkeypatch):
     from app.services.rescue_service import validate_rescue_engine_output
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     unknown_flag = SimpleNamespace(
         rule_id="AGM-001",
         resolved=False,
@@ -77,7 +77,7 @@ def test_rescue_service_rejects_unlinked_steps_and_non_red_black_risk(monkeypatc
     from app.services.rescue_service import validate_rescue_engine_output
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     flag = SimpleNamespace(
         rule_id="AGM-001",
         resolved=False,
@@ -108,7 +108,7 @@ def test_rescue_service_rejects_cross_tenant_engine_output(monkeypatch):
     from app.services.rescue_service import validate_rescue_engine_output
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     output = SimpleNamespace(
         company_id="company-A",
         score_breakdown=SimpleNamespace(risk_band="RED", final_score=40),
@@ -126,7 +126,7 @@ def test_rescue_service_rejects_missing_tenant_identity(monkeypatch):
     from app.services.rescue_service import validate_rescue_engine_output
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     output = SimpleNamespace(
         score_breakdown=SimpleNamespace(risk_band="RED", final_score=40),
         flags=[],
@@ -142,7 +142,7 @@ def test_rescue_service_rejects_ambiguous_duplicate_findings(monkeypatch):
     from app.services.rescue_service import validate_rescue_engine_output
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     flag = SimpleNamespace(
         rule_id="AGM-001",
         resolved=False,
@@ -169,7 +169,7 @@ def test_rescue_service_rejects_finding_from_unreleased_rule_id(monkeypatch):
     from app.services.rescue_service import validate_rescue_engine_output
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-002"}))
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-002"}))
     flag = SimpleNamespace(
         rule_id="AGM-001",
         resolved=False,

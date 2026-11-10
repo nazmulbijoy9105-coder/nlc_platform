@@ -39,11 +39,18 @@ class TestRulesAPI:
     async def test_black_overrides(self, api_client, super_admin_headers):
         r = await api_client.get("/api/v1/rules", headers=super_admin_headers)
         assert r.status_code == 200
-        # No BLACK override is published before independent counsel approval.
-        blacks = [x for x in r.json() if x.get("is_black_override")]
-        assert blacks == []
-        assert all(x["default_severity"] == "NOT_EVALUATED" for x in r.json())
-        assert all(x["score_impact"] == 0 for x in r.json())
+        # BLACK overrides remain separately controlled from the product
+        # scoring allowlist. Do not conflate a quarantined registry severity
+        # sentinel with the API's nullable default_severity field.
+        rules = r.json()
+        assert all(isinstance(x["product_scoring_enabled"], bool) for x in rules)
+        assert [x for x in rules if x["is_black_override"]] == []
+        assert all(x["default_severity"] != "NOT_EVALUATED" for x in rules)
+        assert all(
+            x["score_impact"] == 0
+            for x in rules
+            if not x["product_scoring_enabled"]
+        )
 
 
 class TestAuthFlow:

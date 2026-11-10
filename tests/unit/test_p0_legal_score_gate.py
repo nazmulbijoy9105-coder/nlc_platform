@@ -32,8 +32,8 @@ def _engine_flag(rule_id="AUD-003", severity=Severity.BLACK, black=True):
     )
 
 
-def test_unapproved_black_override_cannot_force_zero(monkeypatch):
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+def test_rule_outside_product_scoring_allowlist_cannot_force_zero(monkeypatch):
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset())
     result = NLCRuleEngine(today=date(2026, 11, 5))._calculate_score(
         [_engine_flag()], CompanyProfile(company_id="x", company_name="Test")
     )
@@ -43,8 +43,8 @@ def test_unapproved_black_override_cannot_force_zero(monkeypatch):
     assert result.risk_band == Severity.NOT_EVALUATED
 
 
-def test_approved_black_override_still_forces_zero(monkeypatch):
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AUD-003"}))
+def test_product_allowlisted_black_override_requires_explicit_override_authorisation(monkeypatch):
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
     monkeypatch.setattr(
         engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"AUD-003"})
     )
@@ -57,8 +57,8 @@ def test_approved_black_override_still_forces_zero(monkeypatch):
     assert result.final_score == 0
 
 
-def test_unapproved_black_flag_is_excluded_from_persisted_score_reconciliation(monkeypatch):
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+def test_rule_outside_product_allowlist_is_excluded_from_score_reconciliation(monkeypatch):
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset())
     flag = SimpleNamespace(
         rule_id="AUD-003", severity="BLACK", score_impact=25,
         state=RuleState.NON_COMPLIANT, resolved=False,
@@ -70,23 +70,23 @@ def test_unapproved_black_flag_is_excluded_from_persisted_score_reconciliation(m
     ]
 
 
-def test_pdf_score_reconciliation_ignores_unapproved_black_flag(monkeypatch):
-    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
+def test_pdf_score_reconciliation_ignores_rule_outside_product_allowlist(monkeypatch):
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset())
     flag = SimpleNamespace(rule_id="AUD-003", severity="BLACK", score_impact=25)
     assert _verified_flag_score([flag]) == (0, False)
 
 
-def test_pdf_score_reconciliation_counts_only_approved_rules(monkeypatch):
-    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+def test_pdf_score_reconciliation_counts_product_allowlisted_rules(monkeypatch):
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
     approved = SimpleNamespace(rule_id="AGM-001", severity="RED", score_impact=15)
     unapproved = SimpleNamespace(rule_id="AUD-003", severity="BLACK", score_impact=25)
     assert _verified_flag_score([approved, unapproved]) == (85, False)
 
 
-def test_release_switch_without_any_approved_rules_does_not_release_a_score(monkeypatch):
+def test_release_switch_without_product_rules_does_not_release_a_score(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset())
     result = NLCRuleEngine(today=date(2026, 11, 5))._calculate_score(
         [_engine_flag()], CompanyProfile(company_id="x", company_name="Test")
     )
@@ -101,7 +101,7 @@ def test_release_switch_without_any_approved_rules_does_not_release_a_score(monk
 
 def test_pdf_requires_explicit_authorisation_for_black_override(monkeypatch):
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(report_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
     flag = SimpleNamespace(
         rule_id="AGM-001",
@@ -119,3 +119,16 @@ def test_pdf_requires_explicit_authorisation_for_black_override(monkeypatch):
     score, override = _verified_flag_score([flag])
     assert score == 0
     assert override is True
+
+
+def test_product_scoring_is_released_without_legal_verification_allowlist(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
+    result = NLCRuleEngine(today=date(2026, 11, 5))._calculate_score(
+        [_engine_flag(severity=Severity.RED, black=False)],
+        CompanyProfile(company_id="x", company_name="Test"),
+    )
+    assert engine_module.legal_score_is_released() is True
+    assert engine_module.VERIFIED_RULE_IDS == frozenset()
+    assert result.final_score == 75

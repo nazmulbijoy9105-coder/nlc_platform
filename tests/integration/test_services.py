@@ -214,16 +214,25 @@ class TestComplianceService:
         """Integration: build profile → run engine → persist → verify."""
         from app.services.compliance_service import ComplianceService
 
-        # Mock rule engine to avoid complex setup
-        score_breakdown = SimpleNamespace(
+        # Use the production result contract so added scoring fields fail
+        # immediately at fixture construction instead of deep in persistence.
+        from app.rule_engine.engine import (
+            ExposureBand,
+            RevenueTier,
+            ScoreBreakdown,
+            Severity,
+        )
+
+        score_breakdown = ScoreBreakdown(
             final_score=90,
-            risk_band="GREEN",
-            exposure_band="LOW",
+            risk_band=Severity.GREEN,
+            exposure_band=ExposureBand.LOW,
             override_applied=False,
             override_reason=None,
             black_flag_count=0,
             red_flag_count=0,
             yellow_flag_count=0,
+            green_flag_count=0,
             active_flag_count=0,
             score_hash="abc123",
             raw_total=90,
@@ -242,6 +251,7 @@ class TestComplianceService:
             fx_score=0,
             escalation_score=0,
             coverage=1.0,
+            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
         )
         mock_output = SimpleNamespace(
             flags=[],
@@ -260,10 +270,24 @@ class TestComplianceService:
         )
 
         assert result is not None
-        # A mocked/provisional GREEN band cannot bypass the global legal release gate.
-        assert result["score"] is None
-        assert result["risk_band"] == "NOT_EVALUATED"
+        # The product-controlled scoring release exposes the deterministic score.
+        assert result["score"] == 90
+        assert result["risk_band"] == "GREEN"
         mock_engine.evaluate.assert_called_once()
+
+        # The evaluation-run JSONB snapshot persists the full score contract,
+        # including category deductions; no schema migration is required.
+        from sqlalchemy import select
+        from app.models.compliance import ComplianceEvaluationRun
+
+        persisted_result = await db.execute(
+            select(ComplianceEvaluationRun)
+            .where(ComplianceEvaluationRun.company_id == db_company.id)
+            .order_by(ComplianceEvaluationRun.calculated_at.desc())
+            .limit(1)
+        )
+        persisted_run = persisted_result.scalar_one()
+        assert persisted_run.score_breakdown_snapshot["category_deductions"] == {}
 
 
 # =============================================================================

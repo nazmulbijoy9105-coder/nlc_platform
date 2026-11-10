@@ -70,8 +70,7 @@ def _require_legal_release() -> None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=(
-                "Rescue plans are withheld until the underlying legal rules "
-                "receive independent counsel approval and the legal score is released."
+                "Rescue plans are withheld because product scoring is disabled."
             ),
         )
 
@@ -202,7 +201,7 @@ async def create_rescue_plan(
     if not legal_score_is_released():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Automated rescue generation is withheld until statutory scoring is independently approved and released.",
+            detail="Automated rescue generation is withheld because product scoring is disabled.",
         )
 
     company_svc = CompanyService(db)
