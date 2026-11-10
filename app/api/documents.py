@@ -22,6 +22,8 @@ AI Constitution Article 3 compliance:
 
 
 import uuid
+from datetime import date
+from typing import Any
 
 import structlog
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
@@ -703,3 +705,115 @@ async def get_pdf_url(
         "download_url": presigned_url,
         "expires_in_seconds": 3600,
     }
+
+
+# ---------------------------------------------------------------------------
+# COMPANY FACT PROVENANCE — existing document vault, same tenant authorization
+# ---------------------------------------------------------------------------
+
+from app.services.company_fact_service import CompanyFactService, fact_response
+
+
+class CompanyFactAssertionRequest(BaseModel):
+    fact_key: str = Field(min_length=1, max_length=120)
+    fact_value: Any
+    observed_on: date
+    source_reference: str | None = None
+
+
+class CompanyFactVerificationRequest(BaseModel):
+    decision: str = Field(pattern="^(VERIFIED|REJECTED|SUPERSEDED)$")
+    note: str | None = None
+
+
+@router.post(
+    "/facts/company/{company_id}",
+    dependencies=[
+        Depends(require_company_access("company_id")),
+        Depends(require_entitlement("document_management")),
+    ],
+    summary="Record a user-asserted company fact",
+)
+async def create_user_asserted_company_fact(
+    company_id: uuid.UUID,
+    body: CompanyFactAssertionRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    fact = await CompanyFactService(db).assert_fact(
+        company_id=company_id,
+        fact_key=body.fact_key,
+        fact_value=body.fact_value,
+        actor_id=current_user.id,
+        observed_on=body.observed_on,
+        source_reference=body.source_reference,
+    )
+    return fact_response(fact)
+
+
+@router.post(
+    "/facts/document/{document_id}",
+    summary="Attach a company fact to an existing document-vault record",
+)
+async def create_document_backed_company_fact(
+    document_id: uuid.UUID,
+    body: CompanyFactAssertionRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    doc = await DocumentService(db).get_by_id_or_404(document_id)
+    await _assert_document_company_access(doc, current_user, db)
+    await _assert_document_entitlement(doc, current_user, db)
+    fact = await CompanyFactService(db).record_document_fact(
+        document_id=document_id,
+        fact_key=body.fact_key,
+        fact_value=body.fact_value,
+        actor_id=current_user.id,
+        observed_on=body.observed_on,
+        source_reference=body.source_reference,
+    )
+    return fact_response(fact)
+
+
+@router.get(
+    "/facts/company/{company_id}",
+    dependencies=[
+        Depends(require_company_access("company_id")),
+        Depends(require_entitlement("document_management")),
+    ],
+    summary="List current company facts with provenance disclosures",
+)
+async def list_company_facts(
+    company_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    facts = await CompanyFactService(db).list_current(company_id)
+    return [fact_response(fact) for fact in facts]
+
+
+@router.post(
+    "/facts/{fact_id}/verify",
+    dependencies=[Depends(require_roles("LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN"))],
+    summary="Record a staff decision on document-backed company fact provenance",
+)
+async def verify_company_fact(
+    fact_id: uuid.UUID,
+    body: CompanyFactVerificationRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    from sqlalchemy import select
+    from app.models.company_fact import CompanyFact
+
+    result = await db.execute(select(CompanyFact).where(CompanyFact.id == fact_id))
+    fact = result.scalar_one_or_none()
+    if fact is None:
+        raise HTTPException(status_code=404, detail="Company fact not found.")
+    await ensure_staff_company_scope(fact.company_id, current_user, db)
+    updated = await CompanyFactService(db).verify_fact(
+        fact_id=fact_id,
+        reviewer_id=current_user.id,
+        decision=body.decision,
+        note=body.note,
+    )
+    return fact_response(updated)
