@@ -66,6 +66,55 @@ def test_unapproved_black_override_is_excluded_before_override_semantics():
     assert result == [{"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"}]
 
 
+def test_compliance_service_persists_exact_deduplicated_category_allocations(monkeypatch):
+    monkeypatch.setattr(
+        engine_module,
+        "PRODUCT_SCORING_RULE_IDS",
+        frozenset({"DIR-001", "AGM-001", "AGM-002"}),
+    )
+    monkeypatch.setattr(engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+
+    flags = [
+        SimpleNamespace(
+            rule_id="DIR-001",
+            state=RuleState.NON_COMPLIANT,
+            eval_state="VIOLATION",
+            severity=Severity.RED,
+            resolved=False,
+            conditional_applies=True,
+            score_impact=15,
+            detail={"scoring_event_key": "director-change-2026-01"},
+        ),
+        SimpleNamespace(
+            rule_id="AGM-001",
+            state=RuleState.NON_COMPLIANT,
+            eval_state="VIOLATION",
+            severity=Severity.RED,
+            resolved=False,
+            conditional_applies=True,
+            score_impact=30,
+            detail={"scoring_event_key": "director-change-2026-01"},
+        ),
+        SimpleNamespace(
+            rule_id="AGM-002",
+            state=RuleState.NON_COMPLIANT,
+            eval_state="VIOLATION",
+            severity=Severity.RED,
+            resolved=False,
+            conditional_applies=True,
+            score_impact=20,
+            detail={"scoring_event_key": "separate-agm-default"},
+        ),
+    ]
+
+    assert _applied_score_impacts(flags) == [
+        {"applied": 0, "status": "DUPLICATE_EVENT_SUPPRESSED"},
+        {"applied": 30, "status": "APPLIED"},
+        {"applied": 0, "status": "CATEGORY_CAP_REACHED"},
+    ]
+
+
 def test_unapproved_black_rule_cannot_force_black_score_band():
     profile = _profile()
     unapproved_black = ComplianceFlag(
