@@ -167,8 +167,7 @@ class UserCreateResponse(BaseModel):
     full_name: str
     role: str
     is_active: bool
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 @router.get("/users", response_model=list[UserListItem])
