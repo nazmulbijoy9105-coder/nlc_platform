@@ -21,6 +21,7 @@ class CompanyFactService:
     @staticmethod
     def _normalize_fact_key(fact_key: str) -> str:
         from dataclasses import fields
+        from typing import get_args, get_origin, get_type_hints
 
         from app.rule_engine import CompanyProfile
 
@@ -32,6 +33,17 @@ class CompanyFactService:
             raise HTTPException(
                 status_code=422,
                 detail="fact_key must be a supported CompanyProfile field; company identity fields are read-only.",
+            )
+        annotation = get_type_hints(CompanyProfile).get(normalized)
+        candidates = get_args(annotation) or (annotation,)
+        if any(
+            candidate in (list, dict, set, tuple)
+            or get_origin(candidate) in (list, dict, set, tuple)
+            for candidate in candidates
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail="Structured collection facts require a dedicated typed workflow and cannot be asserted through this scalar fact endpoint.",
             )
         return normalized
 
