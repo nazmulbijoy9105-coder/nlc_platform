@@ -98,11 +98,11 @@ company ID and the outbox's forced tenant RLS.
 
 ## Remaining integration work
 
-1. Generate/update first-class obligation instances from the event stream, with
-   effective-date and applicability provenance.
-2. Connect obligation remediation to explicit owner assignment, due dates,
-   reassignment and completion evidence; do not silently infer legal verification
-   from task completion.
+1. Persist first-class obligation instances from event-driven evaluations, retaining
+   effective-date, applicability and evidence provenance beyond the current
+   compliance-flag/rescue-plan representation.
+2. Add explicit remediation reassignment, owner-change history, due-date escalation
+   and completion evidence; task completion must not imply legal verification.
 3. Connect the frontend client dashboard to the new activity endpoint and expose
    actionable obligation/remediation states.
 4. Add broader PostgreSQL end-to-end tests for worker dispatch, consumer retries,
@@ -110,6 +110,7 @@ company ID and the outbox's forced tenant RLS.
 5. Add operator metrics/alerts for queue age, retry volume, consumer lag and
    dead-letter growth.
 
-This PR connects the backend lifecycle producers, dedicated receipt/evidence
-consumers, dead-letter/replay controls and the tenant-scoped activity API. It does
-not claim that obligation ownership or the frontend dashboard UI is complete.
+This PR connects backend lifecycle producers, dedicated receipt/evidence consumers,
+dead-letter/replay controls, compliance reevaluation, assigned-staff ownership for
+new rescue plans and a tenant-scoped activity API. First-class obligation instances,
+remediation reassignment and the frontend dashboard UI remain follow-on work.
