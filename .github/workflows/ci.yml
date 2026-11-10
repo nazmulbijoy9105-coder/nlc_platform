@@ -125,6 +125,7 @@ jobs:
             tests/integration/test_compliance_calendar.py \
             alembic/versions/0091_calendar_legal_provenance.py \
             alembic/versions/0092_rescue_source_rule_ids.py
+            alembic/versions/0093_verified_rule_audit_view.py
 
       - name: Verify single Alembic head
         run: |
@@ -440,7 +441,7 @@ jobs:
           printf '%s\n' "$FINAL_MARKER"
           HEAD_REVISION="$(alembic heads | awk 'NR == 1 {print $1}')"
           grep -q "$HEAD_REVISION" <<< "$FINAL_MARKER"
-          grep -q "0092_rescue_source_rule_ids" <<< "$FINAL_MARKER"
+          grep -q "$HEAD_REVISION" <<< "$FINAL_MARKER"
 
       - name: Upload isolated migration rehearsal schema
         uses: actions/upload-artifact@v4
