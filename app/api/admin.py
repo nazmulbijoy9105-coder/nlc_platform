@@ -113,8 +113,6 @@ async def replay_dead_lettered_domain_event(
     event = result.scalar_one_or_none()
     if event is None:
         raise HTTPException(status_code=404, detail="Domain event not found.")
-    if event.processed_at is not None:
-        raise HTTPException(status_code=409, detail="A dispatched event cannot be replayed from the dead-letter queue.")
     if event.dead_lettered_at is None:
         raise HTTPException(status_code=409, detail="Only dead-lettered events can be replayed.")
 
@@ -122,6 +120,7 @@ async def replay_dead_lettered_domain_event(
     event.dead_lettered_at = None
     event.dead_letter_reason = None
     event.attempts = 0
+    event.processed_at = None
     event.available_at = now
     event.last_error = None
     event.last_replayed_at = now
