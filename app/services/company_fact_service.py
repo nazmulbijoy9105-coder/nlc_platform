@@ -87,7 +87,7 @@ class CompanyFactService:
 
     async def record_document_fact(
         self, *, document_id: uuid.UUID, fact_key: str, fact_value: Any,
-        actor_id: uuid.UUID, observed_on: date, source_reference: str | None = None,
+        actor_id: uuid.UUID, observed_on: date,
     ) -> CompanyFact:
         result = await self.db.execute(
             select(Document).where(Document.id == document_id, Document.is_active.is_(True))
@@ -119,7 +119,7 @@ class CompanyFactService:
             trust_level="AUTHORIZED_DOCUMENT_BACKED",
             asserted_by=actor_id,
             observed_on=observed_on,
-            source_reference=source_reference or f"document:{document.id}",
+            source_reference=f"document:{document.id}",
             document_id=document.id,
             authorized_uploader_id=document.created_by,
             uploaded_at=document.created_at,
