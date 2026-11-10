@@ -27,9 +27,9 @@ class DomainEventOutbox(UUIDPrimaryKeyMixin, Base):
             "ix_domain_event_outbox_pending",
             "processed_at",
             "available_at",
-            "created_at",
+            "occurred_at",
         ),
-        Index("ix_domain_event_outbox_company_created", "company_id", "created_at"),
+        Index("ix_domain_event_outbox_company_created", "company_id", "occurred_at"),
     )
 
     company_id: Mapped[uuid.UUID] = mapped_column(
