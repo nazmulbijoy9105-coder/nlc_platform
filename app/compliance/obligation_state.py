@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from datetime import date
 from enum import Enum
 
+from app.compliance.fact_provenance import FactTrustLevel, FactVerificationStatus
+
 
 class _StrEnum(str, Enum):
     def __str__(self) -> str:
@@ -40,22 +42,28 @@ class ObligationStatus(_StrEnum):
     EXEMPTED = "EXEMPTED"
 
 
-class FactTrustLevel(_StrEnum):
-    USER_ASSERTED = "USER_ASSERTED"
-    DOCUMENT_BACKED = "DOCUMENT_BACKED"
-    RJSC_CONFIRMED = "RJSC_CONFIRMED"
-
-
 @dataclass(frozen=True)
 class FactProvenance:
     fact_key: str
     trust_level: FactTrustLevel
     source_reference: str
     observed_on: date
+    verification_status: FactVerificationStatus = FactVerificationStatus.UNVERIFIED
+    document_id: str | None = None
+    authorized_uploader_id: str | None = None
+    uploaded_at: str | None = None
+    verified_by: str | None = None
+    verified_at: str | None = None
 
     def __post_init__(self) -> None:
         if not self.fact_key.strip() or not self.source_reference.strip():
             raise ValueError("fact_key and source_reference are required")
+        if self.trust_level is FactTrustLevel.AUTHORIZED_DOCUMENT_BACKED:
+            if not all((self.document_id, self.authorized_uploader_id, self.uploaded_at)):
+                raise ValueError("document-backed finding facts require document and uploader provenance")
+        if self.verification_status is FactVerificationStatus.VERIFIED:
+            if not self.verified_by or not self.verified_at:
+                raise ValueError("verified finding facts require verifier and timestamp")
 
 
 @dataclass(frozen=True)
@@ -169,4 +177,8 @@ class ObligationFinding:
 
     @property
     def contains_unverified_facts(self) -> bool:
-        return any(f.trust_level is FactTrustLevel.USER_ASSERTED for f in self.facts)
+        return any(
+            f.trust_level is FactTrustLevel.USER_ASSERTED
+            or f.verification_status is not FactVerificationStatus.VERIFIED
+            for f in self.facts
+        )
