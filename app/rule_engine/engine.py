@@ -1700,20 +1700,26 @@ class NLCRuleEngine:
                 self._add_flag(ComplianceFlag(
                     rule_id=rule_id,
                     flag_code=flag_code,
-                    severity=Severity.NOT_EVALUATED,
-                    score_impact=0,
+                    severity=Severity.YELLOW,
+                    score_impact=10,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=(
-                        f"Reported Form XII filing is not verified {delay} days after "
-                        f"the {change.event_type} event. Section 115(2) provides a "
-                        "14-day filing period; verify the event, liable filer, actual "
-                        "RJSC record, extension/correction and current law before any "
-                        "default or penalty conclusion."
+                        f"Verified RJSC filing evidence shows no Form XII filing "
+                        f"{delay} days after the {change.event_type} event. "
+                        "Section 115(2) provides a 14-day filing period. This is "
+                        "a filing-default assessment only; it does not invalidate "
+                        "the director appointment or determine a penalty."
                     ),
                     statutory_basis="Section 115(2), Companies Act 1994 (Bangladesh)",
-                    detail={"director_id": change.director_id, "delay": delay, "type": change.event_type},
-                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
-                    eval_state="UNKNOWN",
+                    detail={
+                        "director_id": change.director_id,
+                        "delay": delay,
+                        "type": change.event_type,
+                        "filing_status_verified": True,
+                        "filing_evidence_ref": change.form_filed_evidence_ref,
+                    },
+                    state=RuleState.NON_COMPLIANT,
+                    eval_state="VIOLATION",
                 ))
 
                 # >365 days is an NLC internal escalation threshold, not a
