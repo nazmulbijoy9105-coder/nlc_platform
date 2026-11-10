@@ -930,14 +930,6 @@ async def verify_company_charge(
         payload={"change": "evidence_state_updated", "changed_fields": sorted(updates),
                  "verified_groups": verified_groups},
     )
-    await publish_domain_event(
-        db, company_id=company_id,
-        event_type=DomainEventType.EVIDENCE_VERIFICATION_COMPLETED,
-        aggregate_type="company_charge", aggregate_id=charge.id,
-        actor_id=current_user.id,
-        payload={"verification_scope": "company_charge",
-                 "verified_groups": verified_groups},
-    )
     await ActivityService(db).log(
         actor_user_id=current_user.id,
         company_id=company_id,
