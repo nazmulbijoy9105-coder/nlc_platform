@@ -482,7 +482,9 @@ jobs:
             tests/integration/test_agm_share_event_rls.py \
             tests/unit/test_rjsc_forms_idor.py \
             tests/unit/test_service_data_leak.py \
-            -q -rs --tb=short --junitxml=/tmp/nlc-security-tests.xml
+            -q -rs --tb=short --junitxml=/tmp/nlc-security-tests.xml \
+            --cov=app --cov-append --cov-report=term-missing \
+            --cov-report=xml:coverage-security-integration.xml
 
           # These tests are authorization gates, not optional DB coverage.
           # Fail the job if pytest ever reports a skip in either target file.
@@ -504,6 +506,14 @@ jobs:
               raise SystemExit(f"Security tests must not skip: {names}")
           print(f"Verified {len(selected)} PostgreSQL-backed security tests; zero skips.")
           PY
+
+      - name: Upload combined integration and security coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nlc-security-integration-coverage
+          path: coverage-security-integration.xml
+          if-no-files-found: warn
 
   docker-runtime-smoke:
     runs-on: ubuntu-latest
