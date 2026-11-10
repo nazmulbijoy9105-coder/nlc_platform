@@ -227,6 +227,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
             fact_provenance_snapshot.append({
                 "record_type": "UNATTRIBUTED_PROFILE_FIELDS",
                 "fields": untracked_profile_fields,
+                "field_values": jsonable_encoder({
+                    key: profile_data[key] for key in untracked_profile_fields
+                }),
                 "disclosure": (
                     "Some legacy company-profile inputs have no explicit source record. "
                     "Their origin and verification status are unknown; do not treat them as verified."
