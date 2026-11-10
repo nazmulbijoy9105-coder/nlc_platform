@@ -162,6 +162,7 @@ def test_approved_penalty_respects_grace_cap_and_effective_dates():
 
 
 def test_penalty_fails_closed_without_approval_applicability_or_evidence():
+    from dataclasses import replace
     from decimal import Decimal
 
     from app.services.legal_deadline_engine import (
@@ -186,7 +187,7 @@ def test_penalty_fails_closed_without_approval_applicability_or_evidence():
         trigger_evidence_verified=True,
     )
     assert calculate_approved_penalty(candidate, **args) is None
-    approved = PenaltyRule(**{**candidate.__dict__, "approved": True})
+    approved = replace(candidate, approved=True)
     assert calculate_approved_penalty(
         approved, **{**args, "applicable": False}
     ) is None
