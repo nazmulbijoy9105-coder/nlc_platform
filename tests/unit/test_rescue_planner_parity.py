@@ -1,7 +1,7 @@
 """RES-015: Parity test — engine rescue sequence vs canonical rescue planner.
 
 Verifies that NLCRuleEngine._generate_rescue_sequence and
-canonical_architecture.lifecycle_engine.LifecycleEngine.generate_rescue_plan
+canonical_architecture.lifecycle_engine.CanonicalLifecycleEngine.generate_rescue_plan
 produce consistent step sequences for the same set of active findings.
 """
 from __future__ import annotations
