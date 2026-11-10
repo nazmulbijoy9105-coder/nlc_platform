@@ -72,7 +72,7 @@ def duplicate_event_indices(items: Iterable[tuple]) -> set[int]:
     rows = [_normalise_item(item) for item in items]
     grouped: dict[str, list[int]] = {}
     for index, (_, _, event_key) in enumerate(rows):
-        if event_key:
+        if event_key and category_for_rule(rows[index][0]) is not None:
             grouped.setdefault(event_key, []).append(index)
 
     suppressed: set[int] = set()
