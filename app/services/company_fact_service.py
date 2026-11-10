@@ -18,6 +18,23 @@ class CompanyFactService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
+    @staticmethod
+    def _normalize_fact_key(fact_key: str) -> str:
+        from dataclasses import fields
+
+        from app.rule_engine import CompanyProfile
+
+        normalized = fact_key.strip()
+        allowed = {
+            item.name for item in fields(CompanyProfile)
+        } - {"company_id", "company_name"}
+        if normalized not in allowed:
+            raise HTTPException(
+                status_code=422,
+                detail="fact_key must be a supported CompanyProfile field; company identity fields are read-only.",
+            )
+        return normalized
+
     async def _latest_fact_id(
         self, company_id: uuid.UUID, fact_key: str
     ) -> uuid.UUID | None:
@@ -37,9 +54,7 @@ class CompanyFactService:
         self, *, company_id: uuid.UUID, fact_key: str, fact_value: Any,
         actor_id: uuid.UUID, observed_on: date, source_reference: str | None = None,
     ) -> CompanyFact:
-        normalized_key = fact_key.strip()
-        if not normalized_key:
-            raise HTTPException(status_code=422, detail="fact_key cannot be blank.")
+        normalized_key = self._normalize_fact_key(fact_key)
         await self.db.execute(
             select(Company.id).where(Company.id == company_id).with_for_update()
         )
@@ -75,9 +90,7 @@ class CompanyFactService:
                 status_code=422,
                 detail="The source document has no recorded uploader/timestamp and cannot establish document provenance.",
             )
-        normalized_key = fact_key.strip()
-        if not normalized_key:
-            raise HTTPException(status_code=422, detail="fact_key cannot be blank.")
+        normalized_key = self._normalize_fact_key(fact_key)
         await self.db.execute(
             select(Company.id).where(Company.id == document.company_id).with_for_update()
         )
