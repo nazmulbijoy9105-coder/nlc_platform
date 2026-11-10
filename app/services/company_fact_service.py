@@ -68,7 +68,10 @@ class CompanyFactService:
         actor_id: uuid.UUID, observed_on: date, source_reference: str | None = None,
     ) -> CompanyFact:
         normalized_key = self._normalize_fact_key(fact_key)
-        coerce_company_profile_fact_value(normalized_key, fact_value)
+        try:
+            coerce_company_profile_fact_value(normalized_key, fact_value)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         fact_value = jsonable_encoder(fact_value)
         await self.db.execute(
             select(Company.id).where(Company.id == company_id).with_for_update()
@@ -136,8 +139,8 @@ class CompanyFactService:
         decision: str, note: str | None = None,
     ) -> CompanyFact:
         decision = decision.upper()
-        if decision not in {"VERIFIED", "REJECTED", "SUPERSEDED"}:
-            raise HTTPException(status_code=422, detail="Decision must be VERIFIED, REJECTED or SUPERSEDED.")
+        if decision not in {"VERIFIED", "REJECTED"}:
+            raise HTTPException(status_code=422, detail="Decision must be VERIFIED or REJECTED. Supersession is recorded by creating a new fact version.")
         result = await self.db.execute(select(CompanyFact).where(CompanyFact.id == fact_id))
         fact = result.scalar_one_or_none()
         if fact is None:
