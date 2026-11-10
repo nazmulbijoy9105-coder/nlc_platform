@@ -22,12 +22,11 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
-from app.models.company import Company, CompanyUserAccess
 from app.models.charges import CompanyCharge
-from app.models.infrastructure import RegisteredOfficeHistory
+from app.models.company import Company, CompanyUserAccess
 from app.models.domain_event import DomainEventOutbox
-from app.services.domain_events import DomainEventType, publish_domain_event
 from app.models.enums import CompanyStatus, CompanyType, RevenueTier, RiskBand, UserRole
+from app.models.infrastructure import RegisteredOfficeHistory
 from app.models.user import User
 from app.rule_engine.engine import (
     AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
@@ -36,6 +35,7 @@ from app.rule_engine.engine import (
     VERIFIED_RULE_IDS,
 )
 from app.services.company_service import CompanyService
+from app.services.domain_events import DomainEventType, publish_domain_event
 from app.services.compliance_service import ComplianceService
 from app.services.compliance_calendar import calendar_manifest_is_released
 from app.services.notification_service import ActivityService
