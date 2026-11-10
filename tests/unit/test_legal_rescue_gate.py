@@ -160,3 +160,30 @@ def test_rescue_service_rejects_ambiguous_duplicate_findings(monkeypatch):
     )
     with pytest.raises(PermissionError, match="unique"):
         validate_rescue_engine_output(output, expected_company_id="company-1")
+
+
+
+def test_rescue_service_rejects_finding_from_unreleased_rule_id(monkeypatch):
+    from types import SimpleNamespace
+
+    from app.services.rescue_service import validate_rescue_engine_output
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-002"}))
+    flag = SimpleNamespace(
+        rule_id="AGM-001",
+        resolved=False,
+        conditional_applies=True,
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        severity="RED",
+        score_impact=5,
+    )
+    output = SimpleNamespace(
+        company_id="company-1",
+        score_breakdown=SimpleNamespace(risk_band="RED", final_score=40),
+        flags=[flag],
+        rescue_sequence=[{"title": "Remediate", "related_rules": ["AGM-001"]}],
+    )
+    with pytest.raises(PermissionError, match="released"):
+        validate_rescue_engine_output(output, expected_company_id="company-1")
