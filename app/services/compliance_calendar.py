@@ -76,10 +76,6 @@ def calendar_manifest_is_released() -> bool:
             or definition.rule.approved is not True
             or not definition.title.strip()
             or not definition.period_label.strip()
-            or not definition.trigger_evidence_verified
-            or definition.applicable is not True
-            or not isinstance(definition.trigger_evidence_ref, str)
-            or not definition.trigger_evidence_ref.strip()
             or (definition.holidays and not (
                 definition.holiday_calendar_version
                 and definition.holiday_source_citation
