@@ -820,4 +820,14 @@ async def verify_company_fact(
         decision=body.decision,
         note=body.note,
     )
+    await ActivityService(db).log(
+        action=f"COMPANY_FACT_{body.decision}",
+        resource_type="company_fact",
+        resource_id=str(fact_id),
+        description=(
+            f"Company fact {updated.fact_key} marked {body.decision} "
+            f"by authorized reviewer for company {updated.company_id}."
+        ),
+        actor_user_id=current_user.id,
+    )
     return fact_response(updated)
