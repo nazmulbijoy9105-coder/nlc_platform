@@ -555,6 +555,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "engine_version": engine_version,
             "ilrmf_version": str(getattr(output, "ilrmf_version", "") or ""),
             "score_hash": sb.score_hash,
+            "scoring_spec_version": SCORING_SPEC_VERSION,
             "raw_total": sb.raw_total,
             "final_score": score_for_current,
             "risk_band": risk_band.value,
@@ -563,6 +564,20 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "override_applied": sb.override_applied,
             "override_reason": sb.override_reason,
             "category_deductions": dict(sb.category_deductions or {}),
+            "total_applied_category_deduction": sum((sb.category_deductions or {}).values()),
+            "risk_policy_override_adjustment": (
+                max(0, 100 - sum((sb.category_deductions or {}).values()) - int(score_for_current))
+                if sb.override_applied and score_for_current is not None else 0
+            ),
+            "score_reconciles": (
+                100 - sum((sb.category_deductions or {}).values())
+                - (
+                    max(0, 100 - sum((sb.category_deductions or {}).values()) - int(score_for_current))
+                    if score_for_current is not None else 0
+                ) == score_for_current
+                if score_for_current is not None else None
+            ),
+            "diagnostic_module_scores_are_additive": False,
             "category_caps": {
                 key: {"max_deduction": cap, "prefixes": list(prefixes)}
                 for key, (cap, prefixes) in sorted(CATEGORY_CAPS.items())
