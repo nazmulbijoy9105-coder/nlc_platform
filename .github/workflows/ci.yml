@@ -485,7 +485,7 @@ jobs:
           entrypoint = config.get("Entrypoint") or []
           cmd = config.get("Cmd") or []
           command = entrypoint + cmd
-          expected = [
+          expected_tokens = [
               "uvicorn",
               "app.main:app",
               "--host",
@@ -493,14 +493,22 @@ jobs:
               "--port",
               "8000",
           ]
-          # Allow either list form or shell-form that ends with the same tokens
-          if command != expected and not (
-              len(command) == 1 and command[0].endswith(" ".join(expected))
+          # Accept pure uvicorn exec form or the production shell form that
+          # runs alembic upgrade head then exec uvicorn for PID 1 signals.
+          if command == expected_tokens:
+              print("API startup command uses direct Uvicorn exec form")
+          elif (
+              len(command) == 3
+              and command[0] in ("sh", "/bin/sh")
+              and command[1] == "-c"
+              and "alembic upgrade head" in command[2]
+              and "exec uvicorn app.main:app --host 0.0.0.0 --port 8000" in command[2]
           ):
-              # Also accept exec-form with full path to uvicorn
-              if not (len(command) >= 6 and command[-6:] == expected):
-                  raise SystemExit(f"Unexpected API startup command: {command!r}")
-          print("API startup command uses exec for direct Uvicorn PID 1 signal handling")
+              print("API startup command runs migrations then exec uvicorn")
+          elif len(command) >= 6 and command[-6:] == expected_tokens:
+              print("API startup command ends with expected Uvicorn tokens")
+          else:
+              raise SystemExit(f"Unexpected API startup command: {command!r}")
           PY
 
       - name: Verify Fontconfig cache is writable as non-root runtime user
