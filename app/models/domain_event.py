@@ -75,7 +75,9 @@ class DomainEventOutbox(UUIDPrimaryKeyMixin, Base):
     replay_count: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
-    last_replayed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_replayed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class DomainEventConsumption(UUIDPrimaryKeyMixin, Base):
