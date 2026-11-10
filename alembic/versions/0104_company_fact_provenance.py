@@ -124,7 +124,28 @@ def upgrade() -> None:
         DECLARE
             parent_company_id uuid;
             parent_fact_key text;
+            source_company_id uuid;
+            source_uploader_id uuid;
+            source_uploaded_at timestamptz;
+            source_is_ai_generated boolean;
+            source_is_active boolean;
         BEGIN
+            IF NEW.trust_level = 'AUTHORIZED_DOCUMENT_BACKED' THEN
+                SELECT company_id, created_by, created_at, ai_generated, is_active
+                  INTO source_company_id, source_uploader_id, source_uploaded_at,
+                       source_is_ai_generated, source_is_active
+                  FROM public.documents
+                 WHERE id = NEW.document_id;
+                IF NOT FOUND
+                   OR source_company_id IS DISTINCT FROM NEW.company_id
+                   OR source_uploader_id IS DISTINCT FROM NEW.authorized_uploader_id
+                   OR source_uploaded_at IS DISTINCT FROM NEW.uploaded_at
+                   OR source_is_ai_generated IS TRUE
+                   OR source_is_active IS NOT TRUE
+                   OR NEW.source_reference IS DISTINCT FROM ('document:' || NEW.document_id::text) THEN
+                    RAISE EXCEPTION 'Document-backed company fact must match an active non-AI vault document and its recorded uploader/time';
+                END IF;
+            END IF;
             IF NEW.supersedes_fact_id IS NOT NULL THEN
                 SELECT company_id, fact_key
                   INTO parent_company_id, parent_fact_key
