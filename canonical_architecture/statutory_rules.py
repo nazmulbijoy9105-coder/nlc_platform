@@ -621,9 +621,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "REG-002": {
         "rule_id": "REG-002",
         "legal_domain": "Corporate",
-        "law": "Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh)",
-        "requirement": "Core statutory records missing. Distinguishes (1) internal register-keeping obligations — Members (Sec 34), Meeting minutes (Sec 89), Charges register (Sec 174) — from (2) RJSC filing obligations such as director particulars (Sec 115). Each missing item is an independent legal obligation. Absence of internal registers is a governance failure; missing RJSC filings are separate filing defaults.",
-        "provision": "UNVERIFIED CANDIDATE — Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh)",
+        "law": "Sections 34, 89, 174, Companies Act 1994 (Bangladesh)",
+        "requirement": "Core internal records missing: register of members (Section 34), AGM minutes (Section 89), and register of charges (Section 174). Director particulars/Form XII are a separate RJSC filing obligation evaluated by DIR-001 under Section 115; they are not inferred from the internal register inventory.",
+        "provision": "UNVERIFIED CANDIDATE — Sections 34, 89, 174, Companies Act 1994 (Bangladesh)",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
