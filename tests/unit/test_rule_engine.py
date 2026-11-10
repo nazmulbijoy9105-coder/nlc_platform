@@ -498,6 +498,22 @@ class TestDirectorRules:
         output = rule_engine.evaluate(profile)
         assert_flag_not_triggered(output, "DIR-001")
 
+    def test_DIR001_scores_verified_overdue_form_xii_appointment(self, rule_engine, build_profile, make_director_change):
+        change = make_director_change(
+            event_type="appointment",
+            days_ago=30,
+            form_filed=False,
+        )
+        change.form_filed_verified = True
+        change.form_filed_evidence_ref = "RJSC-SEARCH-DIR001-VERIFIED"
+        output = rule_engine.evaluate(build_profile(director_changes=[change]))
+        flag = next(f for f in output.flags if f.rule_id == "DIR-001")
+        assert flag.state == RuleState.NON_COMPLIANT
+        assert flag.eval_state == "VIOLATION"
+        assert flag.score_impact == 10
+        assert flag.detail["filing_status_verified"] is True
+
+
     def test_DIR002_triggers_resignation_not_filed(self, rule_engine, build_profile, make_director_change):
         """Director resigned but form not filed → DIR-002."""
         change = make_director_change(event_type="resignation", days_ago=60, form_filed=False)
