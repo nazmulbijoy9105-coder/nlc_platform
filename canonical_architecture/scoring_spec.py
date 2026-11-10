@@ -86,7 +86,11 @@ def duplicate_event_indices(items: Iterable[ScoringItem]) -> set[int]:
             indices,
             key=lambda index: (
                 -rows[index][1],
-                category_rank.get(category_for_rule(rows[index][0]), len(CATEGORY_ORDER)),
+                (
+                    category_rank[category_for_rule(rows[index][0])]
+                    if category_for_rule(rows[index][0]) is not None
+                    else len(CATEGORY_ORDER)
+                ),
                 rows[index][0],
             ),
         )
