@@ -202,7 +202,7 @@ async def create_rescue_plan(
     if not legal_score_is_released():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Automated rescue generation is withheld until product scoring is enabled.",
+            detail="Automated rescue generation is withheld because product scoring is disabled.",
         )
 
     company_svc = CompanyService(db)
