@@ -242,6 +242,7 @@ class TestComplianceService:
             fx_score=0,
             escalation_score=0,
             coverage=1.0,
+            revenue_tier="COMPLIANCE_PACKAGE",
         )
         mock_output = SimpleNamespace(
             flags=[],
@@ -260,9 +261,9 @@ class TestComplianceService:
         )
 
         assert result is not None
-        # A mocked/provisional GREEN band cannot bypass the global legal release gate.
-        assert result["score"] is None
-        assert result["risk_band"] == "NOT_EVALUATED"
+        # The product-controlled scoring release exposes the deterministic score.
+        assert result["score"] == 90
+        assert result["risk_band"] == "GREEN"
         mock_engine.evaluate.assert_called_once()
 
 
