@@ -181,8 +181,6 @@ class ComplianceService(BaseService[ComplianceFlag]):
         from app.core.dependencies import get_rule_engine
         from app.rule_engine import CompanyProfile
         from app.rule_engine.engine import (
-            CATEGORY_CAPS,
-            _COVERAGE_FIELDS,
             PRODUCT_SCORING_RULE_IDS,
             legal_score_is_released,
         )
