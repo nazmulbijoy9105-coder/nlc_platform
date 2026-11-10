@@ -280,12 +280,12 @@ class ShareTransferService(BaseService[ShareTransfer]):
         shares_transferred: int,
         transfer_date: date,
         consideration_bdt: float | None = None,
-        has_transfer_instrument: bool = True,
-        stamp_duty_paid: bool = True,
+        has_transfer_instrument: bool | None = None,
+        stamp_duty_paid: bool | None = None,
         stamp_duty_amount_bdt: float | None = None,
-        board_approval_obtained: bool = True,
+        board_approval_obtained: bool | None = None,
         board_approval_date: date | None = None,
-        register_updated: bool = True,
+        register_updated: bool | None = None,
         register_update_date: date | None = None,
         aoa_restriction_violated: bool = False,
         transferor_shareholder_id: uuid.UUID | None = None,
@@ -296,13 +296,13 @@ class ShareTransferService(BaseService[ShareTransfer]):
         TR-001 through TR-006 irregularities flagged here for rule engine.
         """
         irregularities = []
-        if not has_transfer_instrument:
+        if has_transfer_instrument is False:
             irregularities.append("TR-001: No transfer instrument")
-        if not stamp_duty_paid:
+        if stamp_duty_paid is False:
             irregularities.append("TR-002: Stamp duty not paid")
-        if not board_approval_obtained:
+        if board_approval_obtained is False:
             irregularities.append("TR-003: No board approval")
-        if not register_updated:
+        if register_updated is False:
             irregularities.append("TR-004: Register not updated")
         if aoa_restriction_violated:
             irregularities.append("TR-005: AoA restriction violated — BLACK override")
