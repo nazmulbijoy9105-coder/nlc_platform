@@ -1218,3 +1218,31 @@ def test_pdf_reconciliation_accepts_global_cap_allocations(monkeypatch):
     html = _render_score_reconciliation(flags, 0, "RED")
     assert "effective deductions -100 pts" in html
     assert "indicated score 0/100" in html
+
+
+def test_api_marks_duplicate_scoring_event_as_suppressed(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"DIR-001", "AGM-001"})
+    )
+    flags = [
+        ComplianceFlag(
+            rule_id="DIR-001", flag_code="DIRECTOR-FILING",
+            severity=Severity.RED, score_impact=15,
+            revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+            description="Same scoring event.", statutory_basis="Test only.",
+            state=RuleState.NON_COMPLIANT, eval_state="VIOLATION",
+            detail={"scoring_event_key": "director-change-42"},
+        ),
+        ComplianceFlag(
+            rule_id="AGM-001", flag_code="DUPLICATE-DIRECTOR-FILING",
+            severity=Severity.RED, score_impact=30,
+            revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+            description="Same scoring event.", statutory_basis="Test only.",
+            state=RuleState.NON_COMPLIANT, eval_state="VIOLATION",
+            detail={"scoring_event_key": "director-change-42"},
+        ),
+    ]
+    applied = _applied_score_impacts(flags)
+    assert applied[0] == {"applied": 0, "status": "DUPLICATE_EVENT_SUPPRESSED"}
+    assert applied[1] == {"applied": 30, "status": "APPLIED"}
