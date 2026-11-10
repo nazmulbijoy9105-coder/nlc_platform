@@ -2,7 +2,6 @@ from datetime import date
 
 import pytest
 
-from app.rule_engine import CompanyProfile
 from app.compliance.fact_provenance import coerce_company_profile_fact_value
 
 
@@ -10,7 +9,6 @@ def test_date_fact_json_string_is_coerced_to_profile_date() -> None:
     value = coerce_company_profile_fact_value(
         "registered_office_change_date",
         "2026-11-01",
-        CompanyProfile,
     )
     assert value == date(2026, 11, 1)
 
