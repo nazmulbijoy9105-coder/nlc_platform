@@ -1178,13 +1178,18 @@ class TestRules:
             if rule_id == "SH-001":
                 assert not item["statutory_basis"].startswith("NOT VALIDATED")
                 assert "Review prompt only" not in item["description"]
-                assert item["default_severity"] != "NOT_EVALUATED"
-                assert item["score_impact"] > 0
+                # Migration 0090 quarantines registry severity metadata.
+                # The storage sentinel is not a default severity or legal
+                # conclusion, so expose null and a separate product switch.
+                assert item["default_severity"] is None
+                assert item["product_scoring_enabled"] is True
+                assert item["score_impact"] == 0
                 assert item["is_active"] is True
             else:
                 assert "Not part of the product scoring allowlist" in item["statutory_basis"]
                 assert "Informational catalogue entry only" in item["description"]
-                assert item["default_severity"] == "NOT_EVALUATED"
+                assert item["default_severity"] is None
+                assert item["product_scoring_enabled"] is False
                 assert item["score_impact"] == 0
                 assert item["is_active"] is False
 
