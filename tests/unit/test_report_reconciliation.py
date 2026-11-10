@@ -98,15 +98,15 @@ def test_reconciliation_mismatch_is_rejected(monkeypatch):
         build_compliance_report_html(_company(score=74), FLAGS, WHEN)
 
 
-def test_unreleased_provisional_findings_are_not_shown_as_score_deductions():
+def test_product_allowlisted_findings_are_shown_as_score_deductions_while_legal_review_is_pending():
     page = build_compliance_report_html(
         _company(score=100, band="NOT_EVALUATED"),
         [_flag("AGM-001", "RED", 20)],
         WHEN,
     )
-    assert "Not scored" in page
+    assert "-20 pts" in page
     assert "pending independent legal approval" in page
-    assert "-20 pts" not in page
+    assert "Score reconciliation" not in page
     assert "Score reconciliation" not in page
 
 def test_real_evaluation_snapshot_reconciles_nominal_and_applied_impacts(monkeypatch):
