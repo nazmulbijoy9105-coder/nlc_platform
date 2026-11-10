@@ -11,6 +11,7 @@ from __future__ import annotations
 import calendar
 from dataclasses import dataclass
 from datetime import date, timedelta
+from decimal import Decimal
 from typing import Literal
 
 
@@ -115,3 +116,60 @@ def calculate_deadline(
         raise ValueError(f"Unsupported deadline unit: {rule.unit}")
 
     return _adjust_business_day(due, rule.adjustment, holidays)
+
+
+
+@dataclass(frozen=True, slots=True)
+class PenaltyRule:
+    """Source-versioned penalty formula; no jurisdiction-specific defaults."""
+
+    rule_id: str
+    source_citation: str
+    source_version: str
+    effective_from: date
+    effective_to: date | None
+    liable_person: str
+    fixed_amount: Decimal = Decimal("0")
+    per_day_amount: Decimal = Decimal("0")
+    grace_days: int = 0
+    cap_amount: Decimal | None = None
+    approved: bool = False
+
+    def __post_init__(self) -> None:
+        if not self.rule_id.strip() or not self.source_citation.strip() or not self.source_version.strip():
+            raise ValueError("penalty rule ID, exact source and source version are required")
+        if not self.liable_person.strip():
+            raise ValueError("liable_person must be explicit")
+        if self.fixed_amount < 0 or self.per_day_amount < 0:
+            raise ValueError("penalty amounts cannot be negative")
+        if self.grace_days < 0:
+            raise ValueError("grace_days cannot be negative")
+        if self.cap_amount is not None and self.cap_amount < 0:
+            raise ValueError("cap_amount cannot be negative")
+        if self.effective_to is not None and self.effective_to < self.effective_from:
+            raise ValueError("effective_to cannot precede effective_from")
+
+
+def calculate_approved_penalty(
+    rule: PenaltyRule,
+    *,
+    days_overdue: int,
+    as_of: date,
+    applicable: bool,
+    trigger_evidence_verified: bool,
+) -> Decimal | None:
+    """Calculate only an approved, in-force, evidenced penalty provision."""
+    if (
+        not rule.approved
+        or not applicable
+        or not trigger_evidence_verified
+        or days_overdue < 0
+        or as_of < rule.effective_from
+        or (rule.effective_to is not None and as_of > rule.effective_to)
+    ):
+        return None
+    chargeable_days = max(0, days_overdue - rule.grace_days)
+    amount = rule.fixed_amount + rule.per_day_amount * chargeable_days
+    if rule.cap_amount is not None:
+        amount = min(amount, rule.cap_amount)
+    return amount.quantize(Decimal("0.01"))
