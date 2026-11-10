@@ -37,7 +37,8 @@ aggregate ID when additional detail is required.
 | AGM record / held status | `filing.agm.recorded`, `filing.agm.held_recorded` |
 | AGM / annual return receipt details | `filing.receipt.recorded` |
 | Annual return record / filed status | `filing.annual_return.recorded`, `filing.annual_return.filed` |
-| Share or charge evidence verification | `evidence.verification.completed` |
+| Share evidence verification | `evidence.verification.completed` |
+| Charge evidence verification | `company.charge.evidence_verified` |
 | Approved calendar event | `deadline.calendar.generated` |
 | AI document generated / approved / released | `evidence.document.generated`, `evidence.document.approved`, `evidence.document.released` |
 
