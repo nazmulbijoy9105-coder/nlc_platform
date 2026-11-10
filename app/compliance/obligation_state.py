@@ -165,7 +165,7 @@ class ObligationFinding:
         )
 
     @property
-    def fact_provenance_snapshot(self) -> tuple[dict[str, str | None], ...]:
+    def fact_provenance_snapshot(self) -> tuple[dict[str, object], ...]:
         """Serializable immutable provenance to persist with the finding."""
         return tuple(fact_provenance_payload(fact) for fact in self.facts)
 
