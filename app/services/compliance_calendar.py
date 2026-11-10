@@ -110,16 +110,14 @@ class ComplianceCalendarService:
     ) -> list[ComplianceCalendarEvent]:
         """Calculate and persist approved events with source/evidence provenance.
 
-        This method is intentionally unavailable until the global release gate
-        and the event-type allowlist are both set by a reviewed release.
+        This method is intentionally unavailable until the global release gate,
+        rule/event allowlists and exact approved event manifest are released.
         Definitions are explicit inputs, not inferred from company defaults.
         """
         if not calendar_manifest_is_released():
             raise PermissionError("Statutory calendar generation is not released.")
         if not definitions:
             raise PermissionError("No counsel-approved calendar event definitions are registered.")
-        if not calendar_manifest_is_released():
-            raise PermissionError("The registered calendar manifest is incomplete or inconsistent.")
         result = await self.db.execute(
             select(Company).where(Company.id == company_id)
         )
