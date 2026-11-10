@@ -33,7 +33,7 @@ aggregate ID when additional detail is required.
 | Shareholder addition / holding update | `company.shareholder.changed` |
 | Share transfer recorded | `company.share_transfer.changed` |
 | Registered address update | `company.registered_office.changed` |
-| Charge recorded / charge evidence reviewed | `company.charge.recorded`, `company.charge.evidence_verified` |
+| Charge recorded / charge evidence reviewed | `company.charge.recorded`, `company.charge.evidence_state_changed` |
 | AGM record / held status | `filing.agm.recorded`, `filing.agm.held_recorded` |
 | AGM / annual return receipt details | `filing.receipt.recorded` |
 | Annual return record / filed status | `filing.annual_return.recorded`, `filing.annual_return.filed` |
