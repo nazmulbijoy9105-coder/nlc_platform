@@ -16,6 +16,7 @@ from sqlalchemy import select
 from app.models.enums import DirectorStatus, TransferStatus
 from app.models.people import Director, Shareholder, ShareTransfer
 from app.services.base import BaseService
+from app.services.domain_events import DomainEventType, publish_domain_event
 
 if TYPE_CHECKING:
     import uuid
@@ -55,7 +56,7 @@ class DirectorService(BaseService[Director]):
                 delay_days = (appointment_filed_date - deadline).days
                 filing_delayed = True
 
-        return await self.create(
+        director = await self.create(
             company_id=company_id,
             full_name=full_name,
             father_name=father_name,
@@ -72,6 +73,16 @@ class DirectorService(BaseService[Director]):
             is_managing_director=is_managing_director,
             is_chairman=is_chairman,
         )
+        await self.db.flush()
+        await publish_domain_event(
+            self.db, company_id=company_id,
+            event_type=DomainEventType.DIRECTOR_CHANGED,
+            aggregate_type="director", aggregate_id=director.id,
+            payload={"change": "appointed", "director_status": "ACTIVE",
+                     "appointment_date": appointment_date.isoformat(),
+                     "appointment_filing_recorded": appointment_filed_date is not None},
+        )
+        return director
 
     async def record_departure(
         self,
@@ -100,7 +111,7 @@ class DirectorService(BaseService[Director]):
         # Still liable if departure not filed with RJSC
         still_liable = departure_filed_date is None
 
-        return await self.update_instance(
+        updated = await self.update_instance(
             director,
             director_status=departure_type,
             departure_date=departure_date,
@@ -109,6 +120,16 @@ class DirectorService(BaseService[Director]):
             departure_delay_days=delay_days,
             departed_still_liable=still_liable,
         )
+        await self.db.flush()
+        await publish_domain_event(
+            self.db, company_id=updated.company_id,
+            event_type=DomainEventType.DIRECTOR_CHANGED,
+            aggregate_type="director", aggregate_id=updated.id,
+            payload={"change": "departed", "director_status": departure_type.value,
+                     "departure_date": departure_date.isoformat(),
+                     "departure_filing_recorded": departure_filed_date is not None},
+        )
+        return updated
 
     async def get_active_directors(self, company_id: uuid.UUID) -> list[Director]:
         """Get all active directors for a company."""
@@ -178,7 +199,7 @@ class ShareholderService(BaseService[Shareholder]):
             if date.today() > deadline:
                 cert_delay = (date.today() - deadline).days
 
-        return await self.create(
+        shareholder = await self.create(
             company_id=company_id,
             shareholder_name=shareholder_name,
             shares_held=shares_held,
@@ -195,6 +216,15 @@ class ShareholderService(BaseService[Shareholder]):
             change_filed_with_rjsc=change_filed_with_rjsc,
             rjsc_filing_date=rjsc_filing_date,
         )
+        await self.db.flush()
+        await publish_domain_event(
+            self.db, company_id=company_id,
+            event_type=DomainEventType.SHAREHOLDER_CHANGED,
+            aggregate_type="shareholder", aggregate_id=shareholder.id,
+            payload={"change": "added", "shares_held": shares_held,
+                     "share_class": share_class, "effective_date": effective_date.isoformat() if effective_date else None},
+        )
+        return shareholder
 
     async def get_for_company(self, company_id: uuid.UUID) -> list[Shareholder]:
         """Get all shareholders for a company."""
@@ -215,11 +245,19 @@ class ShareholderService(BaseService[Shareholder]):
         sh = await self.get_by_id(shareholder_id)
         if not sh:
             return None
-        return await self.update_instance(
+        updated = await self.update_instance(
             sh,
             shares_held=new_shares,
             percentage_holding=percentage,
         )
+        await self.db.flush()
+        await publish_domain_event(
+            self.db, company_id=updated.company_id,
+            event_type=DomainEventType.SHAREHOLDER_CHANGED,
+            aggregate_type="shareholder", aggregate_id=updated.id,
+            payload={"change": "holding_updated", "shares_held": new_shares},
+        )
+        return updated
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -272,7 +310,7 @@ class ShareTransferService(BaseService[ShareTransfer]):
         if aoa_restriction_violated:
             transfer_status = TransferStatus.VOID
 
-        return await self.create(
+        transfer = await self.create(
             company_id=company_id,
             transferor_name=transferor_name,
             transferee_name=transferee_name,
@@ -293,6 +331,16 @@ class ShareTransferService(BaseService[ShareTransfer]):
             is_irregular=is_irregular,
             irregularity_notes="\n".join(irregularities) if irregularities else None,
         )
+        await self.db.flush()
+        await publish_domain_event(
+            self.db, company_id=company_id,
+            event_type=DomainEventType.SHARE_TRANSFER_CHANGED,
+            aggregate_type="share_transfer", aggregate_id=transfer.id,
+            payload={"change": "recorded", "shares_transferred": shares_transferred,
+                     "transfer_date": transfer_date.isoformat(),
+                     "transfer_status": transfer_status.value},
+        )
+        return transfer
 
     async def get_for_company(self, company_id: uuid.UUID) -> list[ShareTransfer]:
         """Get all share transfers for a company."""
