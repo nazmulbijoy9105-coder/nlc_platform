@@ -39,7 +39,7 @@ def test_product_scoring_catalogue_shows_rules_but_keeps_legal_verification_pend
     assert response.score_impact == 20
     assert response.is_black_override is False
     assert response.is_active is True
-    assert response.verification_status == "ENGINE_ALIGNED_NOT_COUNSEL_VALIDATED"
+    assert response.verification_status == "PENDING"
     assert response.verified_at is None
     assert response.statutory_effective_date is None
     assert response.statutory_basis == "Section 81, Companies Act 1994"
