@@ -10,6 +10,7 @@ from app.models.domain_event import DomainEventOutbox
 
 
 class DomainEventType:
+    COMPANY_CREATED = "company.created"
     COMPANY_FACT_ASSERTED = "company.fact.asserted"
     COMPANY_FACT_VERIFIED = "company.fact.verified"
     AGM_RECORDED = "filing.agm.recorded"
