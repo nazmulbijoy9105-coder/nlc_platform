@@ -7,11 +7,13 @@
 
 ## 1. Release posture
 
-**Statutory scoring: NOT RELEASED. Evidence-review mode only.**
+**Product scoring: RELEASE ENABLED by product configuration. Legal verification: PENDING.**
 
-The current source has `LEGAL_SCORE_RELEASED = False` and an empty `VERIFIED_RULE_IDS` set. The legal approval register has `approved_rule_ids: []`; its 85 rule records remain `REVIEW_REQUIRED` and `score_eligible: false`. Keep these controls unchanged.
+The product release branch sets `LEGAL_SCORE_RELEASED = True` and enables the 82 score-bearing rules in `PRODUCT_SCORING_RULE_IDS`. AR-001 and SH-002 remain informational; ESC-003 is the internal surcharge/escalation rule and is not itself a scored finding.
 
-The platform must not present candidate engine findings, candidate severity, score impact, BLACK override metadata, or risk bands as approved legal conclusions. Missing evidence is not proof of statutory non-compliance. AI-generated drafts remain subject to human review and approval.
+`VERIFIED_RULE_IDS` remains empty. The legal approval register still has `approved_rule_ids: []`, with 85 records `REVIEW_REQUIRED` and `score_eligible: false`. Product scoring eligibility must not be represented as independent legal certification or counsel approval. The three non-scoring catalogue rules remain excluded by design.
+
+This is an application scoring release, not a legal opinion or certification. Missing evidence remains UNKNOWN rather than proof of statutory non-compliance. AI-generated drafts remain subject to human review and approval. See [Product-controlled scoring release](release/PRODUCT_CONTROLLED_SCORING_RELEASE_2026-11-10.md) for the exact configuration and data/deployment scope.
 
 This document is an engineering status record, not a legal opinion, counsel sign-off, production-readiness certificate, or permission to migrate/deploy.
 
