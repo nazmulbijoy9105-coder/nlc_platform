@@ -34,6 +34,10 @@ EVIDENCE_VERIFICATION_EVENTS = {
     "company.fact.verified",
     "company.charge.evidence_state_changed",
 }
+AUDIT_ONLY_EVENTS = {
+    "evidence.document.approved",
+    "evidence.document.released",
+}
 
 
 @celery_app.task(
@@ -119,6 +123,10 @@ def dispatch_domain_event_outbox(self, batch_size: int = 100) -> dict[str, Any]:
                             task_id=f"domain-event-{event.id}",
                         )
                         queued += 1
+                    elif event.event_type not in AUDIT_ONLY_EVENTS:
+                        raise ValueError(
+                            f"No dispatcher registered for event type: {event.event_type}"
+                        )
                     # Audit-only approval/release events are intentionally retained.
                     event.processed_at = datetime.now(UTC)
                     event.locked_at = None
