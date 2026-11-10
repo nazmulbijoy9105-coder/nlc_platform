@@ -24,7 +24,13 @@ async def test_super_admin_kpis_include_the_authorized_portfolio(
     result = await ComplianceService(db).get_dashboard_kpis()
 
     assert result["total_companies"] >= 2
-    assert result["not_evaluated_count"] >= 2 or result["green_count"] + result["yellow_count"] + result["red_black_count"] >= 2
+    assert (
+        result["green_count"]
+        + result["yellow_count"]
+        + result["red_black_count"]
+        + result["not_evaluated_count"]
+        == result["total_companies"]
+    )
 
 
 @pytest.mark.asyncio
