@@ -195,8 +195,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
             raise ValueError(f"Company {company_id} not found or inactive.")
 
         # Current versioned facts override same-key legacy profile values. Every
-        # evaluation and finding receives the exact provenance snapshot used
-        # for this run; [] means no explicit fact records were available.
+        # evaluation and finding receives the exact explicit fact inputs plus
+        # a disclosure/value snapshot for legacy profile inputs without provenance.
         fact_result = await self.db.execute(
             select(CompanyFact).where(
                 CompanyFact.company_id == company_id,
@@ -220,15 +220,18 @@ class ComplianceService(BaseService[ComplianceFlag]):
         fact_provenance_snapshot = [
             fact.provenance_payload() for fact in used_facts
         ]
+        normalized_profile_data = _company_profile_kwargs(profile_data, CompanyProfile)
         untracked_profile_fields = sorted(
-            set(profile_data) - {fact.fact_key for fact in used_facts}
+            set(normalized_profile_data)
+            - {fact.fact_key for fact in used_facts}
+            - {"company_id", "company_name"}
         )
         if untracked_profile_fields:
             fact_provenance_snapshot.append({
                 "record_type": "UNATTRIBUTED_PROFILE_FIELDS",
                 "fields": untracked_profile_fields,
                 "field_values": jsonable_encoder({
-                    key: profile_data[key] for key in untracked_profile_fields
+                    key: normalized_profile_data[key] for key in untracked_profile_fields
                 }),
                 "disclosure": (
                     "Some legacy company-profile inputs have no explicit source record. "
@@ -238,7 +241,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
         # Convert dict to CompanyProfile dataclass
         try:
-            profile = CompanyProfile(**_company_profile_kwargs(profile_data, CompanyProfile))
+            profile = CompanyProfile(**normalized_profile_data)
         except TypeError as exc:
             raise ValueError(f"CompanyProfile assembly failed: {exc}") from exc
 
