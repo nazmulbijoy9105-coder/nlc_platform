@@ -988,7 +988,7 @@ def test_subsequent_agm_violation_reports_statutory_deadline_and_basis_metadata(
 
 def test_verified_black_severity_without_override_authority_does_not_force_zero(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
     flag = ComplianceFlag(
         rule_id="AGM-001",
