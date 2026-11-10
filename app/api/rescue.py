@@ -130,7 +130,7 @@ class RescuePlanResponse(BaseModel):
     assigned_staff_id: str | None
     target_completion_date: str | None
     engagement_id: str | None
-    source_rule_ids: list[str] = []
+    source_rule_ids: list[str] = Field(default_factory=list)
     steps: list[RescueStepResponse]
     created_at: str
     updated_at: str
