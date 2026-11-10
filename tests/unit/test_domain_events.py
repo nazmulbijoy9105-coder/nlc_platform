@@ -71,3 +71,18 @@ def test_domain_event_dispatcher_is_registered_and_scheduled() -> None:
     schedule = BEAT_SCHEDULE["dispatch-domain-event-outbox"]
     assert schedule["task"] == dispatch_domain_event_outbox.name
     assert schedule["kwargs"]["batch_size"] == 100
+
+
+def test_domain_event_outbox_indexes_reference_real_timestamp_columns() -> None:
+    from app.models.domain_event import DomainEventOutbox
+
+    table = DomainEventOutbox.__table__
+    column_names = set(table.columns.keys())
+    indexed_columns = {
+        column.name
+        for index in table.indexes
+        for column in index.columns
+    }
+    assert "occurred_at" in column_names
+    assert "created_at" not in column_names
+    assert indexed_columns <= column_names
