@@ -82,6 +82,9 @@ async def test_approved_calendar_definition_persists_legal_provenance(
         trigger_evidence_verified=True,
         trigger_evidence_ref="fixture:evidence:agm-date",
     )
+    monkeypatch.setattr(calendar_service, "VERIFIED_CALENDAR_RULE_IDS", frozenset({"TEST-CAL-001"}))
+    monkeypatch.setattr(calendar_service, "APPROVED_CALENDAR_EVENT_DEFINITIONS", (definition,))
+
     service = calendar_service.ComplianceCalendarService(db)
     events = await service.generate_approved_events(db_company.id, [definition])
     assert len(events) == 1
@@ -132,5 +135,8 @@ async def test_calendar_does_not_persist_unverified_or_inapplicable_trigger(
         trigger_evidence_verified=False,
         trigger_evidence_ref="fixture:evidence:unverified",
     )
+    monkeypatch.setattr(calendar_service, "VERIFIED_CALENDAR_RULE_IDS", frozenset({"TEST-CAL-UNKNOWN"}))
+    monkeypatch.setattr(calendar_service, "APPROVED_CALENDAR_EVENT_DEFINITIONS", (definition,))
+
     service = calendar_service.ComplianceCalendarService(db)
     assert await service.generate_approved_events(db_company.id, [definition]) == []
