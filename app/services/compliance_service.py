@@ -220,10 +220,37 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
 
         applied_impacts = _applied_score_impacts(output.flags)
+        applied_total = sum(item["applied"] for item in applied_impacts)
+        category_deductions = dict(output.score_breakdown.category_deductions or {})
+        category_total = sum(category_deductions.values())
+        if score_is_released and category_total != applied_total:
+            raise ValueError(
+                "Scoring reconciliation failed: per-finding applied deductions "
+                f"({applied_total}) do not match category deductions ({category_total})."
+            )
+        override_adjustment = (
+            max(0, 100 - category_total - int(api_score or 0))
+            if score_is_released else None
+        )
+        score_reconciliation = {
+            "scoring_spec_version": SCORING_SPEC_VERSION,
+            "base_score": 100 if score_is_released else None,
+            "category_deductions": category_deductions if score_is_released else None,
+            "total_applied_category_deduction": category_total if score_is_released else None,
+            "risk_policy_override_adjustment": override_adjustment,
+            "final_score": api_score,
+            "reconciles": (
+                100 - category_total - int(override_adjustment or 0) == api_score
+                if score_is_released else None
+            ),
+            "diagnostic_module_scores_are_additive": False,
+        }
 
         return {
             "company_id":    str(company_id),
             "score":         api_score,
+            "scoring_spec_version": SCORING_SPEC_VERSION,
+            "score_reconciliation": score_reconciliation,
             "raw_total":     api_raw_total,
             "risk_band":     public_risk_band,
             "exposure_band": output.score_breakdown.exposure_band if score_is_released else None,
@@ -249,6 +276,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
             ],
             "score_breakdown": {
                 "risk_band": public_risk_band,
+                "scoring_spec_version": SCORING_SPEC_VERSION,
+                "category_deductions": category_deductions if score_is_released else None,
                 "agm_score":         output.score_breakdown.agm_score if score_is_released else None,
                 "audit_score":       output.score_breakdown.audit_score if score_is_released else None,
                 "return_score":      output.score_breakdown.return_score if score_is_released else None,
@@ -277,6 +306,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "rescue_sequence": output.rescue_sequence if score_is_released else None,
             "engine_version":  output.engine_version,
             "ilrmf_version":   output.ilrmf_version,
+            "scoring_spec_version": SCORING_SPEC_VERSION,
         }
 
     async def _persist_evaluation(
