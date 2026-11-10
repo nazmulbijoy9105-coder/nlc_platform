@@ -77,8 +77,11 @@ def test_explicit_shared_scoring_event_key_prevents_duplicate_penalty():
         ("AGM-002", 20, "separate-agm-default"),
     ]
     assert duplicate_event_indices(findings) == {0}
-    assert allocate_flag_deductions(findings) == [0, 30, 20]
+    # The shared event suppresses DIR-001. Both remaining findings are
+    # AGM-category deductions, so the 30-point AGM cap applies to their
+    # combined impact; the separate event does not bypass a category cap.
+    assert allocate_flag_deductions(findings) == [0, 30, 0]
     deductions = category_deductions_from_flags(findings)
     assert deductions["DIR"] == 0
-    assert deductions["AGM"] == 50
-    assert score_from_category_deductions(deductions) == 50
+    assert deductions["AGM"] == 30
+    assert score_from_category_deductions(deductions) == 70
