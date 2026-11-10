@@ -721,6 +721,12 @@ class CompanyFactAssertionRequest(BaseModel):
     source_reference: str | None = None
 
 
+class CompanyFactDocumentRequest(BaseModel):
+    fact_key: str = Field(min_length=1, max_length=120)
+    fact_value: Any
+    observed_on: date
+
+
 class CompanyFactVerificationRequest(BaseModel):
     decision: str = Field(pattern="^(VERIFIED|REJECTED|SUPERSEDED)$")
     note: str | None = None
@@ -768,7 +774,7 @@ async def create_user_asserted_company_fact(
 )
 async def create_document_backed_company_fact(
     document_id: uuid.UUID,
-    body: CompanyFactAssertionRequest,
+    body: CompanyFactDocumentRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
