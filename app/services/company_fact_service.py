@@ -69,10 +69,7 @@ class CompanyFactService:
     ) -> CompanyFact:
         normalized_key = self._normalize_fact_key(fact_key)
         try:
-            try:
-            coerce_company_profile_fact_value(normalized_key, fact_value)
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
+            fact_value = coerce_company_profile_fact_value(normalized_key, fact_value)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         fact_value = jsonable_encoder(fact_value)
@@ -112,7 +109,10 @@ class CompanyFactService:
                 detail="The source document has no recorded uploader/timestamp and cannot establish document provenance.",
             )
         normalized_key = self._normalize_fact_key(fact_key)
-        coerce_company_profile_fact_value(normalized_key, fact_value)
+        try:
+            fact_value = coerce_company_profile_fact_value(normalized_key, fact_value)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         fact_value = jsonable_encoder(fact_value)
         await self.db.execute(
             select(Company.id).where(Company.id == document.company_id).with_for_update()
