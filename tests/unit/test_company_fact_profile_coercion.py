@@ -18,7 +18,6 @@ def test_invalid_date_fact_is_rejected_before_rule_evaluation() -> None:
         coerce_company_profile_fact_value(
             "registered_office_change_date",
             "not-a-date",
-            CompanyProfile,
         )
 
 
