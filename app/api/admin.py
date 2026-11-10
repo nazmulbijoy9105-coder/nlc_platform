@@ -140,7 +140,7 @@ async def replay_dead_lettered_domain_event(
     admin=Depends(require_super_admin),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    """Requeue only an unprocessed dead-letter event; never rewrite its payload."""
+    """Requeue a dead-lettered event without changing its UUID or payload."""
     from app.models.domain_event import DomainEventOutbox
 
     try:
