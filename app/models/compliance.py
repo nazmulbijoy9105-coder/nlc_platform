@@ -124,7 +124,7 @@ class ComplianceFlag(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     fact_provenance_snapshot: Mapped[list[dict]] = mapped_column(
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"),
-        comment="Immutable source/trust/verification snapshot for every fact used by this finding; [] means legacy or no facts attached."
+        comment="Latest source/trust/verification snapshot attached to this active finding; [] means legacy or no explicit facts attached."
     )
 
     # ── Notification ─────────────────────────────────────────────
