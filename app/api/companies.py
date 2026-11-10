@@ -25,6 +25,7 @@ from app.core.dependencies import (
 from app.models.company import Company, CompanyUserAccess
 from app.models.charges import CompanyCharge
 from app.models.infrastructure import RegisteredOfficeHistory
+from app.models.domain_event import DomainEventOutbox
 from app.services.domain_events import DomainEventType, publish_domain_event
 from app.models.enums import CompanyStatus, CompanyType, RevenueTier, RiskBand, UserRole
 from app.models.user import User
@@ -517,6 +518,54 @@ async def get_company(company_id: uuid.UUID, current_user: User = Depends(get_cu
         company,
         can_view_financials=company.id in financial_ids,
     )
+
+
+@router.get(
+    "/{company_id}/activity",
+    dependencies=[Depends(require_company_access("company_id"))],
+    summary="Company lifecycle activity for the client dashboard",
+)
+async def get_company_lifecycle_activity(
+    company_id: uuid.UUID,
+    limit: int = Query(default=25, ge=1, le=100),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Return a tenant-scoped, payload-free lifecycle timeline."""
+    result = await db.execute(
+        select(DomainEventOutbox)
+        .where(DomainEventOutbox.company_id == company_id)
+        .order_by(DomainEventOutbox.occurred_at.desc(), DomainEventOutbox.id.desc())
+        .limit(limit)
+    )
+    labels = {
+        "company.director.changed": "Director record changed",
+        "company.shareholder.changed": "Shareholder record changed",
+        "company.share_transfer.changed": "Share transfer recorded",
+        "company.registered_office.changed": "Registered office changed",
+        "company.charge.recorded": "Company charge recorded",
+        "company.charge.evidence_verified": "Company charge evidence reviewed",
+        "filing.receipt.recorded": "Filing receipt recorded",
+        "evidence.verification.completed": "Evidence verification completed",
+        "company.fact.asserted": "Company fact recorded",
+        "company.fact.verified": "Company fact reviewed",
+        "deadline.calendar.generated": "Compliance deadline updated",
+    }
+    return [
+        {
+            "event_id": str(event.id),
+            "event_type": event.event_type,
+            "title": labels.get(event.event_type, "Company record updated"),
+            "occurred_at": event.occurred_at.isoformat(),
+            "status": (
+                "attention_required"
+                if event.dead_lettered_at is not None
+                else "completed"
+                if event.processed_at is not None
+                else "pending"
+            ),
+        }
+        for event in result.scalars().all()
+    ]
 
 
 @router.patch("/{company_id}", response_model=CompanyResponse, dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN")), Depends(require_company_access("company_id"))], summary="Update company")
