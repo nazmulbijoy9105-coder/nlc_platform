@@ -140,7 +140,7 @@ def upgrade() -> None:
                    OR source_company_id IS DISTINCT FROM NEW.company_id
                    OR source_uploader_id IS DISTINCT FROM NEW.authorized_uploader_id
                    OR source_uploaded_at IS DISTINCT FROM NEW.uploaded_at
-                   OR source_is_ai_generated IS TRUE
+                   OR source_is_ai_generated IS NOT FALSE
                    OR source_is_active IS NOT TRUE
                    OR NEW.source_reference IS DISTINCT FROM ('document:' || NEW.document_id::text) THEN
                     RAISE EXCEPTION 'Document-backed company fact must match an active non-AI vault document and its recorded uploader/time';
