@@ -49,6 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql+asyncpg://dummy:dummy@localhost:5432/dummy
+      JWT_SECRET_KEY: ci-only-jwt-secret-not-for-production-2026
 
     steps:
       - uses: actions/checkout@v5
