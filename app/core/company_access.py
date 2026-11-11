@@ -27,7 +27,7 @@ from app.core.dependencies import get_current_user, get_db
 from app.models.company import CompanyUserAccess  # adjust import path
 
 
-async def require_company_access(
+def require_company_access(
     company_id_param: str = "company_id",
 ):
     """
