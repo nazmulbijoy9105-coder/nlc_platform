@@ -55,3 +55,14 @@ def test_seed_write_rejects_remote_neon_database_even_with_opt_in(monkeypatch):
         assert_seed_write_allowed(
             "postgresql+asyncpg://user:password@ep-example.ap-southeast-1.aws.neon.tech/neondb"
         )
+
+
+def test_seed_write_rejects_non_loopback_service_alias(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.setenv("NLC_ALLOW_DEVELOPMENT_RULE_SEED", "true")
+    _clear_deployment_markers(monkeypatch)
+
+    with pytest.raises(RuntimeError, match="restricted to local PostgreSQL hosts"):
+        assert_seed_write_allowed(
+            "postgresql+asyncpg://user:password@db:5432/nlc_dev"
+        )
