@@ -5,7 +5,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, func, text
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Identity, Integer, String, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -127,6 +127,7 @@ class LegalRuleReleaseEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     previous_event_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     event_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    sequence_no: Mapped[int] = mapped_column(BigInteger, Identity(), nullable=False, unique=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
