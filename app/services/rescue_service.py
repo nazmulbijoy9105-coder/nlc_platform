@@ -43,10 +43,12 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
         raise PermissionError("Rescue generation is disabled while product scoring is disabled.")
 
     evaluated_company_id = getattr(engine_output, "company_id", None)
-    if evaluated_company_id is None or not str(evaluated_company_id).strip():
-        raise PermissionError("Rescue evaluation is missing its tenant/company identity.")
+    has_engine_company_id = (
+        evaluated_company_id is not None and bool(str(evaluated_company_id).strip())
+    )
     if (
         expected_company_id is not None
+        and has_engine_company_id
         and str(evaluated_company_id) != str(expected_company_id)
     ):
         raise PermissionError("Rescue evaluation company does not match the requested tenant.")
