@@ -19,7 +19,6 @@ class TestCompanyAccessDependency:
 
     @pytest.mark.asyncio
     async def test_super_admin_bypasses_company_membership_lookup(self):
-        from starlette.requests import Request
         from app.core.company_access import require_company_access
 
         dependency = require_company_access()
@@ -39,7 +38,6 @@ class TestCompanyAccessDependency:
     @pytest.mark.asyncio
     async def test_missing_company_path_parameter_is_rejected(self):
         from fastapi import HTTPException
-        from starlette.requests import Request
         from app.core.company_access import require_company_access
 
         dependency = require_company_access()
@@ -59,7 +57,6 @@ class TestCompanyAccessDependency:
     @pytest.mark.asyncio
     async def test_malformed_company_id_is_rejected_before_database_lookup(self):
         from fastapi import HTTPException
-        from starlette.requests import Request
         from app.core.company_access import require_company_access
 
         dependency = require_company_access()
@@ -80,7 +77,6 @@ class TestCompanyAccessDependency:
 
     @pytest.mark.asyncio
     async def test_active_company_membership_grants_access(self):
-        from starlette.requests import Request
         from app.core.company_access import require_company_access
 
         company_id = uuid.uuid4()
@@ -109,7 +105,6 @@ class TestCompanyAccessDependency:
     @pytest.mark.asyncio
     async def test_missing_company_membership_is_forbidden(self):
         from fastapi import HTTPException
-        from starlette.requests import Request
         from app.core.company_access import require_company_access
 
         company_id = uuid.uuid4()
