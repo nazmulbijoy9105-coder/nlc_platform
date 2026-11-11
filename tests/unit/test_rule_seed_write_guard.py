@@ -45,7 +45,7 @@ def test_seed_write_can_be_enabled_for_local_development(monkeypatch):
 
     assert_seed_write_allowed("postgresql+asyncpg://test:test@localhost:5432/nlc_dev")
 
- 
+
 def test_seed_write_rejects_remote_neon_database_even_with_opt_in(monkeypatch):
     monkeypatch.setenv("ENVIRONMENT", "development")
     monkeypatch.setenv("NLC_ALLOW_DEVELOPMENT_RULE_SEED", "true")
