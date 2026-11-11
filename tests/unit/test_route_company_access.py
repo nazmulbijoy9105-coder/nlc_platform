@@ -110,6 +110,9 @@ async def test_client_with_active_membership_is_authorized(monkeypatch):
     assert "company_user_access.user_id" in sql
     assert "company_user_access.company_id" in sql
     assert "company_user_access.is_active" in sql
+    bound_values = membership_query.compile().params.values()
+    assert user_id in bound_values
+    assert company_id in bound_values
 
 
 @pytest.mark.asyncio
