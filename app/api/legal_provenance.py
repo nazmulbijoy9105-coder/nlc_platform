@@ -532,7 +532,7 @@ async def preview_or_release_deadline(
             "customer_calendar_write": False,
             "message": "The source and deadline-definition effective periods do not overlap.",
         }
-    holidays = frozenset(date.fromisoformat(item) for item in definition.holidays)
+    holidays = frozenset(date.fromisoformat(str(item)) for item in definition.holidays)
     rule = DeadlineRule(
         rule_id=definition.rule_id,
         source_citation=mapping.provision_citation,
