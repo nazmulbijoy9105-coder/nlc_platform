@@ -281,8 +281,8 @@ def test_agm_quorum_requires_verified_attendance_and_quorum_basis():
     )
     flag = _flag(result, "AGM-005")
     assert flag.state == RuleState.NON_COMPLIANT
-    # Advocate verification (2026-11-11): AGM-005 is in the legal verification inventory.
-    assert "AGM-005" in VERIFIED_RULE_IDS
+    # AGM-005 remains outside the legal verification inventory pending signed counsel approval.
+    assert "AGM-005" not in VERIFIED_RULE_IDS
 
 
 def test_unknown_red_finding_does_not_force_red_risk_band():
@@ -391,8 +391,8 @@ def test_section_94_verified_disqualification_is_not_automatic_black():
     assert flag.state == RuleState.DISPUTED
     assert flag.severity == Severity.NOT_EVALUATED
     assert flag.is_black_override is False
-    # Advocate verification (2026-11-11): DEF-001 is in the legal verification inventory.
-    assert "DEF-001" in VERIFIED_RULE_IDS
+    # DEF-001 remains outside the legal verification inventory pending signed counsel approval.
+    assert "DEF-001" not in VERIFIED_RULE_IDS
 
 def test_released_score_uses_one_category_cap_formula_for_all_paths(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
@@ -772,9 +772,7 @@ def test_product_released_corpus_reports_score_with_full_input_coverage():
     from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
 
     assert LEGAL_SCORE_RELEASED is True
-    # Product scoring and legal verification inventories are both populated (2026-11-11).
-    assert len(VERIFIED_RULE_IDS) == 85
-    assert "AGM-001" in VERIFIED_RULE_IDS
+        assert VERIFIED_RULE_IDS == frozenset()
     profile = _profile(
         last_agm_date=date(2025, 6, 1),
         last_audit_signed_date=date(2025, 5, 1),
