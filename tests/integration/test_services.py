@@ -694,10 +694,7 @@ class TestRulesService:
 
         svc = LegalRuleService(db)
         rules = await svc.get_all()
-        # If seeded, should be 32. If not seeded, returns empty (skip).
-        if not rules:
-            pytest.skip("Legal rules not seeded in test DB. Run: make seed (test DB)")
-        assert len(rules) >= 75
+        assert len(rules) >= 75, "integration test setup must seed the complete legal-rule catalogue"
 
     @pytest.mark.asyncio
     async def test_get_by_rule_id(self, db):
@@ -705,8 +702,7 @@ class TestRulesService:
 
         svc = LegalRuleService(db)
         rules = await svc.get_all()
-        if not rules:
-            pytest.skip("Rules not seeded")
+        assert len(rules) >= 75, "integration test setup must seed the complete legal-rule catalogue"
 
         rule = await svc.get_by_rule_id("AGM-001")
         assert rule is not None
@@ -719,8 +715,7 @@ class TestRulesService:
 
         svc = LegalRuleService(db)
         rules = await svc.get_all()
-        if not rules:
-            pytest.skip("Rules not seeded")
+        assert len(rules) >= 75, "integration test setup must seed the complete legal-rule catalogue"
 
         black_rules = await svc.get_black_override_rules()
         # Migration 0090 quarantines every rule as NOT_EVALUATED / PENDING.
@@ -738,8 +733,7 @@ class TestRulesService:
         await set_rls_context(db, str(db_super_admin.id))
         svc = LegalRuleService(db)
         rules = await svc.get_all()
-        if not rules:
-            pytest.skip("Rules not seeded")
+        assert len(rules) >= 75, "integration test setup must seed the complete legal-rule catalogue"
 
         # Update OFF-001 (lowest impact — safest to test with)
         await svc.get_by_rule_id("OFF-001")
