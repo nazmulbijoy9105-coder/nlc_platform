@@ -154,3 +154,27 @@ async def test_customer_calendar_generator_uses_database_registry_without_false_
     assert result["results"] == []
     assert result["events"] == []
     assert result["no_obligation_inference"] is True
+
+
+@pytest.mark.asyncio
+async def test_super_admin_can_read_source_mapping_deadline_and_release_inventories(
+    api_client, super_admin_headers
+):
+    """Exercise the operator read model used before a bulk import."""
+    starter = await api_client.get(
+        "/api/v1/legal-provenance/starter-sources",
+        headers=super_admin_headers,
+    )
+    assert starter.status_code == 200
+    assert len(starter.json()) == 10
+    assert all(item["rule_mappings_created"] is False for item in starter.json())
+
+    for path in (
+        "/api/v1/legal-provenance/sources",
+        "/api/v1/legal-provenance/mappings",
+        "/api/v1/legal-provenance/deadlines/definitions",
+        "/api/v1/legal-provenance/events",
+    ):
+        response = await api_client.get(path, headers=super_admin_headers)
+        assert response.status_code == 200
+        assert response.json() == []
