@@ -197,6 +197,231 @@ def _source_state(source: LegalSource) -> str:
     return "ARTIFACT_REFERENCE_RECORDED" if source.artifact_sha256 else "REFERENCE_ONLY"
 
 
+# Curated official-register references. These are references only: no file bytes,
+# amendments, provision interpretation or legal verification are inferred here.
+BD_STARTER_SOURCE_CATALOG: tuple[dict[str, Any], ...] = (
+    {
+        "source_key": "BD-COMPANIES-ACT-1994",
+        "jurisdiction": "BD",
+        "instrument_title": "Companies Act, 1994",
+        "issuing_authority": "Government of Bangladesh",
+        "instrument_type": "ACT",
+        "official_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "citation": "Act No. XVIII of 1994; published 12 September 1994",
+        "version_label": "1994-base-text-amendment-chain-not-yet-reconciled",
+        "publication_date": date(1994, 9, 12),
+    },
+    {
+        "source_key": "BD-BSEC-CGC-2018",
+        "jurisdiction": "BD",
+        "instrument_title": "Corporate Governance Code, 2018",
+        "issuing_authority": "Bangladesh Securities and Exchange Commission",
+        "instrument_type": "CODE",
+        "official_url": "https://sec.gov.bd/act-rules-and-regulations",
+        "citation": "Corporate Governance Code, 2018; BSEC official regulations register",
+        "version_label": "2018-base-code-official-register-reference",
+    },
+    {
+        "source_key": "BD-BSEC-CGC-AMENDMENT-2023-11-20",
+        "jurisdiction": "BD",
+        "instrument_title": "Amendment to Corporate Governance Code, 2018",
+        "issuing_authority": "Bangladesh Securities and Exchange Commission",
+        "instrument_type": "NOTIFICATION",
+        "official_url": "https://sec.gov.bd/act-rules-and-regulations",
+        "citation": "BSEC notification of amendment to Corporate Governance Code, 2018; listed 20 November 2023",
+        "version_label": "bsec-amendment-notification-2023-11-20",
+        "publication_date": date(2023, 11, 20),
+    },
+    {
+        "source_key": "BD-LABOUR-ACT-2006",
+        "jurisdiction": "BD",
+        "instrument_title": "Bangladesh Labour Act, 2006",
+        "issuing_authority": "Government of Bangladesh",
+        "instrument_type": "ACT",
+        "official_url": "https://bdlaws.minlaw.gov.bd/act-details-952.html?lang=en",
+        "citation": "Act No. XLII of 2006; published 11 October 2006",
+        "version_label": "2006-base-text-amendment-chain-not-yet-reconciled",
+        "publication_date": date(2006, 10, 11),
+    },
+    {
+        "source_key": "BD-LABOUR-AMENDMENT-ACT-2026",
+        "jurisdiction": "BD",
+        "instrument_title": "Bangladesh Labour (Amendment) Act, 2026",
+        "issuing_authority": "Government of Bangladesh; Ministry of Labour and Employment",
+        "instrument_type": "ACT",
+        "official_url": "https://mole.gov.bd/pages/legislative-informations",
+        "citation": "Ministry of Labour legislative information entry; published 16 April 2026",
+        "version_label": "ministry-listing-publication-2026-04-16",
+        "publication_date": date(2026, 4, 16),
+    },
+    {
+        "source_key": "BD-INCOME-TAX-ACT-2023-AUTHENTIC-EN-2025",
+        "jurisdiction": "BD",
+        "instrument_title": "Income Tax Act, 2023 — Authentic English Text",
+        "issuing_authority": "National Board of Revenue",
+        "instrument_type": "ACT",
+        "official_url": "https://nbr.gov.bd/uploads/acts/3190-SRO-404-NBR-16_October_2025(10455-10741).pdf",
+        "citation": "Act No. XII of 2023; S.R.O. No. 404-Law/2025; notification dated 8 October 2025, Gazette published 16 October 2025",
+        "version_label": "authentic-english-text-sro-404-2025-10-16",
+        "publication_date": date(2025, 10, 16),
+    },
+    {
+        "source_key": "BD-FINANCE-ACT-2026",
+        "jurisdiction": "BD",
+        "instrument_title": "Finance Act, 2026",
+        "issuing_authority": "Government of Bangladesh; National Board of Revenue register",
+        "instrument_type": "ACT",
+        "official_url": "https://nbr.gov.bd/uploads/acts/Finance_Act_2026.pdf",
+        "citation": "Finance Act, 2026; NBR register date 6 July 2026",
+        "version_label": "finance-act-2026-nbr-publication-2026-07-06",
+        "publication_date": date(2026, 7, 6),
+    },
+    {
+        "source_key": "BD-VAT-SD-ACT-2012-AUTHENTIC-EN-2025",
+        "jurisdiction": "BD",
+        "instrument_title": "Value Added Tax and Supplementary Duty Act, 2012 — Authentic English Text",
+        "issuing_authority": "Government of Bangladesh; National Board of Revenue",
+        "instrument_type": "ACT",
+        "official_url": "https://bdlaws.minlaw.gov.bd/upload/act/2026-01-18-15-14-21-72.-Value-Added-Tax-and-Supplementary-Duty-Act%2C-2012.pdf",
+        "citation": "Act No. XLVII of 2012; S.R.O. No. 440-Law/2025/326-Mushak dated 5 November 2025",
+        "version_label": "authentic-english-text-sro-440-2025-11-05",
+        "publication_date": date(2025, 11, 5),
+    },
+    {
+        "source_key": "BD-FOREIGN-EXCHANGE-REGULATION-ACT-1947",
+        "jurisdiction": "BD",
+        "instrument_title": "Foreign Exchange Regulation Act, 1947",
+        "issuing_authority": "Government of Bangladesh",
+        "instrument_type": "ACT",
+        "official_url": "https://bdlaws.minlaw.gov.bd/act-print-218.html",
+        "citation": "Act No. VII of 1947; dated 11 March 1947",
+        "version_label": "1947-base-text-amendment-chain-not-yet-reconciled",
+        "publication_date": date(1947, 3, 11),
+    },
+    {
+        "source_key": "BD-STAMP-ACT-1899",
+        "jurisdiction": "BD",
+        "instrument_title": "Stamp Act, 1899",
+        "issuing_authority": "Government of Bangladesh",
+        "instrument_type": "ACT",
+        "official_url": "https://bdlaws.minlaw.gov.bd/act-print-77.html",
+        "citation": "Act No. II of 1899; dated 27 January 1899",
+        "version_label": "1899-base-text-schedule-and-amendment-chain-not-yet-reconciled",
+        "publication_date": date(1899, 1, 27),
+    },
+)
+
+
+class StarterSourceImport(BaseModel):
+    source_keys: list[str] = Field(min_length=1, max_length=20)
+    reason: str = Field(min_length=10, max_length=2000)
+
+
+@router.get("/starter-sources", dependencies=[Depends(require_roles("SUPER_ADMIN"))])
+async def get_starter_source_catalog(
+    db: AsyncSession = Depends(get_db_for_user),
+    current_user=Depends(get_current_user),
+):
+    """Return vetted official-register references and registration state."""
+    existing = (
+        await db.execute(select(LegalSource.source_key, LegalSource.version_label))
+    ).all()
+    existing_keys = {(key, version) for key, version in existing}
+    return [
+        {
+            **{
+                key: (value.isoformat() if isinstance(value, date) else value)
+                for key, value in candidate.items()
+            },
+            "registration_state": (
+                "REGISTERED" if (candidate["source_key"], candidate["version_label"]) in existing_keys
+                else "NOT_REGISTERED"
+            ),
+            "artifact_state": "REFERENCE_ONLY",
+            "artifact_bytes_checked": False,
+            "rule_mappings_created": False,
+            "owner_approval_created": False,
+        }
+        for candidate in BD_STARTER_SOURCE_CATALOG
+    ]
+
+
+@router.post("/starter-sources/register", status_code=201,
+             dependencies=[Depends(require_roles("SUPER_ADMIN"))])
+async def register_starter_source_references(
+    body: StarterSourceImport,
+    db: AsyncSession = Depends(get_db_for_user),
+    current_user=Depends(get_current_user),
+):
+    """Explicit, idempotent owner action; imports references only, never approvals."""
+    catalog = {item["source_key"]: item for item in BD_STARTER_SOURCE_CATALOG}
+    unknown = sorted(set(body.source_keys) - set(catalog))
+    if unknown:
+        raise HTTPException(422, f"Unknown starter source keys: {unknown}")
+
+    results = []
+    for source_key in dict.fromkeys(body.source_keys):
+        candidate = catalog[source_key]
+        existing = (
+            await db.execute(
+                select(LegalSource).where(
+                    LegalSource.source_key == source_key,
+                    LegalSource.version_label == candidate["version_label"],
+                )
+            )
+        ).scalar_one_or_none()
+        if existing is not None:
+            results.append({
+                "source_key": source_key,
+                "source_id": str(existing.id),
+                "state": "ALREADY_REGISTERED",
+            })
+            continue
+
+        source_values = dict(candidate)
+        source = LegalSource(
+            **source_values,
+            created_by=current_user.id,
+            # Starter entries are references only. No hash/URI is fabricated.
+            artifact_sha256=None,
+            artifact_uri=None,
+        )
+        db.add(source)
+        await db.flush()
+        event = await _append_event(
+            db,
+            event_type="SOURCE_REGISTERED",
+            actor_id=current_user.id,
+            reason=body.reason,
+            source_id=source.id,
+            metadata={
+                "source_key": source_key,
+                "version_label": source.version_label,
+                "registration_method": "EXPLICIT_SUPER_ADMIN_STARTER_CATALOG_SELECTION",
+                "source_state": "REFERENCE_ONLY",
+                "artifact_bytes_checked": False,
+                "rule_mappings_created": False,
+                "owner_approval_created": False,
+            },
+        )
+        results.append({
+            "source_key": source_key,
+            "source_id": str(source.id),
+            "event_id": str(event.id),
+            "event_hash": event.event_hash,
+            "state": "SOURCE_REGISTERED_REFERENCE_ONLY",
+        })
+
+    return {
+        "registered": sum(item["state"] == "SOURCE_REGISTERED_REFERENCE_ONLY" for item in results),
+        "already_registered": sum(item["state"] == "ALREADY_REGISTERED" for item in results),
+        "sources": results,
+        "legal_verification_status_changed": False,
+        "rule_mappings_created": False,
+        "product_owner_approval_created": False,
+    }
+
+
 @router.post("/sources", status_code=201, dependencies=[Depends(require_roles("SUPER_ADMIN"))])
 async def register_source(
     body: SourceCreate,
