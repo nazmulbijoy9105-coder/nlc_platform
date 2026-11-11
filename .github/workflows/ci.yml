@@ -95,12 +95,6 @@ jobs:
             tests/unit/test_legal_coverage_taxonomy.py \
             tests/unit/test_legal_evidence_scoring_gates.py
 
-      - name: Type-check scoring release-boundary services
-        run: |
-          mypy app/services/company_service.py \
-            app/services/pdf_report_service.py \
-            app/services/rescue_service.py
-
       - name: Type-check scoring and statutory release services
         run: |
           mypy app/services/company_service.py \
@@ -461,20 +455,6 @@ jobs:
           path: /tmp/nlc_0042_to_head_schema.sql
           if-no-files-found: error
 
-      - name: Run integration tests with coverage baseline
-        run: |
-          python -m pytest tests/integration -q -rs --tb=short \
-            --cov=app --cov-report=term-missing \
-            --cov-report=xml:coverage-integration.xml --cov-fail-under=58.0
-
-      - name: Upload integration coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: integration-coverage-baseline
-          path: coverage-integration.xml
-          if-no-files-found: warn
-
       - name: Security and tenant-isolation integration tests (PostgreSQL required)
         env:
           CI: "true"
@@ -519,6 +499,21 @@ jobs:
               raise SystemExit(f"PostgreSQL security suite must not skip: {names}")
           print(f"Verified all {len(expected)} required PostgreSQL security tests; zero skips.")
           PY
+
+      - name: Run integration tests with coverage baseline
+        run: |
+          python -m pytest tests/integration -q -rs --tb=short \
+            --cov=app --cov-report=term-missing \
+            --cov-report=xml:coverage-integration.xml --cov-fail-under=58.0
+
+      - name: Upload integration coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-coverage-baseline
+          path: coverage-integration.xml
+          if-no-files-found: warn
+
 
       - name: Upload combined integration and security coverage
         if: always()
