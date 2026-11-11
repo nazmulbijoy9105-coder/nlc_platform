@@ -772,7 +772,7 @@ def test_product_released_corpus_reports_score_with_full_input_coverage():
     from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
 
     assert LEGAL_SCORE_RELEASED is True
-        assert VERIFIED_RULE_IDS == frozenset()
+    assert VERIFIED_RULE_IDS == frozenset()
     profile = _profile(
         last_agm_date=date(2025, 6, 1),
         last_audit_signed_date=date(2025, 5, 1),
