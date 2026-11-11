@@ -162,7 +162,7 @@ def test_clear_day_preview_excludes_trigger_day_and_honours_holidays():
 
 
 def test_customer_rule_provenance_route_requires_authentication_not_super_admin():
-    from app.api.dependencies import get_current_user
+    from app.core.dependencies import get_current_user
     from app.api.legal_provenance import router
 
     route = next(
