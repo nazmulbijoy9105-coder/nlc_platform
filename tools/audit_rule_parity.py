@@ -385,8 +385,9 @@ def main():
         "database_metadata": metadata_result,
         "id_parity_passed": len(common) == len(all_rules),
         "metadata_parity_passed": (
-            metadata_result is None or not metadata_result["mismatches"]
+            None if metadata_result is None else not metadata_result["mismatches"]
         ),
+        "audit_scope": sorted(sources),
     }
     if args.report_json:
         report_path = Path(args.report_json)
