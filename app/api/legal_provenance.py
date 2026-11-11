@@ -502,13 +502,37 @@ async def preview_or_release_deadline(
         and latest_decision.event_type == "PRODUCT_OWNER_APPROVED"
         and latest_decision.decision == "APPROVED"
     )
+    mapping = (
+        await db.execute(
+            select(LegalRuleSourceMapping).where(
+                LegalRuleSourceMapping.id == definition.mapping_id
+            )
+        )
+    ).scalar_one_or_none()
+    if mapping is None:
+        raise HTTPException(409, "Deadline source mapping is missing")
+    effective_from = max(
+        definition.effective_from,
+        source.effective_from or definition.effective_from,
+    )
+    effective_to_candidates = [
+        value for value in (definition.effective_to, source.effective_to) if value is not None
+    ]
+    effective_to = min(effective_to_candidates) if effective_to_candidates else None
+    if effective_to is not None and effective_to < effective_from:
+        return {
+            "status": "NO_CANDIDATE",
+            "candidate_due_date": None,
+            "customer_calendar_write": False,
+            "message": "The source and deadline-definition effective periods do not overlap.",
+        }
     holidays = frozenset(date.fromisoformat(item) for item in definition.holidays)
     rule = DeadlineRule(
         rule_id=definition.rule_id,
-        source_citation=f"{source.instrument_title}, {definition.mapping_id}",
+        source_citation=mapping.provision_citation,
         source_version=source.version_label,
-        effective_from=definition.effective_from,
-        effective_to=definition.effective_to,
+        effective_from=effective_from,
+        effective_to=effective_to,
         offset=definition.offset,
         unit=definition.unit,
         adjustment=definition.adjustment,
@@ -573,6 +597,11 @@ async def preview_or_release_deadline(
         "rule_id": definition.rule_id,
         "source_id": str(source.id),
         "source_version": source.version_label,
+        "source_url": source.official_url,
+        "source_artifact_sha256": source.artifact_sha256,
+        "provision_citation": mapping.provision_citation,
+        "effective_from": effective_from.isoformat(),
+        "effective_to": effective_to.isoformat() if effective_to else None,
         "mapping_id": str(definition.mapping_id),
         "deadline_definition_id": str(definition.id),
         "trigger_fact_id": str(fact.id),
@@ -613,8 +642,8 @@ async def preview_or_release_deadline(
     existing.legal_rule_id = definition.rule_id
     existing.legal_source_citation = source.citation
     existing.legal_source_version = source.version_label
-    existing.legal_effective_from = definition.effective_from
-    existing.legal_effective_to = definition.effective_to
+    existing.legal_effective_from = effective_from
+    existing.legal_effective_to = effective_to
     existing.legal_trigger_date = trigger_date
     existing.trigger_evidence_ref = fact.source_reference
     existing.legal_manifest_sha256 = manifest_hash
