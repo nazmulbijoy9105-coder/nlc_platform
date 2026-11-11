@@ -176,6 +176,7 @@ def upgrade() -> None:
                   nullable=False, server_default=sa.text("'{}'::jsonb")),
         sa.Column("previous_event_hash", sa.String(64), nullable=True),
         sa.Column("event_hash", sa.String(64), nullable=False),
+        sa.Column("sequence_no", sa.BigInteger(), sa.Identity(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True),
                   nullable=False, server_default=sa.func.now()),
         sa.CheckConstraint(
@@ -192,7 +193,72 @@ def upgrade() -> None:
             name="ck_legal_release_decision",
         ),
         sa.CheckConstraint("length(btrim(reason)) >= 10", name="ck_legal_release_reason"),
-        sa.CheckConstraint("event_hash ~ '^[0-9a-f]{64}$'", name="ck_legal_release_hash"),
+        sa.CheckConstraint("event_hash ~ '^[0-9a-f]{64}
+        sa.CheckConstraint(
+            "previous_event_hash IS NULL OR previous_event_hash ~ '^[0-9a-f]{64}$'",
+            name="ck_legal_release_previous_hash",
+        ),
+    )
+    op.create_index(
+        "ix_legal_release_events_rule_scope_created",
+        "legal_rule_release_events", ["rule_id", "release_scope", "created_at"],
+    )
+
+    # All four registries are immutable after insertion. Corrections are new
+    # versions/events, never UPDATE or DELETE.
+    op.execute("""
+        CREATE OR REPLACE FUNCTION public.nlc_reject_legal_provenance_mutation()
+        RETURNS trigger
+        LANGUAGE plpgsql
+        SECURITY DEFINER
+        SET search_path TO 'pg_catalog', 'public'
+        AS $function$
+        BEGIN
+            RAISE EXCEPTION 'legal provenance records are append-only; create a correction/version event'
+                USING ERRCODE = '55000';
+        END
+        $function$
+    """)
+    op.execute("REVOKE ALL ON FUNCTION public.nlc_reject_legal_provenance_mutation() FROM PUBLIC")
+    for table in (
+        "legal_sources",
+        "legal_rule_source_mappings",
+        "legal_deadline_definitions",
+        "legal_rule_release_events",
+    ):
+        op.execute(
+            f"CREATE TRIGGER {table}_reject_mutation "
+            f"BEFORE UPDATE OR DELETE ON public.{table} "
+            "FOR EACH ROW EXECUTE FUNCTION public.nlc_reject_legal_provenance_mutation()"
+        )
+        op.execute(
+            f"CREATE TRIGGER {table}_reject_truncate "
+            f"BEFORE TRUNCATE ON public.{table} "
+            "FOR EACH STATEMENT EXECUTE FUNCTION public.nlc_reject_legal_provenance_mutation()"
+        )
+
+    # These are jurisdiction-wide legal metadata, not tenant records. Any
+    # authenticated signed principal may read them; only SUPER_ADMIN may write.
+    read_registry = (
+        "public.nlc_current_user_context_valid() AND "
+        "(public.nlc_current_user_principal() IN ('AUTH','CATALOG') "
+        "OR public.nlc_current_user_is_rule_admin() "
+        "OR public.nlc_current_user_id() IS NOT NULL)"
+    )
+    insert_admin = "public.nlc_current_user_is_super_admin()"
+    _apply_rls("legal_sources", read_registry, insert_admin)
+    _apply_rls("legal_rule_source_mappings", read_registry, insert_admin)
+    _apply_rls("legal_deadline_definitions", read_registry, insert_admin)
+    _apply_rls("legal_rule_release_events", read_registry, insert_admin)
+
+
+def downgrade() -> None:
+    # Forward-only: this records governance and release decisions. Removing it
+    # would destroy audit provenance.
+    pass
+", name="ck_legal_release_hash"),
+        sa.UniqueConstraint("event_hash", name="uq_legal_release_event_hash"),
+        sa.UniqueConstraint("sequence_no", name="uq_legal_release_sequence"),
         sa.CheckConstraint(
             "previous_event_hash IS NULL OR previous_event_hash ~ '^[0-9a-f]{64}$'",
             name="ck_legal_release_previous_hash",
