@@ -505,6 +505,30 @@ jobs:
             --cov=app --cov-report=term-missing \
             --cov-report=xml:coverage-integration.xml --cov-fail-under=58.0
 
+      - name: Verify company-access authorization coverage
+        run: |
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse("coverage-integration.xml").getroot()
+          matches = [
+              item for item in root.findall(".//class")
+              if item.get("filename", "").endswith("app/core/company_access.py")
+          ]
+          if len(matches) != 1:
+              raise SystemExit(
+                  "Expected exactly one coverage entry for app/core/company_access.py; "
+                  f"found {len(matches)}"
+              )
+          covered = float(matches[0].get("line-rate", "0"))
+          if covered < 0.95:
+              raise SystemExit(
+                  "Company authorization coverage must be at least 95%; "
+                  f"observed {covered:.1%}"
+              )
+          print(f"Company authorization code coverage: {covered:.1%}")
+          PY
+
       - name: Upload integration coverage report
         if: always()
         uses: actions/upload-artifact@v4
