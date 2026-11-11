@@ -121,25 +121,67 @@ def get_db_rule_inventory():
         async def query():
             connection = await asyncpg.connect(db_url)
             try:
-                rows = await connection.fetch(
-                    """
-                    SELECT
-                        rule_id, rule_name, rule_type, statutory_basis, description,
-                        rule_condition, default_severity, score_impact, revenue_tier,
-                        is_black_override, rule_version, is_active, verification_status
-                    FROM audit.legal_rule_registry_inventory
-                    ORDER BY rule_id
-                    """
-                )
-                inventory = {}
-                for row in rows:
-                    item = dict(row)
-                    item["rule_condition"] = _decode_jsonb(item["rule_condition"])
-                    rule_id = item["rule_id"]
-                    if rule_id in inventory:
-                        raise ValueError(f"Duplicate database rule ID: {rule_id}")
-                    inventory[rule_id] = item
-                return inventory
+                async with connection.transaction():
+                    # The first statement makes the complete audit transaction read-only.
+                    await connection.execute("SET TRANSACTION READ ONLY")
+                    identity = await connection.fetchrow(
+                        """
+                        SELECT
+                            current_user AS db_role,
+                            session_user AS session_role,
+                            current_setting('transaction_read_only') AS read_only,
+                            role.rolsuper,
+                            role.rolbypassrls,
+                            has_table_privilege(
+                                current_user,
+                                'public.legal_rules',
+                                'SELECT'
+                            ) AS direct_rule_table_select,
+                            has_table_privilege(
+                                current_user,
+                                'audit.legal_rule_registry_inventory',
+                                'SELECT'
+                            ) AS inventory_view_select
+                        FROM pg_roles AS role
+                        WHERE role.rolname = current_user
+                        """
+                    )
+                    if identity is None:
+                        raise RuntimeError("Cannot identify production audit database role")
+                    if (
+                        identity["db_role"] != "nlc_ci_audit_role"
+                        or identity["session_role"] != "nlc_ci_audit_role"
+                        or identity["read_only"] != "on"
+                        or identity["rolsuper"]
+                        or identity["rolbypassrls"]
+                        or identity["direct_rule_table_select"]
+                        or not identity["inventory_view_select"]
+                    ):
+                        raise RuntimeError(
+                            "Production parity requires a read-only nlc_ci_audit_role "
+                            "with view-only access and no SUPERUSER/BYPASSRLS/direct "
+                            "legal_rules SELECT privilege"
+                        )
+
+                    rows = await connection.fetch(
+                        """
+                        SELECT
+                            rule_id, rule_name, rule_type, statutory_basis, description,
+                            rule_condition, default_severity, score_impact, revenue_tier,
+                            is_black_override, rule_version, is_active, verification_status
+                        FROM audit.legal_rule_registry_inventory
+                        ORDER BY rule_id
+                        """
+                    )
+                    inventory = {}
+                    for row in rows:
+                        item = dict(row)
+                        item["rule_condition"] = _decode_jsonb(item["rule_condition"])
+                        rule_id = item["rule_id"]
+                        if rule_id in inventory:
+                            raise ValueError(f"Duplicate database rule ID: {rule_id}")
+                        inventory[rule_id] = item
+                    return inventory
 
             finally:
                 await connection.close()
