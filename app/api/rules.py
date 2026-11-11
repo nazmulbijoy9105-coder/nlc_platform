@@ -38,7 +38,6 @@ from app.rule_engine.engine import (
     AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
-    VERIFIED_RULE_IDS,
 )
 from app.models.user import User
 from app.services.notification_service import ActivityService
@@ -125,7 +124,8 @@ class MessageResponse(BaseModel):
 def _rule_to_response(rule) -> RuleResponse:
     scoring_catalogue_member = rule.rule_id in PRODUCT_SCORING_RULE_IDS
     product_scoring_enabled = LEGAL_SCORE_RELEASED and scoring_catalogue_member
-    legally_verified = rule.rule_id in VERIFIED_RULE_IDS
+    # Product-owner release is not independent legal/source verification.
+    legally_verified = False
     return RuleResponse(
         rule_id=rule.rule_id,
         rule_name=rule.rule_name,
