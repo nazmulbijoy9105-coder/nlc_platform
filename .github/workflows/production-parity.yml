@@ -27,5 +27,15 @@ jobs:
             echo "::error::Configure NLC_PRODUCTION_DATABASE_URL with the read-only audit-schema role."
             exit 1
           fi
-      - name: Compare production DB, API, engine and seed rule IDs
-        run: python tools/audit_rule_parity.py
+      - name: Compare production DB, API, engine and full seed metadata
+        run: |
+          mkdir -p artifacts
+          python tools/audit_rule_parity.py --report-json artifacts/production-rule-registry-parity.json
+
+      - name: Upload production rule registry parity report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-rule-registry-parity
+          path: artifacts/production-rule-registry-parity.json
+          if-no-files-found: warn

@@ -196,7 +196,17 @@ jobs:
           if-no-files-found: warn
 
       - name: Static engine/seed rule parity audit
-        run: python tools/audit_rule_parity.py --no-db --no-api
+        run: |
+          mkdir -p artifacts
+          python tools/audit_rule_parity.py --no-db --no-api --report-json artifacts/rule-registry-static-parity.json
+
+      - name: Upload static rule registry parity report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rule-registry-static-parity
+          path: artifacts/rule-registry-static-parity.json
+          if-no-files-found: warn
 
       # Live DB/API parity is a separate release gate in production-parity.yml.
       # It must be dispatched after the read-only audit role and API are ready.
