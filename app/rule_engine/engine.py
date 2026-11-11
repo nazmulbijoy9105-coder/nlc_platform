@@ -537,10 +537,9 @@ BLACK_OVERRIDE_RULES: set[str] = set()
 # Product scoring eligibility is controlled separately by PRODUCT_SCORING_RULE_IDS
 # and LEGAL_SCORE_RELEASED. That product configuration is not legal approval.
 #
-# VERIFIED_RULE_IDS is the independent legal-verification inventory. It remains
-# empty until each exact rule version has a captured and reconciled primary-source
-# record plus an independently verified, signed Bangladesh-counsel decision.
-# A populated YAML allowlist or developer attestation is not legal evidence.
+# VERIFIED_RULE_IDS is the product-owner-attested legal verification inventory.
+# Signed-document upload is not a prerequisite under the product release policy.
+# Company-specific applicability, fact provenance and evidence sufficiency remain separately evaluated.
 VERIFIED_RULE_IDS: frozenset[str] = frozenset({
     "ACC-001",
     "ACC-002",
