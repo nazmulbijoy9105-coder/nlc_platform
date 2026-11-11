@@ -18,10 +18,10 @@ AI Constitution compliance:
 
 from __future__ import annotations
 
+import os as _os
 import time
 import uuid
 from contextlib import asynccontextmanager
-from datetime import UTC
 from typing import TYPE_CHECKING
 
 import structlog
@@ -368,8 +368,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 
 
 # ── Sentry Error Monitoring ──────────────────────────────────────
-import os as _os
-
 _sentry_dsn = _os.environ.get("SENTRY_DSN", "")
 if _sentry_dsn:
     try:
