@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -57,6 +57,14 @@ class SourceCreate(BaseModel):
     effective_to: date | None = None
     artifact_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     artifact_uri: str | None = Field(default=None, max_length=2000)
+
+    @model_validator(mode="after")
+    def validate_artifact_pair(self):
+        if (self.artifact_sha256 is None) != (self.artifact_uri is None):
+            raise ValueError("artifact_sha256 and artifact_uri must be supplied together")
+        if self.effective_to and self.effective_from and self.effective_to < self.effective_from:
+            raise ValueError("effective_to cannot precede effective_from")
+        return self
 
     @field_validator("official_url")
     @classmethod
