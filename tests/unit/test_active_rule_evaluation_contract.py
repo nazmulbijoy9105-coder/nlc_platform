@@ -86,3 +86,30 @@ def test_compliance_summary_contract_exposes_immutable_evaluation_identity():
     assert payload["evaluation_run_id"] == "run-1"
     assert payload["evaluation_hash"] == "a" * 64
     assert payload["evaluation_run_status"] == "COMPLETED"
+
+
+
+def test_latest_evaluation_run_lookup_is_company_scoped_and_ordered():
+    import asyncio
+    import uuid
+    from types import SimpleNamespace
+
+    from app.services.compliance_service import ComplianceService
+
+    company_id = uuid.uuid4()
+    expected = SimpleNamespace(id=uuid.uuid4(), company_id=company_id)
+
+    class Result:
+        def scalar_one_or_none(self):
+            return expected
+
+    class FakeSession:
+        async def execute(self, statement):
+            compiled = str(statement)
+            assert "compliance_evaluation_runs.company_id" in compiled
+            assert "ORDER BY compliance_evaluation_runs.calculated_at DESC" in compiled
+            assert "LIMIT" in compiled
+            return Result()
+
+    actual = asyncio.run(ComplianceService(FakeSession()).get_latest_evaluation_run(company_id))
+    assert actual is expected
