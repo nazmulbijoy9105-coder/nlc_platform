@@ -272,8 +272,10 @@ class ComplianceCalendarService:
         include_past_days: int = 365,
         include_future_days: int = 365,
     ) -> list[dict]:
-        if not calendar_manifest_is_released():
-            return []
+        # Reading already-persisted company events is safe. New statutory
+        # calendar writes are handled by the source/version/evidence-bound
+        # product-owner release path; an empty calendar is not proof that no
+        # statutory obligation exists.
         result = await self.db.execute(
             select(Company).where(Company.id == company_id)
         )
