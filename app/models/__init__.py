@@ -103,6 +103,7 @@ from .subscription import (
 
 # ── Rescue (Plans + Steps) ───────────────────────────────────────────
 from .rescue import RescuePlan, RescueStep
+from .rescue_audit_log import RescueAuditLog
 from .rjsc_forms import RJSCFormFiling
 
 # ── Rules (Legal Rules + Version History) ────────────────────────────
@@ -171,6 +172,7 @@ __all__ = [
     "RegisteredOfficeHistory",
     "RegulatoryRule",
     "RescuePlan",
+    "RescueAuditLog",
     "RescueStep",
     "RescueStepStatus",
     "RevenueTier",
