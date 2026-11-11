@@ -1,9 +1,18 @@
 """Legal provenance governance: no runtime shortcut may self-approve a rule."""
 
 from copy import deepcopy
+from datetime import date
+from types import SimpleNamespace
 
 import pytest
+from pydantic import ValidationError
 
+from app.api.legal_provenance import SourceCreate, _source_state
+from app.services.legal_deadline_engine import (
+    DeadlineRule,
+    calculate_deadline,
+    calculate_deadline_candidate,
+)
 from canonical_architecture.legal_reconciliation import (
     LEGAL_RECONCILIATION,
     get_reconciliation_status,
@@ -62,18 +71,6 @@ def test_unknown_rule_id_is_not_silently_reported_as_reconciled():
 
 # Product-owner infrastructure tests. These keep operational approval separate
 # from statutory verification and make provisional arithmetic explicit.
-from datetime import date
-from types import SimpleNamespace
-
-from pydantic import ValidationError
-
-from app.api.legal_provenance import SourceCreate, _source_state
-from app.services.legal_deadline_engine import (
-    DeadlineRule,
-    calculate_deadline,
-    calculate_deadline_candidate,
-)
-
 
 def test_source_reference_state_does_not_claim_artifact_capture():
     reference_only = SimpleNamespace(artifact_sha256=None, artifact_uri=None)
