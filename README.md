@@ -53,7 +53,7 @@ A full-stack compliance intelligence platform that:
 
 nlc_platform/
 ├── app/
-│   ├── main.py              # FastAPI app factory + middleware + auto-migration
+│   ├── main.py              # FastAPI app factory + middleware; no schema migration at startup
 │   ├── api/                 # 11 routers, 80+ endpoints
 │   ├── models/              # 28 SQLAlchemy ORM tables (147+ columns on companies)
 │   ├── services/            # 12 service files (CompanyService, ComplianceService, etc.)
@@ -61,7 +61,7 @@ nlc_platform/
 │   ├── rule_engine/         # Deterministic 85-rule ILRMF engine v2.1
 │   └── worker/              # Celery tasks + beat schedule (7-year retention)
 ├── alembic/                 # Versioned Alembic revision DAG (including merge revisions)
-├── scripts/                 # Audits and development-only utilities (canonical rules are migration-controlled)
+├── scripts/                 # Audits and development-only utilities; production registry is migration-controlled
 ├── tests/                   # 288 unit tests + integration tests (unit + integration)
 ├── tools/                   # audit_rule_parity.py (canonical AST-based parity check)
 ├── docs/                    # LEGAL_BASIS_MATRIX.md, LAWYER_LEGAL_REVIEW_PACK.md
@@ -121,7 +121,7 @@ cp .env.example .env
 # Install + run
 pip install -r requirements.txt
 alembic upgrade head
-python scripts/seed_rules.py
+python scripts/seed_rules.py  # Development only; never use as a production release step
 uvicorn app.main:app --reload
 
 # Verify
@@ -145,12 +145,10 @@ python -m compileall app/              # Compile check
 python tools/audit_rule_parity.py --no-db  # Rule parity (AST-based)
 
 # Deployment (Render.com)
-# Render service is configured with autoDeploy: false; releases are manual/controlled
-# Apply reviewed Alembic migrations as an explicit release operation; API startup performs no schema migration
+# Native Render autoDeploy is disabled; GitHub Actions deploys only after CI succeeds on current main
+# Apply reviewed Alembic migrations as a separately authorized release operation; API startup performs no schema migration
 # Canonical legal-rule registry is managed by versioned Alembic migrations; do not seed production at runtime
-# Manual deploy on Render (autoDeploy: false) — push to main does not deploy
-# Migrations run automatically on startup
-# Rules auto-seed if count < 85
+
 API Endpoints
 Router
 	
@@ -188,11 +186,10 @@ Render.com (Production)
      Frontend: https://nlc-frontend.vercel.app
      Database: Neon PostgreSQL (confirm PITR/snapshot schedule in Neon console; do not assume retention)
      Redis: Render Redis
-     Render autoDeploy is disabled; deployment is a controlled/manual release action
+     Native Render autoDeploy is disabled; GitHub Actions triggers the deploy hook only after successful CI on current main
      Apply reviewed Alembic migrations explicitly before application release
      API startup does not mutate schema or seed legal rules
-     Manual deploy only (autoDeploy: false); push to main does not deploy
-     Migrations + rule seeding run on startup
+     Native Render autoDeploy is disabled; GitHub Actions triggers the deploy hook only after successful CI on current main
 Docker (Local/On-Premise)
 docker-compose up -d
 Rule Parity Audit
