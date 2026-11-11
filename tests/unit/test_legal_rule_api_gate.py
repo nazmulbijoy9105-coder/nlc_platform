@@ -50,6 +50,7 @@ def test_product_authorized_black_override_does_not_require_legal_verification(m
 
 def test_super_admin_black_override_catalogue_remains_visible_when_scoring_is_disabled(monkeypatch):
     monkeypatch.setattr(rules_api, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(rules_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
     monkeypatch.setattr(rules_api, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"INC-003"}))
 
