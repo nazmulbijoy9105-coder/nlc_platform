@@ -97,14 +97,14 @@ def main() -> int:
     verified_count = len(re.findall(r"^\s+status:\s*VERIFIED\s*$", approval, re.MULTILINE))
     eligible_count = len(re.findall(r"^\s+score_eligible:\s*true\s*$", approval, re.MULTILINE))
     ineligible_count = len(re.findall(r"^\s+score_eligible:\s*false\s*$", approval, re.MULTILINE))
-    if "approval_policy: owner_attested" not in verified_header or "verified_rule_ids:" not in verified_header:
-        print("FAIL: approval register must use owner_attested policy and verified_rule_ids")
+    if "approval_policy: owner_attested" not in verified_header or "approved_rule_ids:" not in verified_header:
+        print("FAIL: approval register must use owner_attested policy and approved_rule_ids")
         return 1
     if approval_ids != seed or verified_ids != seed:
         print(f"FAIL: approval register inventory mismatch; missing={sorted(seed - approval_ids)} extra={sorted(approval_ids - seed)} verified_missing={sorted(seed - verified_ids)}")
         return 1
     if verified_count != len(seed) or eligible_count != len(seed - {"AR-001", "SH-002", "ESC-003"}) or ineligible_count != 3:
-        print(f"FAIL: expected 85 VERIFIED, 82 scoring and 3 informational; got {verified_count}, {eligible_count}, {ineligible_count}")
+        print(f"FAIL: expected 85 APPROVED, 82 scoring and 3 informational; got {verified_count}, {eligible_count}, {ineligible_count}")
         return 1
 
     # Fail closed at the data source too: an empty engine allowlist is not
