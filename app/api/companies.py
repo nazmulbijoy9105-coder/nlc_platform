@@ -32,7 +32,6 @@ from app.rule_engine.engine import (
     AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
-    VERIFIED_RULE_IDS,
 )
 from app.services.company_service import CompanyService
 from app.services.domain_events import DomainEventType, publish_domain_event
@@ -315,7 +314,9 @@ def _flag_to_response(flag) -> FlagResponse:
     score_eligible = (
         _legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
     )
-    legally_verified = flag.rule_id in VERIFIED_RULE_IDS
+    # Product-owner approval releases product scoring; it is not independent
+    # legal verification. No counsel/source-verification registry is wired here.
+    legally_verified = False
     severity = getattr(flag.severity, "value", flag.severity)
     return FlagResponse(
         flag_id=str(flag.id),
