@@ -56,7 +56,18 @@ async def generate_calendar(
     ).scalars().all()
 
     outcomes: list[dict] = []
+    seen_event_keys: set[tuple[str, str]] = set()
     for definition in definitions:
+        event_key = (definition.event_type, definition.period_label)
+        if event_key in seen_event_keys:
+            outcomes.append({
+                "definition_id": str(definition.id),
+                "rule_id": definition.rule_id,
+                "status": "CONFLICTING_EVENT_KEY",
+                "customer_calendar_write": False,
+            })
+            continue
+        seen_event_keys.add(event_key)
         fact = (
             await db.execute(
                 select(CompanyFact)
