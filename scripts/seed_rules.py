@@ -14,8 +14,11 @@ parity is enforced in tests/unit/test_canonical_integrity.py.
 
 USAGE:
   python scripts/seed_rules.py                 # dry-run only
-  python scripts/seed_rules.py --apply         # explicitly write to DATABASE_URL
-  python scripts/seed_rules.py --apply --verbose
+  NLC_ALLOW_DEVELOPMENT_RULE_SEED=true python scripts/seed_rules.py --apply
+
+The --apply path is a development-only bootstrap aid. Production/Render
+registry changes must be introduced through reviewed, forward-only Alembic
+migrations; this script refuses writes in deployment environments.
 """
 from __future__ import annotations
 
@@ -176,7 +179,29 @@ def get_database_url() -> str:
     return url
 
 
+def assert_seed_write_allowed() -> None:
+    """Prevent the bootstrap script from mutating production rule registries."""
+    environment = os.environ.get("ENVIRONMENT", "development").strip().lower()
+    is_render = (
+        os.environ.get("RENDER", "").strip().lower() == "true"
+        or bool(os.environ.get("RENDER_SERVICE_ID", "").strip())
+    )
+    if environment in {"prod", "production"} or is_render:
+        raise RuntimeError(
+            "Rule seed writes are disabled in production/Render. "
+            "Use a reviewed, forward-only Alembic migration."
+        )
+    if os.environ.get("NLC_ALLOW_DEVELOPMENT_RULE_SEED", "").strip().lower() != "true":
+        raise RuntimeError(
+            "Rule seed writes require explicit local development opt-in: "
+            "set NLC_ALLOW_DEVELOPMENT_RULE_SEED=true. "
+            "Production registry changes must use Alembic."
+        )
+
+
 async def seed_rules(dry_run: bool = True, verbose: bool = False) -> int:
+    if not dry_run:
+        assert_seed_write_allowed()
     print(f"\n{'='*60}")
     print(f" NEUM LEX COUNSEL — Legal Rules Seeder v2.0")
     print(f" ILRMF — {EXPECTED_RULE_COUNT} rules")
@@ -342,7 +367,7 @@ def main():
     p.add_argument(
         "--apply",
         action="store_true",
-        help="Insert missing rules only; existing rule changes require the audited Super Admin workflow",
+        help="Development-only bootstrap insert; requires NLC_ALLOW_DEVELOPMENT_RULE_SEED=true and is blocked on production/Render",
     )
     p.add_argument("--verbose", "-v", action="store_true")
     args = p.parse_args()
