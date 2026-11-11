@@ -125,6 +125,7 @@ async def generate_calendar(
         "preview_only": sum(item.get("status") == "PREVIEW_ONLY" for item in outcomes),
         "without_trigger_fact": sum(item.get("status") == "NO_TRIGGER_FACT" for item in outcomes),
         "definition_errors": sum(item.get("status") == "DEFINITION_ERROR" for item in outcomes),
+        "conflicting_event_keys": sum(item.get("status") == "CONFLICTING_EVENT_KEY" for item in outcomes),
         "results": outcomes,
         "events": events,
         "no_obligation_inference": True,
