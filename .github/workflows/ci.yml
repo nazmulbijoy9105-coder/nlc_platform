@@ -131,7 +131,61 @@ jobs:
             --ignore=tests/unit/test_rjsc_forms_idor.py \
             --ignore=tests/unit/test_service_data_leak.py \
             --cov=app --cov-report=term-missing \
-            --cov-report=xml:coverage-unit.xml --cov-fail-under=57.0
+            --cov-report=xml:coverage-unit.xml --cov-fail-under=57.0 \
+            --junitxml=/tmp/nlc-unit-tests.xml
+
+      - name: Verify company-access regression tests and dependency coverage
+        run: |
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+
+          junit = ET.parse("/tmp/nlc-unit-tests.xml").getroot()
+          names = {case.get("name", "").split("[", 1)[0] for case in junit.findall(".//testcase")}
+          required = {
+              "test_inactive_user_is_rejected_with_401",
+              "test_database_role_mismatch_is_rejected_with_401",
+              "test_platform_admin_roles_bypass_company_membership",
+              "test_legal_staff_uses_company_scope_authorization",
+              "test_client_with_active_membership_is_authorized",
+              "test_client_without_active_membership_is_forbidden",
+          }
+          missing = sorted(required - names)
+          if missing:
+              raise SystemExit(f"Company-access regression tests missing: {', '.join(missing)}")
+
+          from pathlib import PurePosixPath
+
+          coverage = ET.parse("coverage-unit.xml").getroot()
+          sources = [
+              PurePosixPath(source.text.strip())
+              for source in coverage.findall("./sources/source")
+              if source.text and source.text.strip()
+          ]
+          target = PurePosixPath("app/core/dependencies.py")
+          matches = []
+          for item in coverage.findall(".//class"):
+              filename = PurePosixPath(item.get("filename", ""))
+              candidates = [filename, *(source / filename for source in sources)]
+              if any(
+                  path.parts[-len(target.parts):] == target.parts
+                  for path in candidates
+                  if len(path.parts) >= len(target.parts)
+              ):
+                  matches.append(item)
+
+          if len(matches) != 1:
+              raise SystemExit(
+                  "Expected one coverage entry resolving to app/core/dependencies.py; "
+                  f"found {len(matches)}"
+              )
+          rate = float(matches[0].get("line-rate", "0"))
+          if rate < 0.45:
+              raise SystemExit(
+                  "Company-access dependency coverage must be at least 45%; "
+                  f"observed {rate:.1%}"
+              )
+          print(f"Required company-access tests collected; dependencies.py coverage: {rate:.1%}")
+          PY
 
       - name: Upload unit coverage report
         if: always()
