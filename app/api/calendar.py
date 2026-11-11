@@ -22,8 +22,7 @@ def _require_calendar_release() -> None:
         raise HTTPException(
             status_code=503,
             detail=(
-                "Statutory calendar is unavailable pending rule-level legal "
-                "validation, company-specific applicability and independent counsel approval."
+                "No registered product-owner approved deadline manifest is available for generation."
             ),
         )
 
@@ -71,7 +70,11 @@ async def get_calendar(
 ):
     if current_user.role == "LEGAL_STAFF":
         await ensure_staff_company_scope(company_id, current_user, db)
-    _require_calendar_release()
     service = ComplianceCalendarService(db)
     events = await service.get_upcoming(company_id, days_ahead=days_ahead)
-    return {"company_id": str(company_id), "events": events}
+    return {
+        "company_id": str(company_id),
+        "events": events,
+        "calendar_state": "HAS_RELEASED_EVENTS" if events else "NO_RELEASED_EVENTS",
+        "no_obligation_inference": True,
+    }
