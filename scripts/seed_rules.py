@@ -30,6 +30,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Dict, List
+from urllib.parse import urlparse
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -179,8 +180,8 @@ def get_database_url() -> str:
     return url
 
 
-def assert_seed_write_allowed() -> None:
-    """Prevent the bootstrap script from mutating production rule registries."""
+def assert_seed_write_allowed(database_url: str) -> None:
+    """Permit bootstrap writes only to an explicitly opted-in local database."""
     environment = os.environ.get("ENVIRONMENT", "development").strip().lower()
     is_render = (
         os.environ.get("RENDER", "").strip().lower() == "true"
@@ -198,10 +199,16 @@ def assert_seed_write_allowed() -> None:
             "Production registry changes must use Alembic."
         )
 
+    host = urlparse(database_url).hostname
+    local_hosts = {"localhost", "127.0.0.1", "::1", "postgres", "db", "host.docker.internal"}
+    if host not in local_hosts:
+        raise RuntimeError(
+            "Rule seed writes are restricted to local PostgreSQL hosts. "
+            "Use Alembic for Neon, Render, or any remote database."
+        )
+
 
 async def seed_rules(dry_run: bool = True, verbose: bool = False) -> int:
-    if not dry_run:
-        assert_seed_write_allowed()
     print(f"\n{'='*60}")
     print(f" NEUM LEX COUNSEL — Legal Rules Seeder v2.0")
     print(f" ILRMF — {EXPECTED_RULE_COUNT} rules")
@@ -250,6 +257,7 @@ async def seed_rules(dry_run: bool = True, verbose: bool = False) -> int:
         return 0
 
     db_url = get_database_url()
+    assert_seed_write_allowed(db_url)
     engine = create_async_engine(db_url, echo=False)
 
     async with engine.begin() as conn:
