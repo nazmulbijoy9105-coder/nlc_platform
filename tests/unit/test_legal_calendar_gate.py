@@ -224,10 +224,18 @@ async def test_customer_calendar_generation_uses_source_backed_definitions_and_t
 
     company_id = uuid4()
     definition_with_fact = SimpleNamespace(
-        id=uuid4(), rule_id="AGM-001", trigger_fact_key="incorporation_date"
+        id=uuid4(),
+        rule_id="AGM-001",
+        trigger_fact_key="incorporation_date",
+        event_type="FIRST_AGM",
+        period_label="AGM-001-2026",
     )
     definition_without_fact = SimpleNamespace(
-        id=uuid4(), rule_id="AUD-001", trigger_fact_key="auditor_appointment_date"
+        id=uuid4(),
+        rule_id="AUD-001",
+        trigger_fact_key="auditor_appointment_date",
+        event_type="AUDITOR_APPOINTMENT",
+        period_label="AUD-001-2026",
     )
     fact = SimpleNamespace(id=uuid4())
 
@@ -263,8 +271,8 @@ async def test_customer_calendar_generation_uses_source_backed_definitions_and_t
         def __init__(self, db):
             self.db = db
 
-        async def get_calendar(self, company_id, include_past_days, include_future_days):
-            assert company_id == company_id
+        async def get_calendar(self, requested_company_id, include_past_days, include_future_days):
+            assert requested_company_id == company_id
             assert include_past_days == 0
             assert include_future_days == 3 * 366
             return [{"event_id": "already-persisted"}]
