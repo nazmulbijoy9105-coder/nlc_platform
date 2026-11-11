@@ -1,12 +1,12 @@
-# SEED-01: This script upserts by rule_id (SELECT then UPDATE/INSERT).
+# SEED-01: This script inserts missing rule IDs only; existing definitions are preserved.
 # It must NEVER seed based on COUNT(*) < N. Count checks are verification only.
 #!/usr/bin/env python3
 """
 NEUM LEX COUNSEL — Legal Rules Seeder
 scripts/seed_rules.py
 
-Standalone script to seed all 85 ILRMF rules (engine parity).
-Safe to run multiple times — upserts by rule_id.
+Development-only bootstrap utility for the 85-rule ILRMF catalogue.
+Safe to repeat — inserts missing IDs and preserves existing definitions.
 
 Statutory bases must match app/rule_engine/engine.py.
 ID parity is verified by tests; field-level statutory_basis
