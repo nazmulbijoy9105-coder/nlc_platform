@@ -1,74 +1,90 @@
-# =============================================================================
-# GitHub Actions: Trigger Render Backend Redeploy on Push to main
-# Backend: https://nlc-platform.onrender.com
-# =============================================================================
+# CI-gated Render deployment. Render's native autoDeploy remains disabled.
+# A deploy hook is triggered only after the CI workflow succeeds for current main.
 
 name: Deploy Backend (Render)
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  workflow_run:
+    workflows: ["CI"]
+    branches: ["main"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nlc-platform-production-render-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy-render:
     name: Trigger Render Redeploy
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout the CI-tested commit
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 1
+
+      - name: Skip stale CI results
+        id: freshness
+        env:
+          TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          if [[ -z "$CURRENT_MAIN_SHA" ]]; then
+            echo "::error::Could not resolve current main SHA."
+            exit 1
+          fi
+          if [[ "$CURRENT_MAIN_SHA" == "$TARGET_SHA" ]]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+            echo "CI-tested SHA $TARGET_SHA is current main."
+          else
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping stale CI result $TARGET_SHA; current main is $CURRENT_MAIN_SHA."
+          fi
+
       - name: Trigger Render Deploy Hook
         id: trigger
+        if: steps.freshness.outputs.current == 'true'
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         shell: bash
         run: |
           set -euo pipefail
-
           if [[ -z "${RENDER_DEPLOY_HOOK:-}" ]]; then
             echo "::error::RENDER_DEPLOY_HOOK_URL secret is not configured."
-            echo "Configure it in GitHub Actions secrets before triggering a deployment."
             exit 1
           fi
-
-          echo "Triggering Render deploy..."
-          if RESPONSE=$(curl --silent --show-error --fail-with-body --max-time 30 \
-            --request POST "$RENDER_DEPLOY_HOOK"); then
-            echo "Render accepted the deploy request."
-          else
-            echo "::error::Render deploy hook request failed."
-            exit 1
-          fi
-
-          # Render's response contains a deployment identifier, not the hook URL.
+          echo "Triggering Render deploy after successful CI..."
+          RESPONSE=$(curl --silent --show-error --fail-with-body --max-time 30 \
+            --request POST "$RENDER_DEPLOY_HOOK")
           DEPLOYMENT_ID=$(printf '%s' "$RESPONSE" | python -c \
-            'import json,sys; data=json.load(sys.stdin); print(data.get("deploy", {}).get("id", ""))') || {
-              echo "::error::Could not parse the Render deployment response."
-              exit 1
-            }
+            'import json,sys; data=json.load(sys.stdin); print(data.get("deploy", {}).get("id", ""))')
           if [[ -z "$DEPLOYMENT_ID" ]]; then
             echo "::error::Render response did not contain a deployment ID."
             exit 1
           fi
-
           echo "Render deployment ID: $DEPLOYMENT_ID"
           echo "deployment_id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
 
       - name: Wait and verify backend health
+        if: steps.trigger.outcome == 'success'
         env:
           DEPLOYMENT_ID: ${{ steps.trigger.outputs.deployment_id }}
         shell: bash
         run: |
           set -euo pipefail
-
           echo "Waiting 3 minutes for Render deployment $DEPLOYMENT_ID to start..."
           sleep 180
-
           HEALTH_URL="https://nlc-platform.onrender.com/api/v1/health/live"
           BODY_FILE="$(mktemp)"
           trap 'rm -f "$BODY_FILE"' EXIT
-
           for attempt in 1 2 3 4 5; do
-            # A curl transport failure is a failed probe (000), not a shell failure.
             if STATUS=$(curl --silent --show-error --output "$BODY_FILE" \
               --write-out '%{http_code}' --connect-timeout 10 --max-time 15 \
               "$HEALTH_URL"); then
@@ -76,26 +92,50 @@ jobs:
             else
               STATUS="000"
             fi
-
             echo "Deployment $DEPLOYMENT_ID — health probe $attempt/5: HTTP $STATUS"
             if [[ "$STATUS" == "200" ]]; then
-              echo "Backend health check passed."
+              echo "Backend liveness passed."
               head -c 1000 "$BODY_FILE"
               echo
               exit 0
             fi
-
             if [[ -s "$BODY_FILE" ]]; then
-              echo "Health response body (first 1000 bytes):"
               head -c 1000 "$BODY_FILE"
               echo
             fi
-
-            if [[ "$attempt" -lt 5 ]]; then
-              echo "Health check not ready; retrying in 30 seconds..."
-              sleep 30
-            fi
+            if [[ "$attempt" -lt 5 ]]; then sleep 30; fi
           done
-
-          echo "::error::Deployment $DEPLOYMENT_ID did not become healthy after five probes."
+          echo "::error::Deployment $DEPLOYMENT_ID did not become live after five probes."
           exit 1
+
+      - name: Verify backend readiness
+        if: steps.trigger.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          HEALTH_URL="https://nlc-platform.onrender.com/api/v1/health/ready"
+          BODY_FILE="$(mktemp)"
+          trap 'rm -f "$BODY_FILE"' EXIT
+          for attempt in 1 2 3 4 5; do
+            if STATUS=$(curl --silent --show-error --output "$BODY_FILE" \
+              --write-out '%{http_code}' --connect-timeout 10 --max-time 20 \
+              "$HEALTH_URL"); then
+              :
+            else
+              STATUS="000"
+            fi
+            echo "Readiness probe $attempt/5: HTTP $STATUS"
+            if [[ "$STATUS" == "200" ]]; then
+              head -c 1000 "$BODY_FILE"
+              echo
+              exit 0
+            fi
+            if [[ -s "$BODY_FILE" ]]; then head -c 1000 "$BODY_FILE"; echo; fi
+            if [[ "$attempt" -lt 5 ]]; then sleep 30; fi
+          done
+          echo "::error::Backend readiness did not pass after five probes."
+          exit 1
+
+      - name: Report skipped stale CI result
+        if: steps.freshness.outputs.current == 'false'
+        run: echo "No deploy was triggered because main advanced after this CI run."
