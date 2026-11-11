@@ -18,7 +18,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_user, get_db_for_user, require_roles
+from app.core.company_authorization import ensure_staff_company_scope
+from app.core.dependencies import get_current_user, get_db_for_user, require_company_access, require_roles
+from app.core.entitlement import require_entitlement
 from app.models.company_fact import CompanyFact
 from app.models.compliance_calendar import ComplianceCalendarEvent
 from app.models.enums import CalendarEventStatus, CalendarEventType
@@ -31,11 +33,8 @@ from app.models.legal_provenance import (
 from app.models.rules import LegalRule
 from app.services.legal_deadline_engine import DeadlineRule, calculate_deadline_candidate
 
-router = APIRouter(
-    prefix="/legal-provenance",
-    tags=["Legal Source Provenance"],
-    dependencies=[Depends(require_roles("SUPER_ADMIN"))],
-)
+router = APIRouter(prefix="/legal-provenance", tags=["Legal Source Provenance"])
+
 
 MappingKind = Literal["RULE_BASIS", "DEADLINE_BASIS", "PENALTY_BASIS"]
 ReleaseScope = Literal["SCORING", "DEADLINE"]
@@ -127,8 +126,6 @@ class ProductOwnerDecision(BaseModel):
 
 
 class DeadlinePreviewRequest(BaseModel):
-    company_id: UUID
-    definition_id: UUID
     fact_id: UUID
 
 
@@ -200,7 +197,7 @@ def _source_state(source: LegalSource) -> str:
     return "ARTIFACT_REFERENCE_RECORDED" if source.artifact_sha256 else "REFERENCE_ONLY"
 
 
-@router.post("/sources", status_code=201)
+@router.post("/sources", status_code=201, dependencies=[Depends(require_roles("SUPER_ADMIN"))])
 async def register_source(
     body: SourceCreate,
     db: AsyncSession = Depends(get_db_for_user),
@@ -247,7 +244,7 @@ async def register_source(
     }
 
 
-@router.post("/mappings", status_code=201)
+@router.post("/mappings", status_code=201, dependencies=[Depends(require_roles("SUPER_ADMIN"))])
 async def map_rule_to_source(
     body: MappingCreate,
     db: AsyncSession = Depends(get_db_for_user),
@@ -292,7 +289,7 @@ async def map_rule_to_source(
     }
 
 
-@router.post("/deadlines/definitions", status_code=201)
+@router.post("/deadlines/definitions", status_code=201, dependencies=[Depends(require_roles("SUPER_ADMIN"))])
 async def register_deadline_definition(
     body: DeadlineDefinitionCreate,
     db: AsyncSession = Depends(get_db_for_user),
@@ -362,7 +359,7 @@ async def register_deadline_definition(
     }
 
 
-@router.post("/decisions", status_code=201)
+@router.post("/decisions", status_code=201, dependencies=[Depends(require_roles("SUPER_ADMIN"))])
 async def record_product_owner_decision(
     body: ProductOwnerDecision,
     db: AsyncSession = Depends(get_db_for_user),
@@ -438,16 +435,26 @@ async def record_product_owner_decision(
     }
 
 
-@router.post("/deadlines/preview")
+@router.post(
+    "/companies/{company_id}/deadlines/{definition_id}/preview",
+    dependencies=[
+        Depends(require_company_access("company_id")),
+        Depends(require_entitlement("compliance_package")),
+    ],
+)
 async def preview_or_release_deadline(
+    company_id: UUID,
+    definition_id: UUID,
     body: DeadlinePreviewRequest,
     db: AsyncSession = Depends(get_db_for_user),
     current_user=Depends(get_current_user),
 ):
+    if current_user.role == "LEGAL_STAFF":
+        await ensure_staff_company_scope(company_id, current_user, db)
     definition = (
         await db.execute(
             select(LegalDeadlineDefinition).where(
-                LegalDeadlineDefinition.id == body.definition_id
+                LegalDeadlineDefinition.id == definition_id
             )
         )
     ).scalar_one_or_none()
@@ -457,7 +464,7 @@ async def preview_or_release_deadline(
         await db.execute(
             select(CompanyFact).where(
                 CompanyFact.id == body.fact_id,
-                CompanyFact.company_id == body.company_id,
+                CompanyFact.company_id == company_id,
             )
         )
     ).scalar_one_or_none()
@@ -478,61 +485,26 @@ async def preview_or_release_deadline(
     ).scalar_one_or_none()
     if source is None:
         raise HTTPException(409, "Deadline source reference is missing")
-    approved = (
+    latest_decision = (
         await db.execute(
-            select(LegalRuleReleaseEvent.id).where(
-                LegalRuleReleaseEvent.event_type == "PRODUCT_OWNER_APPROVED",
-                LegalRuleReleaseEvent.decision == "APPROVED",
+            select(LegalRuleReleaseEvent).where(
                 LegalRuleReleaseEvent.release_scope == "DEADLINE",
                 LegalRuleReleaseEvent.rule_id == definition.rule_id,
                 LegalRuleReleaseEvent.source_id == definition.source_id,
                 LegalRuleReleaseEvent.mapping_id == definition.mapping_id,
                 LegalRuleReleaseEvent.deadline_definition_id == definition.id,
+                LegalRuleReleaseEvent.decision.in_(["APPROVED", "REVOKED"]),
             ).order_by(
                 LegalRuleReleaseEvent.created_at.desc(),
                 LegalRuleReleaseEvent.id.desc(),
             ).limit(1)
         )
     ).scalar_one_or_none()
-    revoked = (
-        await db.execute(
-            select(LegalRuleReleaseEvent.id).where(
-                LegalRuleReleaseEvent.event_type == "PRODUCT_OWNER_REVOKED",
-                LegalRuleReleaseEvent.decision == "REVOKED",
-                LegalRuleReleaseEvent.release_scope == "DEADLINE",
-                LegalRuleReleaseEvent.rule_id == definition.rule_id,
-                LegalRuleReleaseEvent.source_id == definition.source_id,
-                LegalRuleReleaseEvent.mapping_id == definition.mapping_id,
-                LegalRuleReleaseEvent.deadline_definition_id == definition.id,
-            ).order_by(
-                LegalRuleReleaseEvent.created_at.desc(),
-                LegalRuleReleaseEvent.id.desc(),
-            ).limit(1)
-        )
-    ).scalar_one_or_none()
-    # The latest decision wins; a later revoke invalidates an earlier approval.
-    is_owner_approved = approved is not None and (
-        revoked is None
-        or str(revoked) < str(approved)
+    is_owner_approved = (
+        latest_decision is not None
+        and latest_decision.event_type == "PRODUCT_OWNER_APPROVED"
+        and latest_decision.decision == "APPROVED"
     )
-    if revoked is not None and approved is not None:
-        latest_decision = (
-            await db.execute(
-                select(LegalRuleReleaseEvent.event_type).where(
-                    LegalRuleReleaseEvent.release_scope == "DEADLINE",
-                    LegalRuleReleaseEvent.rule_id == definition.rule_id,
-                    LegalRuleReleaseEvent.source_id == definition.source_id,
-                    LegalRuleReleaseEvent.mapping_id == definition.mapping_id,
-                    LegalRuleReleaseEvent.deadline_definition_id == definition.id,
-                    LegalRuleReleaseEvent.decision.in_(["APPROVED", "REVOKED"]),
-                ).order_by(
-                    LegalRuleReleaseEvent.created_at.desc(),
-                    LegalRuleReleaseEvent.id.desc(),
-                ).limit(1)
-            )
-        ).scalar_one_or_none()
-        is_owner_approved = latest_decision == "PRODUCT_OWNER_APPROVED"
-
     holidays = frozenset(date.fromisoformat(item) for item in definition.holidays)
     rule = DeadlineRule(
         rule_id=definition.rule_id,
@@ -621,7 +593,7 @@ async def preview_or_release_deadline(
     ).hexdigest()
     if existing is None:
         existing = ComplianceCalendarEvent(
-            company_id=body.company_id,
+            company_id=company_id,
             event_type=CalendarEventType(definition.event_type),
             title=definition.title,
             description="Product-owner released date derived from a verified company fact. Review underlying source and evidence.",
@@ -661,7 +633,7 @@ async def preview_or_release_deadline(
     }
 
 
-@router.get("/rules/{rule_id}")
+@router.get("/rules/{rule_id}", dependencies=[Depends(require_roles("SUPER_ADMIN"))])
 async def get_rule_provenance(
     rule_id: str,
     db: AsyncSession = Depends(get_db_for_user),
