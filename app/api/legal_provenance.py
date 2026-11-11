@@ -750,6 +750,74 @@ async def list_deadline_definitions(
     return result
 
 
+@router.get("/mappings", dependencies=[Depends(require_roles("SUPER_ADMIN"))])
+async def list_legal_rule_mappings(
+    rule_id: str | None = None,
+    limit: int = Query(500, ge=1, le=1000),
+    db: AsyncSession = Depends(get_db_for_user),
+    current_user=Depends(get_current_user),
+):
+    statement = (
+        select(LegalRuleSourceMapping, LegalSource)
+        .join(LegalSource, LegalSource.id == LegalRuleSourceMapping.source_id)
+        .order_by(LegalRuleSourceMapping.rule_id, LegalRuleSourceMapping.created_at)
+        .limit(limit)
+    )
+    if rule_id:
+        statement = statement.where(LegalRuleSourceMapping.rule_id == rule_id)
+    rows = (await db.execute(statement)).all()
+    return [
+        {
+            "mapping_id": str(mapping.id),
+            "rule_id": mapping.rule_id,
+            "source_id": str(source.id),
+            "source_title": source.instrument_title,
+            "source_version": source.version_label,
+            "mapping_kind": mapping.mapping_kind,
+            "provision_citation": mapping.provision_citation,
+            "rationale": mapping.rationale,
+            "created_at": mapping.created_at.isoformat() if mapping.created_at else None,
+        }
+        for mapping, source in rows
+    ]
+
+
+@router.get("/events", dependencies=[Depends(require_roles("SUPER_ADMIN"))])
+async def list_legal_release_events(
+    rule_id: str | None = None,
+    limit: int = Query(500, ge=1, le=1000),
+    db: AsyncSession = Depends(get_db_for_user),
+    current_user=Depends(get_current_user),
+):
+    statement = (
+        select(LegalRuleReleaseEvent)
+        .order_by(LegalRuleReleaseEvent.sequence_no.desc())
+        .limit(limit)
+    )
+    if rule_id:
+        statement = statement.where(LegalRuleReleaseEvent.rule_id == rule_id)
+    rows = (await db.execute(statement)).scalars().all()
+    return [
+        {
+            "event_id": str(event.id),
+            "sequence_no": event.sequence_no,
+            "event_type": event.event_type,
+            "release_scope": event.release_scope,
+            "decision": event.decision,
+            "rule_id": event.rule_id,
+            "source_id": str(event.source_id) if event.source_id else None,
+            "mapping_id": str(event.mapping_id) if event.mapping_id else None,
+            "deadline_definition_id": str(event.deadline_definition_id) if event.deadline_definition_id else None,
+            "actor_id": str(event.actor_id),
+            "reason": event.reason,
+            "event_hash": event.event_hash,
+            "previous_event_hash": event.previous_event_hash,
+            "created_at": event.created_at.isoformat() if event.created_at else None,
+        }
+        for event in rows
+    ]
+
+
 @router.get("/rules/{rule_id}")
 async def get_rule_provenance(
     rule_id: str,
