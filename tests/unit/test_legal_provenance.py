@@ -7,7 +7,12 @@ from types import SimpleNamespace
 import pytest
 from pydantic import ValidationError
 
-from app.api.legal_provenance import MappingBulkCreate, MappingCreate, SourceCreate, _source_state
+from app.api.legal_provenance import (
+    MappingBulkCreate,
+    MappingCreate,
+    SourceCreate,
+    _source_state,
+)
 from app.services.legal_deadline_engine import (
     DeadlineRule,
     calculate_deadline,
