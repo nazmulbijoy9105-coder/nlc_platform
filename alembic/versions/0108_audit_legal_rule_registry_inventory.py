@@ -60,8 +60,7 @@ def upgrade() -> None:
             ) THEN
                 EXECUTE 'GRANT USAGE ON SCHEMA audit TO nlc_ci_audit_role';
                 EXECUTE
-                    'GRANT SELECT ON audit.legal_rule_registry_inventory '
-                    'TO nlc_ci_audit_role';
+                    'GRANT SELECT ON audit.legal_rule_registry_inventory TO nlc_ci_audit_role';
             END IF;
         END
         $$
