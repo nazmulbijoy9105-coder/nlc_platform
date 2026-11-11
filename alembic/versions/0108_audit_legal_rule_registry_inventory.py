@@ -72,7 +72,7 @@ def upgrade() -> None:
     )
     op.execute(
         """
-        DO $$$
+        DO $$
         BEGIN
             IF EXISTS (
                 SELECT 1 FROM pg_roles WHERE rolname = 'nlc_ci_audit_role'
@@ -82,7 +82,7 @@ def upgrade() -> None:
                     'GRANT SELECT ON audit.legal_rule_registry_inventory TO nlc_ci_audit_role';
             END IF;
         END
-        $$$
+        $$
         """
     )
 
