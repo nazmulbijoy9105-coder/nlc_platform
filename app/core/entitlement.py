@@ -43,11 +43,11 @@ async def _company_contexts(
             raise HTTPException(status_code=400, detail="Invalid company context") from exc
         if role_value == "LEGAL_STAFF":
             from app.core.company_authorization import ensure_staff_company_scope
-            await ensure_staff_company_scope(document_company_id, current_user, db)
-            return [document_company_id]
+            await ensure_staff_company_scope(company_id, current_user, db)
+            return [company_id]
         membership = await db.execute(
             select(CompanyUserAccess.company_id).where(
-                CompanyUserAccess.company_id == document_company_id,
+                CompanyUserAccess.company_id == company_id,
                 CompanyUserAccess.user_id == current_user.id,
                 CompanyUserAccess.is_active.is_(True),
             ).limit(1)
