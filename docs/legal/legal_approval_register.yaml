@@ -95,254 +95,254 @@ rules:
     status: APPROVED
     score_eligible: true
   - rule_id: ACC-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: ACC-003
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: AGM-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: AGM-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: AGM-003
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: AGM-004
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: AGM-005
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: AGM-006
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: AGM-007
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: AR-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: false
   - rule_id: AR-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: AR-003
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: AR-004
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: AUD-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: AUD-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: AUD-003
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: AUD-004
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: AUD-005
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: BNK-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: BNK-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: BNK-003
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: BOD-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: BOD-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: BOD-003
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: BSEC-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: BSEC-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: BSEC-003
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: BSEC-004
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: CAP-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: CAP-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: CAP-003
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: CAP-004
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: CHG-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: DEF-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: DEF-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: DIR-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: DIR-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: DIR-003
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: DIR-004
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: DIR-005
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: DIR-006
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: DIR-007
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: DIR-008
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: DIR-010
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: ESC-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: ESC-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: ESC-003
-    status: VERIFIED
+    status: APPROVED
     score_eligible: false
   - rule_id: ESC-004
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: ESC-005
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: FX-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: INC-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: INC-003
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: INC-004
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: INC-005
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: INC-006
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: INC-007
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: LBR-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: LBR-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: LBR-003
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: MEM-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: OFF-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: REG-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: REG-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: REG-003
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: SH-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: SH-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: false
   - rule_id: SH-003
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: STR-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: STR-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: STR-003
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: TAX-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: TAX-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: TAX-003
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: TAX-004
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: TL-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: TL-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: TR-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: TR-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: TR-003
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: TR-004
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: TR-005
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: TR-006
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: VAT-002
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: VAT-003
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
