@@ -218,6 +218,70 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 
+
+class RedactedUnhandledExceptionMiddleware:
+    """Catch unexpected HTTP exceptions before the ASGI server logs frame locals.
+
+    ServerErrorMiddleware/ASGI server tracebacks can include request scope locals,
+    including Authorization and Cookie headers. Keep the application log minimal;
+    Sentry receives the exception only through the configured scrubber.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+
+        try:
+            await self.app(scope, receive, send)
+        except Exception as exc:
+            state = scope.get("state") or {}
+            request_id = state.get("request_id") or str(uuid.uuid4())
+            logger.error(
+                "unhandled_exception",
+                path=scope.get("path", ""),
+                method=scope.get("method", ""),
+                request_id=request_id,
+                error_type=type(exc).__name__,
+            )
+            try:
+                import sentry_sdk
+                sentry_sdk.capture_exception(exc)
+            except Exception:
+                # Error reporting must never replace the safe HTTP response.
+                pass
+
+            headers = {
+                "X-Request-ID": request_id,
+                "Cache-Control": "no-store, no-cache, must-revalidate",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Referrer-Policy": "strict-origin-when-cross-origin",
+            }
+            if settings.environment == "production":
+                headers["Strict-Transport-Security"] = (
+                    "max-age=31536000; includeSubDomains; preload"
+                )
+            response = JSONResponse(
+                status_code=500,
+                content={
+                    "error": True,
+                    "status_code": 500,
+                    "detail": (
+                        "An unexpected error occurred. Please contact NLC support "
+                        "with your request ID."
+                    ),
+                    "request_id": request_id,
+                },
+                headers=headers,
+            )
+            await response(scope, receive, send)
+
+
+
 # ---------------------------------------------------------------------------
 # Exception handlers
 # ---------------------------------------------------------------------------
@@ -365,6 +429,8 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(AccessLogMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
+    # Catch unexpected errors before the ASGI server can emit frame locals.
+    app.add_middleware(RedactedUnhandledExceptionMiddleware)
     # ------------------------------------------------------------------
     # Exception handlers
     # ------------------------------------------------------------------
