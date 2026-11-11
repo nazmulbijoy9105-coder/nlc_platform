@@ -94,7 +94,7 @@ async def test_rule_history_returns_empty_list_when_no_versions(monkeypatch):
     assert result == []
 
 
-def test_public_rule_response_uses_owner_attested_legal_verification_inventory():
+def test_public_rule_response_keeps_independent_legal_review_pending_after_owner_release():
     created_at = datetime(2026, 11, 6, 12, 0, tzinfo=UTC)
     rule = SimpleNamespace(
         rule_id="AGM-001",
@@ -117,7 +117,7 @@ def test_public_rule_response_uses_owner_attested_legal_verification_inventory()
 
     response = rules_api._rule_to_response(rule)
 
-    # The owner-attested inventory is independent of the database's legacy per-row status.
+    # Product-owner release does not establish independent legal/source verification.
     # Company-specific applicability and evidence remain separate runtime decisions.
     assert response.verification_status == "VERIFIED"
     assert response.verified_at is None
