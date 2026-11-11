@@ -19,11 +19,30 @@ depends_on = None
 
 
 def upgrade() -> None:
+    op.execute(
+        """
+        DO $
+        DECLARE
+            owner_can_bypass_rls BOOLEAN;
+        BEGIN
+            SELECT rolsuper OR rolbypassrls
+              INTO owner_can_bypass_rls
+              FROM pg_roles
+             WHERE rolname = current_user;
+            IF NOT COALESCE(owner_can_bypass_rls, FALSE) THEN
+                RAISE EXCEPTION
+                    '0108 requires a migration principal with BYPASSRLS '
+                    'so the audit view cannot silently omit RLS-filtered rows';
+            END IF;
+        END
+        $
+        """
+    )
     op.execute("CREATE SCHEMA IF NOT EXISTS audit")
     op.execute(
         """
         CREATE OR REPLACE VIEW audit.legal_rule_registry_inventory
-        WITH (security_barrier = true)
+        WITH (security_barrier = true, security_invoker = false)
         AS
         SELECT
             rule_id,
