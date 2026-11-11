@@ -1,4 +1,4 @@
-"""Statutory calendar must remain unavailable until legal approval is real."""
+"""Statutory calendar creation stays gated by registered product-owner releases."""
 
 from fastapi import HTTPException
 
@@ -38,9 +38,9 @@ def test_calendar_api_returns_unavailable_not_an_empty_no_deadline_claim(monkeyp
         calendar_api._require_calendar_release()
     except HTTPException as exc:
         assert exc.status_code == 503
-        assert "pending rule-level legal validation" in exc.detail
+        assert "No registered product-owner approved deadline manifest" in exc.detail
     else:
-        raise AssertionError("calendar endpoint must fail closed before legal approval")
+        raise AssertionError("calendar endpoint must fail closed before a product-owner deadline manifest")
 
 
 def test_customer_facing_dashboard_reads_only_persisted_deadline_events():
