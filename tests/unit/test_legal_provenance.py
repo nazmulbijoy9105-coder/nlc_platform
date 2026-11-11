@@ -182,3 +182,42 @@ def test_source_registry_listing_remains_super_admin_only():
         if getattr(route, "path", None) == "/legal-provenance/sources"
     )
     assert route.dependant.dependencies
+
+
+def test_bd_starter_catalog_has_unique_official_source_version_keys():
+    from app.api.legal_provenance import BD_STARTER_SOURCE_CATALOG
+
+    assert len(BD_STARTER_SOURCE_CATALOG) == 10
+    identities = [
+        (source["source_key"], source["version_label"])
+        for source in BD_STARTER_SOURCE_CATALOG
+    ]
+    assert len(identities) == len(set(identities))
+    for source in BD_STARTER_SOURCE_CATALOG:
+        assert source["source_key"].startswith("BD-")
+        assert source["jurisdiction"] == "BD"
+        assert source["official_url"].startswith("https://")
+        assert source["instrument_title"]
+        assert source["issuing_authority"]
+        assert source["citation"]
+        assert source["version_label"]
+        # A catalogue reference is not evidence of archived source bytes.
+        assert "artifact_sha256" not in source
+        assert "artifact_uri" not in source
+
+
+def test_starter_source_import_endpoint_is_super_admin_only():
+    from app.api.legal_provenance import router
+    from app.core.dependencies import get_current_user, require_roles
+
+    route = next(
+        route for route in router.routes
+        if getattr(route, "path", None) == "/legal-provenance/starter-sources/register"
+    )
+    dependencies = route.dependant.dependencies
+    assert get_current_user in {dependency.call for dependency in dependencies}
+    assert any(
+        getattr(dependency.call, "__name__", "") == "role_checker"
+        or "require_roles" in getattr(dependency.call, "__qualname__", "")
+        for dependency in dependencies
+    )
