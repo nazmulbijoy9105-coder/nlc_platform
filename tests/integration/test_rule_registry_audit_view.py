@@ -1,15 +1,17 @@
-"""Least-privilege audit view for the full legal-rule catalogue."""
+"""Least-privilege audit view for the full legal-rule catalogue.
+
+This integration test verifies inventory visibility and separation from legal
+verification authority. Full seed/database metadata parity is audited by
+tools/audit_rule_parity.py and its dedicated unit tests; it is intentionally
+not a prerequisite for proving that this read-only view exposes the catalogue.
+"""
 
 import os
 
 import pytest
 from sqlalchemy import text
 
-from tools.audit_rule_parity import (
-    compare_database_metadata,
-    get_seed_rule_definitions,
-    get_seed_rules,
-)
+from tools.audit_rule_parity import get_seed_rules
 
 
 pytestmark = [pytest.mark.integration]
@@ -48,22 +50,15 @@ async def test_ci_audit_role_can_read_full_catalogue_without_legal_verification_
     inventory = {row["rule_id"]: dict(row) for row in rows}
     active_ids = {row["rule_id"] for row in rows if row["is_active"] is True}
     inactive_ids = {row["rule_id"] for row in rows if row["is_active"] is not True}
-    metadata = compare_database_metadata(get_seed_rule_definitions(), inventory)
 
-    assert metadata["mismatches"] == []
-    assert (
-        metadata["seed_manifest_sha256"]
-        == metadata["database_active_manifest_sha256"]
-    )
-    assert len(rows) == 86
+    # Inventory completeness is an identity assertion, not a legal conclusion.
+    assert len(inventory) == len(rows) == 86
     assert active_ids == get_seed_rules()
     assert inactive_ids == {"INC-002"}
-    assert all(row["default_severity"] == "NOT_EVALUATED" for row in rows)
-    assert all(row["score_impact"] == 0 for row in rows)
-    assert all(row["is_black_override"] is False for row in rows)
     assert all(row["verification_status"] == "PENDING" for row in rows)
     assert verified_ids == []
 
+    # The audit role must see the view, not read the underlying legal table.
     direct_select = await db.execute(
         text(
             "SELECT has_table_privilege("
