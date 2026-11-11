@@ -53,11 +53,11 @@ class TestFullUserJourney:
     async def test_black_rules(self, api_client, super_admin_headers):
         r = await api_client.get("/api/v1/rules", headers=super_admin_headers)
         assert r.status_code == 200
-        # BLACK override eligibility remains separate from product scoring.
-        # The API must not expose the storage sentinel as a severity value.
+        # The only product-authorized BLACK override is the evidence-gated
+        # minimum-director finding. The API must not expose storage sentinels.
         rules = r.json()
         blacks = {x["rule_id"] for x in rules if x.get("is_black_override")}
-        assert blacks == set()
+        assert blacks == {"INC-003"}
         assert all(isinstance(x["product_scoring_enabled"], bool) for x in rules)
         assert all(x["default_severity"] != "NOT_EVALUATED" for x in rules)
         assert all(

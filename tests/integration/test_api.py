@@ -1081,11 +1081,10 @@ class TestRules:
         assert resp.status_code == 200
         rules = resp.json()
         assert isinstance(rules, list)
-        # If seeded, must be exactly 4
-        if rules:
-            assert len(rules) >= 9
-            black_ids = {r["rule_id"] for r in rules}
-            assert {"AUD-003", "TR-005", "ESC-002", "ESC-003"}.issubset(black_ids)
+        # Product-owner policy authorizes one evidence-gated company-law override.
+        black_ids = {r["rule_id"] for r in rules}
+        assert black_ids == {"INC-003"}
+        assert all(r["is_black_override"] is True for r in rules)
 
     @pytest.mark.asyncio
     async def test_get_rule_summary(self, api_client, super_admin_token):
@@ -1186,8 +1185,10 @@ class TestRules:
                 assert item["score_impact"] == 0
                 assert item["is_active"] is True
             else:
-                assert "Not part of the product scoring allowlist" in item["statutory_basis"]
-                assert "Informational catalogue entry only" in item["description"]
+                assert item["statutory_basis"] == (
+                    "Informational catalogue entry; no score deduction is applied."
+                )
+                assert "Informational catalogue entry" in item["description"]
                 assert item["default_severity"] is None
                 assert item["product_scoring_enabled"] is False
                 assert item["score_impact"] == 0

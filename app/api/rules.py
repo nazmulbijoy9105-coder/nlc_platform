@@ -34,7 +34,12 @@ from app.core.dependencies import (
     require_roles,
 )
 from app.models.enums import SeverityLevel
-from app.rule_engine.engine import LEGAL_SCORE_RELEASED, PRODUCT_SCORING_RULE_IDS, VERIFIED_RULE_IDS
+from app.rule_engine.engine import (
+    AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
+    LEGAL_SCORE_RELEASED,
+    PRODUCT_SCORING_RULE_IDS,
+    VERIFIED_RULE_IDS,
+)
 from app.models.user import User
 from app.services.notification_service import ActivityService
 from app.services.rules_service import RulesService
@@ -118,30 +123,36 @@ class MessageResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 def _rule_to_response(rule) -> RuleResponse:
-    score_eligible = LEGAL_SCORE_RELEASED and rule.rule_id in PRODUCT_SCORING_RULE_IDS
+    scoring_catalogue_member = rule.rule_id in PRODUCT_SCORING_RULE_IDS
+    product_scoring_enabled = LEGAL_SCORE_RELEASED and scoring_catalogue_member
     legally_verified = rule.rule_id in VERIFIED_RULE_IDS
     return RuleResponse(
         rule_id=rule.rule_id,
         rule_name=rule.rule_name,
         rule_type=str(rule.rule_type),
         statutory_basis=(
-            rule.statutory_basis if score_eligible
-            else "Not part of the product scoring allowlist; no score deduction is applied."
+            rule.statutory_basis if scoring_catalogue_member
+            else "Informational catalogue entry; no score deduction is applied."
         ),
         description=(
-            rule.description if score_eligible
+            rule.description if scoring_catalogue_member
             else "Informational catalogue entry only. No score deduction is applied."
         ),
         default_severity=(
             None
             if str(getattr(rule.default_severity, "value", rule.default_severity)).upper() == "NOT_EVALUATED"
             else str(getattr(rule.default_severity, "value", rule.default_severity))
-        ) if score_eligible else None,
-        product_scoring_enabled=score_eligible,
-        score_impact=rule.score_impact if score_eligible else 0,
-        revenue_tier=str(rule.revenue_tier) if score_eligible else "COMPLIANCE_PACKAGE",
-        is_black_override=(rule.is_black_override and rule.rule_id in VERIFIED_RULE_IDS) if score_eligible else False,
-        is_active=bool(rule.is_active and score_eligible),
+        ) if scoring_catalogue_member else None,
+        product_scoring_enabled=product_scoring_enabled,
+        score_impact=rule.score_impact if scoring_catalogue_member else 0,
+        revenue_tier=str(rule.revenue_tier) if scoring_catalogue_member else "COMPLIANCE_PACKAGE",
+        # Catalogue configuration remains visible while score publication is paused.
+        # This field describes product policy, not independent legal verification.
+        is_black_override=(
+            scoring_catalogue_member
+            and rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+        ),
+        is_active=bool(rule.is_active and scoring_catalogue_member),
         verification_status=rule.verification_status if legally_verified else "PENDING",
         verified_at=rule.verified_at.isoformat() if legally_verified and rule.verified_at else None,
         statutory_effective_date=(
@@ -198,20 +209,6 @@ async def get_rule_summary(
     svc = RulesService(db)
     rules = await svc.get_all()
 
-    if not LEGAL_SCORE_RELEASED:
-        return RuleSummaryResponse(
-            total_rules=len(rules),
-            active_rules=0,
-            inactive_rules=len(rules),
-            black_override_rules=0,
-            by_module={
-                module: sum(1 for item in rules if item.rule_id.split("-")[0] == module)
-                for module in {rule.rule_id.split("-")[0] for rule in rules}
-            },
-            by_severity={"NOT_EVALUATED": len(rules)},
-            total_max_deduction=0,
-        )
-
     by_module: dict[str, int] = {}
     by_severity: dict[str, int] = {}
     total_max_deduction = 0
@@ -223,10 +220,13 @@ async def get_rule_summary(
         module = r.rule_id.split("-")[0]
         by_module[module] = by_module.get(module, 0) + 1
         by_severity[r.default_severity] = by_severity.get(r.default_severity, 0) + 1
-        if r.is_active:
+        if r.is_active and r.rule_id in PRODUCT_SCORING_RULE_IDS:
             active_count += 1
             total_max_deduction += r.score_impact
-        if r.is_black_override:
+        if (
+            r.rule_id in PRODUCT_SCORING_RULE_IDS
+            and r.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+        ):
             black_overrides += 1
 
     return RuleSummaryResponse(
@@ -248,18 +248,21 @@ async def get_rule_summary(
     "/black-overrides",
     response_model=list[RuleResponse],
     summary="List all BLACK override rules",
-    description="Returns all rules where is_black_override=True; the set is data-driven and may change through governed rule updates.",
+    description="Returns BLACK override rules enabled by the product-owner authorization allowlist.",
     dependencies=[Depends(require_roles("SUPER_ADMIN"))],
 )
 async def get_black_overrides(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    if not LEGAL_SCORE_RELEASED:
-        return []
     svc = RulesService(db)
-    rules = await svc.get_black_override_rules()
-    return [_rule_to_response(r) for r in rules]
+    rules = await svc.get_all()
+    return [
+        _rule_to_response(rule)
+        for rule in rules
+        if rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+        and rule.rule_id in PRODUCT_SCORING_RULE_IDS
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -306,14 +309,9 @@ async def update_rule(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    if not LEGAL_SCORE_RELEASED:
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Rule activation or modification is withheld until the rule-level "
-                "counsel approval workflow and legal release gate are complete."
-            ),
-        )
+    # Super Admin rule maintenance is independent of customer score publication.
+    # When product scoring is disabled, edits remain versioned/audited but cannot
+    # affect customer-facing scores until the product owner re-enables release.
     svc = RulesService(db)
     activity = ActivityService(db)
 

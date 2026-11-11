@@ -63,7 +63,7 @@ router = APIRouter()
 
 
 def _require_legal_release() -> None:
-    """Prevent rescue actions based on unapproved legal findings."""
+    """Prevent rescue actions while product scoring is disabled."""
     from app.rule_engine.engine import legal_score_is_released
 
     if not legal_score_is_released():
@@ -249,8 +249,8 @@ async def create_rescue_plan(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
-                "A rescue plan cannot be generated until a counsel-approved statutory "
-                "evaluation produces a RED or BLACK rescue sequence."
+                "A rescue plan requires a product-released RED or BLACK evaluation and an "
+                "active, applicable, evidence-supported finding."
             ),
         )
 

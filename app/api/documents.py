@@ -49,7 +49,7 @@ router = APIRouter()
 
 
 def _require_document_legal_release(document_type: DocumentType) -> None:
-    """Hold AI legal conclusions until the underlying rule catalogue is approved."""
+    """Hold restricted AI legal documents while product scoring release is disabled."""
     from app.rule_engine.engine import LEGAL_SCORE_RELEASED
 
     restricted_types = {
@@ -62,8 +62,8 @@ def _require_document_legal_release(document_type: DocumentType) -> None:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=(
                 "This AI-generated legal document type cannot be released while " 
-                "the underlying statutory rule catalogue remains unapproved. " 
-                "A human approval alone does not substitute for rule-level legal validation."
+                "product scoring is disabled. " 
+                "Human review and document approval remain separate requirements before client release."
             ),
         )
 

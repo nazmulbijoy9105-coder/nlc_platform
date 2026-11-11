@@ -44,7 +44,9 @@ class TestRulesAPI:
         # sentinel with the API's nullable default_severity field.
         rules = r.json()
         assert all(isinstance(x["product_scoring_enabled"], bool) for x in rules)
-        assert [x for x in rules if x["is_black_override"]] == []
+        assert {
+            x["rule_id"] for x in rules if x["is_black_override"]
+        } == {"INC-003"}
         assert all(x["default_severity"] != "NOT_EVALUATED" for x in rules)
         assert all(
             x["score_impact"] == 0

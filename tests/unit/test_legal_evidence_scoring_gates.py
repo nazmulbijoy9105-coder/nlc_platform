@@ -137,9 +137,9 @@ def test_unapproved_black_rule_cannot_force_black_score_band():
     assert result.risk_band == Severity.NOT_EVALUATED
 
 
-def test_counsel_approved_black_override_is_honoured_by_engine(monkeypatch):
-    # Simulate a separately approved rule and an explicitly authorised release.
-    # Product scoring is enabled independently of the legal-verification inventory.
+def test_product_owner_authorized_black_override_is_honoured_by_engine(monkeypatch):
+    # Product scoring and BLACK-override policy are independently configured.
+    # Neither depends on the legal-verification inventory.
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
     monkeypatch.setattr(
         engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"AUD-003"})
@@ -789,7 +789,10 @@ def test_product_released_corpus_reports_score_with_full_input_coverage():
     assert score.override_applied is False
 
 
-def test_black_severity_without_authorised_override_does_not_force_zero_score():
+def test_black_severity_without_authorised_override_does_not_force_zero_score(monkeypatch):
+    monkeypatch.setattr(
+        "app.rule_engine.engine.AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset()
+    )
     profile = _profile()
     unapproved_black = ComplianceFlag(
         rule_id="INC-003",

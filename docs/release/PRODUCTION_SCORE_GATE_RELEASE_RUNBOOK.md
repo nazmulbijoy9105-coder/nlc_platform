@@ -1,6 +1,8 @@
-# NLC production score-gate release runbook
+# Historical NLC production score-gate release runbook
 
-**Release posture:** statutory scoring remains disabled until each rule has individual counsel approval. A successful deployment is not legal approval.
+> **Superseded for scoring-release policy on 11 November 2026.** The current product configuration is documented in [PRODUCT_CONTROLLED_SCORING_RELEASE_2026-11-10.md](./PRODUCT_CONTROLLED_SCORING_RELEASE_2026-11-10.md): product-owner-controlled scoring is enabled, the 82 score-bearing rule IDs are allowlisted, and legal-verification metadata is separate from scoring eligibility. Independent counsel approval is not a software precondition for product scoring. The database, migration and deployment observations below are historical and must be revalidated before operational use.
+
+**Historical release posture:** this runbook records an earlier proposed counsel-gated release model and is not the current product scoring policy.
 
 ## Live production status — 8 November 2026 (read-only verification)
 

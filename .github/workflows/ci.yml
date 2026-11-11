@@ -124,11 +124,12 @@ jobs:
             alembic/versions/0092_rescue_source_rule_ids.py \
             alembic/versions/0093_verified_rule_audit_view.py
 
-      - name: Verify single Alembic head
+      - name: Audit complete Alembic revision DAG
         run: |
           alembic heads
           HEAD_COUNT="$(alembic heads | grep -c '(head)')"
           test "$HEAD_COUNT" -eq 1
+          python scripts/audit_alembic_graph.py
 
       - name: Run unit tests with coverage baseline
         run: |

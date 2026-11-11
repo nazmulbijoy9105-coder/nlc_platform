@@ -126,7 +126,7 @@ async def admin_dashboard(
                 message = f"Evaluation for {co.company_name or 'Unknown'} - Score: {score}/100"
                 activity_type = "EVALUATION" if score >= 50 else "VIOLATION"
             else:
-                message = f"Evaluation for {co.company_name or 'Unknown'} - statutory score withheld pending independent legal approval"
+                message = f"Evaluation for {co.company_name or 'Unknown'} - score withheld because product scoring is disabled or the evaluation is not score-eligible"
                 activity_type = "NOT_EVALUATED"
             activities.append({"id": str(co.id), "message": message, "actor": "Rule Engine", "created_at": co.last_evaluated_at.isoformat() if co.last_evaluated_at else "", "type": activity_type})
     except Exception:
