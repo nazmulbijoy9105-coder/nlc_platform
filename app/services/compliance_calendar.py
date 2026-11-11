@@ -337,7 +337,7 @@ def calculate_rule_penalty(
     *,
     event_type: str,
     days_overdue: int,
-    due_date: date,
+    due_date: date | None = None,
     trigger_date: date,
     as_of: date,
     applicable: bool,
@@ -351,6 +351,8 @@ def calculate_rule_penalty(
         or (event_type, rule) not in APPROVED_PENALTY_RULES
     ):
         return None
+    if due_date is None:
+        due_date = as_of - timedelta(days=days_overdue)
     return calculate_approved_penalty(
         rule,
         days_overdue=days_overdue,

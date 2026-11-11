@@ -1191,7 +1191,9 @@ class TestRules:
                 assert item["default_severity"] is None
                 assert item["product_scoring_enabled"] is False
                 assert item["score_impact"] == 0
-                assert item["is_active"] is False
+                # All canonical catalogue entries stay active/visible.
+                # Active does not mean score-bearing: SH-002 is informational.
+                assert item["is_active"] is True
 
 
 # =============================================================================

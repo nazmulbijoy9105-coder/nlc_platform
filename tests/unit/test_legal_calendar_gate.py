@@ -149,6 +149,17 @@ def test_source_specific_penalty_service_requires_event_type_allowlist(monkeypat
         trigger_evidence_verified=True,
     ) == Decimal("100.00")
 
+    # The wrapper derives an omitted due date from the overdue interval.
+    assert calendar_service.calculate_rule_penalty(
+        rule,
+        event_type="FIRST_AGM",
+        days_overdue=20,
+        trigger_date=date(2026, 1, 1),
+        as_of=date(2026, 1, 21),
+        applicable=True,
+        trigger_evidence_verified=True,
+    ) == Decimal("100.00")
+
     # A registered rule is still rejected when the event is not applicable
     # or the caller mutates any source/formula field.
     assert calendar_service.calculate_rule_penalty(

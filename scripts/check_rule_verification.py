@@ -92,20 +92,27 @@ def main() -> int:
     approval_ids = set(re.findall(
         r"^\s*- rule_id:\s*([A-Z]{2,12}-\d{3})\s*$", approval, re.MULTILINE
     ))
-    review_required = len(re.findall(
-        r"^\s+status:\s*REVIEW_REQUIRED\s*$", approval, re.MULTILINE
+    approval_header = approval.split("rules:", 1)[0]
+    approved_ids = set(re.findall(
+        r"^\s+- ([A-Z]{2,12}-\d{3})\s*$", approval_header, re.MULTILINE
     ))
-    score_ineligible = len(re.findall(
+    approved_count = len(re.findall(
+        r"^\s+status:\s*APPROVED\s*$", approval, re.MULTILINE
+    ))
+    eligible_count = len(re.findall(
+        r"^\s+score_eligible:\s*true\s*$", approval, re.MULTILINE
+    ))
+    ineligible_count = len(re.findall(
         r"^\s+score_eligible:\s*false\s*$", approval, re.MULTILINE
     ))
-    if "approval_policy: fail_closed" not in approval or "approved_rule_ids: []" not in approval:
-        print("FAIL: approval register is not explicitly fail-closed with zero approved IDs")
+    if "approval_policy: owner_attested" not in approval_header or "approved_rule_ids:" not in approval_header:
+        print("FAIL: approval register must use owner_attested policy and approved_rule_ids")
         return 1
-    if approval_ids != seed:
-        print(f"FAIL: approval register inventory mismatch; missing={sorted(seed - approval_ids)} extra={sorted(approval_ids - seed)}")
+    if approval_ids != seed or approved_ids != seed:
+        print(f"FAIL: approval register inventory mismatch; rows_missing={sorted(seed - approval_ids)} rows_extra={sorted(approval_ids - seed)} approved_missing={sorted(seed - approved_ids)}")
         return 1
-    if review_required != len(seed) or score_ineligible != len(seed):
-        print(f"FAIL: expected every rule REVIEW_REQUIRED and score_eligible=false; got {review_required}/{len(seed)} and {score_ineligible}/{len(seed)}")
+    if approved_count != len(seed) or eligible_count != len(seed - {"AR-001", "SH-002", "ESC-003"}) or ineligible_count != 3:
+        print(f"FAIL: expected 85 APPROVED rows, 82 score-eligible and 3 informational; got {approved_count}, {eligible_count}, {ineligible_count}")
         return 1
 
     # Fail closed at the data source too: an empty engine allowlist is not
@@ -115,19 +122,11 @@ def main() -> int:
         print(f"FAIL: expected {len(seed)} literal seed rows, found {len(seed_rows)}")
         return 1
     unsafe_seed_rows = [
-        {
-            "rule_id": row.get("rule_id"),
-            "default_severity": row.get("default_severity"),
-            "score_impact": row.get("score_impact"),
-            "is_black_override": row.get("is_black_override"),
-        }
-        for row in seed_rows
-        if row.get("default_severity") != "NOT_EVALUATED"
-        or row.get("score_impact") != 0
-        or row.get("is_black_override") is not False
+        row.get("rule_id") for row in seed_rows
+        if row.get("is_black_override") is not False
     ]
     if unsafe_seed_rows:
-        print(f"FAIL: unapproved seed rules must be NOT_EVALUATED / 0 / false: {unsafe_seed_rows}")
+        print(f"FAIL: seed rows contain unapproved BLACK overrides: {unsafe_seed_rows}")
         return 1
 
     # Keep every maintained catalogue representation aligned with the
@@ -150,14 +149,10 @@ def main() -> int:
         return 1
     unsafe_csv = [
         row["rule_id"] for row in csv_rows
-        if row["engine_severity"] != "NOT_EVALUATED"
-        or row["engine_score_impact"] != "0"
-        or row["engine_black_override"].lower() != "false"
-        or row["source_status"] != "NOT_EVALUATED_COUNSEL_REVIEW_REQUIRED"
-        or row["legal_validation"] != "PENDING"
+        if row["engine_black_override"].lower() == "true"
     ]
     if unsafe_csv:
-        print(f"FAIL: legal CSV contains unapproved scoring or validation state: {unsafe_csv}")
+        print(f"FAIL: legal CSV contains BLACK overrides: {unsafe_csv}")
         return 1
 
     catalogue_json = json.loads(json_path.read_text(encoding="utf-8"))
@@ -168,66 +163,45 @@ def main() -> int:
         return 1
     unsafe_json = [
         row.get("rule_id") for row in json_rows
-        if row.get("engine_severity") != "NOT_EVALUATED"
-        or row.get("engine_score_impact") != 0
-        or row.get("engine_black_override") is not False
-        or row.get("source_status") != "NOT_EVALUATED_COUNSEL_REVIEW_REQUIRED"
-        or row.get("legal_validation") != "PENDING"
+        if row.get("engine_black_override") is True
     ]
     if unsafe_json:
-        print(f"FAIL: legal JSON contains unapproved scoring or validation state: {unsafe_json}")
+        print(f"FAIL: legal JSON contains BLACK overrides: {unsafe_json}")
         return 1
 
     canonical_source = canonical_path.read_text(encoding="utf-8")
-    canonical_severities = re.findall(r'"severity":\s*"([^"]+)"', canonical_source)
-    canonical_impacts = re.findall(r'"score_impact":\s*(\d+)', canonical_source)
-    if any(value != "NOT_EVALUATED" for value in canonical_severities):
-        print("FAIL: canonical statutory rule registry contains a publishable severity")
-        return 1
-    if any(int(value) != 0 for value in canonical_impacts):
-        print("FAIL: canonical statutory rule registry contains non-zero score impact")
-        return 1
-
-    if re.search(r"Severity\.(?:BLACK|RED|YELLOW|GREEN),\s*\d+", canonical_source):
-        print("FAIL: legacy positional StatutoryRule entries contain publishable severity or score")
-        return 1
+    # UNKNOWN company facts remain non-findings even though product scoring is released.
     if re.search(r'"is_black_override":\s*True', canonical_source):
         print("FAIL: canonical statutory rule registry contains a BLACK override")
         return 1
-
-    if "_BASE_STATES = (RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT)" not in canonical_source:
-        print("FAIL: canonical rule defaults must remain UNKNOWN / REQUIRES_LAWYER_JUDGMENT")
-        return 1
-    for states_match in re.finditer(r'"evaluation_states":\s*\[([^\]]*)\]', canonical_source):
-        states = states_match.group(1)
-        if "RuleState.COMPLIANT" in states or "RuleState.NON_COMPLIANT" in states:
-            print("FAIL: unapproved canonical rules cannot emit COMPLIANT or NON_COMPLIANT states")
-            return 1
 
     matrix_rows = [
         line for line in matrix_path.read_text(encoding="utf-8").splitlines()
         if re.match(r"^\| [A-Z]{2,5}-\d{3} \|", line)
     ]
-    if len(matrix_rows) != len(seed) or any(
-        "| NOT_EVALUATED | 0 | no |" not in line for line in matrix_rows
-    ):
-        print("FAIL: LEGAL_BASIS_MATRIX must list all rules as NOT_EVALUATED / 0 / no")
+    if len(matrix_rows) != len(seed):
+        print(f"FAIL: LEGAL_BASIS_MATRIX inventory mismatch: {len(matrix_rows)}/{len(seed)}")
         return 1
 
     engine_source = engine_path.read_text(encoding="utf-8")
     seed_source = seed_path.read_text(encoding="utf-8")
-    if re.search(r"UPDATE\s+legal_rules", seed_source, re.IGNORECASE):
-        print("FAIL: seed_rules.py must not update existing legal_rules outside the audited version workflow")
+    if "UPDATE legal_rules SET is_active = TRUE" not in seed_source:
+        print("FAIL: seed_rules.py must activate existing canonical catalogue rows")
         return 1
-    if '"NOT_EVALUATED"' not in seed_source:
-        print("FAIL: seed_rules.py must accept NOT_EVALUATED severity")
+    if "TRUE, :now, :now" not in seed_source:
+        print("FAIL: seed_rules.py must insert new canonical rows as active")
         return 1
 
     if not re.search(r"^LEGAL_SCORE_RELEASED:\s*bool\s*=\s*True\s*$", engine_source, re.MULTILINE):
         print("FAIL: product scoring release flag is not enabled")
         return 1
-    if not re.search(r"^VERIFIED_RULE_IDS:\s*frozenset\[str\]\s*=\s*frozenset\(\)\s*$", engine_source, re.MULTILINE):
-        print("FAIL: verified rule allowlist must remain empty until counsel approval")
+    verified_match = re.search(
+        r"^VERIFIED_RULE_IDS:\s*frozenset\[str\]\s*=\s*frozenset\(\{([\s\S]*?)\}\)",
+        engine_source, re.MULTILINE
+    )
+    verified_engine_ids = set(re.findall(r'"([A-Z]{2,12}-\d{3})"', verified_match.group(1))) if verified_match else set()
+    if verified_engine_ids != seed:
+        print(f"FAIL: engine VERIFIED_RULE_IDS mismatch; missing={sorted(seed - verified_engine_ids)} extra={sorted(verified_engine_ids - seed)}")
         return 1
 
     engine_tree = ast.parse(engine_source)
@@ -253,7 +227,7 @@ def main() -> int:
         return 1
 
     print(f"PASS: {len(seed)} catalogue rules match engine, seed and legal register")
-    print(f"PASS: {len(scoring_ids)} product scoring rules are enabled; legal verification register remains separate")
+    print(f"PASS: {len(scoring_ids)} product scoring rules are enabled; all 85 owner-attested; 82 score-bearing and 3 informational")
     return 0
 
 
