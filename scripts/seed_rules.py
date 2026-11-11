@@ -311,7 +311,7 @@ async def seed_rules(dry_run: bool = True, verbose: bool = False) -> int:
             sa.text("SELECT rule_id FROM legal_rules WHERE is_active = TRUE")
         )
         active_ids = {row[0] for row in ids_result.fetchall()}
-        expected_ids = {rule["rule_id"] for rule in SEED_RULES}
+        expected_ids = {rule["rule_id"] for rule in ILRMF_RULES}
         db_count = len(active_ids)
         missing_ids = sorted(expected_ids - active_ids)
         extra_ids = sorted(active_ids - expected_ids)
