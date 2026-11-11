@@ -1,11 +1,12 @@
 # Production E2E closure checklist
 
-Use this after code on `main` includes full `VERIFIED_RULE_IDS` and product scoring release.  
+Use this after the product release candidate is on `main`. Product-owner attestation and product scoring release are not independent legal/source verification. `VERIFIED_RULE_IDS` currently represents the owner-attested product inventory and must not be cited as proof of signed counsel review; record independent counsel/source verification separately when it exists.  
 **Do not mark an item done without command output, SHA, and timestamp.**
 
 ## 1. Deploy alignment
 - [ ] Note git SHA on `main`
-- [ ] Manual Render deploy of that SHA (auto-deploy is disabled)
+- [ ] Confirm CI completed successfully for the current `main` SHA; the GitHub Actions deploy hook runs only after CI success (native Render autoDeploy remains disabled)
+- [ ] Confirm Render deployment ID and deployed commit SHA correspond to the successful CI-tested `main` revision
 - [ ] Confirm `/api/v1/health/live` and `/api/v1/health/ready`
 - [ ] Confirm Vercel deployment SHA for `nlc_frontend`
 
