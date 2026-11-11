@@ -13,7 +13,7 @@ from typing import Any, Literal, cast
 from urllib.parse import urlparse
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -665,10 +665,96 @@ async def preview_or_release_deadline(
     }
 
 
-@router.get("/rules/{rule_id}", dependencies=[Depends(require_roles("SUPER_ADMIN"))])
+@router.get("/sources", dependencies=[Depends(require_roles("SUPER_ADMIN"))])
+async def list_legal_sources(
+    limit: int = Query(200, ge=1, le=500),
+    db: AsyncSession = Depends(get_db_for_user),
+    current_user=Depends(get_current_user),
+):
+    """List registered official-source references for authorised source stewards."""
+    rows = (
+        await db.execute(
+            select(LegalSource)
+            .order_by(LegalSource.jurisdiction, LegalSource.instrument_title, LegalSource.version_label)
+            .limit(limit)
+        )
+    ).scalars().all()
+    return [
+        {
+            "source_id": str(row.id),
+            "source_key": row.source_key,
+            "jurisdiction": row.jurisdiction,
+            "instrument_title": row.instrument_title,
+            "issuing_authority": row.issuing_authority,
+            "instrument_type": row.instrument_type,
+            "official_url": row.official_url,
+            "citation": row.citation,
+            "version_label": row.version_label,
+            "publication_date": row.publication_date.isoformat() if row.publication_date else None,
+            "effective_from": row.effective_from.isoformat() if row.effective_from else None,
+            "effective_to": row.effective_to.isoformat() if row.effective_to else None,
+            "artifact_state": _source_state(row),
+            "artifact_bytes_checked": False,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+        }
+        for row in rows
+    ]
+
+
+@router.get("/deadlines/definitions", dependencies=[Depends(require_roles("SUPER_ADMIN"))])
+async def list_deadline_definitions(
+    limit: int = Query(200, ge=1, le=500),
+    db: AsyncSession = Depends(get_db_for_user),
+    current_user=Depends(get_current_user),
+):
+    rows = (
+        await db.execute(
+            select(LegalDeadlineDefinition)
+            .order_by(LegalDeadlineDefinition.rule_id, LegalDeadlineDefinition.effective_from)
+            .limit(limit)
+        )
+    ).scalars().all()
+    result = []
+    for definition in rows:
+        latest = (
+            await db.execute(
+                select(LegalRuleReleaseEvent)
+                .where(
+                    LegalRuleReleaseEvent.deadline_definition_id == definition.id,
+                    LegalRuleReleaseEvent.release_scope == "DEADLINE",
+                    LegalRuleReleaseEvent.decision.in_(["APPROVED", "REVOKED"]),
+                )
+                .order_by(LegalRuleReleaseEvent.sequence_no.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        result.append({
+            "definition_id": str(definition.id),
+            "rule_id": definition.rule_id,
+            "source_id": str(definition.source_id),
+            "mapping_id": str(definition.mapping_id),
+            "event_type": definition.event_type,
+            "title": definition.title,
+            "trigger_fact_key": definition.trigger_fact_key,
+            "period_label": definition.period_label,
+            "offset": definition.offset,
+            "unit": definition.unit,
+            "adjustment": definition.adjustment,
+            "effective_from": definition.effective_from.isoformat(),
+            "effective_to": definition.effective_to.isoformat() if definition.effective_to else None,
+            "owner_decision": (
+                latest.decision if latest and latest.event_type == "PRODUCT_OWNER_APPROVED"
+                else "REVOKED" if latest else "PENDING"
+            ),
+        })
+    return result
+
+
+@router.get("/rules/{rule_id}")
 async def get_rule_provenance(
     rule_id: str,
     db: AsyncSession = Depends(get_db_for_user),
+    current_user=Depends(get_current_user),
 ):
     rule = (
         await db.execute(select(LegalRule).where(LegalRule.rule_id == rule_id))
