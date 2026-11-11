@@ -1,5 +1,6 @@
 """Regression tests for strict canonical rule parity auditing."""
 import importlib.util
+import json
 import sys
 import pytest
 from pathlib import Path
@@ -155,3 +156,26 @@ def test_database_metadata_comparison_detects_statutory_basis_drift():
 
 def test_manifest_hash_is_order_independent():
     assert AUDIT._sha256({"a": 1, "b": 2}) == AUDIT._sha256({"b": 2, "a": 1})
+
+
+def test_static_report_does_not_claim_unqueried_database_metadata_parity(tmp_path, monkeypatch):
+    monkeypatch.setattr(AUDIT, "get_engine_rules", lambda: {"AGM-001"})
+    monkeypatch.setattr(
+        AUDIT,
+        "get_seed_rule_definitions",
+        lambda: {"AGM-001": {"rule_id": "AGM-001"}},
+    )
+    monkeypatch.setattr(sys, "argv", [
+        "audit_rule_parity.py",
+        "--no-db",
+        "--no-api",
+        "--report-json",
+        str(tmp_path / "static-parity.json"),
+    ])
+
+    assert AUDIT.main() == 0
+    report = json.loads((tmp_path / "static-parity.json").read_text())
+
+    assert report["id_parity_passed"] is True
+    assert report["metadata_parity_passed"] is None
+    assert report["audit_scope"] == ["ENGINE", "SEED"]
