@@ -94,7 +94,7 @@ async def test_rule_history_returns_empty_list_when_no_versions(monkeypatch):
     assert result == []
 
 
-def test_public_rule_response_discloses_pending_legal_verification():
+def test_public_rule_response_uses_owner_attested_legal_verification_inventory():
     created_at = datetime(2026, 11, 6, 12, 0, tzinfo=UTC)
     rule = SimpleNamespace(
         rule_id="AGM-001",
@@ -117,8 +117,8 @@ def test_public_rule_response_discloses_pending_legal_verification():
 
     response = rules_api._rule_to_response(rule)
 
-    # Do not infer an effective date from a statutory citation alone; the source/version field remains null.
-    # Effective-date metadata, when captured, is not evidence of counsel approval.
-    assert response.verification_status == "PENDING"
+    # The owner-attested inventory is independent of the database's legacy per-row status.
+    # Company-specific applicability and evidence remain separate runtime decisions.
+    assert response.verification_status == "VERIFIED"
     assert response.verified_at is None
     assert response.statutory_effective_date is None
