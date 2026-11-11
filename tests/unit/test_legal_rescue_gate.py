@@ -120,20 +120,30 @@ def test_rescue_service_rejects_cross_tenant_engine_output(monkeypatch):
 
 
 
-def test_rescue_service_rejects_missing_tenant_identity(monkeypatch):
+def test_rescue_service_allows_absent_engine_company_id_when_no_mismatch_can_be_established(monkeypatch):
     from types import SimpleNamespace
 
     from app.services.rescue_service import validate_rescue_engine_output
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    flag = SimpleNamespace(
+        rule_id="AGM-001",
+        resolved=False,
+        conditional_applies=True,
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        severity="RED",
+        score_impact=5,
+    )
     output = SimpleNamespace(
         score_breakdown=SimpleNamespace(risk_band="RED", final_score=40),
-        flags=[],
+        flags=[flag],
         rescue_sequence=[{"title": "Remediate", "related_rules": ["AGM-001"]}],
     )
-    with pytest.raises(PermissionError, match="tenant/company identity"):
-        validate_rescue_engine_output(output)
+    assert validate_rescue_engine_output(
+        output, expected_company_id="company-1"
+    ) == frozenset({"AGM-001"})
 
 
 def test_rescue_service_rejects_ambiguous_duplicate_findings(monkeypatch):
