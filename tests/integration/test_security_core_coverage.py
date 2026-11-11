@@ -185,3 +185,84 @@ class TestRescueAuditModelRegistration:
         assert Base.metadata.tables["rescue_audit_log"] is RescueAuditLog.__table__
         rescue_plan_fk = next(iter(RescueAuditLog.__table__.c.rescue_plan_id.foreign_keys))
         assert rescue_plan_fk.ondelete == "CASCADE"
+
+
+
+class TestAuthenticationDependency:
+    @pytest.mark.asyncio
+    async def test_valid_access_token_is_returned_when_not_revoked(self, monkeypatch):
+        import app.core.token_blacklist as blacklist
+        from app.api.auth import get_current_user
+        from app.core.security import create_access_token
+
+        monkeypatch.setattr(blacklist, "is_revoked", lambda _jti: False)
+        token = create_access_token({"sub": "user-1"})
+        payload = await get_current_user(token=token)
+        assert payload["sub"] == "user-1"
+        assert payload["type"] == "access"
+        assert payload["jti"]
+
+    @pytest.mark.asyncio
+    async def test_invalid_access_token_is_rejected(self):
+        from fastapi import HTTPException
+
+        from app.api.auth import get_current_user
+
+        with pytest.raises(HTTPException) as exc:
+            await get_current_user(token="not.a.valid.jwt")
+        assert exc.value.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_access_token_without_jti_is_rejected(self):
+        from datetime import UTC, datetime, timedelta
+
+        from fastapi import HTTPException
+        from jose import jwt
+
+        from app.api.auth import get_current_user
+        from app.core.config import settings
+
+        token = jwt.encode(
+            {
+                "sub": "user-1",
+                "type": "access",
+                "exp": datetime.now(UTC) + timedelta(minutes=5),
+            },
+            settings.JWT_SECRET_KEY,
+            algorithm=settings.JWT_ALGORITHM,
+        )
+        with pytest.raises(HTTPException) as exc:
+            await get_current_user(token=token)
+        assert exc.value.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_revoked_access_token_is_rejected(self, monkeypatch):
+        from fastapi import HTTPException
+
+        import app.core.token_blacklist as blacklist
+        from app.api.auth import get_current_user
+        from app.core.security import create_access_token
+
+        monkeypatch.setattr(blacklist, "is_revoked", lambda _jti: True)
+        token = create_access_token({"sub": "user-1"})
+        with pytest.raises(HTTPException) as exc:
+            await get_current_user(token=token)
+        assert exc.value.status_code == 401
+        assert "revoked" in exc.value.detail
+
+    @pytest.mark.asyncio
+    async def test_blacklist_outage_returns_service_unavailable(self, monkeypatch):
+        from fastapi import HTTPException
+
+        import app.core.token_blacklist as blacklist
+        from app.api.auth import get_current_user
+        from app.core.security import create_access_token
+
+        def unavailable(_jti):
+            raise blacklist.BlacklistUnavailable("redis unavailable")
+
+        monkeypatch.setattr(blacklist, "is_revoked", unavailable)
+        token = create_access_token({"sub": "user-1"})
+        with pytest.raises(HTTPException) as exc:
+            await get_current_user(token=token)
+        assert exc.value.status_code == 503
