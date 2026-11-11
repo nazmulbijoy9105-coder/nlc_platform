@@ -71,20 +71,20 @@ async def _company_contexts(
             raise HTTPException(status_code=404, detail="Document not found")
         if role_value == "LEGAL_STAFF":
             from app.core.company_authorization import ensure_staff_company_scope
-            await ensure_staff_company_scope(company_id, current_user, db)
-            return [company_id]
+            await ensure_staff_company_scope(document_company_id, current_user, db)
+            return [document_company_id]
         membership = await db.execute(
             select(CompanyUserAccess.company_id).where(
-                CompanyUserAccess.company_id == company_id,
+                CompanyUserAccess.company_id == document_company_id,
                 CompanyUserAccess.user_id == current_user.id,
                 CompanyUserAccess.is_active.is_(True),
             ).limit(1)
         )
         if membership.scalar_one_or_none() is None:
             raise HTTPException(status_code=403, detail="Active company membership is required.")
-        return [company_id]
+        return [document_company_id]
 
-    resource_models = {}
+    resource_models: dict[str, Any] = {}
     from app.models.filings import AGM, AnnualReturn, Audit
     from app.models.infrastructure import StatutoryRegister
     resource_models.update({
@@ -104,8 +104,8 @@ async def _company_contexts(
         result = await db.execute(
             select(model.company_id).where(model.id == resource_id).limit(1)
         )
-        resource_resource_company_id = result.scalar_one_or_none()
-        if resource_resource_company_id is None:
+        resource_company_id = result.scalar_one_or_none()
+        if resource_company_id is None:
             raise HTTPException(status_code=404, detail="Filing record not found")
         if role_value == "LEGAL_STAFF":
             from app.core.company_authorization import ensure_staff_company_scope
@@ -113,14 +113,14 @@ async def _company_contexts(
             return [resource_company_id]
         membership = await db.execute(
             select(CompanyUserAccess.company_id).where(
-                CompanyUserAccess.company_id == company_id,
+                CompanyUserAccess.company_id == resource_company_id,
                 CompanyUserAccess.user_id == current_user.id,
                 CompanyUserAccess.is_active.is_(True),
             ).limit(1)
         )
         if membership.scalar_one_or_none() is None:
             raise HTTPException(status_code=403, detail="Active company membership is required.")
-        return [company_id]
+        return [resource_company_id]
 
     if role_value == "LEGAL_STAFF":
         assigned = await db.execute(
