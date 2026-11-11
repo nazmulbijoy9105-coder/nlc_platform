@@ -193,7 +193,8 @@ def upgrade() -> None:
             name="ck_legal_release_decision",
         ),
         sa.CheckConstraint("length(btrim(reason)) >= 10", name="ck_legal_release_reason"),
-        sa.CheckConstraint("event_hash ~ '^[0-9a-f]{64}
+        sa.CheckConstraint("event_hash ~ '^[0-9a-f]{64}$'", name="ck_legal_release_hash"),
+        sa.CheckConstraint(
             "previous_event_hash IS NULL OR previous_event_hash ~ '^[0-9a-f]{64}$'",
             name="ck_legal_release_previous_hash",
         ),
