@@ -155,9 +155,12 @@ def _rule_to_response(rule) -> RuleResponse:
         is_active=bool(rule.is_active),
         verification_status="VERIFIED" if legally_verified else "PENDING",
         verified_at=rule.verified_at.isoformat() if legally_verified and rule.verified_at else None,
+        # A legacy date alone is not proof that the underlying instrument
+        # and its effective-date provenance have been independently verified.
         statutory_effective_date=(
             rule.statutory_effective_date.isoformat()
-            if legally_verified and rule.statutory_effective_date else None
+            if legally_verified and rule.verified_at and rule.statutory_effective_date
+            else None
         ),
         version=rule.rule_version,
         created_at=rule.created_at.isoformat(),
