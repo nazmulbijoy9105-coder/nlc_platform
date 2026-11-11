@@ -5,7 +5,11 @@ import os
 import pytest
 from sqlalchemy import text
 
-from tools.audit_rule_parity import get_seed_rules
+from tools.audit_rule_parity import (
+    compare_database_metadata,
+    get_seed_rule_definitions,
+    get_seed_rules,
+)
 
 
 pytestmark = [pytest.mark.integration]
@@ -41,9 +45,16 @@ async def test_ci_audit_role_can_read_full_catalogue_without_legal_verification_
     ).scalars().all()
     await db.execute(text("RESET ROLE"))
 
+    inventory = {row["rule_id"]: dict(row) for row in rows}
     active_ids = {row["rule_id"] for row in rows if row["is_active"] is True}
     inactive_ids = {row["rule_id"] for row in rows if row["is_active"] is not True}
+    metadata = compare_database_metadata(get_seed_rule_definitions(), inventory)
 
+    assert metadata["mismatches"] == []
+    assert (
+        metadata["seed_manifest_sha256"]
+        == metadata["database_active_manifest_sha256"]
+    )
     assert len(rows) == 86
     assert active_ids == get_seed_rules()
     assert inactive_ids == {"INC-002"}
