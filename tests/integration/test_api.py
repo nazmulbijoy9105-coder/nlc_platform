@@ -1122,8 +1122,8 @@ class TestRules:
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_black_override_rule_cannot_change_severity(self, api_client, db_super_admin):
-        """AUD-003 is a BLACK override — severity cannot be changed to non-BLACK."""
+    async def test_seeded_non_override_rule_can_update_catalogue_severity(self, api_client, db_super_admin):
+        """AUD-003 is not a product BLACK override; its catalogue row remains editable."""
         from app.core.security import create_access_token
         sa_token = create_access_token({
             "sub": str(db_super_admin.id), "user_id": str(db_super_admin.id), "type": "access",
@@ -1137,10 +1137,9 @@ class TestRules:
                 "change_reason": "Testing BLACK override protection",
             }
         )
-        if resp.status_code == 200:
-            # If rule doesn't exist in test DB (not seeded), 404 is also valid
-            pytest.skip("Rules not seeded in test DB")
-        assert resp.status_code in (400, 404, 422), resp.text
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["rule_id"] == "AUD-003"
+        assert resp.json()["default_severity"] == "RED"
 
 
 

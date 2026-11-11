@@ -21,6 +21,14 @@ class DomainEventType:
     DOCUMENT_GENERATED = "evidence.document.generated"
     DOCUMENT_APPROVED = "evidence.document.approved"
     DOCUMENT_RELEASED = "evidence.document.released"
+    DIRECTOR_CHANGED = "company.director.changed"
+    SHAREHOLDER_CHANGED = "company.shareholder.changed"
+    SHARE_TRANSFER_CHANGED = "company.share_transfer.changed"
+    REGISTERED_OFFICE_CHANGED = "company.registered_office.changed"
+    COMPANY_CHARGE_RECORDED = "company.charge.recorded"
+    COMPANY_CHARGE_EVIDENCE_CHANGED = "company.charge.evidence_state_changed"
+    FILING_RECEIPT_RECORDED = "filing.receipt.recorded"
+    EVIDENCE_VERIFICATION_COMPLETED = "evidence.verification.completed"
 
 
 async def publish_domain_event(

@@ -2,92 +2,120 @@
 
 ## Purpose
 
-Connect the existing company, fact-provenance, statutory filing, deadline-calendar,
-document-vault, compliance-evaluation and notification modules without replacing
-their current domain services or tenant authorization boundaries.
+Connect existing NLC company, people, shareholding, charge, registered-office,
+filing, evidence, compliance and client-dashboard modules without replacing their
+domain services or bypassing tenant authorization.
 
-The integration uses a transactional outbox. A service appends a domain event in
-the same SQLAlchemy transaction as its source-row mutation. The service does not
-commit; the request/task transaction remains the single commit boundary. A failed
-source mutation therefore cannot leave a published event, and a failed event insert
-cannot silently leave an unannounced source mutation.
+A service appends a domain event in the same SQLAlchemy transaction as its source
+mutation. The publisher flushes but never commits. A failed source mutation cannot
+leave a durable event, and a failed outbox insert cannot silently leave an
+unannounced source mutation.
 
 ## Event contract
 
-Table: `domain_event_outbox` (migration `0105_domain_event_outbox`).
+The outbox is `domain_event_outbox` (migration
+`0105_domain_event_outbox`). Events contain an immutable UUID, event type and
+schema version, tenant company ID, optional actor ID, aggregate type/UUID, compact
+JSON payload, optional correlation ID, occurrence/availability timestamps, retry
+metadata and processing state.
 
-Each event carries:
+Payloads must not contain credentials, NID/passport values, raw personal data,
+document contents, or presigned storage URLs. Consumers load source records by
+aggregate ID when additional detail is required.
 
-- immutable event UUID, event type and schema version;
-- tenant `company_id` and nullable actor ID;
-- aggregate type and aggregate UUID;
-- compact JSON payload containing identifiers, state and provenance metadata;
-- optional correlation ID;
-- occurrence/availability timestamps, attempts, processed timestamp and last error.
-
-Payloads must not contain credentials, raw personal data, document contents, or
-presigned storage URLs. Event consumers load authorized source records by ID when
-they need further information.
-
-## Events currently emitted
+## Event producers
 
 | Source mutation | Event |
 |---|---|
 | Company creation | `company.created` |
-| User-asserted or document-backed company fact | `company.fact.asserted` |
-| Staff fact verification/rejection | `company.fact.verified` |
-| AGM record created | `filing.agm.recorded` |
-| AGM marked held | `filing.agm.held_recorded` |
-| Annual return record created | `filing.annual_return.recorded` |
-| Annual return marked filed | `filing.annual_return.filed` |
-| Approved calendar event created/rescheduled | `deadline.calendar.generated` |
-| AI document generated | `evidence.document.generated` |
-| AI document approved | `evidence.document.approved` |
-| Document released to client | `evidence.document.released` |
+| Company fact assertion / verification | `company.fact.asserted`, `company.fact.verified` |
+| Director appointment / departure | `company.director.changed` |
+| Shareholder addition / holding update | `company.shareholder.changed` |
+| Share transfer recorded | `company.share_transfer.changed` |
+| Registered address update | `company.registered_office.changed` |
+| Charge recorded / charge evidence reviewed | `company.charge.recorded`, `company.charge.evidence_state_changed` |
+| AGM record / held status | `filing.agm.recorded`, `filing.agm.held_recorded` |
+| AGM / annual return receipt details | `filing.receipt.recorded` |
+| Annual return record / filed status | `filing.annual_return.recorded`, `filing.annual_return.filed` |
+| Share evidence verification | `evidence.verification.completed` |
+| Charge evidence verification | `company.charge.evidence_verified` |
+| Approved calendar event | `deadline.calendar.generated` |
+| AI document generated / approved / released | `evidence.document.generated`, `evidence.document.approved`, `evidence.document.released` |
 
-## Dispatcher and delivery semantics
+Lifecycle producer payloads carry state metadata only; they do not carry director,
+shareholder, transferor, transferee, charge-holder or office-address values.
+
+## Dispatch and consumers
 
 Celery task `app.worker.tasks.dispatch_domain_event_outbox` drains pending rows
-using `FOR UPDATE SKIP LOCKED` and is scheduled once per minute. It routes fact,
-company and filing events to deterministic compliance reevaluation; AI document
-generation routes to the existing human-review queue. Delivery is at-least-once:
-a worker crash after broker publication but before the database commit can result
-in redelivery. Consumers must therefore be idempotent and use the stable event UUID.
+with `FOR UPDATE SKIP LOCKED` and is scheduled once per minute. Company, people,
+share, office, charge and filing mutations trigger deterministic company
+reevaluation. That evaluation updates the existing compliance findings and,
+when released rule-engine output requires rescue, creates/refreshes the existing
+rescue plan. New rescue plans inherit the company's configured assigned staff
+member so generated rescue tasks have an operational owner when one is configured.
+Deadline events route to the existing deadline-warning scanner; generated AI
+documents route to the existing human-review queue.
 
-Failed broker publication retains the event and applies bounded exponential
-backoff. Processed events remain in the table for auditability. Deadline and
-document approval/release events are persisted for their dedicated downstream
-consumers; they are not treated as proof of filing or legal verification.
+Company lifecycle changes use `consume_company_lifecycle_event`; filing receipts
+use `consume_filing_receipt_event`; evidence verification uses
+`consume_evidence_verification_event`. Each consumer claims the pair (event UUID,
+consumer name) in `domain_event_consumptions` under a unique database constraint
+and performs its compliance reevaluation in the same transaction. A repeated
+delivery therefore does not repeat that consumer's database side effect.
+
+Delivery is at-least-once. The dispatcher uses stable task IDs and bounded
+exponential retry. Dispatch attempts are capped at eight; terminal failures are
+marked dead-lettered. Consumer tasks retry transient failures and also mark the
+source event dead-lettered after exhausting retries.
+
+## Operations and replay
+
+Migration `0106_domain_event_processing_controls` adds dead-letter timestamps and
+reasons, replay count and last-replay timestamp, plus the idempotent consumer
+receipt table.
+
+Super-admin operations endpoints:
+
+- `GET /api/v1/admin/domain-events?status=all|pending|dispatched|dead_lettered`
+  returns counts and event metadata without exposing payloads.
+- `POST /api/v1/admin/domain-events/{event_id}/replay` requeues only an
+  unprocessed dead-lettered event. It preserves the event UUID and payload,
+  clears transient dispatch state and increments the replay counter.
+
+The client-facing `GET /api/v1/companies/{company_id}/activity` endpoint returns
+a company-scoped, payload-free lifecycle timeline. Its query is constrained by
+company ID and the outbox's forced tenant RLS.
 
 ## Evidence and legal safeguards
 
 - Uploading a document does not verify it or prove that a statutory act occurred.
 - AI-generated drafts remain excluded as source evidence.
-- Fact verification remains a staff action with recorded reviewer provenance.
+- Fact and evidence verification remains an explicit staff action with reviewer
+  provenance.
+- A filing-receipt event records whether a receipt reference was supplied; it does
+  not claim an authenticated RJSC integration.
 - An event is a notification that a source record changed, not a legal conclusion.
-- Deadline generation still uses the existing approved calendar manifest and
-  statutory provenance; this integration does not bypass its release gate.
-- Annual-return filing events record whether an RJSC receipt number was supplied;
-  they do not claim an authenticated RJSC integration.
-- Tenant RLS is forced on the outbox and reuses the signed identity/company-access
-  helpers. Runtime roles cannot delete or truncate event history.
+- Deadline generation retains its existing approved calendar manifest and
+  statutory provenance controls.
+- The outbox has forced tenant RLS; runtime roles cannot delete or truncate event
+  history. Consumer receipts are admin-worker-only and immutable to the app role.
 
-## Remaining vertical-slice work
+## Remaining integration work
 
-1. Add dedicated consumers for filing-receipt and evidence-verification events,
-   with idempotency and dead-letter handling.
-2. Add event-driven generation of obligation instances and owned UNKNOWN-applicability
-   resolution tasks, retaining the existing rule/effective-date provenance.
-3. Add director, shareholder, share-transfer, registered-office and charge events.
-4. Add end-to-end tests proving one transaction creates the source row and outbox
-   event, dispatcher retries safely, and downstream effects remain tenant-isolated.
-5. Add operator visibility for pending, retried and failed events, plus replay tooling.
+1. Persist first-class obligation instances from event-driven evaluations, retaining
+   effective-date, applicability and evidence provenance beyond the current
+   compliance-flag/rescue-plan representation.
+2. Add explicit remediation reassignment, owner-change history, due-date escalation
+   and completion evidence; task completion must not imply legal verification.
+3. Connect the frontend client dashboard to the new activity endpoint and expose
+   actionable obligation/remediation states.
+4. Add broader PostgreSQL end-to-end tests for worker dispatch, consumer retries,
+   safe replay and real tenant visibility under the production runtime role.
+5. Add operator metrics/alerts for queue age, retry volume, consumer lag and
+   dead-letter growth.
 
-Deadline-generation events enqueue the existing deadline-warning scanner, which
-continues to enforce its own calendar release gate and notification deduplication.
-Document approval/release events are currently retained as audit events; they do not
-create facts or compliance findings automatically.
-
-The current delivery is the shared integration backbone and initial connected
-vertical slice; it does not claim that every remaining consumer or lifecycle domain
-is complete.
+This PR connects backend lifecycle producers, dedicated receipt/evidence consumers,
+dead-letter/replay controls, compliance reevaluation, assigned-staff ownership for
+new rescue plans and a tenant-scoped activity API. First-class obligation instances,
+remediation reassignment and the frontend dashboard UI remain follow-on work.

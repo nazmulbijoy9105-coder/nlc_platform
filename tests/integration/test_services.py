@@ -19,7 +19,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, timedelta
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -694,10 +694,7 @@ class TestRulesService:
 
         svc = LegalRuleService(db)
         rules = await svc.get_all()
-        # If seeded, should be 32. If not seeded, returns empty (skip).
-        if not rules:
-            pytest.skip("Legal rules not seeded in test DB. Run: make seed (test DB)")
-        assert len(rules) >= 75
+        assert len(rules) >= 75, "integration test setup must seed the complete legal-rule catalogue"
 
     @pytest.mark.asyncio
     async def test_get_by_rule_id(self, db):
@@ -705,8 +702,7 @@ class TestRulesService:
 
         svc = LegalRuleService(db)
         rules = await svc.get_all()
-        if not rules:
-            pytest.skip("Rules not seeded")
+        assert len(rules) >= 75, "integration test setup must seed the complete legal-rule catalogue"
 
         rule = await svc.get_by_rule_id("AGM-001")
         assert rule is not None
@@ -719,8 +715,7 @@ class TestRulesService:
 
         svc = LegalRuleService(db)
         rules = await svc.get_all()
-        if not rules:
-            pytest.skip("Rules not seeded")
+        assert len(rules) >= 75, "integration test setup must seed the complete legal-rule catalogue"
 
         black_rules = await svc.get_black_override_rules()
         # Migration 0090 quarantines every rule as NOT_EVALUATED / PENDING.
@@ -738,8 +733,7 @@ class TestRulesService:
         await set_rls_context(db, str(db_super_admin.id))
         svc = LegalRuleService(db)
         rules = await svc.get_all()
-        if not rules:
-            pytest.skip("Rules not seeded")
+        assert len(rules) >= 75, "integration test setup must seed the complete legal-rule catalogue"
 
         # Update OFF-001 (lowest impact — safest to test with)
         await svc.get_by_rule_id("OFF-001")
@@ -755,3 +749,120 @@ class TestRulesService:
         history = await svc.get_version_history("OFF-001")
         assert len(history) >= 1
         assert history[0].rule_id == "OFF-001"
+
+
+# =============================================================================
+# COMPANY ACCESS DEPENDENCY — IDOR REGRESSION COVERAGE
+# =============================================================================
+
+class TestCompanyAccessDependency:
+
+    @pytest.mark.asyncio
+    async def test_super_admin_bypasses_company_membership_lookup(self):
+        from starlette.requests import Request
+        from app.core.company_access import require_company_access
+
+        dependency = await require_company_access()
+        request = Request({
+            "type": "http", "http_version": "1.1", "method": "GET",
+            "scheme": "http", "path": "/companies/any/documents",
+            "raw_path": b"/companies/any/documents", "query_string": b"",
+            "headers": [], "server": ("test", 80), "client": ("test", 1),
+            "root_path": "", "path_params": {"company_id": "not-a-uuid"},
+        })
+        db = SimpleNamespace(execute=AsyncMock())
+        user = SimpleNamespace(role="SUPER_ADMIN", id=uuid.uuid4())
+
+        assert await dependency(request, current_user=user, db=db) is user
+        db.execute.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_missing_company_path_parameter_is_rejected(self):
+        from fastapi import HTTPException
+        from starlette.requests import Request
+        from app.core.company_access import require_company_access
+
+        dependency = await require_company_access()
+        request = Request({
+            "type": "http", "http_version": "1.1", "method": "GET",
+            "scheme": "http", "path": "/companies", "raw_path": b"/companies",
+            "query_string": b"", "headers": [], "server": ("test", 80),
+            "client": ("test", 1), "root_path": "", "path_params": {},
+        })
+        user = SimpleNamespace(role="CLIENT_VIEW_ONLY", id=uuid.uuid4())
+
+        with pytest.raises(HTTPException) as exc:
+            await dependency(request, current_user=user, db=SimpleNamespace(execute=AsyncMock()))
+        assert exc.value.status_code == 400
+        assert "Missing path parameter" in exc.value.detail
+
+    @pytest.mark.asyncio
+    async def test_malformed_company_id_is_rejected_before_database_lookup(self):
+        from fastapi import HTTPException
+        from starlette.requests import Request
+        from app.core.company_access import require_company_access
+
+        dependency = await require_company_access()
+        request = Request({
+            "type": "http", "http_version": "1.1", "method": "GET",
+            "scheme": "http", "path": "/companies/not-a-uuid",
+            "raw_path": b"/companies/not-a-uuid", "query_string": b"",
+            "headers": [], "server": ("test", 80), "client": ("test", 1),
+            "root_path": "", "path_params": {"company_id": "not-a-uuid"},
+        })
+        db = SimpleNamespace(execute=AsyncMock())
+        user = SimpleNamespace(role="CLIENT_VIEW_ONLY", id=uuid.uuid4())
+
+        with pytest.raises(HTTPException) as exc:
+            await dependency(request, current_user=user, db=db)
+        assert exc.value.status_code == 400
+        db.execute.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_active_company_membership_grants_access(self):
+        from starlette.requests import Request
+        from app.core.company_access import require_company_access
+
+        company_id = uuid.uuid4()
+        dependency = await require_company_access()
+        request = Request({
+            "type": "http", "http_version": "1.1", "method": "GET",
+            "scheme": "http", "path": f"/companies/{company_id}",
+            "raw_path": f"/companies/{company_id}".encode(), "query_string": b"",
+            "headers": [], "server": ("test", 80), "client": ("test", 1),
+            "root_path": "", "path_params": {"company_id": str(company_id)},
+        })
+        user = SimpleNamespace(role="CLIENT_VIEW_ONLY", id=uuid.uuid4())
+        membership = SimpleNamespace(company_id=company_id, user_id=user.id, is_active=True)
+        db = SimpleNamespace(
+            execute=AsyncMock(return_value=SimpleNamespace(scalar_one_or_none=lambda: membership))
+        )
+
+        assert await dependency(request, current_user=user, db=db) is user
+        db.execute.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_missing_company_membership_is_forbidden(self):
+        from fastapi import HTTPException
+        from starlette.requests import Request
+        from app.core.company_access import require_company_access
+
+        company_id = uuid.uuid4()
+        dependency = await require_company_access()
+        request = Request({
+            "type": "http", "http_version": "1.1", "method": "GET",
+            "scheme": "http", "path": f"/companies/{company_id}",
+            "raw_path": f"/companies/{company_id}".encode(), "query_string": b"",
+            "headers": [], "server": ("test", 80), "client": ("test", 1),
+            "root_path": "", "path_params": {"company_id": str(company_id)},
+        })
+        user = SimpleNamespace(role="CLIENT_VIEW_ONLY", id=uuid.uuid4())
+        db = SimpleNamespace(
+            execute=AsyncMock(return_value=SimpleNamespace(scalar_one_or_none=lambda: None))
+        )
+
+        with pytest.raises(HTTPException) as exc:
+            await dependency(request, current_user=user, db=db)
+        assert exc.value.status_code == 403
+        assert "do not have access" in exc.value.detail
+        db.execute.assert_awaited_once()

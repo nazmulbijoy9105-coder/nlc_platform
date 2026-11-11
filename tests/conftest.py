@@ -144,6 +144,58 @@ async def test_engine(request):
     if proc.returncode != 0:
         pytest.fail(f"alembic upgrade head failed:\n{proc.stdout}\n{proc.stderr}", pytrace=False)
 
+    # Prove the isolated test database is at the repository's single Alembic
+    # head before loading fixtures or executing integration tests.
+    heads_proc = subprocess.run(
+        [sys.executable, "-m", "alembic", "heads"],
+        cwd=Path(__file__).resolve().parent.parent,
+        env={**os.environ, "DATABASE_URL": TEST_DATABASE_URL},
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+    )
+    if heads_proc.returncode != 0:
+        pytest.fail(f"alembic heads failed:\n{heads_proc.stdout}\n{heads_proc.stderr}", pytrace=False)
+    head_revisions = [
+        line.split()[0]
+        for line in heads_proc.stdout.splitlines()
+        if "(head)" in line.split()
+    ]
+    if len(head_revisions) != 1:
+        pytest.fail(
+            f"Expected exactly one Alembic head, found {head_revisions!r}: "
+            f"{heads_proc.stdout}",
+            pytrace=False,
+        )
+
+    current_proc = subprocess.run(
+        [sys.executable, "-m", "alembic", "current"],
+        cwd=Path(__file__).resolve().parent.parent,
+        env={**os.environ, "DATABASE_URL": TEST_DATABASE_URL},
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+    )
+    if current_proc.returncode != 0:
+        pytest.fail(f"alembic current failed:\n{current_proc.stdout}\n{current_proc.stderr}", pytrace=False)
+    if head_revisions[0] not in current_proc.stdout:
+        pytest.fail(
+            "Test database is not at Alembic head "
+            f"{head_revisions[0]!r}: {current_proc.stdout}",
+            pytrace=False,
+        )
+
+    # Use the repository's existing idempotent seeder, not a parallel fixture
+    # implementation. It inserts missing rule IDs and preserves existing
+    # catalogue edits; it is scoped to the local *_test database URL above.
+    seed_proc = subprocess.run(
+        [sys.executable, "scripts/seed_rules.py", "--apply"],
+        cwd=Path(__file__).resolve().parent.parent,
+        env={**os.environ, "DATABASE_URL": TEST_DATABASE_URL},
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+    )
+    if seed_proc.returncode != 0:
+        pytest.fail(
+            f"Rule seeding failed:\n{seed_proc.stdout}\n{seed_proc.stderr}",
+            pytrace=False,
+        )
+
     yield engine
     await engine.dispose()
 
