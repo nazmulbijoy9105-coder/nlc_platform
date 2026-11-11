@@ -474,7 +474,13 @@ async def preview_or_release_deadline(
         raise HTTPException(422, "Company fact key does not match the deadline trigger")
     if not isinstance(fact.fact_value, (str, dict)):
         raise HTTPException(422, "Trigger fact must contain an ISO date value")
-    raw_date = fact.fact_value.get("date") or fact.fact_value.get("value") if isinstance(fact.fact_value, dict) else fact.fact_value
+    raw_date: Any = (
+        fact.fact_value.get("date") or fact.fact_value.get("value")
+        if isinstance(fact.fact_value, dict)
+        else fact.fact_value
+    )
+    if not isinstance(raw_date, str):
+        raise HTTPException(422, "Trigger fact value must be an ISO YYYY-MM-DD date")
     try:
         trigger_date = date.fromisoformat(raw_date)
     except (TypeError, ValueError):
@@ -577,7 +583,7 @@ async def preview_or_release_deadline(
     existing = (
         await db.execute(
             select(ComplianceCalendarEvent).where(
-                ComplianceCalendarEvent.company_id == body.company_id,
+                ComplianceCalendarEvent.company_id == company_id,
                 ComplianceCalendarEvent.event_type == CalendarEventType(definition.event_type),
                 ComplianceCalendarEvent.period_label == definition.period_label,
             )
