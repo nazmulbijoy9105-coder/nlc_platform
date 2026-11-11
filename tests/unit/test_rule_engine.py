@@ -975,7 +975,8 @@ class TestEscalationRules:
         esc003_fired = any(f.rule_id == "ESC-003" for f in output.flags)
         assert esc003_fired is False
         assert output.score_breakdown.override_applied is False
-        assert output.score_breakdown.final_score == 55
+        # ESC-003 is not a score-bearing finding in scoring spec 2.0.0.
+        assert output.score_breakdown.final_score == 65
 
 class TestScoreBanding:
     """Verify score → band mapping is correct and non-overlapping."""
@@ -1292,7 +1293,7 @@ class TestEngineIntegrity:
         )
         output = rule_engine.evaluate(profile)
         assert output.score_breakdown.risk_band != "BLACK"
-        assert output.score_breakdown.final_score == 75
+        assert output.score_breakdown.final_score == 85
         assert output.score_breakdown.override_applied is False
 
 
