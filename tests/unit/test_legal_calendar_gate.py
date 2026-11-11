@@ -1,6 +1,8 @@
 """Statutory calendar creation stays gated by registered product-owner releases."""
 
-import pytest\n\nfrom fastapi import HTTPException
+import pytest
+
+from fastapi import HTTPException
 
 import app.api.calendar as calendar_api
 from app.services.compliance_calendar import (
