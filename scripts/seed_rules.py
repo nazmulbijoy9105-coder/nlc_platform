@@ -245,6 +245,13 @@ async def seed_rules(dry_run: bool = True, verbose: bool = False) -> int:
             existing = res.fetchone()
 
             if existing:
+                # Catalogue activation is separate from definition changes.
+                # Keep existing rule definitions immutable here, but ensure every
+                # canonical seed ID remains active for deterministic evaluation.
+                await conn.execute(
+                    sa.text("UPDATE legal_rules SET is_active = TRUE, updated_at = :now WHERE rule_id = :rid"),
+                    {"now": now, "rid": rule["rule_id"]},
+                )
                 actual = dict(existing._mapping)
                 expected = {
                     "rule_name": rule["rule_name"],
