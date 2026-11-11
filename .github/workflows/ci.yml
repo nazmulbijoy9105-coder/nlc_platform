@@ -152,14 +152,29 @@ jobs:
           if missing:
               raise SystemExit(f"Company-access regression tests missing: {', '.join(missing)}")
 
+          from pathlib import PurePosixPath
+
           coverage = ET.parse("coverage-unit.xml").getroot()
-          matches = [
-              item for item in coverage.findall(".//class")
-              if item.get("filename", "").endswith("app/core/dependencies.py")
+          sources = [
+              PurePosixPath(source.text.strip())
+              for source in coverage.findall("./sources/source")
+              if source.text and source.text.strip()
           ]
+          target = PurePosixPath("app/core/dependencies.py")
+          matches = []
+          for item in coverage.findall(".//class"):
+              filename = PurePosixPath(item.get("filename", ""))
+              candidates = [filename, *(source / filename for source in sources)]
+              if any(
+                  path.parts[-len(target.parts):] == target.parts
+                  for path in candidates
+                  if len(path.parts) >= len(target.parts)
+              ):
+                  matches.append(item)
+
           if len(matches) != 1:
               raise SystemExit(
-                  "Expected one coverage entry for app/core/dependencies.py; "
+                  "Expected one coverage entry resolving to app/core/dependencies.py; "
                   f"found {len(matches)}"
               )
           rate = float(matches[0].get("line-rate", "0"))
