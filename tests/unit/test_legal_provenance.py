@@ -208,7 +208,7 @@ def test_bd_starter_catalog_has_unique_official_source_version_keys():
 
 def test_starter_source_import_endpoint_is_super_admin_only():
     from app.api.legal_provenance import router
-    from app.core.dependencies import get_current_user, require_roles
+    from app.core.dependencies import get_current_user
 
     route = next(
         route for route in router.routes
