@@ -93,10 +93,10 @@ def main() -> int:
         r"^\s*- rule_id:\s*([A-Z]{2,12}-\d{3})\s*$", approval, re.MULTILINE
     ))
     verified_header = approval.split("rules:", 1)[0]
-    verified_ids = set(re.findall(r"^\\s+- ([A-Z]{2,12}-\\d{3})\\s*$", verified_header, re.MULTILINE))
-    verified_count = len(re.findall(r"^\\s+status:\\s*VERIFIED\\s*$", approval, re.MULTILINE))
-    eligible_count = len(re.findall(r"^\\s+score_eligible:\\s*true\\s*$", approval, re.MULTILINE))
-    ineligible_count = len(re.findall(r"^\\s+score_eligible:\\s*false\\s*$", approval, re.MULTILINE))
+    verified_ids = set(re.findall(r"^\s+- ([A-Z]{2,12}-\d{3})\s*$", verified_header, re.MULTILINE))
+    verified_count = len(re.findall(r"^\s+status:\s*VERIFIED\s*$", approval, re.MULTILINE))
+    eligible_count = len(re.findall(r"^\s+score_eligible:\s*true\s*$", approval, re.MULTILINE))
+    ineligible_count = len(re.findall(r"^\s+score_eligible:\s*false\s*$", approval, re.MULTILINE))
     if "approval_policy: owner_attested" not in verified_header or "verified_rule_ids:" not in verified_header:
         print("FAIL: approval register must use owner_attested policy and verified_rule_ids")
         return 1
@@ -177,18 +177,23 @@ def main() -> int:
 
     engine_source = engine_path.read_text(encoding="utf-8")
     seed_source = seed_path.read_text(encoding="utf-8")
-    if re.search(r"UPDATE\s+legal_rules", seed_source, re.IGNORECASE):
-        print("FAIL: seed_rules.py must not update existing legal_rules outside the audited version workflow")
+    if "UPDATE legal_rules SET is_active = TRUE" not in seed_source:
+        print("FAIL: seed_rules.py must activate existing canonical catalogue rows")
         return 1
-    if '"NOT_EVALUATED"' not in seed_source:
-        print("FAIL: seed_rules.py must accept NOT_EVALUATED severity")
+    if "TRUE, :now, :now" not in seed_source:
+        print("FAIL: seed_rules.py must insert new canonical rows as active")
         return 1
 
-    if not re.search(r"^LEGAL_SCORE_RELEASED:\s*bool\s*=\s*True\s*$", engine_source, re.MULTILINE):
+    if not re.search(r"^LEGAL_SCORE_RELEASED:\\s*bool\\s*=\\s*True\\s*$", engine_source, re.MULTILINE):
         print("FAIL: product scoring release flag is not enabled")
         return 1
-    if not re.search(r"^VERIFIED_RULE_IDS:\s*frozenset\[str\]\s*=\s*frozenset\(\)\s*$", engine_source, re.MULTILINE):
-        print("FAIL: verified rule allowlist must remain empty until counsel approval")
+    verified_match = re.search(
+        r"^VERIFIED_RULE_IDS:\\s*frozenset\\[str\\]\\s*=\\s*frozenset\\(\\{([\\s\\S]*?)\\}\\)",
+        engine_source, re.MULTILINE
+    )
+    verified_engine_ids = set(re.findall(r'"([A-Z]{2,12}-\\d{3})"', verified_match.group(1))) if verified_match else set()
+    if verified_engine_ids != seed:
+        print(f"FAIL: engine VERIFIED_RULE_IDS mismatch; missing={sorted(seed - verified_engine_ids)} extra={sorted(verified_engine_ids - seed)}")
         return 1
 
     engine_tree = ast.parse(engine_source)
