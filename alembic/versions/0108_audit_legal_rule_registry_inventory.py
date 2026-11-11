@@ -21,7 +21,7 @@ depends_on = None
 def upgrade() -> None:
     op.execute(
         """
-        DO $
+        DO $$
         DECLARE
             owner_can_bypass_rls BOOLEAN;
         BEGIN
@@ -35,7 +35,7 @@ def upgrade() -> None:
                     'so the audit view cannot silently omit RLS-filtered rows';
             END IF;
         END
-        $
+        $$
         """
     )
     op.execute("CREATE SCHEMA IF NOT EXISTS audit")
@@ -72,7 +72,7 @@ def upgrade() -> None:
     )
     op.execute(
         """
-        DO $$
+        DO $$$
         BEGIN
             IF EXISTS (
                 SELECT 1 FROM pg_roles WHERE rolname = 'nlc_ci_audit_role'
@@ -82,7 +82,7 @@ def upgrade() -> None:
                     'GRANT SELECT ON audit.legal_rule_registry_inventory TO nlc_ci_audit_role';
             END IF;
         END
-        $$
+        $$$
         """
     )
 
