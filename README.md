@@ -145,7 +145,7 @@ python -m compileall app/              # Compile check
 python tools/audit_rule_parity.py --no-db  # Rule parity (AST-based)
 
 # Deployment (Render.com)
-# Auto-deploys on push to main branch
+# Manual deploy on Render (autoDeploy: false) — push to main does not deploy
 # Migrations run automatically on startup
 # Rules auto-seed if count < 85
 API Endpoints
@@ -183,9 +183,9 @@ Render.com (Production)
 
      Backend: https://nlc-platform.onrender.com
      Frontend: https://nlc-frontend.vercel.app
-     Database: Neon PostgreSQL (7-day PITR backups)
+     Database: Neon PostgreSQL (confirm PITR/snapshot schedule in Neon console; do not assume retention)
      Redis: Render Redis
-     Auto-deploys on push to main
+     Manual deploy only (autoDeploy: false); push to main does not deploy
      Migrations + rule seeding run on startup
 Docker (Local/On-Premise)
 docker-compose up -d
