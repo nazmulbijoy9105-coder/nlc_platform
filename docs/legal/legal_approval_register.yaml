@@ -1,10 +1,10 @@
 # NLC legal verification register — snapshot 2026-11-11
-# Product-owner attestation: all 85 ILRMF rule propositions are accepted as legally verified.
+# Product-owner approval: all 85 canonical ILRMF rules are approved for product evaluation; 82 are score-eligible and 3 are informational.
 # Signed-document upload is not a product prerequisite. Company-specific applicability and evidence remain separate.
 jurisdiction: BD
 snapshot_date: 2026-11-11
 approval_policy: owner_attested
-verified_rule_ids:
+approved_rule_ids:
   - ACC-001
   - ACC-002
   - ACC-003
@@ -92,7 +92,7 @@ verified_rule_ids:
   - VAT-003
 rules:
   - rule_id: ACC-001
-    status: VERIFIED
+    status: APPROVED
     score_eligible: true
   - rule_id: ACC-002
     status: VERIFIED
