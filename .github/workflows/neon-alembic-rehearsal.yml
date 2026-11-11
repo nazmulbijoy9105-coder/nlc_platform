@@ -50,7 +50,7 @@ jobs:
           parent_json=$(curl --silent --show-error --fail "${AUTH[@]}" \
             "$API/branches/$NEON_PARENT_BRANCH_ID")
           parent_name=$(jq -r '.branch.name // empty' <<<"$parent_json")
-          parent_default=$(jq -r '.branch.default // true' <<<"$parent_json")
+          parent_default=$(jq -r 'if .branch.default == null then "unknown" else (.branch.default | tostring) end' <<<"$parent_json")
           if [[ "$parent_name" != "rehearsal-drift" || "$parent_default" != "false" ]]; then
             echo "::error::Refusing migration rehearsal: fixed parent is not the expected non-default rehearsal-drift branch."
             exit 1
