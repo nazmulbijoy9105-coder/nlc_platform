@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import date, datetime, timedelta, timezone
-from typing import Any, Literal
+from typing import Any, Literal, cast
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -115,14 +115,6 @@ class DeadlineDefinitionCreate(BaseModel):
         if value not in allowed:
             raise ValueError(f"event_type must be one of {sorted(allowed)}")
         return value
-
-    @field_validator("holidays")
-    @classmethod
-    def require_holiday_provenance(cls, value, info):
-        # The paired-field check also runs in the route to keep Pydantic's
-        # validation independent of request field ordering.
-        return value
-
 
 class ProductOwnerDecision(BaseModel):
     rule_id: str = Field(min_length=3, max_length=50)
@@ -542,8 +534,8 @@ async def preview_or_release_deadline(
         effective_from=effective_from,
         effective_to=effective_to,
         offset=definition.offset,
-        unit=definition.unit,
-        adjustment=definition.adjustment,
+        unit=cast(Literal["DAYS", "CLEAR_DAYS", "MONTHS", "YEARS"], definition.unit),
+        adjustment=cast(Literal["NONE", "FOLLOWING", "PRECEDING"], definition.adjustment),
         exclude_trigger_day=definition.exclude_trigger_day,
         approved=is_owner_approved,
     )
