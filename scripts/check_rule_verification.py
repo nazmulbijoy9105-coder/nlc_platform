@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 INFO_ONLY = {"AR-001", "SH-002", "ESC-003"}
-RULE_RE = re.compile(r"^[A-Z]{2,12}-\\d{3}$")
+RULE_RE = re.compile(r"^[A-Z]{2,12}-\d{3}$")
 
 
 def engine_ids(source: str) -> set[str]:
@@ -36,10 +36,10 @@ def engine_ids(source: str) -> set[str]:
 
 
 def literal_set(source: str, name: str) -> set[str]:
-    match = re.search(rf"^{name}:\\s*frozenset\\[str\\]\\s*=\\s*frozenset\\(\\{{([\\s\\S]*?)\\}}\\)", source, re.M)
+    match = re.search(rf"^{name}:\s*frozenset\[str\]\s*=\s*frozenset\(\{{([\s\S]*?)\}}\)", source, re.M)
     if not match:
         raise ValueError(f"{name} must be an explicit frozenset literal")
-    return set(re.findall(r'"([A-Z]{2,12}-\\d{3})"', match.group(1)))
+    return set(re.findall(r'"([A-Z]{2,12}-\d{3})"', match.group(1)))
 
 
 def main() -> int:
@@ -55,14 +55,14 @@ def main() -> int:
     seed_source = seed_path.read_text(encoding="utf-8")
     register = register_path.read_text(encoding="utf-8")
     engine = engine_ids(engine_source)
-    seed = set(re.findall(r'"rule_id":\\s*"([A-Z]{2,12}-\\d{3})"', seed_source))
+    seed = set(re.findall(r'"rule_id":\s*"([A-Z]{2,12}-\d{3})"', seed_source))
     verified = literal_set(engine_source, "VERIFIED_RULE_IDS")
     scoring = literal_set(engine_source, "PRODUCT_SCORING_RULE_IDS")
-    register_ids = set(re.findall(r"^\\s*- rule_id:\\s*([A-Z]{2,12}-\\d{3})\\s*$", register, re.M))
+    register_ids = set(re.findall(r"^\s*- rule_id:\s*([A-Z]{2,12}-\d{3})\s*$", register, re.M))
     verified_header = register.split("rules:", 1)[0]
-    approved = set(re.findall(r"^\\s*- ([A-Z]{2,12}-\\d{3})\\s*$", verified_header, re.M))
-    statuses = re.findall(r"^\\s+status:\\s*([A-Z_]+)\\s*$", register, re.M)
-    eligibility = re.findall(r"^\\s+score_eligible:\\s*(true|false)\\s*$", register, re.M)
+    approved = set(re.findall(r"^\s*- ([A-Z]{2,12}-\d{3})\s*$", verified_header, re.M))
+    statuses = re.findall(r"^\s+status:\s*([A-Z_]+)\s*$", register, re.M)
+    eligibility = re.findall(r"^\s+score_eligible:\s*(true|false)\s*$", register, re.M)
 
     failures = []
     if len(engine) != 85 or engine != seed:
@@ -76,7 +76,7 @@ def main() -> int:
     else:
         eligible_by_id = {}
         row_matches = re.findall(
-            r"^  - rule_id: ([A-Z]{2,12}-\\d{3})\\n    status: VERIFIED\\n    score_eligible: (true|false)$",
+            r"^  - rule_id: ([A-Z]{2,12}-\d{3})\n    status: VERIFIED\n    score_eligible: (true|false)$",
             register, re.M
         )
         eligible_by_id = {rid: value == "true" for rid, value in row_matches}
@@ -85,7 +85,7 @@ def main() -> int:
             failures.append("score_eligible must be true for the 82 score-bearing IDs and false only for AR-001, SH-002, ESC-003")
     if scoring != seed - INFO_ONLY or len(scoring) != 82:
         failures.append(f"product scoring allowlist mismatch: {len(scoring)}")
-    if not re.search(r"^LEGAL_SCORE_RELEASED:\\s*bool\\s*=\\s*True$", engine_source, re.M):
+    if not re.search(r"^LEGAL_SCORE_RELEASED:\s*bool\s*=\s*True$", engine_source, re.M):
         failures.append("LEGAL_SCORE_RELEASED is not True")
     if "approval_policy: owner_attested" not in verified_header:
         failures.append("register must declare owner_attested policy")
