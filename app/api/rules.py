@@ -81,7 +81,7 @@ class RuleResponse(BaseModel):
     revenue_tier: str
     is_black_override: bool
     is_active: bool
-    verification_status: str = Field(description="Product-owner attestation inventory status only; this is not independent legal verification or counsel approval.")
+    verification_status: str = Field(description="Independent legal/source review status; PENDING means no trusted verification record exists. Product-owner release is separate.")
     verified_at: str | None = Field(description="Independent legal/source verification timestamp; unavailable until a trusted verification record exists.")
     statutory_effective_date: str | None = Field(description="Authoritatively source-verified statutory effective date; omitted until source verification is recorded.")
     version: str
@@ -172,7 +172,7 @@ def _rule_to_response(rule) -> RuleResponse:
     "",
     response_model=list[RuleResponse],
     summary="List all ILRMF legal rules",
-    description="Returns public legal-rule metadata and citation-review status. Citation verification is not a legal opinion or confirmation of company-specific applicability; tenant and user data are not exposed.",
+    description="Returns public rule metadata, product-scoring eligibility, catalogue activation and independent legal/source review status. Product-owner release does not constitute independent legal verification; tenant and user data are not exposed.",
 )
 async def list_rules(
     rule_type: str | None = None,
