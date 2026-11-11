@@ -82,9 +82,9 @@ class RuleResponse(BaseModel):
     revenue_tier: str
     is_black_override: bool
     is_active: bool
-    verification_status: str = Field(description="Owner-attested legal verification inventory status; company-specific applicability and evidence are evaluated separately.")
-    verified_at: str | None = Field(description="Date the citation review status was recorded, if applicable.")
-    statutory_effective_date: str | None = Field(description="Recorded statutory effective date; applicability must still be assessed for the relevant company and period.")
+    verification_status: str = Field(description="Product-owner attestation inventory status only; this is not independent legal verification or counsel approval.")
+    verified_at: str | None = Field(description="Independent legal/source verification timestamp; unavailable until a trusted verification record exists.")
+    statutory_effective_date: str | None = Field(description="Authoritatively source-verified statutory effective date; omitted until source verification is recorded.")
     version: str
     created_at: str
     updated_at: str | None
@@ -154,14 +154,10 @@ def _rule_to_response(rule) -> RuleResponse:
         ),
         is_active=bool(rule.is_active),
         verification_status="VERIFIED" if legally_verified else "PENDING",
-        verified_at=rule.verified_at.isoformat() if legally_verified and rule.verified_at else None,
-        # A legacy date alone is not proof that the underlying instrument
-        # and its effective-date provenance have been independently verified.
-        statutory_effective_date=(
-            rule.statutory_effective_date.isoformat()
-            if legally_verified and rule.verified_at and rule.statutory_effective_date
-            else None
-        ),
+        # Owner attestation does not establish independent legal/source
+        # verification. Do not expose legacy timestamps or dates as verified.
+        verified_at=None,
+        statutory_effective_date=None,
         version=rule.rule_version,
         created_at=rule.created_at.isoformat(),
         updated_at=rule.updated_at.isoformat() if rule.updated_at else None,
