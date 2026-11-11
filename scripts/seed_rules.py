@@ -200,7 +200,7 @@ def assert_seed_write_allowed(database_url: str) -> None:
         )
 
     host = urlparse(database_url).hostname
-    local_hosts = {"localhost", "127.0.0.1", "::1", "postgres", "db", "host.docker.internal"}
+    local_hosts = {"localhost", "127.0.0.1", "::1", "host.docker.internal"}
     if host not in local_hosts:
         raise RuntimeError(
             "Rule seed writes are restricted to local PostgreSQL hosts. "
