@@ -849,6 +849,18 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
     # ── Flag Management ───────────────────────────────────────────
 
+    async def get_latest_evaluation_run(
+        self, company_id: uuid.UUID
+    ) -> ComplianceEvaluationRun | None:
+        """Return the latest immutable evaluation run for this tenant company."""
+        result = await self.db.execute(
+            select(ComplianceEvaluationRun)
+            .where(ComplianceEvaluationRun.company_id == company_id)
+            .order_by(ComplianceEvaluationRun.calculated_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
     async def get_active_flags(self, company_id: uuid.UUID) -> list[ComplianceFlag]:
         """Return all ACTIVE compliance flags for a company."""
         result = await self.db.execute(
