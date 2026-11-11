@@ -159,3 +159,26 @@ def test_clear_day_preview_excludes_trigger_day_and_honours_holidays():
         trigger_date=date(2026, 1, 1),
         applicable=True,
     ) == date(2026, 1, 5)
+
+
+def test_customer_rule_provenance_route_requires_authentication_not_super_admin():
+    from app.api.dependencies import get_current_user
+    from app.api.legal_provenance import router
+
+    route = next(
+        route for route in router.routes
+        if getattr(route, "path", None) == "/legal-provenance/rules/{rule_id}"
+    )
+    dependency_calls = {dependency.call for dependency in route.dependant.dependencies}
+    assert get_current_user in dependency_calls
+    assert all("require_roles" not in getattr(call, "__name__", "") for call in dependency_calls)
+
+
+def test_source_registry_listing_remains_super_admin_only():
+    from app.api.legal_provenance import router
+
+    route = next(
+        route for route in router.routes
+        if getattr(route, "path", None) == "/legal-provenance/sources"
+    )
+    assert route.dependant.dependencies
