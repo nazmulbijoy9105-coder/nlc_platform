@@ -5,7 +5,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Identity, Integer, String, Text, func, text
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Identity, Integer, String, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -101,6 +101,10 @@ class LegalDeadlineDefinition(Base):
 
 class LegalRuleReleaseEvent(Base):
     __tablename__ = "legal_rule_release_events"
+    __table_args__ = (
+        UniqueConstraint("event_hash", name="uq_legal_release_event_hash"),
+        UniqueConstraint("sequence_no", name="uq_legal_release_sequence"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -127,7 +131,7 @@ class LegalRuleReleaseEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     previous_event_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     event_hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    sequence_no: Mapped[int] = mapped_column(BigInteger, Identity(), nullable=False, unique=True)
+    sequence_no: Mapped[int] = mapped_column(BigInteger, Identity(), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
