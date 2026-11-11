@@ -271,7 +271,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         api_raw_total = output.score_breakdown.raw_total if score_is_released else None
 
         # ── Step 3: Persist results ────────────────────────────────
-        await self._persist_evaluation(
+        evaluation_run = await self._persist_evaluation(
             company_id, output, trigger_source,
             fact_provenance_snapshot=fact_provenance_snapshot,
         )
@@ -393,6 +393,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "rescue_sequence": output.rescue_sequence if score_is_released else None,
             "engine_version":  output.engine_version,
             "ilrmf_version":   output.ilrmf_version,
+            "evaluation_run_id": str(evaluation_run.id),
+            "evaluation_hash": evaluation_run.score_hash,
+            "evaluation_run_status": evaluation_run.evaluation_status,
+            "evaluation_calculated_at": evaluation_run.calculated_at.isoformat(),
         }
 
     async def _persist_evaluation(
@@ -401,7 +405,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         output,  # EngineOutput from C_rule_engine.py
         trigger_source: str,
         fact_provenance_snapshot: list[dict] | None = None,
-    ) -> None:
+    ) -> ComplianceEvaluationRun:
         """
         Persist all evaluation results to DB atomically.
         Order: resolve old flags → insert new flags → score snapshot → update company.
@@ -840,6 +844,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
         if notification_flags:
             notif_svc = NotificationService(self.db)
             await notif_svc.queue_for_new_flags(company_id, notification_flags)
+
+        return evaluation_run
 
     # ── Flag Management ───────────────────────────────────────────
 
