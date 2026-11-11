@@ -26,7 +26,7 @@ def test_seed_write_is_blocked_in_production_even_with_opt_in(monkeypatch, envir
     _clear_deployment_markers(monkeypatch)
 
     with pytest.raises(RuntimeError, match="disabled in production/Render"):
-        assert_seed_write_allowed()
+        assert_seed_write_allowed("postgresql+asyncpg://test:test@localhost:5432/nlc_dev")
 
 
 def test_seed_write_is_blocked_on_render_even_if_environment_is_misconfigured(monkeypatch):
@@ -35,7 +35,7 @@ def test_seed_write_is_blocked_on_render_even_if_environment_is_misconfigured(mo
     monkeypatch.setenv("NLC_ALLOW_DEVELOPMENT_RULE_SEED", "true")
 
     with pytest.raises(RuntimeError, match="disabled in production/Render"):
-        assert_seed_write_allowed()
+        assert_seed_write_allowed("postgresql+asyncpg://test:test@localhost:5432/nlc_dev")
 
 
 def test_seed_write_can_be_enabled_for_local_development(monkeypatch):
@@ -43,4 +43,15 @@ def test_seed_write_can_be_enabled_for_local_development(monkeypatch):
     monkeypatch.setenv("NLC_ALLOW_DEVELOPMENT_RULE_SEED", "true")
     _clear_deployment_markers(monkeypatch)
 
-    assert_seed_write_allowed()
+    assert_seed_write_allowed("postgresql+asyncpg://test:test@localhost:5432/nlc_dev")
+
+ 
+def test_seed_write_rejects_remote_neon_database_even_with_opt_in(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.setenv("NLC_ALLOW_DEVELOPMENT_RULE_SEED", "true")
+    _clear_deployment_markers(monkeypatch)
+
+    with pytest.raises(RuntimeError, match="restricted to local PostgreSQL hosts"):
+        assert_seed_write_allowed(
+            "postgresql+asyncpg://user:password@ep-example.ap-southeast-1.aws.neon.tech/neondb"
+        )
