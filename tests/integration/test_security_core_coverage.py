@@ -138,6 +138,7 @@ class TestTokenBlacklist:
         import app.core.token_blacklist as blacklist
 
         monkeypatch.setenv("ENVIRONMENT", "production")
+        monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
 
         def unavailable():
             raise ConnectionError("redis unavailable")
