@@ -187,7 +187,12 @@ async def test_engine(request):
     seed_proc = subprocess.run(
         [sys.executable, "scripts/seed_rules.py", "--apply"],
         cwd=Path(__file__).resolve().parent.parent,
-        env={**os.environ, "DATABASE_URL": TEST_DATABASE_URL},
+        env={
+            **os.environ,
+            "DATABASE_URL": TEST_DATABASE_URL,
+            "NLC_ALLOW_DEVELOPMENT_RULE_SEED": "true",
+            "ENVIRONMENT": "test",
+        },
         capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     if seed_proc.returncode != 0:
