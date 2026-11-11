@@ -178,7 +178,7 @@ def upgrade() -> None:
             "'TRADE_LICENSE','TAX_RETURN','OTHER')",
             name="ck_legal_deadline_event_type",
         ),
-        sa.CheckConstraint("offset >= 0", name="ck_legal_deadline_offset"),
+        sa.CheckConstraint('"offset" >= 0', name="ck_legal_deadline_offset"),
         sa.CheckConstraint(
             "unit IN ('DAYS','CLEAR_DAYS','MONTHS','YEARS')",
             name="ck_legal_deadline_unit",
