@@ -163,7 +163,7 @@ def main() -> int:
 
     canonical_source = canonical_path.read_text(encoding="utf-8")
     # UNKNOWN company facts remain non-findings even though product scoring is released.
-    if re.search(r'"is_black_override":\\s*True', canonical_source):
+    if re.search(r'"is_black_override":\s*True', canonical_source):
         print("FAIL: canonical statutory rule registry contains a BLACK override")
         return 1
 
@@ -184,14 +184,14 @@ def main() -> int:
         print("FAIL: seed_rules.py must insert new canonical rows as active")
         return 1
 
-    if not re.search(r"^LEGAL_SCORE_RELEASED:\\s*bool\\s*=\\s*True\\s*$", engine_source, re.MULTILINE):
+    if not re.search(r"^LEGAL_SCORE_RELEASED:\s*bool\s*=\s*True\s*$", engine_source, re.MULTILINE):
         print("FAIL: product scoring release flag is not enabled")
         return 1
     verified_match = re.search(
-        r"^VERIFIED_RULE_IDS:\\s*frozenset\\[str\\]\\s*=\\s*frozenset\\(\\{([\\s\\S]*?)\\}\\)",
+        r"^VERIFIED_RULE_IDS:\s*frozenset\[str\]\s*=\s*frozenset\(\{([\s\S]*?)\}\)",
         engine_source, re.MULTILINE
     )
-    verified_engine_ids = set(re.findall(r'"([A-Z]{2,12}-\\d{3})"', verified_match.group(1))) if verified_match else set()
+    verified_engine_ids = set(re.findall(r'"([A-Z]{2,12}-\d{3})"', verified_match.group(1))) if verified_match else set()
     if verified_engine_ids != seed:
         print(f"FAIL: engine VERIFIED_RULE_IDS mismatch; missing={sorted(seed - verified_engine_ids)} extra={sorted(verified_engine_ids - seed)}")
         return 1
