@@ -100,6 +100,11 @@ class TestCompanyAccessDependency:
 
         assert await dependency(request, current_user=user, db=db) is user
         db.execute.assert_awaited_once()
+        statement = db.execute.await_args.args[0]
+        rendered_query = str(statement)
+        assert "company_user_access.user_id" in rendered_query
+        assert "company_user_access.company_id" in rendered_query
+        assert "company_user_access.is_active" in rendered_query
 
     @pytest.mark.asyncio
     async def test_missing_company_membership_is_forbidden(self):
