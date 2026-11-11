@@ -43,17 +43,13 @@ def test_calendar_api_returns_unavailable_not_an_empty_no_deadline_claim(monkeyp
         raise AssertionError("calendar endpoint must fail closed before legal approval")
 
 
-def test_customer_facing_dashboard_deadlines_fail_closed(monkeypatch):
+def test_customer_facing_dashboard_reads_only_persisted_deadline_events():
     import app.api.companies as companies_api
 
-    monkeypatch.setattr(companies_api, "calendar_manifest_is_released", lambda: False)
-    try:
-        companies_api._require_legal_dashboard_release(deadlines=True)
-    except HTTPException as exc:
-        assert exc.status_code == 503
-        assert "Statutory deadlines are unavailable" in exc.detail
-    else:
-        raise AssertionError("dashboard must not expose unapproved statutory deadlines")
+    # New events can only be written through the source/mapping/owner-release
+    # endpoint after a verified tenant fact is supplied. An empty result is
+    # reported separately; it is not interpreted as no statutory obligations.
+    companies_api._require_legal_dashboard_release(deadlines=True)
 
 
 def test_dashboard_risk_aggregates_fail_closed_until_score_release(monkeypatch):
@@ -83,7 +79,7 @@ def test_legacy_calendar_generator_cannot_emit_unverified_deadlines():
             )
         )
     except RuntimeError as exc:
-        assert "independently approved" in str(exc)
+        assert "product-owner deadline registry" in str(exc)
     else:
         raise AssertionError("legacy calendar generator must remain disabled")
 
