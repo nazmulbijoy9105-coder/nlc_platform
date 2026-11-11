@@ -7,13 +7,11 @@ databases.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable
-
 from alembic.config import Config
-from alembic.script import Script, ScriptDirectory
+from alembic.script import ScriptDirectory
 
 
-def parents_for(revision: Script) -> tuple[str, ...]:
+def parents_for(revision) -> tuple[str, ...]:
     down_revision = revision.down_revision
     if down_revision is None:
         return ()
