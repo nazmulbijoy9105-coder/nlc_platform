@@ -38,7 +38,7 @@ from app.rule_engine.engine import (
     AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
-    VERIFIED_RULE_IDS,  # Compatibility export; not used to claim independent legal review.
+    VERIFIED_RULE_IDS as VERIFIED_RULE_IDS,  # Compatibility export; not used to claim independent legal review.
 )
 from app.models.user import User
 from app.services.notification_service import ActivityService
