@@ -149,7 +149,7 @@ async def _append_event(
     previous = (
         await db.execute(
             select(LegalRuleReleaseEvent.event_hash)
-            .order_by(LegalRuleReleaseEvent.created_at.desc(), LegalRuleReleaseEvent.id.desc())
+            .order_by(LegalRuleReleaseEvent.sequence_no.desc())
             .limit(1)
         )
     ).scalar_one_or_none()
@@ -494,10 +494,7 @@ async def preview_or_release_deadline(
                 LegalRuleReleaseEvent.mapping_id == definition.mapping_id,
                 LegalRuleReleaseEvent.deadline_definition_id == definition.id,
                 LegalRuleReleaseEvent.decision.in_(["APPROVED", "REVOKED"]),
-            ).order_by(
-                LegalRuleReleaseEvent.created_at.desc(),
-                LegalRuleReleaseEvent.id.desc(),
-            ).limit(1)
+            ).order_by(LegalRuleReleaseEvent.sequence_no.desc()).limit(1)
         )
     ).scalar_one_or_none()
     is_owner_approved = (
