@@ -117,8 +117,8 @@ def test_public_rule_response_discloses_pending_legal_verification():
 
     response = rules_api._rule_to_response(rule)
 
-    # Rule remains in the legal verification inventory; row-level status is still PENDING
-    # until counsel marks verified_at, but statutory effective date is disclosed.
+    # A known statutory effective date may be disclosed while legal verification remains pending.
+    # Effective-date metadata is not evidence of a counsel approval.
     assert response.verification_status == "PENDING"
     assert response.verified_at is None
     assert response.statutory_effective_date == "1994-02-12"
