@@ -16,7 +16,7 @@ def test_seed_write_requires_explicit_development_opt_in(monkeypatch):
     monkeypatch.delenv("NLC_ALLOW_DEVELOPMENT_RULE_SEED", raising=False)
 
     with pytest.raises(RuntimeError, match="explicit local development opt-in"):
-        assert_seed_write_allowed()
+        assert_seed_write_allowed('postgresql+asyncpg://test:test@localhost:5432/nlc_dev')
 
 
 @pytest.mark.parametrize("environment", ["production", "prod"])
