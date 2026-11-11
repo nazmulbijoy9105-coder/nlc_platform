@@ -119,6 +119,6 @@ def test_public_rule_response_keeps_independent_legal_review_pending_after_owner
 
     # Product-owner release does not establish independent legal/source verification.
     # Company-specific applicability and evidence remain separate runtime decisions.
-    assert response.verification_status == "VERIFIED"
+    assert response.verification_status == "PENDING"
     assert response.verified_at is None
     assert response.statutory_effective_date is None
