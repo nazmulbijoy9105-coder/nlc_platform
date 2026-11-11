@@ -74,7 +74,7 @@ def test_historical_score_history_is_visible_without_mutating_the_database_recor
     assert item["score"] == 72  # Preserve immutable historical evidence.
 
 
-def test_product_scoring_flag_is_visible_with_legal_verification_inventory():
+def test_product_scoring_flag_is_visible_without_claiming_legal_verification():
     flag = SimpleNamespace(
         id=uuid4(),
         rule_id="AGM-001",
@@ -94,11 +94,11 @@ def test_product_scoring_flag_is_visible_with_legal_verification_inventory():
     assert response.severity == "BLACK"
     assert response.score_impact == 20
     assert response.is_black_override is False
-    assert response.legal_review_status == "LEGALLY_VERIFIED"
+    assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
     assert response.rule_name == "Provisional AGM evidence flag"
 
 
-def test_product_scoring_flag_reports_legal_verification_after_inventory_release(monkeypatch):
+def test_product_scoring_flag_remains_legally_pending_after_product_release(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
     flag = SimpleNamespace(
@@ -119,7 +119,7 @@ def test_product_scoring_flag_reports_legal_verification_after_inventory_release
 
     assert response.severity == "RED"
     assert response.score_impact == 15
-    assert response.legal_review_status == "LEGALLY_VERIFIED"
+    assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
 
 
 def test_flag_summary_separates_pending_review_from_released_findings(monkeypatch):
