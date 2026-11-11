@@ -92,6 +92,12 @@ class MappingCreate(BaseModel):
     rationale: str = Field(min_length=10, max_length=4000)
 
 
+class MappingBulkCreate(BaseModel):
+    """Explicit bulk import of rule/source mappings under one signed owner session."""
+
+    mappings: list[MappingCreate] = Field(min_length=1, max_length=100)
+
+
 class DeadlineDefinitionCreate(BaseModel):
     mapping_id: UUID
     event_type: str
@@ -511,6 +517,129 @@ async def map_rule_to_source(
         "source_id": str(mapping.source_id),
         "event_id": str(event.id),
         "event_hash": event.event_hash,
+    }
+
+
+@router.post(
+    "/mappings/bulk",
+    status_code=201,
+    dependencies=[Depends(require_roles("SUPER_ADMIN"))],
+)
+async def bulk_map_rules_to_sources(
+    body: MappingBulkCreate,
+    db: AsyncSession = Depends(get_db_for_user),
+    current_user=Depends(get_current_user),
+):
+    """Import explicit mappings atomically; append one actor-bound event per new row.
+
+    This endpoint never infers citations, source versions, owner approval or legal
+    verification. It only persists the exact mapping data supplied by a signed
+    SUPER_ADMIN after confirming that every referenced rule and source exists.
+    """
+    # Serialize bulk identity checks so retries remain idempotent.
+    await db.execute(text("SELECT pg_advisory_xact_lock(741113, 2)"))
+
+    rule_ids = sorted({item.rule_id for item in body.mappings})
+    source_ids = sorted({item.source_id for item in body.mappings}, key=str)
+    rules = (
+        await db.execute(select(LegalRule).where(LegalRule.rule_id.in_(rule_ids)))
+    ).scalars().all()
+    sources = (
+        await db.execute(select(LegalSource).where(LegalSource.id.in_(source_ids)))
+    ).scalars().all()
+    rules_by_id = {row.rule_id: row for row in rules}
+    sources_by_id = {row.id: row for row in sources}
+    missing_rules = sorted(set(rule_ids) - set(rules_by_id))
+    missing_sources = sorted(str(item) for item in set(source_ids) - set(sources_by_id))
+    if missing_rules or missing_sources:
+        raise HTTPException(
+            422,
+            {
+                "message": "Bulk mapping rejected before any row was inserted.",
+                "missing_rule_ids": missing_rules,
+                "missing_source_ids": missing_sources,
+            },
+        )
+
+    seen: set[tuple[str, UUID, str, str]] = set()
+    results: list[dict[str, Any]] = []
+    created = 0
+    existing_count = 0
+    for item in body.mappings:
+        identity = (
+            item.rule_id,
+            item.source_id,
+            item.mapping_kind,
+            item.provision_citation.strip(),
+        )
+        if identity in seen:
+            existing_count += 1
+            results.append({
+                "rule_id": item.rule_id,
+                "source_id": str(item.source_id),
+                "state": "DUPLICATE_IN_REQUEST",
+            })
+            continue
+        seen.add(identity)
+        existing = (
+            await db.execute(
+                select(LegalRuleSourceMapping).where(
+                    LegalRuleSourceMapping.rule_id == item.rule_id,
+                    LegalRuleSourceMapping.source_id == item.source_id,
+                    LegalRuleSourceMapping.mapping_kind == item.mapping_kind,
+                    LegalRuleSourceMapping.provision_citation == item.provision_citation,
+                )
+            )
+        ).scalar_one_or_none()
+        if existing is not None:
+            existing_count += 1
+            results.append({
+                "rule_id": item.rule_id,
+                "source_id": str(item.source_id),
+                "mapping_id": str(existing.id),
+                "state": "ALREADY_MAPPED",
+            })
+            continue
+
+        mapping = LegalRuleSourceMapping(
+            **item.model_dump(),
+            created_by=current_user.id,
+        )
+        db.add(mapping)
+        await db.flush()
+        source = sources_by_id[item.source_id]
+        event = await _append_event(
+            db,
+            event_type="RULE_SOURCE_MAPPED",
+            actor_id=current_user.id,
+            reason=f"Bulk mapped {item.rule_id} to {source.instrument_title}",
+            rule_id=item.rule_id,
+            source_id=source.id,
+            mapping_id=mapping.id,
+            metadata={
+                "mapping_kind": item.mapping_kind,
+                "provision_citation": item.provision_citation,
+                "rationale": item.rationale,
+                "registration_method": "SIGNED_SUPER_ADMIN_BULK_IMPORT",
+                "source_version": source.version_label,
+            },
+        )
+        created += 1
+        results.append({
+            "rule_id": item.rule_id,
+            "source_id": str(source.id),
+            "mapping_id": str(mapping.id),
+            "event_id": str(event.id),
+            "event_hash": event.event_hash,
+            "state": "RULE_SOURCE_MAPPED",
+        })
+
+    return {
+        "created": created,
+        "already_present_or_duplicate": existing_count,
+        "results": results,
+        "product_owner_approval_created": False,
+        "legal_verification_status_changed": False,
     }
 
 
