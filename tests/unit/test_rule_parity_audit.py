@@ -49,7 +49,7 @@ def test_unavailable_requested_live_api_fails_audit(monkeypatch):
 
 def test_engine_seed_rule_mismatch_fails_static_audit(monkeypatch):
     monkeypatch.setattr(AUDIT, "get_engine_rules", lambda: {"AGM-001", "INC-001"})
-    monkeypatch.setattr(AUDIT, "get_seed_rules", lambda: {"AGM-001"})
+    monkeypatch.setattr(AUDIT, "get_seed_rule_definitions", lambda: {"AGM-001": {"rule_id": "AGM-001"}})
     monkeypatch.setattr(sys, "argv", ["audit_rule_parity.py", "--no-db", "--no-api"])
 
     assert AUDIT.main() == 1
