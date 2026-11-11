@@ -152,8 +152,8 @@ def _rule_to_response(rule) -> RuleResponse:
             scoring_catalogue_member
             and rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         ),
-        is_active=bool(rule.is_active),
-        verification_status=rule.verification_status if legally_verified else "PENDING",
+        is_active=bool(rule.is_active and scoring_catalogue_member),
+        verification_status="VERIFIED" if legally_verified else "PENDING",
         verified_at=rule.verified_at.isoformat() if legally_verified and rule.verified_at else None,
         statutory_effective_date=(
             rule.statutory_effective_date.isoformat()
