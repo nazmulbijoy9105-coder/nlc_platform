@@ -82,7 +82,7 @@ class RuleResponse(BaseModel):
     revenue_tier: str
     is_black_override: bool
     is_active: bool
-    verification_status: str = Field(description="Citation review status only; not a legal opinion or confirmation of company-specific applicability.")
+    verification_status: str = Field(description="Owner-attested legal verification inventory status; company-specific applicability and evidence are evaluated separately.")
     verified_at: str | None = Field(description="Date the citation review status was recorded, if applicable.")
     statutory_effective_date: str | None = Field(description="Recorded statutory effective date; applicability must still be assessed for the relevant company and period.")
     version: str
