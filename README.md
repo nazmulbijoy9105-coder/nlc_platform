@@ -38,7 +38,7 @@ A full-stack compliance intelligence platform that:
 | API | FastAPI + Pydantic v2 + uvicorn |
 | Database | PostgreSQL 16 + SQLAlchemy 2.0 async (147 columns on companies table) |
 | Cache/Queue | Redis 7 + Celery 5 + redbeat |
-| Migrations | Alembic (43 migrations, auto-applied on deploy) |
+| Migrations | Alembic revision DAG with explicit forward migrations; inspect `alembic heads` and `python scripts/audit_alembic_graph.py` |
 | Auth | JWT (32+ char secret) + TOTP 2FA (AES-256 encrypted) + bcrypt |
 | Rate Limiting | slowapi (10/min on login) |
 | AI | Anthropic Claude / OpenAI (human approval required) |
@@ -53,15 +53,15 @@ A full-stack compliance intelligence platform that:
 
 nlc_platform/
 ├── app/
-│   ├── main.py              # FastAPI app factory + middleware + auto-migration
+│   ├── main.py              # FastAPI app factory + middleware; no schema migration at startup
 │   ├── api/                 # 11 routers, 80+ endpoints
 │   ├── models/              # 28 SQLAlchemy ORM tables (147+ columns on companies)
 │   ├── services/            # 12 service files (CompanyService, ComplianceService, etc.)
 │   ├── core/                # config, security, dependencies (RBAC + RLS)
 │   ├── rule_engine/         # Deterministic 85-rule ILRMF engine v2.1
 │   └── worker/              # Celery tasks + beat schedule (7-year retention)
-├── alembic/                 # 43 migrations (0001-0043)
-├── scripts/                 # Seeders (75 rules + AI templates)
+├── alembic/                 # Versioned Alembic revision DAG (including merge revisions)
+├── scripts/                 # Audits and development-only utilities; production registry is migration-controlled
 ├── tests/                   # 288 unit tests + integration tests (unit + integration)
 ├── tools/                   # audit_rule_parity.py (canonical AST-based parity check)
 ├── docs/                    # LEGAL_BASIS_MATRIX.md, LAWYER_LEGAL_REVIEW_PACK.md
@@ -121,7 +121,7 @@ cp .env.example .env
 # Install + run
 pip install -r requirements.txt
 alembic upgrade head
-python scripts/seed_rules.py
+python scripts/seed_rules.py  # Development only; never use as a production release step
 uvicorn app.main:app --reload
 
 # Verify
@@ -130,7 +130,7 @@ curl http://localhost:8000/api/v1/health/ready
 # Development
 uvicorn app.main:app --reload          # Start API server
 alembic upgrade head                   # Run migrations
-python scripts/seed_rules.py           # Seed 85 rules
+
 celery -A app.worker.celery_app worker -l info  # Start Celery worker
 celery -A app.worker.celery_app beat -l info     # Start beat scheduler
 
@@ -145,9 +145,10 @@ python -m compileall app/              # Compile check
 python tools/audit_rule_parity.py --no-db  # Rule parity (AST-based)
 
 # Deployment (Render.com)
-# Manual deploy on Render (autoDeploy: false) — push to main does not deploy
-# Migrations run automatically on startup
-# Rules auto-seed if count < 85
+# Native Render autoDeploy is disabled; GitHub Actions deploys only after CI succeeds on current main
+# Apply reviewed Alembic migrations as a separately authorized release operation; API startup performs no schema migration
+# Canonical legal-rule registry is managed by versioned Alembic migrations; do not seed production at runtime
+
 API Endpoints
 Router
 	
@@ -185,8 +186,10 @@ Render.com (Production)
      Frontend: https://nlc-frontend.vercel.app
      Database: Neon PostgreSQL (confirm PITR/snapshot schedule in Neon console; do not assume retention)
      Redis: Render Redis
-     Manual deploy only (autoDeploy: false); push to main does not deploy
-     Migrations + rule seeding run on startup
+     Native Render autoDeploy is disabled; GitHub Actions triggers the deploy hook only after successful CI on current main
+     Apply reviewed Alembic migrations explicitly before application release
+     API startup does not mutate schema or seed legal rules
+     Native Render autoDeploy is disabled; GitHub Actions triggers the deploy hook only after successful CI on current main
 Docker (Local/On-Premise)
 docker-compose up -d
 Rule Parity Audit
