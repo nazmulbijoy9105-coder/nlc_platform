@@ -178,3 +178,41 @@ def calculate_approved_penalty(
     if rule.cap_amount is not None:
         amount = min(amount, rule.cap_amount)
     return amount.quantize(Decimal("0.01"))
+
+
+
+def calculate_deadline_candidate(
+    rule: DeadlineRule,
+    *,
+    trigger_date: date,
+    applicable: bool,
+    holidays: frozenset[date] = frozenset(),
+) -> date | None:
+    """Calculate a clearly provisional date without asserting rule/fact approval.
+
+    This function is for preview only. It intentionally ignores rule.approved
+    and performs no trigger-evidence verification. Callers must label the
+    result PREVIEW_ONLY unless a separate product-owner release event and a
+    verified, tenant-bound company fact authorize persistence.
+    """
+    if not applicable:
+        return None
+    if trigger_date < rule.effective_from:
+        return None
+    if rule.effective_to is not None and trigger_date > rule.effective_to:
+        return None
+
+    if rule.unit == "CLEAR_DAYS":
+        due = trigger_date + timedelta(days=rule.offset + 1)
+    else:
+        base = trigger_date + timedelta(days=1) if rule.exclude_trigger_day else trigger_date
+        if rule.unit == "DAYS":
+            due = base + timedelta(days=rule.offset)
+        elif rule.unit == "MONTHS":
+            due = _add_months(base, rule.offset)
+        elif rule.unit == "YEARS":
+            due = _add_years(base, rule.offset)
+        else:  # pragma: no cover
+            raise ValueError(f"Unsupported deadline unit: {rule.unit}")
+
+    return _adjust_business_day(due, rule.adjustment, holidays)
