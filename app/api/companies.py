@@ -277,7 +277,14 @@ class ComplianceSummaryResponse(BaseModel):
     yellow_flags: int
     last_evaluated_at: str | None
     evaluation_triggered: bool = False
-    disclaimer: str = "Automated compliance screening. Not legal advice. Consult your legal counsel."
+    evaluation_run_id: str | None = None
+    evaluation_hash: str | None = None
+    evaluation_run_status: str | None = None
+    evaluation_calculated_at: str | None = None
+    engine_version: str | None = None
+    ilrmf_version: str | None = None
+    scoring_spec_version: str | None = None
+    disclaimer: str = "Product risk indicator only — not legal advice and not a certification."
 
 
 class FlagResponse(BaseModel):
@@ -652,7 +659,7 @@ async def evaluate_company(company_id: uuid.UUID, request: Request, current_user
     await db.refresh(company)
     await activity.log(action="COMPLIANCE_EVALUATED", resource_type="company", resource_id=str(company_id), description=f"Evaluation: Score={result['score']}, Band={result['risk_band']}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     flag_summary = await compliance_svc.get_flag_summary(company_id)
-    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=result["score"] if _legal_score_is_released() else None, pre_override_score=result.get("raw_total") if _legal_score_is_released() else None, risk_band=result["risk_band"] if _legal_score_is_released() else "NOT_EVALUATED", active_flags=flag_summary.get("total_active", 0) if _legal_score_is_released() else 0, black_flags=flag_summary.get("black", 0) if _legal_score_is_released() else 0, red_flags=flag_summary.get("red", 0) if _legal_score_is_released() else 0, yellow_flags=flag_summary.get("yellow", 0) if _legal_score_is_released() else 0, last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, evaluation_triggered=True, disclaimer="Automated compliance screening. Not legal advice. Consult your legal counsel.")
+    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=result["score"] if _legal_score_is_released() else None, pre_override_score=result.get("raw_total") if _legal_score_is_released() else None, risk_band=result["risk_band"] if _legal_score_is_released() else "NOT_EVALUATED", active_flags=flag_summary.get("total_active", 0) if _legal_score_is_released() else 0, black_flags=flag_summary.get("black", 0) if _legal_score_is_released() else 0, red_flags=flag_summary.get("red", 0) if _legal_score_is_released() else 0, yellow_flags=flag_summary.get("yellow", 0) if _legal_score_is_released() else 0, last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, evaluation_triggered=True, evaluation_run_id=result.get("evaluation_run_id"), evaluation_hash=result.get("evaluation_hash"), evaluation_run_status=result.get("evaluation_run_status"), evaluation_calculated_at=result.get("evaluation_calculated_at"), engine_version=result.get("engine_version"), ilrmf_version=result.get("ilrmf_version"), scoring_spec_version=result.get("scoring_spec_version"), disclaimer="Product risk indicator only — not legal advice and not a certification.")
 
 
 @router.get("/{company_id}/compliance", response_model=ComplianceSummaryResponse, dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))], summary="Get compliance state")
