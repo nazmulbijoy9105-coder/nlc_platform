@@ -36,7 +36,6 @@ from app.rule_engine.engine import (
 from app.services.company_service import CompanyService
 from app.services.domain_events import DomainEventType, publish_domain_event
 from app.services.compliance_service import ComplianceService
-from app.services.compliance_calendar import calendar_manifest_is_released
 from app.services.notification_service import ActivityService
 from app.services.pdf_report_service import PDFReportService
 
@@ -49,14 +48,12 @@ logger = structlog.get_logger(__name__)
 
 
 def _require_legal_dashboard_release(*, deadlines: bool = False) -> None:
-    """Do not expose cached statutory risk or deadline aggregates before release."""
-    if deadlines and not calendar_manifest_is_released():
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Statutory deadlines are unavailable because the product calendar release is disabled or its manifest is incomplete."
-            ),
-        )
+    """Gate risk aggregates; deadline dashboards read only persisted tenant events.
+
+    An empty calendar must never be interpreted as evidence that no obligation
+    exists. New deadline writes have their own source, owner-release and fact
+    verification gates.
+    """
     if not deadlines and not _legal_score_is_released():
         raise HTTPException(
             status_code=503,
@@ -761,7 +758,6 @@ async def get_dashboard_kpis(current_user: User = Depends(get_current_user), db:
 
 @router.get("/dashboard/deadlines", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Upcoming deadlines")
 async def get_upcoming_deadlines(days_ahead: int = Query(default=30, ge=7, le=90), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
-    _require_legal_dashboard_release(deadlines=True)
     svc = CompanyService(db)
     return await svc.get_upcoming_deadlines(
         days_ahead=days_ahead,

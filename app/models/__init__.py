@@ -108,6 +108,12 @@ from .rjsc_forms import RJSCFormFiling
 
 # ── Rules (Legal Rules + Version History) ────────────────────────────
 from .rules import LegalRule, LegalRuleVersion
+from .legal_provenance import (
+    LegalDeadlineDefinition,
+    LegalRuleReleaseEvent,
+    LegalRuleSourceMapping,
+    LegalSource,
+)
 
 # ── Users ────────────────────────────────────────────────────────────
 from .user import User
@@ -161,6 +167,10 @@ __all__ = [
     "EventAction",
     "ExposureBand",
     "FlagStatus",
+    "LegalDeadlineDefinition",
+    "LegalRuleReleaseEvent",
+    "LegalRuleSourceMapping",
+    "LegalSource",
     "LegalRule",
     "LegalRuleVersion",
     "LifecycleStage",

@@ -18,10 +18,10 @@ AI Constitution compliance:
 
 from __future__ import annotations
 
+import os as _os
 import time
 import uuid
 from contextlib import asynccontextmanager
-from datetime import UTC
 from typing import TYPE_CHECKING
 
 import structlog
@@ -41,6 +41,7 @@ from app.api import (
     filings,
     finance,
     health,
+    legal_provenance,
     notifications,
     rescue,
     rjsc_forms,
@@ -367,8 +368,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 
 
 # ── Sentry Error Monitoring ──────────────────────────────────────
-import os as _os
-
 _sentry_dsn = _os.environ.get("SENTRY_DSN", "")
 if _sentry_dsn:
     try:
@@ -459,6 +458,7 @@ def create_app() -> FastAPI:
     app.include_router(subscriptions.router, prefix=f"{API_PREFIX}/subscriptions", tags=["Subscriptions & Entitlements"])
     app.include_router(rjsc_forms.router, prefix=f"{API_PREFIX}/rjsc-forms", tags=["RJSC Forms"])
     app.include_router(calendar.router, prefix=API_PREFIX, tags=["Compliance Calendar"])
+    app.include_router(legal_provenance.router, prefix=API_PREFIX, tags=["Legal Source Provenance"])
     app.include_router(rules.router,      prefix=f"{API_PREFIX}/rules",      tags=["Legal Rules"])
     app.include_router(admin.router,      prefix=f"{API_PREFIX}/admin",      tags=["Admin"])
     app.include_router(notifications.router, prefix=f"{API_PREFIX}/notifications", tags=["Notifications"])

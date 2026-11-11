@@ -179,8 +179,8 @@ class SubscriptionService:
             item.billing_interval: item
             for item in existing_prices_result.scalars().all()
         }
-        for interval, price_item in existing_prices.items():
-            price_item.is_active = interval in intervals
+        for interval, existing_price in existing_prices.items():
+            existing_price.is_active = interval in intervals
 
         for price in prices:
             interval = str(price["billing_interval"]).upper()
