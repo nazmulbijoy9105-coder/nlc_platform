@@ -323,9 +323,10 @@ def _flag_to_response(flag) -> FlagResponse:
     score_eligible = (
         _legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
     )
-    # Product-owner approval releases product scoring; it is not independent
-    # legal verification. No counsel/source-verification registry is wired here.
-    legally_verified = False
+    # Counsel verification is rule-specific and remains distinct from
+    # product scoring release. A verified rule can still be unpublished while
+    # the complete product catalogue release gate remains closed.
+    legally_verified = flag.rule_id in VERIFIED_RULE_IDS
     severity = getattr(flag.severity, "value", flag.severity)
     return FlagResponse(
         flag_id=str(flag.id),
@@ -694,7 +695,11 @@ async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_d
         last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
         evaluation_run_id=str(evaluation_run.id) if evaluation_run else None,
         evaluation_hash=evaluation_run.score_hash if evaluation_run else None,
-        evaluation_run_status=evaluation_run.evaluation_status if evaluation_run else None,
+        evaluation_run_status=(
+            "NOT_RELEASED"
+            if not _legal_score_is_released()
+            else (evaluation_run.evaluation_status if evaluation_run else None)
+        ),
         evaluation_calculated_at=evaluation_run.calculated_at.isoformat() if evaluation_run else None,
         engine_version=evaluation_run.engine_version if evaluation_run else None,
         ilrmf_version=score_snapshot.get("ilrmf_version"),
