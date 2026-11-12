@@ -54,6 +54,7 @@ async def test_unapproved_rule_is_not_notified_even_if_release_switch_is_true(mo
 async def test_released_approved_red_flag_queues_dashboard_alert(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     service = NotificationService(MagicMock())
     service.queue_notification = AsyncMock()
 
