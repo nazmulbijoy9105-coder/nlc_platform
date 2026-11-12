@@ -41,10 +41,10 @@ Before any metadata migration:
 These are source-discovery starting points, not proof that every rule's cited provision is correct or that the source is the latest controlling consolidation:
 - Companies Act 1994 (official Bangladesh Laws): https://bdlaws.minlaw.gov.bd/act-print-788.html
 - Income Tax Act publications (NBR): https://nbr.gov.bd/regulations/acts/income-tax-acts/eng/eng
-- VAT Acts and regulations (NBR): https://nbr.gov.bd/regulations/acts/vat-acts/eng
+- VAT Acts and regulations (NBR): https://nbr.gov.bd/regulations/acts/vat-acts/eng/contents/eng
 - Bangladesh Labour (Amendment) Act 2026 (Government Press Gazette listing): https://www.dpp.gov.bd/bgpress/index.php/document/extraordinary_gazettes_monthly/2026-04-02
 - BSEC Act/rules/notifications: https://sec.gov.bd/act-rules-and-regulations
-- Bangladesh Bank foreign exchange guideline portal: https://www.bb.org.bd/feidportal/guidelines/company_act1994.pdf
+- Bangladesh Bank foreign exchange guideline portal: https://www.bb.org.bd/en/index.php/about/guidelist
 
 The register deliberately marks source URIs as `PRIMARY_SOURCE_NOT_YET_VERIFIED` where an authoritative source was not established in this pass. It does not infer statutory text from unofficial summaries.
 
