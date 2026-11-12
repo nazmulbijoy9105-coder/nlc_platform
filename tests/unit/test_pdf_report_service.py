@@ -421,5 +421,5 @@ def test_pdf_black_override_requires_independent_rule_verification(monkeypatch):
         conditional_applies=True,
     )
 
-    assert report_module._verified_flag_score([black]) == (100, False)
+    assert report_module._verified_flag_score([black]) == (0, False)
     assert report_module._legal_score_is_released() is False
