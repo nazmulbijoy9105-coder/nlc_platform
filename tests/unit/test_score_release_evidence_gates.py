@@ -6,7 +6,6 @@ import app.rule_engine.engine as engine_module
 from app.rule_engine.engine import (
     CompanyProfile,
     ComplianceFlag,
-    ExposureBand,
     NLCRuleEngine,
     RevenueTier,
     RuleState,
