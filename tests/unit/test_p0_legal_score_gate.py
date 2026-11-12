@@ -48,6 +48,7 @@ def test_product_allowlisted_black_override_requires_explicit_override_authorisa
         engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"AUD-003"})
     )
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AUD-003"}))
     result = NLCRuleEngine(today=date(2026, 11, 5))._calculate_score(
         [_engine_flag()], CompanyProfile(company_id="x", company_name="Test")
     )
@@ -78,6 +79,7 @@ def test_pdf_score_reconciliation_ignores_rule_outside_product_allowlist(monkeyp
 def test_pdf_score_reconciliation_counts_product_allowlisted_rules(monkeypatch):
     monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     approved = SimpleNamespace(rule_id="AGM-001", severity="RED", score_impact=15)
     unapproved = SimpleNamespace(rule_id="AUD-003", severity="BLACK", score_impact=25)
     assert _verified_flag_score([approved, unapproved]) == (85, False)
@@ -101,6 +103,7 @@ def test_release_switch_without_product_rules_does_not_release_a_score(monkeypat
 def test_pdf_requires_explicit_authorisation_for_black_override(monkeypatch):
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(report_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
     flag = SimpleNamespace(
         rule_id="AGM-001",
@@ -120,7 +123,7 @@ def test_pdf_requires_explicit_authorisation_for_black_override(monkeypatch):
     assert override is True
 
 
-def test_product_scoring_is_released_without_legal_verification_allowlist(monkeypatch):
+def test_product_scoring_remains_paused_without_legal_verification_allowlist(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
@@ -128,9 +131,10 @@ def test_product_scoring_is_released_without_legal_verification_allowlist(monkey
         [_engine_flag(severity=Severity.RED, black=False)],
         CompanyProfile(company_id="x", company_name="Test"),
     )
-    assert engine_module.legal_score_is_released() is True
+    assert engine_module.legal_score_is_released() is False
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
-    assert result.final_score == 75
+    assert result.final_score == 100
+    assert result.override_applied is False
 
 
 def test_verified_director_minimum_violation_emits_one_product_owner_black_override(build_profile):
@@ -150,11 +154,11 @@ def test_verified_director_minimum_violation_emits_one_product_owner_black_overr
     assert director_findings[0].is_black_override is True
     assert director_findings[0].state == RuleState.NON_COMPLIANT
     assert director_findings[0].eval_state == "VIOLATION"
-    assert output.score_breakdown.override_applied is True
-    assert output.score_breakdown.final_score == 0
+    assert output.score_breakdown.override_applied is False
+    assert output.score_breakdown.final_score == 100
 
 
-def test_product_owner_black_override_does_not_require_legal_verification(monkeypatch):
+def test_product_owner_black_override_is_blocked_without_legal_verification(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
@@ -164,9 +168,9 @@ def test_product_owner_black_override_does_not_require_legal_verification(monkey
         [flag], CompanyProfile(company_id="x", company_name="Test")
     )
 
-    assert engine_module.legal_score_is_released() is True
+    assert engine_module.legal_score_is_released() is False
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert engine_module.AUTHORIZED_BLACK_OVERRIDE_RULE_IDS == frozenset({"INC-003"})
-    assert result.override_applied is True
-    assert result.black_flag_count == 1
-    assert result.final_score == 0
+    assert result.override_applied is False
+    assert result.black_flag_count == 0
+    assert result.final_score == 100
