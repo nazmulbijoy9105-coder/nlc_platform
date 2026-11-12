@@ -288,7 +288,7 @@ def test_black_override_is_reported_separately_from_category_deduction():
 
     assert _applied_score_impacts([flag])[0] == {
         "applied": 0,
-        "status": "EXCLUDED_FROM_PRODUCT_SCORING",
+        "status": "LEGAL_SCORE_NOT_RELEASED",
     }
 
 
