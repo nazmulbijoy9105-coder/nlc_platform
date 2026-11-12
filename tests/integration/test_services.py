@@ -289,7 +289,7 @@ class TestComplianceService:
             .limit(1)
         )
         persisted_run = persisted_result.scalar_one()
-        assert persisted_run.score_breakdown_snapshot["category_deductions"] == {}
+        assert persisted_run.score_breakdown_snapshot["category_deductions"] is None
 
 
 # =============================================================================
