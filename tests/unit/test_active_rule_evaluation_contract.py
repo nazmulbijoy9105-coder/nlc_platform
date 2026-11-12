@@ -5,6 +5,8 @@ from app.rule_engine.engine import (
     REQUIRED_REGISTERS,
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
+    VERIFIED_RULE_IDS,
+    legal_score_is_released,
 )
 from canonical_architecture.evidence_model import EVIDENCE_REGISTRY
 
@@ -18,9 +20,11 @@ ACTIVE_EVALUATION_RULE_IDS = {
 }
 
 
-def test_requested_rules_remain_product_scoring_enabled():
-    assert LEGAL_SCORE_RELEASED is True
+def test_requested_rules_remain_product_enabled_but_statutory_release_is_paused():
     assert ACTIVE_EVALUATION_RULE_IDS <= PRODUCT_SCORING_RULE_IDS
+    assert LEGAL_SCORE_RELEASED is False
+    assert VERIFIED_RULE_IDS == frozenset()
+    assert legal_score_is_released() is False
 
 
 def test_legacy_rule_ids_are_preserved():
