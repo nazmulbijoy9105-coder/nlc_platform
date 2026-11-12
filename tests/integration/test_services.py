@@ -270,9 +270,11 @@ class TestComplianceService:
         )
 
         assert result is not None
-        # The product-controlled scoring release exposes the deterministic score.
-        assert result["score"] == 90
-        assert result["risk_band"] == "GREEN"
+        # Findings are evaluated and persisted, but statutory scores are not
+        # published until both product release and independent legal review exist.
+        assert result["score"] is None
+        assert result["risk_band"] == "NOT_EVALUATED"
+        assert result["legal_evaluation_status"] == "NOT_RELEASED"
         mock_engine.evaluate.assert_called_once()
 
         # The evaluation-run JSONB snapshot persists the full score contract,
