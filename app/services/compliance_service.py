@@ -349,7 +349,26 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     ],
                 }
                 for index, f in enumerate(output.flags)
-                if score_is_released and f.rule_id in PRODUCT_SCORING_RULE_IDS
+                if score_is_released and f.rule_id in VERIFIED_RULE_IDS and f.rule_id in PRODUCT_SCORING_RULE_IDS
+            ],
+            "review_findings": [
+                {
+                    "rule_id": flag.rule_id,
+                    "legal_state": getattr(flag.state, "value", flag.state),
+                    "evaluation_state": getattr(flag.eval_state, "value", flag.eval_state),
+                    "review_status": applied_impacts[index]["status"],
+                    "message": (
+                        "Evidence review required. No statutory conclusion, "
+                        "liability, penalty or score deduction is published."
+                    ),
+                    "score_impact_applied": 0,
+                }
+                for index, flag in enumerate(output.flags)
+                if not (
+                    score_is_released
+                    and flag.rule_id in VERIFIED_RULE_IDS
+                    and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+                )
             ],
             "excluded_rule_findings": [
                 {
