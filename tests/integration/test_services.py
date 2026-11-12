@@ -312,7 +312,9 @@ class TestComplianceService:
         assert len(persisted_run.flags_snapshot) == 1
         assert persisted_run.flags_snapshot[0]["scoring_status"] == "LEGAL_SCORE_NOT_RELEASED"
         assert persisted_run.flags_snapshot[0]["score_impact_applied"] == 0
-        assert persisted_run.flags_snapshot[0]["severity"] == "NOT_EVALUATED"
+        # Immutable evaluation evidence preserves the engine's internal raw label;
+        # customer-facing ComplianceFlag rows and API serializers must redact it.
+        assert persisted_run.flags_snapshot[0]["severity"] == "RED"
 
         persisted_flag_result = await db.execute(
             select(ComplianceFlag).where(
