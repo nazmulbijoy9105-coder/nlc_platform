@@ -389,6 +389,27 @@ class TestCompanies:
         assert run.risk_band == "NOT_EVALUATED"
         assert run.score_breakdown_snapshot is None
 
+        # A legacy completed snapshot must not make the customer API appear
+        # released after the product/legal release gate has been closed.
+        from app.models.enums import RiskBand
+
+        run.score = 88
+        run.risk_band = RiskBand.GREEN
+        run.evaluation_status = "COMPLETED"
+        db_company.current_compliance_score = 88
+        db_company.current_risk_band = RiskBand.GREEN
+        await db.flush()
+
+        stale_state_response = await api_client.get(
+            f"/api/v1/companies/{db_company.id}/compliance",
+            headers=_auth(admin_token),
+        )
+        assert stale_state_response.status_code == 200, stale_state_response.text
+        stale_state = stale_state_response.json()
+        assert stale_state["current_score"] is None
+        assert stale_state["risk_band"] == "NOT_EVALUATED"
+        assert stale_state["evaluation_run_status"] == "NOT_RELEASED"
+
         history_result = await db.execute(
             select(ComplianceScoreHistory)
             .where(ComplianceScoreHistory.company_id == db_company.id)
