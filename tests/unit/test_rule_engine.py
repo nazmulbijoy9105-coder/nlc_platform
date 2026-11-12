@@ -951,6 +951,7 @@ class TestEscalationRules:
 
 
     def test_ESC003_counts_only_active_black_flags(self, monkeypatch, rule_engine, build_profile):
+        import app.rule_engine.engine as engine_module
         """ESC-003 uses same filter as _calculate_score for counting BLACK flags.
 
         _run_escalation_rules must filter on not resolved and conditional_applies,
