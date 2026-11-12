@@ -760,7 +760,6 @@ class TestRulesService:
 
 def test_score_allocation_keeps_confirmed_findings_but_excludes_unverified_rules(monkeypatch):
     import app.rule_engine.engine as engine_module
-    from app.models.enums import RuleState as ModelRuleState
     from app.rule_engine.engine import RuleState
     from app.services.compliance_service import _applied_score_impacts
 
