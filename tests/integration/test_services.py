@@ -287,7 +287,7 @@ class TestComplianceService:
         # published until both product release and independent legal review exist.
         assert result["score"] is None
         assert result["risk_band"] == "NOT_EVALUATED"
-        assert result["legal_evaluation_status"] == "NOT_RELEASED"
+        assert result["legal_evaluation_status"] == "NOT_EVALUATED_PRODUCT_SCORING_DISABLED"
         assert len(result["review_findings"]) == 1
         assert result["review_findings"][0]["rule_id"] == "AGM-001"
         assert result["review_findings"][0]["score_impact_applied"] == 0
