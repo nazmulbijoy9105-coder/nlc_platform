@@ -310,7 +310,7 @@ def _legal_score_is_released() -> bool:
     return (
         LEGAL_SCORE_RELEASED is True
         and bool(PRODUCT_SCORING_RULE_IDS)
-        and bool(VERIFIED_RULE_IDS)
+        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
     )
 
 
