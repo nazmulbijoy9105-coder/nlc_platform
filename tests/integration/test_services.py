@@ -784,7 +784,9 @@ def test_score_allocation_keeps_confirmed_findings_but_excludes_unverified_rules
     from app.services.compliance_service import _applied_score_impacts
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001", "AUD-001"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
     confirmed = SimpleNamespace(
         rule_id="AUD-001",
         state=RuleState.NON_COMPLIANT,
@@ -818,6 +820,7 @@ def test_score_allocation_applies_only_verified_rule_in_controlled_release(monke
     from app.services.compliance_service import _applied_score_impacts
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     finding = SimpleNamespace(
         rule_id="AGM-001",
@@ -881,7 +884,7 @@ def test_pdf_report_only_scores_verified_rules_and_lists_other_rules_for_review(
     from app.services import pdf_report_service as report_module
 
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001", "AUD-001"}))
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     verified = SimpleNamespace(
         rule_id="AGM-001", severity="RED", description="Verified finding",
@@ -890,7 +893,7 @@ def test_pdf_report_only_scores_verified_rules_and_lists_other_rules_for_review(
         conditional_applies=True, detail={},
     )
     unverified = SimpleNamespace(
-        rule_id="AUD-001", severity="BLACK", description="Unverified legal conclusion",
+        rule_id="MEM-001", severity="BLACK", description="Unverified legal conclusion",
         score_impact=30, score_impact_applied=0, scoring_status="LEGAL_VERIFICATION_PENDING",
         state="NON_COMPLIANT", eval_state="VIOLATION", resolved=False,
         conditional_applies=True, detail={},
@@ -983,6 +986,7 @@ def test_rescue_output_validation_requires_release_and_unique_verified_findings(
         validate_rescue_engine_output(output, expected_company_id="tenant-001")
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     assert validate_rescue_engine_output(
         output, expected_company_id="tenant-001"
