@@ -437,6 +437,17 @@ class TestCompanies:
         assert str(history.risk_band.value if hasattr(history.risk_band, "value") else history.risk_band) == "NOT_EVALUATED"
 
     @pytest.mark.asyncio
+    async def test_company_compliance_pdf_returns_409_while_release_is_paused(
+        self, api_client, admin_token, db_company
+    ):
+        response = await api_client.get(
+            f"/api/v1/companies/{db_company.id}/compliance-pdf",
+            headers=_auth(admin_token),
+        )
+        assert response.status_code == 409, response.text
+        assert "PDF withheld" in response.json()["detail"]
+
+    @pytest.mark.asyncio
     async def test_get_compliance_returns_summary(self, api_client, admin_token, db_company):
         # api_client seeds the persisted ADMIN_STAFF identity used by admin_token.
         token = admin_token
