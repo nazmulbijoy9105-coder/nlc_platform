@@ -79,7 +79,8 @@ def test_each_finding_gets_exactly_one_rescue_disposition():
     assert [item["rule_id"] for item in result] == [
         finding.rule_id for finding in findings
     ]
-    assert result[0]["disposition"] == "ACTION_REQUIRED"
+    assert result[0]["disposition"] == "REVIEW_REQUIRED"
+    assert result[0]["reason"] == "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"
     assert result[1]["disposition"] == "WAITING_EVIDENCE"
     assert result[1]["reason"] == "FINDING_STATE_UNKNOWN"
     assert result[2]["reason"] == "FINDING_RESOLVED"
@@ -107,7 +108,10 @@ def test_yellow_finding_has_explicit_no_action_reason_in_red_plan():
     assert result[0]["reason"] == "FINDING_SEVERITY_BELOW_RESCUE_THRESHOLD"
 
 
-def test_red_finding_has_no_rescue_when_company_band_is_below_red():
+def test_red_finding_has_no_rescue_when_company_band_is_below_red(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     finding = _flag("AGM-001")
 
     result = _dispositions([finding], band=Severity.YELLOW)
@@ -125,7 +129,10 @@ def test_tax004_without_established_quarters_is_waiting_for_evidence():
     assert result[0]["reason"] == "MISSED_TAX_QUARTERS_NOT_ESTABLISHED"
 
 
-def test_gate_returns_empty_below_red():
+def test_gate_returns_empty_below_red(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     for band in (Severity.GREEN, Severity.YELLOW, Severity.NOT_EVALUATED):
         assert _seq([_flag("AGM-001")], band) == []
 
