@@ -24,6 +24,7 @@ from app.rule_engine.engine import (
     CATEGORY_CAPS,
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
+    VERIFIED_RULE_IDS,
     RuleState,
 )
 from app.services.company_service import CompanyService
@@ -306,7 +307,11 @@ def _render_rescue_section(rescue_plan: Any) -> str:
 
 def _legal_score_is_released() -> bool:
     """Mirror the engine's two-part release gate using this module's testable inputs."""
-    return LEGAL_SCORE_RELEASED is True and bool(PRODUCT_SCORING_RULE_IDS)
+    return (
+        LEGAL_SCORE_RELEASED is True
+        and bool(PRODUCT_SCORING_RULE_IDS)
+        and bool(VERIFIED_RULE_IDS)
+    )
 
 
 def _verified_flag_score(flags: Any) -> tuple[int, bool]:
@@ -330,6 +335,7 @@ def _verified_flag_score(flags: Any) -> tuple[int, bool]:
             or state not in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             or eval_state != "VIOLATION"
             or rule_id not in PRODUCT_SCORING_RULE_IDS
+            or rule_id not in VERIFIED_RULE_IDS
         ):
             continue
 
@@ -383,7 +389,10 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
 
     for f in (flags or []):
         rule_id = getattr(f, "rule_id", "") or ""
-        if rule_id not in PRODUCT_SCORING_RULE_IDS:
+        if (
+            rule_id not in PRODUCT_SCORING_RULE_IDS
+            or rule_id not in VERIFIED_RULE_IDS
+        ):
             continue
 
         scoring_status = getattr(f, "scoring_status", None)
@@ -525,7 +534,11 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
 
 def _flag_impact_label(flag: Any) -> str:
     rule_id = getattr(flag, "rule_id", "") or ""
-    if not _legal_score_is_released() or rule_id not in PRODUCT_SCORING_RULE_IDS:
+    if (
+        not _legal_score_is_released()
+        or rule_id not in PRODUCT_SCORING_RULE_IDS
+        or rule_id not in VERIFIED_RULE_IDS
+    ):
         return "Not scored — excluded from product scoring"
     applied = getattr(
         flag,
