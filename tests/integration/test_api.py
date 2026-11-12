@@ -306,7 +306,7 @@ class TestCompanies:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_get_dashboard_kpis_exposes_product_released_risk_aggregates(
+    async def test_get_dashboard_kpis_exposes_evidence_review_while_score_release_is_paused(
         self, api_client, admin_token
     ):
         resp = await api_client.get(
@@ -315,12 +315,13 @@ class TestCompanies:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["dashboard_mode"] == "STATUTORY_RISK"
-        assert data["statutory_score_release_status"] == "RELEASED"
-        assert data["statutory_risk_aggregates_available"] is True
-        assert data["green_count"] is not None
-        assert data["yellow_count"] is not None
-        assert data["red_black_count"] is not None
+        assert data["dashboard_mode"] == "EVIDENCE_REVIEW"
+        assert data["statutory_score_release_status"] == "NOT_RELEASED"
+        assert data["statutory_risk_aggregates_available"] is False
+        assert data["green_count"] is None
+        assert data["yellow_count"] is None
+        assert data["red_black_count"] is None
+        assert data["upcoming_deadlines"] is None
 
     @pytest.mark.asyncio
     async def test_get_compliance_returns_summary(self, api_client, admin_token, db_company):
