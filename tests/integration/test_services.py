@@ -218,7 +218,9 @@ class TestComplianceService:
         # immediately at fixture construction instead of deep in persistence.
         from app.rule_engine.engine import (
             ExposureBand,
+            ComplianceFlag,
             RevenueTier,
+            RuleState,
             ScoreBreakdown,
             Severity,
         )
@@ -253,8 +255,19 @@ class TestComplianceService:
             coverage=1.0,
             revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
         )
+        review_finding = ComplianceFlag(
+            rule_id="AGM-001",
+            flag_code="AGM_TEST",
+            severity=Severity.RED,
+            score_impact=10,
+            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+            description="Controlled evidence review fixture",
+            statutory_basis="Test fixture only",
+            state=RuleState.NON_COMPLIANT,
+            eval_state="VIOLATION",
+        )
         mock_output = SimpleNamespace(
-            flags=[],
+            flags=[review_finding],
             engine_version="test-engine-v1",
             ilrmf_version="test-ilrmf-v1",
             score_breakdown=score_breakdown,
@@ -270,9 +283,15 @@ class TestComplianceService:
         )
 
         assert result is not None
-        # The product-controlled scoring release exposes the deterministic score.
-        assert result["score"] == 90
-        assert result["risk_band"] == "GREEN"
+        # Findings are evaluated and persisted, but statutory scores are not
+        # published until both product release and independent legal review exist.
+        assert result["score"] is None
+        assert result["risk_band"] == "NOT_EVALUATED"
+        assert result["legal_evaluation_status"] == "NOT_RELEASED"
+        assert len(result["review_findings"]) == 1
+        assert result["review_findings"][0]["rule_id"] == "AGM-001"
+        assert result["review_findings"][0]["score_impact_applied"] == 0
+        assert "No statutory conclusion" in result["review_findings"][0]["message"]
         mock_engine.evaluate.assert_called_once()
 
         # The evaluation-run JSONB snapshot persists the full score contract,
@@ -287,7 +306,7 @@ class TestComplianceService:
             .limit(1)
         )
         persisted_run = persisted_result.scalar_one()
-        assert persisted_run.score_breakdown_snapshot["category_deductions"] == {}
+        assert persisted_run.score_breakdown_snapshot["category_deductions"] is None
 
 
 # =============================================================================
@@ -749,3 +768,102 @@ class TestRulesService:
         history = await svc.get_version_history("OFF-001")
         assert len(history) >= 1
         assert history[0].rule_id == "OFF-001"
+
+
+
+# =============================================================================
+# PAUSED SCORE RELEASE: FINDING, ALLOCATION AND RESCUE-PLANNER CONTRACTS
+# =============================================================================
+
+def test_score_allocation_keeps_confirmed_findings_but_excludes_unverified_rules(monkeypatch):
+    import app.rule_engine.engine as engine_module
+    from app.rule_engine.engine import RuleState
+    from app.services.compliance_service import _applied_score_impacts
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    confirmed = SimpleNamespace(
+        rule_id="AUD-001",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+        resolved=False,
+        conditional_applies=True,
+        severity="RED",
+        score_impact=15,
+        detail={},
+    )
+    unknown = SimpleNamespace(
+        rule_id="AGM-001",
+        state=RuleState.UNKNOWN,
+        eval_state="UNKNOWN",
+        resolved=False,
+        conditional_applies=True,
+        severity="NOT_EVALUATED",
+        score_impact=25,
+        detail={},
+    )
+
+    allocations = _applied_score_impacts([confirmed, unknown])
+
+    assert allocations[0] == {"applied": 0, "status": "LEGAL_VERIFICATION_PENDING"}
+    assert allocations[1] == {"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"}
+
+
+def test_score_allocation_applies_only_verified_rule_in_controlled_release(monkeypatch):
+    import app.rule_engine.engine as engine_module
+    from app.rule_engine.engine import RuleState
+    from app.services.compliance_service import _applied_score_impacts
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    finding = SimpleNamespace(
+        rule_id="AGM-001",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+        resolved=False,
+        conditional_applies=True,
+        severity="RED",
+        score_impact=10,
+        detail={},
+    )
+
+    assert _applied_score_impacts([finding]) == [{"applied": 10, "status": "APPLIED"}]
+
+
+def test_rescue_planner_remains_deterministic_when_score_release_is_paused(monkeypatch):
+    import app.rule_engine.engine as engine_module
+    from app.rule_engine.engine import (
+        ComplianceFlag,
+        NLCRuleEngine,
+        RevenueTier,
+        RuleState,
+        Severity,
+    )
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    finding = ComplianceFlag(
+        rule_id="AGM-001",
+        flag_code="AGM_EVIDENCE_CONFIRMED",
+        severity=Severity.RED,
+        score_impact=0,
+        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+        description="Confirmed fact fixture; review required",
+        statutory_basis="Controlled test fixture",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+    )
+    score = SimpleNamespace(risk_band=Severity.NOT_EVALUATED)
+
+    steps = NLCRuleEngine._generate_rescue_sequence(
+        None, None, [finding], score
+    )
+
+    assert len(steps) == 1
+    assert steps[0]["related_rules"] == ["AGM-001"]
+
+    dispositions = NLCRuleEngine._build_rescue_dispositions(
+        [finding], score, steps
+    )
+    assert dispositions[0]["disposition"] == "REVIEW_REQUIRED"
+    assert dispositions[0]["reason"] == "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"

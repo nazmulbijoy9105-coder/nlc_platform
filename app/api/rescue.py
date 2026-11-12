@@ -307,7 +307,8 @@ async def list_rescue_plans(
     Without company_id, returns all plans (admin/portfolio view).
     With company_id, returns only that company's plans.
     """
-    _require_legal_release()
+    # Historical rescue plans remain readable while statutory score publication
+    # is paused. Creation and mutation endpoints retain the release gate.
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
 
@@ -346,7 +347,6 @@ async def get_active_plan(
 ):
     if current_user.role == "LEGAL_STAFF":
         await ensure_staff_company_scope(company_id, current_user, db)
-    _require_legal_release()
     rescue_svc = RescueService(db)
     company_svc = CompanyService(db)
 
@@ -376,7 +376,7 @@ async def get_rescue_plan(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    _require_legal_release()
+    # Read-only retrieval of historical plans is safe while score release is paused.
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
 

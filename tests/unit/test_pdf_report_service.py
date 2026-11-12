@@ -98,6 +98,10 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
         "app.services.pdf_report_service.PRODUCT_SCORING_RULE_IDS",
         frozenset({"AGM-001"}),
     )
+    monkeypatch.setattr(
+        "app.services.pdf_report_service.VERIFIED_RULE_IDS",
+        frozenset({"AGM-001"}),
+    )
     captured = {}
 
     async def fake_render(html_content):
@@ -399,3 +403,73 @@ def test_endpoint_rejects_missing_snapshot(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         asyncio.run(PDFReportService(db=FakeDB()).generate_company_compliance_pdf("00000000-0000-4000-8000-000000000001"))
     assert exc.value.status_code == 409
+
+
+
+def test_pdf_black_override_requires_independent_rule_verification(monkeypatch):
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    black = SimpleNamespace(
+        rule_id="INC-003",
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        severity="BLACK",
+        is_black_override=True,
+        score_impact=0,
+        resolved=False,
+        conditional_applies=True,
+    )
+
+    assert report_module._verified_flag_score([black]) == (100, False)
+    assert report_module._legal_score_is_released() is True
+
+
+
+def test_pdf_separates_unverified_findings_from_verified_score_report(monkeypatch):
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        report_module, "PRODUCT_SCORING_RULE_IDS",
+        frozenset({"AGM-001", "AUD-001"}),
+    )
+    monkeypatch.setattr(
+        report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"})
+    )
+    verified = SimpleNamespace(
+        rule_id="AGM-001",
+        severity="RED",
+        description="Verified AGM review item",
+        score_impact=10,
+        resolved=False,
+        conditional_applies=True,
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        detail={},
+    )
+    unverified = SimpleNamespace(
+        rule_id="AUD-001",
+        severity="BLACK",
+        description="UNVERIFIED_SECRET_DESC",
+        score_impact=0,
+        resolved=False,
+        conditional_applies=True,
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        detail={},
+    )
+    company = SimpleNamespace(
+        company_name="Partial Review Ltd",
+        registration_number="P-1",
+        current_compliance_score=90,
+        current_risk_band="GREEN",
+    )
+
+    page = build_compliance_report_html(
+        company, [verified, unverified], WHEN
+    )
+
+    assert "Verified AGM review item" in page
+    assert "AUD-001" in page
+    assert "Independent legal/source verification pending" in page
+    assert "UNVERIFIED_SECRET_DESC" not in page
+    assert "BLACK-severity compliance breach" not in page

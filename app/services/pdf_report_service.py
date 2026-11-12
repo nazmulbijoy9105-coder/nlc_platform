@@ -24,6 +24,7 @@ from app.rule_engine.engine import (
     CATEGORY_CAPS,
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
+    VERIFIED_RULE_IDS,
     RuleState,
 )
 from app.services.company_service import CompanyService
@@ -306,7 +307,11 @@ def _render_rescue_section(rescue_plan: Any) -> str:
 
 def _legal_score_is_released() -> bool:
     """Mirror the engine's two-part release gate using this module's testable inputs."""
-    return LEGAL_SCORE_RELEASED is True and bool(PRODUCT_SCORING_RULE_IDS)
+    return (
+        LEGAL_SCORE_RELEASED is True
+        and bool(PRODUCT_SCORING_RULE_IDS)
+        and bool(VERIFIED_RULE_IDS)
+    )
 
 
 def _verified_flag_score(flags: Any) -> tuple[int, bool]:
@@ -330,6 +335,7 @@ def _verified_flag_score(flags: Any) -> tuple[int, bool]:
             or state not in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             or eval_state != "VIOLATION"
             or rule_id not in PRODUCT_SCORING_RULE_IDS
+            or rule_id not in VERIFIED_RULE_IDS
         ):
             continue
 
@@ -383,7 +389,10 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
 
     for f in (flags or []):
         rule_id = getattr(f, "rule_id", "") or ""
-        if rule_id not in PRODUCT_SCORING_RULE_IDS:
+        if (
+            rule_id not in PRODUCT_SCORING_RULE_IDS
+            or rule_id not in VERIFIED_RULE_IDS
+        ):
             continue
 
         scoring_status = getattr(f, "scoring_status", None)
@@ -523,9 +532,29 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
     </div>
     """
 
+def _render_review_queue(flags: Any) -> str:
+    """Show unverified rule IDs as neutral review prompts, never as breaches."""
+    if not flags:
+        return ""
+    items = "".join(
+        f"<li>{esc(getattr(flag, 'rule_id', 'Unknown rule'))}: "
+        "Independent legal/source verification pending; no statutory conclusion "
+        "or score deduction is published.</li>"
+        for flag in flags
+    )
+    return (
+        '<section class="review-queue"><h3>Items pending legal/source review</h3>'
+        f"<ul>{items}</ul></section>"
+    )
+
+
 def _flag_impact_label(flag: Any) -> str:
     rule_id = getattr(flag, "rule_id", "") or ""
-    if not _legal_score_is_released() or rule_id not in PRODUCT_SCORING_RULE_IDS:
+    if (
+        not _legal_score_is_released()
+        or rule_id not in PRODUCT_SCORING_RULE_IDS
+        or rule_id not in VERIFIED_RULE_IDS
+    ):
         return "Not scored — excluded from product scoring"
     applied = getattr(
         flag,
@@ -556,6 +585,7 @@ def build_compliance_report_html(
     # The HTML builder is also called directly by tests and internal jobs.
     # Enforce the release boundary here, not only in the HTTP endpoint:
     # stale cached scores, flags and rescue plans must never leak into a report.
+    review_flags = []
     if not _legal_score_is_released():
         flags = ()
         rescue_plan = None
@@ -564,6 +594,20 @@ def build_compliance_report_html(
     else:
         score = company.current_compliance_score or 0
         band = company.current_risk_band or "NOT_EVALUATED"
+        review_flags = [
+            flag for flag in (flags or [])
+            if (
+                getattr(flag, "rule_id", "") not in VERIFIED_RULE_IDS
+                or getattr(flag, "rule_id", "") not in PRODUCT_SCORING_RULE_IDS
+            )
+        ]
+        flags = [
+            flag for flag in (flags or [])
+            if (
+                getattr(flag, "rule_id", "") in VERIFIED_RULE_IDS
+                and getattr(flag, "rule_id", "") in PRODUCT_SCORING_RULE_IDS
+            )
+        ]
     company_name = company.company_name or "[COMPANY NAME NOT ON FILE]"
     score_display = "NOT EVALUATED" if band == "NOT_EVALUATED" else f"{score} / 100"
     score_css_class = "score-warn" if band == "NOT_EVALUATED" else _score_class(score)
@@ -587,6 +631,7 @@ def build_compliance_report_html(
     summary_html = _render_exec_summary(company, flags, band, score, rescue_plan)
     rescue_html = _render_rescue_section(rescue_plan)
     reconciliation_html = _render_score_reconciliation(flags, score, band)
+    review_html = _render_review_queue(review_flags)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -630,6 +675,7 @@ def build_compliance_report_html(
     {legend_html}
     {summary_html}
     {reconciliation_html}
+    {review_html}
 
     <h3>Active Compliance Flags</h3>
     <table class="flags-table">

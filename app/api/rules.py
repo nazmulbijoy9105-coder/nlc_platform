@@ -36,9 +36,9 @@ from app.core.dependencies import (
 from app.models.enums import SeverityLevel
 from app.rule_engine.engine import (
     AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
-    LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
     VERIFIED_RULE_IDS as VERIFIED_RULE_IDS,  # Compatibility export; not used to claim independent legal review.
+    legal_score_is_released,
 )
 from app.models.user import User
 from app.services.notification_service import ActivityService
@@ -124,7 +124,7 @@ class MessageResponse(BaseModel):
 
 def _rule_to_response(rule) -> RuleResponse:
     scoring_catalogue_member = rule.rule_id in PRODUCT_SCORING_RULE_IDS
-    product_scoring_enabled = LEGAL_SCORE_RELEASED and scoring_catalogue_member
+    product_scoring_enabled = legal_score_is_released() and scoring_catalogue_member
     # Product-owner release is not independent legal/source verification.
     legally_verified = False
     return RuleResponse(
@@ -213,6 +213,7 @@ async def get_rule_summary(
     by_severity: dict[str, int] = {}
     total_max_deduction = 0
     black_overrides = 0
+    score_release_available = legal_score_is_released()
     active_count = 0
 
     for r in rules:
@@ -222,7 +223,8 @@ async def get_rule_summary(
         by_severity[r.default_severity] = by_severity.get(r.default_severity, 0) + 1
         if r.is_active and r.rule_id in PRODUCT_SCORING_RULE_IDS:
             active_count += 1
-            total_max_deduction += r.score_impact
+            if score_release_available:
+                total_max_deduction += r.score_impact
         if (
             r.rule_id in PRODUCT_SCORING_RULE_IDS
             and r.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
