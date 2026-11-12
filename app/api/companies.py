@@ -32,6 +32,7 @@ from app.rule_engine.engine import (
     AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
+    VERIFIED_RULE_IDS,
 )
 from app.services.company_service import CompanyService
 from app.services.domain_events import DomainEventType, publish_domain_event
@@ -41,8 +42,12 @@ from app.services.pdf_report_service import PDFReportService
 
 
 def _legal_score_is_released() -> bool:
-    """Require the product release switch and a non-empty scoring allowlist."""
-    return LEGAL_SCORE_RELEASED is True and bool(PRODUCT_SCORING_RULE_IDS)
+    """Require product release plus independent verification of the full catalogue."""
+    return (
+        LEGAL_SCORE_RELEASED is True
+        and bool(PRODUCT_SCORING_RULE_IDS)
+        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
+    )
 
 logger = structlog.get_logger(__name__)
 
