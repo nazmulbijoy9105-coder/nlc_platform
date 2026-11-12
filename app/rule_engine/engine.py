@@ -3499,6 +3499,11 @@ class NLCRuleEngine:
                 disposition, reason = "BLOCKED", "RULE_NOT_IN_PRODUCT_SCORING_ALLOWLIST"
             elif severity not in (Severity.RED.value, Severity.BLACK.value):
                 disposition, reason = "NO_ACTION", "FINDING_SEVERITY_BELOW_RESCUE_THRESHOLD"
+            elif (
+                legal_score_is_released()
+                and score_band not in (Severity.RED.value, Severity.BLACK.value)
+            ):
+                disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
             elif step is not None and not legal_score_is_released():
                 # Deterministic candidate steps remain visible for professional
                 # review, but a paused legal release can never activate them.
@@ -3536,9 +3541,15 @@ class NLCRuleEngine:
         describe one remediation item. Missing quarter evidence does not itself
         establish a missed payment.
         """
-        # Generate deterministic candidate steps from confirmed RED/BLACK
-        # findings. The disposition gate below keeps them REVIEW_REQUIRED until
-        # the complete counsel-verified scoring release is active.
+        # A released company risk band below RED cannot start a rescue plan.
+        # While release is paused, deterministic candidates may still be shown
+        # for review; the disposition gate prevents customer action.
+        score_band = getattr(score.risk_band, "value", score.risk_band)
+        if legal_score_is_released() and score_band not in (
+            Severity.RED.value, Severity.BLACK.value
+        ):
+            return []
+
         flags = [
             f for f in flags
             if getattr(f, "eval_state", "VIOLATION") != "UNKNOWN"
