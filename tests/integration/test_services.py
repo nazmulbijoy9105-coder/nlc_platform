@@ -17,7 +17,7 @@ Coverage:
 from __future__ import annotations
 
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
@@ -878,7 +878,6 @@ def test_rescue_planner_remains_deterministic_when_score_release_is_paused(monke
 # =============================================================================
 
 def test_pdf_report_only_scores_verified_rules_and_lists_other_rules_for_review(monkeypatch):
-    import app.rule_engine.engine as engine_module
     from app.services import pdf_report_service as report_module
 
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
