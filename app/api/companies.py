@@ -323,9 +323,10 @@ def _flag_to_response(flag) -> FlagResponse:
     score_eligible = (
         _legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
     )
-    # Product-owner approval releases product scoring; it is not independent
-    # legal verification. No counsel/source-verification registry is wired here.
-    legally_verified = False
+    # Counsel verification is rule-specific and remains distinct from
+    # product scoring release. A verified rule can still be unpublished while
+    # the complete product catalogue release gate remains closed.
+    legally_verified = flag.rule_id in VERIFIED_RULE_IDS
     severity = getattr(flag.severity, "value", flag.severity)
     return FlagResponse(
         flag_id=str(flag.id),
