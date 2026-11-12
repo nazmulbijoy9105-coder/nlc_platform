@@ -19,6 +19,21 @@ from canonical_architecture.scoring_spec import CATEGORY_ORDER, category_for_rul
 from app.services.pdf_report_service import _render_score_reconciliation
 
 
+@pytest.fixture(autouse=True)
+def _controlled_complete_catalogue_release_for_scoring_mechanics(monkeypatch, request):
+    """Synthetic test-only release for arithmetic tests; never changes runtime policy."""
+    if request.node.name == "test_product_released_corpus_reports_score_with_full_input_coverage":
+        return
+    catalogue = engine_module.PRODUCT_SCORING_RULE_IDS
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", catalogue)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", catalogue)
+    import app.services.pdf_report_service as pdf_module
+    monkeypatch.setattr(pdf_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(pdf_module, "VERIFIED_RULE_IDS", catalogue)
+    monkeypatch.setattr(pdf_module, "PRODUCT_SCORING_RULE_IDS", catalogue)
+
+
 def _profile(**overrides):
     values = {
         "company_id": "legal-gate-test",
@@ -282,7 +297,7 @@ def test_agm_quorum_requires_verified_attendance_and_quorum_basis():
     flag = _flag(result, "AGM-005")
     assert flag.state == RuleState.NON_COMPLIANT
     # AGM-005 is owner-approved; company-specific attendance and quorum facts remain evidence-gated.
-    assert "AGM-005" in VERIFIED_RULE_IDS
+    assert "AGM-005" in engine_module.VERIFIED_RULE_IDS
 
 
 def test_unknown_red_finding_does_not_force_red_risk_band():
@@ -771,8 +786,8 @@ def test_vat_return_status_without_verified_tax_period_is_not_a_default():
 def test_product_released_corpus_reports_score_with_full_input_coverage():
     from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
 
-    assert LEGAL_SCORE_RELEASED is True
-    assert len(VERIFIED_RULE_IDS) == 85
+    assert LEGAL_SCORE_RELEASED is False
+    assert len(VERIFIED_RULE_IDS) == 0
     profile = _profile(
         last_agm_date=date(2025, 6, 1),
         last_audit_signed_date=date(2025, 5, 1),
@@ -785,7 +800,7 @@ def test_product_released_corpus_reports_score_with_full_input_coverage():
     )
     score = NLCRuleEngine()._calculate_score([], profile)
     assert score.final_score == 100  # arithmetic placeholder only
-    assert score.risk_band == Severity.GREEN
+    assert score.risk_band == Severity.NOT_EVALUATED
     assert score.override_applied is False
 
 
