@@ -472,7 +472,7 @@ def test_pdf_separates_unverified_findings_from_verified_score_report(monkeypatc
     )
 
     assert "Verified AGM review item" in page
-    assert "AUD-001" in page
+    assert "MEM-001" in page
     assert "Independent legal/source verification pending" in page
     assert "UNVERIFIED_SECRET_DESC" not in page
     assert "BLACK-severity compliance breach" not in page
