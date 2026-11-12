@@ -3462,6 +3462,7 @@ class NLCRuleEngine:
             for rule_id in rescue_step.get("related_rules", []):
                 step_by_rule[rule_id] = rescue_step
 
+        score_band = getattr(score.risk_band, "value", score.risk_band)
         dispositions: List[Dict[str, Any]] = []
         for flag in flags:
             state = getattr(getattr(flag, "state", None), "value", getattr(flag, "state", None))
@@ -3498,6 +3499,8 @@ class NLCRuleEngine:
                 disposition, reason = "BLOCKED", "RULE_NOT_IN_PRODUCT_SCORING_ALLOWLIST"
             elif severity not in (Severity.RED.value, Severity.BLACK.value):
                 disposition, reason = "NO_ACTION", "FINDING_SEVERITY_BELOW_RESCUE_THRESHOLD"
+            elif score_band not in (Severity.RED.value, Severity.BLACK.value):
+                disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
             elif step is not None and not legal_score_is_released():
                 disposition, reason = "REVIEW_REQUIRED", "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"
             elif step is not None:
@@ -3521,12 +3524,16 @@ class NLCRuleEngine:
         return dispositions
 
     def _generate_rescue_sequence(self, c: CompanyProfile, flags: List[ComplianceFlag], score: ScoreBreakdown) -> List[Dict[str, Any]]:
-        """R-014: Generate rescue steps only from active, verified findings.
+        """R-014: Generate rescue steps only for a RED/BLACK risk band.
 
         TAX-004 is aggregated into one step because its missed-quarter details
         describe one remediation item. Missing quarter evidence does not itself
         establish a missed payment.
         """
+        score_band = getattr(score.risk_band, "value", score.risk_band)
+        if score_band not in (Severity.RED.value, Severity.BLACK.value):
+            return []
+
         flags = [
             f for f in flags
             if getattr(f, "eval_state", "VIOLATION") != "UNKNOWN"
