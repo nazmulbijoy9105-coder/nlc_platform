@@ -25,11 +25,11 @@ def _company(score, band):
     )
 
 
-def test_legacy_stored_company_score_is_visible_after_product_release():
+def test_legacy_stored_company_score_is_hidden_while_legal_release_is_paused():
     response = _company_to_response(_company(88, "GREEN"))
 
-    assert response.band == "GREEN"
-    assert response.compliance_score == 88
+    assert response.band == "NOT_EVALUATED"
+    assert response.compliance_score is None
     assert response.violation_count == 0
     assert response.active_flags == 0
 
@@ -44,6 +44,7 @@ def test_not_evaluated_company_does_not_expose_placeholder_score():
 def test_released_company_score_is_visible_only_when_release_switch_is_enabled(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
+    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", {"AGM-001"})
 
     response = _company_to_response(_company(88, "GREEN"))
 
@@ -91,8 +92,8 @@ def test_product_scoring_flag_is_visible_without_claiming_legal_verification():
 
     response = _flag_to_response(flag)
 
-    assert response.severity == "BLACK"
-    assert response.score_impact == 20
+    assert response.severity == "NOT_EVALUATED"
+    assert response.score_impact == 0
     assert response.is_black_override is False
     assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
     assert response.rule_name == "Provisional AGM evidence flag"
@@ -101,6 +102,7 @@ def test_product_scoring_flag_is_visible_without_claiming_legal_verification():
 def test_product_scoring_flag_remains_legally_pending_after_product_release(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
+    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", set())
     flag = SimpleNamespace(
         id=uuid4(),
         rule_id="AGM-001",
@@ -117,8 +119,8 @@ def test_product_scoring_flag_remains_legally_pending_after_product_release(monk
 
     response = _flag_to_response(flag)
 
-    assert response.severity == "RED"
-    assert response.score_impact == 15
+    assert response.severity == "NOT_EVALUATED"
+    assert response.score_impact == 0
     assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
 
 
