@@ -153,3 +153,17 @@ def test_default_runtime_release_is_fail_closed_until_counsel_signoff():
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert engine_module.LEGAL_SCORE_RELEASED is False
     assert engine_module.legal_score_is_released() is False
+
+
+
+def test_global_score_release_requires_complete_counsel_verified_catalogue(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "PRODUCT_SCORING_RULE_IDS",
+        frozenset({"AGM-001", "AUD-001"}),
+    )
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"})
+    )
+
+    assert engine_module.legal_score_is_released() is False
