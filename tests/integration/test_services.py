@@ -306,7 +306,10 @@ class TestComplianceService:
             .limit(1)
         )
         persisted_run = persisted_result.scalar_one()
-        assert persisted_run.score_breakdown_snapshot["category_deductions"] is None
+        assert persisted_run.score_breakdown_snapshot is None
+        assert len(persisted_run.flags_snapshot) == 1
+        assert persisted_run.flags_snapshot[0]["scoring_status"] == "LEGAL_SCORE_NOT_RELEASED"
+        assert persisted_run.flags_snapshot[0]["score_impact_applied"] == 0
 
 
 # =============================================================================
