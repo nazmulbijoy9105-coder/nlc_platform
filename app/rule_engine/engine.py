@@ -639,8 +639,12 @@ LEGAL_SCORE_RELEASED: bool = False
 
 
 def legal_score_is_released() -> bool:
-    """Return whether product-controlled scoring is enabled and has rules."""
-    return LEGAL_SCORE_RELEASED is True and bool(PRODUCT_SCORING_RULE_IDS)
+    """Require product release approval and independent legal verification."""
+    return (
+        LEGAL_SCORE_RELEASED is True
+        and bool(PRODUCT_SCORING_RULE_IDS)
+        and bool(VERIFIED_RULE_IDS)
+    )
 
 
 REVENUE_TIER_MAP = {
