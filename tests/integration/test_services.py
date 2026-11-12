@@ -218,7 +218,9 @@ class TestComplianceService:
         # immediately at fixture construction instead of deep in persistence.
         from app.rule_engine.engine import (
             ExposureBand,
+            ComplianceFlag,
             RevenueTier,
+            RuleState,
             ScoreBreakdown,
             Severity,
         )
@@ -253,8 +255,19 @@ class TestComplianceService:
             coverage=1.0,
             revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
         )
+        review_finding = ComplianceFlag(
+            rule_id="AGM-001",
+            flag_code="AGM_TEST",
+            severity=Severity.RED,
+            score_impact=10,
+            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+            description="Controlled evidence review fixture",
+            statutory_basis="Test fixture only",
+            state=RuleState.NON_COMPLIANT,
+            eval_state="VIOLATION",
+        )
         mock_output = SimpleNamespace(
-            flags=[],
+            flags=[review_finding],
             engine_version="test-engine-v1",
             ilrmf_version="test-ilrmf-v1",
             score_breakdown=score_breakdown,
@@ -275,6 +288,10 @@ class TestComplianceService:
         assert result["score"] is None
         assert result["risk_band"] == "NOT_EVALUATED"
         assert result["legal_evaluation_status"] == "NOT_RELEASED"
+        assert len(result["review_findings"]) == 1
+        assert result["review_findings"][0]["rule_id"] == "AGM-001"
+        assert result["review_findings"][0]["score_impact_applied"] == 0
+        assert "No statutory conclusion" in result["review_findings"][0]["message"]
         mock_engine.evaluate.assert_called_once()
 
         # The evaluation-run JSONB snapshot persists the full score contract,
