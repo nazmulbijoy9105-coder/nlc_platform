@@ -18,6 +18,7 @@ def test_rescue_workflow_is_blocked_when_product_scoring_is_disabled(monkeypatch
 def test_rescue_workflow_gate_opens_when_product_scoring_is_enabled(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     _require_legal_release()
 
 
@@ -180,6 +181,7 @@ def test_rescue_service_rejects_finding_from_unreleased_rule_id(monkeypatch):
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-002"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-002"}))
     flag = SimpleNamespace(
         rule_id="AGM-001",
         resolved=False,
