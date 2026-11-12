@@ -751,3 +751,97 @@ class TestRulesService:
         history = await svc.get_version_history("OFF-001")
         assert len(history) >= 1
         assert history[0].rule_id == "OFF-001"
+
+
+
+# =============================================================================
+# PAUSED SCORE RELEASE: FINDING, ALLOCATION AND RESCUE-PLANNER CONTRACTS
+# =============================================================================
+
+def test_score_allocation_keeps_confirmed_findings_but_excludes_unverified_rules(monkeypatch):
+    import app.rule_engine.engine as engine_module
+    from app.models.enums import RuleState as ModelRuleState
+    from app.rule_engine.engine import RuleState
+    from app.services.compliance_service import _applied_score_impacts
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    confirmed = SimpleNamespace(
+        rule_id="AUD-001",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+        resolved=False,
+        conditional_applies=True,
+        severity="RED",
+        score_impact=15,
+        detail={},
+    )
+    unknown = SimpleNamespace(
+        rule_id="AGM-001",
+        state=RuleState.UNKNOWN,
+        eval_state="UNKNOWN",
+        resolved=False,
+        conditional_applies=True,
+        severity="NOT_EVALUATED",
+        score_impact=25,
+        detail={},
+    )
+
+    allocations = _applied_score_impacts([confirmed, unknown])
+
+    assert allocations[0] == {"applied": 0, "status": "LEGAL_VERIFICATION_PENDING"}
+    assert allocations[1] == {"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"}
+
+
+def test_score_allocation_applies_only_verified_rule_in_controlled_release(monkeypatch):
+    import app.rule_engine.engine as engine_module
+    from app.rule_engine.engine import RuleState
+    from app.services.compliance_service import _applied_score_impacts
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    finding = SimpleNamespace(
+        rule_id="AGM-001",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+        resolved=False,
+        conditional_applies=True,
+        severity="RED",
+        score_impact=10,
+        detail={},
+    )
+
+    assert _applied_score_impacts([finding]) == [{"applied": 10, "status": "APPLIED"}]
+
+
+def test_rescue_planner_remains_deterministic_when_score_release_is_paused(monkeypatch):
+    import app.rule_engine.engine as engine_module
+    from app.rule_engine.engine import (
+        ComplianceFlag,
+        NLCRuleEngine,
+        RevenueTier,
+        RuleState,
+        Severity,
+    )
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    finding = ComplianceFlag(
+        rule_id="AGM-001",
+        flag_code="AGM_EVIDENCE_CONFIRMED",
+        severity=Severity.RED,
+        score_impact=0,
+        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+        description="Confirmed fact fixture; review required",
+        statutory_basis="Controlled test fixture",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+    )
+    score = SimpleNamespace(risk_band=Severity.NOT_EVALUATED)
+
+    steps = NLCRuleEngine._generate_rescue_sequence(
+        None, None, [finding], score
+    )
+
+    assert len(steps) == 1
+    assert steps[0]["related_rules"] == ["AGM-001"]
