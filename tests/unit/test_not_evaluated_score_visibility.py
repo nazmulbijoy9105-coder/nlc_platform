@@ -154,9 +154,23 @@ def test_flag_summary_separates_pending_review_from_released_findings(monkeypatc
 def test_release_switch_without_product_scoring_rules_hides_company_score(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", set())
+    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", set())
 
     response = _company_to_response(_company(88, "GREEN"))
 
     assert response.band == "NOT_EVALUATED"
     assert response.compliance_score is None
+    assert response.violation_count == 0
+
+
+def test_product_switch_alone_cannot_publish_stored_company_score(monkeypatch):
+    monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
+    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", set())
+
+    response = _company_to_response(_company(88, "GREEN"))
+
+    assert response.band == "NOT_EVALUATED"
+    assert response.compliance_score is None
+    assert response.active_flags == 0
     assert response.violation_count == 0
