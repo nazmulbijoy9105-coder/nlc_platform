@@ -89,12 +89,12 @@ def test_unknown_never_enters_scoring_even_if_impact_was_supplied(monkeypatch):
 
 def test_unapproved_rule_cannot_affect_released_score(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
-    flag = _finding()
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    flag = _finding(rule_id="AUD-001")
     engine = NLCRuleEngine(today=TODAY)
 
     assert engine._eligible_scoring_flags([flag]) == []
-    assert engine._category_deductions(engine._eligible_scoring_flags([flag]))["AGM"] == 0
+    assert engine._category_deductions(engine._eligible_scoring_flags([flag]))["AUD"] == 0
 
     score = engine._calculate_score([flag], CompanyProfile(
         company_id="fixture-score", company_name="Score Fixture Ltd."
@@ -116,7 +116,7 @@ def test_explicitly_approved_rule_can_score_in_controlled_release_fixture(monkey
 
 def test_unverified_black_fact_cannot_activate_black_override(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     black = _finding(
         rule_id="INC-003",
         severity=Severity.BLACK,
