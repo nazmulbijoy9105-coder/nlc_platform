@@ -695,7 +695,11 @@ async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_d
         last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
         evaluation_run_id=str(evaluation_run.id) if evaluation_run else None,
         evaluation_hash=evaluation_run.score_hash if evaluation_run else None,
-        evaluation_run_status=evaluation_run.evaluation_status if evaluation_run else None,
+        evaluation_run_status=(
+            "NOT_RELEASED"
+            if not _legal_score_is_released()
+            else (evaluation_run.evaluation_status if evaluation_run else None)
+        ),
         evaluation_calculated_at=evaluation_run.calculated_at.isoformat() if evaluation_run else None,
         engine_version=evaluation_run.engine_version if evaluation_run else None,
         ilrmf_version=score_snapshot.get("ilrmf_version"),
