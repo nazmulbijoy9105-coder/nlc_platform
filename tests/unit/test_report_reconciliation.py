@@ -34,6 +34,10 @@ def _enable_authorized_score_for_report_test(monkeypatch, rule_ids):
         "app.services.pdf_report_service.PRODUCT_SCORING_RULE_IDS",
         frozenset(rule_ids),
     )
+    monkeypatch.setattr(
+        "app.services.pdf_report_service.VERIFIED_RULE_IDS",
+        frozenset(rule_ids),
+    )
 
 
 FLAGS = [
@@ -99,15 +103,15 @@ def test_reconciliation_mismatch_is_rejected(monkeypatch):
         build_compliance_report_html(_company(score=74), FLAGS, WHEN)
 
 
-def test_product_allowlisted_findings_are_shown_as_score_deductions_while_legal_review_is_pending():
+def test_paused_release_hides_allowlisted_findings_and_stale_score():
     page = build_compliance_report_html(
         _company(score=100, band="NOT_EVALUATED"),
         [_flag("AGM-001", "RED", 20)],
         WHEN,
     )
-    assert "-20 pts" in page
-    assert "Product scoring may be disabled" in page
-    assert "Score reconciliation" not in page
+    assert "NOT EVALUATED" in page
+    assert "AGM-001" not in page
+    assert "-20 pts" not in page
     assert "Score reconciliation" not in page
 
 def test_real_evaluation_snapshot_reconciles_nominal_and_applied_impacts(monkeypatch):
