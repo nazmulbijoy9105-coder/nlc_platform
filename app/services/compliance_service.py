@@ -198,6 +198,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         from app.rule_engine import CompanyProfile
         from app.rule_engine.engine import (
             PRODUCT_SCORING_RULE_IDS,
+            VERIFIED_RULE_IDS,
             legal_score_is_released,
         )
         from app.services.company_service import CompanyService
@@ -497,7 +498,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             existing_flag = existing.scalar_one_or_none()
             if existing_flag:
                 # Update score impact and description in case rule changed
-                approved = legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+                approved = legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS and flag.rule_id in PRODUCT_SCORING_RULE_IDS
                 existing_flag.severity = (
                     SeverityLevel(flag.severity) if approved else SeverityLevel.NOT_EVALUATED
                 )
@@ -528,18 +529,18 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     flag_code=flag.rule_id,
                     statutory_basis=(
                         flag.statutory_basis
-                        if legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+                        if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS and flag.rule_id in PRODUCT_SCORING_RULE_IDS
                         else "Product scoring is disabled or this rule is outside the scoring allowlist."
                     ),
                     severity=SeverityLevel(flag.severity)
-                    if legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+                    if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS and flag.rule_id in PRODUCT_SCORING_RULE_IDS
                     else SeverityLevel.NOT_EVALUATED,
                     score_impact=flag.score_impact
-                    if legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+                    if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS and flag.rule_id in PRODUCT_SCORING_RULE_IDS
                     else 0,
                     exposure_band=(
                         ExposureBand(getattr(getattr(flag, "exposure_band", None) or output.score_breakdown.exposure_band, "value", getattr(flag, "exposure_band", None) or output.score_breakdown.exposure_band))
-                        if legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+                        if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS and flag.rule_id in PRODUCT_SCORING_RULE_IDS
                         else None
                     ),
                     revenue_tier=RevenueTier(flag.revenue_tier.value if hasattr(flag.revenue_tier, 'value') else flag.revenue_tier),
@@ -550,7 +551,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     triggered_date=today,
                     description=(
                         flag.description
-                        if legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+                        if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS and flag.rule_id in PRODUCT_SCORING_RULE_IDS
                         else "Internal review signal only. No legal conclusion, breach, liability, penalty or compliance status is determined."
                     ),
                     detail=getattr(flag, "detail", None),
@@ -843,7 +844,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # ── Queue notifications for new RED/BLACK flags ─────────
         notification_flags = [
             flag for flag in collected_new_flags
-            if legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+            if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS and flag.rule_id in PRODUCT_SCORING_RULE_IDS
         ]
         if notification_flags:
             notif_svc = NotificationService(self.db)
@@ -901,11 +902,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
             )
         )
         rows = flags_result.all()
-        from app.rule_engine.engine import PRODUCT_SCORING_RULE_IDS, legal_score_is_released
+        from app.rule_engine.engine import PRODUCT_SCORING_RULE_IDS, VERIFIED_RULE_IDS, legal_score_is_released
         verified_severities = [
             str(getattr(severity, "value", severity)).upper()
             for rule_id, severity in rows
-            if legal_score_is_released() and rule_id in PRODUCT_SCORING_RULE_IDS
+            if legal_score_is_released() and rule_id in VERIFIED_RULE_IDS and rule_id in PRODUCT_SCORING_RULE_IDS
         ]
         black_count = verified_severities.count("BLACK")
         red_count = verified_severities.count("RED")
