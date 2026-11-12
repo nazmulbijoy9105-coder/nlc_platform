@@ -2,6 +2,7 @@
 
 import pytest
 
+import app.rule_engine.engine as engine_module
 import app.services.notification_service as notification_module
 from app.services.notification_service import is_notification_eligible
 
