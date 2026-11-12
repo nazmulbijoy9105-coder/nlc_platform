@@ -41,9 +41,10 @@ def test_not_evaluated_company_does_not_expose_placeholder_score():
     assert response.compliance_score is None
 
 
-def test_released_company_score_is_visible_only_when_release_switch_is_enabled(monkeypatch):
+def test_released_company_score_is_visible_only_with_complete_verified_catalogue(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
+    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", {"AGM-001"})
 
     response = _company_to_response(_company(88, "GREEN"))
 
@@ -51,7 +52,10 @@ def test_released_company_score_is_visible_only_when_release_switch_is_enabled(m
     assert response.compliance_score == 88
 
 
-def test_historical_score_history_is_visible_without_mutating_the_database_record():
+def test_historical_score_history_is_visible_without_mutating_the_database_record(monkeypatch):
+    monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
+    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", {"AGM-001"})
     item = {
         "month": "2026-10-01",
         "score": 72,
@@ -91,16 +95,17 @@ def test_product_scoring_flag_is_visible_without_claiming_legal_verification():
 
     response = _flag_to_response(flag)
 
-    assert response.severity == "BLACK"
-    assert response.score_impact == 20
+    assert response.severity == "NOT_EVALUATED"
+    assert response.score_impact == 0
     assert response.is_black_override is False
     assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
-    assert response.rule_name == "Provisional AGM evidence flag"
+    assert "No breach" in response.rule_name
 
 
-def test_product_scoring_flag_remains_legally_pending_after_product_release(monkeypatch):
+def test_product_scoring_flag_stays_unpublished_without_counsel_verification(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
+    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", set())
     flag = SimpleNamespace(
         id=uuid4(),
         rule_id="AGM-001",
@@ -117,9 +122,10 @@ def test_product_scoring_flag_remains_legally_pending_after_product_release(monk
 
     response = _flag_to_response(flag)
 
-    assert response.severity == "RED"
-    assert response.score_impact == 15
+    assert response.severity == "NOT_EVALUATED"
+    assert response.score_impact == 0
     assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
+    assert "No breach" in response.rule_name
 
 
 def test_flag_summary_separates_pending_review_from_released_findings(monkeypatch):
