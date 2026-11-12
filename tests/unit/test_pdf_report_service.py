@@ -421,8 +421,11 @@ def test_pdf_black_override_requires_independent_rule_verification(monkeypatch):
         conditional_applies=True,
     )
 
+    assert report_module._legal_score_is_released() is False
+    # Exercise the per-rule defence-in-depth branch independently of the
+    # global complete-catalogue release precondition.
+    monkeypatch.setattr(report_module, "_legal_score_is_released", lambda: True)
     assert report_module._verified_flag_score([black]) == (100, False)
-    assert report_module._legal_score_is_released() is True
 
 
 
@@ -430,7 +433,7 @@ def test_pdf_separates_unverified_findings_from_verified_score_report(monkeypatc
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
         report_module, "PRODUCT_SCORING_RULE_IDS",
-        frozenset({"AGM-001", "AUD-001"}),
+        frozenset({"AGM-001"}),
     )
     monkeypatch.setattr(
         report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"})
@@ -447,7 +450,7 @@ def test_pdf_separates_unverified_findings_from_verified_score_report(monkeypatc
         detail={},
     )
     unverified = SimpleNamespace(
-        rule_id="AUD-001",
+        rule_id="MEM-001",
         severity="BLACK",
         description="UNVERIFIED_SECRET_DESC",
         score_impact=0,
