@@ -3499,10 +3499,14 @@ class NLCRuleEngine:
                 disposition, reason = "BLOCKED", "RULE_NOT_IN_PRODUCT_SCORING_ALLOWLIST"
             elif severity not in (Severity.RED.value, Severity.BLACK.value):
                 disposition, reason = "NO_ACTION", "FINDING_SEVERITY_BELOW_RESCUE_THRESHOLD"
+            elif step is not None and not legal_score_is_released():
+                # Deterministic candidate steps remain visible for professional
+                # review, but a paused legal release can never activate them.
+                disposition, reason = "REVIEW_REQUIRED", "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"
+            elif step is None and flag.rule_id != "TAX-004":
+                disposition, reason = "BLOCKED", "RESCUE_STEP_NOT_GENERATED"
             elif score_band not in (Severity.RED.value, Severity.BLACK.value):
                 disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
-            elif step is not None and not legal_score_is_released():
-                disposition, reason = "REVIEW_REQUIRED", "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"
             elif step is not None:
                 disposition, reason = "ACTION_REQUIRED", "CONFIRMED_RESCUE_STEP"
             elif flag.rule_id == "TAX-004":
@@ -3524,16 +3528,17 @@ class NLCRuleEngine:
         return dispositions
 
     def _generate_rescue_sequence(self, c: CompanyProfile, flags: List[ComplianceFlag], score: ScoreBreakdown) -> List[Dict[str, Any]]:
-        """R-014: Generate rescue steps only for a RED/BLACK risk band.
+        """R-014: Generate reviewable candidates from confirmed RED/BLACK findings.
 
+        Candidate steps are not customer actions. The disposition gate keeps
+        them REVIEW_REQUIRED until scoring release and counsel verification pass.
         TAX-004 is aggregated into one step because its missed-quarter details
         describe one remediation item. Missing quarter evidence does not itself
         establish a missed payment.
         """
-        score_band = getattr(score.risk_band, "value", score.risk_band)
-        if score_band not in (Severity.RED.value, Severity.BLACK.value):
-            return []
-
+        # Generate deterministic candidate steps from confirmed RED/BLACK
+        # findings. The disposition gate below keeps them REVIEW_REQUIRED until
+        # the complete counsel-verified scoring release is active.
         flags = [
             f for f in flags
             if getattr(f, "eval_state", "VIOLATION") != "UNKNOWN"
