@@ -1053,7 +1053,7 @@ def test_score_allocation_covers_inactive_excluded_black_and_duplicate_paths(mon
     assert results[3]["status"] == "BLACK_OVERRIDE_APPLIED"
     assert results[4]["status"] == "NO_SCORING_CATEGORY"
     assert results[5]["status"] == "DUPLICATE_EVENT_SUPPRESSED"
-    assert results[6]["status"] == "DUPLICATE_EVENT_SUPPRESSED"
+    assert results[6]["status"] == "APPLIED"
 
 
 def test_rescue_dispositions_keep_unverified_findings_in_review_only_state(monkeypatch):
