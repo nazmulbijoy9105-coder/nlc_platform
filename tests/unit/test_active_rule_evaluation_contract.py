@@ -19,7 +19,7 @@ ACTIVE_EVALUATION_RULE_IDS = {
 
 
 def test_requested_rules_remain_product_scoring_enabled():
-    assert LEGAL_SCORE_RELEASED is True
+    assert LEGAL_SCORE_RELEASED is False  # statutory scoring remains paused pending complete independent legal verification
     assert ACTIVE_EVALUATION_RULE_IDS <= PRODUCT_SCORING_RULE_IDS
 
 
