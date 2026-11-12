@@ -912,7 +912,13 @@ class TestEscalationRules:
         assert_flag_triggered(output, "ESC-002")
 
     @pytest.mark.black
-    def test_ESC002_does_not_force_black_without_authorized_override(self, rule_engine, black_band_profile):
+    def test_ESC002_does_not_force_black_without_authorized_override(self, monkeypatch, rule_engine, black_band_profile):
+        import app.rule_engine.engine as engine_module
+        candidate = rule_engine.evaluate(black_band_profile)
+        controlled_ids = frozenset(flag.rule_id for flag in candidate.flags)
+        monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+        monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", controlled_ids)
+        monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", controlled_ids)
         output = rule_engine.evaluate(black_band_profile)
         # ESC-002 or ESC-003 should force BLACK
         has_black_override = any(
@@ -969,6 +975,11 @@ class TestEscalationRules:
             directors_verified_at=date.today(),
             directors_verified_by="reviewer-001",
         )
+        candidate = rule_engine.evaluate(profile)
+        controlled_ids = frozenset(flag.rule_id for flag in candidate.flags)
+        monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+        monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", controlled_ids)
+        monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", controlled_ids)
         output = rule_engine.evaluate(profile)
 
         # ESC-003 is an escalation marker, not a score-bearing finding.
@@ -1272,8 +1283,12 @@ class TestEngineIntegrity:
         assert output.score_breakdown.final_score == 100  # all generated findings remain UNKNOWN without sufficient evidence
         assert output.score_breakdown.override_applied is False
 
-    def test_score_never_exceeds_100_with_no_flags(self, rule_engine, build_profile):
-        """A complete, finding-free profile receives the released product score."""
+    def test_score_never_exceeds_100_with_no_flags(self, monkeypatch, rule_engine, build_profile):
+        """A complete, finding-free profile receives a score in an explicit controlled fixture."""
+        import app.rule_engine.engine as engine_module
+        monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+        monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+        monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
         profile = build_profile()
         output = rule_engine.evaluate(profile)
         assert output.score_breakdown.final_score == 100
@@ -1281,6 +1296,10 @@ class TestEngineIntegrity:
 
     def test_product_score_does_not_force_black_without_authorized_override(self, monkeypatch, rule_engine, build_profile):
         """Product deductions do not force BLACK without a separately authorised override."""
+        import app.rule_engine.engine as engine_module
+        monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+        monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
+        monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
         monkeypatch.setattr(
             "app.rule_engine.engine.AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset()
         )
