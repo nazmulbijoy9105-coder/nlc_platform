@@ -7,7 +7,12 @@ from types import SimpleNamespace
 import pytest
 from pydantic import ValidationError
 
-from app.api.legal_provenance import SourceCreate, _source_state
+from app.api.legal_provenance import (
+    MappingBulkCreate,
+    MappingCreate,
+    SourceCreate,
+    _source_state,
+)
 from app.services.legal_deadline_engine import (
     DeadlineRule,
     calculate_deadline,
@@ -213,6 +218,40 @@ def test_starter_source_import_endpoint_is_super_admin_only():
     route = next(
         route for route in router.routes
         if getattr(route, "path", None) == "/legal-provenance/starter-sources/register"
+    )
+    dependencies = route.dependant.dependencies
+    assert get_current_user in {dependency.call for dependency in dependencies}
+    assert any(
+        getattr(dependency.call, "__name__", "") == "role_checker"
+        or "require_roles" in getattr(dependency.call, "__qualname__", "")
+        for dependency in dependencies
+    )
+
+
+def test_bulk_mapping_request_is_bounded_and_requires_at_least_one_row():
+    from uuid import uuid4
+
+    mapping = MappingCreate(
+        rule_id="AGM-001",
+        source_id=uuid4(),
+        mapping_kind="RULE_BASIS",
+        provision_citation="Companies Act 1994, section 81",
+        rationale="Maps the annual general meeting obligation to its statutory basis.",
+    )
+    assert len(MappingBulkCreate(mappings=[mapping]).mappings) == 1
+    with pytest.raises(ValidationError):
+        MappingBulkCreate(mappings=[])
+    with pytest.raises(ValidationError):
+        MappingBulkCreate(mappings=[mapping] * 101)
+
+
+def test_bulk_mapping_endpoint_is_super_admin_only_and_actor_bound():
+    from app.api.legal_provenance import router
+    from app.core.dependencies import get_current_user
+
+    route = next(
+        route for route in router.routes
+        if getattr(route, "path", None) == "/legal-provenance/mappings/bulk"
     )
     dependencies = route.dependant.dependencies
     assert get_current_user in {dependency.call for dependency in dependencies}

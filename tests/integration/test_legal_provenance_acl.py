@@ -98,3 +98,83 @@ async def test_legal_release_event_chain_has_database_guard(db):
     )
     triggers = {row[0] for row in result.fetchall()}
     assert "legal_rule_release_events_chain_guard" in triggers
+
+
+@pytest.mark.asyncio
+async def test_bulk_mapping_endpoint_rejects_unknown_rule_and_source_atomically(
+    api_client, super_admin_headers, db
+):
+    """Exercise the signed admin route and ensure invalid IDs produce no writes."""
+    from uuid import uuid4
+
+    response = await api_client.post(
+        "/api/v1/legal-provenance/mappings/bulk",
+        headers=super_admin_headers,
+        json={
+            "mappings": [
+                {
+                    "rule_id": "UNKNOWN-RULE-DO-NOT-INSERT",
+                    "source_id": str(uuid4()),
+                    "mapping_kind": "RULE_BASIS",
+                    "provision_citation": "Companies Act 1994, section 1",
+                    "rationale": "Integration fixture intentionally references missing records.",
+                }
+            ]
+        },
+    )
+    assert response.status_code == 422
+    payload = response.json()["detail"]
+    assert payload["missing_rule_ids"] == ["UNKNOWN-RULE-DO-NOT-INSERT"]
+    assert len(payload["missing_source_ids"]) == 1
+
+    count = await db.execute(
+        text("SELECT count(*) FROM legal_rule_source_mappings")
+    )
+    assert count.scalar_one() == 0
+
+
+@pytest.mark.asyncio
+async def test_customer_calendar_generator_uses_database_registry_without_false_no_due_claim(
+    db, db_company
+):
+    """The customer generation route reports an empty registry explicitly."""
+    from types import SimpleNamespace
+
+    from app.api.calendar import generate_calendar
+
+    result = await generate_calendar(
+        company_id=db_company.id,
+        years_ahead=2,
+        db=db,
+        current_user=SimpleNamespace(role="CLIENT_DIRECTOR"),
+    )
+
+    assert result["processed"] == 0
+    assert result["count"] == 0
+    assert result["results"] == []
+    assert result["events"] == []
+    assert result["no_obligation_inference"] is True
+
+
+@pytest.mark.asyncio
+async def test_super_admin_can_read_source_mapping_deadline_and_release_inventories(
+    api_client, super_admin_headers
+):
+    """Exercise the operator read model used before a bulk import."""
+    starter = await api_client.get(
+        "/api/v1/legal-provenance/starter-sources",
+        headers=super_admin_headers,
+    )
+    assert starter.status_code == 200
+    assert len(starter.json()) == 10
+    assert all(item["rule_mappings_created"] is False for item in starter.json())
+
+    for path in (
+        "/api/v1/legal-provenance/sources",
+        "/api/v1/legal-provenance/mappings",
+        "/api/v1/legal-provenance/deadlines/definitions",
+        "/api/v1/legal-provenance/events",
+    ):
+        response = await api_client.get(path, headers=super_admin_headers)
+        assert response.status_code == 200
+        assert response.json() == []
