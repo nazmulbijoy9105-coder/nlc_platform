@@ -77,7 +77,7 @@ def test_super_admin_black_override_catalogue_remains_visible_when_scoring_is_di
 
 
 def test_unlisted_black_override_is_not_authorized_by_product_release_alone(monkeypatch):
-    monkeypatch.setattr(rules_api, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
