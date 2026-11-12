@@ -297,7 +297,7 @@ class TestComplianceService:
         # The evaluation-run JSONB snapshot persists the full score contract,
         # including category deductions; no schema migration is required.
         from sqlalchemy import select
-        from app.models.compliance import ComplianceEvaluationRun
+        from app.models.compliance import ComplianceEvaluationRun, ComplianceScoreHistory, ComplianceFlag
 
         persisted_result = await db.execute(
             select(ComplianceEvaluationRun)
@@ -310,6 +310,40 @@ class TestComplianceService:
         assert len(persisted_run.flags_snapshot) == 1
         assert persisted_run.flags_snapshot[0]["scoring_status"] == "LEGAL_SCORE_NOT_RELEASED"
         assert persisted_run.flags_snapshot[0]["score_impact_applied"] == 0
+        assert persisted_run.score is None
+        assert persisted_run.risk_band == "NOT_EVALUATED"
+        assert len(persisted_run.flags_snapshot) == 1
+        assert persisted_run.flags_snapshot[0]["scoring_status"] == "LEGAL_SCORE_NOT_RELEASED"
+        assert persisted_run.flags_snapshot[0]["score_impact_applied"] == 0
+        # Immutable evaluation evidence preserves the engine's internal raw label;
+        # customer-facing ComplianceFlag rows and API serializers must redact it.
+        assert persisted_run.flags_snapshot[0]["severity"] == "RED"
+
+        persisted_flag_result = await db.execute(
+            select(ComplianceFlag).where(
+                ComplianceFlag.company_id == db_company.id,
+                ComplianceFlag.rule_id == "AGM-001",
+                ComplianceFlag.flag_status == "ACTIVE",
+            )
+        )
+        persisted_flag = persisted_flag_result.scalar_one()
+        assert str(persisted_flag.severity.value if hasattr(persisted_flag.severity, "value") else persisted_flag.severity) == "NOT_EVALUATED"
+        assert persisted_flag.score_impact == 0
+        assert "verification pending" in persisted_flag.statutory_basis.lower()
+        assert "No legal conclusion" in persisted_flag.description
+
+        history_result = await db.execute(
+            select(ComplianceScoreHistory)
+            .where(ComplianceScoreHistory.company_id == db_company.id)
+            .order_by(ComplianceScoreHistory.calculated_at.desc())
+            .limit(1)
+        )
+        history = history_result.scalar_one()
+        assert history.score is None
+        assert str(history.risk_band.value if hasattr(history.risk_band, "value") else history.risk_band) == "NOT_EVALUATED"
+        await db.refresh(db_company)
+        assert db_company.current_compliance_score is None
+        assert str(db_company.current_risk_band.value if hasattr(db_company.current_risk_band, "value") else db_company.current_risk_band) == "NOT_EVALUATED"
 
 
 # =============================================================================

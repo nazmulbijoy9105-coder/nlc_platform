@@ -27,8 +27,8 @@ def _flag(rid, sev, imp):
 
 
 def _enable_authorized_score_for_report_test(monkeypatch, rule_ids):
-    # Arithmetic/report rendering tests opt into an isolated approved-rule
-    # fixture. Product scoring release is enabled; legal verification remains separate.
+    # Arithmetic/report tests opt into an isolated complete catalogue. This
+    # fixture is local to the test and never changes production verification.
     monkeypatch.setattr("app.services.pdf_report_service.LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
         "app.services.pdf_report_service.PRODUCT_SCORING_RULE_IDS",
@@ -103,15 +103,15 @@ def test_reconciliation_mismatch_is_rejected(monkeypatch):
         build_compliance_report_html(_company(score=74), FLAGS, WHEN)
 
 
-def test_product_allowlisted_findings_are_shown_as_score_deductions_while_legal_review_is_pending():
+def test_paused_release_hides_allowlisted_findings_and_stale_score():
     page = build_compliance_report_html(
         _company(score=100, band="NOT_EVALUATED"),
         [_flag("AGM-001", "RED", 20)],
         WHEN,
     )
-    assert "-20 pts" in page
-    assert "Product scoring may be disabled" in page
-    assert "Score reconciliation" not in page
+    assert "NOT EVALUATED" in page
+    assert "AGM-001" not in page
+    assert "-20 pts" not in page
     assert "Score reconciliation" not in page
 
 def test_real_evaluation_snapshot_reconciles_nominal_and_applied_impacts(monkeypatch):

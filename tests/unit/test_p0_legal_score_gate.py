@@ -135,9 +135,13 @@ def test_product_scoring_remains_paused_without_legal_verification_allowlist(mon
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert result.final_score == 100
     assert result.override_applied is False
+    assert result.risk_band == Severity.NOT_EVALUATED
 
 
-def test_verified_director_minimum_violation_emits_one_product_owner_black_override(build_profile):
+def test_verified_director_minimum_violation_emits_one_candidate_black_override(monkeypatch, build_profile):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
     profile = build_profile(
         company_type="PRIVATE_LIMITED",
         current_director_count=1,
@@ -174,3 +178,4 @@ def test_product_owner_black_override_is_blocked_without_legal_verification(monk
     assert result.override_applied is False
     assert result.black_flag_count == 0
     assert result.final_score == 100
+    assert result.risk_band == Severity.NOT_EVALUATED

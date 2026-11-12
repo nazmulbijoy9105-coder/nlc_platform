@@ -192,16 +192,16 @@ def main() -> int:
         print("FAIL: seed_rules.py must insert new canonical rows as active")
         return 1
 
-    if not re.search(r"^LEGAL_SCORE_RELEASED:\s*bool\s*=\s*True\s*$", engine_source, re.MULTILINE):
-        print("FAIL: product scoring release flag is not enabled")
+    if not re.search(r"^LEGAL_SCORE_RELEASED:\s*bool\s*=\s*False\s*$", engine_source, re.MULTILINE):
+        print("FAIL: default product scoring release must remain paused")
         return 1
     verified_match = re.search(
         r"^VERIFIED_RULE_IDS:\s*frozenset\[str\]\s*=\s*frozenset\(\{([\s\S]*?)\}\)",
         engine_source, re.MULTILINE
     )
     verified_engine_ids = set(re.findall(r'"([A-Z]{2,12}-\d{3})"', verified_match.group(1))) if verified_match else set()
-    if verified_engine_ids != seed:
-        print(f"FAIL: engine VERIFIED_RULE_IDS mismatch; missing={sorted(seed - verified_engine_ids)} extra={sorted(verified_engine_ids - seed)}")
+    if verified_engine_ids:
+        print(f"FAIL: default VERIFIED_RULE_IDS must remain empty pending independent Bangladesh-counsel verification; found={sorted(verified_engine_ids)}")
         return 1
 
     engine_tree = ast.parse(engine_source)
@@ -227,7 +227,7 @@ def main() -> int:
         return 1
 
     print(f"PASS: {len(seed)} catalogue rules match engine, seed and legal register")
-    print(f"PASS: {len(scoring_ids)} product scoring rules are enabled; all 85 owner-attested; 82 score-bearing and 3 informational")
+    print(f"PASS: {len(scoring_ids)} rules are configured as product-eligible, but default statutory scoring remains paused; counsel-verified IDs: {len(verified_engine_ids)}")
     return 0
 
 

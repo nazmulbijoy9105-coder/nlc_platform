@@ -324,6 +324,130 @@ class TestCompanies:
         assert data["upcoming_deadlines"] is None
 
     @pytest.mark.asyncio
+    async def test_manual_evaluation_and_customer_views_withhold_unreleased_score(
+        self, api_client, admin_token, db_company, db
+    ):
+        from sqlalchemy import select
+        from app.models.compliance import ComplianceEvaluationRun, ComplianceScoreHistory
+
+        evaluated = await api_client.post(
+            f"/api/v1/companies/{db_company.id}/evaluate",
+            headers=_auth(admin_token),
+        )
+        assert evaluated.status_code == 200, evaluated.text
+        evaluation = evaluated.json()
+        assert evaluation["current_score"] is None
+        assert evaluation["risk_band"] == "NOT_EVALUATED"
+        assert evaluation["active_flags"] == 0
+        assert evaluation["black_flags"] == 0
+        assert evaluation["red_flags"] == 0
+        assert evaluation["yellow_flags"] == 0
+        assert evaluation["evaluation_run_status"] == "NOT_RELEASED"
+
+        customer_view = await api_client.get(
+            f"/api/v1/companies/{db_company.id}/compliance",
+            headers=_auth(admin_token),
+        )
+        assert customer_view.status_code == 200, customer_view.text
+        state = customer_view.json()
+        assert state["current_score"] is None
+        assert state["risk_band"] == "NOT_EVALUATED"
+        assert state["active_flags"] == 0
+        assert state["black_flags"] == 0
+        assert state["red_flags"] == 0
+        assert state["yellow_flags"] == 0
+
+        flags_response = await api_client.get(
+            f"/api/v1/companies/{db_company.id}/flags",
+            headers=_auth(admin_token),
+        )
+        assert flags_response.status_code == 200, flags_response.text
+        for flag in flags_response.json():
+            assert flag["severity"] == "NOT_EVALUATED"
+            assert flag["score_impact"] == 0
+            assert flag["legal_review_status"] == "NOT_LEGALLY_VERIFIED"
+            assert "No breach" in flag["rule_name"]
+
+        history_response = await api_client.get(
+            f"/api/v1/companies/{db_company.id}/score-history",
+            headers=_auth(admin_token),
+        )
+        assert history_response.status_code == 200, history_response.text
+        for entry in history_response.json():
+            assert entry["score"] is None
+            assert entry["risk_band"] == "NOT_EVALUATED"
+            assert entry["active_flags"] == 0
+
+        run_result = await db.execute(
+            select(ComplianceEvaluationRun)
+            .where(ComplianceEvaluationRun.company_id == db_company.id)
+            .order_by(ComplianceEvaluationRun.calculated_at.desc())
+            .limit(1)
+        )
+        run = run_result.scalar_one()
+        assert run.score is None
+        assert run.risk_band == "NOT_EVALUATED"
+        assert run.score_breakdown_snapshot is None
+
+        # A legacy completed snapshot must not make the customer API appear
+        # released after the product/legal release gate has been closed.
+        from datetime import timedelta
+        from app.models.enums import RiskBand
+
+        legacy_run = ComplianceEvaluationRun(
+            id=uuid.uuid4(),
+            company_id=db_company.id,
+            score=88,
+            risk_band=RiskBand.GREEN,
+            calculated_at=run.calculated_at + timedelta(seconds=1),
+            engine_version=run.engine_version,
+            score_hash="a" * 64,
+            previous_hash=run.score_hash,
+            evaluation_status="COMPLETED",
+            trigger_source="LEGACY_TEST",
+            active_flags_count=0,
+            black_flags_count=0,
+            flags_snapshot=[],
+            fact_provenance_snapshot=[],
+            score_breakdown_snapshot={},
+        )
+        db.add(legacy_run)
+        db_company.current_compliance_score = 88
+        db_company.current_risk_band = RiskBand.GREEN
+        await db.flush()
+
+        stale_state_response = await api_client.get(
+            f"/api/v1/companies/{db_company.id}/compliance",
+            headers=_auth(admin_token),
+        )
+        assert stale_state_response.status_code == 200, stale_state_response.text
+        stale_state = stale_state_response.json()
+        assert stale_state["current_score"] is None
+        assert stale_state["risk_band"] == "NOT_EVALUATED"
+        assert stale_state["evaluation_run_status"] == "NOT_RELEASED"
+
+        history_result = await db.execute(
+            select(ComplianceScoreHistory)
+            .where(ComplianceScoreHistory.company_id == db_company.id)
+            .order_by(ComplianceScoreHistory.calculated_at.desc())
+            .limit(1)
+        )
+        history = history_result.scalar_one()
+        assert history.score is None
+        assert str(history.risk_band.value if hasattr(history.risk_band, "value") else history.risk_band) == "NOT_EVALUATED"
+
+    @pytest.mark.asyncio
+    async def test_company_compliance_pdf_returns_409_while_release_is_paused(
+        self, api_client, admin_token, db_company
+    ):
+        response = await api_client.get(
+            f"/api/v1/companies/{db_company.id}/compliance-pdf",
+            headers=_auth(admin_token),
+        )
+        assert response.status_code == 409, response.text
+        assert "PDF withheld" in response.json()["detail"]
+
+    @pytest.mark.asyncio
     async def test_get_compliance_returns_summary(self, api_client, admin_token, db_company):
         # api_client seeds the persisted ADMIN_STAFF identity used by admin_token.
         token = admin_token

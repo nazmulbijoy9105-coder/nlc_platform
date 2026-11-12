@@ -60,6 +60,7 @@ async def test_generate_rescue_plan_passes_engagement_id_to_create(monkeypatch):
     db = MagicMock()
     from app.rule_engine import engine as engine_module
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AUD-003"}))
 
     db.execute = AsyncMock()

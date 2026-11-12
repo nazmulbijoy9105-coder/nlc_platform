@@ -64,7 +64,7 @@ def _flag(result, rule_id):
     return next(flag for flag in result.flags if flag.rule_id == rule_id)
 
 
-def test_unapproved_black_override_is_excluded_before_override_semantics():
+def test_unapproved_black_override_is_excluded_before_override_semantics(monkeypatch):
     flag = SimpleNamespace(
         rule_id="UNAPPROVED-TEST-ONLY",
         resolved=False,
@@ -76,6 +76,9 @@ def test_unapproved_black_override_is_excluded_before_override_semantics():
         score_impact=100,
     )
 
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     result = _applied_score_impacts([flag])
 
     assert result == [{"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"}]
@@ -89,6 +92,7 @@ def test_compliance_service_persists_exact_deduplicated_category_allocations(mon
     )
     monkeypatch.setattr(engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"DIR-001", "AGM-001", "AGM-002"}))
 
     flags = [
         SimpleNamespace(
@@ -152,9 +156,9 @@ def test_unapproved_black_rule_cannot_force_black_score_band():
     assert result.risk_band == Severity.NOT_EVALUATED
 
 
-def test_product_owner_authorized_black_override_is_honoured_by_engine(monkeypatch):
-    # Product scoring and BLACK-override policy are independently configured.
-    # Neither depends on the legal-verification inventory.
+def test_product_owner_black_override_is_blocked_without_counsel_verification(monkeypatch):
+    # Product-owner approval and override authority do not substitute for
+    # independent counsel verification.
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
     monkeypatch.setattr(
         engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"AUD-003"})
@@ -175,6 +179,33 @@ def test_product_owner_authorized_black_override_is_honoured_by_engine(monkeypat
 
     result = NLCRuleEngine()._calculate_score([approved_black], _profile())
 
+    assert engine_module.legal_score_is_released() is False
+    assert result.override_applied is False
+    assert result.black_flag_count == 0
+    assert result.risk_band == Severity.NOT_EVALUATED
+
+
+def test_counsel_verified_product_authorized_black_override_is_honoured(monkeypatch):
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AUD-003"}))
+    monkeypatch.setattr(
+        engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"AUD-003"})
+    )
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    approved_black = ComplianceFlag(
+        rule_id="AUD-003",
+        flag_code="AUD-003",
+        severity=Severity.BLACK,
+        score_impact=25,
+        revenue_tier=RevenueTier.CORPORATE_RESCUE,
+        description="Approved test override.",
+        statutory_basis="Test only.",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+        is_black_override=True,
+    )
+    result = NLCRuleEngine()._calculate_score([approved_black], _profile())
+    assert engine_module.legal_score_is_released() is True
     assert result.override_applied is True
     assert result.black_flag_count == 1
     assert result.final_score == 0
@@ -298,6 +329,9 @@ def test_agm_quorum_requires_verified_attendance_and_quorum_basis():
     assert flag.state == RuleState.NON_COMPLIANT
     # AGM-005 is owner-approved; company-specific attendance and quorum facts remain evidence-gated.
     assert "AGM-005" in engine_module.VERIFIED_RULE_IDS
+    # Company evidence may establish the factual finding, but no rule is
+    # independently counsel-verified in the canonical release registry.
+    assert "AGM-005" not in VERIFIED_RULE_IDS
 
 
 def test_unknown_red_finding_does_not_force_red_risk_band():
@@ -406,14 +440,18 @@ def test_section_94_verified_disqualification_is_not_automatic_black():
     assert flag.state == RuleState.DISPUTED
     assert flag.severity == Severity.NOT_EVALUATED
     assert flag.is_black_override is False
-    # DEF-001 is owner-approved; disqualification grounds and operative status remain evidence-gated.
-    assert "DEF-001" in VERIFIED_RULE_IDS
+    # A verified factual allegation does not establish counsel verification.
+    assert "DEF-001" not in VERIFIED_RULE_IDS
 
 def test_released_score_uses_one_category_cap_formula_for_all_paths(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
         engine_module,
         "PRODUCT_SCORING_RULE_IDS",
+        frozenset({"AGM-001", "AGM-002", "INC-003", "INC-004", "AUD-001"}),
+    )
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS",
         frozenset({"AGM-001", "AGM-002", "INC-003", "INC-004", "AUD-001"}),
     )
     profile = _profile()
@@ -452,7 +490,11 @@ def test_released_score_uses_one_category_cap_formula_for_all_paths(monkeypatch)
     assert engine._calculate_raw_score(flags) == breakdown.raw_total
 
 
-def test_pre_score_and_authoritative_raw_score_use_identical_category_caps():
+def test_pre_score_and_authoritative_raw_score_use_identical_category_caps(monkeypatch):
+    ids = frozenset({"AGM-001", "AGM-002", "INC-003"})
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", ids)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", ids)
     profile = _profile()
     flags = [
         ComplianceFlag(
@@ -631,7 +673,11 @@ def test_score_hash_changes_when_evidence_inputs_change():
     assert first.score_breakdown.score_hash != second.score_breakdown.score_hash
 
 
-def test_verified_absence_is_scored_but_unknown_is_not():
+def test_verified_absence_is_scored_but_unknown_is_not(monkeypatch):
+    ids = frozenset({"AGM-001"})
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", ids)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", ids)
     profile = _profile()
     verified_absent = ComplianceFlag(
         rule_id="AGM-001",
@@ -783,11 +829,13 @@ def test_vat_return_status_without_verified_tax_period_is_not_a_default():
     assert flag.score_impact == 0
 
 
-def test_product_released_corpus_reports_score_with_full_input_coverage():
-    from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS
+def test_production_corpus_remains_unreleased_until_counsel_verifies_full_catalogue():
+    from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS, legal_score_is_released
 
     assert LEGAL_SCORE_RELEASED is False
     assert len(VERIFIED_RULE_IDS) == 0
+    assert VERIFIED_RULE_IDS == frozenset()
+    assert legal_score_is_released() is False
     profile = _profile(
         last_agm_date=date(2025, 6, 1),
         last_audit_signed_date=date(2025, 5, 1),
@@ -805,6 +853,9 @@ def test_product_released_corpus_reports_score_with_full_input_coverage():
 
 
 def test_black_severity_without_authorised_override_does_not_force_zero_score(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
     monkeypatch.setattr(
         "app.rule_engine.engine.AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset()
     )
@@ -959,6 +1010,7 @@ def test_subsequent_agm_deadline_is_earlier_of_fifteen_months_and_calendar_year_
 def test_verified_absence_is_included_in_score_impact_reporting(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     flag = SimpleNamespace(
         rule_id="AGM-001",
         state=RuleState.VERIFIED_ABSENT,
@@ -974,6 +1026,7 @@ def test_verified_absence_is_included_in_score_impact_reporting(monkeypatch):
 def test_black_label_without_authorised_override_is_only_a_normal_deduction(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
     flag = SimpleNamespace(
         rule_id="AGM-001",
@@ -1072,6 +1125,7 @@ def test_subsequent_agm_violation_reports_statutory_deadline_and_basis_metadata(
 def test_verified_black_severity_without_override_authority_does_not_force_zero(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
     flag = ComplianceFlag(
         rule_id="AGM-001",
@@ -1195,6 +1249,10 @@ def test_customer_score_components_reconcile_with_per_finding_api_allocations(mo
         "PRODUCT_SCORING_RULE_IDS",
         frozenset(rule_id for rule_id, _ in rule_impacts),
     )
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS",
+        frozenset(rule_id for rule_id, _ in rule_impacts),
+    )
     flags = [
         ComplianceFlag(
             rule_id=rule_id,
@@ -1229,6 +1287,7 @@ def test_customer_score_components_reconcile_with_per_finding_api_allocations(mo
 def test_excluded_and_unknown_findings_have_zero_score_deduction(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     excluded = ComplianceFlag(
         rule_id="AGM-999",
         flag_code="EXCLUDED",
@@ -1273,6 +1332,10 @@ def test_pdf_reconciliation_accepts_global_cap_allocations(monkeypatch):
     monkeypatch.setattr(pdf_module, "PRODUCT_SCORING_RULE_IDS", frozenset(
         rule_id for rule_id, _ in rule_impacts
     ))
+    monkeypatch.setattr(pdf_module, "VERIFIED_RULE_IDS", frozenset(
+        rule_id for rule_id, _ in rule_impacts
+    ))
+    monkeypatch.setattr(pdf_module, "LEGAL_SCORE_RELEASED", True)
     flags = [
         SimpleNamespace(
             rule_id=rule_id,
@@ -1291,6 +1354,9 @@ def test_api_marks_duplicate_scoring_event_as_suppressed(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
         engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"DIR-001", "AGM-001"})
+    )
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", frozenset({"DIR-001", "AGM-001"})
     )
     flags = [
         ComplianceFlag(

@@ -36,6 +36,10 @@ def test_product_authorized_black_override_does_not_require_legal_verification(m
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"INC-003"}))
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(rules_api, "legal_score_is_released", lambda: False)
+    monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset())
+    monkeypatch.setattr(rules_api, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(rules_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
     response = rules_api._rule_to_response(_rule(rule_id="INC-003"))
 
     assert response.default_severity == "RED"
@@ -51,6 +55,7 @@ def test_product_authorized_black_override_does_not_require_legal_verification(m
 
 def test_super_admin_black_override_catalogue_remains_visible_when_scoring_is_disabled(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(rules_api, "legal_score_is_released", lambda: False)
     monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(rules_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
     monkeypatch.setattr(rules_api, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"INC-003"}))
@@ -78,6 +83,7 @@ def test_super_admin_black_override_catalogue_remains_visible_when_scoring_is_di
 
 def test_unlisted_black_override_is_not_authorized_by_product_release_alone(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(rules_api, "legal_score_is_released", lambda: False)
     monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))

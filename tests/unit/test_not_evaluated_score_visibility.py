@@ -26,6 +26,7 @@ def _company(score, band):
 
 
 def test_legacy_stored_company_score_is_hidden_while_legal_release_is_paused():
+def test_legacy_stored_company_score_stays_hidden_while_release_is_paused():
     response = _company_to_response(_company(88, "GREEN"))
 
     assert response.band == "NOT_EVALUATED"
@@ -41,7 +42,7 @@ def test_not_evaluated_company_does_not_expose_placeholder_score():
     assert response.compliance_score is None
 
 
-def test_released_company_score_is_visible_only_when_release_switch_is_enabled(monkeypatch):
+def test_released_company_score_is_visible_only_with_complete_verified_catalogue(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
     monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", {"AGM-001"})
@@ -52,7 +53,10 @@ def test_released_company_score_is_visible_only_when_release_switch_is_enabled(m
     assert response.compliance_score == 88
 
 
-def test_historical_score_history_is_visible_without_mutating_the_database_record():
+def test_historical_score_history_is_visible_without_mutating_the_database_record(monkeypatch):
+    monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
+    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", {"AGM-001"})
     item = {
         "month": "2026-10-01",
         "score": 72,
@@ -96,10 +100,10 @@ def test_product_scoring_flag_is_visible_without_claiming_legal_verification():
     assert response.score_impact == 0
     assert response.is_black_override is False
     assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
-    assert response.rule_name == "Provisional AGM evidence flag"
+    assert "No breach" in response.rule_name
 
 
-def test_product_scoring_flag_remains_legally_pending_after_product_release(monkeypatch):
+def test_product_scoring_flag_stays_unpublished_without_counsel_verification(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
     monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", set())
@@ -122,6 +126,7 @@ def test_product_scoring_flag_remains_legally_pending_after_product_release(monk
     assert response.severity == "NOT_EVALUATED"
     assert response.score_impact == 0
     assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
+    assert "No breach" in response.rule_name
 
 
 def test_flag_summary_separates_pending_review_from_released_findings(monkeypatch):
@@ -150,9 +155,59 @@ def test_flag_summary_separates_pending_review_from_released_findings(monkeypatc
 def test_release_switch_without_product_scoring_rules_hides_company_score(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", set())
+    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", set())
 
     response = _company_to_response(_company(88, "GREEN"))
 
     assert response.band == "NOT_EVALUATED"
     assert response.compliance_score is None
     assert response.violation_count == 0
+
+
+def test_product_switch_alone_cannot_publish_stored_company_score(monkeypatch):
+    monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
+    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", set())
+
+    response = _company_to_response(_company(88, "GREEN"))
+
+    assert response.band == "NOT_EVALUATED"
+    assert response.compliance_score is None
+    assert response.active_flags == 0
+    assert response.violation_count == 0
+
+def test_released_flag_reports_rule_specific_counsel_verification(monkeypatch):
+    monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
+    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", {"AGM-001"})
+    flag = SimpleNamespace(
+        id=uuid4(),
+        rule_id="AGM-001",
+        description="Counsel-verified AGM finding",
+        flag_code="AGM-001",
+        severity="RED",
+        score_impact=15,
+        flag_status="ACTIVE",
+        triggered_date=date(2026, 10, 1),
+        resolved_date=None,
+        is_black_override=False,
+        resolution_notes=None,
+    )
+
+    response = _flag_to_response(flag)
+
+    assert response.severity == "RED"
+    assert response.score_impact == 15
+    assert response.legal_review_status == "LEGALLY_VERIFIED"
+
+def test_partial_counsel_verification_cannot_release_company_api_score(monkeypatch):
+    monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001", "TAX-001"}
+    )
+    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", {"AGM-001"})
+
+    assert companies_api._legal_score_is_released() is False
+    response = _company_to_response(_company(88, "GREEN"))
+    assert response.band == "NOT_EVALUATED"
+    assert response.compliance_score is None
