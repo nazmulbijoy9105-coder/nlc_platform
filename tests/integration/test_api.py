@@ -391,11 +391,27 @@ class TestCompanies:
 
         # A legacy completed snapshot must not make the customer API appear
         # released after the product/legal release gate has been closed.
+        from datetime import timedelta
         from app.models.enums import RiskBand
 
-        run.score = 88
-        run.risk_band = RiskBand.GREEN
-        run.evaluation_status = "COMPLETED"
+        legacy_run = ComplianceEvaluationRun(
+            id=uuid.uuid4(),
+            company_id=db_company.id,
+            score=88,
+            risk_band=RiskBand.GREEN,
+            calculated_at=run.calculated_at + timedelta(seconds=1),
+            engine_version=run.engine_version,
+            score_hash="a" * 64,
+            previous_hash=run.score_hash,
+            evaluation_status="COMPLETED",
+            trigger_source="LEGACY_TEST",
+            active_flags_count=0,
+            black_flags_count=0,
+            flags_snapshot=[],
+            fact_provenance_snapshot=[],
+            score_breakdown_snapshot={},
+        )
+        db.add(legacy_run)
         db_company.current_compliance_score = 88
         db_company.current_risk_band = RiskBand.GREEN
         await db.flush()
