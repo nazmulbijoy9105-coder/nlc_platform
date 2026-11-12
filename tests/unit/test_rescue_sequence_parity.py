@@ -21,7 +21,7 @@ def controlled_release(monkeypatch):
     rule_ids = frozenset({
         "AGM-001", "AGM-002", "AUD-001", "AUD-002", "AUD-003",
         "TR-005", "TR-006", "ESC-002", "TR-001", "TR-004",
-        "AR-002", "ESC-001", "ESC-003", "AGM-003", "TAX-004",
+        "AR-002", "ESC-001", "AGM-003", "TAX-004",
     })
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", rule_ids)
@@ -159,7 +159,7 @@ def test_output_shape_and_metadata_come_from_canonical_registry(controlled_relea
     "rule_id",
     ["AGM-001", "AGM-002", "AUD-001", "AUD-002", "AUD-003",
      "TR-005", "TR-006", "ESC-002", "TR-001", "TR-004",
-     "AR-002", "ESC-001", "ESC-003", "AGM-003"],
+     "AR-002", "ESC-001", "AGM-003"],
 )
 def test_registered_actionable_finding_yields_one_step(rule_id, controlled_release):
     steps = _seq([_flag(rule_id)])
@@ -179,6 +179,10 @@ def test_registered_actionable_finding_yields_one_step(rule_id, controlled_relea
 )
 def test_inactive_or_non_actionable_findings_produce_no_step(finding, controlled_release):
     assert _seq([finding]) == []
+
+
+def test_ESC003_is_not_a_score_bearing_rescue_rule(controlled_release):
+    assert _seq([_flag("ESC-003")]) == []
 
 
 def test_tax004_quarters_aggregate_and_deduplicate_across_flags(controlled_release):
