@@ -1012,3 +1012,101 @@ def test_rescue_output_validation_requires_release_and_unique_verified_findings(
     )
     with pytest.raises(ValueError, match="sequence"):
         validate_rescue_engine_output(empty_plan, expected_company_id="tenant-001")
+
+
+
+def test_score_allocation_covers_inactive_excluded_black_and_duplicate_paths(monkeypatch):
+    import app.rule_engine.engine as engine_module
+    from app.rule_engine.engine import RuleState
+    from app.services.compliance_service import _applied_score_impacts
+
+    product_ids = frozenset({"AGM-001", "AUD-001", "INC-003", "X-001"})
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", product_ids)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", product_ids)
+    monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
+
+    def finding(rule_id, *, resolved=False, state=RuleState.NON_COMPLIANT,
+                eval_state="VIOLATION", severity="RED", impact=5,
+                black_override=False, event_key=None):
+        return SimpleNamespace(
+            rule_id=rule_id, resolved=resolved, conditional_applies=True,
+            state=state, eval_state=eval_state, severity=severity,
+            score_impact=impact, is_black_override=black_override,
+            detail={"scoring_event_key": event_key} if event_key else {},
+        )
+
+    rows = [
+        finding("AGM-001", resolved=True),
+        finding("AGM-001", state=RuleState.UNKNOWN, eval_state="UNKNOWN"),
+        finding("MEM-001"),
+        finding("INC-003", severity="BLACK", black_override=True, impact=0),
+        finding("X-001"),
+        finding("AUD-001", event_key="shared-event"),
+        finding("AGM-001", event_key="shared-event"),
+    ]
+    results = _applied_score_impacts(rows)
+
+    assert results[0]["status"] == "INACTIVE"
+    assert results[1]["status"] == "NOT_A_CONFIRMED_VIOLATION"
+    assert results[2]["status"] == "EXCLUDED_FROM_PRODUCT_SCORING"
+    assert results[3]["status"] == "BLACK_OVERRIDE_APPLIED"
+    assert results[4]["status"] == "NO_SCORING_CATEGORY"
+    assert results[5]["status"] == "DUPLICATE_EVENT_SUPPRESSED"
+    assert results[6]["status"] == "DUPLICATE_EVENT_SUPPRESSED"
+
+
+def test_rescue_dispositions_keep_unverified_findings_in_review_only_state(monkeypatch):
+    import app.rule_engine.engine as engine_module
+    from app.rule_engine.engine import (
+        ComplianceFlag,
+        NLCRuleEngine,
+        RevenueTier,
+        RuleState,
+        Severity,
+    )
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+
+    def flag(rule_id, state=RuleState.NON_COMPLIANT, eval_state="VIOLATION",
+             resolved=False):
+        return ComplianceFlag(
+            rule_id=rule_id, flag_code=f"{rule_id}_DISPOSITION",
+            severity=Severity.RED, score_impact=0,
+            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+            description="Controlled fixture", statutory_basis="Test only",
+            state=state, eval_state=eval_state, resolved=resolved,
+        )
+
+    rows = [
+        flag("AGM-001", resolved=True),
+        flag("AUD-001", state=RuleState.UNKNOWN, eval_state="UNKNOWN"),
+        flag("AGM-002"),
+        flag("AGM-003"),
+    ]
+    score = SimpleNamespace(risk_band=Severity.NOT_EVALUATED)
+    steps = [{"related_rules": ["AGM-002"], "rescue_id": "RES-AGM-002"}]
+
+    dispositions = NLCRuleEngine._build_rescue_dispositions(rows, score, steps)
+
+    assert [item["disposition"] for item in dispositions] == [
+        "NO_ACTION", "WAITING_EVIDENCE", "REVIEW_REQUIRED", "BLOCKED"
+    ]
+    assert dispositions[2]["reason"] == "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"
+
+
+def test_rescue_target_date_prefers_explicit_then_latest_step_date():
+    from app.services.rescue_service import _derive_plan_target
+
+    first = date(2026, 12, 1)
+    latest = date(2026, 12, 15)
+    steps = [
+        SimpleNamespace(target_completion_date=first),
+        SimpleNamespace(target_completion_date=latest),
+        SimpleNamespace(target_completion_date=None),
+    ]
+
+    assert _derive_plan_target(date(2026, 11, 30), steps) == date(2026, 11, 30)
+    assert _derive_plan_target(None, steps) == latest
+    assert _derive_plan_target(None, []) is None
