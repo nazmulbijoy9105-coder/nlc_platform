@@ -27,6 +27,7 @@ def _enable_release_for_rescue_sequence_unit_tests(monkeypatch):
             "AR-002", "ESC-001", "ESC-003", "AGM-003", "TAX-004",
         }),
     )
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", engine_module.PRODUCT_SCORING_RULE_IDS)
 
 
 def _flag(
@@ -79,8 +80,8 @@ def test_each_finding_gets_exactly_one_rescue_disposition():
     assert [item["rule_id"] for item in result] == [
         finding.rule_id for finding in findings
     ]
-    assert result[0]["disposition"] == "REVIEW_REQUIRED"
-    assert result[0]["reason"] == "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"
+    assert result[0]["disposition"] == "ACTION_REQUIRED"
+    assert result[0]["reason"] == "CONFIRMED_RESCUE_STEP"
     assert result[1]["disposition"] == "WAITING_EVIDENCE"
     assert result[1]["reason"] == "FINDING_STATE_UNKNOWN"
     assert result[2]["reason"] == "FINDING_RESOLVED"
