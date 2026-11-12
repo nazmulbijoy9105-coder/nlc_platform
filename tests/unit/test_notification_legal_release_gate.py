@@ -54,6 +54,7 @@ async def test_unapproved_rule_is_not_notified_even_if_release_switch_is_true(mo
 async def test_released_approved_red_flag_queues_dashboard_alert(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     service = NotificationService(MagicMock())
     service.queue_notification = AsyncMock()
 
@@ -63,7 +64,9 @@ async def test_released_approved_red_flag_queues_dashboard_alert(monkeypatch):
     assert service.queue_notification.await_args.kwargs["notification_type"] == "AGM-001"
 
 def test_unreleased_rule_notifications_are_not_eligible(monkeypatch):
-    monkeypatch.setattr(notification_module, "legal_score_is_released", lambda: False)
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(notification_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
 
     assert is_notification_eligible("PAYMENT_RECEIVED") is True
@@ -72,7 +75,9 @@ def test_unreleased_rule_notifications_are_not_eligible(monkeypatch):
 
 
 def test_only_approved_rule_notifications_are_eligible_after_release(monkeypatch):
-    monkeypatch.setattr(notification_module, "legal_score_is_released", lambda: True)
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(notification_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
 
     assert is_notification_eligible("PAYMENT_RECEIVED") is True
@@ -113,7 +118,10 @@ async def test_user_notification_list_hides_unapproved_rule_alerts(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_suppressed_rule_notifications_stay_hidden_after_release(monkeypatch):
-    monkeypatch.setattr(notification_module, "legal_score_is_released", lambda: True)
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(notification_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(notification_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     suppressed = SimpleNamespace(
         notification_type="AGM-001",
@@ -228,7 +236,10 @@ async def test_generic_legal_alert_is_suppressed_even_without_flag_link(monkeypa
 
 
 def test_related_flag_notification_is_never_eligible_even_after_rule_release(monkeypatch):
-    monkeypatch.setattr(notification_module, "legal_score_is_released", lambda: True)
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(notification_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(notification_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
 
     assert is_notification_eligible("CUSTOM_ALERT", related_flag_id=uuid4()) is False

@@ -643,7 +643,7 @@ def legal_score_is_released() -> bool:
     return (
         LEGAL_SCORE_RELEASED is True
         and bool(PRODUCT_SCORING_RULE_IDS)
-        and bool(VERIFIED_RULE_IDS)
+        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
     )
 
 
@@ -3462,6 +3462,7 @@ class NLCRuleEngine:
             for rule_id in rescue_step.get("related_rules", []):
                 step_by_rule[rule_id] = rescue_step
 
+        score_band = getattr(score.risk_band, "value", score.risk_band)
         dispositions: List[Dict[str, Any]] = []
         for flag in flags:
             state = getattr(getattr(flag, "state", None), "value", getattr(flag, "state", None))
@@ -3498,8 +3499,19 @@ class NLCRuleEngine:
                 disposition, reason = "BLOCKED", "RULE_NOT_IN_PRODUCT_SCORING_ALLOWLIST"
             elif severity not in (Severity.RED.value, Severity.BLACK.value):
                 disposition, reason = "NO_ACTION", "FINDING_SEVERITY_BELOW_RESCUE_THRESHOLD"
+            elif (
+                legal_score_is_released()
+                and score_band not in (Severity.RED.value, Severity.BLACK.value)
+            ):
+                disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
             elif step is not None and not legal_score_is_released():
+                # Deterministic candidate steps remain visible for professional
+                # review, but a paused legal release can never activate them.
                 disposition, reason = "REVIEW_REQUIRED", "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"
+            elif step is None and flag.rule_id != "TAX-004":
+                disposition, reason = "BLOCKED", "RESCUE_STEP_NOT_GENERATED"
+            elif score_band not in (Severity.RED.value, Severity.BLACK.value):
+                disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
             elif step is not None:
                 disposition, reason = "ACTION_REQUIRED", "CONFIRMED_RESCUE_STEP"
             elif flag.rule_id == "TAX-004":
@@ -3521,12 +3533,23 @@ class NLCRuleEngine:
         return dispositions
 
     def _generate_rescue_sequence(self, c: CompanyProfile, flags: List[ComplianceFlag], score: ScoreBreakdown) -> List[Dict[str, Any]]:
-        """R-014: Generate rescue steps only from active, verified findings.
+        """R-014: Generate reviewable candidates from confirmed RED/BLACK findings.
 
+        Candidate steps are not customer actions. The disposition gate keeps
+        them REVIEW_REQUIRED until scoring release and counsel verification pass.
         TAX-004 is aggregated into one step because its missed-quarter details
         describe one remediation item. Missing quarter evidence does not itself
         establish a missed payment.
         """
+        # A released company risk band below RED cannot start a rescue plan.
+        # While release is paused, deterministic candidates may still be shown
+        # for review; the disposition gate prevents customer action.
+        score_band = getattr(score.risk_band, "value", score.risk_band)
+        if legal_score_is_released() and score_band not in (
+            Severity.RED.value, Severity.BLACK.value
+        ):
+            return []
+
         flags = [
             f for f in flags
             if getattr(f, "eval_state", "VIOLATION") != "UNKNOWN"

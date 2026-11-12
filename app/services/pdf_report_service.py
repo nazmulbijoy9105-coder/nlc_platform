@@ -306,11 +306,11 @@ def _render_rescue_section(rescue_plan: Any) -> str:
 
 
 def _legal_score_is_released() -> bool:
-    """Mirror the engine's two-part release gate using this module's testable inputs."""
+    """Mirror the engine's complete-catalogue release gate using testable inputs."""
     return (
         LEGAL_SCORE_RELEASED is True
         and bool(PRODUCT_SCORING_RULE_IDS)
-        and bool(VERIFIED_RULE_IDS)
+        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
     )
 
 

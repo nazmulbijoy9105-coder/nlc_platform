@@ -306,7 +306,7 @@ class TestCompanies:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_get_dashboard_kpis_exposes_product_released_risk_aggregates(
+    async def test_get_dashboard_kpis_exposes_evidence_review_while_score_release_is_paused(
         self, api_client, admin_token
     ):
         resp = await api_client.get(
@@ -315,12 +315,89 @@ class TestCompanies:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["dashboard_mode"] == "STATUTORY_RISK"
-        assert data["statutory_score_release_status"] == "RELEASED"
-        assert data["statutory_risk_aggregates_available"] is True
-        assert data["green_count"] is not None
-        assert data["yellow_count"] is not None
-        assert data["red_black_count"] is not None
+        assert data["dashboard_mode"] == "EVIDENCE_REVIEW"
+        assert data["statutory_score_release_status"] == "NOT_RELEASED"
+        assert data["statutory_risk_aggregates_available"] is False
+        assert data["green_count"] is None
+        assert data["yellow_count"] is None
+        assert data["red_black_count"] is None
+        assert data["upcoming_deadlines"] is None
+
+    @pytest.mark.asyncio
+    async def test_manual_evaluation_and_customer_views_withhold_unreleased_score(
+        self, api_client, admin_token, db_company, db
+    ):
+        from sqlalchemy import select
+        from app.models.compliance import ComplianceEvaluationRun, ComplianceScoreHistory
+
+        evaluated = await api_client.post(
+            f"/api/v1/companies/{db_company.id}/evaluate",
+            headers=_auth(admin_token),
+        )
+        assert evaluated.status_code == 200, evaluated.text
+        evaluation = evaluated.json()
+        assert evaluation["current_score"] is None
+        assert evaluation["risk_band"] == "NOT_EVALUATED"
+        assert evaluation["active_flags"] == 0
+        assert evaluation["black_flags"] == 0
+        assert evaluation["red_flags"] == 0
+        assert evaluation["yellow_flags"] == 0
+        assert evaluation["evaluation_run_status"] == "NOT_RELEASED"
+
+        customer_view = await api_client.get(
+            f"/api/v1/companies/{db_company.id}/compliance",
+            headers=_auth(admin_token),
+        )
+        assert customer_view.status_code == 200, customer_view.text
+        state = customer_view.json()
+        assert state["current_score"] is None
+        assert state["risk_band"] == "NOT_EVALUATED"
+        assert state["active_flags"] == 0
+        assert state["black_flags"] == 0
+        assert state["red_flags"] == 0
+        assert state["yellow_flags"] == 0
+
+        flags_response = await api_client.get(
+            f"/api/v1/companies/{db_company.id}/flags",
+            headers=_auth(admin_token),
+        )
+        assert flags_response.status_code == 200, flags_response.text
+        for flag in flags_response.json():
+            assert flag["severity"] == "NOT_EVALUATED"
+            assert flag["score_impact"] == 0
+            assert flag["legal_review_status"] == "NOT_LEGALLY_VERIFIED"
+            assert "No breach" in flag["rule_name"]
+
+        history_response = await api_client.get(
+            f"/api/v1/companies/{db_company.id}/score-history",
+            headers=_auth(admin_token),
+        )
+        assert history_response.status_code == 200, history_response.text
+        for entry in history_response.json():
+            assert entry["score"] is None
+            assert entry["risk_band"] == "NOT_EVALUATED"
+            assert entry["active_flags"] == 0
+
+        run_result = await db.execute(
+            select(ComplianceEvaluationRun)
+            .where(ComplianceEvaluationRun.company_id == db_company.id)
+            .order_by(ComplianceEvaluationRun.calculated_at.desc())
+            .limit(1)
+        )
+        run = run_result.scalar_one()
+        assert run.score is None
+        assert run.risk_band == "NOT_EVALUATED"
+        assert run.score_breakdown_snapshot is None
+
+        history_result = await db.execute(
+            select(ComplianceScoreHistory)
+            .where(ComplianceScoreHistory.company_id == db_company.id)
+            .order_by(ComplianceScoreHistory.calculated_at.desc())
+            .limit(1)
+        )
+        history = history_result.scalar_one()
+        assert history.score is None
+        assert str(history.risk_band.value if hasattr(history.risk_band, "value") else history.risk_band) == "NOT_EVALUATED"
 
     @pytest.mark.asyncio
     async def test_get_compliance_returns_summary(self, api_client, admin_token, db_company):

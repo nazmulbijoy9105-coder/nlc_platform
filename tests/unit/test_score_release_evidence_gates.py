@@ -76,6 +76,7 @@ def test_missing_agm_history_is_unknown_not_a_violation():
 
 def test_unknown_never_enters_scoring_even_if_impact_was_supplied(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     unknown = _finding(
         state=RuleState.UNKNOWN,
@@ -89,7 +90,9 @@ def test_unknown_never_enters_scoring_even_if_impact_was_supplied(monkeypatch):
 
 def test_unapproved_rule_cannot_affect_released_score(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001", "AUD-001"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
     flag = _finding(rule_id="AUD-001")
     engine = NLCRuleEngine(today=TODAY)
 
@@ -105,6 +108,7 @@ def test_unapproved_rule_cannot_affect_released_score(monkeypatch):
 
 def test_explicitly_approved_rule_can_score_in_controlled_release_fixture(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     flag = _finding()
     engine = NLCRuleEngine(today=TODAY)
@@ -116,7 +120,9 @@ def test_explicitly_approved_rule_can_score_in_controlled_release_fixture(monkey
 
 def test_unverified_black_fact_cannot_activate_black_override(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001", "INC-003"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
     black = _finding(
         rule_id="INC-003",
         severity=Severity.BLACK,
@@ -146,4 +152,18 @@ def test_identical_evidence_and_release_versions_produce_identical_score_hashes(
 def test_default_runtime_release_is_fail_closed_until_counsel_signoff():
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert engine_module.LEGAL_SCORE_RELEASED is False
+    assert engine_module.legal_score_is_released() is False
+
+
+
+def test_global_score_release_requires_complete_counsel_verified_catalogue(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "PRODUCT_SCORING_RULE_IDS",
+        frozenset({"AGM-001", "AUD-001"}),
+    )
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"})
+    )
+
     assert engine_module.legal_score_is_released() is False
