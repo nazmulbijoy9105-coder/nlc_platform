@@ -1544,7 +1544,11 @@ class TestVerdictRegression:
         output = rule_engine.evaluate(profile, today=date(2026, 10, 1))
         assert_flag_triggered(output, "TAX-003")
 
-    def test_product_eligible_red_flag_escalates_band(self, rule_engine, build_profile):
+    def test_product_eligible_red_flag_escalates_band(self, monkeypatch, rule_engine, build_profile):
+        import app.rule_engine.engine as engine_module
+        monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+        monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"TL-002"}))
+        monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"TL-002"}))
         profile = build_profile(trade_license_expiry=date.today() - timedelta(days=100))
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "TL-002")
@@ -1577,6 +1581,7 @@ def test_black_override_requires_separate_authorization(
     )
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
     monkeypatch.setattr(
         engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset()
     )
