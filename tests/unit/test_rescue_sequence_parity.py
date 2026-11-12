@@ -87,14 +87,14 @@ def test_each_finding_gets_exactly_one_rescue_disposition(controlled_release):
     assert result[5]["reason"] == "RULE_NOT_APPLICABLE"
 
 
-def test_confirmed_finding_is_blocked_when_legal_score_release_is_closed(monkeypatch):
+def test_confirmed_finding_is_review_required_when_legal_score_release_is_closed(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
     finding = _flag("AGM-001")
 
-    result = _dispositions([finding])
+    result = _dispositions([finding], steps=_seq([finding]))
 
-    assert result[0]["disposition"] == "BLOCKED"
-    assert result[0]["reason"] == "LEGAL_SCORE_NOT_RELEASED"
+    assert result[0]["disposition"] == "REVIEW_REQUIRED"
+    assert result[0]["reason"] == "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"
 
 
 def test_yellow_finding_has_explicit_no_action_reason_in_red_plan(controlled_release):
@@ -240,11 +240,12 @@ def test_missing_mapping_for_actionable_finding_is_explicit(monkeypatch):
     with pytest.raises(ValueError, match="Missing statutory rescue mapping"):
         _seq([_flag("NO-SUCH-RULE")])
 
-def test_default_paused_release_blocks_rescue_actions():
+def test_default_paused_release_keeps_rescue_plan_in_review_only_state():
     assert engine_module.legal_score_is_released() is False
     finding = _flag("AGM-001")
-    result = _dispositions([finding])
-    assert result[0]["disposition"] == "BLOCKED"
-    assert result[0]["reason"] == "LEGAL_SCORE_NOT_RELEASED"
-    assert _seq([finding]) == []
+    steps = _seq([finding])
+    assert len(steps) == 1
+    result = _dispositions([finding], steps=steps)
+    assert result[0]["disposition"] == "REVIEW_REQUIRED"
+    assert result[0]["reason"] == "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"
 
