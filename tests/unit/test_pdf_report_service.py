@@ -423,3 +423,53 @@ def test_pdf_black_override_requires_independent_rule_verification(monkeypatch):
 
     assert report_module._verified_flag_score([black]) == (100, False)
     assert report_module._legal_score_is_released() is True
+
+
+
+def test_pdf_separates_unverified_findings_from_verified_score_report(monkeypatch):
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        report_module, "PRODUCT_SCORING_RULE_IDS",
+        frozenset({"AGM-001", "AUD-001"}),
+    )
+    monkeypatch.setattr(
+        report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"})
+    )
+    verified = SimpleNamespace(
+        rule_id="AGM-001",
+        severity="RED",
+        description="Verified AGM review item",
+        score_impact=10,
+        resolved=False,
+        conditional_applies=True,
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        detail={},
+    )
+    unverified = SimpleNamespace(
+        rule_id="AUD-001",
+        severity="BLACK",
+        description="UNVERIFIED_SECRET_DESC",
+        score_impact=0,
+        resolved=False,
+        conditional_applies=True,
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        detail={},
+    )
+    company = SimpleNamespace(
+        company_name="Partial Review Ltd",
+        registration_number="P-1",
+        current_compliance_score=90,
+        current_risk_band="GREEN",
+    )
+
+    page = build_compliance_report_html(
+        company, [verified, unverified], WHEN
+    )
+
+    assert "Verified AGM review item" in page
+    assert "AUD-001" in page
+    assert "Independent legal/source verification pending" in page
+    assert "UNVERIFIED_SECRET_DESC" not in page
+    assert "BLACK-severity compliance breach" not in page
