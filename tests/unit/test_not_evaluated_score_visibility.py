@@ -25,11 +25,11 @@ def _company(score, band):
     )
 
 
-def test_legacy_stored_company_score_is_visible_after_product_release():
+def test_legacy_stored_company_score_stays_hidden_while_release_is_paused():
     response = _company_to_response(_company(88, "GREEN"))
 
-    assert response.band == "GREEN"
-    assert response.compliance_score == 88
+    assert response.band == "NOT_EVALUATED"
+    assert response.compliance_score is None
     assert response.violation_count == 0
     assert response.active_flags == 0
 
