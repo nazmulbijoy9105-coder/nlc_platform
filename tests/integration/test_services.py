@@ -844,3 +844,9 @@ def test_rescue_planner_remains_deterministic_when_score_release_is_paused(monke
 
     assert len(steps) == 1
     assert steps[0]["related_rules"] == ["AGM-001"]
+
+    dispositions = NLCRuleEngine._build_rescue_dispositions(
+        [finding], score, steps
+    )
+    assert dispositions[0]["disposition"] == "REVIEW_REQUIRED"
+    assert dispositions[0]["reason"] == "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"
