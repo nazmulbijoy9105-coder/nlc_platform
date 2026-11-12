@@ -34,6 +34,10 @@ def _enable_authorized_score_for_report_test(monkeypatch, rule_ids):
         "app.services.pdf_report_service.PRODUCT_SCORING_RULE_IDS",
         frozenset(rule_ids),
     )
+    monkeypatch.setattr(
+        "app.services.pdf_report_service.VERIFIED_RULE_IDS",
+        frozenset(rule_ids),
+    )
 
 
 FLAGS = [
