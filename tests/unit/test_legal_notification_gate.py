@@ -54,7 +54,9 @@ def test_rule_notifications_remain_suppressed_while_legal_release_is_paused():
 
 
 def test_controlled_release_allows_only_verified_catalogue_rule_notifications(monkeypatch):
-    monkeypatch.setattr(notification_module, "legal_score_is_released", lambda: True)
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(notification_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     assert is_notification_eligible("AGM-001") is True
     assert is_notification_eligible("VAT-002") is False
