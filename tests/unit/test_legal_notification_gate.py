@@ -2,6 +2,7 @@
 
 import pytest
 
+import app.services.notification_service as notification_module
 from app.services.notification_service import is_notification_eligible
 
 
@@ -47,9 +48,16 @@ def test_known_non_legal_operational_notifications_remain_eligible(notification_
     assert is_notification_eligible(notification_type) is True
 
 
-def test_product_allowlisted_rule_notifications_are_eligible_while_legal_review_is_pending():
+def test_rule_notifications_remain_suppressed_while_legal_release_is_paused():
+    assert is_notification_eligible("AGM-001") is False
+    assert is_notification_eligible("VAT-002") is False
+
+
+def test_controlled_release_allows_only_verified_catalogue_rule_notifications(monkeypatch):
+    monkeypatch.setattr(notification_module, "legal_score_is_released", lambda: True)
+    monkeypatch.setattr(notification_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     assert is_notification_eligible("AGM-001") is True
-    assert is_notification_eligible("VAT-002") is True
+    assert is_notification_eligible("VAT-002") is False
 
 
 def test_any_notification_linked_to_a_compliance_flag_is_suppressed():
