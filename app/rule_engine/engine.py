@@ -3185,7 +3185,8 @@ class NLCRuleEngine:
 
         pre_score = self._calculate_raw_score(self._flags)
         has_black_override = any(
-            f.rule_id in PRODUCT_SCORING_RULE_IDS
+            f.rule_id in VERIFIED_RULE_IDS
+            and f.rule_id in PRODUCT_SCORING_RULE_IDS
             and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
             and f.is_black_override
             and f.severity == Severity.BLACK
@@ -3321,7 +3322,8 @@ class NLCRuleEngine:
         if legal_score_is_released():
             critical = [
                 f for f in active
-                if f.rule_id in PRODUCT_SCORING_RULE_IDS
+                if f.rule_id in VERIFIED_RULE_IDS
+                and f.rule_id in PRODUCT_SCORING_RULE_IDS
                 and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
                 and f.is_black_override
                 and f.severity == Severity.BLACK
@@ -3488,12 +3490,8 @@ class NLCRuleEngine:
                 RuleState.VERIFIED_ABSENT.value,
             ) or eval_state != "VIOLATION":
                 disposition, reason = "WAITING_EVIDENCE", "NO_CONFIRMED_VIOLATION"
-            elif not legal_score_is_released():
-                disposition, reason = "BLOCKED", "LEGAL_SCORE_NOT_RELEASED"
             elif flag.rule_id not in PRODUCT_SCORING_RULE_IDS:
                 disposition, reason = "BLOCKED", "RULE_NOT_IN_PRODUCT_SCORING_ALLOWLIST"
-            elif score.risk_band not in (Severity.RED, Severity.BLACK):
-                disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
             elif severity not in (Severity.RED.value, Severity.BLACK.value):
                 disposition, reason = "NO_ACTION", "FINDING_SEVERITY_BELOW_RESCUE_THRESHOLD"
             elif step is not None:
@@ -3531,16 +3529,14 @@ class NLCRuleEngine:
             f for f in flags
             if not f.resolved and f.conditional_applies
         ]
-        if score.risk_band not in (Severity.RED, Severity.BLACK):
-            return []
-
-        # Rescue is generated only for confirmed RED/BLACK findings.
+        # Rescue planning is a separate evidence-review workflow; it must
+        # remain deterministic while statutory score publication is paused.
+        # Only confirmed RED/BLACK findings below may create proposed steps.
         # YELLOW findings remain visible in compliance reporting and do not
         # receive a rescue workflow under the current policy.
         actionable = [
             f for f in active
-            if legal_score_is_released()
-            and f.rule_id in PRODUCT_SCORING_RULE_IDS
+            if f.rule_id in PRODUCT_SCORING_RULE_IDS
             and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and f.eval_state == "VIOLATION"
             and f.severity in (Severity.RED, Severity.BLACK)
