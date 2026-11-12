@@ -522,8 +522,9 @@ class TestRescue:
             headers=_auth(super_admin_tok),
             json={"company_id": str(db_company.id)}
         )
-        assert resp.status_code == 422
-        assert "RED or BLACK" in resp.json()["detail"]
+        # The score-release gate takes precedence over risk-band evaluation.
+        assert resp.status_code == 409
+        assert "scoring is disabled" in resp.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_create_rescue_plan_for_red_company(
@@ -632,14 +633,17 @@ class TestRescue:
             headers=headers,
             json={"status": "IN_PROGRESS"},
         )
-        assert update_step.status_code == 404
+        # Mutating an existing rescue plan remains disabled while score
+        # publication is paused, even if the plan ID does not exist.
+        assert update_step.status_code == 503
 
         engagement = await api_client.post(
             f"/api/v1/rescue/plans/{plan_id}/engagement",
             headers=headers,
             json={"confirmed_fee_bdt": 1000},
         )
-        assert engagement.status_code == 404
+        # Commercial engagement creation is a mutation and stays withheld.
+        assert engagement.status_code == 503
 
     @pytest.mark.asyncio
     async def test_rescue_requires_auth(self, api_client):
@@ -664,14 +668,14 @@ class TestRescue:
     async def test_admin_engagement_creation_reaches_plan_lookup_after_product_release(
         self, api_client, super_admin_tok
     ):
-        """Product release no longer blocks admin actions; the missing plan does."""
+        """Engagement creation remains withheld while statutory scoring is paused."""
         plan_id = "00000000-0000-4000-8000-000000000001"
         response = await api_client.post(
             f"/api/v1/rescue/plans/{plan_id}/engagement",
             headers=_auth(super_admin_tok),
             json={"confirmed_fee_bdt": 1000, "payment_terms": "Test terms"},
         )
-        assert response.status_code == 404, response.text
+        assert response.status_code == 503, response.text
 
 
 # =============================================================================
@@ -1180,7 +1184,7 @@ class TestRules:
                 # The storage sentinel is not a default severity or legal
                 # conclusion, so expose null and a separate product switch.
                 assert item["default_severity"] is None
-                assert item["product_scoring_enabled"] is True
+                assert item["product_scoring_enabled"] is False
                 assert item["score_impact"] == 0
                 assert item["is_active"] is True
             else:
