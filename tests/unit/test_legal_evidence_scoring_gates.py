@@ -1008,6 +1008,7 @@ def test_verified_absence_is_included_in_score_impact_reporting(monkeypatch):
 def test_black_label_without_authorised_override_is_only_a_normal_deduction(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
     flag = SimpleNamespace(
         rule_id="AGM-001",
@@ -1106,6 +1107,7 @@ def test_subsequent_agm_violation_reports_statutory_deadline_and_basis_metadata(
 def test_verified_black_severity_without_override_authority_does_not_force_zero(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
     flag = ComplianceFlag(
         rule_id="AGM-001",
@@ -1334,6 +1336,9 @@ def test_api_marks_duplicate_scoring_event_as_suppressed(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
         engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"DIR-001", "AGM-001"})
+    )
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", frozenset({"DIR-001", "AGM-001"})
     )
     flags = [
         ComplianceFlag(
