@@ -908,7 +908,7 @@ def test_pdf_report_only_scores_verified_rules_and_lists_other_rules_for_review(
     )
 
     assert "Verified finding" in page
-    assert "AUD-001" in page
+    assert "MEM-001" in page
     assert "Independent legal/source verification pending" in page
     assert "Unverified legal conclusion" not in page
     assert "effective deductions -10 pts" in page
