@@ -13,7 +13,8 @@
 - Database rows: **86**
 - Active database rows: **85**
 - Inactive historical rows: **INC-002**
-- Active rule metadata mismatches: **270**
+- Active rule metadata mismatches across the 85 active IDs: **269**
+- Additional historical identity difference: **1** (`INC-002` is inactive in DB and intentionally absent from the 85-rule seed)
 - Database verification status: **all 86 rows PENDING**
 - Fail-closed score state: **all rows NOT_EVALUATED / 0 / no BLACK override**
 
