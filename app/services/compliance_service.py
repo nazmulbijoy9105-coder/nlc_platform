@@ -354,8 +354,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "review_findings": [
                 {
                     "rule_id": flag.rule_id,
-                    "legal_state": getattr(flag.state, "value", flag.state),
-                    "evaluation_state": getattr(flag.eval_state, "value", flag.eval_state),
+                    "engine_state": getattr(flag.state, "value", flag.state),
+                    "engine_evaluation_state": getattr(flag.eval_state, "value", flag.eval_state),
                     "review_status": applied_impacts[index]["status"],
                     "message": (
                         "Evidence review required. No statutory conclusion, "
@@ -373,11 +373,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "excluded_rule_findings": [
                 {
                     "rule_id": flag.rule_id,
-                    "legal_state": getattr(flag.state, "value", flag.state),
-                    "evaluation_state": getattr(flag.eval_state, "value", flag.eval_state),
-                    "risk_severity": flag.severity,
-                    "description": flag.description,
-                    "statutory_basis": flag.statutory_basis,
+                    "engine_state": getattr(flag.state, "value", flag.state),
+                    "engine_evaluation_state": getattr(flag.eval_state, "value", flag.eval_state),
+                    "risk_severity": "NOT_EVALUATED",
+                    "description": "Internal review signal only. No legal conclusion, breach, liability or penalty is determined.",
+                    "statutory_basis": "Independent legal/source verification pending; statutory basis not released.",
                     "score_impact_applied": 0,
                     "scoring_eligibility": "EXCLUDED_FROM_PRODUCT_SCORING",
                     "scoring_status": applied_impacts[index]["status"],
@@ -525,7 +525,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 existing_flag.score_impact = flag.score_impact if approved else 0
                 existing_flag.statutory_basis = (
                     flag.statutory_basis if approved
-                    else "Excluded from the product scoring allowlist."
+                    else "Independent legal/source verification pending; statutory basis not released."
                 )
                 existing_flag.description = (
                     flag.description if approved
@@ -550,7 +550,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     statutory_basis=(
                         flag.statutory_basis
                         if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS and flag.rule_id in PRODUCT_SCORING_RULE_IDS
-                        else "Product scoring is disabled or this rule is outside the scoring allowlist."
+                        else "Independent legal/source verification pending; statutory basis not released."
                     ),
                     severity=SeverityLevel(flag.severity)
                     if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS and flag.rule_id in PRODUCT_SCORING_RULE_IDS
