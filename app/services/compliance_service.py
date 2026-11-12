@@ -438,6 +438,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             CATEGORY_CAPS,
             _COVERAGE_FIELDS,
             PRODUCT_SCORING_RULE_IDS,
+            VERIFIED_RULE_IDS,
             legal_score_is_released,
         )
 
