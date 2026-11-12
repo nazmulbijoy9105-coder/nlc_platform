@@ -537,9 +537,9 @@ BLACK_OVERRIDE_RULES: set[str] = set()
 # Product scoring eligibility is controlled separately by PRODUCT_SCORING_RULE_IDS
 # and LEGAL_SCORE_RELEASED. That product configuration is not legal approval.
 #
-# VERIFIED_RULE_IDS is the product-owner-attested legal verification inventory.
-# Signed-document upload is not a prerequisite under the product release policy.
-# Company-specific applicability, fact provenance and evidence sufficiency remain separately evaluated.
+# VERIFIED_RULE_IDS is the independent Bangladesh-counsel verification allowlist.
+# Product-owner approval is a separate release control and cannot populate this set.
+# Company-specific applicability, fact provenance and evidence sufficiency remain separate gates.
 # No statutory rule has independent counsel approval recorded in the
 # canonical legal reconciliation registry. Keep this allowlist empty until
 # a reviewed source-control change records reviewer, source and timestamp.
@@ -3498,6 +3498,8 @@ class NLCRuleEngine:
                 disposition, reason = "BLOCKED", "RULE_NOT_IN_PRODUCT_SCORING_ALLOWLIST"
             elif severity not in (Severity.RED.value, Severity.BLACK.value):
                 disposition, reason = "NO_ACTION", "FINDING_SEVERITY_BELOW_RESCUE_THRESHOLD"
+            elif step is not None and not legal_score_is_released():
+                disposition, reason = "REVIEW_REQUIRED", "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"
             elif step is not None:
                 disposition, reason = "ACTION_REQUIRED", "CONFIRMED_RESCUE_STEP"
             elif flag.rule_id == "TAX-004":
