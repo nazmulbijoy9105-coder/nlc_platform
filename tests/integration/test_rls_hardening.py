@@ -1131,3 +1131,40 @@ async def test_activity_logs_are_company_scoped_for_legal_staff_and_actor_bound_
                 resource_type="Test",
             )
 
+@pytest.mark.asyncio
+async def test_client_cannot_update_foreign_company_even_when_uuid_is_known(
+    db, db_client_user, db_company, db_other_company
+):
+    """A member of tenant A cannot read or mutate tenant B by guessing its UUID."""
+    await set_rls_context(db, str(db_client_user.id))
+    own = await db.execute(
+        text("SELECT company_name FROM companies WHERE id = :company_id"),
+        {"company_id": db_company.id},
+    )
+    assert own.scalar_one() == db_company.company_name
+
+    expected_foreign_name = db_other_company.company_name
+    foreign_before = await db.execute(
+        text("SELECT company_name FROM companies WHERE id = :company_id"),
+        {"company_id": db_other_company.id},
+    )
+    assert foreign_before.scalar_one_or_none() is None
+
+    update_result = await db.execute(
+        text("UPDATE companies SET company_name = :new_name WHERE id = :company_id"),
+        {
+            "new_name": "FORBIDDEN CROSS TENANT WRITE",
+            "company_id": db_other_company.id,
+        },
+    )
+    assert update_result.rowcount == 0
+
+    # Switch to the trusted test principal only to verify the stored row stayed
+    # unchanged; the attempted client UPDATE must not have touched tenant B.
+    await set_admin_context(db)
+    foreign_after = await db.execute(
+        text("SELECT company_name FROM companies WHERE id = :company_id"),
+        {"company_id": db_other_company.id},
+    )
+    assert foreign_after.scalar_one() == expected_foreign_name
+    await db.rollback()
