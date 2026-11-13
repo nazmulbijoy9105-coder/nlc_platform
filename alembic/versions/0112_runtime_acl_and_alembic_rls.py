@@ -54,6 +54,9 @@ def upgrade() -> None:
     # RLS makes the catalog state consistent; the migration owner is
     # BYPASSRLS and remains able to maintain Alembic metadata.
     op.execute(
+        "ALTER TABLE public.alembic_version ENABLE ROW LEVEL SECURITY"
+    )
+    op.execute(
         "ALTER TABLE public.alembic_version FORCE ROW LEVEL SECURITY"
     )
 
