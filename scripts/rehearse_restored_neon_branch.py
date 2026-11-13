@@ -301,7 +301,16 @@ async def _security_audit(conn: asyncpg.Connection) -> dict[str, Any]:
 async def _app_role_spoof_audit(raw_url: str) -> dict[str, Any]:
     conn = await _connect(raw_url)
     try:
-        identity = await _identity(conn)
+        identity_row = await conn.fetchrow(
+            """
+            SELECT current_setting('neon.project_id', true) AS project_id,
+                   current_setting('neon.branch_id', true) AS branch_id,
+                   current_database() AS database_name,
+                   current_user AS current_user,
+                   session_user AS session_user
+            """
+        )
+        identity = dict(identity_row)
         if identity["project_id"] != EXPECTED_PROJECT_ID:
             raise RuntimeError("App-role connection points to a different Neon project.")
         if identity["branch_id"] != EXPECTED_BRANCH_ID:
