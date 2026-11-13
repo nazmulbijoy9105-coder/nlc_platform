@@ -11,8 +11,10 @@ class _Result:
     def __init__(self, value):
         self.value = value
 
-    def scalar_one_or_none(self):
-        return self.value
+    def one_or_none(self):
+        if self.value is None:
+            return None
+        return SimpleNamespace(score_hash=self.value)
 
 
 class _DB:
