@@ -60,3 +60,12 @@ def test_snapshot_hash_is_stable_and_sensitive_to_state():
     )
     assert hash_rule_outcomes_snapshot(first) == hash_rule_outcomes_snapshot(second)
     assert hash_rule_outcomes_snapshot(first) != hash_rule_outcomes_snapshot(changed)
+
+
+def test_engine_finding_without_active_catalogue_rule_is_preserved_as_unmapped():
+    rows = build_rule_outcomes_snapshot(
+        [_rule("AGM-001")], [_flag("UNKNOWN-999", "UNKNOWN")]
+    )
+    orphan = next(item for item in rows if item["rule_id"] == "UNKNOWN-999")
+    assert orphan["verification_status"] == "UNMAPPED"
+    assert orphan["assessment_source"] == "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE"
