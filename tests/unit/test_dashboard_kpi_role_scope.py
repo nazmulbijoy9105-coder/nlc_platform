@@ -74,6 +74,9 @@ class _MappingResult:
     def all(self):
         return self.rows
 
+    def one_or_none(self):
+        return self.rows[0] if self.rows else None
+
 
 class _EvidenceKPIDB:
     def __init__(self):
@@ -118,7 +121,7 @@ async def test_unreleased_kpis_return_evidence_metrics_without_legal_risk_bands(
 
 
 @pytest.mark.asyncio
-async def test_unreleased_legal_staff_evidence_kpis_apply_assignment_scope(monkeypatch):
+async def test_unreleased_legal_staff_evidence_kpis_include_assignment_and_membership_scope(monkeypatch):
     import app.rule_engine.engine as engine_module
     from app.services.compliance_service import ComplianceService
 
@@ -131,4 +134,42 @@ async def test_unreleased_legal_staff_evidence_kpis_apply_assignment_scope(monke
     assert result["total_companies"] == 2
     assert result["active_review_items"] == 4
     assert all("assigned_staff_id = CAST(:uid AS uuid)" in sql for sql, _ in db.calls)
+    assert all("company_user_access AS cua" in sql for sql, _ in db.calls)
+    assert all("cua.is_active IS TRUE" in sql for sql, _ in db.calls)
     assert all(params == {"uid": str(user_id)} for _, params in db.calls)
+
+
+
+class _ReleasedKPIDB:
+    def __init__(self):
+        self.calls = []
+
+    async def execute(self, query, params=None):
+        self.calls.append((str(query), params))
+        return _MappingResult([{
+            "total_companies": 4,
+            "green_count": 2,
+            "yellow_count": 1,
+            "red_black_count": 1,
+            "not_evaluated_count": 0,
+            "upcoming_deadlines": 0,
+        }])
+
+
+@pytest.mark.asyncio
+async def test_released_legal_staff_kpis_include_assignment_and_membership_scope(monkeypatch):
+    import app.rule_engine.engine as engine_module
+    from app.services.compliance_service import ComplianceService
+
+    monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
+    db = _ReleasedKPIDB()
+    user_id = uuid.uuid4()
+
+    result = await ComplianceService(db).get_dashboard_kpis(user_id=user_id)
+
+    assert result["total_companies"] == 4
+    assert result["dashboard_mode"] == "STATUTORY_RISK"
+    assert "assigned_staff_id = CAST(:uid AS uuid)" in db.calls[0][0]
+    assert "company_user_access AS cua" in db.calls[0][0]
+    assert "cua.is_active IS TRUE" in db.calls[0][0]
+    assert db.calls[0][1] == {"uid": str(user_id)}
