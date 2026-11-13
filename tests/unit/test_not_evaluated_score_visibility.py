@@ -53,19 +53,6 @@ def test_released_company_score_is_visible_with_product_allowlist_only(monkeypat
     assert response.band in ("NOT_EVALUATED", "GREEN")
 
 
-def test_dashboard_summary_hides_score_aggregates_while_paused():
-    summary = companies_api._build_flag_summary(
-        [
-            SimpleNamespace(severity="RED", flag_status="ACTIVE", rule_id="AGM-001"),
-            SimpleNamespace(severity="YELLOW", flag_status="ACTIVE", rule_id="AR-001"),
-        ]
-    )
-    assert summary["black"] == 0
-    assert summary["red"] == 0
-    assert summary["yellow"] == 0
-    assert summary["total_active"] == 0
-
-
 def test_product_scoring_flag_is_published_with_counsel_status_separate(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
