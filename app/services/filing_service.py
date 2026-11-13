@@ -423,6 +423,9 @@ class AnnualReturnService(BaseService[AnnualReturn]):
         Auto-calculates is_default and delay_days.
         Section 36 and Schedule X: file within 21 days of AGM date.
         """
+        if filing_deadline is None and agm_date is not None:
+            filing_deadline = self.calculate_filing_deadline(agm_date)
+
         is_default = False
         delay_days = 0
 
