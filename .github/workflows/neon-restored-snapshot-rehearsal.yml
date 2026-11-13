@@ -18,6 +18,7 @@ jobs:
     env:
       NLC_RESTORED_REHEARSAL_DATABASE_URL: ${{ secrets.NLC_RESTORED_REHEARSAL_DATABASE_URL }}
       NLC_RESTORED_REHEARSAL_APP_DATABASE_URL: ${{ secrets.NLC_RESTORED_REHEARSAL_APP_DATABASE_URL }}
+      NLC_RLS_HMAC_SECRET: ${{ secrets.NLC_RESTORED_REHEARSAL_RLS_HMAC_SECRET }}
       PYTHONPATH: ${{ github.workspace }}
     steps:
       - name: Checkout
