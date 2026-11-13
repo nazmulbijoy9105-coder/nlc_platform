@@ -1348,6 +1348,9 @@ def test_pdf_reconciliation_accepts_global_cap_allocations(monkeypatch):
             rule_id=rule_id,
             score_impact=impact,
             score_impact_applied=deduction,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED" if deduction else "CATEGORY_CAP_REACHED",
         )
         for (rule_id, impact), deduction in zip(rule_impacts, applied)
