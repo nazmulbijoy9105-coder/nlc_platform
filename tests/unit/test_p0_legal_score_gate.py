@@ -39,7 +39,7 @@ def test_rule_outside_product_scoring_allowlist_cannot_force_zero(monkeypatch):
     assert result.override_applied is False
     assert result.black_flag_count == 0
     assert result.final_score == 100
-    assert result.risk_band == Severity.NOT_EVALUATED
+    assert result.risk_band == Severity.RED
 
 
 def test_product_allowlisted_black_override_requires_explicit_override_authorisation(monkeypatch):
