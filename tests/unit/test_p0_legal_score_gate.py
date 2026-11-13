@@ -81,8 +81,8 @@ def test_pdf_score_reconciliation_counts_product_allowlisted_rules_without_couns
     monkeypatch.setattr(report_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
-    approved = SimpleNamespace(rule_id="AGM-001", severity="RED", score_impact=15)
-    unapproved = SimpleNamespace(rule_id="AUD-003", severity="BLACK", score_impact=25)
+    approved = SimpleNamespace(rule_id="AGM-001", severity="RED", score_impact=15, eval_state="VIOLATION")
+    unapproved = SimpleNamespace(rule_id="AUD-003", severity="BLACK", score_impact=25, eval_state="VIOLATION")
     assert _verified_flag_score([approved, unapproved]) == (85, False)
 
 
@@ -111,6 +111,7 @@ def test_pdf_requires_explicit_authorisation_for_black_override(monkeypatch):
         severity="BLACK",
         score_impact=25,
         is_black_override=True,
+        eval_state="VIOLATION",
     )
     score, override = _verified_flag_score([flag])
     assert score == 75  # AGM category cap applies; no forced-zero override
