@@ -54,6 +54,26 @@ def build_rule_outcomes_snapshot(
             ),
             "findings": findings,
         })
+    catalogue_ids = {rule.rule_id for rule in active_legal_rules}
+    for orphan_rule_id in sorted(set(findings_by_rule) - catalogue_ids):
+        findings = findings_by_rule[orphan_rule_id]
+        states = {item["outcome_state"] for item in findings}
+        state = (
+            next(iter(states)) if len(states) == 1
+            else "CONTRADICTORY" if len(states) > 1
+            else "UNKNOWN"
+        )
+        snapshot.append({
+            "rule_id": orphan_rule_id,
+            "rule_version": None,
+            "statutory_basis": None,
+            "verification_status": "UNMAPPED",
+            "verified_by": None,
+            "verified_at": None,
+            "outcome_state": state,
+            "assessment_source": "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE",
+            "findings": findings,
+        })
     return snapshot
 
 
