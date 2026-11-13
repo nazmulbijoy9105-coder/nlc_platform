@@ -35,3 +35,7 @@ def test_migration_login_has_no_direct_dml_grants():
     assert "REVOKE ALL PRIVILEGES ON ALL SEQUENCES" in source
     assert "GRANT SELECT ON ALL TABLES" in source
     assert "GRANT SELECT ON ALL SEQUENCES" in source
+
+def test_pre_0050_runtime_schema_create_is_revoked():
+    source = SCRIPT.read_text(encoding="utf-8")
+    assert "REVOKE CREATE ON SCHEMA public FROM PUBLIC, nlc_app_role" in source
