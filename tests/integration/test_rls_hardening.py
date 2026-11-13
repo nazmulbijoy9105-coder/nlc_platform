@@ -1168,3 +1168,94 @@ async def test_client_cannot_update_foreign_company_even_when_uuid_is_known(
     )
     assert foreign_after.scalar_one() == expected_foreign_name
     await db.rollback()
+
+
+@pytest.mark.asyncio
+async def test_runtime_acl_exposes_only_webhook_endpoint_delete_and_read_only_views(db):
+    """Check effective grants, including PUBLIC and inherited role privileges."""
+    delete_grants = await db.execute(
+        text(
+            """
+            SELECT c.relname
+              FROM pg_class AS c
+              JOIN pg_namespace AS n ON n.oid = c.relnamespace
+             WHERE n.nspname = 'public'
+               AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+               AND has_table_privilege('nlc_app_role', c.oid, 'DELETE')
+             ORDER BY c.relname
+            """
+        )
+    )
+    assert {row[0] for row in delete_grants.fetchall()} == {
+        "webhook_endpoints"
+    }
+
+    views = (
+        "vw_admin_dashboard_kpis",
+        "vw_company_flag_summary",
+        "vw_risk_distribution",
+        "vw_upcoming_deadlines",
+        "vw_revenue_pipeline",
+    )
+    view_grants = await db.execute(
+        text(
+            """
+            SELECT c.relname,
+                   has_table_privilege('nlc_app_role', c.oid, 'SELECT'),
+                   has_table_privilege('nlc_app_role', c.oid, 'INSERT'),
+                   has_table_privilege('nlc_app_role', c.oid, 'UPDATE'),
+                   has_table_privilege('nlc_app_role', c.oid, 'DELETE')
+              FROM pg_class AS c
+              JOIN pg_namespace AS n ON n.oid = c.relnamespace
+             WHERE n.nspname = 'public'
+               AND c.relkind = 'v'
+               AND c.relname = ANY(:view_names)
+             ORDER BY c.relname
+            """
+        ),
+        {"view_names": list(views)},
+    )
+    rows = view_grants.fetchall()
+    assert {row[0] for row in rows} == set(views)
+    for _name, can_select, can_insert, can_update, can_delete in rows:
+        assert can_select is True
+        assert can_insert is False
+        assert can_update is False
+        assert can_delete is False
+
+    # Append-only audit evidence must never regain runtime DELETE access.
+    for table in ("user_activity_logs", "rescue_audit_log"):
+        allowed = await db.execute(
+            text(
+                "SELECT has_table_privilege('nlc_app_role', "
+                "format('public.%I', :table_name), 'DELETE')"
+            ),
+            {"table_name": table},
+        )
+        assert allowed.scalar_one() is False
+
+
+@pytest.mark.asyncio
+async def test_alembic_version_is_forced_rls_and_unavailable_to_runtime(db):
+    relation = await db.execute(
+        text(
+            """
+            SELECT c.relrowsecurity, c.relforcerowsecurity
+              FROM pg_class AS c
+              JOIN pg_namespace AS n ON n.oid = c.relnamespace
+             WHERE n.nspname = 'public'
+               AND c.relname = 'alembic_version'
+            """
+        )
+    )
+    assert relation.one() == (True, True)
+
+    for privilege in ("SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE"):
+        allowed = await db.execute(
+            text(
+                "SELECT has_table_privilege('nlc_app_role', "
+                "to_regclass('public.alembic_version'), :privilege)"
+            ),
+            {"privilege": privilege},
+        )
+        assert allowed.scalar_one() is False
