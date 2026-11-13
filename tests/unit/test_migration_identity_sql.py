@@ -39,3 +39,9 @@ def test_migration_login_has_no_direct_dml_grants():
 def test_pre_0050_runtime_schema_create_is_revoked():
     source = SCRIPT.read_text(encoding="utf-8")
     assert "REVOKE CREATE ON SCHEMA public FROM PUBLIC, nlc_app_role" in source
+
+def test_pre_0112_alembic_metadata_is_hardened_before_replay():
+    source = SCRIPT.read_text(encoding="utf-8")
+    assert "ALTER TABLE public.alembic_version ENABLE ROW LEVEL SECURITY" in source
+    assert "ALTER TABLE public.alembic_version FORCE ROW LEVEL SECURITY" in source
+    assert "REVOKE ALL ON TABLE public.alembic_version FROM PUBLIC, nlc_app_role" in source
