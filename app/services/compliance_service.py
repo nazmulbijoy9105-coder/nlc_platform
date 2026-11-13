@@ -352,8 +352,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "engine_evaluation_state": getattr(flag.eval_state, "value", flag.eval_state),
                     "review_status": applied_impacts[index]["status"],
                     "message": (
-                        "Evidence review required. Product scoring release is not independent "
-                        "legal verification, legal advice or certification."
+                        "No statutory conclusion is issued. Evidence review is required. Product scoring "
+                        "release is not independent legal verification, legal advice or certification."
                     ),
                     "score_impact_applied": 0,
                 }
