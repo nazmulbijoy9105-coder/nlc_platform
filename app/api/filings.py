@@ -271,6 +271,7 @@ class AnnualReturnResponse(BaseModel):
     is_filed: bool
     filing_evidence_status: str
     filing_status_verified: bool
+    filing_status_evidence_ref: str | None
     filing_status_verified_at: str | None
     filing_status_verified_by: str | None
     filing_deadline: str | None
@@ -985,8 +986,18 @@ def _audit_to_response(audit) -> AuditResponse:
 
 
 def _return_to_response(r) -> AnnualReturnResponse:
+    filing_status_verified = bool(
+        r.filing_status_verified
+        and r.filing_status_evidence_ref
+        and r.filing_status_verified_at
+        and r.filing_status_verified_by
+    )
     filing_evidence_status = (
-        "RECEIPT_REFERENCE_RECORDED_UNVERIFIED"
+        "VERIFIED_FILED"
+        if filing_status_verified and r.filed_date
+        else "VERIFIED_NOT_FILED"
+        if filing_status_verified
+        else "RECEIPT_REFERENCE_RECORDED_UNVERIFIED"
         if r.filed_date and r.rjsc_receipt_number
         else "DATE_RECORDED_UNVERIFIED"
         if r.filed_date
@@ -998,7 +1009,8 @@ def _return_to_response(r) -> AnnualReturnResponse:
         financial_year=r.financial_year,
         is_filed=r.filed_date is not None,
         filing_evidence_status=filing_evidence_status,
-        filing_status_verified=bool(r.filing_status_verified),
+        filing_status_verified=filing_status_verified,
+        filing_status_evidence_ref=r.filing_status_evidence_ref if filing_status_verified else None,
         filing_status_verified_at=r.filing_status_verified_at.isoformat() if r.filing_status_verified_at else None,
         filing_status_verified_by=str(r.filing_status_verified_by) if r.filing_status_verified_by else None,
         filing_deadline=(
