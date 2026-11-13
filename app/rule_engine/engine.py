@@ -546,10 +546,100 @@ BLACK_OVERRIDE_RULES: set[str] = set()
 # a reviewed source-control change records reviewer, source and timestamp.
 VERIFIED_RULE_IDS: frozenset[str] = frozenset()
 
-# Product scoring allowlist: every score-bearing rule in the 85-rule catalogue.
-# AR-001 and SH-002 are informational; ESC-003 is the surcharge itself, not a
-# finding, so those three IDs are intentionally excluded.
+# Product-active catalogue: all 85 owner-approved rules remain enabled for
+# evaluation, visibility, alerts and their designated workflows. The three
+# non-deduction rules (AR-001, SH-002, ESC-003) remain active but never deduct.
 PRODUCT_SCORING_RULE_IDS: frozenset[str] = frozenset({
+    "ACC-001",
+    "ACC-002",
+    "ACC-003",
+    "AGM-001",
+    "AGM-002",
+    "AGM-003",
+    "AGM-004",
+    "AGM-005",
+    "AGM-006",
+    "AGM-007",
+    "AR-001",
+    "AR-002",
+    "AR-003",
+    "AR-004",
+    "AUD-001",
+    "AUD-002",
+    "AUD-003",
+    "AUD-004",
+    "AUD-005",
+    "BNK-001",
+    "BNK-002",
+    "BNK-003",
+    "BOD-001",
+    "BOD-002",
+    "BOD-003",
+    "BSEC-001",
+    "BSEC-002",
+    "BSEC-003",
+    "BSEC-004",
+    "CAP-001",
+    "CAP-002",
+    "CAP-003",
+    "CAP-004",
+    "CHG-001",
+    "DEF-001",
+    "DEF-002",
+    "DIR-001",
+    "DIR-002",
+    "DIR-003",
+    "DIR-004",
+    "DIR-005",
+    "DIR-006",
+    "DIR-007",
+    "DIR-008",
+    "DIR-010",
+    "ESC-001",
+    "ESC-002",
+    "ESC-003",
+    "ESC-004",
+    "ESC-005",
+    "FX-001",
+    "INC-001",
+    "INC-003",
+    "INC-004",
+    "INC-005",
+    "INC-006",
+    "INC-007",
+    "LBR-001",
+    "LBR-002",
+    "LBR-003",
+    "MEM-001",
+    "OFF-001",
+    "REG-001",
+    "REG-002",
+    "REG-003",
+    "SH-001",
+    "SH-002",
+    "SH-003",
+    "STR-001",
+    "STR-002",
+    "STR-003",
+    "TAX-001",
+    "TAX-002",
+    "TAX-003",
+    "TAX-004",
+    "TL-001",
+    "TL-002",
+    "TR-001",
+    "TR-002",
+    "TR-003",
+    "TR-004",
+    "TR-005",
+    "TR-006",
+    "VAT-002",
+    "VAT-003",
+})
+
+# Only these 82 rules may contribute adverse point deductions. Product
+# activation is not a legal verification or an automatic adverse finding.
+SCORE_DEDUCTION_RULE_IDS: frozenset[str] = frozenset({
     "ACC-001",
     "ACC-002",
     "ACC-003",
@@ -3259,7 +3349,7 @@ class NLCRuleEngine:
             and flag.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and flag.eval_state == "VIOLATION"
             and legal_score_is_released()
-            and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+            and flag.rule_id in SCORE_DEDUCTION_RULE_IDS
             and not (
                 flag.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
                 and flag.is_black_override
