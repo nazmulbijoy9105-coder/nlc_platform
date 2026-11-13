@@ -106,7 +106,7 @@ def test_product_allowlisted_rule_scores_without_counsel_allowlist(monkeypatch):
     assert score.final_score == 90
 
 
-def test_explicitly_approved_rule_can_score_in_controlled_release_fixture(monkeypatch):
+def test_product_allowlisted_rule_can_score_in_controlled_release_fixture(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
@@ -118,7 +118,7 @@ def test_explicitly_approved_rule_can_score_in_controlled_release_fixture(monkey
     assert engine._category_deductions(eligible)["AGM"] == 10
 
 
-def test_unverified_black_fact_cannot_activate_black_override(monkeypatch):
+def test_product_allowlisted_black_fact_can_activate_authorized_override(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001", "INC-003"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
@@ -163,7 +163,7 @@ def test_product_release_does_not_require_counsel_allowlist(monkeypatch):
         frozenset({"AGM-001", "AUD-001"}),
     )
     monkeypatch.setattr(
-        engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"})
+        engine_module, "VERIFIED_RULE_IDS", frozenset()
     )
 
     assert engine_module.legal_score_is_released() is True
