@@ -802,12 +802,12 @@ class PDFReportService:
                 status_code=409,
                 detail="PDF withheld: the latest evaluation run is incomplete or lacks audit identity.",
             )
-        outcomes = snapshot.rule_outcomes_snapshot
+        outcomes = getattr(snapshot, "rule_outcomes_snapshot", None)
         if (
             not isinstance(outcomes, list)
             or not outcomes
-            or snapshot.rule_catalogue_count != len(outcomes)
-            or not snapshot.rule_outcomes_hash
+            or getattr(snapshot, "rule_catalogue_count", None) != len(outcomes)
+            or not getattr(snapshot, "rule_outcomes_hash", None)
         ):
             raise HTTPException(
                 status_code=409,
@@ -816,7 +816,7 @@ class PDFReportService:
         outcomes_hash = hashlib.sha256(json.dumps(
             outcomes, sort_keys=True, separators=(",", ":"), default=str
         ).encode()).hexdigest()
-        if outcomes_hash != snapshot.rule_outcomes_hash:
+        if outcomes_hash != getattr(snapshot, "rule_outcomes_hash", None):
             raise HTTPException(
                 status_code=409,
                 detail="PDF withheld: statutory rule outcome ledger hash mismatch.",
