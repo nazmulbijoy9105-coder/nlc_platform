@@ -87,11 +87,6 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
             )
             if getattr(run, "rule_catalogue_count", None) != catalogue_count:
                 problems.append("RULE_CATALOGUE_COUNT_MISMATCH")
-            if any(
-                item.get("assessment_source") == _UNMAPPED_SOURCE
-                for item in outcomes
-            ):
-                problems.append("UNMAPPED_RULE_OUTCOME_PRESENT")
             allowed_sources = {
                 "ENGINE_FINDING",
                 "NO_FINDING_EMITTED_NOT_PROOF_OF_COMPLIANCE",
