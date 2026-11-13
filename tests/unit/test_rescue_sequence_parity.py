@@ -251,5 +251,5 @@ def test_default_paused_release_keeps_rescue_plan_in_review_only_state():
     assert len(steps) == 1
     result = _dispositions([finding], steps=steps)
     assert result[0]["disposition"] == "REVIEW_REQUIRED"
-    assert result[0]["reason"] == "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"
+    assert result[0]["reason"] == "PRODUCT_SCORE_RELEASE_DISABLED"
 
