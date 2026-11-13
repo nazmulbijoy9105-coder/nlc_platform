@@ -62,6 +62,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Forward-only security migration. Restoring broad DELETE/DML grants
-    # would reintroduce the privilege exposure this revision removes.
-    pass
+    # Refuse to move the Alembic revision backwards while retaining the
+    # hardened ACL state. A rollback would misrepresent the schema/security
+    # contract and must be handled by a separately reviewed forward change.
+    raise RuntimeError(
+        "0112 is forward-only: refusing downgrade of runtime ACL hardening."
+    )
