@@ -1,5 +1,5 @@
 """P0 regressions: product scoring and independent legal verification stay separate."""
-from datetime import date
+from datetime import date, datetime, timezone
 from types import SimpleNamespace
 
 import app.rule_engine.engine as engine_module
@@ -13,7 +13,7 @@ from app.rule_engine.engine import (
     Severity,
 )
 from app.services.compliance_service import _applied_score_impacts
-from app.services.pdf_report_service import _verified_flag_score
+from app.services.pdf_report_service import _verified_flag_score, build_compliance_report_html
 
 
 def _engine_flag(rule_id="AUD-003", severity=Severity.BLACK, black=True):
@@ -177,3 +177,29 @@ def test_product_owner_black_override_does_not_require_counsel_allowlist(monkeyp
     assert result.override_applied is True
     assert result.black_flag_count == 1
     assert result.risk_band == Severity.BLACK
+
+
+
+def test_pdf_html_is_unsigned_and_discloses_counsel_review_even_when_product_scoring_is_released(monkeypatch):
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
+    company = SimpleNamespace(
+        company_name="Test Company",
+        registration_number="TEST-001",
+        current_compliance_score=88,
+        current_risk_band="GREEN",
+    )
+
+    html = build_compliance_report_html(
+        company=company,
+        flags=[],
+        generated_at=datetime(2026, 11, 13, tzinfo=timezone.utc),
+    )
+
+    assert "UNSIGNED — FOR COUNSEL REVIEW ONLY — NO NLC LIABILITY WITHOUT SIGNATURE" in html
+    assert "LIABILITY AND RELIANCE NOTICE" in html
+    assert "Lawyer Review &amp; Signature" in html
+    assert "Approval status:</strong> UNSIGNED" in html
+    assert "<strong>Status: UNSIGNED</strong>" in html
+    assert "Product risk score:" in html
