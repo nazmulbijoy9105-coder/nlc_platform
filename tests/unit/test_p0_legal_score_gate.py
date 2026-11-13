@@ -78,6 +78,7 @@ def test_pdf_score_reconciliation_ignores_rule_outside_product_allowlist(monkeyp
 
 def test_pdf_score_reconciliation_counts_product_allowlisted_rules_without_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
     approved = SimpleNamespace(rule_id="AGM-001", severity="RED", score_impact=15)
