@@ -169,22 +169,22 @@ def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue
     yellow_count = sum(1 for f in (flags or []) if verified_severity(f) == "YELLOW")
 
     if band == "BLACK":
-        urgency = "<strong>Critical legal deficiency detected.</strong> The company has a BLACK-severity compliance breach requiring immediate remediation. The compliance score has been overridden to 0 pending resolution of the critical flag(s)."
+        urgency = "<strong>Critical product-risk indicator detected.</strong> A product-allowlisted BLACK-severity finding requires urgent professional review and remediation. The compliance score has been overridden to 0 pending resolution of the critical flag(s)."
     elif band == "RED":
-        urgency = "<strong>Significant compliance gaps detected.</strong> The company requires structured remediation to address active RED-severity findings and restore compliance standing."
+        urgency = "<strong>Significant product-risk findings detected.</strong> Review the active RED-severity product findings and determine appropriate remediation with qualified counsel."
     elif band == "YELLOW":
-        urgency = "<strong>Compliance monitoring recommended.</strong> The company has minor deficiencies that should be addressed to maintain good standing."
+        urgency = "<strong>Product-risk monitoring recommended.</strong> The company has product findings that should be reviewed and addressed where appropriate."
     elif band == "NOT_EVALUATED":
         urgency = "<strong>Not evaluated: no customer-facing score is available.</strong> Product scoring may be disabled, or the company facts and evidence may be insufficient for evaluation. This report is not a compliance certification."
     else:
-        urgency = "<strong>Company is in good compliance standing.</strong> No critical issues detected. Continue regular monitoring."
+        urgency = "<strong>No adverse product-risk findings detected.</strong> This is not a compliance certification. Continue evidence-based monitoring."
 
     parts = [urgency]
     score_summary = "NOT EVALUATED" if band == "NOT_EVALUATED" else f"{score}/100"
     parts.append(
         f"Active flags: <strong>{flag_count}</strong> "
         f"({black_count} BLACK, {red_count} RED, {yellow_count} YELLOW). "
-        f"Compliance score: <strong>{esc(score_summary)}</strong>."
+        f"Product risk score: <strong>{esc(score_summary)}</strong>."
     )
 
     if rescue_plan is not None:
@@ -663,7 +663,7 @@ def build_compliance_report_html(
         <div class="score-box">
         <div class="score-number {score_css_class}">{esc(score_display)}</div>
         <div class="band">Risk Band: {esc(band)}</div>
-        {('<div style="font-size:11px;color:#B91C1C;margin-top:8px;"><strong>Score Override:</strong> A BLACK-severity rule has been triggered. The compliance score is set to 0 regardless of accumulated deductions, as the company has a critical legal deficiency requiring immediate remediation.</div>') if band == 'BLACK' else ''}
+        {('<div style="font-size:11px;color:#B91C1C;margin-top:8px;"><strong>Score Override:</strong> A BLACK-severity rule has been triggered. The product risk score is set to 0 under the configured critical-override policy, as the company has a critical legal deficiency requiring immediate remediation.</div>') if band == 'BLACK' else ''}
     </div>
     {('<div style="font-size:10px;color:#8B6914;background:#FFF8E1;border:1px solid #FFD54F;padding:6px;margin:8px 0;border-radius:4px;"><strong>TEST ASSESSMENT:</strong> This report was generated for a test company. Do not use for legal or regulatory purposes.</div>') if 'TEST' in (company.registration_number or '').upper() else ''}
     {legend_html}
