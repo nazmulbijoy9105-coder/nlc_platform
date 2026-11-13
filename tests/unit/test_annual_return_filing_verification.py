@@ -67,3 +67,9 @@ def test_future_filing_date_is_rejected():
             today=date(2026, 11, 14),
         )
     assert exc.value.status_code == 422
+
+
+def test_annual_return_deadline_is_21_days_after_agm():
+    from app.services.filing_service import AnnualReturnService
+
+    assert AnnualReturnService.calculate_filing_deadline(date(2026, 6, 30)) == date(2026, 7, 21)
