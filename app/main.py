@@ -451,6 +451,7 @@ def create_app() -> FastAPI:
 
     # Protected routes — all require valid JWT
     app.include_router(companies.router,  prefix=f"{API_PREFIX}/companies",  tags=["Companies"])
+    app.include_router(portfolio_compliance.router, prefix=API_PREFIX, tags=["Portfolio Compliance"])
     app.include_router(filings.router,    prefix=f"{API_PREFIX}/filings",    tags=["Filings"])
     app.include_router(rescue.router,     prefix=f"{API_PREFIX}/rescue",     tags=["Corporate Rescue"])
     app.include_router(documents.router,  prefix=f"{API_PREFIX}/documents",  tags=["Documents"])
