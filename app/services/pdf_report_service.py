@@ -26,6 +26,7 @@ from app.rule_engine.engine import (
     CATEGORY_CAPS,
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
+    SCORE_DEDUCTION_RULE_IDS,
     VERIFIED_RULE_IDS,
     RuleState,
 )
@@ -339,7 +340,7 @@ def _verified_flag_score(flags: Any) -> tuple[int, bool]:
             not active
             or state not in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             or eval_state != "VIOLATION"
-            or rule_id not in PRODUCT_SCORING_RULE_IDS
+            or rule_id not in SCORE_DEDUCTION_RULE_IDS
             ):
             continue
 
@@ -394,7 +395,7 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
     for f in (flags or []):
         rule_id = getattr(f, "rule_id", "") or ""
         if (
-            rule_id not in PRODUCT_SCORING_RULE_IDS
+            rule_id not in SCORE_DEDUCTION_RULE_IDS
         ):
             continue
 
