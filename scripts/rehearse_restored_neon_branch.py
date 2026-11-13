@@ -37,12 +37,12 @@ EXPECTED_PROVIDER_MEMBERSHIPS = {
 REPORT_PATH = Path("artifacts/neon-restored-branch-rehearsal.json")
 
 
-def _database_url() -> str:
-    value = os.environ.get("NLC_RESTORED_REHEARSAL_DATABASE_URL", "").strip()
+def _database_url(secret_name: str) -> str:
+    value = os.environ.get(secret_name, "").strip()
     if not value:
         raise RuntimeError(
-            "NLC_RESTORED_REHEARSAL_DATABASE_URL is required; "
-            "use the direct connection URL for the pinned restored branch."
+            f"{secret_name} is required; use the direct connection URL "
+            "for the pinned restored branch."
         )
     if "-pooler." in value.lower():
         raise RuntimeError("Refusing a pooled Neon URL for a migration rehearsal.")
@@ -225,6 +225,18 @@ async def _security_audit(conn: asyncpg.Connection) -> dict[str, Any]:
     view_security = {
         row["relname"]: row["reloptions"] or [] for row in views
     }
+    expected_views = {
+        "vw_admin_dashboard_kpis",
+        "vw_company_flag_summary",
+        "vw_risk_distribution",
+        "vw_upcoming_deadlines",
+        "vw_revenue_pipeline",
+    }
+    if set(view_security) != expected_views:
+        raise RuntimeError(
+            "Expected all five dashboard security-invoker views; observed "
+            f"{sorted(view_security)!r}."
+        )
     for name, options in view_security.items():
         if "security_invoker=true" not in options:
             raise RuntimeError(f"Dashboard view {name} is not security_invoker.")
@@ -286,6 +298,51 @@ async def _security_audit(conn: asyncpg.Connection) -> dict[str, Any]:
     }
 
 
+async def _app_role_spoof_audit(raw_url: str) -> dict[str, Any]:
+    conn = await _connect(raw_url)
+    try:
+        identity = await _identity(conn)
+        if identity["project_id"] != EXPECTED_PROJECT_ID:
+            raise RuntimeError("App-role connection points to a different Neon project.")
+        if identity["branch_id"] != EXPECTED_BRANCH_ID:
+            raise RuntimeError("App-role connection points to a different Neon branch.")
+        if identity["database_name"] != EXPECTED_DATABASE:
+            raise RuntimeError("App-role connection points to a different database.")
+        if identity["current_user"] != "nlc_app_role":
+            raise RuntimeError("RLS spoof test must connect as nlc_app_role.")
+
+        async with conn.transaction():
+            await conn.execute(
+                """
+                SELECT set_config('app.current_user_id', 'ADMIN', true),
+                       set_config('app.current_user_signature', repeat('0', 64), true)
+                """
+            )
+            principal = await conn.fetchval(
+                "SELECT public.nlc_current_user_principal()"
+            )
+            visible = await conn.fetchrow(
+                """
+                SELECT
+                    (SELECT count(*) FROM public.companies) AS companies,
+                    (SELECT count(*) FROM public.users) AS users,
+                    (SELECT count(*) FROM public.compliance_evaluation_runs) AS evaluations
+                """
+            )
+        if principal is not None or any(int(value) != 0 for value in visible.values()):
+            raise RuntimeError(
+                "Unsigned ADMIN spoof was not rejected by the signed RLS boundary."
+            )
+        return {
+            "identity": identity,
+            "unsigned_admin_principal": principal,
+            "visible_rows_with_unsigned_admin": dict(visible),
+            "result": "PASS",
+        }
+    finally:
+        await conn.close()
+
+
 def _run_command(command: list[str], env: dict[str, str]) -> str:
     result = subprocess.run(
         command,
@@ -295,9 +352,13 @@ def _run_command(command: list[str], env: dict[str, str]) -> str:
         env=env,
     )
     output = (result.stdout or "") + (result.stderr or "")
-    secret = env.get("NLC_RESTORED_REHEARSAL_DATABASE_URL", "")
-    if secret:
-        output = output.replace(secret, "[REDACTED_DATABASE_URL]")
+    for secret_name in (
+        "NLC_RESTORED_REHEARSAL_DATABASE_URL",
+        "NLC_RESTORED_REHEARSAL_APP_DATABASE_URL",
+    ):
+        secret = env.get(secret_name, "")
+        if secret:
+            output = output.replace(secret, "[REDACTED_DATABASE_URL]")
     if result.returncode != 0:
         raise RuntimeError(
             f"Command failed ({result.returncode}): {' '.join(command)}\n"
@@ -318,7 +379,8 @@ async def main() -> int:
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        raw_url = _database_url()
+        raw_url = _database_url("NLC_RESTORED_REHEARSAL_DATABASE_URL")
+        app_raw_url = _database_url("NLC_RESTORED_REHEARSAL_APP_DATABASE_URL")
         conn = await _connect(raw_url)
         try:
             before_identity = await _identity(conn)
@@ -374,6 +436,7 @@ async def main() -> int:
             report["security_audit"] = await _security_audit(conn)
         finally:
             await conn.close()
+        report["app_role_spoof_audit"] = await _app_role_spoof_audit(app_raw_url)
 
         decreases = {
             table: {"before": count, "after": after_counts.get(table)}
