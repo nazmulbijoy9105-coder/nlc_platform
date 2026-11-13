@@ -53,6 +53,7 @@ Evaluation integrity observations:
 - 63 older completed runs have no rule-outcome snapshot; all 43 `NOT_RELEASED` runs also have no rule-outcome snapshot.
 - The latest run for each of the 23 companies has a rule-outcome snapshot. Each latest run's score, risk band and evaluation timestamp matches the corresponding company row.
 - All 129 score hashes have 64-character lowercase hexadecimal form and use engine version `2.2`. This is a format check, not a recomputation of each persisted hash.
+- A read-only window-function audit compared every run's `previous_hash` with the immediately preceding `score_hash` for the same company: 129/129 links matched, with zero invalid genesis links and zero missing predecessor links. PR #308 now repeats this predecessor check at portfolio/PDF time as well as recomputing the run's own score hash.
 - The 74 score-history rows have 64-character hash form and an engine-version value; their hashes have not been recomputed against their complete source material.
 - Missing historical rule-outcome snapshots cannot be reconstructed from today's rule catalogue. Those records must remain historically incomplete and must not become PDF-eligible through inference.
 
