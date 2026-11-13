@@ -4,8 +4,7 @@
 
 This is a source-code and operational-readiness change only. It does not connect to production with a write-capable identity and does not execute role DDL, grants, ownership transfers, migrations, data changes, restores, or deployments.
 
-Production remains at `0111_rule_outcome_ledger`. PR #309 proposes `0112_runtime_acl_and_alembic_rls`; it is not merged or applied. The restored Neon branch remains at `0042_dedup_key`. Do not run the migration chain against that branch until the historical-table discrepancy below has been reconciled.
-PR #309 has merged into `main`. A subsequent Render deploy-hook deployment of merge commit `7023c11473485f7ba7123d0b56ea3c9ea1b76946` completed at 10:31:10 UTC and its logs show Alembic upgrading production from `0111_rule_outcome_ledger` to `0112_runtime_acl_and_alembic_rls` at 10:30:18 UTC. A fresh read-only Neon query confirms production is now at `0112`. This deployment was not initiated by this PR's work; Render's `autoDeploy` is disabled, but a separate `deploy_hook` trigger is configured and active. The restored Neon branch remains at `0042_dedup_key`. Do not run the migration chain against that branch until the historical-table discrepancy below has been reconciled.
+Production is at `0112_runtime_acl_and_alembic_rls`; PR #309 is merged and its migration is applied. The restored Neon branch remains at `0042_dedup_key`. Do not run the migration chain against the restored branch until the historical-table discrepancy below has been reconciled. The production deployment and read-only verification are detailed in the next section.
 
 ## Production deployment observed after PR #309 merge
 
@@ -31,18 +30,17 @@ Read-only catalog queries against production branch `br-purple-fog-aodj8s04` (`n
 |---|---:|---:|---:|---:|---:|---:|---:|
 | `nlc_app_role` | yes | no | no | no | no | no | no |
 | `nlc_ci_audit_role` | yes | no | no | no | no | no | no |
-| `nlc_migration_user` | yes | no | yes | yes | yes | no | yes |
+| `nlc_migration_user` | yes | no | no | no | no | no | yes |
 | `neondb_owner` | yes | no | yes | yes | yes | yes | yes |
 
-The migration login is therefore over-privileged for a narrowly controlled executor. It is not a superuser, but it has `CREATEDB`, `CREATEROLE`, `INHERIT` and `BYPASSRLS`.
-At the initial audit snapshot, the migration login was over-privileged for a narrowly controlled executor: it was not a superuser, but had `CREATEDB`, `CREATEROLE`, `INHERIT` and `BYPASSRLS`. A later post-deployment read-only query confirms `CREATEDB`, `CREATEROLE` and `INHERIT` are now disabled, but `BYPASSRLS` remains enabled; see the current state above.
+The latest read-only production query confirms `CREATEDB`, `CREATEROLE` and `INHERIT` are disabled, but `BYPASSRLS` remains enabled. The migration login is therefore still unsuitable as the final least-privilege migration identity; it must not be used until `BYPASSRLS` is removed and the separate owner-role contract is provisioned.
 
 The owner of both `public.rescue_audit_log` and `public.alembic_version` is `neondb_owner`, not `nlc_migration_user`. Read-only checks also returned:
 
 - `nlc_migration_user` does not own either table or the signed-RLS helper function.
 - `pg_has_role('nlc_migration_user', 'neondb_owner', 'SET')` is false.
 - The observed membership row is the opposite direction: `neondb_owner` is a member of `nlc_migration_user`, granted by `cloud_admin`, with admin option true and SET/INHERIT options false. It does not allow the migration login to assume `neondb_owner`.
-- At the initial audit snapshot, the only observed membership was in the opposite direction: `neondb_owner` was a member of `nlc_migration_user`, granted by `cloud_admin`, with admin option true and SET/INHERIT options false. A later read-only query found no migration-owner group or membership at all. Neither state allows the login to assume `neondb_owner`.
+- A later read-only query found no `nlc_migration_owner` role or membership from `nlc_migration_user` to an owner group. The earlier reverse-direction provider membership did not grant the migration login permission to assume `neondb_owner` and is not a substitute for the required owner-group membership.
 
 Consequently, simply changing Render's migration URL to `nlc_migration_user` would fail the current ownership preflight and would not give that login authority to alter migration-owned objects. Do not attempt that switch.
 
@@ -135,21 +133,17 @@ Do not stamp revisions, skip 0037/0038, or run the migration chain until the sou
 
 ## 3. Production ACL and evidence boundaries
 
-Production remains at `0111_rule_outcome_ledger`. Read-only ACL checks confirmed the five dashboard views still expose effective INSERT/UPDATE/DELETE privileges to `nlc_app_role`; PR #309's `0112` migration is intended to remove those privileges while retaining SELECT. The application role has no privileges on `alembic_version`; the migration owner must own it to apply the FORCE RLS change safely.
-Before PR #309's deploy-hook release, production was at `0111_rule_outcome_ledger` and the five dashboard views exposed effective INSERT/UPDATE/DELETE privileges to `nlc_app_role`. The deployed `0112` migration has since removed those view DML grants while retaining SELECT and has ENABLED + FORCED RLS on `alembic_version`. The runtime role has no privileges on that table.
+Production is at `0112_runtime_acl_and_alembic_rls`. Read-only ACL checks after deployment confirmed the five dashboard views are SELECT-only for `nlc_app_role`; its DELETE privilege is limited to `webhook_endpoints`; and `alembic_version` has ENABLE + FORCE RLS with no application-role privileges.
 
-The `user_activity_logs` table is append-only under migration 0050. The current PR #309 branch has been corrected to retain archived activity-log source rows and not re-grant DELETE to `nlc_app_role`. The only confirmed application DELETE grant retained by `0112` is user-owned `webhook_endpoints` deletion.
+The `user_activity_logs` table is append-only under migration 0050. Migration `0112` retains its source rows and does not grant DELETE to `nlc_app_role`. The only confirmed application DELETE grant retained by `0112` is user-owned `webhook_endpoints` deletion.
 
 The six production evidence tables checked by the audit remain empty. The 129 evaluation runs and their incomplete historical snapshots/hashes remain subject to PR #308's fail-closed eligibility rules. Do not reconstruct missing historical snapshots, score hashes, legal evidence or audit events from today's catalogue or application state.
 
 ## 4. Release gates
 
-- [ ] PR #309 CI is fully green, including unit, integration, fresh migration and Docker runtime jobs.
-- [ ] Runtime ACL integration tests prove effective privileges (including inherited/PUBLIC grants) for all five views and all public tables, not only source-text assertions.
-- [ ] The migration owner role and complete object ownership are provisioned and verified on an isolated branch.
-- [ ] Confirm the final PR #309 head's CI is green, including unit, integration, fresh migration and Docker runtime jobs.
-- [ ] Runtime ACL integration tests prove effective privileges (including inherited/PUBLIC grants) for all five views and all public tables, not only source-text assertions.
-- [ ] The migration owner role and complete object ownership are provisioned and verified on an isolated branch. PR #309's `0112` migration is already applied; this gate is for the stricter future migration-executor contract in PR #310.
+- [x] PR #309 is merged and its production migration to `0112_runtime_acl_and_alembic_rls` is confirmed.
+- [x] Read-only production checks confirm effective DELETE restrictions, SELECT-only dashboard views, and forced RLS on `alembic_version`.
+- [ ] Provision and verify the separate migration owner role, complete object ownership, SET-only membership and default ACLs on an isolated branch. This remains a separate migration-executor hardening gate; it is not a prerequisite for claiming that `0112` is deployed.
 - [ ] Render's actual API and migration connection identities are independently confirmed without exposing credentials.
 - [ ] The three missing pre-0042 tables are reconciled from verified evidence or covered by a formally approved evidence-loss/schema-only reconstruction decision.
 - [ ] The actual restored snapshot rehearsal passes on a disposable copy; a fresh CI database migration is not a substitute.
