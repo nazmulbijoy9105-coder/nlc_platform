@@ -43,6 +43,13 @@ class ReactivationRequest(BaseModel):
 def _validation(run: ComplianceEvaluationRun, company: Company) -> dict[str, Any]:
     snapshot = run.score_breakdown_snapshot
     problems: list[str] = evaluation_run_integrity_problems(run)
+    outcomes = run.rule_outcomes_snapshot
+    if isinstance(outcomes, list) and any(
+        isinstance(item, dict)
+        and item.get("assessment_source") == "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE"
+        for item in outcomes
+    ):
+        problems.append("UNMAPPED_RULE_OUTCOME_PRESENT")
     if run.evaluation_status != "COMPLETED":
         problems.append("RUN_NOT_COMPLETED")
     if not run.score_hash:
@@ -162,7 +169,12 @@ async def aggregate_rule_outcomes(
                 problems.append("RUN_NOT_LATEST_FOR_COMPANY")
             validation = _validation(run, company)
             if not validation["valid"]:
-                problems.extend(validation["problems"])
+                # Portfolio aggregation reports unmapped evidence separately;
+                # it must not convert an unmapped finding into a catalogue row.
+                problems.extend(
+                    problem for problem in validation["problems"]
+                    if problem != "UNMAPPED_RULE_OUTCOME_PRESENT"
+                )
             chain_problem = await evaluation_run_chain_problem(db, run)
             if chain_problem:
                 problems.append(chain_problem)
