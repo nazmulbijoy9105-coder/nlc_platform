@@ -574,11 +574,21 @@ def _render_rule_outcome_ledger(items: list[dict] | None) -> str:
             '<section><h3>Statutory Rule Outcome Ledger</h3>'
             '<p>Unavailable for this historical evaluation. No rule-level pass count is inferred.</p></section>'
         )
+    catalogue_items = [
+        item for item in items
+        if item.get("assessment_source") != "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE"
+    ]
+    unmapped_items = [
+        item for item in items
+        if item.get("assessment_source") == "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE"
+    ]
     counts: dict[str, int] = {}
+    unmapped_counts: dict[str, int] = {}
     rows: list[str] = []
     for item in items:
         state = str(item.get("outcome_state") or "UNKNOWN")
-        counts[state] = counts.get(state, 0) + 1
+        target = unmapped_counts if item in unmapped_items else counts
+        target[state] = target.get(state, 0) + 1
         rows.append(
             "<tr>"
             f"<td>{esc(item.get('rule_id', ''))}</td>"
@@ -591,10 +601,14 @@ def _render_rule_outcome_ledger(items: list[dict] | None) -> str:
         )
     summary = " · ".join(
         f"{esc(state)}: {count}" for state, count in sorted(counts.items())
-    )
+    ) or "No catalogue outcomes"
+    unmapped_summary = " · ".join(
+        f"{esc(state)}: {count}" for state, count in sorted(unmapped_counts.items())
+    ) or "None"
     return (
         '<section class="rule-outcome-ledger"><h3>Statutory Rule Outcome Ledger</h3>'
-        f'<p><strong>Catalogue rows:</strong> {len(items)} · {summary}</p>'
+        f'<p><strong>Active catalogue rules:</strong> {len(catalogue_items)} · {summary}</p>'
+        f'<p><strong>Unmapped engine findings (excluded from catalogue totals):</strong> {len(unmapped_items)} · {unmapped_summary}</p>'
         '<p>NOT_EVALUATED means no engine finding was emitted for that catalogue rule; '
         'it is not a finding of compliance. Catalogue verification status is shown separately.</p>'
         '<table class="flags-table"><tr><th>Rule ID</th><th>Rule Version</th>'
