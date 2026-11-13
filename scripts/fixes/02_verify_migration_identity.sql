@@ -44,20 +44,31 @@ BEGIN
     JOIN pg_roles owner_role ON owner_role.oid=m.roleid
     JOIN pg_roles login_role ON login_role.oid=m.member
    WHERE owner_role.rolname='nlc_migration_owner'
-     AND login_role.rolname='nlc_migration_user'
-     AND NOT m.admin_option AND NOT m.inherit_option AND m.set_option;
-  IF member_count<>1 THEN
-    RAISE EXCEPTION 'FAIL [4]: expected exactly one SET-only membership, found %',member_count;
+     AND login_role.rolname='nlc_migration_user';
+  IF member_count<>1 OR EXISTS (
+    SELECT 1
+      FROM pg_auth_members m
+      JOIN pg_roles owner_role ON owner_role.oid=m.roleid
+      JOIN pg_roles login_role ON login_role.oid=m.member
+     WHERE owner_role.rolname='nlc_migration_owner'
+       AND login_role.rolname='nlc_migration_user'
+       AND (m.admin_option OR m.inherit_option OR NOT m.set_option)
+  ) THEN
+    RAISE EXCEPTION 'FAIL [4]: expected exactly one non-admin, non-inheriting SET-only membership; found %',member_count;
   END IF;
 
-  -- 5. Runtime role exists, is NOBYPASSRLS/NOSUPERUSER and has no schema CREATE.
+  -- 5. Runtime role is restricted; neither runtime nor migration LOGIN has DDL.
   IF NOT EXISTS (
     SELECT 1 FROM pg_roles
      WHERE rolname='nlc_app_role' AND rolcanlogin
        AND NOT rolsuper AND NOT rolcreatedb AND NOT rolcreaterole
-       AND NOT rolinherit AND NOT rolbypassrls
-  ) OR has_schema_privilege('nlc_app_role','public','CREATE') THEN
-    RAISE EXCEPTION 'FAIL [5]: nlc_app_role role attributes or CREATE grant are unsafe';
+       AND NOT rolinherit AND NOT rolbypassrls AND NOT rolreplication
+  ) OR has_schema_privilege('nlc_app_role','public','CREATE')
+    OR has_database_privilege('nlc_migration_user',current_database(),'CREATE')
+    OR has_schema_privilege('nlc_migration_user','public','CREATE')
+    OR has_schema_privilege('nlc_migration_user','nlc_private','CREATE')
+    OR has_schema_privilege('nlc_migration_user','audit','CREATE') THEN
+    RAISE EXCEPTION 'FAIL [5]: runtime/migration login role attributes or direct DDL grants are unsafe';
   END IF;
 
   -- 6. Alembic metadata remains RLS-protected and owned by migration owner.
@@ -71,6 +82,13 @@ BEGIN
        <> (SELECT oid FROM pg_roles WHERE rolname='nlc_migration_owner') THEN
     RAISE EXCEPTION 'FAIL [6]: alembic_version is not owned by nlc_migration_owner';
   END IF;
+  IF has_table_privilege('nlc_app_role','public.alembic_version','SELECT')
+     OR has_table_privilege('nlc_app_role','public.alembic_version','INSERT')
+     OR has_table_privilege('nlc_app_role','public.alembic_version','UPDATE')
+     OR has_table_privilege('nlc_app_role','public.alembic_version','DELETE')
+     OR has_table_privilege('nlc_app_role','public.alembic_version','TRUNCATE') THEN
+    RAISE EXCEPTION 'FAIL [6]: runtime role must have no privileges on alembic_version';
+  END IF;
 
   -- 7. Migration login can inspect all migration-managed tables.
   SELECT string_agg(format('%I.%I',n.nspname,c.relname),', ')
@@ -81,6 +99,15 @@ BEGIN
      AND NOT has_table_privilege('nlc_migration_user',c.oid,'SELECT');
   IF missing_tables IS NOT NULL THEN
     RAISE EXCEPTION 'FAIL [7]: migration login lacks SELECT on %',missing_tables;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_class c
+    JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname IN ('public','nlc_private','audit')
+      AND c.relkind='S'
+      AND NOT has_sequence_privilege('nlc_migration_user',c.oid,'SELECT')
+  ) THEN
+    RAISE EXCEPTION 'FAIL [7]: migration login lacks SELECT on one or more migration sequences';
   END IF;
 
   -- 8. Every migration-managed relation, function and custom type is owned
