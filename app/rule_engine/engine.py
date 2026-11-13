@@ -3502,8 +3502,8 @@ class NLCRuleEngine:
                 disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
             elif step is not None and not legal_score_is_released():
                 # Deterministic candidate steps remain visible for professional
-                # review, but a paused legal release can never activate them.
-                disposition, reason = "REVIEW_REQUIRED", "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"
+                # review, but a disabled product score release can never activate them.
+                disposition, reason = "REVIEW_REQUIRED", "PRODUCT_SCORE_RELEASE_DISABLED"
             elif step is None and flag.rule_id != "TAX-004":
                 disposition, reason = "BLOCKED", "RESCUE_STEP_NOT_GENERATED"
             elif score_band not in (Severity.RED.value, Severity.BLACK.value):
@@ -3532,7 +3532,7 @@ class NLCRuleEngine:
         """R-014: Generate reviewable candidates from confirmed RED/BLACK findings.
 
         Candidate steps are not customer actions. The disposition gate keeps
-        them REVIEW_REQUIRED until scoring release and counsel verification pass.
+        them REVIEW_REQUIRED until product scoring is released; counsel-review status remains separate.
         TAX-004 is aggregated into one step because its missed-quarter details
         describe one remediation item. Missing quarter evidence does not itself
         establish a missed payment.
