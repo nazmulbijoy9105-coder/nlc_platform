@@ -1,0 +1,96 @@
+name: Free-tier encrypted Neon backup
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 2 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nlc-free-tier-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Dump, verify, encrypt, and retain briefly
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check backup secrets
+        env:
+          NLC_BACKUP_DATABASE_URL: ${{ secrets.NLC_BACKUP_DATABASE_URL }}
+          NLC_BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.NLC_BACKUP_ENCRYPTION_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$NLC_BACKUP_DATABASE_URL" || -z "$NLC_BACKUP_ENCRYPTION_PASSPHRASE" ]]; then
+            echo "::error::Configure NLC_BACKUP_DATABASE_URL and NLC_BACKUP_ENCRYPTION_PASSPHRASE in repository Actions secrets before running backups."
+            exit 1
+          fi
+          if [[ "${#NLC_BACKUP_ENCRYPTION_PASSPHRASE}" -lt 24 ]]; then
+            echo "::error::NLC_BACKUP_ENCRYPTION_PASSPHRASE must contain at least 24 characters."
+            exit 1
+          fi
+          case "$NLC_BACKUP_DATABASE_URL" in
+            postgresql://*|postgres://*) ;;
+            *) echo "::error::Use a direct Neon PostgreSQL URL."; exit 1 ;;
+          esac
+          case "$NLC_BACKUP_DATABASE_URL" in
+            *-pooler.*) echo "::error::Use the direct Neon endpoint, not a pooler."; exit 1 ;;
+          esac
+          case "$NLC_BACKUP_DATABASE_URL" in
+            *sslmode=require*|*sslmode=verify-ca*|*sslmode=verify-full*) ;;
+            *) echo "::error::Database URL must explicitly require TLS."; exit 1 ;;
+          esac
+
+      - name: Install PostgreSQL client and GPG
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client gnupg
+
+      - name: Create and verify encrypted backup
+        env:
+          NLC_BACKUP_DATABASE_URL: ${{ secrets.NLC_BACKUP_DATABASE_URL }}
+          NLC_BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.NLC_BACKUP_ENCRYPTION_PASSPHRASE }}
+          PGCONNECT_TIMEOUT: "15"
+        run: |
+          set -Eeuo pipefail
+          set +x
+          umask 077
+          BACKUP_DIR="$RUNNER_TEMP/nlc-backup"
+          mkdir -p "$BACKUP_DIR"
+          TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          DUMP="$BACKUP_DIR/nlc-production-$TIMESTAMP.dump"
+          ENCRYPTED="$DUMP.gpg"
+
+          pg_dump --format=custom --no-owner --verbose --file="$DUMP" --dbname="$NLC_BACKUP_DATABASE_URL"
+          test -s "$DUMP"
+          python3 scripts/verify_backup.py "$DUMP"
+
+          gpg --batch --yes --pinentry-mode loopback --passphrase-fd 3 \
+            --symmetric --cipher-algo AES256 --output "$ENCRYPTED" "$DUMP" \
+            3<<<"$NLC_BACKUP_ENCRYPTION_PASSPHRASE"
+          test -s "$ENCRYPTED"
+          BYTES="$(wc -c < "$ENCRYPTED" | tr -d '[:space:]')"
+          if (( BYTES > 100000000 )); then
+            echo "::error::Encrypted dump exceeds the 100 MB free-artifact safety cap; do not upload it."
+            exit 1
+          fi
+          sha256sum "$ENCRYPTED" > "$ENCRYPTED.sha256"
+          rm -f "$DUMP"
+          echo "Encrypted backup created: $(basename "$ENCRYPTED") ($BYTES bytes)."
+          echo "The archive is encrypted; retain the passphrase outside GitHub."
+
+      - name: Upload encrypted backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nlc-production-encrypted-backup-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/nlc-backup/*.dump.gpg
+            ${{ runner.temp }}/nlc-backup/*.dump.gpg.sha256
+          if-no-files-found: error
+          retention-days: 3
