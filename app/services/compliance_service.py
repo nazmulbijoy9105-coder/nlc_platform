@@ -914,21 +914,31 @@ class ComplianceService(BaseService[ComplianceFlag]):
             )
         )
         rows = flags_result.all()
-        from app.rule_engine.engine import PRODUCT_SCORING_RULE_IDS, legal_score_is_released
+        from app.rule_engine.engine import (
+            PRODUCT_SCORING_RULE_IDS,
+            VERIFIED_RULE_IDS,
+            legal_score_is_released,
+        )
+        score_released = legal_score_is_released()
         product_severities = [
             str(getattr(severity, "value", severity)).upper()
             for rule_id, severity in rows
-            if legal_score_is_released() and rule_id in PRODUCT_SCORING_RULE_IDS
+            if score_released and rule_id in PRODUCT_SCORING_RULE_IDS
         ]
+        pending_review_count = sum(
+            1 for rule_id, _ in rows if rule_id not in VERIFIED_RULE_IDS
+        )
+        not_evaluated_count = sum(
+            1 for rule_id, _ in rows
+            if not score_released or rule_id not in PRODUCT_SCORING_RULE_IDS
+        )
         black_count = product_severities.count("BLACK")
-        red_count = verified_severities.count("RED")
-        yellow_count = verified_severities.count("YELLOW")
-        pending_review_count = len(rows) - len(verified_severities)
+        red_count = product_severities.count("RED")
+        yellow_count = product_severities.count("YELLOW")
         summary.update({
-            # Customer-facing counts include product-allowlisted findings only.
-            # Counsel verification status is tracked separately from product release.
-            "total_active": len(verified_severities),
-            "total_active_flags": len(verified_severities),
+            # Product scoring and counsel review are independent dimensions.
+            "total_active": len(product_severities),
+            "total_active_flags": len(product_severities),
             "pending_review": pending_review_count,
             "pending_review_flags": pending_review_count,
             "black": black_count,
@@ -937,7 +947,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "black_flags": black_count,
             "red_flags": red_count,
             "yellow_flags": yellow_count,
-            "not_evaluated": pending_review_count,
+            "not_evaluated": not_evaluated_count,
         })
         return summary
 
