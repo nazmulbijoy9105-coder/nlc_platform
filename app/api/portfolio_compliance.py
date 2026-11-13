@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.core.dependencies import get_current_user, get_db_for_user, require_roles
+from app.compliance.evaluation_integrity import evaluation_run_integrity_problems
 from app.models.company import Company
 from app.models.compliance import ComplianceEvaluationRun
 from app.models.rules import LegalRule
@@ -38,7 +39,7 @@ class ReactivationRequest(BaseModel):
 
 def _validation(run: ComplianceEvaluationRun, company: Company) -> dict[str, Any]:
     snapshot = run.score_breakdown_snapshot
-    problems: list[str] = []
+    problems: list[str] = evaluation_run_integrity_problems(run)
     if run.evaluation_status != "COMPLETED":
         problems.append("RUN_NOT_COMPLETED")
     if not run.score_hash:
@@ -68,6 +69,8 @@ def _validation(run: ComplianceEvaluationRun, company: Company) -> dict[str, Any
         "score": run.score,
         "risk_band": getattr(run.risk_band, "value", run.risk_band),
         "score_hash": run.score_hash,
+        "rule_outcomes_hash": run.rule_outcomes_hash,
+        "rule_catalogue_count": run.rule_catalogue_count,
         "engine_version": run.engine_version,
         "scoring_spec_version": snapshot.get("scoring_spec_version"),
         "calculated_at": run.calculated_at.isoformat() if run.calculated_at else None,
