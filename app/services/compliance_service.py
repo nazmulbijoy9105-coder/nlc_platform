@@ -86,7 +86,7 @@ def _applied_score_impacts(flags) -> list[dict]:
     """
     from app.rule_engine.engine import (
         AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
-        PRODUCT_SCORING_RULE_IDS,
+        SCORE_DEDUCTION_RULE_IDS,
         RuleState,
         legal_score_is_released,
     )
@@ -109,7 +109,7 @@ def _applied_score_impacts(flags) -> list[dict]:
         if not legal_score_is_released():
             results[index] = {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
             continue
-        if flag.rule_id not in PRODUCT_SCORING_RULE_IDS:
+        if flag.rule_id not in SCORE_DEDUCTION_RULE_IDS:
             results[index] = {"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"}
             continue
         severity_value = getattr(
