@@ -141,6 +141,9 @@ def test_real_evaluation_snapshot_reconciles_nominal_and_applied_impacts(monkeyp
             description="d",
             score_impact=10,
             score_impact_applied=10,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED",
         ),
         SimpleNamespace(
@@ -149,6 +152,9 @@ def test_real_evaluation_snapshot_reconciles_nominal_and_applied_impacts(monkeyp
             description="d",
             score_impact=5,
             score_impact_applied=5,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED",
         ),
     ]
@@ -179,6 +185,9 @@ def test_global_budget_allocation_reconciles_each_persisted_finding(monkeypatch)
             description="d",
             score_impact=impact,
             score_impact_applied=allocated,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED" if allocated else "CATEGORY_CAP_REACHED",
             detail={},
         )
@@ -202,6 +211,9 @@ def test_snapshot_applied_impact_mismatch_is_rejected(monkeypatch):
             description="d",
             score_impact=12,
             score_impact_applied=9,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED",
         ),
         SimpleNamespace(
@@ -210,6 +222,9 @@ def test_snapshot_applied_impact_mismatch_is_rejected(monkeypatch):
             description="d",
             score_impact=10,
             score_impact_applied=10,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED",
         ),
         SimpleNamespace(
@@ -218,6 +233,9 @@ def test_snapshot_applied_impact_mismatch_is_rejected(monkeypatch):
             description="d",
             score_impact=5,
             score_impact_applied=5,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED",
         ),
     ]
