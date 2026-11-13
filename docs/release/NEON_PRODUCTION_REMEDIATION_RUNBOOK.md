@@ -1,5 +1,8 @@
 # Neon Production Remediation Runbook
 
+> **Historical snapshot:** this runbook records the 7 November 2026 production state. Its revision target `0073_payment_allocations_append_only` and its original role-membership blocker are superseded by the [13 November read-only production audit](./PRODUCTION_READ_ONLY_AUDIT_2026-11-13.md). Production is now observed at `0111_rule_outcome_ledger`; the restored snapshot branch remains at `0042_dedup_key`. The actual restored-branch migration rehearsal is still outstanding. Do not use the historical commands below as authorization to change production.
+
+
 **Status:** controlled release procedure; not authorization to change production.  
 **Last read-only audit:** 7 November 2026  
 **Production branch:** `br-purple-fog-aodj8s04`  
