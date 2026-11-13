@@ -84,6 +84,20 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
             )
             if getattr(run, "rule_catalogue_count", None) != catalogue_count:
                 problems.append("RULE_CATALOGUE_COUNT_MISMATCH")
+            if any(
+                item.get("assessment_source") == _UNMAPPED_SOURCE
+                for item in outcomes
+            ):
+                problems.append("UNMAPPED_RULE_OUTCOME_PRESENT")
+            allowed_sources = {
+                "ENGINE_FINDING",
+                "NO_FINDING_EMITTED_NOT_PROOF_OF_COMPLIANCE",
+                _UNMAPPED_SOURCE,
+            }
+            if any(item.get("assessment_source") not in allowed_sources for item in outcomes):
+                problems.append("RULE_OUTCOME_SOURCE_UNRECOGNIZED")
+            if any(not isinstance(item.get("findings"), list) for item in outcomes):
+                problems.append("RULE_OUTCOME_FINDINGS_MALFORMED")
 
     outcomes_hash_valid = isinstance(outcomes_hash, str) and bool(
         _SHA256_RE.fullmatch(outcomes_hash)
