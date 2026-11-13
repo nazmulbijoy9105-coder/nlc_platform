@@ -323,7 +323,7 @@ class AnnualReturn(FullMixin, Base):
     financial_year: Mapped[int] = mapped_column(Integer, nullable=False)
     filing_deadline: Mapped[date | None] = mapped_column(
         Date, nullable=True,
-        comment="AGM date + 30 days (Section 190 CA 1994)"
+        comment="AGM date + 21 days (Section 36 and Schedule X, Companies Act 1994)"
     )
 
     # ── Filing ────────────────────────────────────────────────────
@@ -332,11 +332,17 @@ class AnnualReturn(FullMixin, Base):
     filed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     delay_days: Mapped[int] = mapped_column(Integer, default=0)
     rjsc_receipt_number: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # The user who submitted the filing claim; a different reviewer must verify it.
+    filing_status_submitted_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     # AR-001: a missing filing record is not proof of statutory non-filing.
     filing_status_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     filing_status_evidence_ref: Mapped[str | None] = mapped_column(String(500), nullable=True)
     filing_status_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    filing_status_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    filing_status_verified_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
+    )
 
     # ── Completeness ──────────────────────────────────────────────
     # AR-004: filed but incomplete
