@@ -19,6 +19,7 @@ AI Constitution Article 1: Rule engine output is immutable — AI cannot alter i
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import uuid
 from fastapi.encoders import jsonable_encoder
