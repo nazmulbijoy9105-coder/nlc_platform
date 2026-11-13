@@ -11,6 +11,9 @@ import json
 import re
 from typing import Any
 
+from sqlalchemy import select
+
+from app.models.compliance import ComplianceEvaluationRun
 from app.compliance.rule_outcome_ledger import hash_rule_outcomes_snapshot
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -175,3 +178,23 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
             problems.append("SCORE_HASH_MISMATCH")
 
     return problems
+
+
+
+async def evaluation_run_chain_problem(db: Any, run: Any) -> str | None:
+    """Verify previous_hash points to the immediately preceding run for this company."""
+    if getattr(run, "company_id", None) is None or getattr(run, "calculated_at", None) is None:
+        return "PREVIOUS_HASH_CHAIN_CONTEXT_MISSING"
+    previous_result = await db.execute(
+        select(ComplianceEvaluationRun.score_hash)
+        .where(
+            ComplianceEvaluationRun.company_id == run.company_id,
+            ComplianceEvaluationRun.calculated_at < run.calculated_at,
+        )
+        .order_by(ComplianceEvaluationRun.calculated_at.desc())
+        .limit(1)
+    )
+    expected_previous_hash = previous_result.scalar_one_or_none()
+    if getattr(run, "previous_hash", None) != expected_previous_hash:
+        return "PREVIOUS_HASH_CHAIN_MISMATCH"
+    return None
