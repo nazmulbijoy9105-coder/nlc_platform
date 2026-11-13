@@ -5,8 +5,10 @@
 jurisdiction: BD
 snapshot_date: 2026-11-13
 approval_policy: owner_attested
-attested_by: nazmulbijoy9105-coder
+attested_by: Product owner (explicit instruction)
 attested_at: 2026-11-13
+attestation_method: explicit_product_owner_instruction
+signature: not_provided
 attestation_scope: product_evaluation_and_visibility_only
 legal_effect: NONE
 independent_counsel_verification_required: true
