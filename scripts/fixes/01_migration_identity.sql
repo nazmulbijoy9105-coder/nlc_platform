@@ -180,6 +180,11 @@ REVOKE CREATE ON SCHEMA public FROM PUBLIC, nlc_app_role;
 -- The migration login can inspect the catalogue but cannot perform DDL until
 -- env.py issues SET ROLE nlc_migration_owner inside Alembic's own connection.
 SET ROLE nlc_migration_owner;
+-- The restored 0042 branch predates 0112's Alembic metadata lockdown.
+ALTER TABLE public.alembic_version ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.alembic_version FORCE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.alembic_version FROM PUBLIC, nlc_app_role;
+
 -- Neon-created read_write roles may start with broad direct DML grants.
 -- Strip those grants: the login must use SET ROLE for migration DDL/DML.
 REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public, nlc_private, audit FROM nlc_migration_user;
