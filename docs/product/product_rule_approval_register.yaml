@@ -159,7 +159,7 @@ rules:
   - rule_id: AR-001
     product_status: PRODUCT_APPROVED
     product_active: true
-    score_eligible: false
+    score_eligible: true
     counsel_status: REVIEW_REQUIRED
     independently_verified: false
   - rule_id: AR-002
@@ -381,7 +381,7 @@ rules:
   - rule_id: ESC-003
     product_status: PRODUCT_APPROVED
     product_active: true
-    score_eligible: false
+    score_eligible: true
     counsel_status: REVIEW_REQUIRED
     independently_verified: false
   - rule_id: ESC-004
@@ -495,7 +495,7 @@ rules:
   - rule_id: SH-002
     product_status: PRODUCT_APPROVED
     product_active: true
-    score_eligible: false
+    score_eligible: true
     counsel_status: REVIEW_REQUIRED
     independently_verified: false
   - rule_id: SH-003
