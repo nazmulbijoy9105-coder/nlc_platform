@@ -215,3 +215,40 @@ def test_pdf_html_is_unsigned_and_discloses_counsel_review_even_when_product_sco
     assert "Approval status:</strong> UNSIGNED" in html
     assert "<strong>Status: UNSIGNED</strong>" in html
     assert "Product risk score:" in html
+
+
+
+def test_pdf_reconciliation_fails_closed_for_unknown_persisted_finding(monkeypatch):
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    unknown = SimpleNamespace(
+        rule_id="AGM-001",
+        evaluation_state="UNKNOWN",
+        flag_status="ACTIVE",
+        resolved_date=None,
+        score_impact=15,
+        detail={},
+    )
+
+    assert _verified_flag_score([unknown]) == (100, False)
+    assert report_module._render_score_reconciliation([unknown], 100, "GREEN") == ""
+
+
+def test_pdf_reconciliation_requires_active_explicit_violation(monkeypatch):
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    confirmed = SimpleNamespace(
+        rule_id="AGM-001",
+        evaluation_state="VIOLATION",
+        flag_status="ACTIVE",
+        resolved_date=None,
+        score_impact=15,
+        detail={},
+    )
+
+    assert _verified_flag_score([confirmed]) == (85, False)
+    assert "Score reconciliation" in report_module._render_score_reconciliation(
+        [confirmed], 85, "YELLOW"
+    )
