@@ -28,6 +28,9 @@ class _Result:
     def scalar_one_or_none(self):
         return self._scalar
 
+    def one_or_none(self):
+        return self._scalar
+
 
 class _PortfolioDB:
     def __init__(self, runs, companies, active_rule_ids):
