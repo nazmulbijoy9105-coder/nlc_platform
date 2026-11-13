@@ -431,7 +431,6 @@ class ComplianceService(BaseService[ComplianceFlag]):
             CATEGORY_CAPS,
             _COVERAGE_FIELDS,
             PRODUCT_SCORING_RULE_IDS,
-            VERIFIED_RULE_IDS,
             legal_score_is_released,
         )
 
@@ -542,18 +541,18 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     flag_code=flag.rule_id,
                     statutory_basis=(
                         flag.statutory_basis
-                        if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+                        if legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
                         else "Independent legal/source verification pending; statutory basis not released."
                     ),
                     severity=SeverityLevel(flag.severity)
-                    if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+                    if legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
                     else SeverityLevel.NOT_EVALUATED,
                     score_impact=flag.score_impact
-                    if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+                    if legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
                     else 0,
                     exposure_band=(
                         ExposureBand(getattr(getattr(flag, "exposure_band", None) or output.score_breakdown.exposure_band, "value", getattr(flag, "exposure_band", None) or output.score_breakdown.exposure_band))
-                        if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+                        if legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
                         else None
                     ),
                     revenue_tier=RevenueTier(flag.revenue_tier.value if hasattr(flag.revenue_tier, 'value') else flag.revenue_tier),
@@ -564,7 +563,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     triggered_date=today,
                     description=(
                         flag.description
-                        if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+                        if legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
                         else "Internal review signal only. No legal conclusion, breach, liability, penalty or compliance status is determined."
                     ),
                     detail=getattr(flag, "detail", None),
@@ -857,7 +856,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # ── Queue notifications for new RED/BLACK flags ─────────
         notification_flags = [
             flag for flag in collected_new_flags
-            if legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+            if legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
         ]
         if notification_flags:
             notif_svc = NotificationService(self.db)
