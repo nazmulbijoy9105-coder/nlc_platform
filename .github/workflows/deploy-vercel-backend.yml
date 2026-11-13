@@ -61,15 +61,47 @@ jobs:
             exit 1
           fi
           echo "Triggering Render deploy after successful CI..."
-          RESPONSE=$(curl --silent --show-error --fail-with-body --max-time 30 \
-            --request POST "$RENDER_DEPLOY_HOOK")
-          DEPLOYMENT_ID=$(printf '%s' "$RESPONSE" | python -c \
-            'import json,sys; data=json.load(sys.stdin); print(data.get("deploy", {}).get("id", ""))')
-          if [[ -z "$DEPLOYMENT_ID" ]]; then
-            echo "::error::Render response did not contain a deployment ID."
+          BODY_FILE="$(mktemp)"
+          trap 'rm -f "$BODY_FILE"' EXIT
+          HTTP_STATUS="$(curl --silent --show-error --output "$BODY_FILE" \
+            --write-out '%{http_code}' --max-time 30 \
+            --request POST "$RENDER_DEPLOY_HOOK")"
+          if [[ ! "$HTTP_STATUS" =~ ^2[0-9][0-9]$ ]]; then
+            echo "::error::Render deploy hook returned HTTP $HTTP_STATUS."
+            if [[ -s "$BODY_FILE" ]]; then
+              head -c 1000 "$BODY_FILE"
+              echo
+            fi
             exit 1
           fi
-          echo "Render deployment ID: $DEPLOYMENT_ID"
+
+          # Render deploy hooks may return an empty successful response (for
+          # example HTTP 204). Treat any 2xx as accepted, then rely on the
+          # live/readiness probes below to prove that the new service is up.
+          DEPLOYMENT_ID="$(python - "$BODY_FILE" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          body = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8").strip()
+          if not body:
+              print("accepted-no-id")
+              raise SystemExit(0)
+          try:
+              data = json.loads(body)
+          except json.JSONDecodeError:
+              print("accepted-no-id")
+              raise SystemExit(0)
+          deploy = data.get("deploy", {}) if isinstance(data, dict) else {}
+          deployment_id = (
+              deploy.get("id")
+              if isinstance(deploy, dict)
+              else None
+          ) or (data.get("id") if isinstance(data, dict) else None)
+          print(deployment_id or "accepted-no-id")
+          PY
+          )"
+          echo "Render deploy hook accepted (HTTP $HTTP_STATUS); deployment reference: $DEPLOYMENT_ID"
           echo "deployment_id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
 
       - name: Wait and verify backend health
@@ -79,15 +111,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "Waiting 3 minutes for Render deployment $DEPLOYMENT_ID to start..."
+          echo "Waiting 3 minutes for Render deployment reference $DEPLOYMENT_ID to start..."
           sleep 180
           HEALTH_URL="https://nlc-platform.onrender.com/api/v1/health/live"
           BODY_FILE="$(mktemp)"
           trap 'rm -f "$BODY_FILE"' EXIT
           for attempt in 1 2 3 4 5; do
-            if STATUS=$(curl --silent --show-error --output "$BODY_FILE" \
+            if STATUS="$(curl --silent --show-error --output "$BODY_FILE" \
               --write-out '%{http_code}' --connect-timeout 10 --max-time 15 \
-              "$HEALTH_URL"); then
+              "$HEALTH_URL")"; then
               :
             else
               STATUS="000"
@@ -117,9 +149,9 @@ jobs:
           BODY_FILE="$(mktemp)"
           trap 'rm -f "$BODY_FILE"' EXIT
           for attempt in 1 2 3 4 5; do
-            if STATUS=$(curl --silent --show-error --output "$BODY_FILE" \
+            if STATUS="$(curl --silent --show-error --output "$BODY_FILE" \
               --write-out '%{http_code}' --connect-timeout 10 --max-time 20 \
-              "$HEALTH_URL"); then
+              "$HEALTH_URL")"; then
               :
             else
               STATUS="000"
