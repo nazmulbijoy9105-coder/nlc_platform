@@ -76,7 +76,7 @@ async def list_inactive_companies(db=Depends(get_db_for_user)):
     return [
         {
             "company_id": str(company.id),
-            "company_name": company_name,
+            "company_name": company.company_name,
             "registration_number": company.registration_number,
             "company_status": getattr(company.company_status, "value", company.company_status),
             "is_dormant": company.is_dormant,
@@ -149,7 +149,7 @@ async def evaluate_all_companies(
         company_name = company.company_name
         try:
             async with db.begin_nested():
-                result = await service.evaluate_company(
+                await service.evaluate_company(
                     company_id=company.id, trigger_source="SUPER_ADMIN_PORTFOLIO"
                 )
                 await db.flush()
@@ -217,7 +217,7 @@ async def evaluate_one_company(
         raise HTTPException(status_code=404, detail="Active company not found.")
     try:
         async with db.begin_nested():
-            result = await ComplianceService(db).evaluate_company(
+            await ComplianceService(db).evaluate_company(
                 company_id=company.id, trigger_source="SUPER_ADMIN_PORTFOLIO"
             )
             await db.flush()
