@@ -28,7 +28,6 @@ from app.rule_engine.engine import (
     PRODUCT_SCORING_RULE_IDS,
     SCORE_DEDUCTION_RULE_IDS,
     VERIFIED_RULE_IDS,
-    RuleState,
 )
 from app.services.company_service import CompanyService
 from app.services.pdf_render import (
