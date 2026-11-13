@@ -3,8 +3,8 @@
 ## Release configuration
 
 - `LEGAL_SCORE_RELEASED` is read from the deployment environment. Values `true`, `1`, `yes`, and `on` enable product scoring; all other values, including an unset variable, disable score-bearing output. `.env.example` defaults to `LEGAL_SCORE_RELEASED=false`. A product owner must explicitly set the deployment value to enable scoring.
-- `PRODUCT_SCORING_RULE_IDS`: all 85 product-approved rules, active for evaluation, visibility and their designated workflows.
-- `SCORE_DEDUCTION_RULE_IDS`: all 85 product-approved rules; each may contribute its configured deduction only after evidence and state gates.
+- `PRODUCT_SCORING_RULE_IDS`: all 85 product-owner-approved rules, active for evaluation, visibility and scoring eligibility.
+- `SCORE_DEDUCTION_RULE_IDS`: the same 85 product-approved rules; each may contribute only its configured deduction after evidence, applicability, confirmed-violation and state gates.
 - `AR-001` and `SH-002` are active and score-eligible under the same evidence/state controls as the other rules.
 - `ESC-003` remains active as NLC's internal escalation/surcharge mechanism and may apply its configured product-policy deduction; it is not represented as a statutory provision.
 - The owner-attested product decision is recorded separately in `docs/product/product_rule_approval_register.yaml`; the independent counsel register remains `REVIEW_REQUIRED` for all 85 rules.
