@@ -123,12 +123,22 @@ jobs:
             alembic/versions/0093_verified_rule_audit_view.py \
             alembic/versions/0109_product_owner_legal_provenance.py
 
-      - name: Audit complete Alembic revision DAG
+      - name: Audit complete Alembic revision DAG and emit inventory
         run: |
+          set -euo pipefail
           alembic heads
           HEAD_COUNT="$(alembic heads | grep -c '(head)')"
           test "$HEAD_COUNT" -eq 1
-          python scripts/audit_alembic_graph.py
+          mkdir -p artifacts
+          python scripts/audit_alembic_graph.py --json-output artifacts/alembic-migration-inventory.json
+
+      - name: Upload complete Alembic migration inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alembic-migration-inventory
+          path: artifacts/alembic-migration-inventory.json
+          if-no-files-found: error
 
       - name: Run unit tests with coverage baseline
         run: |
