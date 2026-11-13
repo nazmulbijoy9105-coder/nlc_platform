@@ -118,6 +118,11 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
         evaluation_status="COMPLETED",
         score_hash="test-snapshot-hash",
         engine_version="test-engine-v1",
+        score_breakdown_snapshot={
+            "scoring_spec_version": report_module.SCORING_SPEC_VERSION,
+            "score_reconciles": True,
+            "final_score": 85,
+        },
         flags_snapshot=[{
             "rule_id": "AGM-001",
             "severity": "RED",
