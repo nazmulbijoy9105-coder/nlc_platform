@@ -29,12 +29,18 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='nlc_migration_owner') THEN
     EXECUTE 'CREATE ROLE nlc_migration_owner NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT BYPASSRLS NOREPLICATION';
   END IF;
-  IF (SELECT rolsuper FROM pg_roles WHERE rolname='nlc_migration_owner') THEN\n    RAISE EXCEPTION 'nlc_migration_owner is SUPERUSER; only a superuser DBA may correct this role';\n  END IF;\n  ALTER ROLE nlc_migration_owner NOLOGIN NOCREATEDB NOCREATEROLE NOINHERIT BYPASSRLS NOREPLICATION;
+  IF (SELECT rolsuper FROM pg_roles WHERE rolname='nlc_migration_owner') THEN
+    RAISE EXCEPTION 'nlc_migration_owner is SUPERUSER; only a superuser DBA may correct this role';
+  END IF;
+  ALTER ROLE nlc_migration_owner NOLOGIN NOCREATEDB NOCREATEROLE NOINHERIT BYPASSRLS NOREPLICATION;
 
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='nlc_migration_user') THEN
     EXECUTE 'CREATE ROLE nlc_migration_user LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS NOREPLICATION CONNECTION LIMIT 5';
   END IF;
-  IF (SELECT rolsuper FROM pg_roles WHERE rolname='nlc_migration_user') THEN\n    RAISE EXCEPTION 'nlc_migration_user is SUPERUSER; only a superuser DBA may correct this role';\n  END IF;\n  ALTER ROLE nlc_migration_user LOGIN NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS NOREPLICATION CONNECTION LIMIT 5;
+  IF (SELECT rolsuper FROM pg_roles WHERE rolname='nlc_migration_user') THEN
+    RAISE EXCEPTION 'nlc_migration_user is SUPERUSER; only a superuser DBA may correct this role';
+  END IF;
+  ALTER ROLE nlc_migration_user LOGIN NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS NOREPLICATION CONNECTION LIMIT 5;
 END
 $roles$;
 
@@ -55,7 +61,14 @@ BEGIN
 
   FOREACH schema_name IN ARRAY ARRAY['public','nlc_private','audit'] LOOP
     IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname=schema_name) THEN
-      RAISE EXCEPTION 'Required migration schema % is missing; refusing partial transfer', schema_name;
+      IF schema_name = 'nlc_private' THEN
+        -- At the supported 0042 starting revision this schema is expected to
+        -- be absent; migration 0050 creates it. Pre-create it with the intended
+        -- owner so the ownership transfer is valid before Alembic starts.
+        EXECUTE 'CREATE SCHEMA nlc_private AUTHORIZATION nlc_migration_owner';
+      ELSE
+        RAISE EXCEPTION 'Required migration schema % is missing; refusing partial transfer', schema_name;
+      END IF;
     END IF;
     EXECUTE format('GRANT USAGE, CREATE ON SCHEMA %I TO nlc_migration_owner', schema_name);
   END LOOP;
