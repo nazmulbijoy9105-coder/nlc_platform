@@ -9,9 +9,9 @@
 
 **Product scoring: RELEASE ENABLED by product configuration. Legal verification: PENDING.**
 
-The product release branch sets `LEGAL_SCORE_RELEASED = True` and enables the 82 score-bearing rules in `PRODUCT_SCORING_RULE_IDS`. AR-001 and SH-002 remain informational; ESC-003 is the internal surcharge/escalation rule and is not itself a scored finding.
+The product approval register records all 85 canonical rules as owner-attested and active for product evaluation. `PRODUCT_SCORING_RULE_IDS` contains all 85 IDs; `SCORE_DEDUCTION_RULE_IDS` contains 82. AR-001 and SH-002 remain active for evaluation/display without direct point deductions; ESC-003 remains active as an internal escalation mechanism without a direct statutory deduction.
 
-`VERIFIED_RULE_IDS` remains empty. The legal approval register still has `approved_rule_ids: []`, with 85 records `REVIEW_REQUIRED` and `score_eligible: false`. Product scoring eligibility must not be represented as independent legal certification or counsel approval. The three non-scoring catalogue rules remain excluded by design.
+`VERIFIED_RULE_IDS` remains empty. The independent legal approval register has no approved IDs and all 85 rules remain `REVIEW_REQUIRED`. Product-owner approval is not independent legal verification, a legal opinion or counsel certification.
 
 This is an application scoring release, not a legal opinion or certification. Missing evidence remains UNKNOWN rather than proof of statutory non-compliance. AI-generated drafts remain subject to human review and approval. See [Product-controlled scoring release](release/PRODUCT_CONTROLLED_SCORING_RELEASE_2026-11-10.md) for the exact configuration and data/deployment scope.
 
