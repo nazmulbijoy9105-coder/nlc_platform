@@ -486,6 +486,7 @@ class AnnualReturnService(BaseService[AnnualReturn]):
             .where(
                 AnnualReturn.company_id == company_id,
                 AnnualReturn.is_default,
+                AnnualReturn.filed_date.is_(None),
             )
         )
         return result.scalar_one()
