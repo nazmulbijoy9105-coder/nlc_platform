@@ -649,6 +649,7 @@ async def create_annual_return(
     annual_return = await svc.create_return(
         company_id=body.company_id,
         financial_year=body.financial_year,
+        agm_date=body.agm_date,
     )
     return _return_to_response(annual_return)
 
