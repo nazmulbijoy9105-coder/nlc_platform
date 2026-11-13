@@ -19,8 +19,6 @@ AI Constitution Article 1: Rule engine output is immutable — AI cannot alter i
 """
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
 import uuid
 from fastapi.encoders import jsonable_encoder
@@ -34,6 +32,7 @@ from app.models.compliance import ComplianceEvaluationRun, ComplianceFlag, Compl
 from app.models.company_fact import CompanyFact
 from app.models.rules import LegalRule
 from app.compliance.fact_provenance import coerce_company_profile_fact_value
+from app.compliance.evaluation_integrity import calculate_evaluation_score_hash
 from app.models.enums import (
     ExposureBand,
     FlagStatus,
@@ -763,26 +762,20 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
         rule_outcomes_hash = hash_rule_outcomes_snapshot(rule_outcomes_snapshot)
 
-        hash_material = json.dumps(
-            {
-                "previous_hash": previous_hash or "GENESIS",
-                "company_id": str(company_id),
-                "score": score_for_current,
-                "risk_band": risk_band.value,
-                "calculated_at": now.isoformat(),
-                "engine_version": engine_version,
-                "trigger_source": trigger_source,
-                "flags_snapshot": flags_snapshot,
-                "fact_provenance_snapshot": fact_provenance_snapshot,
-                "score_breakdown_snapshot": score_breakdown_snapshot,
-                "rule_outcomes_hash": rule_outcomes_hash,
-                "rule_outcomes_snapshot": rule_outcomes_snapshot,
-            },
-            sort_keys=True,
-            separators=(",", ":"),
-            default=str,
+        evaluation_hash = calculate_evaluation_score_hash(
+            previous_hash=previous_hash,
+            company_id=company_id,
+            score=score_for_current,
+            risk_band=risk_band,
+            calculated_at=now,
+            engine_version=engine_version,
+            trigger_source=trigger_source,
+            flags_snapshot=flags_snapshot,
+            fact_provenance_snapshot=fact_provenance_snapshot,
+            score_breakdown_snapshot=score_breakdown_snapshot,
+            rule_outcomes_hash=rule_outcomes_hash,
+            rule_outcomes_snapshot=rule_outcomes_snapshot,
         )
-        evaluation_hash = hashlib.sha256(hash_material.encode()).hexdigest()
         black_flags = (
             output.score_breakdown.black_flag_count
             if legal_score_is_released() else 0
