@@ -512,3 +512,68 @@ def test_pdf_separates_unverified_findings_from_verified_score_report(monkeypatc
     assert "Independent Bangladesh-counsel/source verification remains pending" in page
     assert "UNVERIFIED_SECRET_DESC" not in page
     assert "BLACK-severity compliance breach" not in page
+
+def test_endpoint_withholds_pdf_when_evaluation_score_hash_is_tampered(monkeypatch):
+    _patch_services(monkeypatch)
+    monkeypatch.setattr("app.services.pdf_report_service.LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        "app.services.pdf_report_service.PRODUCT_SCORING_RULE_IDS",
+        frozenset({"AGM-001"}),
+    )
+    monkeypatch.setattr(
+        "app.services.pdf_report_service.VERIFIED_RULE_IDS",
+        frozenset({"AGM-001"}),
+    )
+    rule_outcomes = [{
+        "rule_id": "AGM-001",
+        "rule_version": "2.2",
+        "statutory_basis": "Companies Act 1994 s.81",
+        "verification_status": "PENDING",
+        "verified_by": None,
+        "verified_at": None,
+        "outcome_state": "NON_COMPLIANT",
+        "assessment_source": "ENGINE_FINDING",
+        "findings": [],
+    }]
+    snapshot = SimpleNamespace(
+        company_id=COMPANY.id,
+        previous_hash=None,
+        score=85,
+        risk_band="GREEN",
+        calculated_at=WHEN,
+        evaluation_status="COMPLETED",
+        score_hash="f" * 64,
+        engine_version="test-engine-v1",
+        trigger_source="UNIT_TEST",
+        fact_provenance_snapshot=[],
+        score_breakdown_snapshot={
+            "scoring_spec_version": report_module.SCORING_SPEC_VERSION,
+            "score_reconciles": True,
+            "final_score": 85,
+        },
+        flags_snapshot=[{
+            "rule_id": "AGM-001",
+            "severity": "RED",
+            "category": "AGM",
+            "score_impact": 15,
+            "score_impact_applied": 15,
+            "description": "AGM missing",
+            "detail": None,
+            "statutory_basis": "Companies Act 1994 s.81",
+        }],
+        rule_outcomes_snapshot=rule_outcomes,
+        rule_outcomes_hash=hash_rule_outcomes_snapshot(rule_outcomes),
+        rule_catalogue_count=1,
+    )
+
+    class FakeDB:
+        async def execute(self, statement):
+            return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
+
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(
+            PDFReportService(db=FakeDB()).generate_company_compliance_pdf(str(uuid4()))
+        )
+
+    assert exc.value.status_code == 409
+    assert "SCORE_HASH_MISMATCH" in exc.value.detail
