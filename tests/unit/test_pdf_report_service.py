@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException, Response
 
+from app.compliance.evaluation_integrity import calculate_evaluation_score_hash
 from app.compliance.rule_outcome_ledger import hash_rule_outcomes_snapshot
 from app.services import pdf_render, pdf_report_service as report_module
 from app.services.pdf_report_service import (
@@ -124,12 +125,16 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
         "findings": [],
     }]
     snapshot = SimpleNamespace(
+        company_id=COMPANY.id,
+        previous_hash=None,
         score=85,
         risk_band="GREEN",
         calculated_at=WHEN,
         evaluation_status="COMPLETED",
-        score_hash="test-snapshot-hash",
+        score_hash="",
         engine_version="test-engine-v1",
+        trigger_source="UNIT_TEST",
+        fact_provenance_snapshot=[],
         score_breakdown_snapshot={
             "scoring_spec_version": report_module.SCORING_SPEC_VERSION,
             "score_reconciles": True,
@@ -149,6 +154,20 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
         rule_outcomes_hash=hash_rule_outcomes_snapshot(rule_outcomes),
         rule_catalogue_count=1,
     )
+    snapshot.score_hash = calculate_evaluation_score_hash(
+        previous_hash=snapshot.previous_hash,
+        company_id=snapshot.company_id,
+        score=snapshot.score,
+        risk_band=snapshot.risk_band,
+        calculated_at=snapshot.calculated_at,
+        engine_version=snapshot.engine_version,
+        trigger_source=snapshot.trigger_source,
+        flags_snapshot=snapshot.flags_snapshot,
+        fact_provenance_snapshot=snapshot.fact_provenance_snapshot,
+        score_breakdown_snapshot=snapshot.score_breakdown_snapshot,
+        rule_outcomes_hash=snapshot.rule_outcomes_hash,
+        rule_outcomes_snapshot=snapshot.rule_outcomes_snapshot,
+    )
 
     class FakeDB:
         async def execute(self, statement):
@@ -162,7 +181,7 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
     assert response.status_code == 200
     assert response.media_type == "application/pdf"
     assert response.body == b"%PDF-1.7 stub"
-    assert response.headers["x-snapshot-hash"] == "test-snapshot-hash"
+    assert response.headers["x-snapshot-hash"] == snapshot.score_hash
     assert response.headers["x-engine-version"] == "test-engine-v1"
     assert (
         response.headers["content-disposition"]
