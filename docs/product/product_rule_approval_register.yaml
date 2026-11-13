@@ -9,7 +9,7 @@ attested_by: Product owner (explicit instruction)
 attested_at: 2026-11-13
 attestation_method: explicit_product_owner_instruction
 signature: not_provided
-attestation_scope: product_evaluation_and_visibility_only
+attestation_scope: product_evaluation_scoring_and_visibility
 legal_effect: NONE
 independent_counsel_verification_required: true
 approved_rule_ids:
