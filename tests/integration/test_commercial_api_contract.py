@@ -397,8 +397,10 @@ async def _seed_concurrent_quotation_fixture(test_engine):
 async def _cleanup_concurrent_quotation_fixture(
     session_factory, user_id, company_id, engagement_id
 ):
+    # This is test-fixture teardown, not an application workflow. Keep the
+    # owner connection out of nlc_app_role so least-privilege runtime DELETE
+    # revocations do not require granting business-table deletion to the API.
     async with session_factory() as session:
-        await set_admin_context(session)
         await session.execute(
             delete(Quotation).where(Quotation.engagement_id == engagement_id)
         )
