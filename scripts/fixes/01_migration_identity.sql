@@ -191,6 +191,9 @@ ALTER DEFAULT PRIVILEGES FOR ROLE nlc_migration_owner IN SCHEMA public
   GRANT SELECT, INSERT, UPDATE ON TABLES TO nlc_app_role;
 ALTER DEFAULT PRIVILEGES FOR ROLE nlc_migration_owner IN SCHEMA public
   GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO nlc_app_role;
+-- The restored 0042 branch predates migration 0050's public-schema lockdown.
+-- Apply the runtime no-CREATE boundary now; this is required for safe replay.
+REVOKE CREATE ON SCHEMA public FROM PUBLIC, nlc_app_role;
 RESET ROLE;
 
 -- Remove only the temporary membership granted by this script.
