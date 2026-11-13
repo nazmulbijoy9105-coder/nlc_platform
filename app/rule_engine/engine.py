@@ -1663,7 +1663,7 @@ class NLCRuleEngine:
                     score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description="Annual-return filing status has not been verified against an authenticated RJSC filing record; no default is inferred.",
-                    statutory_basis="Section 36 and Schedule X, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 36 (Schedule X), Companies Act 1994 (Bangladesh)",
                     state=RuleState.UNKNOWN,
                     eval_state="UNKNOWN",
                     detail={"agm_date": str(c.last_agm_date), "deadline": str(deadline)},
@@ -1678,7 +1678,7 @@ class NLCRuleEngine:
                     score_impact=self._graduated_ar_deduction(delay),
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=f"Authenticated RJSC evidence confirms Schedule X (Annual Return) was not filed within 21 days of AGM. Overdue by {delay} days.",
-                    statutory_basis="Section 36 and Schedule X, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 36 (Schedule X), Companies Act 1994 (Bangladesh)",
                     detail={
                         "delay_days": delay,
                         "evidence_ref": c.annual_return_filing_status_evidence_ref,
@@ -1694,7 +1694,7 @@ class NLCRuleEngine:
                     score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description="RJSC filing-status verification is recorded but the filed/not-filed result is missing.",
-                    statutory_basis="Section 36 and Schedule X, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 36 (Schedule X), Companies Act 1994 (Bangladesh)",
                     state=RuleState.CONTRADICTORY,
                     eval_state="UNKNOWN",
                 ))
