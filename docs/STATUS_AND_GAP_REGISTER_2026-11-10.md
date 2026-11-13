@@ -9,7 +9,7 @@
 
 **Product scoring: RELEASE ENABLED by product configuration. Legal verification: PENDING.**
 
-The product approval register records all 85 canonical rules as owner-attested and active for product evaluation. `PRODUCT_SCORING_RULE_IDS` contains all 85 IDs; `SCORE_DEDUCTION_RULE_IDS` contains 82. AR-001 and SH-002 remain active for evaluation/display without direct point deductions; ESC-003 remains active as an internal escalation mechanism without a direct statutory deduction.
+The product approval register records all 85 canonical rules as owner-attested, active and score-eligible for product evaluation. `PRODUCT_SCORING_RULE_IDS` and `SCORE_DEDUCTION_RULE_IDS` each contain all 85 IDs, including AR-001, SH-002 and ESC-003. Every deduction remains subject to confirmed violation state, applicability, evidence sufficiency, deterministic scoring caps and reconciliation. ESC-003 is an NLC internal escalation mechanism, not a statutory provision.
 
 `VERIFIED_RULE_IDS` remains empty. The independent legal approval register has no approved IDs and all 85 rules remain `REVIEW_REQUIRED`. Product-owner approval is not independent legal verification, a legal opinion or counsel certification.
 
