@@ -1,5 +1,5 @@
 # CI-gated Render deployment. Render's native autoDeploy remains disabled.
-# A deploy hook is triggered only after the CI workflow succeeds for current main.
+# A deploy hook is triggered only after CI and production migrations succeed.
 
 name: Deploy Backend (Render)
 
@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   deploy-render:
-    name: Trigger Render Redeploy
+    name: Migrate then deploy Render
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
@@ -48,6 +48,28 @@ jobs:
             echo "Skipping stale CI result $TARGET_SHA; current main is $CURRENT_MAIN_SHA."
           fi
 
+      # Migrations run from the CI-tested image, before any production deploy.
+      # The credential is a GitHub Actions secret, not a Render API env var.
+      - name: Apply production migrations before Render deploy
+        if: steps.freshness.outputs.current == 'true'
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.NLC_MIGRATION_DATABASE_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${MIGRATION_DATABASE_URL:-}" ]]; then
+            echo "::error::NLC_MIGRATION_DATABASE_URL is not configured. No Render deployment will be triggered."
+            exit 1
+          fi
+          docker build --target api --tag nlc-api:migration .
+          docker run --rm \
+            --entrypoint /bin/sh \
+            --env ENVIRONMENT=production \
+            --env MIGRATION_DATABASE_URL \
+            nlc-api:migration \
+            -c 'set -eu; alembic upgrade head; alembic current'
+          echo "Production Alembic migration command completed successfully."
+
       - name: Trigger Render Deploy Hook
         id: trigger
         if: steps.freshness.outputs.current == 'true'
@@ -60,7 +82,7 @@ jobs:
             echo "::error::RENDER_DEPLOY_HOOK_URL secret is not configured."
             exit 1
           fi
-          echo "Triggering Render deploy after successful CI..."
+          echo "Triggering Render deploy after successful CI and migration..."
           BODY_FILE="$(mktemp)"
           trap 'rm -f "$BODY_FILE"' EXIT
           HTTP_STATUS="$(curl --silent --show-error --output "$BODY_FILE" \
@@ -75,9 +97,6 @@ jobs:
             exit 1
           fi
 
-          # Render deploy hooks may return an empty successful response (for
-          # example HTTP 204). Treat any 2xx as accepted, then rely on the
-          # live/readiness probes below to prove that the new service is up.
           DEPLOYMENT_ID="$(python - "$BODY_FILE" <<'PY'
           import json
           import pathlib
@@ -170,4 +189,4 @@ jobs:
 
       - name: Report skipped stale CI result
         if: steps.freshness.outputs.current == 'false'
-        run: echo "No deploy was triggered because main advanced after this CI run."
+        run: echo "No migration or deploy was triggered because main advanced after this CI run."
