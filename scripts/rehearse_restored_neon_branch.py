@@ -200,9 +200,41 @@ async def _security_audit(conn: asyncpg.Connection) -> dict[str, Any]:
     app_schema_create = await conn.fetchval(
         "SELECT has_schema_privilege('nlc_app_role', 'public', 'CREATE')"
     )
-    if app_schema_create or dangerous_privileges:
+    audit_role_schema_create = await conn.fetchval(
+        "SELECT has_schema_privilege('nlc_ci_audit_role', 'public', 'CREATE')"
+    )
+    audit_role_public_access = await conn.fetch(
+        """
+        SELECT c.relname
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public'
+          AND c.relkind IN ('r', 'v', 'm')
+          AND (
+              has_table_privilege('nlc_ci_audit_role', c.oid, 'SELECT')
+              OR has_table_privilege('nlc_ci_audit_role', c.oid, 'INSERT')
+              OR has_table_privilege('nlc_ci_audit_role', c.oid, 'UPDATE')
+              OR has_table_privilege('nlc_ci_audit_role', c.oid, 'DELETE')
+          )
+        ORDER BY c.relname
+        """
+    )
+    audit_schema_usage = await conn.fetchval(
+        "SELECT has_schema_privilege('nlc_ci_audit_role', 'audit', 'USAGE')"
+    )
+    audit_view_select = await conn.fetchval(
+        "SELECT has_table_privilege('nlc_ci_audit_role', 'audit.active_legal_rule_ids', 'SELECT')"
+    )
+    if (
+        app_schema_create
+        or audit_role_schema_create
+        or dangerous_privileges
+        or audit_role_public_access
+        or not audit_schema_usage
+        or not audit_view_select
+    ):
         raise RuntimeError(
-            "Runtime app role has schema CREATE or dangerous table privileges."
+            "Runtime/audit role grants do not match the restricted production contract."
         )
 
     views = await conn.fetch(
@@ -293,6 +325,10 @@ async def _security_audit(conn: asyncpg.Connection) -> dict[str, Any]:
         "rls_gap_tables": [],
         "app_schema_create": app_schema_create,
         "app_dangerous_privilege_tables": [],
+        "audit_role_schema_create": audit_role_schema_create,
+        "audit_role_public_access_tables": [],
+        "audit_schema_usage": audit_schema_usage,
+        "audit_view_select": audit_view_select,
         "security_invoker_views": view_security,
         "schema_only_evidence_tables": evidence,
     }
