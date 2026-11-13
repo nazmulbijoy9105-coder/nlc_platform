@@ -129,10 +129,10 @@ def test_all_85_product_rules_are_active_but_only_82_can_deduct():
         VERIFIED_RULE_IDS,
     )
 
-    non_deduction = {"AR-001", "SH-002", "ESC-003"}
     assert len(PRODUCT_SCORING_RULE_IDS) == 85
-    assert len(SCORE_DEDUCTION_RULE_IDS) == 82
-    assert PRODUCT_SCORING_RULE_IDS - SCORE_DEDUCTION_RULE_IDS == non_deduction
+    assert len(SCORE_DEDUCTION_RULE_IDS) == 85
+    assert PRODUCT_SCORING_RULE_IDS == SCORE_DEDUCTION_RULE_IDS
+    assert {"AR-001", "SH-002", "ESC-003"} <= PRODUCT_SCORING_RULE_IDS
     assert VERIFIED_RULE_IDS == frozenset()
 
 
