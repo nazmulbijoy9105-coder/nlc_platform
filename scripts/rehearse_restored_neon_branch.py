@@ -225,6 +225,30 @@ async def _security_audit(conn: asyncpg.Connection) -> dict[str, Any]:
     audit_view_select = await conn.fetchval(
         "SELECT has_table_privilege('nlc_ci_audit_role', 'audit.active_legal_rule_ids', 'SELECT')"
     )
+    key_table_exists = await conn.fetchval(
+        "SELECT to_regclass('nlc_private.rls_signing_key') IS NOT NULL"
+    )
+    app_can_use_private_schema = await conn.fetchval(
+        "SELECT has_schema_privilege('nlc_app_role', 'nlc_private', 'USAGE')"
+    )
+    app_can_read_signing_key = (
+        await conn.fetchval(
+            "SELECT has_table_privilege('nlc_app_role', 'nlc_private.rls_signing_key', 'SELECT')"
+        )
+        if key_table_exists
+        else True
+    )
+    signing_key_state = (
+        await conn.fetchrow(
+            """
+            SELECT count(*)::int AS rows, min(length(secret))::int AS minimum_length
+            FROM nlc_private.rls_signing_key
+            WHERE singleton = true
+            """
+        )
+        if key_table_exists
+        else None
+    )
     if (
         app_schema_create
         or audit_role_schema_create
@@ -232,6 +256,13 @@ async def _security_audit(conn: asyncpg.Connection) -> dict[str, Any]:
         or audit_role_public_access
         or not audit_schema_usage
         or not audit_view_select
+        or not key_table_exists
+        or app_can_use_private_schema
+        or app_can_read_signing_key
+        or signing_key_state is None
+        or signing_key_state["rows"] != 1
+        or signing_key_state["minimum_length"] is None
+        or signing_key_state["minimum_length"] < 32
     ):
         raise RuntimeError(
             "Runtime/audit role grants do not match the restricted production contract."
@@ -329,6 +360,11 @@ async def _security_audit(conn: asyncpg.Connection) -> dict[str, Any]:
         "audit_role_public_access_tables": [],
         "audit_schema_usage": audit_schema_usage,
         "audit_view_select": audit_view_select,
+        "private_signing_key_table_exists": key_table_exists,
+        "app_can_use_private_schema": app_can_use_private_schema,
+        "app_can_read_signing_key": app_can_read_signing_key,
+        "private_signing_key_rows": signing_key_state["rows"] if signing_key_state else 0,
+        "private_signing_key_minimum_length": signing_key_state["minimum_length"] if signing_key_state else None,
         "security_invoker_views": view_security,
         "schema_only_evidence_tables": evidence,
     }
