@@ -7,6 +7,8 @@ files from app/static/brand.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -564,6 +566,43 @@ def _flag_impact_label(flag: Any) -> str:
     return f"-{int(applied)} pts" if applied else "Not applied"
 
 
+
+def _render_rule_outcome_ledger(items: list[dict] | None) -> str:
+    """Render the immutable rule ledger without treating missing findings as passes."""
+    if not items:
+        return (
+            '<section><h3>Statutory Rule Outcome Ledger</h3>'
+            '<p>Unavailable for this historical evaluation. No rule-level pass count is inferred.</p></section>'
+        )
+    counts: dict[str, int] = {}
+    rows: list[str] = []
+    for item in items:
+        state = str(item.get("outcome_state") or "UNKNOWN")
+        counts[state] = counts.get(state, 0) + 1
+        rows.append(
+            "<tr>"
+            f"<td>{esc(item.get('rule_id', ''))}</td>"
+            f"<td>{esc(item.get('rule_version', ''))}</td>"
+            f"<td>{esc(state)}</td>"
+            f"<td>{esc(item.get('verification_status', 'PENDING'))}</td>"
+            f"<td>{esc(item.get('assessment_source', ''))}</td>"
+            f"<td>{esc(item.get('statutory_basis', ''))}</td>"
+            "</tr>"
+        )
+    summary = " · ".join(
+        f"{esc(state)}: {count}" for state, count in sorted(counts.items())
+    )
+    return (
+        '<section class="rule-outcome-ledger"><h3>Statutory Rule Outcome Ledger</h3>'
+        f'<p><strong>Catalogue rows:</strong> {len(items)} · {summary}</p>'
+        '<p>NOT_EVALUATED means no engine finding was emitted for that catalogue rule; '
+        'it is not a finding of compliance. Catalogue verification status is shown separately.</p>'
+        '<table class="flags-table"><tr><th>Rule ID</th><th>Rule Version</th>'
+        '<th>Outcome</th><th>Legal Source Verification</th><th>Assessment Basis</th>'
+        f'<th>Statutory Basis</th></tr>{"".join(rows)}</table></section>'
+    )
+
+
 def build_compliance_report_html(
     company: Any,
     flags: Any,
@@ -573,6 +612,7 @@ def build_compliance_report_html(
     engine_version: str = "unknown",
     snapshot_hash: str = "unknown",
     evaluation_at: datetime | None = None,
+    rule_outcomes_snapshot: list[dict] | None = None,
 ) -> str:
     """Pure function: company + flags + rescue_plan -> report HTML. All dynamic values escaped.
 
@@ -626,6 +666,7 @@ def build_compliance_report_html(
     rescue_html = _render_rescue_section(rescue_plan)
     reconciliation_html = _render_score_reconciliation(flags, score, band)
     review_html = _render_review_queue(review_flags)
+    rule_outcomes_html = _render_rule_outcome_ledger(rule_outcomes_snapshot)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -693,6 +734,8 @@ def build_compliance_report_html(
         <p><strong>Approval status:</strong> UNSIGNED — no counsel approval is represented until completed and signed.</p>
     </div>
 
+    {rule_outcomes_html}
+
     <h3>Active Compliance Flags</h3>
     <table class="flags-table">
         <tr><th>Rule ID</th><th>Severity</th><th>Description</th><th>Score Impact</th></tr>
@@ -759,6 +802,26 @@ class PDFReportService:
                 status_code=409,
                 detail="PDF withheld: the latest evaluation run is incomplete or lacks audit identity.",
             )
+        outcomes = getattr(snapshot, "rule_outcomes_snapshot", None)
+        if (
+            not isinstance(outcomes, list)
+            or not outcomes
+            or getattr(snapshot, "rule_catalogue_count", None) != len(outcomes)
+            or not getattr(snapshot, "rule_outcomes_hash", None)
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="PDF withheld: the authoritative run has no complete statutory rule outcome ledger.",
+            )
+        outcomes_hash = hashlib.sha256(json.dumps(
+            outcomes, sort_keys=True, separators=(",", ":"), default=str
+        ).encode()).hexdigest()
+        if outcomes_hash != getattr(snapshot, "rule_outcomes_hash", None):
+            raise HTTPException(
+                status_code=409,
+                detail="PDF withheld: statutory rule outcome ledger hash mismatch.",
+            )
+
         score_snapshot_data = snapshot.score_breakdown_snapshot
         if (
             not isinstance(score_snapshot_data, dict)
@@ -801,6 +864,7 @@ class PDFReportService:
                 engine_version=engine_version,
                 snapshot_hash=snapshot_hash,
                 evaluation_at=snapshot.calculated_at,
+                rule_outcomes_snapshot=outcomes,
             )
         except ScoreReconciliationError as exc:
             raise HTTPException(

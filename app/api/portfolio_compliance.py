@@ -5,6 +5,8 @@ facts, evidence and historical evaluation runs are deliberately untouched.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import uuid
 from typing import Any
 
@@ -22,6 +24,10 @@ from app.services.notification_service import ActivityService
 from canonical_architecture.scoring_spec import SCORING_SPEC_VERSION
 
 router = APIRouter(prefix="/portfolio/compliance", tags=["portfolio-compliance"])
+
+
+class RuleOutcomeAggregateRequest(BaseModel):
+    run_ids: list[uuid.UUID] = Field(min_length=1, max_length=100)
 
 
 class ReactivationRequest(BaseModel):
@@ -65,6 +71,118 @@ def _validation(run: ComplianceEvaluationRun, company: Company) -> dict[str, Any
         "scoring_spec_version": snapshot.get("scoring_spec_version"),
         "calculated_at": run.calculated_at.isoformat() if run.calculated_at else None,
         "pdf_eligible": not problems,
+    }
+
+
+@router.post("/rule-outcomes/aggregate", dependencies=[Depends(require_roles("SUPER_ADMIN"))])
+async def aggregate_rule_outcomes(
+    body: RuleOutcomeAggregateRequest,
+    db=Depends(get_db_for_user),
+):
+    """Aggregate immutable rule outcome ledgers for exact evaluation-run IDs."""
+    if len(set(body.run_ids)) != len(body.run_ids):
+        raise HTTPException(status_code=422, detail="Duplicate evaluation run IDs are not allowed.")
+
+    rows = await db.execute(
+        select(ComplianceEvaluationRun).where(ComplianceEvaluationRun.id.in_(body.run_ids))
+    )
+    runs_by_id = {run.id: run for run in rows.scalars().all()}
+    if len(runs_by_id) != len(body.run_ids):
+        raise HTTPException(status_code=404, detail="One or more evaluation runs were not found.")
+
+    aggregate: dict[str, int] = {}
+    results: list[dict[str, Any]] = []
+    total_rule_company_rows = 0
+    emitted_outcome_rows = 0
+    not_evaluated_rows = 0
+
+    for run_id in body.run_ids:
+        run = runs_by_id[run_id]
+        company = await db.get(Company, run.company_id)
+        snapshot = run.rule_outcomes_snapshot
+        problems: list[str] = []
+        if company is None:
+            problems.append("COMPANY_NOT_FOUND")
+        if run.evaluation_status != "COMPLETED":
+            problems.append("RUN_NOT_COMPLETED")
+        if not isinstance(snapshot, list) or not snapshot:
+            problems.append("RULE_OUTCOME_SNAPSHOT_MISSING")
+            snapshot = []
+        if run.rule_catalogue_count != len(snapshot):
+            problems.append("RULE_CATALOGUE_COUNT_MISMATCH")
+        if not run.rule_outcomes_hash:
+            problems.append("RULE_OUTCOME_HASH_MISSING")
+        else:
+            actual_hash = hashlib.sha256(json.dumps(
+                snapshot, sort_keys=True, separators=(",", ":"), default=str
+            ).encode()).hexdigest()
+            if actual_hash != run.rule_outcomes_hash:
+                problems.append("RULE_OUTCOME_HASH_MISMATCH")
+        if company is not None:
+            latest = await db.execute(
+                select(ComplianceEvaluationRun.id)
+                .where(ComplianceEvaluationRun.company_id == company.id)
+                .order_by(ComplianceEvaluationRun.calculated_at.desc())
+                .limit(1)
+            )
+            if latest.scalar_one_or_none() != run.id:
+                problems.append("RUN_NOT_LATEST_FOR_COMPANY")
+            validation = _validation(run, company)
+            if not validation["valid"]:
+                problems.extend(validation["problems"])
+
+        ids = [item.get("rule_id") for item in snapshot if isinstance(item, dict)]
+        if len(ids) != len(snapshot) or len(set(ids)) != len(ids):
+            problems.append("RULE_OUTCOME_IDS_MALFORMED_OR_DUPLICATED")
+
+        counts: dict[str, int] = {}
+        for item in snapshot:
+            if not isinstance(item, dict):
+                continue
+            state = str(item.get("outcome_state") or "UNKNOWN")
+            counts[state] = counts.get(state, 0) + 1
+
+        valid = not problems
+        results.append({
+            "company_id": str(run.company_id),
+            "company_name": company.company_name if company is not None else None,
+            "evaluation_run_id": str(run.id),
+            "score_hash": run.score_hash,
+            "engine_version": run.engine_version,
+            "scoring_spec_version": (
+                run.score_breakdown_snapshot.get("scoring_spec_version")
+                if isinstance(run.score_breakdown_snapshot, dict) else None
+            ),
+            "rule_catalogue_count": len(snapshot),
+            "outcome_counts": counts,
+            "valid": valid,
+            "problems": problems,
+        })
+        if valid:
+            total_rule_company_rows += len(snapshot)
+            for state, count in counts.items():
+                aggregate[state] = aggregate.get(state, 0) + count
+            not_evaluated_rows += counts.get("NOT_EVALUATED", 0)
+            emitted_outcome_rows += len(snapshot) - counts.get("NOT_EVALUATED", 0)
+
+    valid_results = sum(item["valid"] for item in results)
+    return {
+        "requested_runs": len(body.run_ids),
+        "validated_runs": valid_results,
+        "rejected_runs": len(body.run_ids) - valid_results,
+        "aggregate_counts": aggregate,
+        "validated_rule_company_rows": total_rule_company_rows,
+        "engine_outcome_rows": emitted_outcome_rows,
+        "not_evaluated_rows": not_evaluated_rows,
+        "potential_rule_company_rows": sum(
+            item["rule_catalogue_count"] for item in results if item["valid"]
+        ),
+        "disclaimer": (
+            "An absent finding is NOT_EVALUATED, never COMPLIANT. "
+            "These records count engine-emitted outcomes and unevaluated catalogue rows; "
+            "they do not establish independent legal verification or counsel approval."
+        ),
+        "results": results,
     }
 
 

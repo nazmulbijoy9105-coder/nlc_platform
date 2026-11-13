@@ -262,6 +262,12 @@ class ComplianceEvaluationRun(UUIDPrimaryKeyMixin, Base):
     flags_snapshot: Mapped[list[dict]] = mapped_column(
         JSONB, nullable=False, default=list, server_default="[]"
     )
+    rule_outcomes_snapshot: Mapped[list[dict] | None] = mapped_column(
+        JSONB, nullable=True,
+        comment="Immutable one-row-per-active-legal-rule outcome ledger; absent findings remain NOT_EVALUATED."
+    )
+    rule_outcomes_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    rule_catalogue_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     fact_provenance_snapshot: Mapped[list[dict]] = mapped_column(
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"),
         comment="Immutable union of fact provenance used during this evaluation run."

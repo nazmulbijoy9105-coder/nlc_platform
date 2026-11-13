@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException, Response
 
+from app.compliance.rule_outcome_ledger import hash_rule_outcomes_snapshot
 from app.services import pdf_render, pdf_report_service as report_module
 from app.services.pdf_report_service import (
     LOGO_FILE,
@@ -111,6 +112,17 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
     monkeypatch.setattr(report_module, "render_html_to_pdf_async", fake_render)
 
     # Mock the COM-007 snapshot lookup: this test does not need a real database.
+    rule_outcomes = [{
+        "rule_id": "AGM-001",
+        "rule_version": "2.2",
+        "statutory_basis": "Companies Act 1994 s.81",
+        "verification_status": "PENDING",
+        "verified_by": None,
+        "verified_at": None,
+        "outcome_state": "NON_COMPLIANT",
+        "assessment_source": "ENGINE_FINDING",
+        "findings": [],
+    }]
     snapshot = SimpleNamespace(
         score=85,
         risk_band="GREEN",
@@ -133,6 +145,9 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
             "detail": None,
             "statutory_basis": "Companies Act 1994 s.81",
         }],
+        rule_outcomes_snapshot=rule_outcomes,
+        rule_outcomes_hash=hash_rule_outcomes_snapshot(rule_outcomes),
+        rule_catalogue_count=1,
     )
 
     class FakeDB:

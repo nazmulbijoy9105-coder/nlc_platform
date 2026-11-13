@@ -32,6 +32,7 @@ from sqlalchemy import select, text, update
 from app.models.company import Company
 from app.models.compliance import ComplianceEvaluationRun, ComplianceFlag, ComplianceScoreHistory
 from app.models.company_fact import CompanyFact
+from app.models.rules import LegalRule
 from app.compliance.fact_provenance import coerce_company_profile_fact_value
 from app.models.enums import (
     ExposureBand,
@@ -746,6 +747,22 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "green": sb.green_flag_count,
             },
         }
+        # Persist the active catalogue and each rule's emitted engine finding.
+        # Rules with no emitted finding remain NOT_EVALUATED, never COMPLIANT.
+        from app.compliance.rule_outcome_ledger import (
+            build_rule_outcomes_snapshot,
+            hash_rule_outcomes_snapshot,
+        )
+
+        catalogue_result = await self.db.execute(
+            select(LegalRule).where(LegalRule.is_active.is_(True)).order_by(LegalRule.rule_id)
+        )
+        active_legal_rules = list(catalogue_result.scalars().all())
+        rule_outcomes_snapshot = jsonable_encoder(
+            build_rule_outcomes_snapshot(active_legal_rules, output.flags)
+        )
+        rule_outcomes_hash = hash_rule_outcomes_snapshot(rule_outcomes_snapshot)
+
         hash_material = json.dumps(
             {
                 "previous_hash": previous_hash or "GENESIS",
@@ -758,6 +775,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "flags_snapshot": flags_snapshot,
                 "fact_provenance_snapshot": fact_provenance_snapshot,
                 "score_breakdown_snapshot": score_breakdown_snapshot,
+                "rule_outcomes_hash": rule_outcomes_hash,
+                "rule_outcomes_snapshot": rule_outcomes_snapshot,
             },
             sort_keys=True,
             separators=(",", ":"),
@@ -784,6 +803,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
             flags_snapshot=flags_snapshot,
             fact_provenance_snapshot=fact_provenance_snapshot,
             score_breakdown_snapshot=score_breakdown_snapshot,
+            rule_outcomes_snapshot=rule_outcomes_snapshot,
+            rule_outcomes_hash=rule_outcomes_hash,
+            rule_catalogue_count=len(active_legal_rules),
         )
         self.db.add(evaluation_run)
 
