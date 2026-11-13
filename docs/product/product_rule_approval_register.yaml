@@ -1,0 +1,608 @@
+# NLC product-owner rule approval register — 13 November 2026
+# Product governance only. This record does not certify statutory accuracy,
+# legal interpretation, applicability, exceptions, remedies or counsel review.
+jurisdiction: BD
+snapshot_date: 2026-11-13
+approval_policy: owner_attested
+attested_by: nazmulbijoy9105-coder
+attested_at: 2026-11-13
+attestation_scope: product_evaluation_and_visibility_only
+legal_effect: NONE
+independent_counsel_verification_required: true
+approved_rule_ids:
+  - ACC-001
+  - ACC-002
+  - ACC-003
+  - AGM-001
+  - AGM-002
+  - AGM-003
+  - AGM-004
+  - AGM-005
+  - AGM-006
+  - AGM-007
+  - AR-001
+  - AR-002
+  - AR-003
+  - AR-004
+  - AUD-001
+  - AUD-002
+  - AUD-003
+  - AUD-004
+  - AUD-005
+  - BNK-001
+  - BNK-002
+  - BNK-003
+  - BOD-001
+  - BOD-002
+  - BOD-003
+  - BSEC-001
+  - BSEC-002
+  - BSEC-003
+  - BSEC-004
+  - CAP-001
+  - CAP-002
+  - CAP-003
+  - CAP-004
+  - CHG-001
+  - DEF-001
+  - DEF-002
+  - DIR-001
+  - DIR-002
+  - DIR-003
+  - DIR-004
+  - DIR-005
+  - DIR-006
+  - DIR-007
+  - DIR-008
+  - DIR-010
+  - ESC-001
+  - ESC-002
+  - ESC-003
+  - ESC-004
+  - ESC-005
+  - FX-001
+  - INC-001
+  - INC-003
+  - INC-004
+  - INC-005
+  - INC-006
+  - INC-007
+  - LBR-001
+  - LBR-002
+  - LBR-003
+  - MEM-001
+  - OFF-001
+  - REG-001
+  - REG-002
+  - REG-003
+  - SH-001
+  - SH-002
+  - SH-003
+  - STR-001
+  - STR-002
+  - STR-003
+  - TAX-001
+  - TAX-002
+  - TAX-003
+  - TAX-004
+  - TL-001
+  - TL-002
+  - TR-001
+  - TR-002
+  - TR-003
+  - TR-004
+  - TR-005
+  - TR-006
+  - VAT-002
+  - VAT-003
+rules:
+  - rule_id: ACC-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: ACC-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: ACC-003
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: AGM-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: AGM-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: AGM-003
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: AGM-004
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: AGM-005
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: AGM-006
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: AGM-007
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: AR-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: false
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: AR-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: AR-003
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: AR-004
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: AUD-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: AUD-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: AUD-003
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: AUD-004
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: AUD-005
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: BNK-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: BNK-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: BNK-003
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: BOD-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: BOD-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: BOD-003
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: BSEC-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: BSEC-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: BSEC-003
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: BSEC-004
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: CAP-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: CAP-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: CAP-003
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: CAP-004
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: CHG-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: DEF-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: DEF-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: DIR-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: DIR-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: DIR-003
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: DIR-004
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: DIR-005
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: DIR-006
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: DIR-007
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: DIR-008
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: DIR-010
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: ESC-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: ESC-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: ESC-003
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: false
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: ESC-004
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: ESC-005
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: FX-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: INC-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: INC-003
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: INC-004
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: INC-005
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: INC-006
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: INC-007
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: LBR-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: LBR-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: LBR-003
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: MEM-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: OFF-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: REG-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: REG-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: REG-003
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: SH-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: SH-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: false
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: SH-003
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: STR-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: STR-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: STR-003
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: TAX-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: TAX-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: TAX-003
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: TAX-004
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: TL-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: TL-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: TR-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: TR-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: TR-003
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: TR-004
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: TR-005
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: TR-006
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: VAT-002
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: VAT-003
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
