@@ -105,7 +105,7 @@ BEGIN
     JOIN pg_namespace n ON n.oid=c.relnamespace
     WHERE n.nspname IN ('public','nlc_private','audit')
       AND c.relkind='S'
-      AND NOT has_sequence_privilege('nlc_migration_user',c.oid,'SELECT')
+      AND NOT has_sequence_privilege('nlc_migration_user',format('%I.%I',n.nspname,c.relname),'SELECT')
   ) THEN
     RAISE EXCEPTION 'FAIL [7]: migration login lacks SELECT on one or more migration sequences';
   END IF;
