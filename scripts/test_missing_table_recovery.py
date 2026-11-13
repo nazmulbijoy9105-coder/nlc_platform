@@ -1,8 +1,9 @@
-"""CI-only destructive rehearsal for migration 0044's missing-table recovery.
+"""CI-only destructive test for the fail-closed 0042 restore-schema guard.
 
-This script must run only against the disposable nlc_test_baseline_0042 database.
-It intentionally drops three reconstructed schema objects, upgrades to head,
-and verifies that 0044 recreates the schema without inventing historical rows.
+This script must run only against the separate disposable
+nlc_test_missing_table_guard database. It drops the three tables created by
+0037/0038, attempts a normal Alembic upgrade, and proves that env.py refuses
+before any migration DDL or schema-only reconstruction occurs.
 """
 from __future__ import annotations
 
@@ -13,130 +14,119 @@ import subprocess
 import asyncpg
 
 
+EXPECTED_DATABASE = "nlc_test_missing_table_guard"
+REQUIRED_TABLES = (
+    "webhook_endpoints",
+    "webhook_deliveries",
+    "rescue_audit_log",
+)
+GUARD_MESSAGE = "Refusing Alembic execution before 0044_webhook_schema_reconcile"
+
+
 async def main() -> None:
     raw_url = os.environ.get("DATABASE_URL", "")
     if not raw_url.startswith("postgresql+asyncpg://"):
         raise SystemExit("Refusing: DATABASE_URL is not the expected CI asyncpg URL")
     database_name = raw_url.rsplit("/", 1)[-1].split("?", 1)[0]
-    if database_name != "nlc_test_baseline_0042":
+    if database_name != EXPECTED_DATABASE:
         raise SystemExit(
-            "Refusing destructive recovery test outside nlc_test_baseline_0042"
+            f"Refusing destructive guard test outside {EXPECTED_DATABASE}"
         )
 
     url = raw_url.replace("postgresql+asyncpg://", "postgresql://", 1)
     conn = await asyncpg.connect(url)
     try:
-        identity = await conn.fetchrow("""
+        identity = await conn.fetchrow(
+            """
             SELECT current_database() AS database_name,
-                   (SELECT version_num FROM alembic_version LIMIT 1) AS revision
-        """)
-        if identity["database_name"] != "nlc_test_baseline_0042":
-            raise SystemExit("Refusing: connected database name is not the CI fixture")
+                   (SELECT version_num FROM public.alembic_version LIMIT 1) AS revision
+            """
+        )
+        if identity["database_name"] != EXPECTED_DATABASE:
+            raise SystemExit("Refusing: connected database is not the CI fixture")
         if identity["revision"] != "0042_dedup_key":
             raise SystemExit(
                 "Refusing: expected fixture revision 0042_dedup_key, "
                 f"found {identity['revision']!r}"
             )
 
-        existing = await conn.fetch("""
+        existing = await conn.fetch(
+            """
             SELECT table_name
-            FROM information_schema.tables
-            WHERE table_schema = 'public'
-              AND table_name = ANY($1::text[])
-        """, ["webhook_endpoints", "webhook_deliveries", "rescue_audit_log"])
-        if {row["table_name"] for row in existing} != {
-            "webhook_endpoints", "webhook_deliveries", "rescue_audit_log"
-        }:
+              FROM information_schema.tables
+             WHERE table_schema = 'public'
+               AND table_name = ANY($1::text[])
+            """,
+            list(REQUIRED_TABLES),
+        )
+        if {row["table_name"] for row in existing} != set(REQUIRED_TABLES):
             raise AssertionError(
-                "The 0042 fixture does not contain all three original tables"
+                "The fresh 0042 fixture must contain all three 0037/0038 tables "
+                "before the test removes them."
             )
 
-        # Drop only the three disposable fixture tables, without CASCADE.
-        await conn.execute("""
+        # This destructive operation is confined to the named disposable CI DB.
+        await conn.execute(
+            """
             DROP TABLE public.webhook_deliveries,
                        public.webhook_endpoints,
                        public.rescue_audit_log
-        """)
+            """
+        )
     finally:
         await conn.close()
 
-    subprocess.run(["alembic", "upgrade", "head"], check=True, env=os.environ.copy())
+    env = os.environ.copy()
+    env["DATABASE_URL"] = raw_url
+    env["ENVIRONMENT"] = "test"
+    env.pop("MIGRATION_DATABASE_URL", None)
+    result = subprocess.run(
+        ["alembic", "upgrade", "head"],
+        check=False,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    output = (result.stdout or "") + "\\n" + (result.stderr or "")
+    if result.returncode == 0:
+        raise AssertionError(
+            "Alembic unexpectedly advanced despite missing pre-0042 evidence tables."
+        )
+    if GUARD_MESSAGE not in output:
+        raise AssertionError(
+            "Alembic failed for an unexpected reason instead of the schema guard:\\n"
+            + output[-8000:]
+        )
 
     conn = await asyncpg.connect(url)
     try:
-        rows = await conn.fetch("""
-            SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity,
-                   obj_description(c.oid, 'pg_class') AS table_comment
-            FROM pg_class c
-            JOIN pg_namespace n ON n.oid = c.relnamespace
-            WHERE n.nspname = 'public'
-              AND c.relname = ANY($1::text[])
-            ORDER BY c.relname
-        """, ["webhook_endpoints", "webhook_deliveries", "rescue_audit_log"])
-        if len(rows) != 3:
-            raise AssertionError(f"Expected all 3 recovery tables, found {len(rows)}")
-        for row in rows:
-            if not row["relrowsecurity"] or not row["relforcerowsecurity"]:
-                raise AssertionError(f"{row['relname']} is not ENABLE + FORCE RLS")
-            if "SCHEMA-ONLY RECONSTRUCTION" not in (row["table_comment"] or ""):
-                raise AssertionError(
-                    f"{row['relname']} is missing the schema-only recovery disclosure"
-                )
-
-        for table in ("webhook_endpoints", "webhook_deliveries", "rescue_audit_log"):
-            count = await conn.fetchval(f'SELECT count(*) FROM public."{table}"')
-            if count != 0:
-                raise AssertionError(
-                    f"{table} unexpectedly contains rows after schema-only reconstruction"
-                )
-
-        foreign_keys = await conn.fetch("""
-            SELECT conname, confdeltype, pg_get_constraintdef(oid) AS definition,
-                   conrelid::regclass::text AS source_table,
-                   confrelid::regclass::text AS target_table
-            FROM pg_constraint
-            WHERE conrelid = 'public.rescue_audit_log'::regclass
-              AND contype = 'f'
-            ORDER BY conname
-        """)
-        plan_fk = [
-            row for row in foreign_keys
-            if row["target_table"] == "rescue_plans"
-        ]
-        if len(plan_fk) != 1 or bytes(plan_fk[0]["confdeltype"]).decode() != "r":
+        revision = await conn.fetchval(
+            "SELECT version_num FROM public.alembic_version LIMIT 1"
+        )
+        if revision != "0042_dedup_key":
             raise AssertionError(
-                "rescue_audit_log -> rescue_plans must have exactly one "
-                "ON DELETE RESTRICT FK; observed: "
-                f"{[dict(row) for row in foreign_keys]!r}"
+                f"Schema guard changed Alembic revision unexpectedly: {revision!r}"
             )
-
-        expected_indexes = {
-            "idx_webhook_endpoints_user",
-            "idx_webhook_endpoints_active",
-            "idx_webhook_deliveries_endpoint",
-            "idx_webhook_deliveries_pending",
-            "idx_webhook_deliveries_retry",
-            "ix_rescue_audit_log_plan_id",
-            "ix_rescue_audit_log_actor_id",
-            "ix_rescue_audit_log_finding_id",
-            "ix_rescue_audit_log_created_at",
-        }
-        actual_indexes = await conn.fetch("""
-            SELECT indexname
-            FROM pg_indexes
-            WHERE schemaname = 'public'
-              AND tablename = ANY($1::text[])
-        """, ["webhook_endpoints", "webhook_deliveries", "rescue_audit_log"])
-        actual = {row["indexname"] for row in actual_indexes}
-        missing = sorted(expected_indexes - actual)
-        if missing:
-            raise AssertionError(f"Missing recovery indexes: {missing}")
+        remaining = await conn.fetch(
+            """
+            SELECT table_name
+              FROM information_schema.tables
+             WHERE table_schema = 'public'
+               AND table_name = ANY($1::text[])
+            """,
+            list(REQUIRED_TABLES),
+        )
+        if remaining:
+            raise AssertionError(
+                "Schema guard unexpectedly recreated tables: "
+                f"{[row['table_name'] for row in remaining]!r}"
+            )
     finally:
         await conn.close()
 
     print(
-        "PASS: 0044 reconstructed all 3 missing schemas, preserved empty-history "
-        "disclosure, enabled+forced RLS, restored indexes and RESTRICT FK."
+        "PASS: missing 0037/0038 tables block Alembic before 0044; "
+        "revision remains 0042 and no schema-only tables are recreated."
     )
 
 
