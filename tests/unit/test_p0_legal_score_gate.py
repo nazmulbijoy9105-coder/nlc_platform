@@ -133,10 +133,10 @@ def test_product_scoring_can_run_with_empty_counsel_allowlist(monkeypatch):
     )
     assert engine_module.legal_score_is_released() is True
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
-    assert result.final_score == 100
-    assert result.override_applied is False
-    assert result.risk_band == Severity.NOT_EVALUATED
+    # Product scoring is released independently of counsel verification;
+    # the confirmed RED finding applies its ordinary category deduction.
     assert result.final_score == 75
+    assert result.override_applied is False
     assert result.risk_band == Severity.RED
 
 
@@ -144,6 +144,9 @@ def test_verified_director_minimum_violation_emits_one_candidate_black_override(
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
+    # This test exercises candidate generation only: explicit product-owner
+    # override authority is intentionally absent.
+    monkeypatch.setattr(engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
     profile = build_profile(
         company_type="PRIVATE_LIMITED",
         current_director_count=1,
@@ -177,12 +180,11 @@ def test_product_owner_black_override_does_not_require_counsel_allowlist(monkeyp
     assert engine_module.legal_score_is_released() is True
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert engine_module.AUTHORIZED_BLACK_OVERRIDE_RULE_IDS == frozenset({"INC-003"})
-    assert result.override_applied is False
-    assert result.black_flag_count == 0
-    assert result.final_score == 100
-    assert result.risk_band == Severity.NOT_EVALUATED
+    # The product owner has explicitly authorised this override. Counsel
+    # status remains empty and is not consulted for this separate control.
     assert result.override_applied is True
     assert result.black_flag_count == 1
+    assert result.final_score == 0
     assert result.risk_band == Severity.BLACK
 
 
