@@ -6,7 +6,7 @@ This workflow creates a PostgreSQL custom-format dump from the direct Neon produ
 
 In GitHub: **Settings → Secrets and variables → Actions → New repository secret**.
 
-1. `NLC_BACKUP_DATABASE_URL`: a direct Neon PostgreSQL connection URL, not a pooler URL, with `sslmode=require`. Use a least-privilege backup login with sufficient read access to dump all required schemas and data. Do not paste this value into chat or commit it.
+1. `NLC_BACKUP_DATABASE_URL`: a direct Neon PostgreSQL connection URL, not a pooler URL, with `sslmode=require`. Use a dedicated backup login with only the required schema USAGE and table/sequence SELECT grants, plus BYPASSRLS so pg_dump can read every tenant's RLS-protected rows. Do not grant INSERT/UPDATE/DELETE/DDL or ownership. BYPASSRLS is still highly sensitive because it can read all tenant data; restrict the credential to this workflow and rotate it if exposed. Do not use the runtime role or the currently misconfigured migration login. Do not paste this value into chat or commit it.
 2. `NLC_BACKUP_ENCRYPTION_PASSPHRASE`: a randomly generated passphrase of at least 24 characters. Store a separate copy offline (password manager or encrypted offline record). GitHub cannot recover it for you. Without it, the downloaded archive is unusable.
 
 Do not use the runtime application's overly privileged credentials if a dedicated read-only backup login can be provisioned.
