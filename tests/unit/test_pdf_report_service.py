@@ -129,7 +129,14 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
         "verified_at": None,
         "outcome_state": "NON_COMPLIANT",
         "assessment_source": "ENGINE_FINDING",
-        "findings": [],
+        "findings": [{
+            "flag_code": "AGM-001",
+            "outcome_state": "NON_COMPLIANT",
+            "evaluation_state": "VERIFIED_ABSENT",
+            "severity": "RED",
+            "description": "AGM missing",
+            "statutory_basis": "Companies Act 1994 s.81",
+        }],
     }]
     snapshot = SimpleNamespace(
         company_id=COMPANY.id,
@@ -540,7 +547,14 @@ def test_endpoint_withholds_pdf_when_evaluation_score_hash_is_tampered(monkeypat
         "verified_at": None,
         "outcome_state": "NON_COMPLIANT",
         "assessment_source": "ENGINE_FINDING",
-        "findings": [],
+        "findings": [{
+            "flag_code": "AGM-001",
+            "outcome_state": "NON_COMPLIANT",
+            "evaluation_state": "VERIFIED_ABSENT",
+            "severity": "RED",
+            "description": "AGM missing",
+            "statutory_basis": "Companies Act 1994 s.81",
+        }],
     }]
     snapshot = SimpleNamespace(
         company_id=COMPANY.id,
