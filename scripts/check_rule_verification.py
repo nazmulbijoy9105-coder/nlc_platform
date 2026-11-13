@@ -115,8 +115,8 @@ def main() -> int:
     if product_row_ids != seed or approved_ids != seed:
         print(f"FAIL: product approval inventory mismatch; rows_missing={sorted(seed-product_row_ids)} rows_extra={sorted(product_row_ids-seed)} approved_missing={sorted(seed-approved_ids)}")
         return 1
-    if product_approved_count != len(seed) or active_count != len(seed) or eligible_count != len(seed-{"AR-001","SH-002","ESC-003"}) or ineligible_count != 3:
-        print(f"FAIL: expected 85 product-approved/active, 82 score-eligible and 3 active non-deduction rules; got {product_approved_count}, {active_count}, {eligible_count}, {ineligible_count}")
+    if product_approved_count != len(seed) or active_count != len(seed) or eligible_count != len(seed) or ineligible_count != 0:
+        print(f"FAIL: expected 85 product-approved/active/score-eligible rules and no inactive catalogue rules; got {product_approved_count}, {active_count}, {eligible_count}, {ineligible_count}")
         return 1
 
     legal_approval = legal_path.read_text(encoding="utf-8")
@@ -258,11 +258,11 @@ def main() -> int:
                 and isinstance(node.target, ast.Name)
                 and node.target.id == "SCORE_DEDUCTION_RULE_IDS"):
             deduction_ids = set(ast.literal_eval(node.value.args[0]))
-    non_deduction_ids = {"AR-001", "SH-002", "ESC-003"}
+    non_deduction_ids: set[str] = set()
     if product_ids != seed:
         print(f"FAIL: product-active rule allowlist mismatch; count={len(product_ids)} missing={sorted(seed-product_ids)} extra={sorted(product_ids-seed)}")
         return 1
-    if deduction_ids != seed - non_deduction_ids:
+    if deduction_ids != seed:
         print(f"FAIL: score-deduction allowlist mismatch; count={len(deduction_ids)}")
         return 1
 
