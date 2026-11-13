@@ -13,6 +13,7 @@ def build_rule_outcomes_snapshot(
     active_legal_rules: Iterable[Any],
     flags: Iterable[Any],
 ) -> list[dict[str, Any]]:
+    rules = list(active_legal_rules)
     findings_by_rule: dict[str, list[dict[str, Any]]] = {}
     for flag in flags:
         state = getattr(flag, "state", None)
@@ -31,7 +32,7 @@ def build_rule_outcomes_snapshot(
         })
 
     snapshot: list[dict[str, Any]] = []
-    for rule in active_legal_rules:
+    for rule in rules:
         findings = findings_by_rule.get(rule.rule_id, [])
         states = {item["outcome_state"] for item in findings}
         state = (
@@ -54,7 +55,7 @@ def build_rule_outcomes_snapshot(
             ),
             "findings": findings,
         })
-    catalogue_ids = {rule.rule_id for rule in active_legal_rules}
+    catalogue_ids = {rule.rule_id for rule in rules}
     for orphan_rule_id in sorted(set(findings_by_rule) - catalogue_ids):
         findings = findings_by_rule[orphan_rule_id]
         states = {item["outcome_state"] for item in findings}
