@@ -51,6 +51,8 @@ def _database_url(secret_name: str) -> str:
 
 def _connect_args(raw_url: str) -> tuple[str, dict[str, Any]]:
     url, args = prepare_asyncpg_connection(raw_url, require_tls=True)
+    if url.startswith("postgresql+asyncpg://"):
+        url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
     return url, args
 
 
