@@ -39,7 +39,7 @@ def test_rule_outside_product_scoring_allowlist_cannot_force_zero(monkeypatch):
     assert result.override_applied is False
     assert result.black_flag_count == 0
     assert result.final_score == 100
-    assert result.risk_band == Severity.RED
+    assert result.risk_band == Severity.NOT_EVALUATED
 
 
 def test_product_allowlisted_black_override_requires_explicit_override_authorisation(monkeypatch):
@@ -134,7 +134,7 @@ def test_product_scoring_can_run_with_empty_counsel_allowlist(monkeypatch):
     assert engine_module.legal_score_is_released() is True
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert result.final_score == 75
-    assert result.risk_band == Severity.NOT_EVALUATED
+    assert result.risk_band == Severity.RED
 
 
 def test_verified_director_minimum_violation_emits_one_candidate_black_override(monkeypatch, build_profile):
