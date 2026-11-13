@@ -4,7 +4,7 @@
 
 This is a source-code and operational-readiness change only. It does not connect to production with a write-capable identity and does not execute role DDL, grants, ownership transfers, migrations, data changes, restores, or deployments.
 
-Production remains at `0111_rule_outcome_ledger`. PR #309 proposes `0112_runtime_acl_and_alembic_rls`; it is not merged or applied. The restored Neon branch remains at `0042_dedup_key`. Do not run the migration chain against that branch until the historical-table discrepancy below has been reconciled.
+PR #309 has merged into `main`, so `0112_runtime_acl_and_alembic_rls` is now in source control. Production remains at `0111_rule_outcome_ledger`; `0112` has not been applied. The restored Neon branch remains at `0042_dedup_key`. Do not run the migration chain against that branch until the historical-table discrepancy below has been reconciled.
 
 ## 1. Migration login and object-owner separation
 
@@ -126,9 +126,9 @@ The six production evidence tables checked by the audit remain empty. The 129 ev
 
 ## 4. Release gates
 
-- [ ] PR #309 CI is fully green, including unit, integration, fresh migration and Docker runtime jobs.
+- [ ] Confirm the final PR #309 head's CI is green, including unit, integration, fresh migration and Docker runtime jobs.
 - [ ] Runtime ACL integration tests prove effective privileges (including inherited/PUBLIC grants) for all five views and all public tables, not only source-text assertions.
-- [ ] The migration owner role and complete object ownership are provisioned and verified on an isolated branch.
+- [ ] The migration owner role and complete object ownership are provisioned and verified on an isolated branch. PR #309's migration remains unapplied until this gate passes.
 - [ ] Render's actual API and migration connection identities are independently confirmed without exposing credentials.
 - [ ] The three missing pre-0042 tables are reconciled from verified evidence or covered by a formally approved evidence-loss/schema-only reconstruction decision.
 - [ ] The actual restored snapshot rehearsal passes on a disposable copy; a fresh CI database migration is not a substitute.
