@@ -3337,7 +3337,8 @@ class NLCRuleEngine:
 
         coverage = _input_coverage(company)
         # A 100-point arithmetic placeholder is not a compliance certification.
-        # Keep the band NOT_EVALUATED when product input coverage is insufficient.
+        # Derive the numeric-score band from profile coverage. Confirmed adverse
+        # product-allowlisted findings may still elevate the final risk band below.
         score_band = (
             Severity(self._score_to_band(final, force_black=bool(critical), coverage=coverage))
             if legal_score_is_released() else Severity.NOT_EVALUATED
