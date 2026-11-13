@@ -1,5 +1,7 @@
 # NLC production read-only audit — 13 November 2026
 
+> The initial snapshot below was captured before PR #309 merged and its deploy hook ran. The follow-up addendum at the end records the later production state and supersedes the initial revision/ACL state where they differ.
+
 ## Scope and limits
 
 This report records read-only observations from the Neon connector and GitHub source/CI. No production SQL, DDL, role, grant, data, migration, or deployment changes were made.
@@ -8,13 +10,13 @@ The inspected Neon production target is project `rapid-bonus-26545234`, branch `
 
 ## Migration state
 
-- Production `public.alembic_version`: `0111_rule_outcome_ledger`.
-- Current repository migration DAG: one head, `0111_rule_outcome_ledger`, 113 revisions. The source DAG audit passed in CI run [43396002928](https://github.com/nazmulbijoy9105-coder/nlc_platform/actions/runs/43396002928).
+- Initial production `public.alembic_version` snapshot: `0111_rule_outcome_ledger` (before the later deploy-hook migration recorded in the addendum).
+- Initial repository migration DAG snapshot: one head, `0111_rule_outcome_ledger`, 113 revisions. The source DAG audit passed in CI run [43396002928](https://github.com/nazmulbijoy9105-coder/nlc_platform/actions/runs/43396002928). PR #309 subsequently added `0112`, merged and deployed as recorded below.
 - The restored branch `br-little-cake-aovrrz0y`, named `nlc-legal-remediation-rehearsal-20261107`, was restored from snapshot `snap-purple-paper-ao2orhfe`. Its source snapshot timestamp is 2026-11-07 07:47:17 UTC. It remains at `0042_dedup_key`.
 - Read-only row counts on that restored branch are: 23 companies, 13 users, 12 company-access rows, 434 compliance flags, 51 score-history rows and 75 legal-rule rows. A follow-up catalog check found seven absent objects; their expected-at-0042 status is classified in the addendum below. Only the webhook and rescue-audit tables introduced by 0037/0038 should already exist at this revision.
 - Current production has 23 companies, 13 users, 12 company-access rows, 549 compliance flags, 74 score-history rows, 129 evaluation runs and 86 legal-rule rows (85 active; zero rows have `verification_status='VERIFIED'`). The 7 November snapshot is therefore not a current production backup: it predates the 129-run ledger and has lower flag/history/rule row counts. Migration can create the missing schemas; it cannot recreate those later records.
 - CI has separately passed a **fresh disposable database** migration from `0042_dedup_key` through the then-current head (run [43396332744](https://github.com/nazmulbijoy9105-coder/nlc_platform/actions/runs/43396332744)). That earlier run exercised migration 0044's schema-only reconstruction behavior. PR #310 replaces that test with a fail-closed guard test: missing 0037/0038 tables must stop before 0044; the fresh baseline database remains intact for the full upgrade. The CI run is not a restore rehearsal of the actual Neon snapshot branch.
-- The actual restored branch has not yet been migrated. The required restore rehearsal remains blocked until the pre-0042 webhook/rescue schema discrepancy is reconciled. Once authorized and provisioned, rehearse through the then-current head (PR #309 proposes `0112_runtime_acl_and_alembic_rls`) and verify schema, data preservation, indexes, constraints, RLS, and application compatibility. Do not run the chain merely to allow 0044 to create empty replacements.
+- The actual restored branch has not yet been migrated. The required restore rehearsal remains blocked until the pre-0042 webhook/rescue schema discrepancy is reconciled. Once authorized and provisioned, rehearse through the current head `0112_runtime_acl_and_alembic_rls` and verify schema, data preservation, indexes, constraints, RLS, and application compatibility. Do not run the chain merely to allow 0044 to create empty replacements.
 
 ## Runtime role and RLS observations
 
