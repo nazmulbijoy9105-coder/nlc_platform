@@ -16,6 +16,16 @@ depends_on = None
 def upgrade() -> None:
     op.add_column(
         "annual_returns",
+        sa.Column("filing_status_submitted_by", postgresql.UUID(as_uuid=True), nullable=True),
+    )
+    op.create_foreign_key(
+        "fk_annual_returns_filing_status_submitted_by_users",
+        "annual_returns", "users",
+        ["filing_status_submitted_by"], ["id"],
+        ondelete="SET NULL",
+    )
+    op.add_column(
+        "annual_returns",
         sa.Column(
             "filing_status_verified",
             sa.Boolean(),
@@ -43,6 +53,12 @@ def upgrade() -> None:
             nullable=True,
         ),
     )
+    op.create_foreign_key(
+        "fk_annual_returns_filing_status_verified_by_users",
+        "annual_returns", "users",
+        ["filing_status_verified_by"], ["id"],
+        ondelete="RESTRICT",
+    )
     op.create_check_constraint(
         "ck_annual_returns_filing_status_provenance",
         "annual_returns",
@@ -56,6 +72,16 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_constraint(
+        "fk_annual_returns_filing_status_verified_by_users",
+        "annual_returns",
+        type_="foreignkey",
+    )
+    op.drop_constraint(
+        "fk_annual_returns_filing_status_submitted_by_users",
+        "annual_returns",
+        type_="foreignkey",
+    )
+    op.drop_constraint(
         "ck_annual_returns_filing_status_provenance",
         "annual_returns",
         type_="check",
@@ -64,3 +90,4 @@ def downgrade() -> None:
     op.drop_column("annual_returns", "filing_status_verified_at")
     op.drop_column("annual_returns", "filing_status_evidence_ref")
     op.drop_column("annual_returns", "filing_status_verified")
+    op.drop_column("annual_returns", "filing_status_submitted_by")
