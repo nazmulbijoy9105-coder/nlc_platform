@@ -94,8 +94,22 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
             }
             if any(item.get("assessment_source") not in allowed_sources for item in outcomes):
                 problems.append("RULE_OUTCOME_SOURCE_UNRECOGNIZED")
-            if any(not isinstance(item.get("findings"), list) for item in outcomes):
+            if any(
+                not isinstance(item.get("findings"), list)
+                or any(not isinstance(finding, dict) for finding in item.get("findings", []))
+                for item in outcomes
+            ):
                 problems.append("RULE_OUTCOME_FINDINGS_MALFORMED")
+            else:
+                for item in outcomes:
+                    source = item.get("assessment_source")
+                    findings = item["findings"]
+                    if source == "NO_FINDING_EMITTED_NOT_PROOF_OF_COMPLIANCE" and findings:
+                        problems.append("RULE_OUTCOME_SOURCE_FINDINGS_CONTRADICTION")
+                        break
+                    if source in {"ENGINE_FINDING", _UNMAPPED_SOURCE} and not findings:
+                        problems.append("RULE_OUTCOME_SOURCE_FINDINGS_CONTRADICTION")
+                        break
 
     outcomes_hash_valid = isinstance(outcomes_hash, str) and bool(
         _SHA256_RE.fullmatch(outcomes_hash)
