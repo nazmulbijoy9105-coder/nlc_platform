@@ -16,6 +16,7 @@ def test_runtime_acl_migration_preserves_only_required_delete_workflows():
     assert 'REVOKE DELETE ON TABLES FROM nlc_app_role' in source
     assert 'GRANT DELETE ON TABLE public.webhook_endpoints TO nlc_app_role' in source
     assert 'GRANT DELETE ON TABLE public.user_activity_logs TO nlc_app_role' not in source
+    assert 'ALTER TABLE public.alembic_version ENABLE ROW LEVEL SECURITY' in source
     assert 'ALTER TABLE public.alembic_version FORCE ROW LEVEL SECURITY' in source
 
     for view in (
