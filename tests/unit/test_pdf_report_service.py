@@ -87,6 +87,13 @@ def _patch_services(monkeypatch, company=COMPANY, flags=FLAGS):
 
     monkeypatch.setattr(report_module, "CompanyService", FakeCompanyService)
 
+    async def no_previous_chain_problem(db, run):
+        return None
+
+    monkeypatch.setattr(
+        report_module, "evaluation_run_chain_problem", no_previous_chain_problem
+    )
+
 
 # --------------------------------------------------------------------------- endpoint
 
@@ -170,13 +177,8 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
     )
 
     class FakeDB:
-        def __init__(self):
-            self.calls = 0
-
         async def execute(self, statement):
-            sql = str(statement).lower()
-            value = None if "compliance_evaluation_runs.score_hash" in sql else snapshot
-            return SimpleNamespace(scalar_one_or_none=lambda: value)
+            return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
 
     response = asyncio.run(
         PDFReportService(db=FakeDB()).generate_company_compliance_pdf(str(uuid4()))
@@ -429,13 +431,8 @@ def test_endpoint_rejects_score_snapshot_mismatch(monkeypatch):
     )
 
     class FakeDB:
-        def __init__(self):
-            self.calls = 0
-
         async def execute(self, statement):
-            sql = str(statement).lower()
-            value = None if "compliance_evaluation_runs.score_hash" in sql else snapshot
-            return SimpleNamespace(scalar_one_or_none=lambda: value)
+            return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
 
     with pytest.raises(HTTPException) as exc:
         asyncio.run(PDFReportService(db=FakeDB()).generate_company_compliance_pdf("00000000-0000-4000-8000-000000000001"))
@@ -577,13 +574,8 @@ def test_endpoint_withholds_pdf_when_evaluation_score_hash_is_tampered(monkeypat
     )
 
     class FakeDB:
-        def __init__(self):
-            self.calls = 0
-
         async def execute(self, statement):
-            sql = str(statement).lower()
-            value = None if "compliance_evaluation_runs.score_hash" in sql else snapshot
-            return SimpleNamespace(scalar_one_or_none=lambda: value)
+            return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
 
     with pytest.raises(HTTPException) as exc:
         asyncio.run(
