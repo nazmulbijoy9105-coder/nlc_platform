@@ -389,8 +389,11 @@ async def _app_role_spoof_audit(raw_url: str) -> dict[str, Any]:
             raise RuntimeError("App-role connection points to a different Neon branch.")
         if identity["database_name"] != EXPECTED_DATABASE:
             raise RuntimeError("App-role connection points to a different database.")
-        if identity["current_user"] != "nlc_app_role":
-            raise RuntimeError("RLS spoof test must connect as nlc_app_role.")
+        if (
+            identity["current_user"] != "nlc_app_role"
+            or identity["session_user"] != "nlc_app_role"
+        ):
+            raise RuntimeError("RLS spoof test must connect directly as nlc_app_role.")
 
         async with conn.transaction():
             await conn.execute(
@@ -472,9 +475,12 @@ async def main() -> int:
                 raise RuntimeError("Refusing: Neon branch ID is not the isolated restored branch.")
             if before_identity["database_name"] != EXPECTED_DATABASE:
                 raise RuntimeError("Refusing: connected database name is not neondb.")
-            if before_identity["current_user"] != "neondb_owner":
+            if (
+                before_identity["current_user"] != "neondb_owner"
+                or before_identity["session_user"] != "neondb_owner"
+            ):
                 raise RuntimeError(
-                    "Refusing: migration connection must use the Neon branch owner role."
+                    "Refusing: migration connection must log in directly as the Neon branch owner."
                 )
             if before_identity["alembic_versions"] != [EXPECTED_START_REVISION]:
                 raise RuntimeError(
