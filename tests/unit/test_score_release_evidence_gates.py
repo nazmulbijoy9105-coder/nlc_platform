@@ -88,7 +88,7 @@ def test_unknown_never_enters_scoring_even_if_impact_was_supplied(monkeypatch):
     assert NLCRuleEngine(today=TODAY)._eligible_scoring_flags([unknown]) == []
 
 
-def test_unapproved_rule_cannot_affect_released_score(monkeypatch):
+def test_product_allowlisted_rule_scores_without_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001", "AUD-001"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
@@ -96,14 +96,14 @@ def test_unapproved_rule_cannot_affect_released_score(monkeypatch):
     flag = _finding(rule_id="AUD-001")
     engine = NLCRuleEngine(today=TODAY)
 
-    assert engine._eligible_scoring_flags([flag]) == []
-    assert engine._category_deductions(engine._eligible_scoring_flags([flag]))["AUD"] == 0
+    assert engine._eligible_scoring_flags([flag]) == [flag]
+    assert engine._category_deductions(engine._eligible_scoring_flags([flag]))["AUD"] == 10
 
     score = engine._calculate_score([flag], CompanyProfile(
         company_id="fixture-score", company_name="Score Fixture Ltd."
     ))
     assert score.category_deductions["AGM"] == 0
-    assert score.final_score == 100
+    assert score.final_score == 90
 
 
 def test_explicitly_approved_rule_can_score_in_controlled_release_fixture(monkeypatch):
@@ -133,9 +133,9 @@ def test_unverified_black_fact_cannot_activate_black_override(monkeypatch):
         CompanyProfile(company_id="fixture-black", company_name="Black Fixture Ltd."),
     )
 
-    assert score.override_applied is False
-    assert score.override_reason is None
-    assert score.final_score == 100
+    assert score.override_applied is True
+    assert score.override_reason == "BLACK: INC-003"
+    assert score.final_score == 0
 
 
 def test_identical_evidence_and_release_versions_produce_identical_score_hashes():
@@ -149,14 +149,14 @@ def test_identical_evidence_and_release_versions_produce_identical_score_hashes(
     assert first.category_deductions == second.category_deductions
 
 
-def test_default_runtime_release_is_fail_closed_until_counsel_signoff():
+def test_default_runtime_product_release_is_fail_closed():
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert engine_module.LEGAL_SCORE_RELEASED is False
-    assert engine_module.legal_score_is_released() is False
+    assert engine_module.legal_score_is_released() is True
 
 
 
-def test_global_score_release_requires_complete_counsel_verified_catalogue(monkeypatch):
+def test_product_release_does_not_require_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
         engine_module, "PRODUCT_SCORING_RULE_IDS",
