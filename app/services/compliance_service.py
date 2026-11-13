@@ -1064,21 +1064,36 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
 
     async def get_dashboard_kpis(self, user_id=None) -> dict:
-        """Return legal risk KPIs only after release; otherwise return evidence-review metrics.
+        """Return KPIs for the same authorised company scope as the company list.
 
-        The unreleased path deliberately does not read or aggregate current_risk_band.
-        Evaluation-state counts are operational review signals, not legal findings.
+        Legal staff may have access through either an explicit staff assignment
+        or an active company_user_access membership. Keep this scope identical
+        in evidence-review and released-risk modes.
         """
         from app.rule_engine.engine import legal_score_is_released
 
-        if not legal_score_is_released():
-            scope = " AND assigned_staff_id = CAST(:uid AS uuid)" if user_id else ""
-            params = {"uid": str(user_id)} if user_id else {}
+        scope = ""
+        params = {}
+        if user_id:
+            scope = """
+                AND (
+                    c.assigned_staff_id = CAST(:uid AS uuid)
+                    OR EXISTS (
+                        SELECT 1
+                        FROM company_user_access AS cua
+                        WHERE cua.company_id = c.id
+                          AND cua.user_id = CAST(:uid AS uuid)
+                          AND cua.is_active IS TRUE
+                    )
+                )
+            """
+            params = {"uid": str(user_id)}
 
+        if not legal_score_is_released():
             total_result = await self.db.execute(
                 text(
-                    "SELECT COUNT(*) FROM companies "
-                    "WHERE is_active = true" + scope
+                    "SELECT COUNT(*) FROM companies AS c "
+                    "WHERE c.is_active IS TRUE" + scope
                 ),
                 params,
             )
@@ -1094,9 +1109,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     JOIN compliance_flags AS cf
                       ON cf.company_id = c.id
                      AND cf.flag_status = 'ACTIVE'
-                    WHERE c.is_active = true
+                    WHERE c.is_active IS TRUE
                     """
-                    + (" AND c.assigned_staff_id = CAST(:uid AS uuid)" if user_id else "")
+                    + scope
                     + """
                     GROUP BY cf.evaluation_state
                     ORDER BY cf.evaluation_state
@@ -1118,9 +1133,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     JOIN compliance_flags AS cf
                       ON cf.company_id = c.id
                      AND cf.flag_status = 'ACTIVE'
-                    WHERE c.is_active = true
+                    WHERE c.is_active IS TRUE
                     """
-                    + (" AND c.assigned_staff_id = CAST(:uid AS uuid)" if user_id else "")
+                    + scope
                 ),
                 params,
             )
@@ -1141,36 +1156,24 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "upcoming_deadlines": None,
             }
 
-        # Released statutory risk aggregates are available only on the approved path.
-        if user_id:
-            query = text("""
-                SELECT
-                    COUNT(*) as total_companies,
-                    COUNT(*) FILTER (WHERE current_risk_band = 'GREEN') as green_count,
-                    COUNT(*) FILTER (WHERE current_risk_band = 'YELLOW') as yellow_count,
-                    COUNT(*) FILTER (WHERE current_risk_band IN ('RED', 'BLACK')) as red_black_count,
-                    COUNT(*) FILTER (WHERE current_risk_band = 'NOT_EVALUATED') as not_evaluated_count,
-                    0 as upcoming_deadlines
-                FROM companies
-                WHERE assigned_staff_id = :uid AND is_active = true
-            """)
-            result = await self.db.execute(query, {"uid": str(user_id)})
-        else:
-            query = text("""
-                SELECT
-                    COUNT(*) as total_companies,
-                    COUNT(*) FILTER (WHERE current_risk_band = 'GREEN') as green_count,
-                    COUNT(*) FILTER (WHERE current_risk_band = 'YELLOW') as yellow_count,
-                    COUNT(*) FILTER (WHERE current_risk_band IN ('RED', 'BLACK')) as red_black_count,
-                    COUNT(*) FILTER (
-                        WHERE current_risk_band = 'NOT_EVALUATED'
-                           OR current_risk_band IS NULL
-                    ) as not_evaluated_count,
-                    0 as upcoming_deadlines
-                FROM companies
-                WHERE is_active = true
-            """)
-            result = await self.db.execute(query)
+        query = text(
+            """
+            SELECT
+                COUNT(*) AS total_companies,
+                COUNT(*) FILTER (WHERE c.current_risk_band = 'GREEN') AS green_count,
+                COUNT(*) FILTER (WHERE c.current_risk_band = 'YELLOW') AS yellow_count,
+                COUNT(*) FILTER (WHERE c.current_risk_band IN ('RED', 'BLACK')) AS red_black_count,
+                COUNT(*) FILTER (
+                    WHERE c.current_risk_band = 'NOT_EVALUATED'
+                       OR c.current_risk_band IS NULL
+                ) AS not_evaluated_count,
+                0 AS upcoming_deadlines
+            FROM companies AS c
+            WHERE c.is_active IS TRUE
+            """
+            + scope
+        )
+        result = await self.db.execute(query, params)
         row = result.mappings().one_or_none()
         result_dict = dict(row) if row else {}
         result_dict.update({
