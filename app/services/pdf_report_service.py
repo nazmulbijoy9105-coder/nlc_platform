@@ -17,7 +17,10 @@ from fastapi import HTTPException, Response
 from sqlalchemy import select
 
 from app.models.compliance import ComplianceEvaluationRun
-from app.compliance.evaluation_integrity import evaluation_run_integrity_problems
+from app.compliance.evaluation_integrity import (
+    evaluation_run_chain_problem,
+    evaluation_run_integrity_problems,
+)
 
 # Import CATEGORY_CAPS for score reconciliation (cap adjustment display)
 from app.rule_engine.engine import (
@@ -853,6 +856,9 @@ class PDFReportService:
                 detail="PDF withheld: the authoritative run has no complete statutory rule outcome ledger.",
             )
         integrity_problems = evaluation_run_integrity_problems(snapshot)
+        chain_problem = await evaluation_run_chain_problem(self.db, snapshot)
+        if chain_problem:
+            integrity_problems.append(chain_problem)
         if integrity_problems:
             raise HTTPException(
                 status_code=409,
