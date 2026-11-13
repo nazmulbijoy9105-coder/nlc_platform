@@ -302,6 +302,15 @@ class Audit(FullMixin, Base):
 # ═══════════════════════════════════════════════════════════════════
 class AnnualReturn(FullMixin, Base):
     __tablename__ = "annual_returns"
+    __table_args__ = (
+        CheckConstraint(
+            "NOT filing_status_verified OR (filing_status_evidence_ref IS NOT NULL "
+            "AND btrim(filing_status_evidence_ref) <> '' "
+            "AND filing_status_verified_at IS NOT NULL "
+            "AND filing_status_verified_by IS NOT NULL)",
+            name="ck_annual_returns_filing_status_provenance",
+        ),
+    )
 
     company_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -323,6 +332,11 @@ class AnnualReturn(FullMixin, Base):
     filed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     delay_days: Mapped[int] = mapped_column(Integer, default=0)
     rjsc_receipt_number: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # AR-001: a missing filing record is not proof of statutory non-filing.
+    filing_status_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    filing_status_evidence_ref: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    filing_status_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    filing_status_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
 
     # ── Completeness ──────────────────────────────────────────────
     # AR-004: filed but incomplete
