@@ -28,3 +28,10 @@ def test_legacy_runbook_warns_against_production_application():
     source = README.read_text(encoding="utf-8")
     assert "Do not apply its Steps 1-5 to production" in source
     assert "pinned isolated restore branch" in source
+
+def test_migration_login_has_no_direct_dml_grants():
+    source = SCRIPT.read_text(encoding="utf-8")
+    assert "REVOKE ALL PRIVILEGES ON ALL TABLES" in source
+    assert "REVOKE ALL PRIVILEGES ON ALL SEQUENCES" in source
+    assert "GRANT SELECT ON ALL TABLES" in source
+    assert "GRANT SELECT ON ALL SEQUENCES" in source
