@@ -173,3 +173,32 @@ async def test_aggregate_rejects_run_with_catalogue_id_set_mismatch():
     assert result["validated_rule_company_rows"] == 0
     assert result["portfolio_reconciles"] is False
     assert "ACTIVE_CATALOGUE_ID_SET_MISMATCH" in result["results"][0]["problems"]
+
+@pytest.mark.asyncio
+async def test_aggregate_rejects_run_with_a_broken_previous_hash_link():
+    runs, companies, rule_ids = _portfolio_fixture(company_count=1)
+    runs[0].previous_hash = "f" * 64
+    runs[0].score_hash = calculate_evaluation_score_hash(
+        previous_hash=runs[0].previous_hash,
+        company_id=runs[0].company_id,
+        score=runs[0].score,
+        risk_band=runs[0].risk_band,
+        calculated_at=runs[0].calculated_at,
+        engine_version=runs[0].engine_version,
+        trigger_source=runs[0].trigger_source,
+        flags_snapshot=runs[0].flags_snapshot,
+        fact_provenance_snapshot=runs[0].fact_provenance_snapshot,
+        score_breakdown_snapshot=runs[0].score_breakdown_snapshot,
+        rule_outcomes_hash=runs[0].rule_outcomes_hash,
+        rule_outcomes_snapshot=runs[0].rule_outcomes_snapshot,
+    )
+    db = _PortfolioDB(runs, companies, rule_ids)
+
+    result = await aggregate_rule_outcomes(
+        RuleOutcomeAggregateRequest(run_ids=[runs[0].id]),
+        db,
+    )
+
+    assert result["validated_runs"] == 0
+    assert result["rejected_runs"] == 1
+    assert "PREVIOUS_HASH_CHAIN_MISMATCH" in result["results"][0]["problems"]
