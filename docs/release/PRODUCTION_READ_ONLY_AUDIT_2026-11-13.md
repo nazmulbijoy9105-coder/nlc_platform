@@ -72,7 +72,7 @@ A verified backup and a restorable snapshot are release prerequisites. Resolve t
 ## Open gates
 
 1. Confirm the Render workspace and verify the deployed API's actual database target and runtime role without exposing credentials.
-2. Execute the migration rehearsal against the actual restored branch, not merely a fresh disposable database. Preserve the pre/post row counts and schema artifact. No production migration is authorized by this report.
-3. Search the external backup archive for the historical rescue/webhook evidence records. If no backup contains them, record the evidence gap as unrecoverable; do not fabricate it.
+2. Execute the migration rehearsal against the actual restored branch, not merely a fresh disposable database. PR #308 adds the manual workflow `.github/workflows/neon-restored-snapshot-rehearsal.yml` and a pinned script. After PR merge, configure GitHub Actions secrets `NLC_RESTORED_REHEARSAL_DATABASE_URL` (direct owner URL) and `NLC_RESTORED_REHEARSAL_APP_DATABASE_URL` (direct `nlc_app_role` URL), both for the exact restored branch ID `br-little-cake-aovrrz0y`, then manually run the workflow. It refuses any other project/branch or starting revision and checks row-count preservation, RLS, role grants, the private signing key boundary and unsigned ADMIN spoof rejection. The workflow applies migrations only to the isolated restore branch; it does not touch production. Do not run it until the isolated-branch migration has been explicitly approved.
+3. Search the external backup archive for the historical rescue/webhook evidence records and the 129 current evaluation runs. If no backup contains them, record the evidence gap as unrecoverable; do not fabricate it.
 4. Configure and test scheduled backups and a separate restore path.
 5. Keep statutory legal verification and product scoring release separate. Infrastructure success does not establish independent Bangladesh company-law counsel verification.
