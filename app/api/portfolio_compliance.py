@@ -76,7 +76,7 @@ async def list_inactive_companies(db=Depends(get_db_for_user)):
     return [
         {
             "company_id": str(company.id),
-            "company_name": company.company_name,
+            "company_name": company_name,
             "registration_number": company.registration_number,
             "company_status": getattr(company.company_status, "value", company.company_status),
             "is_dormant": company.is_dormant,
@@ -146,6 +146,7 @@ async def evaluate_all_companies(
     outcomes: list[dict[str, Any]] = []
     service = ComplianceService(db)
     for company in companies:
+        company_name = company.company_name
         try:
             async with db.begin_nested():
                 result = await service.evaluate_company(
@@ -179,7 +180,7 @@ async def evaluate_all_companies(
                 )
                 outcomes.append({
                     "company_id": str(company.id),
-                    "company_name": company.company_name,
+                    "company_name": company_name,
                     "status": "VALIDATED" if validated["valid"] else (
                         "NOT_RELEASED" if run.evaluation_status != "COMPLETED" else "VALIDATION_FAILED"
                     ),
@@ -188,7 +189,7 @@ async def evaluate_all_companies(
         except Exception as exc:
             outcomes.append({
                 "company_id": str(company.id),
-                "company_name": company.company_name,
+                "company_name": company_name,
                 "status": "FAILED",
                 "error": str(exc)[:500],
                 "pdf_eligible": False,
