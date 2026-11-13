@@ -83,36 +83,55 @@ def main() -> int:
 
     print(f"PASS: exact engine/seed inventory parity ({len(engine)}/{len(seed)})")
 
-    # The approval register is a release control, not merely documentation.
-    approval_path = Path("docs/legal/legal_approval_register.yaml")
-    if not approval_path.exists():
-        print("FAIL: legal approval register missing")
+    # Product approval and independent legal verification are separate registers.
+    product_path = Path("docs/product/product_rule_approval_register.yaml")
+    legal_path = Path("docs/legal/legal_approval_register.yaml")
+    if not product_path.exists() or not legal_path.exists():
+        print("FAIL: product-owner or independent-counsel approval register missing")
         return 1
-    approval = approval_path.read_text(encoding="utf-8")
-    approval_ids = set(re.findall(
-        r"^\s*- rule_id:\s*([A-Z]{2,12}-\d{3})\s*$", approval, re.MULTILINE
+    product_approval = product_path.read_text(encoding="utf-8")
+    product_header = product_approval.split("rules:", 1)[0]
+    product_row_ids = set(re.findall(
+        r"^\\s*- rule_id:\\s*([A-Z]{2,12}-\\d{3})\\s*$", product_approval, re.MULTILINE
     ))
-    approval_header = approval.split("rules:", 1)[0]
     approved_ids = set(re.findall(
-        r"^\s+- ([A-Z]{2,12}-\d{3})\s*$", approval_header, re.MULTILINE
+        r"^\\s+- ([A-Z]{2,12}-\\d{3})\\s*$", product_header, re.MULTILINE
     ))
-    approved_count = len(re.findall(
-        r"^\s+status:\s*APPROVED\s*$", approval, re.MULTILINE
+    product_approved_count = len(re.findall(
+        r"^\\s+product_status:\\s*PRODUCT_APPROVED\\s*$", product_approval, re.MULTILINE
+    ))
+    active_count = len(re.findall(
+        r"^\\s+product_active:\\s*true\\s*$", product_approval, re.MULTILINE
     ))
     eligible_count = len(re.findall(
-        r"^\s+score_eligible:\s*true\s*$", approval, re.MULTILINE
+        r"^\\s+score_eligible:\\s*true\\s*$", product_approval, re.MULTILINE
     ))
     ineligible_count = len(re.findall(
-        r"^\s+score_eligible:\s*false\s*$", approval, re.MULTILINE
+        r"^\\s+score_eligible:\\s*false\\s*$", product_approval, re.MULTILINE
     ))
-    if "approval_policy: owner_attested" not in approval_header or "approved_rule_ids:" not in approval_header:
-        print("FAIL: approval register must use owner_attested policy and approved_rule_ids")
+    if "approval_policy: owner_attested" not in product_header or "legal_effect: NONE" not in product_header:
+        print("FAIL: product register must explicitly be owner-attested and have no legal effect")
         return 1
-    if approval_ids != seed or approved_ids != seed:
-        print(f"FAIL: approval register inventory mismatch; rows_missing={sorted(seed - approval_ids)} rows_extra={sorted(approval_ids - seed)} approved_missing={sorted(seed - approved_ids)}")
+    if product_row_ids != seed or approved_ids != seed:
+        print(f"FAIL: product approval inventory mismatch; rows_missing={sorted(seed-product_row_ids)} rows_extra={sorted(product_row_ids-seed)} approved_missing={sorted(seed-approved_ids)}")
         return 1
-    if approved_count != len(seed) or eligible_count != len(seed - {"AR-001", "SH-002", "ESC-003"}) or ineligible_count != 3:
-        print(f"FAIL: expected 85 APPROVED rows, 82 score-eligible and 3 informational; got {approved_count}, {eligible_count}, {ineligible_count}")
+    if product_approved_count != len(seed) or active_count != len(seed) or eligible_count != len(seed-{"AR-001","SH-002","ESC-003"}) or ineligible_count != 3:
+        print(f"FAIL: expected 85 product-approved/active, 82 score-eligible and 3 active non-deduction rules; got {product_approved_count}, {active_count}, {eligible_count}, {ineligible_count}")
+        return 1
+
+    legal_approval = legal_path.read_text(encoding="utf-8")
+    legal_header = legal_approval.split("rules:", 1)[0]
+    legal_row_ids = set(re.findall(
+        r"^\\s*- rule_id:\\s*([A-Z]{2,12}-\\d{3})\\s*$", legal_approval, re.MULTILINE
+    ))
+    counsel_approved_ids = set(re.findall(
+        r"^\\s+- ([A-Z]{2,12}-\\d{3})\\s*$", legal_header, re.MULTILINE
+    ))
+    review_required_count = len(re.findall(
+        r"^\\s+status:\\s*REVIEW_REQUIRED\\s*$", legal_approval, re.MULTILINE
+    ))
+    if "approval_policy: independent_counsel_only" not in legal_header or counsel_approved_ids or legal_row_ids != seed or review_required_count != len(seed):
+        print("FAIL: legal register must retain all 85 rules as REVIEW_REQUIRED with no counsel approvals")
         return 1
 
     # Fail closed at the data source too: an empty engine allowlist is not
@@ -228,21 +247,23 @@ def main() -> int:
         return 1
 
     engine_tree = ast.parse(engine_source)
-    scoring_ids: set[str] = set()
+    product_ids: set[str] = set()
+    deduction_ids: set[str] = set()
     for node in ast.walk(engine_tree):
         if (isinstance(node, ast.AnnAssign)
                 and isinstance(node.target, ast.Name)
                 and node.target.id == "PRODUCT_SCORING_RULE_IDS"):
-            scoring_ids = set(ast.literal_eval(node.value.args[0]))
-            break
-    forbidden_scoring_ids = {"AR-001", "SH-002", "ESC-003"}
-    expected_scoring_ids = seed - forbidden_scoring_ids
-    if scoring_ids != expected_scoring_ids:
-        print(
-            f"FAIL: product scoring allowlist mismatch; count={len(scoring_ids)} "
-            f"missing={sorted(expected_scoring_ids - scoring_ids)} "
-            f"extra={sorted(scoring_ids - expected_scoring_ids)}"
-        )
+            product_ids = set(ast.literal_eval(node.value.args[0]))
+        if (isinstance(node, ast.AnnAssign)
+                and isinstance(node.target, ast.Name)
+                and node.target.id == "SCORE_DEDUCTION_RULE_IDS"):
+            deduction_ids = set(ast.literal_eval(node.value.args[0]))
+    non_deduction_ids = {"AR-001", "SH-002", "ESC-003"}
+    if product_ids != seed:
+        print(f"FAIL: product-active rule allowlist mismatch; count={len(product_ids)} missing={sorted(seed-product_ids)} extra={sorted(product_ids-seed)}")
+        return 1
+    if deduction_ids != seed - non_deduction_ids:
+        print(f"FAIL: score-deduction allowlist mismatch; count={len(deduction_ids)}")
         return 1
 
     if not re.search(r"^BLACK_OVERRIDE_RULES:\s*set\[str\]\s*=\s*set\(\)\s*$", engine_source, re.MULTILINE):
@@ -250,7 +271,7 @@ def main() -> int:
         return 1
 
     print(f"PASS: {len(seed)} catalogue rules match engine, seed and legal register")
-    print(f"PASS: {len(scoring_ids)} rules are product-eligible; environment switch defaults off; counsel-verified IDs remain separate: {len(verified_engine_ids)}")
+    print(f"PASS: {len(product_ids)} rules are product-active; {len(deduction_ids)} may deduct; counsel-verified IDs remain separate: {len(verified_engine_ids)}")
     return 0
 
 
