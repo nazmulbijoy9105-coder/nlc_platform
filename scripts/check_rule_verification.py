@@ -271,7 +271,7 @@ def main() -> int:
         return 1
 
     print(f"PASS: {len(seed)} catalogue rules match engine, seed and legal register")
-    print(f"PASS: {len(product_ids)} rules are product-active; {len(deduction_ids)} may deduct; counsel-verified IDs remain separate: {len(verified_engine_ids)}")
+    print(f"PASS: {len(product_ids)} rules are product-active and score-eligible; counsel-verified IDs remain separate: {len(verified_engine_ids)}")
     return 0
 
 
