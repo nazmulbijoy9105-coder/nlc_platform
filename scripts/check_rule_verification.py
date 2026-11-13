@@ -92,10 +92,10 @@ def main() -> int:
     product_approval = product_path.read_text(encoding="utf-8")
     product_header = product_approval.split("rules:", 1)[0]
     product_row_ids = set(re.findall(
-        r"^\s*- rule_id:\s*([A-Z]{2,12}-\\d{3})\s*$", product_approval, re.MULTILINE
+        r"^\s*- rule_id:\s*([A-Z]{2,12}-\d{3})\s*$", product_approval, re.MULTILINE
     ))
     approved_ids = set(re.findall(
-        r"^\s+- ([A-Z]{2,12}-\\d{3})\s*$", product_header, re.MULTILINE
+        r"^\s+- ([A-Z]{2,12}-\d{3})\s*$", product_header, re.MULTILINE
     ))
     product_approved_count = len(re.findall(
         r"^\s+product_status:\s*PRODUCT_APPROVED\s*$", product_approval, re.MULTILINE
@@ -122,10 +122,10 @@ def main() -> int:
     legal_approval = legal_path.read_text(encoding="utf-8")
     legal_header = legal_approval.split("rules:", 1)[0]
     legal_row_ids = set(re.findall(
-        r"^\s*- rule_id:\s*([A-Z]{2,12}-\\d{3})\s*$", legal_approval, re.MULTILINE
+        r"^\s*- rule_id:\s*([A-Z]{2,12}-\d{3})\s*$", legal_approval, re.MULTILINE
     ))
     counsel_approved_ids = set(re.findall(
-        r"^\s+- ([A-Z]{2,12}-\\d{3})\s*$", legal_header, re.MULTILINE
+        r"^\s+- ([A-Z]{2,12}-\d{3})\s*$", legal_header, re.MULTILINE
     ))
     review_required_count = len(re.findall(
         r"^\s+status:\s*REVIEW_REQUIRED\s*$", legal_approval, re.MULTILINE
