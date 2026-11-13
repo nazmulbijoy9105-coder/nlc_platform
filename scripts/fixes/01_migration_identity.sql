@@ -176,6 +176,11 @@ $transfer$;
 -- The migration login can inspect the catalogue but cannot perform DDL until
 -- env.py issues SET ROLE nlc_migration_owner inside Alembic's own connection.
 SET ROLE nlc_migration_owner;
+-- Neon-created read_write roles may start with broad direct DML grants.
+-- Strip those grants: the login must use SET ROLE for migration DDL/DML.
+REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public, nlc_private, audit FROM nlc_migration_user;
+REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public, nlc_private, audit FROM nlc_migration_user;
+REVOKE CREATE ON SCHEMA public, nlc_private, audit FROM nlc_migration_user;
 GRANT USAGE ON SCHEMA public, nlc_private, audit TO nlc_migration_user;
 GRANT SELECT ON ALL TABLES IN SCHEMA public, nlc_private, audit TO nlc_migration_user;
 GRANT SELECT ON ALL SEQUENCES IN SCHEMA public, nlc_private, audit TO nlc_migration_user;
