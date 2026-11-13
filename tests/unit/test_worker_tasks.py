@@ -39,3 +39,24 @@ def test_beat_schedule_has_daily_evaluation_and_log_retention():
     tasks = {entry["task"] for entry in BEAT_SCHEDULE.values()}
     assert "app.worker.tasks.evaluate_all_companies" in tasks
     assert "app.worker.tasks.cleanup_old_activity_logs" in tasks
+
+
+
+def test_activity_log_archival_retains_and_reports_source_rows():
+    from pathlib import Path
+
+    source = (
+        Path(__file__).resolve().parents[2]
+        / "app"
+        / "worker"
+        / "tasks"
+        / "core.py"
+    ).read_text(encoding="utf-8")
+    task = source.split('name="app.worker.tasks.cleanup_old_activity_logs"', 1)[1]
+    task = task.split('name="app.worker.tasks.cleanup_expired_notifications"', 1)[0]
+
+    assert "retained = len(old_logs)" in task
+    assert '"retained": len(old_logs)' in task
+    assert '"retained": 0' in task
+    assert "Source rows remain in PostgreSQL." in task
+    assert "delete(UserActivityLog)" not in task

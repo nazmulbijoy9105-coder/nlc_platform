@@ -1013,7 +1013,12 @@ def cleanup_old_activity_logs(
             old_logs = count_result.scalars().all()
 
             if not old_logs:
-                return {"archived": 0, "deleted": 0, "total_checked": 0}
+                return {
+                    "archived": 0,
+                    "deleted": 0,
+                    "retained": 0,
+                    "total_checked": 0,
+                }
 
             logger.info(
                 f"[Cleanup] Found {len(old_logs)} logs older than "
@@ -1066,18 +1071,28 @@ def cleanup_old_activity_logs(
                         f"[Cleanup] Archived {archived} logs to s3://"
                         f"{settings.s3_backup_bucket}/{archive_key}"
                     )
+                else:
+                    logger.warning(
+                        "[Cleanup] S3 credentials are not configured; "
+                        "source activity logs remain in PostgreSQL."
+                    )
             except Exception as archive_err:
                 logger.error(
                     f"[Cleanup] S3 archival failed: {archive_err!r}. "
-                    f"Skipping deletion to preserve data."
+                    f"Source rows remain in PostgreSQL."
                 )
-                return {"archived": 0, "deleted": 0, "error": str(archive_err)}
+                return {
+                    "archived": 0,
+                    "deleted": 0,
+                    "retained": len(old_logs),
+                    "error": str(archive_err),
+                }
 
             # Activity logs are append-only under the runtime ACL. A successful
             # object-store upload is not permission to hard-delete statutory
             # audit evidence; retain source rows until a separately controlled
             # retention workflow with verifiable archive receipts exists.
-            retained = len(old_logs) if archived > 0 else 0
+            retained = len(old_logs)
 
         return {
             "archived":      archived,
@@ -1091,7 +1106,8 @@ def cleanup_old_activity_logs(
         result = run_async(_cleanup())
         logger.info(
             f"[Cleanup] Log cleanup complete: "
-            f"archived={result['archived']} deleted={result['deleted']}"
+            f"archived={result['archived']} deleted={result['deleted']} "
+            f"retained={result.get('retained', 0)}"
         )
         return cast("dict[str, Any]", result)
     except Exception:

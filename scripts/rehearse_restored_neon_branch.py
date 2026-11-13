@@ -676,6 +676,7 @@ async def main() -> int:
             await conn.close()
 
         env = os.environ.copy()
+        env["ENVIRONMENT"] = "production"
         env["MIGRATION_DATABASE_URL"] = raw_url
         env["DATABASE_URL"] = raw_url
         report["alembic_upgrade_output"] = _run_command(

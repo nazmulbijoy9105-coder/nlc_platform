@@ -454,9 +454,13 @@ jobs:
             -v ON_ERROR_STOP=1 \
             -c "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(32)"
 
-          # Simulate historical table loss only in this disposable CI database.
-          # The recovery script upgrades to head and verifies the complete schema.
-          DATABASE_URL="$BASELINE_DATABASE_URL" python scripts/test_missing_table_recovery.py
+          # Exercise the restored-branch safety gate in a separate disposable
+          # database. Missing 0037/0038 tables must block before migration 0044;
+          # the baseline database remains intact for the full forward upgrade.
+          createdb -h localhost -U nlc_test nlc_test_missing_table_guard
+          GUARD_DATABASE_URL="postgresql+asyncpg://nlc_test@localhost:5432/nlc_test_missing_table_guard"
+          DATABASE_URL="$GUARD_DATABASE_URL" alembic upgrade 0042_dedup_key
+          DATABASE_URL="$GUARD_DATABASE_URL" python scripts/test_missing_table_recovery.py
 
           # The env.py preflight must widen the legacy column before the next
           # long revision identifier is written.

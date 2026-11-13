@@ -254,6 +254,99 @@ def ensure_alembic_version_column_capacity(connection: Connection) -> None:
         )
 
 
+def preflight_historical_evidence_schema(connection: Connection) -> None:
+    """Stop a restored 0042 branch before migration 0044 can synthesize empty tables."""
+    version_table = connection.execute(
+        text("SELECT to_regclass('public.alembic_version')")
+    ).scalar_one_or_none()
+    if version_table is None:
+        # A fresh database has no Alembic state yet; 0037/0038 will create
+        # these tables as part of the ordinary forward migration chain.
+        return
+
+    revisions = set(
+        connection.execute(
+            text("SELECT version_num FROM public.alembic_version")
+        ).scalars().all()
+    )
+    guarded_revisions = {
+        "0042_dedup_key",
+        "0043_reconcile_notification_dedup_key",
+        "b10c91ac6860",
+    }
+    if not revisions.intersection(guarded_revisions):
+        return
+
+    expected_columns = {
+        "webhook_endpoints": {
+            "id", "user_id", "url", "secret", "events", "is_active",
+            "last_delivery_at", "last_response_code", "created_at", "updated_at",
+        },
+        "webhook_deliveries": {
+            "id", "endpoint_id", "event_type", "payload", "status", "attempts",
+            "max_attempts", "response_code", "response_body", "error_message",
+            "delivered_at", "next_retry_at", "created_at",
+        },
+        "rescue_audit_log": {
+            "id", "rescue_plan_id", "finding_id", "rule_id", "rule_version",
+            "action_performed", "actor_user_id", "evidence_ref", "outcome",
+            "notes", "created_at", "updated_at",
+        },
+    }
+    missing_tables: list[str] = []
+    missing_columns: dict[str, list[str]] = {}
+
+    for table_name, required_columns in expected_columns.items():
+        exists = connection.execute(
+            text(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                      FROM pg_class AS c
+                      JOIN pg_namespace AS n ON n.oid = c.relnamespace
+                     WHERE n.nspname = 'public'
+                       AND c.relname = :table_name
+                       AND c.relkind IN ('r', 'p')
+                )
+                """
+            ),
+            {"table_name": table_name},
+        ).scalar_one()
+        if not exists:
+            missing_tables.append(table_name)
+            continue
+
+        actual_columns = set(
+            connection.execute(
+                text(
+                    """
+                    SELECT column_name
+                      FROM information_schema.columns
+                     WHERE table_schema = 'public'
+                       AND table_name = :table_name
+                    """
+                ),
+                {"table_name": table_name},
+            ).scalars().all()
+        )
+        absent = sorted(required_columns - actual_columns)
+        if absent:
+            missing_columns[table_name] = absent
+
+    if missing_tables or missing_columns:
+        raise RuntimeError(
+            "Refusing Alembic execution before 0044_webhook_schema_reconcile: "
+            "the applied 0042/0043/b10c91ac6860 revision marker requires the "
+            "0037/0038 webhook and rescue-audit schema to be present and "
+            "reconciled. Migration 0044 can create schema-only replacements "
+            "but cannot recover historical rows. "
+            f"Missing tables={sorted(missing_tables)!r}; "
+            f"missing columns={missing_columns!r}. "
+            "Recover and verify the original schema/evidence, or complete a "
+            "separately approved schema-only reconstruction before retrying."
+        )
+
+
 def do_run_migrations(connection: Connection) -> None:
     """Configure and run migrations using live connection."""
     context.configure(
@@ -418,6 +511,25 @@ def validate_production_migration_role(connection: Connection) -> None:
         )
     if owns_rescue_audit_log is False:
         raise RuntimeError(
+    if role_name == "nlc_app_role":
+        raise RuntimeError(
+            "DATABASE_URL is using nlc_app_role. Configure the dedicated "
+            "nlc_migration_user login and its scoped nlc_migration_owner role; "
+            "do not grant ownership to nlc_app_role."
+        )
+    if login_name != "nlc_migration_user" or role_name != "nlc_migration_owner":
+        raise RuntimeError(
+            "Migration session identity mismatch: require login "
+            "nlc_migration_user with current_user nlc_migration_owner; "
+            f"observed session_user={login_name!r}, current_user={role_name!r}."
+        )
+    if is_superuser or not bypasses_rls:
+        raise RuntimeError(
+            "nlc_migration_owner must be non-superuser and BYPASSRLS; "
+            "the LOGIN principal itself must remain NOBYPASSRLS."
+        )
+    if owns_rescue_audit_log is False:
+        raise RuntimeError(
             "nlc_migration_owner does not own public.rescue_audit_log. "
             "Reconcile object ownership before running migrations."
         )
@@ -506,6 +618,43 @@ def validate_production_migration_role(connection: Connection) -> None:
             "nlc_migration_owner lacks CREATE on migration schemas: "
             + ", ".join(missing_schema_create)
         )
+    ).scalars().all()
+    if missing_schema_create:
+        raise RuntimeError(
+            "nlc_migration_owner lacks CREATE on migration schemas: "
+            + ", ".join(missing_schema_create)
+        )
+
+    default_delete_grant = connection.execute(
+        text(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                  FROM pg_default_acl AS d
+                  CROSS JOIN LATERAL aclexplode(d.defaclacl) AS acl
+                 WHERE d.defaclrole = (
+                           SELECT oid FROM pg_roles
+                            WHERE rolname = 'nlc_migration_owner'
+                       )
+                   AND d.defaclobjtype = 'r'
+                   AND d.defaclnamespace IN (
+                           0,
+                           (SELECT oid FROM pg_namespace WHERE nspname = 'public')
+                       )
+                   AND acl.grantee IN (
+                           0,
+                           (SELECT oid FROM pg_roles WHERE rolname = 'nlc_app_role')
+                       )
+                   AND acl.privilege_type = 'DELETE'
+            )
+            """
+        )
+    ).scalar_one()
+    if default_delete_grant:
+        raise RuntimeError(
+            "nlc_migration_owner has a global/public default DELETE grant "
+            "to PUBLIC or nlc_app_role; revoke it before applying migrations."
+        )
 
 
 async def run_async_migrations() -> None:
@@ -536,6 +685,9 @@ async def run_async_migrations() -> None:
         await connection.commit()
         await connection.run_sync(prepare_production_migration_role)
         await connection.run_sync(validate_production_migration_role)
+        # This guard is environment-independent and runs before any Alembic
+        # DDL, including the historical 0044 schema-only reconstruction.
+        await connection.run_sync(preflight_historical_evidence_schema)
         await connection.run_sync(ensure_alembic_version_column_capacity)
         await connection.commit()
         await connection.run_sync(do_run_migrations)

@@ -43,3 +43,30 @@ def test_migration_preflight_requires_object_ownership_before_ddl():
     assert "missing_schema_create" in source
     assert "prepare_production_migration_role" in source
     assert "validate_production_migration_role" in source
+    assert "migration-managed " in source
+    assert "relation, function and custom type" in source
+    assert "missing_schema_create" in source
+    assert "prepare_production_migration_role" in source
+    assert "validate_production_migration_role" in source
+
+
+
+def test_alembic_blocks_unreconciled_0042_evidence_before_any_ddl():
+    source = ALEMBIC_ENV.read_text(encoding="utf-8")
+
+    assert "def preflight_historical_evidence_schema" in source
+    assert '"0042_dedup_key"' in source
+    assert '"0043_reconcile_notification_dedup_key"' in source
+    assert '"b10c91ac6860"' in source
+    assert "Refusing Alembic execution before 0044_webhook_schema_reconcile" in source
+    assert "await connection.run_sync(preflight_historical_evidence_schema)" in source
+
+
+
+def test_migration_owner_cannot_reintroduce_default_runtime_delete_grants():
+    source = ALEMBIC_ENV.read_text(encoding="utf-8")
+
+    assert "FROM pg_default_acl AS d" in source
+    assert "aclexplode(d.defaclacl)" in source
+    assert "acl.privilege_type = 'DELETE'" in source
+    assert "nlc_migration_owner has a global/public default DELETE grant" in source
