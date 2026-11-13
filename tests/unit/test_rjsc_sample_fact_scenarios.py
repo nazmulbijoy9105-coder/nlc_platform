@@ -160,6 +160,26 @@ def test_sample_e_unverified_non_filing_is_unknown_not_a_default():
     assert finding[0].score_impact == 0
 
 
+def test_sample_e_verified_rjsc_filing_after_21_days_retains_late_default():
+    profile = CompanyProfile(
+        company_id="sample-e-late-filed-return",
+        company_name="Sample E Late Filed Ltd",
+        last_agm_date=date(2026, 6, 1),
+        annual_return_filed=True,
+        annual_return_filed_date=date(2026, 7, 1),
+        annual_return_filing_status_verified=True,
+        annual_return_filing_status_evidence_ref="fixture://rjsc-certified-filing-receipt",
+        annual_return_filing_status_verified_at=date(2026, 7, 22),
+        annual_return_filing_status_verified_by="fixture-reviewer",
+    )
+    finding = _by_rule(_flags(profile), "AR-001")
+    assert len(finding) == 1
+    assert finding[0].flag_code == "ANNUAL_RETURN_FILED_LATE"
+    assert finding[0].state == RuleState.NON_COMPLIANT
+    assert finding[0].eval_state == "VIOLATION"
+    assert finding[0].detail["delay_days"] == 9
+
+
 def test_sample_e_verified_rjsc_non_filing_after_21_days_is_a_candidate_default():
     profile = CompanyProfile(
         company_id="sample-e-verified-return",
