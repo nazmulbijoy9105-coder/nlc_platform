@@ -557,7 +557,7 @@ def _flag_impact_label(flag: Any) -> str:
     if not _legal_score_is_released():
         return "Not evaluated — product score release disabled"
     if rule_id not in SCORE_DEDUCTION_RULE_IDS:
-        return "No direct point deduction"
+        return "Not eligible for a product score deduction"
     applied = getattr(
         flag,
         "score_impact_applied",
