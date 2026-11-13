@@ -4,6 +4,7 @@ services:
     runtime: docker
     region: singapore
     plan: free
+    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port 8000
     healthCheckPath: /api/v1/health/live
     autoDeploy: false
     envVars:
