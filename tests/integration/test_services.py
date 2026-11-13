@@ -994,7 +994,7 @@ def test_pdf_rescue_section_renders_structured_progress_and_blocked_reason():
     assert "BLOCKED" in html
 
 
-def test_rescue_output_validation_requires_release_and_unique_verified_findings(monkeypatch):
+def test_rescue_output_validation_requires_product_release_and_unique_evidenced_findings(monkeypatch):
     import app.rule_engine.engine as engine_module
     from app.rule_engine.engine import RuleState, Severity
     from app.services.rescue_service import validate_rescue_engine_output
@@ -1018,7 +1018,7 @@ def test_rescue_output_validation_requires_release_and_unique_verified_findings(
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     assert validate_rescue_engine_output(
         output, expected_company_id="tenant-001"
     ) == frozenset({"AGM-001"})
