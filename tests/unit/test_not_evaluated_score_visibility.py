@@ -180,7 +180,6 @@ def test_released_flag_reports_rule_specific_counsel_verification(monkeypatch):
     assert response.legal_review_status == "LEGALLY_VERIFIED"
 
 
-def test_partial_counsel_verification_cannot_release_company_api_score(monkeypatch):
 def test_partial_counsel_verification_does_not_block_product_score(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
