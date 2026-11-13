@@ -556,9 +556,9 @@ def _flag_impact_label(flag: Any) -> str:
     rule_id = getattr(flag, "rule_id", "") or ""
     if (
         not _legal_score_is_released()
-        or rule_id not in PRODUCT_SCORING_RULE_IDS
+        or rule_id not in SCORE_DEDUCTION_RULE_IDS
     ):
-        return "Not scored — excluded from product scoring"
+        return "No direct point deduction"
     applied = getattr(
         flag,
         "score_impact_applied",
