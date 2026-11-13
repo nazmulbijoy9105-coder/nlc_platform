@@ -36,11 +36,18 @@ async def test_tenant_a_cannot_select_update_or_delete_tenant_b_company(
     )
     assert updated.rowcount == 0
 
-    deleted = await db.execute(
-        text("DELETE FROM public.companies WHERE id = :company_id"),
-        {"company_id": db_other_company.id},
-    )
-    assert deleted.rowcount == 0
+    # Runtime grants intentionally deny DELETE on companies entirely. Accept
+    # either that privilege denial or an RLS-filtered zero-row result; both
+    # prove Tenant A cannot delete Tenant B's record.
+    try:
+        async with db.begin_nested():
+            deleted = await db.execute(
+                text("DELETE FROM public.companies WHERE id = :company_id"),
+                {"company_id": db_other_company.id},
+            )
+        assert deleted.rowcount == 0
+    except DBAPIError as exc:
+        assert "permission denied" in str(exc).lower()
 
 
 @pytest.mark.asyncio
