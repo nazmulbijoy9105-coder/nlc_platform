@@ -86,7 +86,6 @@ def _applied_score_impacts(flags) -> list[dict]:
     from app.rule_engine.engine import (
         AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
         PRODUCT_SCORING_RULE_IDS,
-        VERIFIED_RULE_IDS,
         RuleState,
         legal_score_is_released,
     )
@@ -112,10 +111,6 @@ def _applied_score_impacts(flags) -> list[dict]:
         if flag.rule_id not in PRODUCT_SCORING_RULE_IDS:
             results[index] = {"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"}
             continue
-        if flag.rule_id not in VERIFIED_RULE_IDS:
-            results[index] = {"applied": 0, "status": "LEGAL_VERIFICATION_PENDING"}
-            continue
-
         severity_value = getattr(
             getattr(flag, "severity", None),
             "value",
@@ -349,7 +344,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     ],
                 }
                 for index, f in enumerate(output.flags)
-                if score_is_released and f.rule_id in VERIFIED_RULE_IDS and f.rule_id in PRODUCT_SCORING_RULE_IDS
+                if score_is_released and f.rule_id in PRODUCT_SCORING_RULE_IDS
             ],
             "review_findings": [
                 {
@@ -358,15 +353,14 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "engine_evaluation_state": getattr(flag.eval_state, "value", flag.eval_state),
                     "review_status": applied_impacts[index]["status"],
                     "message": (
-                        "Evidence review required. No statutory conclusion, "
-                        "liability, penalty or score deduction is published."
+                        "Evidence review required. Product scoring release is not independent "
+                        "legal verification, legal advice or certification."
                     ),
                     "score_impact_applied": 0,
                 }
                 for index, flag in enumerate(output.flags)
                 if not (
                     score_is_released
-                    and flag.rule_id in VERIFIED_RULE_IDS
                     and flag.rule_id in PRODUCT_SCORING_RULE_IDS
                 )
             ],
