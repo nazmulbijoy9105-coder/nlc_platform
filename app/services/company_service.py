@@ -474,11 +474,38 @@ class CompanyService(BaseService[Company]):
         return dict(row)
 
     async def get_risk_distribution(
-        self, user_id: uuid.UUID, *, include_assigned_staff: bool = False
+        self,
+        user_id: uuid.UUID | None = None,
+        *,
+        include_assigned_staff: bool = False,
+        include_all_companies: bool = False,
     ) -> list[dict]:
-        """Return risk aggregates after filtering to the caller's company scope."""
-        if user_id is None:
-            raise ValueError("user_id is required for tenant-scoped risk distribution")
+        """Return risk aggregates for either the admin portfolio or user scope.
+
+        Portfolio-wide access is explicit and still relies on the authenticated
+        database session's RLS policy; tenant users must supply their own UUID.
+        """
+        scope = ""
+        params = {}
+        if not include_all_companies:
+            if user_id is None:
+                raise ValueError("user_id is required for tenant-scoped risk distribution")
+            scope = """
+                AND (
+                    (:include_assigned_staff IS TRUE AND c.assigned_staff_id = :user_id)
+                    OR EXISTS (
+                        SELECT 1
+                        FROM company_user_access cua
+                        WHERE cua.company_id = c.id
+                          AND cua.user_id = :user_id
+                          AND cua.is_active IS TRUE
+                    )
+                )
+            """
+            params = {
+                "user_id": str(user_id),
+                "include_assigned_staff": include_assigned_staff,
+            }
         result = await self.db.execute(
             text(
                 """
@@ -491,16 +518,9 @@ class CompanyService(BaseService[Company]):
                     ) AS percentage
                 FROM companies c
                 WHERE c.is_active IS TRUE
-                  AND (
-                      (:include_assigned_staff IS TRUE AND c.assigned_staff_id = :user_id)
-                      OR EXISTS (
-                          SELECT 1
-                          FROM company_user_access cua
-                          WHERE cua.company_id = c.id
-                            AND cua.user_id = :user_id
-                            AND cua.is_active IS TRUE
-                      )
-                  )
+                """
+                + scope
+                + """
                 GROUP BY c.current_risk_band
                 ORDER BY CASE c.current_risk_band
                     WHEN 'BLACK' THEN 1
@@ -511,7 +531,7 @@ class CompanyService(BaseService[Company]):
                 END
                 """
             ),
-            {"user_id": str(user_id), "include_assigned_staff": include_assigned_staff},
+            params,
         )
         return [dict(row) for row in result.mappings().all()]
 
@@ -521,14 +541,25 @@ class CompanyService(BaseService[Company]):
         user_id: uuid.UUID | None = None,
         *,
         include_assigned_staff: bool = False,
+        include_all_companies: bool = False,
     ) -> list[dict]:
-        """Return deadlines scoped to active company memberships."""
-        if user_id is None:
-            raise ValueError(
-                "user_id is required; use get_upcoming_deadlines_for_system for worker scans"
+        """Return portfolio deadlines for admins or scoped deadlines for staff."""
+        if include_all_companies:
+            query = text(
+                """
+                SELECT d.*
+                FROM vw_upcoming_deadlines d
+                WHERE d.days_remaining <= :days
+                ORDER BY d.days_remaining
+                """
             )
-        result = await self.db.execute(
-            text(
+            params: dict[str, int | str | bool] = {"days": days_ahead}
+        else:
+            if user_id is None:
+                raise ValueError(
+                    "user_id is required; use get_upcoming_deadlines_for_system for worker scans"
+                )
+            query = text(
                 """
                 SELECT d.*
                 FROM vw_upcoming_deadlines d
@@ -549,13 +580,13 @@ class CompanyService(BaseService[Company]):
                   )
                 ORDER BY d.days_remaining
                 """
-            ),
-            {
+            )
+            params = {
                 "days": days_ahead,
                 "user_id": str(user_id),
                 "include_assigned_staff": include_assigned_staff,
-            },
-        )
+            }
+        result = await self.db.execute(query, params)
         return [dict(row) for row in result.mappings().all()]
 
     async def get_upcoming_deadlines_for_system(
