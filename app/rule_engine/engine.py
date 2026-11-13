@@ -3480,6 +3480,7 @@ class NLCRuleEngine:
             "scoring_spec_version": SCORING_SPEC_VERSION,
             "verified_rule_ids": sorted(VERIFIED_RULE_IDS),
             "product_scoring_rule_ids": sorted(PRODUCT_SCORING_RULE_IDS),
+            "score_deduction_rule_ids": sorted(SCORE_DEDUCTION_RULE_IDS),
             "authorized_black_override_rule_ids": sorted(AUTHORIZED_BLACK_OVERRIDE_RULE_IDS),
             "category_caps": {
                 key: {"max_deduction": cap, "prefixes": list(prefixes)}
