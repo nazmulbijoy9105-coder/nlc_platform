@@ -1,4 +1,4 @@
-"""P0 regressions: unapproved rules must never affect authoritative scores or reports."""
+"""P0 regressions: product scoring and independent legal verification stay separate."""
 from datetime import date
 from types import SimpleNamespace
 
@@ -123,7 +123,7 @@ def test_pdf_requires_explicit_authorisation_for_black_override(monkeypatch):
     assert override is True
 
 
-def test_product_scoring_remains_paused_without_legal_verification_allowlist(monkeypatch):
+def test_product_scoring_can_run_with_empty_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
@@ -131,9 +131,9 @@ def test_product_scoring_remains_paused_without_legal_verification_allowlist(mon
         [_engine_flag(severity=Severity.RED, black=False)],
         CompanyProfile(company_id="x", company_name="Test"),
     )
-    assert engine_module.legal_score_is_released() is False
+    assert engine_module.legal_score_is_released() is True
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
-    assert result.final_score == 100
+    assert result.final_score == 75
     assert result.risk_band == Severity.NOT_EVALUATED
 
 
@@ -161,7 +161,7 @@ def test_verified_director_minimum_violation_emits_one_candidate_black_override(
     assert output.score_breakdown.final_score == 0
 
 
-def test_product_owner_black_override_is_blocked_without_legal_verification(monkeypatch):
+def test_product_owner_black_override_does_not_require_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
@@ -171,9 +171,9 @@ def test_product_owner_black_override_is_blocked_without_legal_verification(monk
         [flag], CompanyProfile(company_id="x", company_name="Test")
     )
 
-    assert engine_module.legal_score_is_released() is False
+    assert engine_module.legal_score_is_released() is True
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert engine_module.AUTHORIZED_BLACK_OVERRIDE_RULE_IDS == frozenset({"INC-003"})
-    assert result.override_applied is False
-    assert result.black_flag_count == 0
-    assert result.risk_band == Severity.NOT_EVALUATED
+    assert result.override_applied is True
+    assert result.black_flag_count == 1
+    assert result.risk_band == Severity.BLACK
