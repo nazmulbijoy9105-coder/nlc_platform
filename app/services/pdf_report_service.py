@@ -553,7 +553,6 @@ def _flag_impact_label(flag: Any) -> str:
     if (
         not _legal_score_is_released()
         or rule_id not in PRODUCT_SCORING_RULE_IDS
-        or rule_id not in VERIFIED_RULE_IDS
     ):
         return "Not scored — excluded from product scoring"
     applied = getattr(
