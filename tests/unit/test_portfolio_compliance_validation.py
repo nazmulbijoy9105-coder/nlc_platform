@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from types import SimpleNamespace
 
 from app.api.portfolio_compliance import _validation
@@ -13,7 +14,7 @@ def _records():
         engine_version=RULE_ENGINE_VERSION,
         score=82,
         risk_band="YELLOW",
-        calculated_at="2026-11-13T00:00:00+00:00",
+        calculated_at=datetime(2026, 11, 13, tzinfo=timezone.utc),
         score_breakdown_snapshot={
             "scoring_spec_version": SCORING_SPEC_VERSION,
             "score_reconciles": True,
@@ -23,7 +24,7 @@ def _records():
     company = SimpleNamespace(
         current_compliance_score=82,
         current_risk_band="YELLOW",
-        last_evaluated_at="2026-11-13T00:00:00+00:00",
+        last_evaluated_at=datetime(2026, 11, 13, tzinfo=timezone.utc),
     )
     return run, company
 
