@@ -130,6 +130,7 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
     if (
         outcomes
         and outcomes_hash_valid
+        and isinstance(outcomes_hash, str)
         and score_hash
         and _SHA256_RE.fullmatch(score_hash)
         and isinstance(flags_snapshot, list)
