@@ -1228,7 +1228,7 @@ async def test_runtime_acl_exposes_only_webhook_endpoint_delete_and_read_only_vi
         allowed = await db.execute(
             text(
                 "SELECT has_table_privilege('nlc_app_role', "
-                "format('public.%I', :table_name), 'DELETE')"
+                "to_regclass('public.' || CAST(:table_name AS text)), 'DELETE')"
             ),
             {"table_name": table},
         )
