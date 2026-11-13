@@ -553,7 +553,7 @@ class CompanyService(BaseService[Company]):
                 ORDER BY d.days_remaining
                 """
             )
-            params = {"days": days_ahead}
+            params: dict[str, int | str | bool] = {"days": days_ahead}
         else:
             if user_id is None:
                 raise ValueError(
