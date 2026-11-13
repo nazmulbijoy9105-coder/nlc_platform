@@ -63,8 +63,11 @@ PR [#308](https://github.com/nazmulbijoy9105-coder/nlc_platform/pull/308) adds s
 - The inspected project has one manual snapshot, `snap-purple-paper-ao2orhfe`, created 2026-11-07 at approximately 07:47 UTC.
 - The production snapshot schedule is empty; automated Neon snapshots are not configured.
 - No independent object-store archive inventory or successful external-backup restore was available during this audit.
+- The repository has an S3 logical-backup workflow, but it is manual-dispatch only and requires `AWS_BACKUP_ROLE_ARN`, `AWS_REGION`, `S3_BACKUP_BUCKET`, and `NLC_BACKUP_DATABASE_URL`. No successful S3 backup run was verified.
+- Neon rejected creation of a new production snapshot with `snapshots limit exceeded`; the existing 7 November recovery snapshot was preserved and not deleted.
+- Neon also rejected enabling a scheduled snapshot policy because backup schedule creation is not enabled for this project. The production branch therefore remains without an automated Neon snapshot schedule.
 
-A verified backup and a restorable snapshot are release prerequisites. Configure an automatic backup schedule and verify any external archive before further production schema changes.
+A verified backup and a restorable snapshot are release prerequisites. Resolve the Neon plan/snapshot quota or configure and verify the S3 backup workflow before further production schema changes. Do not delete the existing recovery snapshot to make room until an independent replacement has been created and restore-tested.
 
 ## Open gates
 
