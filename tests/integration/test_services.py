@@ -809,14 +809,14 @@ class TestRulesService:
 # PAUSED SCORE RELEASE: FINDING, ALLOCATION AND RESCUE-PLANNER CONTRACTS
 # =============================================================================
 
-def test_score_allocation_keeps_confirmed_findings_but_excludes_unverified_rules(monkeypatch):
+def test_score_allocation_uses_product_allowlist_and_excludes_unknown_findings(monkeypatch):
     import app.rule_engine.engine as engine_module
     from app.rule_engine.engine import RuleState
     from app.services.compliance_service import _applied_score_impacts
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001", "AUD-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
     confirmed = SimpleNamespace(
         rule_id="AUD-001",
@@ -841,18 +841,18 @@ def test_score_allocation_keeps_confirmed_findings_but_excludes_unverified_rules
 
     allocations = _applied_score_impacts([confirmed, unknown])
 
-    assert allocations[0] == {"applied": 0, "status": "LEGAL_VERIFICATION_PENDING"}
+    assert allocations[0] == {"applied": 15, "status": "APPLIED"}
     assert allocations[1] == {"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"}
 
 
-def test_score_allocation_applies_only_verified_rule_in_controlled_release(monkeypatch):
+def test_score_allocation_applies_product_allowlisted_rule_without_counsel_allowlist(monkeypatch):
     import app.rule_engine.engine as engine_module
     from app.rule_engine.engine import RuleState
     from app.services.compliance_service import _applied_score_impacts
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     finding = SimpleNamespace(
         rule_id="AGM-001",
         state=RuleState.NON_COMPLIANT,
@@ -903,7 +903,7 @@ def test_rescue_planner_remains_deterministic_when_score_release_is_paused(monke
         [finding], score, steps
     )
     assert dispositions[0]["disposition"] == "REVIEW_REQUIRED"
-    assert dispositions[0]["reason"] == "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"
+    assert dispositions[0]["reason"] == "PRODUCT_SCORE_RELEASE_DISABLED"
 
 
 
@@ -911,12 +911,12 @@ def test_rescue_planner_remains_deterministic_when_score_release_is_paused(monke
 # PDF AND RESCUE RELEASE BOUNDARIES (EXERCISED IN THE INTEGRATION JOB)
 # =============================================================================
 
-def test_pdf_report_only_scores_verified_rules_and_lists_other_rules_for_review(monkeypatch):
+def test_pdf_report_scores_product_allowlisted_rules_and_lists_counsel_review_items(monkeypatch):
     from app.services import pdf_report_service as report_module
 
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
     verified = SimpleNamespace(
         rule_id="AGM-001", severity="RED", description="Verified finding",
         score_impact=10, score_impact_applied=10, scoring_status="APPLIED",
@@ -940,7 +940,7 @@ def test_pdf_report_only_scores_verified_rules_and_lists_other_rules_for_review(
 
     assert "Verified finding" in page
     assert "MEM-001" in page
-    assert "Independent legal/source verification pending" in page
+    assert "Independent Bangladesh-counsel/source verification remains pending" in page
     assert "Unverified legal conclusion" not in page
     assert "effective deductions -10 pts" in page
 
@@ -994,7 +994,7 @@ def test_pdf_rescue_section_renders_structured_progress_and_blocked_reason():
     assert "BLOCKED" in html
 
 
-def test_rescue_output_validation_requires_release_and_unique_verified_findings(monkeypatch):
+def test_rescue_output_validation_requires_product_release_and_unique_evidenced_findings(monkeypatch):
     import app.rule_engine.engine as engine_module
     from app.rule_engine.engine import RuleState, Severity
     from app.services.rescue_service import validate_rescue_engine_output
@@ -1018,7 +1018,7 @@ def test_rescue_output_validation_requires_release_and_unique_verified_findings(
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     assert validate_rescue_engine_output(
         output, expected_company_id="tenant-001"
     ) == frozenset({"AGM-001"})
@@ -1087,7 +1087,7 @@ def test_score_allocation_covers_inactive_excluded_black_and_duplicate_paths(mon
     assert results[6]["status"] == "APPLIED"
 
 
-def test_rescue_dispositions_keep_unverified_findings_in_review_only_state(monkeypatch):
+def test_rescue_dispositions_keep_candidates_review_only_when_product_release_is_paused(monkeypatch):
     import app.rule_engine.engine as engine_module
     from app.rule_engine.engine import (
         ComplianceFlag,
@@ -1124,7 +1124,7 @@ def test_rescue_dispositions_keep_unverified_findings_in_review_only_state(monke
     assert [item["disposition"] for item in dispositions] == [
         "NO_ACTION", "WAITING_EVIDENCE", "REVIEW_REQUIRED", "BLOCKED"
     ]
-    assert dispositions[2]["reason"] == "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"
+    assert dispositions[2]["reason"] == "PRODUCT_SCORE_RELEASE_DISABLED"
 
 
 def test_rescue_target_date_prefers_explicit_then_latest_step_date():

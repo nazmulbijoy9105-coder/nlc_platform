@@ -1,5 +1,5 @@
-"""P0 regressions: unapproved rules must never affect authoritative scores or reports."""
-from datetime import date
+"""P0 regressions: product scoring and independent legal verification stay separate."""
+from datetime import date, datetime, timezone
 from types import SimpleNamespace
 
 import app.rule_engine.engine as engine_module
@@ -13,7 +13,7 @@ from app.rule_engine.engine import (
     Severity,
 )
 from app.services.compliance_service import _applied_score_impacts
-from app.services.pdf_report_service import _verified_flag_score
+from app.services.pdf_report_service import _verified_flag_score, build_compliance_report_html
 
 
 def _engine_flag(rule_id="AUD-003", severity=Severity.BLACK, black=True):
@@ -76,10 +76,10 @@ def test_pdf_score_reconciliation_ignores_rule_outside_product_allowlist(monkeyp
     assert _verified_flag_score([flag]) == (0, False)
 
 
-def test_pdf_score_reconciliation_counts_product_allowlisted_rules(monkeypatch):
+def test_pdf_score_reconciliation_counts_product_allowlisted_rules_without_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
     approved = SimpleNamespace(rule_id="AGM-001", severity="RED", score_impact=15)
     unapproved = SimpleNamespace(rule_id="AUD-003", severity="BLACK", score_impact=25)
     assert _verified_flag_score([approved, unapproved]) == (85, False)
@@ -123,7 +123,7 @@ def test_pdf_requires_explicit_authorisation_for_black_override(monkeypatch):
     assert override is True
 
 
-def test_product_scoring_remains_paused_without_legal_verification_allowlist(monkeypatch):
+def test_product_scoring_can_run_with_empty_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
@@ -131,10 +131,10 @@ def test_product_scoring_remains_paused_without_legal_verification_allowlist(mon
         [_engine_flag(severity=Severity.RED, black=False)],
         CompanyProfile(company_id="x", company_name="Test"),
     )
-    assert engine_module.legal_score_is_released() is False
+    assert engine_module.legal_score_is_released() is True
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
-    assert result.final_score == 100
-    assert result.risk_band == Severity.NOT_EVALUATED
+    assert result.final_score == 75
+    assert result.risk_band == Severity.RED
 
 
 def test_verified_director_minimum_violation_emits_one_candidate_black_override(monkeypatch, build_profile):
@@ -161,7 +161,7 @@ def test_verified_director_minimum_violation_emits_one_candidate_black_override(
     assert output.score_breakdown.final_score == 0
 
 
-def test_product_owner_black_override_is_blocked_without_legal_verification(monkeypatch):
+def test_product_owner_black_override_does_not_require_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
@@ -171,9 +171,35 @@ def test_product_owner_black_override_is_blocked_without_legal_verification(monk
         [flag], CompanyProfile(company_id="x", company_name="Test")
     )
 
-    assert engine_module.legal_score_is_released() is False
+    assert engine_module.legal_score_is_released() is True
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert engine_module.AUTHORIZED_BLACK_OVERRIDE_RULE_IDS == frozenset({"INC-003"})
-    assert result.override_applied is False
-    assert result.black_flag_count == 0
-    assert result.risk_band == Severity.NOT_EVALUATED
+    assert result.override_applied is True
+    assert result.black_flag_count == 1
+    assert result.risk_band == Severity.BLACK
+
+
+
+def test_pdf_html_is_unsigned_and_discloses_counsel_review_even_when_product_scoring_is_released(monkeypatch):
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
+    company = SimpleNamespace(
+        company_name="Test Company",
+        registration_number="TEST-001",
+        current_compliance_score=88,
+        current_risk_band="GREEN",
+    )
+
+    html = build_compliance_report_html(
+        company=company,
+        flags=[],
+        generated_at=datetime(2026, 11, 13, tzinfo=timezone.utc),
+    )
+
+    assert "UNSIGNED — FOR COUNSEL REVIEW ONLY — NO NLC LIABILITY WITHOUT SIGNATURE" in html
+    assert "LIABILITY AND RELIANCE NOTICE" in html
+    assert "Lawyer Review &amp; Signature" in html
+    assert "Approval status:</strong> UNSIGNED" in html
+    assert "<strong>Status: UNSIGNED</strong>" in html
+    assert "Product risk score:" in html

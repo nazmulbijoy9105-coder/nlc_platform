@@ -94,7 +94,7 @@ def test_confirmed_finding_is_review_required_when_legal_score_release_is_closed
     result = _dispositions([finding], steps=_seq([finding]))
 
     assert result[0]["disposition"] == "REVIEW_REQUIRED"
-    assert result[0]["reason"] == "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"
+    assert result[0]["reason"] == "PRODUCT_SCORE_RELEASE_DISABLED"
 
 
 def test_yellow_finding_has_explicit_no_action_reason_in_red_plan(controlled_release):
@@ -251,5 +251,5 @@ def test_default_paused_release_keeps_rescue_plan_in_review_only_state():
     assert len(steps) == 1
     result = _dispositions([finding], steps=steps)
     assert result[0]["disposition"] == "REVIEW_REQUIRED"
-    assert result[0]["reason"] == "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"
+    assert result[0]["reason"] == "PRODUCT_SCORE_RELEASE_DISABLED"
 

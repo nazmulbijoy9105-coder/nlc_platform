@@ -192,9 +192,32 @@ def main() -> int:
         print("FAIL: seed_rules.py must insert new canonical rows as active")
         return 1
 
-    if not re.search(r"^LEGAL_SCORE_RELEASED:\s*bool\s*=\s*False\s*$", engine_source, re.MULTILINE):
-        print("FAIL: default product scoring release must remain paused")
+    expected_release_assignment = 'LEGAL_SCORE_RELEASED: bool = os.getenv("LEGAL_SCORE_RELEASED", "false").strip().lower() in {"true", "1", "yes", "on"}'
+    if expected_release_assignment not in engine_source:
+        print("FAIL: product release must use LEGAL_SCORE_RELEASED env var and default to false")
         return 1
+    env_example = Path(".env.example").read_text(encoding="utf-8")
+    if not re.search(r"^LEGAL_SCORE_RELEASED=false$", env_example, re.MULTILINE):
+        print("FAIL: .env.example must keep product scoring disabled by default")
+        return 1
+    release_tree = ast.parse(engine_source)
+    release_function = next(
+        (node for node in ast.walk(release_tree)
+         if isinstance(node, ast.FunctionDef) and node.name == "legal_score_is_released"),
+        None,
+    )
+    release_function_source = (
+        ast.get_source_segment(engine_source, release_function) or ""
+        if release_function is not None else ""
+    )
+    if (
+        "VERIFIED_RULE_IDS" in release_function_source
+        or "issubset" in release_function_source
+        or "PRODUCT_SCORING_RULE_IDS" not in release_function_source
+    ):
+        print("FAIL: product release function must depend on the product allowlist, not counsel verification")
+        return 1
+
     verified_match = re.search(
         r"^VERIFIED_RULE_IDS:\s*frozenset\[str\]\s*=\s*frozenset\(\{([\s\S]*?)\}\)",
         engine_source, re.MULTILINE
@@ -227,7 +250,7 @@ def main() -> int:
         return 1
 
     print(f"PASS: {len(seed)} catalogue rules match engine, seed and legal register")
-    print(f"PASS: {len(scoring_ids)} rules are configured as product-eligible, but default statutory scoring remains paused; counsel-verified IDs: {len(verified_engine_ids)}")
+    print(f"PASS: {len(scoring_ids)} rules are product-eligible; environment switch defaults off; counsel-verified IDs remain separate: {len(verified_engine_ids)}")
     return 0
 
 
