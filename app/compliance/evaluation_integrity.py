@@ -195,7 +195,7 @@ async def evaluation_run_chain_problem(db: Any, run: Any) -> str | None:
     if getattr(run, "company_id", None) is None or getattr(run, "calculated_at", None) is None:
         return "PREVIOUS_HASH_CHAIN_CONTEXT_MISSING"
     previous_result = await db.execute(
-        select(ComplianceEvaluationRun.score_hash)
+        select(ComplianceEvaluationRun.id, ComplianceEvaluationRun.score_hash)
         .where(
             ComplianceEvaluationRun.company_id == run.company_id,
             ComplianceEvaluationRun.calculated_at < run.calculated_at,
@@ -203,7 +203,15 @@ async def evaluation_run_chain_problem(db: Any, run: Any) -> str | None:
         .order_by(ComplianceEvaluationRun.calculated_at.desc())
         .limit(1)
     )
-    expected_previous_hash = previous_result.scalar_one_or_none()
+    previous_row = previous_result.one_or_none()
+    if previous_row is None:
+        expected_previous_hash = None
+    else:
+        expected_previous_hash = previous_row.score_hash
+        if not isinstance(expected_previous_hash, str) or not _SHA256_RE.fullmatch(
+            expected_previous_hash
+        ):
+            return "PREVIOUS_HASH_PREDECESSOR_HASH_INVALID"
     if getattr(run, "previous_hash", None) != expected_previous_hash:
         return "PREVIOUS_HASH_CHAIN_MISMATCH"
     return None
