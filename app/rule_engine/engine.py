@@ -271,8 +271,12 @@ class CompanyProfile:
     auditor_firm_reg_no: Optional[str] = None
     last_return_filed_year: Optional[int] = None
     unfiled_returns_count: int | None = None
-    annual_return_filed: bool = False
-    annual_return_content_complete: bool = False
+    annual_return_filed: bool | None = None
+    annual_return_filing_status_verified: bool = False
+    annual_return_filing_status_evidence_ref: str | None = None
+    annual_return_filing_status_verified_at: date | None = None
+    annual_return_filing_status_verified_by: str | None = None
+    annual_return_content_complete: bool | None = None
     annual_return_filed_date: Optional[date] = None
     schedule_x_attached: bool = False
     balance_sheet_attached: bool = False
@@ -1643,9 +1647,28 @@ class NLCRuleEngine:
     # MODULE 3: ANNUAL RETURNS
     # ───────────────────────────────────────────────────────────────────
     def _run_annual_return_rules(self, c: CompanyProfile) -> None:
-        if c.last_agm_date and c.annual_return_filed is False:
+        if c.last_agm_date:
+            filing_status_verified = (
+                c.annual_return_filing_status_verified is True
+                and bool(c.annual_return_filing_status_evidence_ref)
+                and c.annual_return_filing_status_verified_at is not None
+                and bool(c.annual_return_filing_status_verified_by)
+            )
             deadline = c.last_agm_date + timedelta(days=ANNUAL_RETURN_DEADLINE_DAYS)
-            if self.today > deadline:
+            if not filing_status_verified:
+                self._add_flag(ComplianceFlag(
+                    rule_id="AR-001",
+                    flag_code="ANNUAL_RETURN_FILING_STATUS_UNVERIFIED",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="Annual-return filing status has not been verified against an authenticated RJSC filing record; no default is inferred.",
+                    statutory_basis="Section 36 and Schedule X, Companies Act 1994 (Bangladesh)",
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                    detail={"agm_date": str(c.last_agm_date), "deadline": str(deadline)},
+                ))
+            elif c.annual_return_filed is False and self.today > deadline:
                 delay = (self.today - deadline).days
                 severity = Severity.RED if delay > 90 else Severity.YELLOW
                 self._add_flag(ComplianceFlag(
@@ -1654,9 +1677,26 @@ class NLCRuleEngine:
                     severity=severity,
                     score_impact=self._graduated_ar_deduction(delay),
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Schedule X (Annual Return) not filed within 21 days of AGM. Overdue by {delay} days.",
-                    statutory_basis="Section 36 (Schedule X), Companies Act 1994 (Bangladesh)",
-                    detail={"delay_days": delay}
+                    description=f"Authenticated RJSC evidence confirms Schedule X (Annual Return) was not filed within 21 days of AGM. Overdue by {delay} days.",
+                    statutory_basis="Section 36 and Schedule X, Companies Act 1994 (Bangladesh)",
+                    detail={
+                        "delay_days": delay,
+                        "evidence_ref": c.annual_return_filing_status_evidence_ref,
+                        "verified_at": str(c.annual_return_filing_status_verified_at),
+                        "verified_by": c.annual_return_filing_status_verified_by,
+                    },
+                ))
+            elif c.annual_return_filed is None:
+                self._add_flag(ComplianceFlag(
+                    rule_id="AR-001",
+                    flag_code="ANNUAL_RETURN_FILING_STATUS_CONTRADICTORY",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description="RJSC filing-status verification is recorded but the filed/not-filed result is missing.",
+                    statutory_basis="Section 36 and Schedule X, Companies Act 1994 (Bangladesh)",
+                    state=RuleState.CONTRADICTORY,
+                    eval_state="UNKNOWN",
                 ))
 
         if c.unfiled_returns_count is not None and c.unfiled_returns_count >= 2:
