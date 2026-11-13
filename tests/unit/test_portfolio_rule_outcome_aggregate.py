@@ -37,12 +37,14 @@ class _PortfolioDB:
         self.current_run = None
         self.execute_count = 0
 
-    async def execute(self, _statement):
+    async def execute(self, statement):
         self.execute_count += 1
         if self.execute_count == 1:
             return _Result(rows=self.runs)
         if self.execute_count == 2:
             return _Result(rows=self.active_rule_ids)
+        if "compliance_evaluation_runs.score_hash" in str(statement).lower():
+            return _Result(scalar=None)
         return _Result(scalar=self.current_run.id)
 
     async def get(self, model, entity_id):
