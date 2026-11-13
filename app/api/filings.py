@@ -407,7 +407,7 @@ async def list_all_filings(
     "/agm",
     response_model=AGMResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("compliance_package"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN")), Depends(require_entitlement("compliance_package"))],
     summary="Create an AGM record for a company",
 )
 async def create_agm(
@@ -465,7 +465,7 @@ async def list_agms(
 @router.patch(
     "/agm/{agm_id}/held",
     response_model=AGMResponse,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("compliance_package"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN")), Depends(require_entitlement("compliance_package"))],
     summary="Mark an AGM as held with meeting details",
 )
 async def mark_agm_held(
@@ -507,7 +507,7 @@ async def mark_agm_held(
 @router.patch(
     "/agm/{agm_id}/filed",
     response_model=AGMResponse,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("compliance_package"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN")), Depends(require_entitlement("compliance_package"))],
     summary="Mark AGM filing as submitted to RJSC",
 )
 async def mark_agm_filed(
@@ -555,7 +555,7 @@ async def mark_agm_filed(
     "/audit",
     response_model=AuditResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("compliance_package"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN")), Depends(require_entitlement("compliance_package"))],
     summary="Create an audit engagement record",
 )
 async def create_audit(
@@ -592,7 +592,7 @@ async def list_audits(
 @router.patch(
     "/audit/{audit_id}/complete",
     response_model=AuditResponse,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("compliance_package"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN")), Depends(require_entitlement("compliance_package"))],
     summary="Mark an audit as complete with signed date",
 )
 async def mark_audit_complete(
@@ -636,7 +636,7 @@ async def mark_audit_complete(
     "/annual-return",
     response_model=AnnualReturnResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("compliance_package"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN")), Depends(require_entitlement("compliance_package"))],
     summary="Create an annual return record",
 )
 async def create_annual_return(
@@ -673,7 +673,7 @@ async def list_annual_returns(
 @router.patch(
     "/annual-return/{return_id}/filed",
     response_model=AnnualReturnResponse,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("compliance_package"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN")), Depends(require_entitlement("compliance_package"))],
     summary="Mark an annual return as filed with RJSC",
 )
 async def mark_return_filed(
@@ -724,7 +724,7 @@ async def mark_return_filed(
 @router.patch(
     "/annual-return/{return_id}/verify-filing-status",
     response_model=AnnualReturnResponse,
-    dependencies=[Depends(require_roles("LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN")), Depends(require_entitlement("compliance_package"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN")), Depends(require_entitlement("compliance_package"))],
     summary="Independently verify annual-return filing status against RJSC evidence",
 )
 async def verify_annual_return_filing_status(
@@ -734,6 +734,8 @@ async def verify_annual_return_filing_status(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
+    # Annual returns are finance-protected by database RLS. Only finance/admin
+    # principals may mutate this table; legal staff do not inherit financial access.
     from app.core.company_authorization import ensure_staff_company_scope
 
     result = await db.execute(
@@ -796,7 +798,7 @@ async def verify_annual_return_filing_status(
     "/statutory-register",
     response_model=StatutoryRegisterResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("compliance_package"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN")), Depends(require_entitlement("compliance_package"))],
     summary="Create a statutory register record",
 )
 async def create_statutory_register(
@@ -847,7 +849,7 @@ async def list_statutory_registers(
 @router.patch(
     "/statutory-register/{register_id}",
     response_model=StatutoryRegisterResponse,
-    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("compliance_package"))],
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN")), Depends(require_entitlement("compliance_package"))],
     summary="Update a statutory register entry",
 )
 async def update_statutory_register(
