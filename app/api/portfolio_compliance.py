@@ -15,7 +15,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.core.dependencies import get_current_user, get_db_for_user, require_roles
-from app.compliance.evaluation_integrity import evaluation_run_integrity_problems
+from app.compliance.evaluation_integrity import (
+    evaluation_run_chain_problem,
+    evaluation_run_integrity_problems,
+)
 from app.models.company import Company
 from app.models.compliance import ComplianceEvaluationRun
 from app.models.rules import LegalRule
@@ -160,6 +163,9 @@ async def aggregate_rule_outcomes(
             validation = _validation(run, company)
             if not validation["valid"]:
                 problems.extend(validation["problems"])
+            chain_problem = await evaluation_run_chain_problem(db, run)
+            if chain_problem:
+                problems.append(chain_problem)
 
         ids = [item.get("rule_id") for item in snapshot if isinstance(item, dict)]
         if len(ids) != len(snapshot) or len(set(ids)) != len(ids):
