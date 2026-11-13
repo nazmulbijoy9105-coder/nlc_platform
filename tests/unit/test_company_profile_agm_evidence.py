@@ -291,6 +291,7 @@ def test_non_catalogue_black_surcharge_is_excluded_from_product_scoring(monkeypa
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     assert _applied_score_impacts([flag])[0] == {
         "applied": 0,
