@@ -33,6 +33,13 @@ def upgrade() -> None:
     op.execute(
         "REVOKE DELETE ON ALL TABLES IN SCHEMA public FROM nlc_app_role"
     )
+    # Future tables created by this migration principal must not silently
+    # inherit DELETE for the runtime role. Later migrations must explicitly
+    # grant only the operations their API workflows require.
+    op.execute(
+        "ALTER DEFAULT PRIVILEGES IN SCHEMA public "
+        "REVOKE DELETE ON TABLES FROM nlc_app_role"
+    )
     op.execute(
         "GRANT DELETE ON TABLE public.webhook_endpoints TO nlc_app_role"
     )
