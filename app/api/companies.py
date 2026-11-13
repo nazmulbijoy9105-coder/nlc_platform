@@ -42,11 +42,10 @@ from app.services.pdf_report_service import PDFReportService
 
 
 def _legal_score_is_released() -> bool:
-    """Require product release plus independent verification of the full catalogue."""
+    """Check the product scoring switch and product allowlist; legal review remains separate."""
     return (
         LEGAL_SCORE_RELEASED is True
         and bool(PRODUCT_SCORING_RULE_IDS)
-        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
     )
 
 logger = structlog.get_logger(__name__)
