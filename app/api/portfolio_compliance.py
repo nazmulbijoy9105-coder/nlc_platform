@@ -345,6 +345,11 @@ async def evaluate_all_companies(
                 if run is None:
                     raise ValueError("Evaluation returned without an authoritative run.")
                 validated = _validation(run, company)
+                chain_problem = await evaluation_run_chain_problem(db, run)
+                if chain_problem:
+                    validated["problems"].append(chain_problem)
+                    validated["valid"] = False
+                    validated["pdf_eligible"] = False
                 await ActivityService(db).log(
                     actor_user_id=current_user.id,
                     company_id=company.id,
@@ -413,6 +418,11 @@ async def evaluate_one_company(
             if run is None:
                 raise ValueError("Evaluation returned without an authoritative run.")
             validated = _validation(run, company)
+            chain_problem = await evaluation_run_chain_problem(db, run)
+            if chain_problem:
+                validated["problems"].append(chain_problem)
+                validated["valid"] = False
+                validated["pdf_eligible"] = False
             await ActivityService(db).log(
                 actor_user_id=current_user.id,
                 company_id=company.id,
