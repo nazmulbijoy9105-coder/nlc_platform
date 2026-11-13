@@ -119,3 +119,47 @@ def test_latest_evaluation_run_lookup_is_company_scoped_and_ordered():
 
     actual = asyncio.run(ComplianceService(FakeSession()).get_latest_evaluation_run(company_id))
     assert actual is expected
+
+
+
+def test_all_85_product_rules_are_active_but_only_82_can_deduct():
+    from app.rule_engine.engine import (
+        PRODUCT_SCORING_RULE_IDS,
+        SCORE_DEDUCTION_RULE_IDS,
+        VERIFIED_RULE_IDS,
+    )
+
+    non_deduction = {"AR-001", "SH-002", "ESC-003"}
+    assert len(PRODUCT_SCORING_RULE_IDS) == 85
+    assert len(SCORE_DEDUCTION_RULE_IDS) == 82
+    assert PRODUCT_SCORING_RULE_IDS - SCORE_DEDUCTION_RULE_IDS == non_deduction
+    assert VERIFIED_RULE_IDS == frozenset()
+
+
+def test_indeterminate_and_judgment_states_never_carry_adverse_score_impact():
+    from app.rule_engine.engine import (
+        ComplianceFlag,
+        RevenueTier,
+        RuleState,
+        Severity,
+    )
+
+    for state in (
+        RuleState.UNKNOWN,
+        RuleState.NOT_APPLICABLE,
+        RuleState.DISPUTED,
+        RuleState.REQUIRES_LAWYER_JUDGMENT,
+        RuleState.CONTRADICTORY,
+    ):
+        flag = ComplianceFlag(
+            rule_id="AGM-001",
+            flag_code=f"TEST_{state.value}",
+            severity=Severity.RED,
+            score_impact=15,
+            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+            description="Indeterminate test finding",
+            statutory_basis="test only",
+            state=state,
+            eval_state="UNKNOWN",
+        )
+        assert flag.score_impact == 0, state.value
