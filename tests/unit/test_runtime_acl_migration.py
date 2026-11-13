@@ -39,4 +39,5 @@ def test_runtime_acl_migration_is_forward_only():
     ).read_text(encoding="utf-8")
 
     downgrade = source.split("def downgrade() -> None:", 1)[1]
-    assert "pass" in downgrade
+    assert "raise RuntimeError(" in downgrade
+    assert "refusing downgrade of runtime ACL hardening" in downgrade
