@@ -27,7 +27,7 @@ ENGINE_PATH = Path(__file__).resolve().parents[1] / "app" / "rule_engine" / "eng
 
 EXPECTED_GUARD_SITES = 5          # F-29 x3 + F-30 black_count + 39b4b9d severity floor
 EXPECTED_VERIFIED_COUNT = 0       # independent counsel verification only; no signed approvals recorded
-NON_DEDUCTIBLE_RULE_IDS = ("AR-001", "SH-002", "ESC-003")   # active catalogue rules; no direct point deductions
+SPECIAL_ACTIVE_RULE_IDS = ("AR-001", "SH-002", "ESC-003")   # specifically retained in the 85-rule product scoring set
 LIFECYCLE_ALLOWED = 1             # one lifecycle site is un-gated by design
 
 GUARD = 'f.eval_state == "VIOLATION"'
@@ -192,8 +192,8 @@ def test_product_scoring_allowlist_is_full_and_separate_from_legal_verification(
     product_ids = set(mod.PRODUCT_SCORING_RULE_IDS)
     deduction_ids = set(mod.SCORE_DEDUCTION_RULE_IDS)
     assert len(product_ids) == 85
-    assert set(NON_DEDUCTIBLE_RULE_IDS) <= product_ids
-    assert len(deduction_ids) == 82
-    assert product_ids - deduction_ids == set(NON_DEDUCTIBLE_RULE_IDS)
+    assert set(SPECIAL_ACTIVE_RULE_IDS) <= product_ids
+    assert len(deduction_ids) == 85
+    assert product_ids == deduction_ids
     assert mod.VERIFIED_RULE_IDS == frozenset()
     assert mod.legal_score_is_released() is (mod.LEGAL_SCORE_RELEASED is True and bool(product_ids))
