@@ -41,7 +41,7 @@ from app.core.dependencies import (
     require_roles,
 )
 from app.core.entitlement import require_entitlement
-from app.models.filings import AGM, AGMNoticeEvidence
+from app.models.filings import AGM, AGMNoticeEvidence, AnnualReturn
 from app.models.people import ShareComplianceEvent, Shareholder, ShareTransfer
 from app.models.user import User
 from app.rule_engine.engine import LEGAL_SCORE_RELEASED
@@ -235,12 +235,22 @@ class AnnualReturnMarkFiledRequest(BaseModel):
     filing_document_id: uuid.UUID | None = None
 
 
+class AnnualReturnVerifyFilingStatusRequest(BaseModel):
+    filed: bool
+    filed_date: date | None = None
+    evidence_ref: str = Field(min_length=4, max_length=500)
+    rjsc_acknowledgment_number: str | None = Field(default=None, max_length=255)
+
+
 class AnnualReturnResponse(BaseModel):
     return_id: str
     company_id: str
     financial_year: int
     is_filed: bool
     filing_evidence_status: str
+    filing_status_verified: bool
+    filing_status_verified_at: str | None
+    filing_status_verified_by: str | None
     filing_deadline: str | None
     is_default: bool | None
     filed_date: str | None
@@ -670,6 +680,7 @@ async def mark_return_filed(
         filed_date=body.filed_date,
         rjsc_receipt_number=body.rjsc_acknowledgment_number,
         late_fee_paid_bdt=body.late_fee_amount if body.late_fee_paid else None,
+        submitted_by=current_user.id,
     )
     if not annual_return:
         raise HTTPException(status_code=404, detail="Annual return record not found.")
@@ -684,6 +695,78 @@ async def mark_return_filed(
         actor_user_id=current_user.id,
     )
     _dispatch_reevaluation(annual_return.company_id, "ANNUAL_RETURN_FILED")
+    return _return_to_response(annual_return)
+
+
+@router.patch(
+    "/annual-return/{return_id}/verify-filing-status",
+    response_model=AnnualReturnResponse,
+    dependencies=[Depends(require_roles("LEGAL_STAFF", "ADMIN_STAFF", "SUPER_ADMIN")), Depends(require_entitlement("compliance_package"))],
+    summary="Independently verify annual-return filing status against RJSC evidence",
+)
+async def verify_annual_return_filing_status(
+    return_id: uuid.UUID,
+    body: AnnualReturnVerifyFilingStatusRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    from app.core.company_authorization import ensure_staff_company_scope
+
+    result = await db.execute(
+        select(AnnualReturn)
+        .where(AnnualReturn.id == return_id, AnnualReturn.is_active.is_(True))
+        .with_for_update()
+    )
+    annual_return = result.scalar_one_or_none()
+    if annual_return is None:
+        raise HTTPException(status_code=404, detail="Annual return record not found.")
+    await ensure_staff_company_scope(annual_return.company_id, current_user, db)
+
+    if annual_return.filing_status_submitted_by == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A different authorised reviewer must verify the submitted filing claim.",
+        )
+    if body.filed and body.filed_date is None:
+        raise HTTPException(status_code=422, detail="A verified filed status requires the RJSC filing date.")
+    if not body.filed and body.filed_date is not None:
+        raise HTTPException(status_code=422, detail="A verified non-filing status cannot carry a filing date.")
+    if body.filed_date is not None and body.filed_date > date.today():
+        raise HTTPException(status_code=422, detail="A future filing date cannot be verified.")
+
+    annual_return.filed_date = body.filed_date
+    annual_return.rjsc_receipt_number = (
+        body.rjsc_acknowledgment_number.strip()
+        if body.filed and body.rjsc_acknowledgment_number else None
+    )
+    annual_return.filing_status_verified = True
+    annual_return.filing_status_evidence_ref = body.evidence_ref.strip()
+    annual_return.filing_status_verified_at = datetime.now(UTC)
+    annual_return.filing_status_verified_by = current_user.id
+    if annual_return.filing_deadline is not None:
+        is_late = body.filed and body.filed_date is not None and body.filed_date > annual_return.filing_deadline
+        is_unfiled_overdue = not body.filed and date.today() > annual_return.filing_deadline
+        annual_return.is_default = bool(is_late or is_unfiled_overdue)
+        annual_return.delay_days = (
+            (body.filed_date - annual_return.filing_deadline).days
+            if is_late and body.filed_date is not None
+            else (date.today() - annual_return.filing_deadline).days
+            if is_unfiled_overdue
+            else 0
+        )
+    await db.flush()
+    await ActivityService(db).log(
+        action="ANNUAL_RETURN_FILING_STATUS_VERIFIED",
+        resource_type="annual_return",
+        resource_id=str(return_id),
+        description="Annual-return filing status independently verified against RJSC evidence.",
+        ip_address=request.client.host if request.client else None,
+        actor_user_id=current_user.id,
+        detail={"filed": body.filed, "evidence_ref": body.evidence_ref.strip()},
+    )
+    _dispatch_reevaluation(annual_return.company_id, "ANNUAL_RETURN_FILING_STATUS_VERIFIED")
+    await db.refresh(annual_return)
     return _return_to_response(annual_return)
 
 
@@ -898,6 +981,9 @@ def _return_to_response(r) -> AnnualReturnResponse:
         financial_year=r.financial_year,
         is_filed=r.filed_date is not None,
         filing_evidence_status=filing_evidence_status,
+        filing_status_verified=bool(r.filing_status_verified),
+        filing_status_verified_at=r.filing_status_verified_at.isoformat() if r.filing_status_verified_at else None,
+        filing_status_verified_by=str(r.filing_status_verified_by) if r.filing_status_verified_by else None,
         filing_deadline=(
             r.filing_deadline.isoformat()
             if LEGAL_CALENDAR_RELEASED and r.filing_deadline else None
