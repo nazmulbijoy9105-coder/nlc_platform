@@ -778,6 +778,7 @@ async def verify_annual_return_filing_status(
     await db.flush()
     await ActivityService(db).log(
         action="ANNUAL_RETURN_FILING_STATUS_VERIFIED",
+        company_id=annual_return.company_id,
         resource_type="annual_return",
         resource_id=str(return_id),
         description="Annual-return filing status independently verified against RJSC evidence.",
