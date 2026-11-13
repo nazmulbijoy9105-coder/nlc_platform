@@ -789,11 +789,6 @@ class ComplianceService(BaseService[ComplianceFlag]):
         rule_outcomes_hash = hashlib.sha256(json.dumps(
             rule_outcomes_snapshot, sort_keys=True, separators=(",", ":"), default=str
         ).encode()).hexdigest()
-        rule_outcome_counts: dict[str, int] = {}
-        for item in rule_outcomes_snapshot:
-            state = item["outcome_state"]
-            rule_outcome_counts[state] = rule_outcome_counts.get(state, 0) + 1
-
         hash_material = json.dumps(
             {
                 "previous_hash": previous_hash or "GENESIS",
