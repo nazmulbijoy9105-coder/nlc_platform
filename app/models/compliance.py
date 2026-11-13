@@ -122,6 +122,12 @@ class ComplianceFlag(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         JSONB, nullable=True,
         comment="Structured explanation: delay_days, calculation_basis, etc."
     )
+    rule_outcomes_snapshot: Mapped[list[dict] | None] = mapped_column(
+        JSONB, nullable=True,
+        comment="Immutable one-row-per-active-legal-rule outcome ledger; absent findings remain NOT_EVALUATED."
+    )
+    rule_outcomes_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    rule_catalogue_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     fact_provenance_snapshot: Mapped[list[dict]] = mapped_column(
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"),
         comment="Latest source/trust/verification snapshot attached to this active finding; [] means legacy or no explicit facts attached."
