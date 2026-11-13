@@ -193,7 +193,6 @@ class ComplianceService(BaseService[ComplianceFlag]):
         from app.rule_engine import CompanyProfile
         from app.rule_engine.engine import (
             PRODUCT_SCORING_RULE_IDS,
-            VERIFIED_RULE_IDS,
             legal_score_is_released,
         )
         from app.services.company_service import CompanyService
@@ -512,7 +511,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             existing_flag = existing.scalar_one_or_none()
             if existing_flag:
                 # Update score impact and description in case rule changed
-                approved = legal_score_is_released() and flag.rule_id in VERIFIED_RULE_IDS and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+                approved = legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
                 existing_flag.severity = (
                     SeverityLevel(flag.severity) if approved else SeverityLevel.NOT_EVALUATED
                 )
@@ -916,19 +915,19 @@ class ComplianceService(BaseService[ComplianceFlag]):
             )
         )
         rows = flags_result.all()
-        from app.rule_engine.engine import PRODUCT_SCORING_RULE_IDS, VERIFIED_RULE_IDS, legal_score_is_released
-        verified_severities = [
+        from app.rule_engine.engine import PRODUCT_SCORING_RULE_IDS, legal_score_is_released
+        product_severities = [
             str(getattr(severity, "value", severity)).upper()
             for rule_id, severity in rows
-            if legal_score_is_released() and rule_id in VERIFIED_RULE_IDS and rule_id in PRODUCT_SCORING_RULE_IDS
+            if legal_score_is_released() and rule_id in PRODUCT_SCORING_RULE_IDS
         ]
-        black_count = verified_severities.count("BLACK")
+        black_count = product_severities.count("BLACK")
         red_count = verified_severities.count("RED")
         yellow_count = verified_severities.count("YELLOW")
         pending_review_count = len(rows) - len(verified_severities)
         summary.update({
-            # Customer-facing active counts include only rules approved for release.
-            # Unapproved engine flags remain separately visible as review prompts.
+            # Customer-facing counts include product-allowlisted findings only.
+            # Counsel verification status is tracked separately from product release.
             "total_active": len(verified_severities),
             "total_active_flags": len(verified_severities),
             "pending_review": pending_review_count,
