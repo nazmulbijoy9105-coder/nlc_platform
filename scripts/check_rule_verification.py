@@ -192,8 +192,71 @@ def main() -> int:
         print("FAIL: seed_rules.py must insert new canonical rows as active")
         return 1
 
-    if not re.search(r"^LEGAL_SCORE_RELEASED:\s*bool\s*=\s*False\s*$", engine_source, re.MULTILINE):
-        print("FAIL: default product scoring release must remain paused")
+    release_env_pattern = (
+        r'^LEGAL_SCORE_RELEASED:\\s*bool\\s*=\\s*os\\.getenv\\('
+        r'"LEGAL_SCORE_RELEASED",\\s*"false"\\)\\.strip\\(\\)\\.lower\\(\\)\\s+'
+        r'in\\s+\\{"true",\\s*"1",\\s*"yes",\\s*"on"\\}\\s*    verified_match = re.search(
+        r"^VERIFIED_RULE_IDS:\s*frozenset\[str\]\s*=\s*frozenset\(\{([\s\S]*?)\}\)",
+        engine_source, re.MULTILINE
+    )
+    verified_engine_ids = set(re.findall(r'"([A-Z]{2,12}-\d{3})"', verified_match.group(1))) if verified_match else set()
+    if verified_engine_ids:
+        print(f"FAIL: default VERIFIED_RULE_IDS must remain empty pending independent Bangladesh-counsel verification; found={sorted(verified_engine_ids)}")
+        return 1
+
+    engine_tree = ast.parse(engine_source)
+    scoring_ids: set[str] = set()
+    for node in ast.walk(engine_tree):
+        if (isinstance(node, ast.AnnAssign)
+                and isinstance(node.target, ast.Name)
+                and node.target.id == "PRODUCT_SCORING_RULE_IDS"):
+            scoring_ids = set(ast.literal_eval(node.value.args[0]))
+            break
+    forbidden_scoring_ids = {"AR-001", "SH-002", "ESC-003"}
+    expected_scoring_ids = seed - forbidden_scoring_ids
+    if scoring_ids != expected_scoring_ids:
+        print(
+            f"FAIL: product scoring allowlist mismatch; count={len(scoring_ids)} "
+            f"missing={sorted(expected_scoring_ids - scoring_ids)} "
+            f"extra={sorted(scoring_ids - expected_scoring_ids)}"
+        )
+        return 1
+
+    if not re.search(r"^BLACK_OVERRIDE_RULES:\s*set\[str\]\s*=\s*set\(\)\s*$", engine_source, re.MULTILINE):
+        print("FAIL: unapproved legal rule catalogue must not define BLACK overrides")
+        return 1
+
+    print(f"PASS: {len(seed)} catalogue rules match engine, seed and legal register")
+    print(f"PASS: {len(scoring_ids)} rules are product-eligible; environment switch defaults off; counsel-verified IDs remain separate: {len(verified_engine_ids)}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+    )
+    if not re.search(release_env_pattern, engine_source, re.MULTILINE):
+        print("FAIL: product release must use LEGAL_SCORE_RELEASED env var and default to false")
+        return 1
+    env_example = Path(".env.example").read_text(encoding="utf-8")
+    if not re.search(r"^LEGAL_SCORE_RELEASED=false$", env_example, re.MULTILINE):
+        print("FAIL: .env.example must keep product scoring disabled by default")
+        return 1
+    release_function = next(
+        (node for node in ast.walk(ast.parse(engine_source))
+         if isinstance(node, ast.FunctionDef) and node.name == "legal_score_is_released"),
+        None,
+    )
+    release_function_source = (
+        ast.get_source_segment(engine_source, release_function) or ""
+        if release_function is not None else ""
+    )
+    if (
+        "VERIFIED_RULE_IDS" in release_function_source
+        or "issubset" in release_function_source
+        or "PRODUCT_SCORING_RULE_IDS" not in release_function_source
+    ):
+        print("FAIL: product release function must depend on the product allowlist, not counsel verification")
         return 1
     verified_match = re.search(
         r"^VERIFIED_RULE_IDS:\s*frozenset\[str\]\s*=\s*frozenset\(\{([\s\S]*?)\}\)",
