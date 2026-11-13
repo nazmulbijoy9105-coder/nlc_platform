@@ -29,12 +29,18 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='nlc_migration_owner') THEN
     EXECUTE 'CREATE ROLE nlc_migration_owner NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT BYPASSRLS NOREPLICATION';
   END IF;
-  IF (SELECT rolsuper FROM pg_roles WHERE rolname='nlc_migration_owner') THEN\n    RAISE EXCEPTION 'nlc_migration_owner is SUPERUSER; only a superuser DBA may correct this role';\n  END IF;\n  ALTER ROLE nlc_migration_owner NOLOGIN NOCREATEDB NOCREATEROLE NOINHERIT BYPASSRLS NOREPLICATION;
+  IF (SELECT rolsuper FROM pg_roles WHERE rolname='nlc_migration_owner') THEN
+    RAISE EXCEPTION 'nlc_migration_owner is SUPERUSER; only a superuser DBA may correct this role';
+  END IF;
+  ALTER ROLE nlc_migration_owner NOLOGIN NOCREATEDB NOCREATEROLE NOINHERIT BYPASSRLS NOREPLICATION;
 
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='nlc_migration_user') THEN
     EXECUTE 'CREATE ROLE nlc_migration_user LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS NOREPLICATION CONNECTION LIMIT 5';
   END IF;
-  IF (SELECT rolsuper FROM pg_roles WHERE rolname='nlc_migration_user') THEN\n    RAISE EXCEPTION 'nlc_migration_user is SUPERUSER; only a superuser DBA may correct this role';\n  END IF;\n  ALTER ROLE nlc_migration_user LOGIN NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS NOREPLICATION CONNECTION LIMIT 5;
+  IF (SELECT rolsuper FROM pg_roles WHERE rolname='nlc_migration_user') THEN
+    RAISE EXCEPTION 'nlc_migration_user is SUPERUSER; only a superuser DBA may correct this role';
+  END IF;
+  ALTER ROLE nlc_migration_user LOGIN NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS NOREPLICATION CONNECTION LIMIT 5;
 END
 $roles$;
 
@@ -55,7 +61,14 @@ BEGIN
 
   FOREACH schema_name IN ARRAY ARRAY['public','nlc_private','audit'] LOOP
     IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname=schema_name) THEN
-      RAISE EXCEPTION 'Required migration schema % is missing; refusing partial transfer', schema_name;
+      IF schema_name = 'nlc_private' THEN
+        -- At the supported 0042 starting revision this schema is expected to
+        -- be absent; migration 0050 creates it. Pre-create it with the intended
+        -- owner so the ownership transfer is valid before Alembic starts.
+        EXECUTE 'CREATE SCHEMA nlc_private AUTHORIZATION nlc_migration_owner';
+      ELSE
+        RAISE EXCEPTION 'Required migration schema % is missing; refusing partial transfer', schema_name;
+      END IF;
     END IF;
     EXECUTE format('GRANT USAGE, CREATE ON SCHEMA %I TO nlc_migration_owner', schema_name);
   END LOOP;
@@ -160,9 +173,23 @@ BEGIN
 END
 $transfer$;
 
+-- The restored 0042 branch predates migration 0050's public-schema lockdown.
+-- Revoke as the current schema/database owner before switching to the group role.
+REVOKE CREATE ON SCHEMA public FROM PUBLIC, nlc_app_role;
+
 -- The migration login can inspect the catalogue but cannot perform DDL until
 -- env.py issues SET ROLE nlc_migration_owner inside Alembic's own connection.
 SET ROLE nlc_migration_owner;
+-- The restored 0042 branch predates 0112's Alembic metadata lockdown.
+ALTER TABLE public.alembic_version ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.alembic_version FORCE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.alembic_version FROM PUBLIC, nlc_app_role;
+
+-- Neon-created read_write roles may start with broad direct DML grants.
+-- Strip those grants: the login must use SET ROLE for migration DDL/DML.
+REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public, nlc_private, audit FROM nlc_migration_user;
+REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public, nlc_private, audit FROM nlc_migration_user;
+REVOKE CREATE ON SCHEMA public, nlc_private, audit FROM nlc_migration_user;
 GRANT USAGE ON SCHEMA public, nlc_private, audit TO nlc_migration_user;
 GRANT SELECT ON ALL TABLES IN SCHEMA public, nlc_private, audit TO nlc_migration_user;
 GRANT SELECT ON ALL SEQUENCES IN SCHEMA public, nlc_private, audit TO nlc_migration_user;
