@@ -22,7 +22,7 @@ def upgrade() -> None:
         "fk_annual_returns_filing_status_submitted_by_users",
         "annual_returns", "users",
         ["filing_status_submitted_by"], ["id"],
-        ondelete="SET NULL",
+        ondelete="RESTRICT",
     )
     op.add_column(
         "annual_returns",
