@@ -320,6 +320,40 @@ def _legal_score_is_released() -> bool:
     )
 
 
+def _is_active_confirmed_violation(flag: Any) -> bool:
+    """Accept only active, applicable, explicitly classified violations.
+
+    Engine flags expose RuleState/eval_state; persisted ORM flags expose
+    evaluation_state/flag_status/resolved_date. Missing classification fails
+    closed instead of defaulting to a violation.
+    """
+    evaluation_state = getattr(
+        flag, "evaluation_state", getattr(flag, "eval_state", "UNKNOWN")
+    )
+    if getattr(evaluation_state, "value", evaluation_state) != "VIOLATION":
+        return False
+
+    state = getattr(flag, "state", None)
+    if state is not None:
+        state_value = getattr(state, "value", state)
+        if state_value not in ("NON_COMPLIANT", "VERIFIED_ABSENT"):
+            return False
+
+    flag_status = getattr(flag, "flag_status", None)
+    if flag_status is not None and getattr(flag_status, "value", flag_status) != "ACTIVE":
+        return False
+
+    resolved = getattr(flag, "resolved", None)
+    if resolved is None:
+        resolved = getattr(flag, "resolved_date", None) is not None
+    if resolved:
+        return False
+
+    if not getattr(flag, "conditional_applies", True):
+        return False
+    return True
+
+
 def _verified_flag_score(flags: Any) -> tuple[int, bool]:
     """Mirror the engine's release, eligibility, category-cap and override gates."""
     if not _legal_score_is_released():
@@ -330,18 +364,10 @@ def _verified_flag_score(flags: Any) -> tuple[int, bool]:
     has_black_override = False
     for flag in flags:
         rule_id = getattr(flag, "rule_id", "")
-        state = getattr(flag, "state", RuleState.NON_COMPLIANT)
-        eval_state = getattr(flag, "eval_state", "VIOLATION")
-        active = (
-            not getattr(flag, "resolved", False)
-            and getattr(flag, "conditional_applies", True)
-        )
         if (
-            not active
-            or state not in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
-            or eval_state != "VIOLATION"
+            not _is_active_confirmed_violation(flag)
             or rule_id not in SCORE_DEDUCTION_RULE_IDS
-            ):
+        ):
             continue
 
         severity = getattr(
@@ -395,7 +421,8 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
     for f in (flags or []):
         rule_id = getattr(f, "rule_id", "") or ""
         if (
-            rule_id not in SCORE_DEDUCTION_RULE_IDS
+            not _is_active_confirmed_violation(f)
+            or rule_id not in SCORE_DEDUCTION_RULE_IDS
         ):
             continue
 
