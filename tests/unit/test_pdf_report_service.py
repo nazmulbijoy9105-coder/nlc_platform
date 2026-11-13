@@ -174,8 +174,8 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
             self.calls = 0
 
         async def execute(self, statement):
-            self.calls += 1
-            value = snapshot if self.calls == 1 else None
+            sql = str(statement).lower()
+            value = None if "compliance_evaluation_runs.score_hash" in sql else snapshot
             return SimpleNamespace(scalar_one_or_none=lambda: value)
 
     response = asyncio.run(
@@ -433,8 +433,8 @@ def test_endpoint_rejects_score_snapshot_mismatch(monkeypatch):
             self.calls = 0
 
         async def execute(self, statement):
-            self.calls += 1
-            value = snapshot if self.calls == 1 else None
+            sql = str(statement).lower()
+            value = None if "compliance_evaluation_runs.score_hash" in sql else snapshot
             return SimpleNamespace(scalar_one_or_none=lambda: value)
 
     with pytest.raises(HTTPException) as exc:
@@ -581,8 +581,8 @@ def test_endpoint_withholds_pdf_when_evaluation_score_hash_is_tampered(monkeypat
             self.calls = 0
 
         async def execute(self, statement):
-            self.calls += 1
-            value = snapshot if self.calls == 1 else None
+            sql = str(statement).lower()
+            value = None if "compliance_evaluation_runs.score_hash" in sql else snapshot
             return SimpleNamespace(scalar_one_or_none=lambda: value)
 
     with pytest.raises(HTTPException) as exc:
