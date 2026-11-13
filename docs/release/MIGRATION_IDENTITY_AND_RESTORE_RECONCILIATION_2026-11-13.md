@@ -4,7 +4,20 @@
 
 This is a source-code and operational-readiness change only. It does not connect to production with a write-capable identity and does not execute role DDL, grants, ownership transfers, migrations, data changes, restores, or deployments.
 
-PR #309 has merged into `main`, so `0112_runtime_acl_and_alembic_rls` is now in source control. Production remains at `0111_rule_outcome_ledger`; `0112` has not been applied. The restored Neon branch remains at `0042_dedup_key`. Do not run the migration chain against that branch until the historical-table discrepancy below has been reconciled.
+PR #309 has merged into `main`. A subsequent Render deploy-hook deployment of merge commit `7023c11473485f7ba7123d0b56ea3c9ea1b76946` completed at 10:31:10 UTC and its logs show Alembic upgrading production from `0111_rule_outcome_ledger` to `0112_runtime_acl_and_alembic_rls` at 10:30:18 UTC. A fresh read-only Neon query confirms production is now at `0112`. This deployment was not initiated by this PR's work; Render's `autoDeploy` is disabled, but a separate `deploy_hook` trigger is configured and active. The restored Neon branch remains at `0042_dedup_key`. Do not run the migration chain against that branch until the historical-table discrepancy below has been reconciled.
+
+## Production deployment observed after PR #309 merge
+
+Read-only Render and Neon checks now show:
+
+- Service `nlc_platform` (`srv-d72sam94tr6s73dk8etg`) has `autoDeploy=no`, but deploy `dep-dbrecurbc2fs73cres70` was triggered by `deploy_hook` for merge commit `7023c114`.
+- The deploy completed successfully at 10:31:10 UTC. Render logs show `alembic upgrade 0111_rule_outcome_ledger -> 0112_runtime_acl_and_alembic_rls` at 10:30:18 UTC, then application startup with `db_connectivity_ok runtime_role_verified=True`.
+- Neon now reports `0112_runtime_acl_and_alembic_rls`.
+- Effective ACL verification: `nlc_app_role` has DELETE only on `webhook_endpoints`; all five dashboard views are SELECT-only; `alembic_version` has ENABLE + FORCE RLS and no app-role privileges; all six checked evidence tables remain empty.
+
+The current migration-role state is only partially remediated. A new read-only query now sees `nlc_migration_user` as LOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, NOREPLICATION, but still BYPASSRLS. `nlc_migration_owner` does not exist; `nlc_migration_user` owns zero public migration relations/functions and has no CREATE on the database or public schema. `neondb_owner` still owns `public.alembic_version` and `public.rescue_audit_log`. No membership from `nlc_migration_user` to an owner group is present. The exact Render migration credential is not exposed by service metadata; the evidence indicates the 0112 migration did not run as `nlc_migration_user` assuming a separate owner group.
+
+**Operational implication:** do not deploy the PR #310 migration-executor change until the non-login owner group, ownership inventory, SET-only membership, default ACLs and explicit Render `MIGRATION_DATABASE_URL` have been provisioned and verified. The deployed 0112 ACL changes are confirmed; the migration-identity remediation is not complete.
 
 ## 1. Migration login and object-owner separation
 
