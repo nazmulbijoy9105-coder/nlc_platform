@@ -198,6 +198,7 @@ def test_verified_zero_directors_triggers_minimum_director_rule():
 def test_score_impact_reporting_respects_product_release_gate_and_category_caps(monkeypatch):
     # Simulate an internally source-checked rule while the release gate is closed.
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
     flags = [
         SimpleNamespace(
@@ -280,8 +281,8 @@ def test_unverified_director_rows_do_not_inflate_evidence_coverage():
 
 
 def test_non_catalogue_black_surcharge_is_excluded_from_product_scoring(monkeypatch):
-    # ESC-003 is the surcharge itself, not a score-bearing finding in the
-    # product catalogue. It must not be counted as a category deduction.
+    # This test isolates a catalogue that deliberately contains AGM-001 only.
+    # ESC-003 is active in the real 85-rule product register, but absent here.
     flag = SimpleNamespace(
         rule_id="ESC-003", score_impact=10, state=RuleState.NON_COMPLIANT,
         eval_state="VIOLATION", resolved=False, conditional_applies=True,
