@@ -173,3 +173,76 @@ async def test_released_legal_staff_kpis_include_assignment_and_membership_scope
     assert "company_user_access AS cua" in db.calls[0][0]
     assert "cua.is_active IS TRUE" in db.calls[0][0]
     assert db.calls[0][1] == {"uid": str(user_id)}
+
+
+
+class _PortfolioDashboardService:
+    calls = []
+
+    def __init__(self, db):
+        self.db = db
+
+    async def get_upcoming_deadlines(self, **kwargs):
+        self.calls.append(("deadlines", kwargs))
+        return []
+
+    async def get_risk_distribution(self, **kwargs):
+        self.calls.append(("risk", kwargs))
+        return []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", [UserRole.SUPER_ADMIN, UserRole.ADMIN_STAFF])
+async def test_admin_deadlines_and_risk_use_portfolio_scope(monkeypatch, role):
+    user_id = uuid.uuid4()
+    _PortfolioDashboardService.calls = []
+    monkeypatch.setattr(companies_api, "CompanyService", _PortfolioDashboardService)
+    monkeypatch.setattr(companies_api, "_require_legal_dashboard_release", lambda: None)
+    user = SimpleNamespace(id=user_id, role=role)
+
+    assert await companies_api.get_upcoming_deadlines(
+        days_ahead=30, current_user=user, db=object()
+    ) == []
+    assert await companies_api.get_risk_distribution(
+        current_user=user, db=object()
+    ) == []
+
+    assert _PortfolioDashboardService.calls == [
+        ("deadlines", {
+            "days_ahead": 30,
+            "user_id": None,
+            "include_assigned_staff": False,
+            "include_all_companies": True,
+        }),
+        ("risk", {
+            "user_id": None,
+            "include_assigned_staff": False,
+            "include_all_companies": True,
+        }),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_legal_staff_deadlines_and_risk_remain_tenant_scoped(monkeypatch):
+    user_id = uuid.uuid4()
+    _PortfolioDashboardService.calls = []
+    monkeypatch.setattr(companies_api, "CompanyService", _PortfolioDashboardService)
+    monkeypatch.setattr(companies_api, "_require_legal_dashboard_release", lambda: None)
+    user = SimpleNamespace(id=user_id, role=UserRole.LEGAL_STAFF)
+
+    await companies_api.get_upcoming_deadlines(days_ahead=30, current_user=user, db=object())
+    await companies_api.get_risk_distribution(current_user=user, db=object())
+
+    assert _PortfolioDashboardService.calls == [
+        ("deadlines", {
+            "days_ahead": 30,
+            "user_id": user_id,
+            "include_assigned_staff": True,
+            "include_all_companies": False,
+        }),
+        ("risk", {
+            "user_id": user_id,
+            "include_assigned_staff": True,
+            "include_all_companies": False,
+        }),
+    ]
