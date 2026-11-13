@@ -279,7 +279,9 @@ def test_unverified_director_rows_do_not_inflate_evidence_coverage():
     assert _input_coverage(verified) > 0.0
 
 
-def test_black_override_is_reported_separately_from_category_deduction(monkeypatch):
+def test_non_catalogue_black_surcharge_is_excluded_from_product_scoring(monkeypatch):
+    # ESC-003 is the surcharge itself, not a score-bearing finding in the
+    # product catalogue. It must not be counted as a category deduction.
     flag = SimpleNamespace(
         rule_id="ESC-003", score_impact=10, state=RuleState.NON_COMPLIANT,
         eval_state="VIOLATION", resolved=False, conditional_applies=True,
@@ -288,7 +290,7 @@ def test_black_override_is_reported_separately_from_category_deduction(monkeypat
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     assert _applied_score_impacts([flag])[0] == {
         "applied": 0,
         "status": "EXCLUDED_FROM_PRODUCT_SCORING",

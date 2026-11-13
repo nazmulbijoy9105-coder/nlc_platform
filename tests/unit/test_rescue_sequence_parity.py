@@ -24,6 +24,16 @@ def controlled_release(monkeypatch):
         "AR-002", "ESC-001", "AGM-003", "TAX-004",
     })
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module,
+        "PRODUCT_SCORING_RULE_IDS",
+        frozenset({
+            "AGM-001", "AGM-002", "AUD-001", "AUD-002", "AUD-003",
+            "TR-005", "TR-006", "ESC-002", "TR-001", "TR-004",
+            "AR-002", "ESC-001", "ESC-003", "AGM-003", "TAX-004",
+        }),
+    )
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", engine_module.PRODUCT_SCORING_RULE_IDS)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", rule_ids)
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", rule_ids)
 
@@ -79,6 +89,7 @@ def test_each_finding_gets_exactly_one_rescue_disposition(controlled_release):
         finding.rule_id for finding in findings
     ]
     assert result[0]["disposition"] == "ACTION_REQUIRED"
+    assert result[0]["reason"] == "CONFIRMED_RESCUE_STEP"
     assert result[1]["disposition"] == "WAITING_EVIDENCE"
     assert result[1]["reason"] == "FINDING_STATE_UNKNOWN"
     assert result[2]["reason"] == "FINDING_RESOLVED"

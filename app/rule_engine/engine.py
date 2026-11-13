@@ -3510,6 +3510,8 @@ class NLCRuleEngine:
                 disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
             elif step is not None:
                 disposition, reason = "ACTION_REQUIRED", "CONFIRMED_RESCUE_STEP"
+            elif not legal_score_is_released():
+                disposition, reason = "BLOCKED", "LEGAL_SCORE_NOT_RELEASED"
             elif flag.rule_id == "TAX-004":
                 disposition, reason = "WAITING_EVIDENCE", "MISSED_TAX_QUARTERS_NOT_ESTABLISHED"
             else:
@@ -3559,6 +3561,14 @@ class NLCRuleEngine:
         # Only confirmed RED/BLACK findings below may create proposed steps.
         # YELLOW findings remain visible in compliance reporting and do not
         # receive a rescue workflow under the current policy.
+        released_risk_band = getattr(
+            getattr(score, "risk_band", None), "value", getattr(score, "risk_band", None)
+        )
+        if legal_score_is_released() and released_risk_band not in (
+            Severity.RED.value, Severity.BLACK.value
+        ):
+            return []
+
         actionable = [
             f for f in active
             if f.rule_id in PRODUCT_SCORING_RULE_IDS

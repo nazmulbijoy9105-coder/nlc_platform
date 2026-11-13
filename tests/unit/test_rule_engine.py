@@ -24,6 +24,8 @@ from datetime import date, timedelta
 
 import pytest
 
+import app.rule_engine.engine as engine_module
+
 from app.rule_engine.engine import (
     ApplicabilityState,
     ChargeEvent,
@@ -41,6 +43,13 @@ from tests.conftest import (
 
 # All tests in this file are unit tests
 pytestmark = [pytest.mark.unit, pytest.mark.rule]
+
+
+@pytest.fixture(autouse=True)
+def _synthetic_complete_legal_release_for_engine_mechanics(monkeypatch):
+    """Exercise scoring mechanics only under an isolated complete-release fixture."""
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", engine_module.PRODUCT_SCORING_RULE_IDS)
 
 
 # =============================================================================

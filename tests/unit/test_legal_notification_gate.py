@@ -49,6 +49,9 @@ def test_known_non_legal_operational_notifications_remain_eligible(notification_
     assert is_notification_eligible(notification_type) is True
 
 
+def test_product_allowlisted_rule_notifications_remain_suppressed_while_legal_review_is_pending():
+    assert is_notification_eligible("AGM-001") is False
+    assert is_notification_eligible("VAT-002") is False
 def test_rule_notifications_remain_suppressed_while_legal_release_is_paused():
     assert is_notification_eligible("AGM-001") is False
     assert is_notification_eligible("VAT-002") is False
