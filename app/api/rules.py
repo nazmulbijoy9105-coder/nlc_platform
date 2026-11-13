@@ -37,6 +37,7 @@ from app.models.enums import SeverityLevel
 from app.rule_engine.engine import (
     AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
     PRODUCT_SCORING_RULE_IDS,
+    SCORE_DEDUCTION_RULE_IDS,
     VERIFIED_RULE_IDS as VERIFIED_RULE_IDS,  # Compatibility export; not used to claim independent legal review.
     legal_score_is_released,
 )
@@ -145,7 +146,7 @@ def _rule_to_response(rule) -> RuleResponse:
             else str(getattr(rule.default_severity, "value", rule.default_severity))
         ) if scoring_catalogue_member else None,
         product_scoring_enabled=product_scoring_enabled,
-        score_impact=rule.score_impact if scoring_catalogue_member else 0,
+        score_impact=rule.score_impact if rule.rule_id in SCORE_DEDUCTION_RULE_IDS else 0,
         revenue_tier=str(rule.revenue_tier) if scoring_catalogue_member else "COMPLIANCE_PACKAGE",
         # Catalogue configuration remains visible while score publication is paused.
         # This field describes product policy, not independent legal verification.
