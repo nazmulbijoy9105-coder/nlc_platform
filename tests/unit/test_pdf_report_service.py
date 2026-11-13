@@ -185,7 +185,7 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
 
     class FakeDB:
         async def execute(self, statement):
-            if "compliance_evaluation_runs.score_hash" in str(statement).lower():
+            if str(statement).strip().lower().startswith("select compliance_evaluation_runs.score_hash"):
                 return SimpleNamespace(scalar_one_or_none=lambda: None)
             return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
 
@@ -441,7 +441,7 @@ def test_endpoint_rejects_score_snapshot_mismatch(monkeypatch):
 
     class FakeDB:
         async def execute(self, statement):
-            if "compliance_evaluation_runs.score_hash" in str(statement).lower():
+            if str(statement).strip().lower().startswith("select compliance_evaluation_runs.score_hash"):
                 return SimpleNamespace(scalar_one_or_none=lambda: None)
             return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
 
@@ -593,7 +593,7 @@ def test_endpoint_withholds_pdf_when_evaluation_score_hash_is_tampered(monkeypat
 
     class FakeDB:
         async def execute(self, statement):
-            if "compliance_evaluation_runs.score_hash" in str(statement).lower():
+            if str(statement).strip().lower().startswith("select compliance_evaluation_runs.score_hash"):
                 return SimpleNamespace(scalar_one_or_none=lambda: None)
             return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
 
