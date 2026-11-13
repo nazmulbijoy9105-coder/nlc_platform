@@ -992,7 +992,7 @@ def cleanup_old_activity_logs(
     async def _cleanup():
         import json
 
-        from sqlalchemy import delete, select
+        from sqlalchemy import select
 
         from app.models.database import AsyncSessionLocal, set_admin_context
         from app.models.infrastructure import UserActivityLog
