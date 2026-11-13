@@ -1,272 +1,259 @@
--- ============================================================================
--- NLC Platform — P0 Fix #1 (v3, corrected): Migration Identity Provisioning
--- File: scripts/fixes/01_migration_identity.sql
+-- NLC Platform — migration identity provisioning and reviewed ownership transfer
+-- Run once as neondb_owner on an isolated restored branch first.
+-- Do not run against production until the full restored-branch rehearsal passes.
 --
--- v3 CORRECTIONS (on top of v2):
---   6. nlc_migration_user is created with NOBYPASSRLS. If the role already
---      exists (the audit confirms it does, with BYPASSRLS), ALTER ROLE
---      NOBYPASSRLS explicitly revokes the bypass. This is non-negotiable:
---      a migration role that bypasses RLS defeats the entire row-level
---      security model during migrations.
---   7. Added an explicit FAIL gate: if nlc_app_role does not exist, the
---      script aborts at Step 9 with an exception. No silent fallback.
---   8. The ownership-transfer loop (Step 4) now reports per-object-type
---      counts so the Neon SQL Editor output shows exactly what moved.
+-- Contract:
+--   nlc_app_role         LOGIN, NOINHERIT, NOBYPASSRLS; runtime grants unchanged.
+--   nlc_migration_user   LOGIN, NOINHERIT, NOBYPASSRLS; no direct DDL.
+--   nlc_migration_owner  NOLOGIN, NOINHERIT, BYPASSRLS; owns migration objects.
+--   nlc_migration_user may SET ROLE to owner, but does not inherit its grants.
 --
--- v2 CORRECTIONS (carried forward):
---   1. Removed psql meta-commands. Pure SQL for Neon SQL Editor.
---   2. CREATE ROLE via EXECUTE inside DO blocks. Password via top-level ALTER ROLE.
---   3. ACLs reconciled — targeted grants, not blanket GRANT ALL.
---   4. Role name: nlc_app -> nlc_app_role (confirmed by production audit).
---   5. Ownership transfer of existing public-schema objects to nlc_migration_owner.
+-- Passwords are intentionally NOT embedded in this file. Provision/reset the
+-- nlc_migration_user password through Neon and store its direct URL only as a
+-- GitHub Actions secret. Never place it in Render's APP_DATABASE_URL.
 --
--- TARGET STATE (not current state — the audit confirms this is not yet provisioned):
---   - nlc_migration_owner: NOLOGIN, NOINHERIT, owns all public-schema objects
---   - nlc_migration_user:  LOGIN, NOINHERIT, NOBYPASSRLS, SET-only membership
---   - nlc_app_role:        LOGIN, no CREATE on public, RLS-protected access
---   - neondb_owner:        no longer owns user objects in public schema
---
--- Run order:
---   0. Run 00_preflight_inspect.sql (read-only) and confirm state.
---   1. Find-replace <<SET_STRONG_PASSWORD_HERE>> below with a strong password.
---   2. Run this script AS neondb_owner ONCE.
---   3. Run 02_verify_migration_identity.sql (now 10 checks).
---   4. Run 06_alembic_env_role_check.py to verify env.py role-prep works.
---   5. Set MIGRATION_DATABASE_URL on Render (see 03_render_env.md).
---   6. Re-run the deployment via 04_migration_preflight.sh.
--- ============================================================================
+-- This script preserves existing explicit runtime ACLs and all RLS policies.
+-- It does not grant blanket runtime DELETE, does not disable RLS, and does not
+-- create replacement evidence tables.
 
-
--- ===========================================================================
--- STEP 1 — Create nlc_migration_owner (NOLOGIN, NOINHERIT)
--- ===========================================================================
-DO $$
+DO $roles$
 BEGIN
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'nlc_migration_owner') THEN
-        EXECUTE 'CREATE ROLE nlc_migration_owner WITH NOLOGIN NOINHERIT';
-        RAISE NOTICE 'Created role: nlc_migration_owner';
-    ELSE
-        RAISE NOTICE 'Role already exists (no change): nlc_migration_owner';
+  IF current_user <> 'neondb_owner' THEN
+    RAISE EXCEPTION 'Run as neondb_owner; observed %', current_user;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='nlc_app_role') THEN
+    RAISE EXCEPTION 'nlc_app_role is missing; refusing migration identity provisioning';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='nlc_migration_owner') THEN
+    EXECUTE 'CREATE ROLE nlc_migration_owner NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT BYPASSRLS NOREPLICATION';
+  END IF;
+  ALTER ROLE nlc_migration_owner NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT BYPASSRLS NOREPLICATION;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='nlc_migration_user') THEN
+    EXECUTE 'CREATE ROLE nlc_migration_user LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS NOREPLICATION CONNECTION LIMIT 5';
+  END IF;
+  ALTER ROLE nlc_migration_user LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS NOREPLICATION CONNECTION LIMIT 5;
+END
+$roles$;
+
+-- Exactly one non-admin, non-inheriting SET membership for the migration login.
+GRANT nlc_migration_owner TO nlc_migration_user
+  WITH ADMIN FALSE, INHERIT FALSE, SET TRUE;
+
+-- Temporary SET membership lets the current object owner transfer objects.
+-- This grant is revoked after the transfer; the provider-managed cloud_admin
+-- membership, if present, is not modified.
+GRANT nlc_migration_owner TO neondb_owner
+  WITH INHERIT FALSE, SET TRUE;
+
+DO $privileges$
+DECLARE schema_name text;
+BEGIN
+  EXECUTE format('GRANT CREATE ON DATABASE %I TO nlc_migration_owner', current_database());
+
+  FOREACH schema_name IN ARRAY ARRAY['public','nlc_private','audit'] LOOP
+    IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname=schema_name) THEN
+      RAISE EXCEPTION 'Required migration schema % is missing; refusing partial transfer', schema_name;
     END IF;
-END $$;
+    EXECUTE format('GRANT USAGE, CREATE ON SCHEMA %I TO nlc_migration_owner', schema_name);
+  END LOOP;
+END
+$privileges$;
 
-
--- ===========================================================================
--- STEP 2 — Create nlc_migration_user (LOGIN, NOINHERIT, NOBYPASSRLS)
--- ---------------------------------------------------------------------------
--- NOBYPASSRLS is critical: the audit confirms nlc_migration_user currently
--- HAS BYPASSRLS. This role must never bypass RLS — it runs migrations that
--- touch RLS-protected tables, and bypassing RLS during migrations would
--- allow the migration to see and modify rows across all tenants.
---
--- If the role already exists, Step 2b below explicitly revokes BYPASSRLS.
--- ===========================================================================
-DO $$
+-- Transfer tables first: table-owned serial/identity sequences follow their
+-- table. Indexes, constraints, triggers and table row types follow ownership.
+DO $transfer$
+DECLARE obj record;
 BEGIN
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'nlc_migration_user') THEN
-        EXECUTE 'CREATE ROLE nlc_migration_user WITH LOGIN NOINHERIT NOBYPASSRLS CONNECTION LIMIT 5';
-        RAISE NOTICE 'Created login role: nlc_migration_user (NOBYPASSRLS, password not yet set)';
+  FOR obj IN
+    SELECT n.nspname AS schema_name, c.relname AS object_name
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid=c.relnamespace
+     WHERE n.nspname IN ('public','nlc_private','audit')
+       AND c.relkind IN ('r','p')
+       AND c.relowner <> (SELECT oid FROM pg_roles WHERE rolname='nlc_migration_owner')
+     ORDER BY n.nspname,c.relname
+  LOOP
+    EXECUTE format('ALTER TABLE %I.%I OWNER TO nlc_migration_owner', obj.schema_name, obj.object_name);
+  END LOOP;
+
+  FOR obj IN
+    SELECT n.nspname AS schema_name,c.relname AS object_name,c.relkind
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid=c.relnamespace
+     WHERE n.nspname IN ('public','nlc_private','audit')
+       AND c.relkind IN ('v','m','f')
+       AND c.relowner <> (SELECT oid FROM pg_roles WHERE rolname='nlc_migration_owner')
+     ORDER BY n.nspname,c.relname
+  LOOP
+    IF obj.relkind='v' THEN
+      EXECUTE format('ALTER VIEW %I.%I OWNER TO nlc_migration_owner',obj.schema_name,obj.object_name);
+    ELSIF obj.relkind='m' THEN
+      EXECUTE format('ALTER MATERIALIZED VIEW %I.%I OWNER TO nlc_migration_owner',obj.schema_name,obj.object_name);
     ELSE
-        RAISE NOTICE 'Login role already exists: nlc_migration_user (will enforce NOBYPASSRLS and reset password below)';
+      EXECUTE format('ALTER FOREIGN TABLE %I.%I OWNER TO nlc_migration_owner',obj.schema_name,obj.object_name);
     END IF;
-END $$;
+  END LOOP;
 
--- Step 2b — Explicitly enforce NOBYPASSRLS (revokes bypass if currently held)
--- This is idempotent and safe whether or not the role currently has BYPASSRLS.
-ALTER ROLE nlc_migration_user NOBYPASSRLS;
+  FOR obj IN
+    SELECT n.nspname AS schema_name,p.proname AS object_name,p.oid,p.prokind
+      FROM pg_proc p
+      JOIN pg_namespace n ON n.oid=p.pronamespace
+     WHERE n.nspname IN ('public','nlc_private','audit')
+       AND p.proowner <> (SELECT oid FROM pg_roles WHERE rolname='nlc_migration_owner')
+       AND p.prokind IN ('f','p')
+       AND NOT EXISTS (
+         SELECT 1 FROM pg_depend d
+          WHERE d.classid='pg_proc'::regclass AND d.objid=p.oid
+            AND d.refclassid='pg_extension'::regclass AND d.deptype='e'
+       )
+     ORDER BY n.nspname,p.proname,p.oid
+  LOOP
+    IF obj.prokind='p' THEN
+      EXECUTE format('ALTER PROCEDURE %I.%I(%s) OWNER TO nlc_migration_owner',
+        obj.schema_name,obj.object_name,pg_get_function_identity_arguments(obj.oid));
+    ELSE
+      EXECUTE format('ALTER FUNCTION %I.%I(%s) OWNER TO nlc_migration_owner',
+        obj.schema_name,obj.object_name,pg_get_function_identity_arguments(obj.oid));
+    END IF;
+  END LOOP;
 
--- Step 2c — Set the password. Top-level SQL (not in DO block) so the literal
--- is passed directly to the server. Find-replace the placeholder token.
--- If the placeholder is still present, this statement fails with a syntax
--- error — the intended safety behaviour.
-ALTER ROLE nlc_migration_user PASSWORD '<<SET_STRONG_PASSWORD_HERE>>';
+  -- User-defined enums, domains, ranges, multiranges and standalone composites.
+  -- Table row types are excluded because ALTER TABLE transfers them.
+  FOR obj IN
+    SELECT n.nspname AS schema_name,t.typname AS object_name,t.oid
+      FROM pg_type t
+      JOIN pg_namespace n ON n.oid=t.typnamespace
+     WHERE n.nspname IN ('public','nlc_private','audit')
+       AND t.typowner <> (SELECT oid FROM pg_roles WHERE rolname='nlc_migration_owner')
+       AND t.typtype IN ('e','d','r','m','c')
+       AND NOT EXISTS (
+         SELECT 1 FROM pg_depend d
+          WHERE d.classid='pg_type'::regclass AND d.objid=t.oid
+            AND d.refclassid='pg_extension'::regclass AND d.deptype='e'
+       )
+       AND NOT EXISTS (SELECT 1 FROM pg_class c WHERE c.reltype=t.oid)
+     ORDER BY n.nspname,t.typname
+  LOOP
+    EXECUTE format('ALTER TYPE %I.%I OWNER TO nlc_migration_owner',obj.schema_name,obj.object_name);
+  END LOOP;
 
+  -- Only standalone sequences remain; table-owned sequences moved with tables.
+  FOR obj IN
+    SELECT n.nspname AS schema_name,c.relname AS object_name
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid=c.relnamespace
+     WHERE n.nspname IN ('public','nlc_private','audit')
+       AND c.relkind='S'
+       AND c.relowner <> (SELECT oid FROM pg_roles WHERE rolname='nlc_migration_owner')
+       AND NOT EXISTS (
+         SELECT 1 FROM pg_depend d
+          WHERE d.classid='pg_class'::regclass AND d.objid=c.oid
+            AND d.refclassid='pg_class'::regclass AND d.deptype IN ('a','i')
+       )
+     ORDER BY n.nspname,c.relname
+  LOOP
+    EXECUTE format('ALTER SEQUENCE %I.%I OWNER TO nlc_migration_owner',obj.schema_name,obj.object_name);
+  END LOOP;
+END
+$transfer$;
 
--- ===========================================================================
--- STEP 3 — Grant nlc_migration_user SET-only membership in nlc_migration_owner
--- ---------------------------------------------------------------------------
--- NOINHERIT on nlc_migration_user means it does NOT automatically inherit
--- nlc_migration_owner privileges. It must explicitly `SET ROLE
--- nlc_migration_owner` before any DDL. Alembic's env.py must do this inside
--- the Alembic database connection — a shell-level SET ROLE in the preflight
--- does NOT carry over (different connection).
--- ===========================================================================
-GRANT nlc_migration_owner TO nlc_migration_user;
-
-
--- ===========================================================================
--- STEP 4 — Transfer ownership of existing public-schema objects to
---          nlc_migration_owner
--- ---------------------------------------------------------------------------
--- PostgreSQL requires ownership (or superuser) to ALTER a table. Without this
--- transfer, nlc_migration_owner cannot run Alembic migrations that ALTER
--- existing tables — the exact failure mode that blocked PR #310.
---
--- Transfers: tables (r), sequences (S), views (v), materialised views (m),
--- and functions/procedures (f/p). Includes alembic_version (Alembic manages it).
--- Does NOT touch: system schemas, RLS policies (stored separately), grants.
--- ===========================================================================
-DO $$
-DECLARE
-    obj record;
-    tables_n integer := 0;
-    seqs_n   integer := 0;
-    views_n  integer := 0;
-    funcs_n  integer := 0;
-BEGIN
-    -- Tables, sequences, views, materialised views
-    FOR obj IN
-        SELECT n.nspname AS schema, c.relname AS obj, c.relkind AS kind
-        FROM pg_class c
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-        JOIN pg_roles r     ON r.oid = c.relowner
-        WHERE n.nspname = 'public'
-          AND c.relkind IN ('r', 'S', 'v', 'm')
-          AND r.rolname <> 'nlc_migration_owner'
-        LOOP
-            EXECUTE format('ALTER TABLE %I.%I OWNER TO nlc_migration_owner',
-                           obj.schema, obj.obj);
-            IF obj.kind = 'r' THEN tables_n := tables_n + 1;
-            ELSIF obj.kind = 'S' THEN seqs_n := seqs_n + 1;
-            ELSE views_n := views_n + 1;
-            END IF;
-        END LOOP;
-
-    -- Functions and procedures
-    FOR obj IN
-        SELECT n.nspname AS schema, p.proname AS obj, p.oid AS fn_oid
-        FROM pg_proc p
-        JOIN pg_namespace n ON n.oid = p.pronamespace
-        JOIN pg_roles r     ON r.oid = p.proowner
-        WHERE n.nspname = 'public'
-          AND p.prokind IN ('f', 'p')
-          AND r.rolname <> 'nlc_migration_owner'
-        LOOP
-            EXECUTE format('ALTER FUNCTION %I.%I(%s) OWNER TO nlc_migration_owner',
-                           obj.schema, obj.obj,
-                           pg_get_function_identity_arguments(obj.fn_oid));
-            funcs_n := funcs_n + 1;
-        END LOOP;
-
-    RAISE NOTICE 'Ownership transfer: % tables, % sequences, % views, % functions -> nlc_migration_owner',
-        tables_n, seqs_n, views_n, funcs_n;
-END $$;
-
-
--- ===========================================================================
--- STEP 5 — Schema privileges for nlc_migration_owner
--- ===========================================================================
-GRANT USAGE ON SCHEMA public TO nlc_migration_owner;
-GRANT CREATE ON SCHEMA public TO nlc_migration_owner;
-
-
--- ===========================================================================
--- STEP 6 — Read access for nlc_migration_user (before SET ROLE)
--- ---------------------------------------------------------------------------
--- Alembic connects as nlc_migration_user and needs to read the schema to
--- compute migration deltas. This is read-only — DDL only happens after
--- env.py issues SET ROLE nlc_migration_owner inside the Alembic connection.
--- ===========================================================================
-GRANT USAGE ON SCHEMA public TO nlc_migration_user;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO nlc_migration_user;
-GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO nlc_migration_user;
-
-
--- ===========================================================================
--- STEP 7 — Default privileges: future objects created by nlc_migration_owner
---          are accessible to nlc_app_role
--- ===========================================================================
+-- The migration login can inspect the catalogue but cannot perform DDL until
+-- env.py issues SET ROLE nlc_migration_owner inside Alembic's own connection.
 SET ROLE nlc_migration_owner;
+GRANT USAGE ON SCHEMA public, nlc_private, audit TO nlc_migration_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA public, nlc_private, audit TO nlc_migration_user;
+GRANT SELECT ON ALL SEQUENCES IN SCHEMA public, nlc_private, audit TO nlc_migration_user;
+
+-- Future public objects receive only non-destructive runtime DML by default.
+-- DELETE remains an explicit per-table grant and is not granted to PUBLIC.
 ALTER DEFAULT PRIVILEGES FOR ROLE nlc_migration_owner IN SCHEMA public
-    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO nlc_app_role;
+  GRANT SELECT, INSERT, UPDATE ON TABLES TO nlc_app_role;
 ALTER DEFAULT PRIVILEGES FOR ROLE nlc_migration_owner IN SCHEMA public
-    GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO nlc_app_role;
+  GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO nlc_app_role;
 RESET ROLE;
 
+-- Remove only the temporary membership granted by this script.
+REVOKE nlc_migration_owner FROM neondb_owner;
 
--- ===========================================================================
--- STEP 8 — Re-grant runtime privileges on EXISTING tables to nlc_app_role
--- ---------------------------------------------------------------------------
--- The ownership transfer in Step 4 can drop existing grants. Re-grant the
--- runtime privileges nlc_app_role needs (subject to RLS policies).
--- ===========================================================================
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO nlc_app_role;
-GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO nlc_app_role;
-
-
--- ===========================================================================
--- STEP 9 — Lock down: nlc_app_role and PUBLIC cannot do DDL
--- ---------------------------------------------------------------------------
--- HARD FAIL if nlc_app_role does not exist. No silent fallback to nlc_app
--- or any other role. The script aborts.
--- ===========================================================================
-REVOKE CREATE ON SCHEMA public FROM PUBLIC;
-
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
-        RAISE EXCEPTION 'FATAL: nlc_app_role does not exist. The production runtime role must be nlc_app_role (confirmed by audit). Aborting — no silent fallback.';
-    END IF;
-    REVOKE CREATE ON SCHEMA public FROM nlc_app_role;
-    RAISE NOTICE 'Verified nlc_app_role exists. Revoked CREATE on public from nlc_app_role.';
-END $$;
-
-
--- ===========================================================================
--- STEP 10 — Confirm alembic_version RLS (ENABLE + FORCE per PR #309)
--- ===========================================================================
-DO $$
+-- Fail closed on final ownership, role attributes, membership and RLS metadata.
+DO $final$
 DECLARE
-    rls_enabled boolean;
-    rls_forced  boolean;
+  owner_tables integer;
+  stray_relations integer;
+  stray_functions integer;
+  stray_types integer;
+  app_create boolean;
+  version_rls boolean;
+  version_force boolean;
 BEGIN
-    SELECT relrowsecurity, relforcerowsecurity
-      INTO rls_enabled, rls_forced
-      FROM pg_class
-     WHERE relname = 'alembic_version';
+  IF (SELECT rolcanlogin OR rolsuper OR NOT rolbypassrls OR rolinherit
+        FROM pg_roles WHERE rolname='nlc_migration_owner') THEN
+    RAISE EXCEPTION 'nlc_migration_owner role attributes do not match contract';
+  END IF;
+  IF (SELECT NOT rolcanlogin OR rolsuper OR rolcreatedb OR rolcreaterole
+             OR rolbypassrls OR rolinherit
+        FROM pg_roles WHERE rolname='nlc_migration_user') THEN
+    RAISE EXCEPTION 'nlc_migration_user role attributes do not match contract';
+  END IF;
 
-    IF rls_enabled IS NULL THEN
-        RAISE EXCEPTION 'FATAL: alembic_version table not found — schema is in an unknown state';
-    END IF;
-    IF NOT rls_enabled THEN
-        RAISE EXCEPTION 'FATAL: alembic_version RLS not ENABLE — refusing to proceed';
-    END IF;
-    IF NOT rls_forced THEN
-        RAISE EXCEPTION 'FATAL: alembic_version RLS not FORCE — refusing to proceed';
-    END IF;
-    RAISE NOTICE 'Verified: alembic_version RLS is ENABLE and FORCE';
-END $$;
+  SELECT count(*) INTO owner_tables
+    FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+   WHERE n.nspname='public' AND c.relkind IN ('r','p')
+     AND c.relowner=(SELECT oid FROM pg_roles WHERE rolname='nlc_migration_owner');
+  SELECT count(*) INTO stray_relations
+    FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+   WHERE n.nspname IN ('public','nlc_private','audit')
+     AND c.relkind IN ('r','p','v','m','S','f','i','I')
+     AND c.relowner<>(SELECT oid FROM pg_roles WHERE rolname='nlc_migration_owner');
+  SELECT count(*) INTO stray_functions
+    FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+   WHERE n.nspname IN ('public','nlc_private','audit')
+     AND p.proowner<>(SELECT oid FROM pg_roles WHERE rolname='nlc_migration_owner')
+     AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid='pg_proc'::regclass
+       AND d.objid=p.oid AND d.refclassid='pg_extension'::regclass AND d.deptype='e');
+  SELECT count(*) INTO stray_types
+    FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace
+   WHERE n.nspname IN ('public','nlc_private','audit')
+     AND t.typtype IN ('e','d','c','r','m')
+     AND t.typowner<>(SELECT oid FROM pg_roles WHERE rolname='nlc_migration_owner')
+     AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid='pg_type'::regclass
+       AND d.objid=t.oid AND d.refclassid='pg_extension'::regclass AND d.deptype='e')
+     AND NOT EXISTS (SELECT 1 FROM pg_class c WHERE c.reltype=t.oid);
 
+  SELECT has_schema_privilege('nlc_app_role','public','CREATE') INTO app_create;
+  SELECT relrowsecurity,relforcerowsecurity INTO version_rls,version_force
+    FROM pg_class WHERE oid=to_regclass('public.alembic_version');
 
--- ===========================================================================
--- STEP 11 — Final summary
--- ===========================================================================
+  IF owner_tables=0 OR stray_relations<>0 OR stray_functions<>0 OR stray_types<>0 THEN
+    RAISE EXCEPTION 'Ownership transfer incomplete: public tables %, relation gaps %, function gaps %, type gaps %',
+      owner_tables,stray_relations,stray_functions,stray_types;
+  END IF;
+  IF app_create THEN
+    RAISE EXCEPTION 'nlc_app_role has CREATE on public';
+  END IF;
+  IF version_rls IS DISTINCT FROM true OR version_force IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'alembic_version must retain ENABLE + FORCE RLS';
+  END IF;
+END
+$final$;
+
 SELECT
-    (SELECT rolname FROM pg_roles WHERE rolname = 'nlc_migration_owner') AS owner_role_exists,
-    (SELECT rolcanlogin FROM pg_roles WHERE rolname = 'nlc_migration_owner') AS owner_can_login_should_be_false,
-    (SELECT rolname FROM pg_roles WHERE rolname = 'nlc_migration_user') AS user_role_exists,
-    (SELECT rolcanlogin FROM pg_roles WHERE rolname = 'nlc_migration_user') AS user_can_login_should_be_true,
-    (SELECT rolbypassrls FROM pg_roles WHERE rolname = 'nlc_migration_user') AS user_bypassrls_should_be_false,
-    (SELECT COUNT(*) FROM pg_auth_members m
-       JOIN pg_roles r1 ON r1.oid = m.roleid
-       JOIN pg_roles r2 ON r2.oid = m.member
-      WHERE r1.rolname = 'nlc_migration_owner'
-        AND r2.rolname = 'nlc_migration_user') AS membership_count_should_be_1,
-    (SELECT COUNT(*) FROM pg_class c
-       JOIN pg_namespace n ON n.oid = c.relnamespace
-       JOIN pg_roles r ON r.oid = c.relowner
-      WHERE n.nspname = 'public'
-        AND c.relkind = 'r'
-        AND r.rolname = 'nlc_migration_owner') AS tables_owned_by_migration_owner,
-    (SELECT COUNT(*) FROM pg_class c
-       JOIN pg_namespace n ON n.oid = c.relnamespace
-       JOIN pg_roles r ON r.oid = c.relowner
-      WHERE n.nspname = 'public'
-        AND c.relkind = 'r'
-        AND r.rolname <> 'nlc_migration_owner') AS tables_still_owned_by_others,
-    (SELECT has_schema_privilege('nlc_app_role', 'public', 'CREATE')) AS app_role_can_create_should_be_false;
-
--- ===========================================================================
--- DONE. Next: run 02_verify_migration_identity.sql (10 checks).
--- Then run 06_alembic_env_role_check.py to verify env.py role-preparation.
--- ===========================================================================
+  (SELECT rolcanlogin FROM pg_roles WHERE rolname='nlc_migration_owner') AS owner_can_login,
+  (SELECT rolbypassrls FROM pg_roles WHERE rolname='nlc_migration_owner') AS owner_bypassrls,
+  (SELECT rolcanlogin FROM pg_roles WHERE rolname='nlc_migration_user') AS migration_user_can_login,
+  (SELECT rolbypassrls FROM pg_roles WHERE rolname='nlc_migration_user') AS migration_user_bypassrls,
+  (SELECT count(*) FROM pg_auth_members m JOIN pg_roles g ON g.oid=m.roleid
+     JOIN pg_roles u ON u.oid=m.member
+    WHERE g.rolname='nlc_migration_owner' AND u.rolname='nlc_migration_user'
+      AND NOT m.admin_option AND NOT m.inherit_option AND m.set_option) AS set_only_membership,
+  (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND c.relkind IN ('r','p')
+      AND c.relowner=(SELECT oid FROM pg_roles WHERE rolname='nlc_migration_owner')) AS public_tables_owned,
+  (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname IN ('public','nlc_private','audit')
+      AND c.relkind IN ('r','p','v','m','S','f','i','I')
+      AND c.relowner<>(SELECT oid FROM pg_roles WHERE rolname='nlc_migration_owner')) AS relation_ownership_gaps,
+  has_schema_privilege('nlc_app_role','public','CREATE') AS app_can_create_public;
