@@ -117,10 +117,6 @@ def test_yellow_finding_has_explicit_no_action_reason_in_red_plan(controlled_rel
     assert result[0]["reason"] == "FINDING_SEVERITY_BELOW_RESCUE_THRESHOLD"
 
 
-def test_red_finding_has_no_rescue_when_company_band_is_below_red(monkeypatch):
-    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
 def test_red_finding_has_no_rescue_when_company_band_is_below_red(controlled_release):
     finding = _flag("AGM-001")
 
@@ -139,10 +135,6 @@ def test_tax004_without_established_quarters_is_waiting_for_evidence(controlled_
     assert result[0]["reason"] == "MISSED_TAX_QUARTERS_NOT_ESTABLISHED"
 
 
-def test_gate_returns_empty_below_red(monkeypatch):
-    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
 def test_gate_returns_empty_below_red(controlled_release):
     for band in (Severity.GREEN, Severity.YELLOW, Severity.NOT_EVALUATED):
         assert _seq([_flag("AGM-001")], band) == []
