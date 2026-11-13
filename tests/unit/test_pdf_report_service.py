@@ -406,10 +406,10 @@ def test_endpoint_rejects_missing_snapshot(monkeypatch):
 
 
 
-def test_pdf_black_override_requires_independent_rule_verification(monkeypatch):
+def test_pdf_product_black_override_does_not_require_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
-    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
     black = SimpleNamespace(
         rule_id="INC-003",
         state="NON_COMPLIANT",
@@ -421,11 +421,8 @@ def test_pdf_black_override_requires_independent_rule_verification(monkeypatch):
         conditional_applies=True,
     )
 
-    assert report_module._legal_score_is_released() is False
-    # Exercise the per-rule defence-in-depth branch independently of the
-    # global complete-catalogue release precondition.
-    monkeypatch.setattr(report_module, "_legal_score_is_released", lambda: True)
-    assert report_module._verified_flag_score([black]) == (100, False)
+    assert report_module._legal_score_is_released() is True
+    assert report_module._verified_flag_score([black]) == (0, True)
 
 
 
@@ -473,6 +470,6 @@ def test_pdf_separates_unverified_findings_from_verified_score_report(monkeypatc
 
     assert "Verified AGM review item" in page
     assert "MEM-001" in page
-    assert "Independent legal/source verification pending" in page
+    assert "Independent Bangladesh-counsel/source verification remains pending" in page
     assert "UNVERIFIED_SECRET_DESC" not in page
     assert "BLACK-severity compliance breach" not in page
