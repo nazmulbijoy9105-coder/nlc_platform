@@ -1,6 +1,6 @@
 """Immutable per-run statutory rule outcome ledger helpers.
 
-No emitted engine finding is never interpreted as compliance.
+An absent engine finding is never interpreted as compliance.
 """
 from __future__ import annotations
 
