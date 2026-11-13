@@ -916,7 +916,7 @@ def test_pdf_report_scores_product_allowlisted_rules_and_lists_counsel_review_it
 
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
     verified = SimpleNamespace(
         rule_id="AGM-001", severity="RED", description="Verified finding",
         score_impact=10, score_impact_applied=10, scoring_status="APPLIED",
@@ -1087,7 +1087,7 @@ def test_score_allocation_covers_inactive_excluded_black_and_duplicate_paths(mon
     assert results[6]["status"] == "APPLIED"
 
 
-def test_rescue_dispositions_keep_unverified_findings_in_review_only_state(monkeypatch):
+def test_rescue_dispositions_keep_candidates_review_only_when_product_release_is_paused(monkeypatch):
     import app.rule_engine.engine as engine_module
     from app.rule_engine.engine import (
         ComplianceFlag,
@@ -1124,7 +1124,7 @@ def test_rescue_dispositions_keep_unverified_findings_in_review_only_state(monke
     assert [item["disposition"] for item in dispositions] == [
         "NO_ACTION", "WAITING_EVIDENCE", "REVIEW_REQUIRED", "BLOCKED"
     ]
-    assert dispositions[2]["reason"] == "SCORING_PAUSED_COUNSEL_REVIEW_REQUIRED"
+    assert dispositions[2]["reason"] == "PRODUCT_SCORE_RELEASE_DISABLED"
 
 
 def test_rescue_target_date_prefers_explicit_then_latest_step_date():
