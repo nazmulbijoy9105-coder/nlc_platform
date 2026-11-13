@@ -11,6 +11,7 @@ PR #309 has merged into `main`. A subsequent Render deploy-hook deployment of me
 Read-only Render and Neon checks now show:
 
 - Service `nlc_platform` (`srv-d72sam94tr6s73dk8etg`) has `autoDeploy=no`, but deploy `dep-dbrecurbc2fs73cres70` was triggered by `deploy_hook` for merge commit `7023c114`.
+- The trigger is the repository workflow `.github/workflows/deploy-vercel-backend.yml`: it runs after a successful `CI` workflow on `main`, checks that the tested SHA is current, then POSTs `RENDER_DEPLOY_HOOK_URL`. Therefore `autoDeploy=no` does not prevent a CI-gated workflow deployment.
 - The deploy completed successfully at 10:31:10 UTC. Render logs show `alembic upgrade 0111_rule_outcome_ledger -> 0112_runtime_acl_and_alembic_rls` at 10:30:18 UTC, then application startup with `db_connectivity_ok runtime_role_verified=True`.
 - Neon now reports `0112_runtime_acl_and_alembic_rls`.
 - Effective ACL verification: `nlc_app_role` has DELETE only on `webhook_endpoints`; all five dashboard views are SELECT-only; `alembic_version` has ENABLE + FORCE RLS and no app-role privileges; all six checked evidence tables remain empty.
