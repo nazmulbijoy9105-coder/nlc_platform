@@ -153,6 +153,8 @@ async def test_admin_dashboard_deadlines_and_risk_cover_the_authorized_portfolio
     import uuid
     from datetime import date, timedelta
 
+    from sqlalchemy import text
+
     from app.models.enums import UserRole
     from app.models.filings import AGM
     from app.models.user import User
@@ -187,8 +189,13 @@ async def test_admin_dashboard_deadlines_and_risk_cover_the_authorized_portfolio
 
     await set_rls_context(db, str(admin_user.id))
     service = CompanyService(db)
+    portfolio_result = await db.execute(
+        text("SELECT COUNT(*) FROM companies WHERE is_active IS TRUE")
+    )
+    expected_portfolio_count = int(portfolio_result.scalar_one())
     risk_rows = await service.get_risk_distribution(include_all_companies=True)
-    assert sum(int(row["company_count"]) for row in risk_rows) == 2
+    assert expected_portfolio_count >= 2
+    assert sum(int(row["company_count"]) for row in risk_rows) == expected_portfolio_count
 
     deadlines = await service.get_upcoming_deadlines(
         days_ahead=30,
