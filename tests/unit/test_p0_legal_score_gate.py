@@ -76,10 +76,10 @@ def test_pdf_score_reconciliation_ignores_rule_outside_product_allowlist(monkeyp
     assert _verified_flag_score([flag]) == (0, False)
 
 
-def test_pdf_score_reconciliation_counts_product_allowlisted_rules(monkeypatch):
+def test_pdf_score_reconciliation_counts_product_allowlisted_rules_without_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
     approved = SimpleNamespace(rule_id="AGM-001", severity="RED", score_impact=15)
     unapproved = SimpleNamespace(rule_id="AUD-003", severity="BLACK", score_impact=25)
     assert _verified_flag_score([approved, unapproved]) == (85, False)
