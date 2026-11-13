@@ -554,10 +554,9 @@ def _render_review_queue(flags: Any) -> str:
 
 def _flag_impact_label(flag: Any) -> str:
     rule_id = getattr(flag, "rule_id", "") or ""
-    if (
-        not _legal_score_is_released()
-        or rule_id not in SCORE_DEDUCTION_RULE_IDS
-    ):
+    if not _legal_score_is_released():
+        return "Not evaluated — product score release disabled"
+    if rule_id not in SCORE_DEDUCTION_RULE_IDS:
         return "No direct point deduction"
     applied = getattr(
         flag,
