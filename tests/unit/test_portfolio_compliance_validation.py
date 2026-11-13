@@ -149,3 +149,60 @@ def test_portfolio_validation_withholds_pdf_when_company_state_does_not_match_ru
     assert result["valid"] is False
     assert result["pdf_eligible"] is False
     assert "COMPANY_SCORE_MISMATCH" in result["problems"]
+
+def _rehash_run(run):
+    run.rule_outcomes_hash = hash_rule_outcomes_snapshot(run.rule_outcomes_snapshot)
+    run.score_hash = calculate_evaluation_score_hash(
+        previous_hash=run.previous_hash,
+        company_id=run.company_id,
+        score=run.score,
+        risk_band=run.risk_band,
+        calculated_at=run.calculated_at,
+        engine_version=run.engine_version,
+        trigger_source=run.trigger_source,
+        flags_snapshot=run.flags_snapshot,
+        fact_provenance_snapshot=run.fact_provenance_snapshot,
+        score_breakdown_snapshot=run.score_breakdown_snapshot,
+        rule_outcomes_hash=run.rule_outcomes_hash,
+        rule_outcomes_snapshot=run.rule_outcomes_snapshot,
+    )
+
+
+def test_portfolio_validation_withholds_pdf_for_unmapped_engine_finding():
+    run, company = _records()
+    run.rule_outcomes_snapshot.append({
+        "rule_id": "ORPHAN-001",
+        "rule_version": None,
+        "statutory_basis": None,
+        "verification_status": "UNMAPPED",
+        "verified_by": None,
+        "verified_at": None,
+        "outcome_state": "UNKNOWN",
+        "assessment_source": "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE",
+        "findings": [{"outcome_state": "UNKNOWN"}],
+    })
+    _rehash_run(run)
+    result = _validation(run, company)
+    assert result["valid"] is False
+    assert result["pdf_eligible"] is False
+    assert "UNMAPPED_RULE_OUTCOME_PRESENT" in result["problems"]
+
+
+def test_portfolio_validation_withholds_pdf_for_unrecognized_assessment_source():
+    run, company = _records()
+    run.rule_outcomes_snapshot[0]["assessment_source"] = "ASSUMED_COMPLIANT"
+    _rehash_run(run)
+    result = _validation(run, company)
+    assert result["valid"] is False
+    assert result["pdf_eligible"] is False
+    assert "RULE_OUTCOME_SOURCE_UNRECOGNIZED" in result["problems"]
+
+
+def test_portfolio_validation_withholds_pdf_for_malformed_rule_findings():
+    run, company = _records()
+    run.rule_outcomes_snapshot[0]["findings"] = None
+    _rehash_run(run)
+    result = _validation(run, company)
+    assert result["valid"] is False
+    assert result["pdf_eligible"] is False
+    assert "RULE_OUTCOME_FINDINGS_MALFORMED" in result["problems"]
