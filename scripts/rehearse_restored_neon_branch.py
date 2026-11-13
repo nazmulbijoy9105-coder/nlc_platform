@@ -24,8 +24,32 @@ EXPECTED_PROJECT_ID = "rapid-bonus-26545234"
 EXPECTED_BRANCH_ID = "br-little-cake-aovrrz0y"
 EXPECTED_DATABASE = "neondb"
 EXPECTED_START_REVISION = "0042_dedup_key"
-EXPECTED_HEAD_REVISION = "0111_rule_outcome_ledger"
+EXPECTED_HEAD_REVISION = "0112_runtime_acl_and_alembic_rls"
+PRE_0042_REQUIRED_TABLES = (
+    "webhook_endpoints",
+    "webhook_deliveries",
+    "rescue_audit_log",
+)
+PRE_0042_REQUIRED_COLUMNS = {
+    "webhook_endpoints": {
+        "id", "user_id", "url", "secret", "events", "is_active",
+        "last_delivery_at", "last_response_code", "created_at", "updated_at",
+    },
+    "webhook_deliveries": {
+        "id", "endpoint_id", "event_type", "payload", "status", "attempts",
+        "max_attempts", "response_code", "response_body", "error_message",
+        "delivered_at", "next_retry_at", "created_at",
+    },
+    "rescue_audit_log": {
+        "id", "rescue_plan_id", "finding_id", "rule_id", "rule_version",
+        "action_performed", "actor_user_id", "evidence_ref", "outcome",
+        "notes", "created_at", "updated_at",
+    },
+}
 EVIDENCE_TABLES = (
+    "agm_notice_evidence",
+    "articles_verifications",
+    "articles_verification_events",
     "rescue_audit_log",
     "webhook_endpoints",
     "webhook_deliveries",
@@ -56,9 +80,84 @@ def _connect_args(raw_url: str) -> tuple[str, dict[str, Any]]:
     return url, args
 
 
-async def _connect(raw_url: str) -> asyncpg.Connection:
+async def _connect(
+    raw_url: str,
+    *,
+    assume_migration_owner: bool = False,
+) -> asyncpg.Connection:
     url, args = _connect_args(raw_url)
-    return await asyncpg.connect(url, **args)
+    conn = await asyncpg.connect(url, **args)
+    if assume_migration_owner:
+        identity = await conn.fetchrow(
+            "SELECT session_user AS session_user, current_user AS current_user"
+        )
+        if (
+            identity["session_user"] != "nlc_migration_user"
+            or identity["current_user"] != "nlc_migration_user"
+        ):
+            await conn.close()
+            raise RuntimeError(
+                "Migration rehearsal must log in as nlc_migration_user before "
+                "assuming nlc_migration_owner."
+            )
+        await conn.execute("SET ROLE nlc_migration_owner")
+        assumed = await conn.fetchrow(
+            "SELECT session_user AS session_user, current_user AS current_user"
+        )
+        if (
+            assumed["session_user"] != "nlc_migration_user"
+            or assumed["current_user"] != "nlc_migration_owner"
+        ):
+            await conn.close()
+            raise RuntimeError(
+                "Migration rehearsal could not assume nlc_migration_owner."
+            )
+    return conn
+
+
+async def _preflight_pre_0042_tables(
+    conn: asyncpg.Connection,
+) -> dict[str, Any]:
+    """Refuse to start Alembic if tables created by 0037/0038 are missing or incomplete."""
+    missing_tables: list[str] = []
+    schema_mismatches: dict[str, list[str]] = {}
+
+    for table_name, expected_columns in PRE_0042_REQUIRED_COLUMNS.items():
+        exists = await conn.fetchval(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                  FROM pg_class AS c
+                  JOIN pg_namespace AS n ON n.oid = c.relnamespace
+                 WHERE n.nspname = 'public'
+                   AND c.relname = $1
+                   AND c.relkind IN ('r', 'p')
+            )
+            """,
+            table_name,
+        )
+        if not exists:
+            missing_tables.append(table_name)
+            continue
+
+        rows = await conn.fetch(
+            """
+            SELECT column_name
+              FROM information_schema.columns
+             WHERE table_schema = 'public'
+               AND table_name = $1
+            """,
+            table_name,
+        )
+        actual_columns = {row["column_name"] for row in rows}
+        missing_columns = sorted(expected_columns - actual_columns)
+        if missing_columns:
+            schema_mismatches[table_name] = missing_columns
+
+    return {
+        "missing_tables": sorted(missing_tables),
+        "missing_columns_by_table": schema_mismatches,
+    }
 
 
 async def _identity(conn: asyncpg.Connection) -> dict[str, Any]:
@@ -199,6 +298,54 @@ async def _security_audit(conn: asyncpg.Connection) -> dict[str, Any]:
         ORDER BY c.relname
         """
     )
+    runtime_delete_grants = await conn.fetch(
+        """
+        SELECT c.relname
+          FROM pg_class AS c
+          JOIN pg_namespace AS n ON n.oid = c.relnamespace
+         WHERE n.nspname = 'public'
+           AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+           AND has_table_privilege('nlc_app_role', c.oid, 'DELETE')
+         ORDER BY c.relname
+        """
+    )
+    if {row["relname"] for row in runtime_delete_grants} != {"webhook_endpoints"}:
+        raise RuntimeError(
+            "Runtime DELETE grants must be limited to webhook_endpoints; "
+            f"observed {[row['relname'] for row in runtime_delete_grants]!r}."
+        )
+
+    for table in ("user_activity_logs", "rescue_audit_log"):
+        if await conn.fetchval(
+            "SELECT has_table_privilege('nlc_app_role', "
+            "to_regclass('public.' || $1), 'DELETE')",
+            table,
+        ):
+            raise RuntimeError(
+                f"Append-only evidence table {table} grants DELETE to nlc_app_role."
+            )
+
+    alembic_acl = await conn.fetchrow(
+        """
+        SELECT c.relrowsecurity, c.relforcerowsecurity,
+               has_table_privilege('nlc_app_role', c.oid, 'SELECT') AS can_select,
+               has_table_privilege('nlc_app_role', c.oid, 'INSERT') AS can_insert,
+               has_table_privilege('nlc_app_role', c.oid, 'UPDATE') AS can_update,
+               has_table_privilege('nlc_app_role', c.oid, 'DELETE') AS can_delete,
+               has_table_privilege('nlc_app_role', c.oid, 'TRUNCATE') AS can_truncate
+          FROM pg_class AS c
+          JOIN pg_namespace AS n ON n.oid = c.relnamespace
+         WHERE n.nspname = 'public' AND c.relname = 'alembic_version'
+        """
+    )
+    if alembic_acl is None or not alembic_acl["relrowsecurity"] or not alembic_acl["relforcerowsecurity"]:
+        raise RuntimeError("public.alembic_version must have ENABLE + FORCE RLS.")
+    if any(
+        alembic_acl[key]
+        for key in ("can_select", "can_insert", "can_update", "can_delete", "can_truncate")
+    ):
+        raise RuntimeError("nlc_app_role must have no privileges on public.alembic_version.")
+
     app_schema_create = await conn.fetchval(
         "SELECT has_schema_privilege('nlc_app_role', 'public', 'CREATE')"
     )
@@ -272,7 +419,11 @@ async def _security_audit(conn: asyncpg.Connection) -> dict[str, Any]:
 
     views = await conn.fetch(
         """
-        SELECT c.relname, c.reloptions
+        SELECT c.relname, c.reloptions,
+               has_table_privilege('nlc_app_role', c.oid, 'SELECT') AS can_select,
+               has_table_privilege('nlc_app_role', c.oid, 'INSERT') AS can_insert,
+               has_table_privilege('nlc_app_role', c.oid, 'UPDATE') AS can_update,
+               has_table_privilege('nlc_app_role', c.oid, 'DELETE') AS can_delete
         FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace
         WHERE n.nspname = 'public'
@@ -305,6 +456,13 @@ async def _security_audit(conn: asyncpg.Connection) -> dict[str, Any]:
     for name, options in view_security.items():
         if "security_invoker=true" not in options:
             raise RuntimeError(f"Dashboard view {name} is not security_invoker.")
+    for row in views:
+        if not row["can_select"] or any(
+            row[key] for key in ("can_insert", "can_update", "can_delete")
+        ):
+            raise RuntimeError(
+                f"Dashboard view {row['relname']} must be SELECT-only for nlc_app_role."
+            )
 
     evidence = []
     for table in EVIDENCE_TABLES:
@@ -324,13 +482,12 @@ async def _security_audit(conn: asyncpg.Connection) -> dict[str, Any]:
         comment = row["table_comment"] or ""
         if not row["relrowsecurity"] or not row["relforcerowsecurity"]:
             raise RuntimeError(f"Evidence table {table} is not ENABLE + FORCE RLS.")
-        if "SCHEMA-ONLY RECONSTRUCTION" not in comment:
+        schema_only_reconstruction = (
+            "SCHEMA-ONLY RECONSTRUCTION" in comment.upper()
+        )
+        if schema_only_reconstruction and count != 0:
             raise RuntimeError(
-                f"Evidence table {table} lacks its schema-only reconstruction comment."
-            )
-        if count != 0:
-            raise RuntimeError(
-                f"Expected schema-only evidence table {table} to be empty; found {count} rows."
+                f"Evidence table {table} is marked schema-only but contains {count} rows."
             )
         evidence.append(
             {
@@ -338,6 +495,7 @@ async def _security_audit(conn: asyncpg.Connection) -> dict[str, Any]:
                 "rows": count,
                 "rls_enabled": row["relrowsecurity"],
                 "rls_forced": row["relforcerowsecurity"],
+                "schema_only_reconstruction": schema_only_reconstruction,
                 "comment": comment,
             }
         )
@@ -467,7 +625,7 @@ async def main() -> int:
     try:
         raw_url = _database_url("NLC_RESTORED_REHEARSAL_DATABASE_URL")
         app_raw_url = _database_url("NLC_RESTORED_REHEARSAL_APP_DATABASE_URL")
-        conn = await _connect(raw_url)
+        conn = await _connect(raw_url, assume_migration_owner=True)
         try:
             before_identity = await _identity(conn)
             report["before_identity"] = before_identity
@@ -478,11 +636,12 @@ async def main() -> int:
             if before_identity["database_name"] != EXPECTED_DATABASE:
                 raise RuntimeError("Refusing: connected database name is not neondb.")
             if (
-                before_identity["current_user"] != "neondb_owner"
-                or before_identity["session_user"] != "neondb_owner"
+                before_identity["current_user"] != "nlc_migration_owner"
+                or before_identity["session_user"] != "nlc_migration_user"
             ):
                 raise RuntimeError(
-                    "Refusing: migration connection must log in directly as the Neon branch owner."
+                    "Refusing: migration connection must authenticate as nlc_migration_user "
+                    "and assume nlc_migration_owner."
                 )
             if before_identity["alembic_versions"] != [EXPECTED_START_REVISION]:
                 raise RuntimeError(
@@ -490,6 +649,27 @@ async def main() -> int:
                     f"{EXPECTED_START_REVISION}; observed "
                     f"{before_identity['alembic_versions']!r}."
                 )
+            preflight = await _preflight_pre_0042_tables(conn)
+            report["pre_0042_schema_preflight"] = preflight
+            if preflight["missing_tables"] or preflight["missing_columns_by_table"]:
+                report["status"] = "BLOCKED_SCHEMA_DRIFT"
+                report["migration_applied"] = False
+                report["error"] = (
+                    "Migration rehearsal blocked before Alembic: revision 0042 "
+                    "requires the 0037/0038 webhook and rescue-audit tables. "
+                    "Reconcile their original schema and recovery evidence first."
+                )
+                report["finished_at"] = datetime.now(timezone.utc).isoformat()
+                REPORT_PATH.write_text(
+                    json.dumps(report, indent=2, default=str) + "\n"
+                )
+                print(
+                    "BLOCKED_SCHEMA_DRIFT: no Alembic command was run; "
+                    f"pre-0042 schema gaps: {preflight!r}",
+                    file=sys.stderr,
+                )
+                return 2
+
             before_counts = await _table_row_counts(conn)
             report["before_table_row_counts"] = before_counts
         finally:
@@ -507,7 +687,7 @@ async def main() -> int:
         )
         report["alembic_heads_output"] = _run_command(["alembic", "heads"], env)
 
-        conn = await _connect(raw_url)
+        conn = await _connect(raw_url, assume_migration_owner=True)
         try:
             after_identity = await _identity(conn)
             report["after_identity"] = after_identity
@@ -515,6 +695,11 @@ async def main() -> int:
                 raise RuntimeError("Neon project identity changed during rehearsal.")
             if after_identity["branch_id"] != EXPECTED_BRANCH_ID:
                 raise RuntimeError("Neon branch identity changed during rehearsal.")
+            if (
+                after_identity["current_user"] != "nlc_migration_owner"
+                or after_identity["session_user"] != "nlc_migration_user"
+            ):
+                raise RuntimeError("Migration connection identity changed after upgrade.")
             if after_identity["alembic_versions"] != [EXPECTED_HEAD_REVISION]:
                 raise RuntimeError(
                     f"Expected one head {EXPECTED_HEAD_REVISION}; observed "
