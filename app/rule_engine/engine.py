@@ -547,8 +547,8 @@ BLACK_OVERRIDE_RULES: set[str] = set()
 VERIFIED_RULE_IDS: frozenset[str] = frozenset()
 
 # Product-active catalogue: all 85 owner-approved rules remain enabled for
-# evaluation, visibility, alerts and their designated workflows. The three
-# non-deduction rules (AR-001, SH-002, ESC-003) remain active but never deduct.
+# evaluation, visibility, alerts and scoring eligibility. Product approval is
+# not independent counsel verification; evidence and state gates still apply.
 PRODUCT_SCORING_RULE_IDS: frozenset[str] = frozenset({
     "ACC-001",
     "ACC-002",
@@ -637,8 +637,9 @@ PRODUCT_SCORING_RULE_IDS: frozenset[str] = frozenset({
     "VAT-003",
 })
 
-# Only these 82 rules may contribute adverse point deductions. Product
-# activation is not a legal verification or an automatic adverse finding.
+# The same 85 product-approved rules may contribute configured deductions,
+# but only for evidence-supported, applicable, confirmed violations. This
+# allowlist does not independently verify statutory propositions.
 SCORE_DEDUCTION_RULE_IDS: frozenset[str] = frozenset({
     "ACC-001",
     "ACC-002",
