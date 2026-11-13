@@ -27,19 +27,15 @@ _READ_ONLY_VIEWS = (
 
 
 def upgrade() -> None:
-    # Remove broad DELETE grants, including any inherited by views. Preserve
-    # the two code-confirmed workflows: user-owned webhook endpoint removal
-    # and activity-log deletion only after successful archival.
+    # Remove broad DELETE grants. The only application deletion workflow
+    # verified in service code is user-owned webhook endpoint removal.
+    # Activity logs are append-only; archival does not authorize DB deletion.
     op.execute(
         "REVOKE DELETE ON ALL TABLES IN SCHEMA public FROM nlc_app_role"
     )
     op.execute(
         "GRANT DELETE ON TABLE public.webhook_endpoints TO nlc_app_role"
     )
-    op.execute(
-        "GRANT DELETE ON TABLE public.user_activity_logs TO nlc_app_role"
-    )
-
     # Views are read-only API projections. Keep SELECT; remove all DML.
     for view in _READ_ONLY_VIEWS:
         op.execute(
