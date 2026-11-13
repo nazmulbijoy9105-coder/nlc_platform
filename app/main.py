@@ -43,6 +43,7 @@ from app.api import (
     health,
     legal_provenance,
     notifications,
+    portfolio_compliance,
     rescue,
     rjsc_forms,
     rules,
