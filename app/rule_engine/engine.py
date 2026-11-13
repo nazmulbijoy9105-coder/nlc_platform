@@ -1686,6 +1686,30 @@ class NLCRuleEngine:
                         "verified_by": c.annual_return_filing_status_verified_by,
                     },
                 ))
+            elif (
+                c.annual_return_filed is True
+                and c.annual_return_filed_date is not None
+                and c.annual_return_filed_date > deadline
+            ):
+                delay = (c.annual_return_filed_date - deadline).days
+                severity = Severity.RED if delay > 90 else Severity.YELLOW
+                self._add_flag(ComplianceFlag(
+                    rule_id="AR-001",
+                    flag_code="ANNUAL_RETURN_FILED_LATE",
+                    severity=severity,
+                    score_impact=self._graduated_ar_deduction(delay),
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=f"Authenticated RJSC evidence confirms Schedule X (Annual Return) was filed {delay} days after the 21-day AGM deadline.",
+                    statutory_basis="Section 36 (Schedule X), Companies Act 1994 (Bangladesh)",
+                    detail={
+                        "delay_days": delay,
+                        "filed_date": str(c.annual_return_filed_date),
+                        "deadline": str(deadline),
+                        "evidence_ref": c.annual_return_filing_status_evidence_ref,
+                        "verified_at": str(c.annual_return_filing_status_verified_at),
+                        "verified_by": c.annual_return_filing_status_verified_by,
+                    },
+                ))
             elif c.annual_return_filed is None:
                 self._add_flag(ComplianceFlag(
                     rule_id="AR-001",
