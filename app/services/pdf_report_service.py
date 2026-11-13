@@ -36,6 +36,7 @@ from app.services.pdf_render import (
 )
 from app.services.rescue_service import RescueService
 from canonical_architecture.scoring_spec import allocate_flag_deductions
+from canonical_architecture.scoring_spec import SCORING_SPEC_VERSION
 
 REPORT_TZ = ZoneInfo("Asia/Dhaka")
 LOGO_FILE = "nlc_logo.svg"
