@@ -22,7 +22,14 @@ from app.services.pdf_report_service import _render_score_reconciliation
 @pytest.fixture(autouse=True)
 def _controlled_complete_catalogue_release_for_scoring_mechanics(monkeypatch, request):
     """Synthetic test-only release for arithmetic tests; never changes runtime policy."""
-    if request.node.name == "test_product_released_corpus_reports_score_with_full_input_coverage":
+    if request.node.name in {
+        "test_product_released_corpus_reports_score_with_full_input_coverage",
+        "test_product_owner_black_override_does_not_require_counsel_allowlist",
+        "test_production_corpus_remains_unreleased_until_counsel_verifies_full_catalogue",
+    }:
+        # These tests assert the real production defaults or explicitly
+        # exercise the separation between product release and counsel status.
+        # Do not replace the production counsel allowlist with a synthetic one.
         return
     catalogue = engine_module.PRODUCT_SCORING_RULE_IDS
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)

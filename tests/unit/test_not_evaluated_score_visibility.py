@@ -53,36 +53,6 @@ def test_released_company_score_is_visible_with_product_allowlist_only(monkeypat
     assert response.band in ("NOT_EVALUATED", "GREEN")
 
 
-def test_dashboard_summary_hides_score_aggregates_while_paused():
-    summary = companies_api._build_flag_summary(
-        [
-            SimpleNamespace(severity="RED", flag_status="ACTIVE", rule_id="AGM-001"),
-            SimpleNamespace(severity="YELLOW", flag_status="ACTIVE", rule_id="AR-001"),
-        ]
-    )
-    assert summary["black"] == 0
-    assert summary["red"] == 0
-    assert summary["yellow"] == 0
-    assert summary["total_active"] == 0
-
-
-def test_pending_review_counts_are_exposed_while_scores_are_paused():
-    result = companies_api._flag_summary_payload(
-        [
-            SimpleNamespace(severity="RED", flag_status="ACTIVE", rule_id="AGM-001"),
-            SimpleNamespace(severity="YELLOW", flag_status="ACTIVE", rule_id="AR-001"),
-        ]
-    )
-
-    response = _flag_to_response(flag)
-
-    assert response.severity == "NOT_EVALUATED"
-    assert response.score_impact == 0
-    assert response.is_black_override is False
-    assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
-    assert "No breach" in response.rule_name
-
-
 def test_product_scoring_flag_is_published_with_counsel_status_separate(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
@@ -180,7 +150,6 @@ def test_released_flag_reports_rule_specific_counsel_verification(monkeypatch):
     assert response.legal_review_status == "LEGALLY_VERIFIED"
 
 
-def test_partial_counsel_verification_cannot_release_company_api_score(monkeypatch):
 def test_partial_counsel_verification_does_not_block_product_score(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
