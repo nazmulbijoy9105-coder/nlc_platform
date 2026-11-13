@@ -152,7 +152,7 @@ def test_identical_evidence_and_release_versions_produce_identical_score_hashes(
 def test_default_runtime_product_release_is_fail_closed():
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert engine_module.LEGAL_SCORE_RELEASED is False
-    assert engine_module.legal_score_is_released() is True
+    assert engine_module.legal_score_is_released() is False
 
 
 
@@ -166,4 +166,4 @@ def test_product_release_does_not_require_counsel_allowlist(monkeypatch):
         engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"})
     )
 
-    assert engine_module.legal_score_is_released() is False
+    assert engine_module.legal_score_is_released() is True
