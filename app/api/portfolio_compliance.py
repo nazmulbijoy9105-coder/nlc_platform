@@ -175,7 +175,7 @@ async def aggregate_rule_outcomes(
         "engine_outcome_rows": emitted_outcome_rows,
         "not_evaluated_rows": not_evaluated_rows,
         "potential_rule_company_rows": sum(
-            item["rule_catalogue_count"] for item in results
+            item["rule_catalogue_count"] for item in results if item["valid"]
         ),
         "disclaimer": (
             "An absent finding is NOT_EVALUATED, never COMPLIANT. "
