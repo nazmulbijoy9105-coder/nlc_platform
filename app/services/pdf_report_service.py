@@ -74,6 +74,9 @@ h2 { color: __NAVY__; }
 .flags-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
 .flags-table th, .flags-table td { border: 1px solid #dee2e6; padding: 8px; text-align: left; font-size: 12px; }
 .flags-table th { background-color: __NAVY__; color: white; }
+.unsigned-banner { background:#991b1b; color:#fff; border:2px solid #7f1d1d; padding:12px; margin:14px 0; text-align:center; font-size:14px; font-weight:bold; letter-spacing:.3px; }
+.liability-box { border:2px solid #991b1b; background:#fff7f7; padding:12px; margin:14px 0; font-size:10px; line-height:1.5; }
+.signature-box { border:1px solid #64748b; padding:12px; margin:18px 0; page-break-inside:avoid; font-size:10px; line-height:1.8; }
 .footer { margin-top: 40px; font-size: 10px; color: #6c757d; text-align: center; border-top: 1px solid #dee2e6; padding-top: 10px; }
 
 /* ── Risk band legend ───────────────────────────────────── */
@@ -310,7 +313,6 @@ def _legal_score_is_released() -> bool:
     return (
         LEGAL_SCORE_RELEASED is True
         and bool(PRODUCT_SCORING_RULE_IDS)
-        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
     )
 
 
@@ -335,8 +337,7 @@ def _verified_flag_score(flags: Any) -> tuple[int, bool]:
             or state not in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             or eval_state != "VIOLATION"
             or rule_id not in PRODUCT_SCORING_RULE_IDS
-            or rule_id not in VERIFIED_RULE_IDS
-        ):
+            ):
             continue
 
         severity = getattr(
@@ -391,7 +392,6 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
         rule_id = getattr(f, "rule_id", "") or ""
         if (
             rule_id not in PRODUCT_SCORING_RULE_IDS
-            or rule_id not in VERIFIED_RULE_IDS
         ):
             continue
 
@@ -538,8 +538,8 @@ def _render_review_queue(flags: Any) -> str:
         return ""
     items = "".join(
         f"<li>{esc(getattr(flag, 'rule_id', 'Unknown rule'))}: "
-        "Independent legal/source verification pending; no statutory conclusion "
-        "or score deduction is published.</li>"
+        "Independent Bangladesh-counsel/source verification remains pending. "
+        "Product scoring release is not legal approval or certification.</li>"
         for flag in flags
     )
     return (
@@ -596,17 +596,11 @@ def build_compliance_report_html(
         band = company.current_risk_band or "NOT_EVALUATED"
         review_flags = [
             flag for flag in (flags or [])
-            if (
-                getattr(flag, "rule_id", "") not in VERIFIED_RULE_IDS
-                or getattr(flag, "rule_id", "") not in PRODUCT_SCORING_RULE_IDS
-            )
+            if getattr(flag, "rule_id", "") not in VERIFIED_RULE_IDS
         ]
         flags = [
             flag for flag in (flags or [])
-            if (
-                getattr(flag, "rule_id", "") in VERIFIED_RULE_IDS
-                and getattr(flag, "rule_id", "") in PRODUCT_SCORING_RULE_IDS
-            )
+            if getattr(flag, "rule_id", "") in PRODUCT_SCORING_RULE_IDS
         ]
     company_name = company.company_name or "[COMPANY NAME NOT ON FILE]"
     score_display = "NOT EVALUATED" if band == "NOT_EVALUATED" else f"{score} / 100"
@@ -641,6 +635,7 @@ def build_compliance_report_html(
     <style>{_CSS}</style>
 </head>
 <body>
+    <div class="unsigned-banner">UNSIGNED — FOR COUNSEL REVIEW ONLY — NO NLC LIABILITY WITHOUT SIGNATURE</div>
     <div class="header">
         {logo_html}
         <div class="title">RJSC Compliance Intelligence Report</div>
@@ -677,6 +672,27 @@ def build_compliance_report_html(
     {reconciliation_html}
     {review_html}
 
+    <div class="liability-box">
+        <strong>LIABILITY AND RELIANCE NOTICE</strong><br>
+        This is an unsigned, automated product output prepared for preliminary information and review only.
+        It is not legal advice, a legal opinion, a statutory certificate, an RJSC determination, or confirmation
+        that any company is compliant or non-compliant. No NLC legal opinion, professional certification,
+        or liability for legal conclusions is assumed or represented by this unsigned report. NLC accepts no
+        liability for reliance on legal conclusions in this report unless and until an independent Bangladesh
+        company-law counsel has reviewed the relevant facts and sources and signed the approval block below.
+        Product scoring release is a product-owner setting and does not constitute independent legal verification.
+    </div>
+
+    <div class="signature-box">
+        <h3>Lawyer Review &amp; Signature</h3>
+        <p><strong>Reviewing Bangladesh Company-Law Counsel:</strong> __________________________________</p>
+        <p><strong>Date:</strong> ____________________ &nbsp; <strong>Comments / qualifications:</strong> ______________________________</p>
+        <p>☐ I have independently reviewed the relevant company facts, evidence, statutory sources, rule application and score reconciliation.</p>
+        <p>☐ I approve the legal conclusions stated in this report, subject to the comments or qualifications recorded above.</p>
+        <p><strong>Signature:</strong> _________________________________________________________________</p>
+        <p><strong>Approval status:</strong> UNSIGNED — no counsel approval is represented until completed and signed.</p>
+    </div>
+
     <h3>Active Compliance Flags</h3>
     <table class="flags-table">
         <tr><th>Rule ID</th><th>Severity</th><th>Description</th><th>Score Impact</th></tr>
@@ -687,7 +703,8 @@ def build_compliance_report_html(
 
     <div class="footer">
         <p>This compliance intelligence output is subject to professional review under the Companies Act 1994 (Bangladesh).</p>
-        <p>Automated compliance screening. Not legal advice. Consult your legal counsel.</p>
+        <p><strong>Status: UNSIGNED</strong></p>
+        <p>Automated compliance screening. Not legal advice. For counsel review only.</p>
         <div class="audit-meta">Engine: {esc(engine_version)} | Snapshot: {esc(snapshot_hash[:16]) if snapshot_hash else 'unknown'} | Generated: {esc(generated_at.isoformat())}</div>
     </div>
 </body>
