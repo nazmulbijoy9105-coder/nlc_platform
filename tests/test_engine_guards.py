@@ -26,8 +26,8 @@ from pathlib import Path
 ENGINE_PATH = Path(__file__).resolve().parents[1] / "app" / "rule_engine" / "engine.py"
 
 EXPECTED_GUARD_SITES = 5          # F-29 x3 + F-30 black_count + 39b4b9d severity floor
-EXPECTED_VERIFIED_COUNT = 85      # owner-attested legal verification inventory
-FORBIDDEN_RULE_IDS = ("AR-001", "SH-002", "ESC-003")   # unscored: AR/SH informational, ESC-003 is the surcharge itself
+EXPECTED_VERIFIED_COUNT = 0       # independent counsel verification only; no signed approvals recorded
+NON_DEDUCTIBLE_RULE_IDS = ("AR-001", "SH-002", "ESC-003")   # active catalogue rules; no direct point deductions
 LIFECYCLE_ALLOWED = 1             # one lifecycle site is un-gated by design
 
 GUARD = 'f.eval_state == "VIOLATION"'
@@ -189,9 +189,11 @@ if __name__ == "__main__":
 
 def test_product_scoring_allowlist_is_full_and_separate_from_legal_verification():
     mod = _load_module()
-    scoring_ids = set(mod.PRODUCT_SCORING_RULE_IDS)
-    assert len(scoring_ids) == 82
-    assert not (scoring_ids & set(FORBIDDEN_RULE_IDS))
-    assert mod.LEGAL_SCORE_RELEASED is True
-    assert len(mod.VERIFIED_RULE_IDS) == 85
-    assert mod.legal_score_is_released() is True
+    product_ids = set(mod.PRODUCT_SCORING_RULE_IDS)
+    deduction_ids = set(mod.SCORE_DEDUCTION_RULE_IDS)
+    assert len(product_ids) == 85
+    assert set(NON_DEDUCTIBLE_RULE_IDS) <= product_ids
+    assert len(deduction_ids) == 82
+    assert product_ids - deduction_ids == set(NON_DEDUCTIBLE_RULE_IDS)
+    assert mod.VERIFIED_RULE_IDS == frozenset()
+    assert mod.legal_score_is_released() is (mod.LEGAL_SCORE_RELEASED is True and bool(product_ids))
