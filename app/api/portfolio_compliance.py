@@ -17,6 +17,7 @@ from sqlalchemy import select
 from app.core.dependencies import get_current_user, get_db_for_user, require_roles
 from app.models.company import Company
 from app.models.compliance import ComplianceEvaluationRun
+from app.models.rules import LegalRule
 from app.models.user import User
 from app.rule_engine.engine import RULE_ENGINE_VERSION
 from app.services.compliance_service import ComplianceService
@@ -90,11 +91,21 @@ async def aggregate_rule_outcomes(
     if len(runs_by_id) != len(body.run_ids):
         raise HTTPException(status_code=404, detail="One or more evaluation runs were not found.")
 
+    active_rule_result = await db.execute(
+        select(LegalRule.rule_id).where(LegalRule.is_active.is_(True))
+    )
+    active_rule_ids = set(active_rule_result.scalars().all())
+    if not active_rule_ids:
+        raise HTTPException(status_code=409, detail="Active legal-rule catalogue is empty.")
+
     aggregate: dict[str, int] = {}
+    unmapped_aggregate: dict[str, int] = {}
     results: list[dict[str, Any]] = []
     total_rule_company_rows = 0
     emitted_outcome_rows = 0
     not_evaluated_rows = 0
+    total_unmapped_rule_ids = 0
+    seen_company_ids: set[uuid.UUID] = set()
 
     for run_id in body.run_ids:
         run = runs_by_id[run_id]
@@ -108,8 +119,24 @@ async def aggregate_rule_outcomes(
         if not isinstance(snapshot, list) or not snapshot:
             problems.append("RULE_OUTCOME_SNAPSHOT_MISSING")
             snapshot = []
-        if run.rule_catalogue_count != len(snapshot):
+        catalogue_items = [
+            item for item in snapshot
+            if isinstance(item, dict)
+            and item.get("assessment_source") != "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE"
+        ]
+        unmapped_items = [
+            item for item in snapshot
+            if isinstance(item, dict)
+            and item.get("assessment_source") == "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE"
+        ]
+        if run.rule_catalogue_count != len(catalogue_items):
             problems.append("RULE_CATALOGUE_COUNT_MISMATCH")
+        catalogue_ids = [item.get("rule_id") for item in catalogue_items]
+        if len(catalogue_ids) != len(active_rule_ids) or set(catalogue_ids) != active_rule_ids:
+            problems.append("ACTIVE_CATALOGUE_ID_SET_MISMATCH")
+        if run.company_id in seen_company_ids:
+            problems.append("DUPLICATE_COMPANY_RUN")
+        seen_company_ids.add(run.company_id)
         if not run.rule_outcomes_hash:
             problems.append("RULE_OUTCOME_HASH_MISSING")
         else:
@@ -134,13 +161,17 @@ async def aggregate_rule_outcomes(
         ids = [item.get("rule_id") for item in snapshot if isinstance(item, dict)]
         if len(ids) != len(snapshot) or len(set(ids)) != len(ids):
             problems.append("RULE_OUTCOME_IDS_MALFORMED_OR_DUPLICATED")
+        if any(item.get("verification_status") != "UNMAPPED" for item in unmapped_items):
+            problems.append("UNMAPPED_OUTCOME_MARKER_INVALID")
 
         counts: dict[str, int] = {}
-        for item in snapshot:
-            if not isinstance(item, dict):
-                continue
+        for item in catalogue_items:
             state = str(item.get("outcome_state") or "UNKNOWN")
             counts[state] = counts.get(state, 0) + 1
+        unmapped_counts: dict[str, int] = {}
+        for item in unmapped_items:
+            state = str(item.get("outcome_state") or "UNKNOWN")
+            unmapped_counts[state] = unmapped_counts.get(state, 0) + 1
 
         valid = not problems
         results.append({
@@ -153,17 +184,22 @@ async def aggregate_rule_outcomes(
                 run.score_breakdown_snapshot.get("scoring_spec_version")
                 if isinstance(run.score_breakdown_snapshot, dict) else None
             ),
-            "rule_catalogue_count": len(snapshot),
+            "rule_catalogue_count": len(catalogue_items),
             "outcome_counts": counts,
+            "unmapped_rule_id_count": len(unmapped_items),
+            "unmapped_outcome_counts": unmapped_counts,
             "valid": valid,
             "problems": problems,
         })
         if valid:
-            total_rule_company_rows += len(snapshot)
+            total_rule_company_rows += len(catalogue_items)
             for state, count in counts.items():
                 aggregate[state] = aggregate.get(state, 0) + count
+            for state, count in unmapped_counts.items():
+                unmapped_aggregate[state] = unmapped_aggregate.get(state, 0) + count
+            total_unmapped_rule_ids += len(unmapped_items)
             not_evaluated_rows += counts.get("NOT_EVALUATED", 0)
-            emitted_outcome_rows += len(snapshot) - counts.get("NOT_EVALUATED", 0)
+            emitted_outcome_rows += len(catalogue_items) - counts.get("NOT_EVALUATED", 0)
 
     valid_results = sum(item["valid"] for item in results)
     return {
@@ -171,11 +207,17 @@ async def aggregate_rule_outcomes(
         "validated_runs": valid_results,
         "rejected_runs": len(body.run_ids) - valid_results,
         "aggregate_counts": aggregate,
+        "unmapped_engine_outcome_counts": unmapped_aggregate,
         "validated_rule_company_rows": total_rule_company_rows,
+        "active_catalogue_rule_count": len(active_rule_ids),
+        "unmapped_rule_id_rows": total_unmapped_rule_ids,
         "engine_outcome_rows": emitted_outcome_rows,
         "not_evaluated_rows": not_evaluated_rows,
-        "potential_rule_company_rows": sum(
-            item["rule_catalogue_count"] for item in results if item["valid"]
+        "potential_rule_company_rows": total_rule_company_rows,
+        "expected_rule_company_rows": len(active_rule_ids) * valid_results,
+        "portfolio_reconciles": (
+            valid_results == len(body.run_ids)
+            and total_rule_company_rows == len(active_rule_ids) * len(body.run_ids)
         ),
         "disclaimer": (
             "An absent finding is NOT_EVALUATED, never COMPLIANT. "
