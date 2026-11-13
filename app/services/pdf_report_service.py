@@ -7,6 +7,8 @@ files from app/static/brand.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -811,7 +813,7 @@ class PDFReportService:
                 status_code=409,
                 detail="PDF withheld: the authoritative run has no complete statutory rule outcome ledger.",
             )
-        outcomes_hash = __import__("hashlib").sha256(__import__("json").dumps(
+        outcomes_hash = hashlib.sha256(json.dumps(
             outcomes, sort_keys=True, separators=(",", ":"), default=str
         ).encode()).hexdigest()
         if outcomes_hash != snapshot.rule_outcomes_hash:
