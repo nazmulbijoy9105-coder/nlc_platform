@@ -539,6 +539,7 @@ jobs:
             tests/integration/test_finance_cross_table_wallet_reference_guard.py \
             tests/integration/test_agm_share_event_rls.py \
             tests/integration/test_legal_provenance_acl.py \
+            tests/integration/test_articles_rls_security.py \
             tests/unit/test_rjsc_forms_idor.py \
             tests/unit/test_service_data_leak.py \
             -q -rs --tb=short --junitxml=/tmp/nlc-security-tests.xml \
@@ -562,6 +563,9 @@ jobs:
               "test_filed_by_audit_trail_is_recorded",
               "test_user_cannot_mark_other_companys_filing",
               "test_unverified_zero_director_records_do_not_trigger_inc003_and_agm_unknown",
+              "test_articles_evidence_tables_have_signed_tenant_write_policies",
+              "test_unsigned_admin_guc_cannot_authorize_articles_staff_write",
+              "test_legacy_agm_evidence_reference_uses_canonical_text_type",
           }
           collected = {case.get("name", "").split("[", 1)[0] for case in cases}
           missing = sorted(expected - collected)
