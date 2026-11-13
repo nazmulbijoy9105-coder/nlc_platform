@@ -122,7 +122,7 @@ def test_latest_evaluation_run_lookup_is_company_scoped_and_ordered():
 
 
 
-def test_all_85_product_rules_are_active_but_only_82_can_deduct():
+def test_all_85_product_rules_are_active_and_score_eligible():
     from app.rule_engine.engine import (
         PRODUCT_SCORING_RULE_IDS,
         SCORE_DEDUCTION_RULE_IDS,
@@ -160,6 +160,6 @@ def test_indeterminate_and_judgment_states_never_carry_adverse_score_impact():
             description="Indeterminate test finding",
             statutory_basis="test only",
             state=state,
-            eval_state="UNKNOWN",
+            eval_state="VIOLATION",
         )
         assert flag.score_impact == 0, state.value
