@@ -953,7 +953,7 @@ class CompanyService(BaseService[Company]):
             # Annual Return State
             "last_return_filed_year":         company.last_return_filed_year,
             "unfiled_returns_count":          unfiled_returns,
-            "annual_return_filed":            (latest_return is not None and not latest_return.is_default) if latest_return else None,
+            "annual_return_filed":            (latest_return.filed_date is not None) if latest_return else None,
             "annual_return_filing_status_verified": bool(latest_return and latest_return.filing_status_verified),
             "annual_return_filing_status_evidence_ref": latest_return.filing_status_evidence_ref if latest_return and latest_return.filing_status_verified else None,
             "annual_return_filing_status_verified_at": latest_return.filing_status_verified_at.date() if latest_return and latest_return.filing_status_verified_at else None,
