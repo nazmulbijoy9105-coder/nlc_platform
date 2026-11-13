@@ -8,6 +8,7 @@ from app.api.portfolio_compliance import (
     RuleOutcomeAggregateRequest,
     aggregate_rule_outcomes,
 )
+from app.compliance.evaluation_integrity import calculate_evaluation_score_hash
 from app.compliance.rule_outcome_ledger import hash_rule_outcomes_snapshot
 from app.rule_engine.engine import RULE_ENGINE_VERSION
 from canonical_architecture.scoring_spec import SCORING_SPEC_VERSION
@@ -83,10 +84,14 @@ def _portfolio_fixture(company_count=23, rule_count=85):
             id=run_id,
             company_id=company_id,
             evaluation_status="COMPLETED",
+            previous_hash=None,
+            trigger_source="UNIT_TEST",
+            flags_snapshot=[],
+            fact_provenance_snapshot=[],
             rule_outcomes_snapshot=snapshot,
             rule_catalogue_count=rule_count,
             rule_outcomes_hash=hash_rule_outcomes_snapshot(snapshot),
-            score_hash="a" * 64,
+            score_hash="",
             engine_version=RULE_ENGINE_VERSION,
             scoring_spec_version=SCORING_SPEC_VERSION,
             score=77,
@@ -97,6 +102,20 @@ def _portfolio_fixture(company_count=23, rule_count=85):
                 "score_reconciles": True,
                 "final_score": 77,
             },
+        )
+        run.score_hash = calculate_evaluation_score_hash(
+            previous_hash=run.previous_hash,
+            company_id=run.company_id,
+            score=run.score,
+            risk_band=run.risk_band,
+            calculated_at=run.calculated_at,
+            engine_version=run.engine_version,
+            trigger_source=run.trigger_source,
+            flags_snapshot=run.flags_snapshot,
+            fact_provenance_snapshot=run.fact_provenance_snapshot,
+            score_breakdown_snapshot=run.score_breakdown_snapshot,
+            rule_outcomes_hash=run.rule_outcomes_hash,
+            rule_outcomes_snapshot=run.rule_outcomes_snapshot,
         )
         company = SimpleNamespace(
             id=company_id,
