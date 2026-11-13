@@ -59,6 +59,28 @@ logger = structlog.get_logger(__name__)
 router = APIRouter()
 
 
+def _validate_annual_return_verification(
+    annual_return: AnnualReturn,
+    reviewer_id: uuid.UUID,
+    *,
+    filed: bool,
+    filed_date: date | None,
+    today: date | None = None,
+) -> None:
+    """Enforce reviewer separation and internally consistent RJSC filing facts."""
+    if annual_return.filing_status_submitted_by == reviewer_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A different authorised reviewer must verify the submitted filing claim.",
+        )
+    if filed and filed_date is None:
+        raise HTTPException(status_code=422, detail="A verified filed status requires the RJSC filing date.")
+    if not filed and filed_date is not None:
+        raise HTTPException(status_code=422, detail="A verified non-filing status cannot carry a filing date.")
+    if filed_date is not None and filed_date > (today or date.today()):
+        raise HTTPException(status_code=422, detail="A future filing date cannot be verified.")
+
+
 # ---------------------------------------------------------------------------
 # Schemas — AGM
 # ---------------------------------------------------------------------------
@@ -723,17 +745,12 @@ async def verify_annual_return_filing_status(
         raise HTTPException(status_code=404, detail="Annual return record not found.")
     await ensure_staff_company_scope(annual_return.company_id, current_user, db)
 
-    if annual_return.filing_status_submitted_by == current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="A different authorised reviewer must verify the submitted filing claim.",
-        )
-    if body.filed and body.filed_date is None:
-        raise HTTPException(status_code=422, detail="A verified filed status requires the RJSC filing date.")
-    if not body.filed and body.filed_date is not None:
-        raise HTTPException(status_code=422, detail="A verified non-filing status cannot carry a filing date.")
-    if body.filed_date is not None and body.filed_date > date.today():
-        raise HTTPException(status_code=422, detail="A future filing date cannot be verified.")
+    _validate_annual_return_verification(
+        annual_return,
+        current_user.id,
+        filed=body.filed,
+        filed_date=body.filed_date,
+    )
 
     annual_return.filed_date = body.filed_date
     annual_return.rjsc_receipt_number = (
