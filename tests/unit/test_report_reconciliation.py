@@ -21,7 +21,7 @@ def _company(score=75, band="RED", name="Test Co"):
 
 
 def _flag(rid, sev, imp):
-    return SimpleNamespace(rule_id=rid, severity=sev, description="d", score_impact=imp)
+    return SimpleNamespace(rule_id=rid, severity=sev, description="d", score_impact=imp, evaluation_state="VIOLATION", flag_status="ACTIVE", resolved_date=None)
 
 
 
@@ -32,6 +32,10 @@ def _enable_authorized_score_for_report_test(monkeypatch, rule_ids):
     monkeypatch.setattr("app.services.pdf_report_service.LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
         "app.services.pdf_report_service.PRODUCT_SCORING_RULE_IDS",
+        frozenset(rule_ids),
+    )
+    monkeypatch.setattr(
+        "app.services.pdf_report_service.SCORE_DEDUCTION_RULE_IDS",
         frozenset(rule_ids),
     )
     monkeypatch.setattr(
@@ -126,6 +130,9 @@ def test_real_evaluation_snapshot_reconciles_nominal_and_applied_impacts(monkeyp
             description="d",
             score_impact=12,
             score_impact_applied=10,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED",
         ),
         SimpleNamespace(
@@ -134,6 +141,9 @@ def test_real_evaluation_snapshot_reconciles_nominal_and_applied_impacts(monkeyp
             description="d",
             score_impact=10,
             score_impact_applied=10,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED",
         ),
         SimpleNamespace(
@@ -142,6 +152,9 @@ def test_real_evaluation_snapshot_reconciles_nominal_and_applied_impacts(monkeyp
             description="d",
             score_impact=5,
             score_impact_applied=5,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED",
         ),
     ]
@@ -172,6 +185,9 @@ def test_global_budget_allocation_reconciles_each_persisted_finding(monkeypatch)
             description="d",
             score_impact=impact,
             score_impact_applied=allocated,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED" if allocated else "CATEGORY_CAP_REACHED",
             detail={},
         )
@@ -195,6 +211,9 @@ def test_snapshot_applied_impact_mismatch_is_rejected(monkeypatch):
             description="d",
             score_impact=12,
             score_impact_applied=9,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED",
         ),
         SimpleNamespace(
@@ -203,6 +222,9 @@ def test_snapshot_applied_impact_mismatch_is_rejected(monkeypatch):
             description="d",
             score_impact=10,
             score_impact_applied=10,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED",
         ),
         SimpleNamespace(
@@ -211,6 +233,9 @@ def test_snapshot_applied_impact_mismatch_is_rejected(monkeypatch):
             description="d",
             score_impact=5,
             score_impact_applied=5,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED",
         ),
     ]

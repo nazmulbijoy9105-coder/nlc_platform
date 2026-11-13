@@ -1057,6 +1057,7 @@ def test_score_allocation_covers_inactive_excluded_black_and_duplicate_paths(mon
     product_ids = frozenset({"AGM-001", "AUD-001", "INC-003", "X-001"})
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", product_ids)
+    monkeypatch.setattr(engine_module, "SCORE_DEDUCTION_RULE_IDS", product_ids)
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", product_ids)
     monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
 

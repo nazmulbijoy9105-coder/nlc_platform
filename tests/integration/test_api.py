@@ -1313,15 +1313,17 @@ class TestRules:
                 assert item["score_impact"] == 0
                 assert item["is_active"] is True
             else:
+                # SH-002 is part of the 85-rule product-approved scoring
+                # catalogue. The deployment release switch is currently
+                # paused, so the API must preserve its canonical statutory
+                # basis while reporting product_scoring_enabled=False.
                 assert item["statutory_basis"] == (
-                    "Informational catalogue entry; no score deduction is applied."
+                    "Section 158, Companies Act 1994 (Bangladesh)"
                 )
-                assert "Informational catalogue entry" in item["description"]
+                assert "Section 158" in item["description"]
                 assert item["default_severity"] is None
                 assert item["product_scoring_enabled"] is False
                 assert item["score_impact"] == 0
-                # All canonical catalogue entries stay active/visible.
-                # Active does not mean score-bearing: SH-002 is informational.
                 assert item["is_active"] is True
 
 
