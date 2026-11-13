@@ -204,3 +204,55 @@ async def evaluate_all_companies(
         "results": outcomes,
         "disclaimer": "Product scoring release is not independent legal verification, legal advice or certification.",
     }
+
+@router.post("/evaluate/{company_id}", dependencies=[Depends(require_roles("SUPER_ADMIN"))])
+async def evaluate_one_company(
+    company_id: uuid.UUID,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db_for_user),
+):
+    company = await db.get(Company, company_id)
+    if company is None or not company.is_active:
+        raise HTTPException(status_code=404, detail="Active company not found.")
+    try:
+        async with db.begin_nested():
+            result = await ComplianceService(db).evaluate_company(
+                company_id=company.id, trigger_source="SUPER_ADMIN_PORTFOLIO"
+            )
+            await db.flush()
+            latest_result = await db.execute(
+                select(ComplianceEvaluationRun)
+                .where(ComplianceEvaluationRun.company_id == company.id)
+                .order_by(ComplianceEvaluationRun.calculated_at.desc())
+                .limit(1)
+            )
+            run = latest_result.scalar_one_or_none()
+            await db.refresh(company)
+            if run is None:
+                raise ValueError("Evaluation returned without an authoritative run.")
+            validated = _validation(run, company)
+            await ActivityService(db).log(
+                actor_user_id=current_user.id,
+                company_id=company.id,
+                action="PORTFOLIO_COMPLIANCE_EVALUATED",
+                resource_type="compliance_evaluation_run",
+                resource_id=run.id,
+                description="Company processed by SUPER_ADMIN portfolio evaluation.",
+                ip_address=request.client.host if request.client else None,
+                detail={"evaluation_run_id": str(run.id), "validation": validated,
+                        "trigger_source": "SUPER_ADMIN_PORTFOLIO"},
+            )
+        await db.commit()
+        return {
+            "company_id": str(company.id),
+            "company_name": company.company_name,
+            "status": "VALIDATED" if validated["valid"] else (
+                "NOT_RELEASED" if run.evaluation_status != "COMPLETED" else "VALIDATION_FAILED"
+            ),
+            **validated,
+        }
+    except Exception:
+        await db.rollback()
+        raise
+
