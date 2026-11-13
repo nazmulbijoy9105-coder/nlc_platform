@@ -7,8 +7,6 @@ files from app/static/brand.
 """
 from __future__ import annotations
 
-import hashlib
-import json
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -19,6 +17,10 @@ from fastapi import HTTPException, Response
 from sqlalchemy import select
 
 from app.models.compliance import ComplianceEvaluationRun
+from app.compliance.evaluation_integrity import (
+    evaluation_run_chain_problem,
+    evaluation_run_integrity_problems,
+)
 
 # Import CATEGORY_CAPS for score reconciliation (cap adjustment display)
 from app.rule_engine.engine import (
@@ -853,13 +855,17 @@ class PDFReportService:
                 status_code=409,
                 detail="PDF withheld: the authoritative run has no complete statutory rule outcome ledger.",
             )
-        outcomes_hash = hashlib.sha256(json.dumps(
-            outcomes, sort_keys=True, separators=(",", ":"), default=str
-        ).encode()).hexdigest()
-        if outcomes_hash != getattr(snapshot, "rule_outcomes_hash", None):
+        integrity_problems = evaluation_run_integrity_problems(snapshot)
+        chain_problem = await evaluation_run_chain_problem(self.db, snapshot)
+        if chain_problem:
+            integrity_problems.append(chain_problem)
+        if integrity_problems:
             raise HTTPException(
                 status_code=409,
-                detail="PDF withheld: statutory rule outcome ledger hash mismatch.",
+                detail=(
+                    "PDF withheld: evaluation evidence integrity checks failed: "
+                    + ", ".join(integrity_problems)
+                ),
             )
 
         score_snapshot_data = snapshot.score_breakdown_snapshot

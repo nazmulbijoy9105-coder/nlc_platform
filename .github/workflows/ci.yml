@@ -79,7 +79,7 @@ jobs:
       - name: Validate backup tooling syntax
         run: |
           bash -n scripts/backup_to_s3.sh
-          python -m py_compile scripts/verify_backup.py
+          python -m py_compile scripts/verify_backup.py scripts/rehearse_restored_neon_branch.py
 
       - name: Lint scoring and migration release changes
         run: |

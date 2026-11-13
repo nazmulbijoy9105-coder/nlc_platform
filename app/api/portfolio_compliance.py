@@ -15,6 +15,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.core.dependencies import get_current_user, get_db_for_user, require_roles
+from app.compliance.evaluation_integrity import (
+    evaluation_run_chain_problem,
+    evaluation_run_integrity_problems,
+)
 from app.models.company import Company
 from app.models.compliance import ComplianceEvaluationRun
 from app.models.rules import LegalRule
@@ -38,7 +42,14 @@ class ReactivationRequest(BaseModel):
 
 def _validation(run: ComplianceEvaluationRun, company: Company) -> dict[str, Any]:
     snapshot = run.score_breakdown_snapshot
-    problems: list[str] = []
+    problems: list[str] = evaluation_run_integrity_problems(run)
+    outcomes = run.rule_outcomes_snapshot
+    if isinstance(outcomes, list) and any(
+        isinstance(item, dict)
+        and item.get("assessment_source") == "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE"
+        for item in outcomes
+    ):
+        problems.append("UNMAPPED_RULE_OUTCOME_PRESENT")
     if run.evaluation_status != "COMPLETED":
         problems.append("RUN_NOT_COMPLETED")
     if not run.score_hash:
@@ -68,6 +79,8 @@ def _validation(run: ComplianceEvaluationRun, company: Company) -> dict[str, Any
         "score": run.score,
         "risk_band": getattr(run.risk_band, "value", run.risk_band),
         "score_hash": run.score_hash,
+        "rule_outcomes_hash": run.rule_outcomes_hash,
+        "rule_catalogue_count": run.rule_catalogue_count,
         "engine_version": run.engine_version,
         "scoring_spec_version": snapshot.get("scoring_spec_version"),
         "calculated_at": run.calculated_at.isoformat() if run.calculated_at else None,
@@ -156,7 +169,15 @@ async def aggregate_rule_outcomes(
                 problems.append("RUN_NOT_LATEST_FOR_COMPANY")
             validation = _validation(run, company)
             if not validation["valid"]:
-                problems.extend(validation["problems"])
+                # Portfolio aggregation reports unmapped evidence separately;
+                # it must not convert an unmapped finding into a catalogue row.
+                problems.extend(
+                    problem for problem in validation["problems"]
+                    if problem != "UNMAPPED_RULE_OUTCOME_PRESENT"
+                )
+            chain_problem = await evaluation_run_chain_problem(db, run)
+            if chain_problem:
+                problems.append(chain_problem)
 
         ids = [item.get("rule_id") for item in snapshot if isinstance(item, dict)]
         if len(ids) != len(snapshot) or len(set(ids)) != len(ids):
@@ -324,6 +345,11 @@ async def evaluate_all_companies(
                 if run is None:
                     raise ValueError("Evaluation returned without an authoritative run.")
                 validated = _validation(run, company)
+                chain_problem = await evaluation_run_chain_problem(db, run)
+                if chain_problem:
+                    validated["problems"].append(chain_problem)
+                    validated["valid"] = False
+                    validated["pdf_eligible"] = False
                 await ActivityService(db).log(
                     actor_user_id=current_user.id,
                     company_id=company.id,
@@ -392,6 +418,11 @@ async def evaluate_one_company(
             if run is None:
                 raise ValueError("Evaluation returned without an authoritative run.")
             validated = _validation(run, company)
+            chain_problem = await evaluation_run_chain_problem(db, run)
+            if chain_problem:
+                validated["problems"].append(chain_problem)
+                validated["valid"] = False
+                validated["pdf_eligible"] = False
             await ActivityService(db).log(
                 actor_user_id=current_user.id,
                 company_id=company.id,

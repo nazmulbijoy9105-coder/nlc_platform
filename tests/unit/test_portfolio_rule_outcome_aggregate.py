@@ -8,6 +8,10 @@ from app.api.portfolio_compliance import (
     RuleOutcomeAggregateRequest,
     aggregate_rule_outcomes,
 )
+from app.compliance.evaluation_integrity import (
+    calculate_evaluation_score_hash,
+    evaluation_run_chain_problem,
+)
 from app.compliance.rule_outcome_ledger import hash_rule_outcomes_snapshot
 from app.rule_engine.engine import RULE_ENGINE_VERSION
 from canonical_architecture.scoring_spec import SCORING_SPEC_VERSION
@@ -27,6 +31,9 @@ class _Result:
     def scalar_one_or_none(self):
         return self._scalar
 
+    def one_or_none(self):
+        return self._scalar
+
 
 class _PortfolioDB:
     def __init__(self, runs, companies, active_rule_ids):
@@ -36,12 +43,14 @@ class _PortfolioDB:
         self.current_run = None
         self.execute_count = 0
 
-    async def execute(self, _statement):
+    async def execute(self, statement):
         self.execute_count += 1
         if self.execute_count == 1:
             return _Result(rows=self.runs)
         if self.execute_count == 2:
             return _Result(rows=self.active_rule_ids)
+        if "compliance_evaluation_runs.score_hash" in str(statement).lower():
+            return _Result(scalar=None)
         return _Result(scalar=self.current_run.id)
 
     async def get(self, model, entity_id):
@@ -83,10 +92,14 @@ def _portfolio_fixture(company_count=23, rule_count=85):
             id=run_id,
             company_id=company_id,
             evaluation_status="COMPLETED",
+            previous_hash=None,
+            trigger_source="UNIT_TEST",
+            flags_snapshot=[],
+            fact_provenance_snapshot=[],
             rule_outcomes_snapshot=snapshot,
             rule_catalogue_count=rule_count,
             rule_outcomes_hash=hash_rule_outcomes_snapshot(snapshot),
-            score_hash="a" * 64,
+            score_hash="",
             engine_version=RULE_ENGINE_VERSION,
             scoring_spec_version=SCORING_SPEC_VERSION,
             score=77,
@@ -97,6 +110,20 @@ def _portfolio_fixture(company_count=23, rule_count=85):
                 "score_reconciles": True,
                 "final_score": 77,
             },
+        )
+        run.score_hash = calculate_evaluation_score_hash(
+            previous_hash=run.previous_hash,
+            company_id=run.company_id,
+            score=run.score,
+            risk_band=run.risk_band,
+            calculated_at=run.calculated_at,
+            engine_version=run.engine_version,
+            trigger_source=run.trigger_source,
+            flags_snapshot=run.flags_snapshot,
+            fact_provenance_snapshot=run.fact_provenance_snapshot,
+            score_breakdown_snapshot=run.score_breakdown_snapshot,
+            rule_outcomes_hash=run.rule_outcomes_hash,
+            rule_outcomes_snapshot=run.rule_outcomes_snapshot,
         )
         company = SimpleNamespace(
             id=company_id,
@@ -152,3 +179,52 @@ async def test_aggregate_rejects_run_with_catalogue_id_set_mismatch():
     assert result["validated_rule_company_rows"] == 0
     assert result["portfolio_reconciles"] is False
     assert "ACTIVE_CATALOGUE_ID_SET_MISMATCH" in result["results"][0]["problems"]
+
+@pytest.mark.asyncio
+async def test_aggregate_rejects_run_with_a_broken_previous_hash_link():
+    runs, companies, rule_ids = _portfolio_fixture(company_count=1)
+    runs[0].previous_hash = "f" * 64
+    runs[0].score_hash = calculate_evaluation_score_hash(
+        previous_hash=runs[0].previous_hash,
+        company_id=runs[0].company_id,
+        score=runs[0].score,
+        risk_band=runs[0].risk_band,
+        calculated_at=runs[0].calculated_at,
+        engine_version=runs[0].engine_version,
+        trigger_source=runs[0].trigger_source,
+        flags_snapshot=runs[0].flags_snapshot,
+        fact_provenance_snapshot=runs[0].fact_provenance_snapshot,
+        score_breakdown_snapshot=runs[0].score_breakdown_snapshot,
+        rule_outcomes_hash=runs[0].rule_outcomes_hash,
+        rule_outcomes_snapshot=runs[0].rule_outcomes_snapshot,
+    )
+    db = _PortfolioDB(runs, companies, rule_ids)
+
+    result = await aggregate_rule_outcomes(
+        RuleOutcomeAggregateRequest(run_ids=[runs[0].id]),
+        db,
+    )
+
+    assert result["validated_runs"] == 0
+    assert result["rejected_runs"] == 1
+    assert "PREVIOUS_HASH_CHAIN_MISMATCH" in result["results"][0]["problems"]
+
+@pytest.mark.asyncio
+async def test_chain_rejects_existing_predecessor_without_a_valid_score_hash():
+    class PreviousResult:
+        def one_or_none(self):
+            return SimpleNamespace(id=uuid4(), score_hash=None)
+
+    class PreviousDB:
+        async def execute(self, statement):
+            return PreviousResult()
+
+    run = SimpleNamespace(
+        company_id=uuid4(),
+        calculated_at=datetime(2026, 11, 13, tzinfo=timezone.utc),
+        previous_hash=None,
+    )
+
+    problem = await evaluation_run_chain_problem(PreviousDB(), run)
+
+    assert problem == "PREVIOUS_HASH_PREDECESSOR_HASH_INVALID"

@@ -1,0 +1,46 @@
+name: Neon restored snapshot migration rehearsal
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nlc-neon-restored-snapshot-rehearsal
+  cancel-in-progress: false
+
+jobs:
+  rehearse:
+    name: Upgrade the pinned isolated 0042 restore branch to current head
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      NLC_RESTORED_REHEARSAL_DATABASE_URL: ${{ secrets.NLC_RESTORED_REHEARSAL_DATABASE_URL }}
+      NLC_RESTORED_REHEARSAL_APP_DATABASE_URL: ${{ secrets.NLC_RESTORED_REHEARSAL_APP_DATABASE_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install application and migration dependencies
+        run: python -m pip install --no-cache-dir -r requirements.txt
+
+      - name: Validate rehearsal script
+        run: python -m py_compile scripts/rehearse_restored_neon_branch.py
+
+      - name: Verify branch identity, migrate, and audit data preservation
+        run: python scripts/rehearse_restored_neon_branch.py
+
+      - name: Upload restore rehearsal report
+        if: always() && hashFiles('artifacts/neon-restored-branch-rehearsal.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: nlc-neon-restored-branch-rehearsal
+          path: artifacts/neon-restored-branch-rehearsal.json
+          if-no-files-found: error
