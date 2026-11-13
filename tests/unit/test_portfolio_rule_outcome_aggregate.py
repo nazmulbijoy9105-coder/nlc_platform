@@ -8,7 +8,10 @@ from app.api.portfolio_compliance import (
     RuleOutcomeAggregateRequest,
     aggregate_rule_outcomes,
 )
-from app.compliance.evaluation_integrity import calculate_evaluation_score_hash
+from app.compliance.evaluation_integrity import (
+    calculate_evaluation_score_hash,
+    evaluation_run_chain_problem,
+)
 from app.compliance.rule_outcome_ledger import hash_rule_outcomes_snapshot
 from app.rule_engine.engine import RULE_ENGINE_VERSION
 from canonical_architecture.scoring_spec import SCORING_SPEC_VERSION
@@ -205,3 +208,23 @@ async def test_aggregate_rejects_run_with_a_broken_previous_hash_link():
     assert result["validated_runs"] == 0
     assert result["rejected_runs"] == 1
     assert "PREVIOUS_HASH_CHAIN_MISMATCH" in result["results"][0]["problems"]
+
+@pytest.mark.asyncio
+async def test_chain_rejects_existing_predecessor_without_a_valid_score_hash():
+    class PreviousResult:
+        def one_or_none(self):
+            return SimpleNamespace(id=uuid4(), score_hash=None)
+
+    class PreviousDB:
+        async def execute(self, statement):
+            return PreviousResult()
+
+    run = SimpleNamespace(
+        company_id=uuid4(),
+        calculated_at=datetime(2026, 11, 13, tzinfo=timezone.utc),
+        previous_hash=None,
+    )
+
+    problem = await evaluation_run_chain_problem(PreviousDB(), run)
+
+    assert problem == "PREVIOUS_HASH_PREDECESSOR_HASH_INVALID"
