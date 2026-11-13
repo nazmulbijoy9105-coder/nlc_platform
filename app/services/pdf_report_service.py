@@ -758,6 +758,17 @@ class PDFReportService:
                 status_code=409,
                 detail="PDF withheld: the latest evaluation run is incomplete or lacks audit identity.",
             )
+        score_snapshot_data = snapshot.score_breakdown_snapshot
+        if (
+            not isinstance(score_snapshot_data, dict)
+            or score_snapshot_data.get("scoring_spec_version") != SCORING_SPEC_VERSION
+            or score_snapshot_data.get("score_reconciles") is not True
+            or score_snapshot_data.get("final_score") != snapshot.score
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="PDF withheld: the authoritative run does not contain a reconciled score under the current scoring specification.",
+            )
         if (
             snapshot.score != company.current_compliance_score
             or snapshot.risk_band != company.current_risk_band
