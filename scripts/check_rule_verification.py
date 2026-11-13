@@ -92,22 +92,22 @@ def main() -> int:
     product_approval = product_path.read_text(encoding="utf-8")
     product_header = product_approval.split("rules:", 1)[0]
     product_row_ids = set(re.findall(
-        r"^\\s*- rule_id:\\s*([A-Z]{2,12}-\\d{3})\\s*$", product_approval, re.MULTILINE
+        r"^\s*- rule_id:\s*([A-Z]{2,12}-\\d{3})\s*$", product_approval, re.MULTILINE
     ))
     approved_ids = set(re.findall(
-        r"^\\s+- ([A-Z]{2,12}-\\d{3})\\s*$", product_header, re.MULTILINE
+        r"^\s+- ([A-Z]{2,12}-\\d{3})\s*$", product_header, re.MULTILINE
     ))
     product_approved_count = len(re.findall(
-        r"^\\s+product_status:\\s*PRODUCT_APPROVED\\s*$", product_approval, re.MULTILINE
+        r"^\s+product_status:\s*PRODUCT_APPROVED\s*$", product_approval, re.MULTILINE
     ))
     active_count = len(re.findall(
-        r"^\\s+product_active:\\s*true\\s*$", product_approval, re.MULTILINE
+        r"^\s+product_active:\s*true\s*$", product_approval, re.MULTILINE
     ))
     eligible_count = len(re.findall(
-        r"^\\s+score_eligible:\\s*true\\s*$", product_approval, re.MULTILINE
+        r"^\s+score_eligible:\s*true\s*$", product_approval, re.MULTILINE
     ))
     ineligible_count = len(re.findall(
-        r"^\\s+score_eligible:\\s*false\\s*$", product_approval, re.MULTILINE
+        r"^\s+score_eligible:\s*false\s*$", product_approval, re.MULTILINE
     ))
     if "approval_policy: owner_attested" not in product_header or "legal_effect: NONE" not in product_header:
         print("FAIL: product register must explicitly be owner-attested and have no legal effect")
@@ -122,13 +122,13 @@ def main() -> int:
     legal_approval = legal_path.read_text(encoding="utf-8")
     legal_header = legal_approval.split("rules:", 1)[0]
     legal_row_ids = set(re.findall(
-        r"^\\s*- rule_id:\\s*([A-Z]{2,12}-\\d{3})\\s*$", legal_approval, re.MULTILINE
+        r"^\s*- rule_id:\s*([A-Z]{2,12}-\\d{3})\s*$", legal_approval, re.MULTILINE
     ))
     counsel_approved_ids = set(re.findall(
-        r"^\\s+- ([A-Z]{2,12}-\\d{3})\\s*$", legal_header, re.MULTILINE
+        r"^\s+- ([A-Z]{2,12}-\\d{3})\s*$", legal_header, re.MULTILINE
     ))
     review_required_count = len(re.findall(
-        r"^\\s+status:\\s*REVIEW_REQUIRED\\s*$", legal_approval, re.MULTILINE
+        r"^\s+status:\s*REVIEW_REQUIRED\s*$", legal_approval, re.MULTILINE
     ))
     if "approval_policy: independent_counsel_only" not in legal_header or counsel_approved_ids or legal_row_ids != seed or review_required_count != len(seed):
         print("FAIL: legal register must retain all 85 rules as REVIEW_REQUIRED with no counsel approvals")
