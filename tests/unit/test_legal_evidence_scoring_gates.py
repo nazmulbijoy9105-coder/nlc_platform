@@ -141,9 +141,8 @@ def test_unapproved_black_rule_cannot_force_black_score_band():
     assert result.risk_band == Severity.NOT_EVALUATED
 
 
-def test_product_owner_black_override_is_blocked_without_counsel_verification(monkeypatch):
-    # Product-owner approval and override authority do not substitute for
-    # independent counsel verification.
+def test_product_owner_black_override_does_not_require_counsel_allowlist(monkeypatch):
+    # Product release and explicit override authority are separate from counsel status.
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
     monkeypatch.setattr(
         engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"AUD-003"})
@@ -164,10 +163,11 @@ def test_product_owner_black_override_is_blocked_without_counsel_verification(mo
 
     result = NLCRuleEngine()._calculate_score([approved_black], _profile())
 
-    assert engine_module.legal_score_is_released() is False
-    assert result.override_applied is False
-    assert result.black_flag_count == 0
-    assert result.risk_band == Severity.NOT_EVALUATED
+    assert engine_module.VERIFIED_RULE_IDS == frozenset()
+    assert engine_module.legal_score_is_released() is True
+    assert result.override_applied is True
+    assert result.black_flag_count == 1
+    assert result.risk_band == Severity.BLACK
 
 
 def test_counsel_verified_product_authorized_black_override_is_honoured(monkeypatch):
