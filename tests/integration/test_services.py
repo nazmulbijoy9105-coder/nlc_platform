@@ -1026,6 +1026,10 @@ def test_rescue_output_validation_requires_product_release_and_unique_evidenced_
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    with pytest.raises(PermissionError, match="disabled"):
+        validate_rescue_engine_output(output, expected_company_id="tenant-001")
+
     # A released fixture must approve every rule in its product catalogue.
     monkeypatch.setattr(
         engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"})
