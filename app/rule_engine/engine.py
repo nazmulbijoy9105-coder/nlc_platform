@@ -451,6 +451,11 @@ class CompanyProfile:
     audit_committee_established: bool | None = None
     # -- Bangladesh Bank / Foreign Exchange --
     foreign_exchange_violation: bool = False
+    # Production evaluation binds every emitted rule to the LegalRule catalogue.
+    # Direct pure-engine tests may omit this snapshot; service evaluations must set it.
+    catalogue_binding_required: bool = False
+    catalogue_rule_versions: Dict[str, str] = field(default_factory=dict)
+    catalogue_rule_active: Dict[str, bool] = field(default_factory=dict)
 
 @dataclass
 class ScoreBreakdown:
@@ -834,6 +839,9 @@ class NLCRuleEngine:
     def evaluate(self, company: CompanyProfile, today: date | None = None) -> EngineOutput:
         """Evaluate a company profile. Thread-safety: create a fresh NLCRuleEngine() per call — self._flags is instance state."""
         self._flags = []
+        self._rule_versions = dict(company.catalogue_rule_versions or {})
+        self._rule_active = dict(company.catalogue_rule_active or {})
+        self._catalogue_binding_required = company.catalogue_binding_required is True
         self.today = today or self._default_today or date.today()
 
         self._run_incorporation_rules(company)
@@ -4247,6 +4255,25 @@ class NLCRuleEngine:
         return 2              # Oct-Dec = Q2
 
     def _add_flag(self, flag: ComplianceFlag) -> None:
+        """Bind each finding to its database catalogue version and activation state."""
+        if self._catalogue_binding_required:
+            version = self._rule_versions.get(flag.rule_id)
+            active = self._rule_active.get(flag.rule_id)
+            if version is not None:
+                flag.rule_version = str(version)
+            if version is None or active is not True:
+                detail = dict(flag.detail or {})
+                detail["rule_catalogue_binding"] = (
+                    "CATALOGUE_ENTRY_MISSING" if version is None else "RULE_INACTIVE"
+                )
+                detail["engine_evaluator_version"] = RULE_ENGINE_VERSION
+                flag.detail = detail
+                flag.severity = Severity.NOT_EVALUATED
+                flag.score_impact = 0
+                flag.state = RuleState.UNKNOWN
+                flag.eval_state = "UNKNOWN"
+                flag.is_black_override = False
+                flag.conditional_applies = False
         self._flags.append(flag)
 
     def _graduated_agm_deduction(self, delay: int) -> int:
