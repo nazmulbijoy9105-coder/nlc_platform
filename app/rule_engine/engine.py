@@ -431,7 +431,7 @@ class CompanyProfile:
     voluntary_winding_up: bool = False
     investigation_order: bool = False
     # -- BSEC Corporate Governance Code 2023 --
-    bsec_listed: bool = False
+    bsec_listed: bool | None = None
     bsec_quarterly_report_filed: bool | None = None
     cg_certificate_obtained: bool | None = None
     board_independent_director: bool | None = None
@@ -2896,40 +2896,104 @@ class NLCRuleEngine:
 
     def _run_labour_rules(self, c: CompanyProfile) -> None:
         applicability = self._manufacturing_applicability(c)
+        labour_basis = (
+            "Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026"
+        )
 
-        # Factory-license obligations are evaluated only for established
-        # manufacturing entities. UNKNOWN and NOT_APPLICABLE never create
-        # a statutory breach or score deduction.
-        if applicability.state is ApplicabilityState.APPLICABLE and c.factory_license_required_by_direction is True:
-            # The profile does not yet bind a Government direction, class,
-            # licence record and renewal terms to verified source evidence.
-            # Never turn a user-entered boolean or expiry date into a breach.
-            if c.factory_license_obtained is False:
+        # A conditional rule must report UNKNOWN when its applicability facts
+        # are missing; silence would make UNKNOWN indistinguishable from N/A.
+        if applicability.state is ApplicabilityState.UNKNOWN:
+            self._add_flag(ComplianceFlag(
+                rule_id="LBR-001",
+                flag_code="FACTORY_LICENSE_APPLICABILITY_UNKNOWN",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "Manufacturing/factory status is not established. Confirm the "
+                    "nature and location of the establishment before treating the "
+                    "section 326 factory-licensing rule as applicable or not applicable."
+                ),
+                statutory_basis=labour_basis,
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"applicability_state": "UNKNOWN", "reason": applicability.reason},
+            ))
+
+        if applicability.state is ApplicabilityState.APPLICABLE:
+            if c.factory_license_required_by_direction is None:
                 self._add_flag(ComplianceFlag(
                     rule_id="LBR-001",
-                    flag_code="FACTORY_LICENSE_STATUS_REQUIRES_VERIFICATION",
+                    flag_code="FACTORY_LICENSE_GOVERNMENT_DIRECTION_UNKNOWN",
                     severity=Severity.NOT_EVALUATED,
                     score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="A factory/establishment licence may be required under section 326 only if the applicable Government direction covers this establishment/class. Verify the direction, class, commencement, exemption and authentic licence search before finding a default.",
-                    statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
+                    description=(
+                        "Manufacturing activity is reported, but no authenticated "
+                        "section 326 Government direction has been identified for "
+                        "this establishment/class. Verify the direction, scope, "
+                        "commencement and exemptions before deciding applicability."
+                    ),
+                    statutory_basis=labour_basis,
                     state=RuleState.UNKNOWN,
                     eval_state="UNKNOWN",
+                    detail={"applicability_state": "UNKNOWN", "government_direction_verified": False},
                 ))
+            elif c.factory_license_required_by_direction is True:
+                if c.factory_license_obtained is not True:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="LBR-001",
+                        flag_code="FACTORY_LICENSE_STATUS_REQUIRES_VERIFICATION",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            "A section 326 direction is reported to require a licence, "
+                            "but licence status is absent or negative. Verify the "
+                            "direction, class, commencement, exemptions and authentic "
+                            "licence search before determining any default."
+                        ),
+                        statutory_basis=labour_basis,
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                        detail={"applicability_state": "APPLICABLE_PENDING_SOURCE_VERIFICATION"},
+                    ))
 
-            if c.factory_license_expiry and self.today > c.factory_license_expiry:
-                delay = (self.today - c.factory_license_expiry).days
-                self._add_flag(ComplianceFlag(
-                    rule_id="LBR-002",
-                    flag_code="FACTORY_LICENSE_EXPIRY_REQUIRES_VERIFICATION",
-                    severity=Severity.NOT_EVALUATED,
-                    score_impact=0,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Recorded licence expiry is {delay} days in the past. Verify the licence class, section 326 Government direction, five-year/contractor one-year term, renewal application, extension and operative status before finding a breach.",
-                    statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
-                    state=RuleState.UNKNOWN,
-                    eval_state="UNKNOWN",
-                ))
+                if c.factory_license_expiry is None:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="LBR-002",
+                        flag_code="FACTORY_LICENSE_EXPIRY_STATUS_UNKNOWN",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            "The reported section 326 licensing requirement has no "
+                            "verified licence-expiry/renewal record. Obtain the licence "
+                            "and any renewal application, extension or replacement "
+                            "instrument before assessing current validity."
+                        ),
+                        statutory_basis=labour_basis,
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                    ))
+                elif self.today > c.factory_license_expiry:
+                    delay = (self.today - c.factory_license_expiry).days
+                    self._add_flag(ComplianceFlag(
+                        rule_id="LBR-002",
+                        flag_code="FACTORY_LICENSE_EXPIRY_REQUIRES_VERIFICATION",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            f"Recorded licence expiry is {delay} days in the past. "
+                            "Verify the licence class, section 326 Government direction, "
+                            "five-year/contractor one-year term, renewal application, "
+                            "extension and operative status before finding a breach."
+                        ),
+                        statutory_basis=labour_basis,
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                    ))
 
         # LBR-003 is not gated by manufacturing status: applicability of an
         # existing labour-court order depends on the order's parties and scope.
@@ -3032,43 +3096,76 @@ class NLCRuleEngine:
 
     # MODULE 15: BSEC CG CODE 2023
     def _run_bsec_rules(self, c: CompanyProfile) -> None:
-        # The Code is not a universal private-company obligation. Even where
-        # listed status is asserted, each condition requires verified scope,
-        # current instrument version and condition-specific evidence. Until
-        # those facts are verified, emit review prompts only.
-        if c.bsec_listed:
-            candidates = (
-                ("BSEC-001", "QUARTERLY_REPORT_STATUS_REQUIRES_SOURCE_VERIFICATION",
-                 c.bsec_quarterly_report_filed,
-                 "Quarterly-report status requires the exact applicable BSEC reporting instrument, reporting period, issuer category and due date; it is not Condition 8 of the Corporate Governance Code."),
-                ("BSEC-002", "CG_CERTIFICATE_STATUS_REQUIRES_VERIFICATION",
-                 c.cg_certificate_obtained,
-                 "Corporate-governance compliance certification is associated with Condition 9; verify listed-issuer scope, auditor/certifier, reporting year and filing evidence."),
-                ("BSEC-003", "BOARD_COMPOSITION_STATUS_REQUIRES_VERIFICATION",
-                 c.board_independent_director,
-                 "Board composition is governed by Condition 1 as amended; verify board size, independent-director ratio, female independent-director requirement, eligibility and effective date."),
-                ("BSEC-004", "AUDIT_COMMITTEE_STATUS_REQUIRES_VERIFICATION",
-                 c.audit_committee_established,
-                 "Audit Committee is addressed by Condition 5; verify committee composition, terms, meetings, independence and issuer applicability."),
-            )
-            for rule_id, flag_code, supplied_status, description in candidates:
-                if supplied_status is False:
-                    basis = (
-                        "Applicable BSEC financial-reporting instrument; exact notification, issuer class, reporting period and due date require verification"
-                        if rule_id == "BSEC-001"
-                        else "BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification"
-                    )
-                    self._add_flag(ComplianceFlag(
-                        rule_id=rule_id,
-                        flag_code=flag_code,
-                        severity=Severity.NOT_EVALUATED,
-                        score_impact=0,
-                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=description,
-                        statutory_basis=basis,
-                        state=RuleState.UNKNOWN,
-                        eval_state="UNKNOWN",
-                    ))
+        company_type = str(getattr(c.company_type, "value", c.company_type)).upper()
+        # The Corporate Governance Code is a listed-issuer regime, not a
+        # general private-company duty. For public companies, missing listing
+        # status remains UNKNOWN rather than silently becoming unlisted.
+        if company_type != "PUBLIC_LIMITED":
+            return
+
+        candidates = (
+            ("BSEC-001", "QUARTERLY_REPORT_STATUS_REQUIRES_SOURCE_VERIFICATION",
+             c.bsec_quarterly_report_filed,
+             "Quarterly-report status requires the exact applicable BSEC financial-reporting instrument, issuer class, reporting period and due date; it is not Condition 8 of the Corporate Governance Code."),
+            ("BSEC-002", "CG_CERTIFICATE_STATUS_REQUIRES_VERIFICATION",
+             c.cg_certificate_obtained,
+             "Corporate-governance compliance certification is associated with Condition 9; verify listed-issuer scope, certifier eligibility, reporting year and filing evidence."),
+            ("BSEC-003", "BOARD_COMPOSITION_STATUS_REQUIRES_VERIFICATION",
+             c.board_independent_director,
+             "Board composition is governed by Condition 1 as amended; verify board size, independent-director ratio, female independent-director requirement, eligibility and effective date."),
+            ("BSEC-004", "AUDIT_COMMITTEE_STATUS_REQUIRES_VERIFICATION",
+             c.audit_committee_established,
+             "Audit Committee is addressed by Condition 5; verify committee composition, terms, meetings, independence and issuer applicability."),
+        )
+
+        if c.bsec_listed is None:
+            for rule_id, _flag_code, _status, description in candidates:
+                self._add_flag(ComplianceFlag(
+                    rule_id=rule_id,
+                    flag_code="BSEC_LISTED_ISSUER_APPLICABILITY_UNKNOWN",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=(
+                        "Public-company status alone does not establish that the issuer "
+                        "is listed. Verify the issuer's current BSEC/DSE/CSE listing "
+                        f"status before evaluating this condition. {description}"
+                    ),
+                    statutory_basis=(
+                        "BSEC Corporate Governance Code 2018 and applicable "
+                        "amendments/notifications; issuer scope requires verification"
+                    ),
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                    detail={"applicability_state": "UNKNOWN", "bsec_listed": None},
+                ))
+            return
+
+        if c.bsec_listed is False:
+            return
+
+        for rule_id, flag_code, supplied_status, description in candidates:
+            if supplied_status is not True:
+                basis = (
+                    "Applicable BSEC financial-reporting instrument; exact notification, issuer class, reporting period and due date require verification"
+                    if rule_id == "BSEC-001"
+                    else "BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification"
+                )
+                self._add_flag(ComplianceFlag(
+                    rule_id=rule_id,
+                    flag_code=flag_code,
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=description,
+                    statutory_basis=basis,
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                    detail={
+                        "applicability_state": "APPLICABLE_PENDING_SOURCE_VERIFICATION",
+                        "reported_status": supplied_status,
+                    },
+                ))
 
     # MODULE 16: FOREIGN EXCHANGE
     def _run_fx_rules(self, c: CompanyProfile) -> None:
