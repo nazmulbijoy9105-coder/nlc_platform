@@ -1,4 +1,3 @@
-import pytest
 """
 NLC Legal Audit Test Suite — Implements the test matrix from the deep legal audit.
 
@@ -17,6 +16,7 @@ Legal basis: Companies Act 1994 (Bangladesh)
 
 from datetime import date, timedelta
 
+import pytest
 
 from app.rule_engine.engine import (
     ChargeEvent,
@@ -113,7 +113,7 @@ class TestDirectorDisqualification:
         assert flag is not None, "DEF-001 should fire (as NOT_EVALUATED)"
         assert flag.severity == Severity.NOT_EVALUATED
         assert flag.state == RuleState.UNKNOWN
-        assert flag.is_black_override == False
+        assert not flag.is_black_override
         # P0 KEY ASSERTION: DEF-001 specifically must NOT be the cause
         # of the BLACK override. Other rules may trigger override independently.
         if result.score_breakdown.override_reason:
@@ -146,10 +146,6 @@ class TestCalendarMonthDeadlines:
     def test_DATE_001_auditor_one_month_calendar_calculation(self):
         """DATE-001: AUD-001 deadline uses calendar month, not 30 days."""
         # Registration on Jan 31 → deadline should be Feb 28 (or 29 in leap year)
-        c = _base_profile(
-            incorporation_date=date(2025, 1, 31),
-            first_auditor_appointed=False,
-        )
         engine = NLCRuleEngine()
         deadline = engine._add_one_month(date(2025, 1, 31))
         # Jan 31 + 1 calendar month = Feb 28 (2025 is not a leap year)
@@ -213,7 +209,7 @@ class TestScoringEngine:
         if def_flag:
             assert def_flag.severity != Severity.BLACK, \
                 "Unverified DEF-001 must NOT be BLACK severity"
-            assert def_flag.is_black_override == False
+            assert not def_flag.is_black_override
 
     def test_SCORE_003_no_double_counting(self):
         """SCORE-003: Same breach detected by multiple rules — no double counting."""
