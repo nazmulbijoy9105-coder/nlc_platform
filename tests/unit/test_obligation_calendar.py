@@ -38,7 +38,7 @@ def test_calendar_month_arithmetic_clamps_month_end():
 
 def test_private_company_calendar_has_agm_financials_audit_and_board_cycles():
     items = {item.obligation_id: item for item in _items()}
-    assert items["AGM-81"].due_date == date(2026, 12, 31)
+    assert items["AGM-81"].due_date == date(2026, 9, 30)
     assert items["ACC-183"].due_date == items["AGM-81"].due_date
     assert items["AUD-210-AGM"].due_date == items["AGM-81"].due_date
     assert items["BOD-96"].due_date == date(2026, 11, 15)
