@@ -355,13 +355,18 @@ async def update_rule(
                 ),
             )
 
-    updated_rule = await svc.update_rule(
-        rule_id=rule_id,
-        **update_data,
-        change_reason=body.change_reason,
-        changed_by=current_user.id,
-        expected_version=body.expected_version,
-    )
+    try:
+        updated_rule = await svc.update_rule(
+            rule_id=rule_id,
+            **update_data,
+            change_reason=body.change_reason,
+            changed_by=current_user.id,
+            expected_version=body.expected_version,
+        )
+    except ValueError as exc:
+        # Stale version or malformed version string: caller must reload and
+        # explicitly reconcile; never silently overwrite a concurrent edit.
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     await activity.log(
         action="LEGAL_RULE_UPDATED",
