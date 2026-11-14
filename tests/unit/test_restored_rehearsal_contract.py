@@ -8,6 +8,7 @@ from pathlib import Path
 from scripts.rehearse_restored_neon_branch import (
     EXPECTED_HEAD_REVISION,
     EXPECTED_START_REVISION,
+    POST_MIGRATION_REQUIRED_COLUMNS,
     PRE_0042_REQUIRED_COLUMNS,
 )
 
@@ -18,7 +19,10 @@ def _assignment_literal(tree: ast.AST, name: str):
     for node in ast.walk(tree):
         if isinstance(node, (ast.Assign, ast.AnnAssign)):
             targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-            if any(isinstance(target, ast.Name) and target.id == name for target in targets):
+            if any(
+                isinstance(target, ast.Name) and target.id == name
+                for target in targets
+            ):
                 return ast.literal_eval(node.value)
     raise AssertionError(f"Missing literal assignment: {name}")
 
@@ -34,7 +38,9 @@ def test_rehearsal_head_tracks_the_single_repository_alembic_head():
         if isinstance(down_revision, str):
             referenced.add(down_revision)
         elif isinstance(down_revision, (tuple, list)):
-            referenced.update(item for item in down_revision if isinstance(item, str))
+            referenced.update(
+                item for item in down_revision if isinstance(item, str)
+            )
 
     heads = revisions - referenced
     assert heads == {EXPECTED_HEAD_REVISION}
@@ -67,3 +73,4 @@ def test_webhook_deliveries_preflight_uses_original_0037_shape():
     assert "updated_at" not in PRE_0042_REQUIRED_COLUMNS["webhook_deliveries"]
     assert "updated_at" in PRE_0042_REQUIRED_COLUMNS["webhook_endpoints"]
     assert "updated_at" in PRE_0042_REQUIRED_COLUMNS["rescue_audit_log"]
+    assert "updated_at" in POST_MIGRATION_REQUIRED_COLUMNS["webhook_deliveries"]
