@@ -29,7 +29,6 @@ from app.rule_engine.engine import (
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
     SCORE_DEDUCTION_RULE_IDS,
-    VERIFIED_RULE_IDS,
 )
 from app.services.company_service import CompanyService
 from app.services.pdf_render import (
@@ -314,12 +313,8 @@ def _render_rescue_section(rescue_plan: Any) -> str:
 
 
 def _legal_score_is_released() -> bool:
-    """Mirror the engine gate: every catalogue rule needs counsel approval."""
-    return (
-        LEGAL_SCORE_RELEASED is True
-        and bool(PRODUCT_SCORING_RULE_IDS)
-        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
-    )
+    """Mirror the product release switch and scoring catalogue."""
+    return LEGAL_SCORE_RELEASED is True and bool(PRODUCT_SCORING_RULE_IDS)
 
 
 def _is_active_confirmed_violation(flag: Any) -> bool:
@@ -677,10 +672,7 @@ def build_compliance_report_html(
     else:
         score = company.current_compliance_score or 0
         band = company.current_risk_band or "NOT_EVALUATED"
-        review_flags = [
-            flag for flag in (flags or [])
-            if getattr(flag, "rule_id", "") not in VERIFIED_RULE_IDS
-        ]
+        review_flags = []  # Not governed by a code-level counsel allowlist.
         flags = [
             flag for flag in (flags or [])
             if getattr(flag, "rule_id", "") in PRODUCT_SCORING_RULE_IDS
