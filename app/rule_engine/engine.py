@@ -2952,7 +2952,7 @@ class NLCRuleEngine:
                     "any applicable Government direction before deciding whether "
                     "a licence is required. This is not a breach finding."
                 ),
-                statutory_basis=statutory_basis,
+                statutory_basis="Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355",
                 state=RuleState.UNKNOWN,
                 eval_state="UNKNOWN",
                 detail={
@@ -2977,7 +2977,7 @@ class NLCRuleEngine:
                     "been resolved. Obtain the operative direction and legal scope "
                     "review; do not infer a default from manufacturing status."
                 ),
-                statutory_basis=statutory_basis,
+                statutory_basis="Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355",
                 state=RuleState.UNKNOWN,
                 eval_state="UNKNOWN",
                 detail={
@@ -3004,7 +3004,7 @@ class NLCRuleEngine:
                     "verified. Obtain the licence or a dated registry/inspection "
                     "record before making a finding."
                 ),
-                statutory_basis=statutory_basis,
+                statutory_basis="Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355",
                 state=RuleState.UNKNOWN,
                 eval_state="UNKNOWN",
                 detail={
@@ -3028,7 +3028,7 @@ class NLCRuleEngine:
                     "category, commencement date and any exception; no score or "
                     "statutory breach is asserted by this engine."
                 ),
-                statutory_basis=statutory_basis,
+                statutory_basis="Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355",
                 state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                 eval_state="UNKNOWN",
                 detail={
@@ -3051,7 +3051,7 @@ class NLCRuleEngine:
                     "The licence is required, but the current licence status is "
                     "unknown. Verify the issued licence and its operative dates."
                 ),
-                statutory_basis=statutory_basis,
+                statutory_basis="Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355",
                 state=RuleState.UNKNOWN,
                 eval_state="UNKNOWN",
                 detail={"required_evidence": required_evidence},
@@ -3076,7 +3076,7 @@ class NLCRuleEngine:
                     "a renewal deadline from issue date until the amended Act "
                     "and Labour Rules transition are reconciled."
                 ),
-                statutory_basis=statutory_basis,
+                statutory_basis="Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355",
                 state=RuleState.UNKNOWN,
                 eval_state="UNKNOWN",
                 detail={
@@ -3097,7 +3097,7 @@ class NLCRuleEngine:
                     "continued operation, transitional treatment and the "
                     "applicable contractor/non-contractor term with counsel."
                 ),
-                statutory_basis=statutory_basis,
+                statutory_basis="Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355",
                 state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                 eval_state="UNKNOWN",
                 detail={
