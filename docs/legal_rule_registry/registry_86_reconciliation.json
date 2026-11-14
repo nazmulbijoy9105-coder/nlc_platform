@@ -1,6 +1,6 @@
 {
   "manifest_version": "1.0.0",
-  "purpose": "Complete 86-rule Seed, Engine and production database field snapshot. Differences are reconciliation data only; individual statutory-basis and condition resolutions are out of scope.",
+  "purpose": "Complete 86-rule Seed, Engine and production database field snapshot. Differences are reconciliation data only; individual statutory-basis and condition resolutions are out of scope. No independent counsel-verification allowlist is used by the scoring gate.",
   "sources": {
     "seed": {
       "path": "scripts/seed_rules.py",
@@ -187,7 +187,7 @@
         "VAT-002",
         "VAT-003"
       ],
-      "verified_rule_ids": []
+      "scoring_gate": "LEGAL_SCORE_RELEASED + PRODUCT_SCORING_RULE_IDS + SCORE_DEDUCTION_RULE_IDS + applicability/evidence/confirmed-violation gates; no counsel-verification allowlist"
     },
     "production_database": {
       "project_id": "rapid-bonus-26545234",
@@ -288,7 +288,7 @@
     "documented_unresolved": "Retained as source reconciliation only; not legal approval.",
     "approved_exception": "Requires status APPROVED_EXCEPTION, reviewer, approval_reference, approved_at, rationale and expiry_or_review_date.",
     "unexplained_mismatch": "Fail CI when an observed source mismatch is absent from this manifest.",
-    "legal_release": "Only VERIFIED_RULE_IDS is counsel approval; database activation fields do not populate it."
+    "legal_release": "Scoring does not consult an independent counsel-verification ID allowlist. Counsel review status remains documentary metadata and must not be inferred from product activation."
   },
   "rules": {
     "ACC-001": {
@@ -296,7 +296,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "ACC-001",
         "rule_name": "Financial Statements Not Presented at AGM",
@@ -353,7 +352,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "ACC-002",
         "rule_name": "Financial Statements Not Filed with Registrar",
@@ -410,7 +408,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "ACC-003",
         "rule_name": "Books of Account Not Kept",
@@ -467,7 +464,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "AGM-001",
         "rule_name": "First AGM Default",
@@ -545,7 +541,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "AGM-002",
         "rule_name": "Subsequent AGM Default",
@@ -628,7 +623,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "AGM-003",
         "rule_name": "AGM Short Notice — Consent Verification",
@@ -713,7 +707,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "AGM-004",
         "rule_name": "AGM Notice or Short-Notice Consent Missing",
@@ -797,7 +790,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "AGM-005",
         "rule_name": "AGM Quorum Not Met",
@@ -875,7 +867,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "AGM-006",
         "rule_name": "AGM Minutes Status Requires Verification",
@@ -951,7 +942,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "AGM-007",
         "rule_name": "AGM Adjournment Notice Requires Review",
@@ -1024,7 +1014,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "AR-001",
         "rule_name": "Annual Return Default — Single Year",
@@ -1102,7 +1091,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "AR-002",
         "rule_name": "Annual Return Backlog — Review Required",
@@ -1183,7 +1171,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "AR-003",
         "rule_name": "Annual Return Backlog — Extended Review Required",
@@ -1264,7 +1251,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "AR-004",
         "rule_name": "Annual Return Filed But Incomplete",
@@ -1335,7 +1321,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "AUD-001",
         "rule_name": "First Auditor Not Appointed Within One Calendar Month",
@@ -1406,7 +1391,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "AUD-002",
         "rule_name": "Audit Not Completed Before AGM",
@@ -1481,7 +1465,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "AUD-003",
         "rule_name": "AGM Held Without Completed Audit",
@@ -1565,7 +1548,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "AUD-004",
         "rule_name": "Auditor Not Reappointed at AGM",
@@ -1636,7 +1618,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "AUD-005",
         "rule_name": "Subsequent Auditor Reappointment Status Unknown",
@@ -1710,7 +1691,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "BNK-001",
         "rule_name": "Winding Up Petition Filed",
@@ -1783,7 +1763,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "BNK-002",
         "rule_name": "Liquidator Appointed",
@@ -1856,7 +1835,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "BNK-003",
         "rule_name": "Court-Ordered Winding Up",
@@ -1929,7 +1907,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "BOD-001",
         "rule_name": "Board Meeting History Requires Verification",
@@ -2003,7 +1980,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "BOD-002",
         "rule_name": "Board Meeting Notice Status Requires Verification",
@@ -2072,7 +2048,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "BOD-003",
         "rule_name": "Board Minutes Status Requires Verification",
@@ -2141,7 +2116,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "BSEC-001",
         "rule_name": "Quarterly Report Status Requires Verification",
@@ -2216,7 +2190,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "BSEC-002",
         "rule_name": "CG Certificate Status Requires Verification",
@@ -2296,7 +2269,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "BSEC-003",
         "rule_name": "Board Composition Status Requires Verification",
@@ -2371,7 +2343,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "BSEC-004",
         "rule_name": "Audit Committee Status Requires Verification",
@@ -2446,7 +2417,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "CAP-001",
         "rule_name": "Capital Alteration Authority Requires Review",
@@ -2530,7 +2500,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "CAP-002",
         "rule_name": "Charge Not Registered With RJSC Within 21 Days",
@@ -2615,7 +2584,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "CAP-003",
         "rule_name": "Capital Reduction — Court Confirmation Review",
@@ -2701,7 +2669,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "CAP-004",
         "rule_name": "Special Resolution Not Filed With RJSC",
@@ -2777,7 +2744,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "CHG-001",
         "rule_name": "Charge Satisfaction — Evidence Review Required",
@@ -2855,7 +2821,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "DEF-001",
         "rule_name": "Director Disqualified",
@@ -2943,7 +2908,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "DEF-002",
         "rule_name": "Unresolved Penalty Notices",
@@ -3012,7 +2976,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "DIR-001",
         "rule_name": "Director Appointment Not Filed Within 14 Days",
@@ -3085,7 +3048,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "DIR-002",
         "rule_name": "Director Departure Not Filed Within 14 Days",
@@ -3158,7 +3120,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "DIR-003",
         "rule_name": "Director Filing Delay — Internal 365-Day Escalation",
@@ -3246,7 +3207,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "DIR-004",
         "rule_name": "Late Director Cessation Filing - Legal Effect Review",
@@ -3334,7 +3294,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "DIR-005",
         "rule_name": "Director Interest Disclosure/Register Requires Review",
@@ -3418,7 +3377,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "DIR-006",
         "rule_name": "Register of Contracts Requires Review",
@@ -3491,7 +3449,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "DIR-007",
         "rule_name": "Director Consent Not Filed Within 30 Days",
@@ -3573,7 +3530,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "DIR-008",
         "rule_name": "Office of Profit Status Requires Verification",
@@ -3642,7 +3598,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "DIR-010",
         "rule_name": "Managing Director Term Requires Verification",
@@ -3711,7 +3666,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "ESC-001",
         "rule_name": "Strike-Off Process Status Requires Verification",
@@ -3794,7 +3748,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "ESC-002",
         "rule_name": "Strike-Off Status Requires Verification",
@@ -3882,7 +3835,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "ESC-003",
         "rule_name": "Corporate Rescue Mandatory — Systemic Failure",
@@ -3957,7 +3909,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "ESC-004",
         "rule_name": "Voluntary Winding Up",
@@ -4030,7 +3981,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "ESC-005",
         "rule_name": "Investigation Order Pending",
@@ -4103,7 +4053,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "FX-001",
         "rule_name": "Foreign Exchange Violation",
@@ -4171,7 +4120,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "INC-001",
         "rule_name": "MoA/AoA Registration Status Requires Verification",
@@ -4253,7 +4201,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "INC-002",
         "rule_name": "Memorandum and Articles Not Filed",
@@ -4315,7 +4262,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "INC-003",
         "rule_name": "Minimum Directors Not Appointed",
@@ -4393,7 +4339,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "INC-004",
         "rule_name": "Paid-Up / Authorized Capital Mismatch — Legal Review",
@@ -4474,7 +4419,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "INC-005",
         "rule_name": "Encashment Certificate Missing — Foreign Shareholding",
@@ -4547,7 +4491,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "INC-006",
         "rule_name": "Initial Establishment Remittance Evidence — Work Permit Review",
@@ -4625,7 +4568,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "INC-007",
         "rule_name": "Business Commenced Without Section 150 Declaration",
@@ -4705,7 +4647,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "LBR-001",
         "rule_name": "Establishment Licence Applicability and Status",
@@ -4793,7 +4734,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "LBR-002",
         "rule_name": "Establishment Licence Expiry Requires Review",
@@ -4876,7 +4816,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "LBR-003",
         "rule_name": "Labour Court Order Pending",
@@ -4949,7 +4888,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "MEM-001",
         "rule_name": "Company Operating with Fewer than Minimum Members",
@@ -5006,7 +4944,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "OFF-001",
         "rule_name": "Change of Registered Office Not Filed Within 28 Days",
@@ -5077,7 +5014,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "REG-001",
         "rule_name": "Statutory Registers Incomplete",
@@ -5151,7 +5087,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "REG-002",
         "rule_name": "Core Statutory Registers Missing",
@@ -5230,7 +5165,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "REG-003",
         "rule_name": "Registers Not Kept at Registered Office",
@@ -5289,7 +5223,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "SH-001",
         "rule_name": "Share Allotment Not Filed — Form XV",
@@ -5348,7 +5281,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "SH-002",
         "rule_name": "Share Certificates Not Issued Within 90 Days",
@@ -5407,7 +5339,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "SH-003",
         "rule_name": "Capital Increase Not Filed — Form IV",
@@ -5483,7 +5414,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "STR-001",
         "rule_name": "Name Change Not Filed",
@@ -5552,7 +5482,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "STR-002",
         "rule_name": "Object Clause Change Not Filed",
@@ -5621,7 +5550,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "STR-003",
         "rule_name": "AoA Alteration Not Filed",
@@ -5690,7 +5618,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "TAX-001",
         "rule_name": "TIN Status Requires Verification",
@@ -5766,7 +5693,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "TAX-002",
         "rule_name": "VAT Registration or Turnover-Tax Enlistment Status Requires Verification",
@@ -5849,7 +5775,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "TAX-003",
         "rule_name": "Annual Tax Return Overdue",
@@ -5935,7 +5860,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "TAX-004",
         "rule_name": "Advance Tax Missed",
@@ -6017,7 +5941,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "TL-001",
         "rule_name": "Trade License Not Obtained",
@@ -6102,7 +6025,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "TL-002",
         "rule_name": "Trade License Expired",
@@ -6165,7 +6087,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "TR-001",
         "rule_name": "No Share Transfer Instrument — Form 117",
@@ -6243,7 +6164,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "TR-002",
         "rule_name": "Share Transfer Stamp Duty Requires Verification",
@@ -6327,7 +6247,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "TR-003",
         "rule_name": "Articles-Based Transfer Restriction Review",
@@ -6411,7 +6330,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "TR-004",
         "rule_name": "Notice of Refusal to Register Transfer",
@@ -6496,7 +6414,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "TR-005",
         "rule_name": "Registered Transfer Despite Articles Restriction — Counsel Review",
@@ -6580,7 +6497,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "TR-006",
         "rule_name": "Composite Transfer Record Review",
@@ -6656,7 +6572,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "VAT-002",
         "rule_name": "VAT Return Status Requires Verification",
@@ -6738,7 +6653,6 @@
       "production_database_present": true,
       "engine_product_scoring_member": true,
       "engine_score_deduction_member": true,
-      "engine_counsel_verified_member": false,
       "seed_fields": {
         "rule_id": "VAT-003",
         "rule_name": "VAT Annual Return Status Requires Verification",
