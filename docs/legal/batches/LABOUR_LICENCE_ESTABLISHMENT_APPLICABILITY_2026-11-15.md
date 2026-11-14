@@ -61,6 +61,8 @@ It separately requires verified licence-status metadata:
 
 The legacy field `factory_license_required_by_direction` is retained for compatibility but now represents the reviewed s. 326/r. 354 licensing requirement for the establishment category. The actual licence expiry date is used only when present on the verified licence copy.
 
+These fields default to unverified in the company profile. They are not treated as company self-certification inputs; until an authenticated, audited counsel/reviewer workflow persists them, LBR-001/LBR-002 remain UNKNOWN. This batch does not add that persistence workflow or a database migration.
+
 All candidate outputs remain NOT_EVALUATED with zero score impact pending independent rule approval.
 
 ## 5. Sources checked
