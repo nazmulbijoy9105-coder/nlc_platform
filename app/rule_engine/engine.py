@@ -1250,16 +1250,27 @@ class NLCRuleEngine:
                         eval_state="UNKNOWN",
                     ))
                 else:
-                    severity = Severity.RED if days_to < 14 else Severity.YELLOW
                     self._add_flag(ComplianceFlag(
                         rule_id="AUD-002",
-                        flag_code="AUDIT_MISSING_PRE_AGM",
-                        severity=severity,
-                        score_impact=12,
+                        flag_code="AUDIT_READINESS_REQUIRES_REVIEW",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"Verified audit completion is absent. AGM in {days_to} days. Section 183 requires accounts to be laid before the AGM.",
+                        description=(
+                            f"Verified audit completion is not recorded and the AGM is "
+                            f"scheduled in {days_to} days. This is a pre-meeting readiness "
+                            "alert, not proof that Section 183 has already been breached. "
+                            "Verify the audit engagement, completion timetable, meeting "
+                            "record and whether the statements will be laid before the AGM."
+                        ),
                         statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
-                        detail={"days_to_agm": days_to}
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                        detail={
+                            "days_to_agm": days_to,
+                            "is_pre_agm_readiness_alert": True,
+                            "statutory_default_established": False,
+                        },
                     ))
 
         if c.agm_held_this_cycle and c.audit_complete is False:
@@ -1285,9 +1296,9 @@ class NLCRuleEngine:
                 self._add_flag(ComplianceFlag(
                     rule_id="AUD-003",
                     flag_code="AGM_HELD_WITHOUT_COMPLETED_AUDIT",
-                    severity=Severity.RED,
+                    severity=Severity.NOT_EVALUATED,
                     score_impact=0,
-                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=(
                         "Verified audit completion is absent for an AGM. Section 183 governs "
                         "accounts laid before the AGM; a lawyer must assess the actual accounts, "
@@ -3061,13 +3072,43 @@ class NLCRuleEngine:
 
     # MODULE 16: FOREIGN EXCHANGE
     def _run_fx_rules(self, c: CompanyProfile) -> None:
-        if c.foreign_exchange_violation:
+        # A profile boolean does not identify the transaction, applicable
+        # Bangladesh Bank permission/circular, statutory subsection, actor,
+        # date, exemption or documentary evidence. Never convert it directly
+        # into a confirmed foreign-exchange violation or score deduction.
+        if c.foreign_exchange_violation is True:
             self._add_flag(ComplianceFlag(
-                rule_id="FX-001", flag_code="FOREIGN_EXCHANGE_VIOLATION",
-                severity=Severity.RED, score_impact=15,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="Foreign exchange violation. FE Regulation Act 1947.",
-                statutory_basis="Foreign Exchange Regulation Act 1947 (Bangladesh)"))
+                rule_id="FX-001",
+                flag_code="FOREIGN_EXCHANGE_TRANSACTION_REQUIRES_LEGAL_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The company profile reports a possible foreign-exchange issue. "
+                    "Identify the exact transaction, parties, currency, date, authorised "
+                    "dealer bank, applicable Bangladesh Bank circular/permission, "
+                    "statutory subsection, exemption and source documents before making "
+                    "any finding. A profile boolean is not proof of a violation."
+                ),
+                statutory_basis=(
+                    "Foreign Exchange Regulation Act 1947 (Bangladesh) and the "
+                    "transaction-specific Bangladesh Bank instruments; exact provision "
+                    "and operative circular require verification"
+                ),
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={
+                    "reported_foreign_exchange_issue": True,
+                    "verification_status": "UNVERIFIED_PROFILE_ASSERTION",
+                    "required_evidence": [
+                        "UNDERLYING_TRANSACTION_DOCUMENTS",
+                        "AUTHORISED_DEALER_BANK_RECORDS",
+                        "APPLICABLE_BANGLADESH_BANK_PERMISSION_OR_CIRCULAR",
+                        "PARTY_AND_RESIDENCY_CLASSIFICATION",
+                        "EXEMPTION_OR_APPROVAL_RECORDS",
+                    ],
+                },
+            ))
 
     # ───────────────────────────────────────────────────────────────────
     # MODULE: BOARD MEETINGS (Section 95, 96, 89)
@@ -3142,60 +3183,112 @@ class NLCRuleEngine:
     # MODULE: ACCOUNTS & AUDIT FILING (Section 181, 183, 190)
     # ───────────────────────────────────────────────────────────────────
     def _run_accounts_rules(self, c: CompanyProfile) -> None:
-        # ACC-001: Financial statements not presented at AGM (Section 183)
-        if c.agm_held_this_cycle and c.financial_statements_presented is False:
+        """Emit review-only findings until each accounting fact has authenticated provenance.
+
+        The current CompanyProfile exposes plain booleans for presentation,
+        filing and books status, but no reviewer, evidence reference or
+        verification timestamp for those facts. A false profile value is
+        therefore an assertion/data point, not proof of a statutory default.
+        Keep each rule visible without converting an unverified assertion into
+        a red finding or score deduction.
+        """
+        if c.agm_held_this_cycle is True and c.financial_statements_presented is False:
             self._add_flag(ComplianceFlag(
                 rule_id="ACC-001",
-                flag_code="FINANCIAL_STATEMENTS_NOT_PRESENTED",
-                severity=Severity.RED,
-                score_impact=15,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="AGM held but balance sheet and P&L not presented. Section 183: Board shall lay before AGM.",
+                flag_code="FINANCIAL_STATEMENTS_PRESENTATION_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The company profile reports that financial statements were not "
+                    "presented at the AGM. The current profile has no authenticated "
+                    "AGM-minute or accounts-presentation verification fields. Check "
+                    "the signed AGM minutes, audited statements and any corrected or "
+                    "adjourned meeting record before determining a Section 183 default."
+                ),
                 statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={
+                    "reported_agm_held": True,
+                    "reported_financial_statements_presented": False,
+                    "verification_status": "UNVERIFIED_PROFILE_ASSERTION",
+                    "required_evidence": [
+                        "AUTHENTICATED_AGM_MINUTES",
+                        "AUDITED_FINANCIAL_STATEMENTS",
+                        "MEETING_ADJOURNMENT_OR_CORRECTION_RECORD_IF_ANY",
+                    ],
+                },
             ))
 
-        # ACC-002: Section 190 allows 30 days after the AGM, or if no AGM
-        # was held, 30 days after the latest date on which it should have been held.
-        if c.financial_statements_filed is False and self._agm_history_is_verified(c):
-            filing_deadline: date | None = None
-            deadline_basis: str | None = None
-            agm_due: date | None = None
-            if c.agm_held_this_cycle is True and c.last_agm_date is not None:
-                filing_deadline = c.last_agm_date + timedelta(days=30)
-                deadline_basis = "30 days after AGM"
-            elif c.agm_held_this_cycle is False:
-                if c.agm_count == 0 and c.incorporation_date is not None:
-                    agm_due = self._add_months(c.incorporation_date, 18)
-                elif c.agm_count is not None and c.agm_count > 0 and c.last_agm_date is not None:
-                    agm_due = self._subsequent_agm_deadline(c)
-                if agm_due is not None:
-                    filing_deadline = agm_due + timedelta(days=30)
-                    deadline_basis = "30 days after latest date AGM should have been held"
-            if filing_deadline is not None and self.today > filing_deadline:
-                delay = (self.today - filing_deadline).days
-                self._add_flag(ComplianceFlag(
-                    rule_id="ACC-002",
-                    flag_code="FINANCIAL_STATEMENTS_NOT_FILED",
-                    severity=Severity.RED,
-                    score_impact=15,
-                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description=f"Financial statements not filed with Registrar within 30 days of {deadline_basis}. Overdue by {delay} days. Section 190.",
-                    statutory_basis="Section 190, Companies Act 1994 (Bangladesh)",
-                    detail={"delay": delay, "filing_deadline": str(filing_deadline), "deadline_basis": deadline_basis},
-                ))
+        # Section 190's 30-day period is only calculated from a legally
+        # established trigger. The current profile's filing boolean has no
+        # independent RJSC search/receipt provenance, so it cannot establish
+        # non-filing even when AGM history itself is verified.
+        if c.financial_statements_filed is False:
+            self._add_flag(ComplianceFlag(
+                rule_id="ACC-002",
+                flag_code="FINANCIAL_STATEMENTS_FILING_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The company profile reports that financial statements were not "
+                    "filed. No authenticated RJSC filing search, filing receipt or "
+                    "registry-unavailability record is bound to this field. Verify "
+                    "the Section 190 filing obligation, the applicable AGM/last due "
+                    "date, the filing receipt and any correction or extension before "
+                    "determining a default."
+                ),
+                statutory_basis="Section 190, Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={
+                    "reported_financial_statements_filed": False,
+                    "agm_history_verified": self._agm_history_is_verified(c),
+                    "verification_status": "UNVERIFIED_PROFILE_ASSERTION",
+                    "required_evidence": [
+                        "AUTHENTICATED_RJSC_FILING_SEARCH_OR_RESPONSE",
+                        "FILING_RECEIPT_OR_ACKNOWLEDGEMENT",
+                        "AGM_OR_STATUTORY_DUE_DATE_EVIDENCE",
+                        "EXTENSION_OR_COURT_ORDER_IF_ANY",
+                    ],
+                },
+            ))
 
-        # ACC-003: Books of account not kept (Section 181)
         if c.books_of_account_kept is False:
             self._add_flag(ComplianceFlag(
                 rule_id="ACC-003",
-                flag_code="BOOKS_NOT_KEPT",
-                severity=Severity.RED,
-                score_impact=15,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="Proper books of account not maintained. Section 181: every company shall keep proper books.",
+                flag_code="BOOKS_OF_ACCOUNT_STATUS_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The company profile reports that proper books of account are "
+                    "not kept. The current profile does not bind a reviewer-verified "
+                    "inspection, record inventory, accounting period or branch-office "
+                    "records. Inspect the books, vouchers, branch summaries, location "
+                    "notice and retention period before determining a Section 181 default."
+                ),
                 statutory_basis="Section 181, Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={
+                    "reported_books_of_account_kept": False,
+                    "verification_status": "UNVERIFIED_PROFILE_ASSERTION",
+                    "required_evidence": [
+                        "INSPECTION_RECORD_AND_SCOPE",
+                        "BOOKS_AND_VOUCHER_INVENTORY",
+                        "REGISTERED_OFFICE_OR_APPROVED_ALTERNATE_LOCATION_NOTICE",
+                        "BRANCH_ACCOUNT_SUMMARIES_IF_APPLICABLE",
+                        "TWELVE_YEAR_RETENTION_REVIEW",
+                    ],
+                },
             ))
 
+    # ───────────────────────────────────────────────────────────────────
+    # SCORING ENGINE
+    # ───────────────────────────────────────────────────────────────────
     def _run_escalation_rules(self, c: CompanyProfile) -> None:
         agm_years = self._calculate_agm_default_years(c)
         ar_years = c.unfiled_returns_count or 0  # defensive: None → 0
