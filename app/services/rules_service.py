@@ -65,6 +65,7 @@ class RulesService(BaseService[LegalRule]):
         *,
         change_reason: str,
         changed_by: uuid.UUID,
+        expected_version: str | None = None,
         sro_reference: str | None = None,
         # Updatable fields
         rule_name: str | None = None,
@@ -103,6 +104,11 @@ class RulesService(BaseService[LegalRule]):
         rule = result.scalar_one_or_none()
         if not rule:
             return None
+        if expected_version is not None and rule.rule_version != expected_version:
+            raise ValueError(
+                f"Stale rule version for {rule_id}: expected {expected_version}, "
+                f"current version is {rule.rule_version}"
+            )
 
         # ── Step 1: Snapshot current state ─────────────────────────
         await self._create_version_snapshot(
