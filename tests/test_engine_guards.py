@@ -196,4 +196,8 @@ def test_product_scoring_allowlist_is_full_and_separate_from_legal_verification(
     assert len(deduction_ids) == 85
     assert product_ids == deduction_ids
     assert mod.VERIFIED_RULE_IDS == frozenset()
-    assert mod.legal_score_is_released() is (mod.LEGAL_SCORE_RELEASED is True and bool(product_ids))
+    assert mod.legal_score_is_released() is (
+        mod.LEGAL_SCORE_RELEASED is True
+        and bool(product_ids)
+        and product_ids.issubset(set(mod.VERIFIED_RULE_IDS))
+    )
