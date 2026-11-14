@@ -31,6 +31,8 @@ Foreign-key delete actions match the original 0037/0038 semantics: webhook endpo
 
 The NLC application role has no SELECT/INSERT/UPDATE/DELETE grants on these three historical evidence tables at the 0042 restore point. This is consistent with the 0037/0038 migration intent to keep these tables closed until signed RLS policies are installed later.
 
+At this 0042 starting point, `nlc_app_role` and `nlc_ci_audit_role` still have `INHERIT` enabled and `nlc_private.rls_signing_key` does not yet exist. Those are expected pre-0050 states, not post-migration acceptance criteria. Migration 0050 must set both runtime roles to `NOINHERIT`, create and protect the signing-key table, and install the signed identity policies. The rehearsal's post-upgrade security audit must verify those final conditions and a valid signing key; the absence of that table before 0050 is not a reason to seed it manually.
+
 ## 2. Production branch, read-only comparison
 
 | Item | Observed |
