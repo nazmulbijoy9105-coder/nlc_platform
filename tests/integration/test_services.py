@@ -1264,12 +1264,14 @@ def test_rule_evaluator_quarantines_unapproved_candidate_before_score_or_overrid
 
 
 def test_compliance_score_impact_requires_verified_rule_and_global_release(monkeypatch):
+    import app.rule_engine.engine as engine_module
     import app.services.compliance_service as compliance_module
 
-    monkeypatch.setattr(compliance_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(compliance_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(compliance_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(compliance_module, "legal_score_is_released", lambda: True)
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
     flag = SimpleNamespace(
         rule_id="AGM-001",
         score_impact=10,
