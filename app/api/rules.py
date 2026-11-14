@@ -143,14 +143,14 @@ def _rule_to_response(rule) -> RuleResponse:
         ),
         default_severity=(
             str(getattr(rule.default_severity, "value", rule.default_severity))
-            if legally_verified
+            if scoring_catalogue_member
             and str(getattr(rule.default_severity, "value", rule.default_severity)).upper() != "NOT_EVALUATED"
             else None
         ),
         product_scoring_enabled=product_scoring_enabled,
         score_impact=(
             rule.score_impact
-            if legally_verified and rule.rule_id in SCORE_DEDUCTION_RULE_IDS
+            if product_scoring_enabled and rule.rule_id in SCORE_DEDUCTION_RULE_IDS
             else 0
         ),
         revenue_tier=str(rule.revenue_tier) if scoring_catalogue_member else "COMPLIANCE_PACKAGE",
@@ -158,7 +158,7 @@ def _rule_to_response(rule) -> RuleResponse:
         # This field describes product policy, not independent legal verification.
         is_black_override=(
             product_scoring_enabled
-                and scoring_catalogue_member
+            and scoring_catalogue_member
             and rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         ),
         is_active=bool(rule.is_active),
