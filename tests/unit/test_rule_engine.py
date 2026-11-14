@@ -1194,21 +1194,29 @@ class TestLabourRules:
         assert not_applicable.reason
         assert unknown.reason
 
-    def test_LBR001_triggers_only_for_confirmed_manufacturing(self, rule_engine, build_profile):
+    def test_LBR001_surfaces_unknown_direction_for_confirmed_manufacturing(self, rule_engine, build_profile):
         profile = build_profile(is_manufacturing=True, factory_license_obtained=False)
         output = rule_engine.evaluate(profile)
-        # Manufacturing status alone does not establish a Section 326 licence duty.
-        assert_flag_not_triggered(output, "LBR-001")
+        finding = next(f for f in output.flags if f.rule_id == "LBR-001")
+        assert finding.flag_code == "FACTORY_LICENSE_GOVERNMENT_DIRECTION_UNKNOWN"
+        assert finding.eval_state == "UNKNOWN"
+        assert finding.score_impact == 0
 
     @pytest.mark.parametrize("manufacturing_status", [False, None])
-    def test_LBR001_does_not_trigger_when_manufacturing_not_established(
+    def test_LBR001_distinguishes_non_manufacturing_from_unknown_status(
         self, rule_engine, build_profile, manufacturing_status
     ):
         output = rule_engine.evaluate(build_profile(
             is_manufacturing=manufacturing_status,
             factory_license_obtained=False,
         ))
-        assert_flag_not_triggered(output, "LBR-001")
+        if manufacturing_status is None:
+            finding = next(f for f in output.flags if f.rule_id == "LBR-001")
+            assert finding.flag_code == "FACTORY_LICENSE_APPLICABILITY_UNKNOWN"
+            assert finding.eval_state == "UNKNOWN"
+            assert finding.score_impact == 0
+        else:
+            assert_flag_not_triggered(output, "LBR-001")
 
     def test_LBR002_triggers_only_for_confirmed_manufacturing(self, rule_engine, build_profile):
         profile = build_profile(
@@ -1241,7 +1249,7 @@ class TestLabourRules:
         assert_flag_triggered(output, "LBR-003")
 
     def test_no_labour_flags_when_compliant(self, rule_engine, build_profile):
-        profile = build_profile(is_manufacturing=True)
+        profile = build_profile(is_manufacturing=False)
         output = rule_engine.evaluate(profile)
         flag_ids = [f.rule_id for f in output.flags]
         assert "LBR-001" not in flag_ids
@@ -1533,16 +1541,16 @@ class TestUntestedRules:
         assert_flag_triggered(rule_engine.evaluate(build_profile(investigation_order=True)), "ESC-005")
 
     def test_BSEC001_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, bsec_quarterly_report_filed=False)), "BSEC-001")
+        assert_flag_triggered(rule_engine.evaluate(build_profile(company_type="PUBLIC_LIMITED", bsec_listed=True, bsec_quarterly_report_filed=False)), "BSEC-001")
 
     def test_BSEC002_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, cg_certificate_obtained=False)), "BSEC-002")
+        assert_flag_triggered(rule_engine.evaluate(build_profile(company_type="PUBLIC_LIMITED", bsec_listed=True, cg_certificate_obtained=False)), "BSEC-002")
 
     def test_BSEC003_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, board_independent_director=False)), "BSEC-003")
+        assert_flag_triggered(rule_engine.evaluate(build_profile(company_type="PUBLIC_LIMITED", bsec_listed=True, board_independent_director=False)), "BSEC-003")
 
     def test_BSEC004_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, audit_committee_established=False)), "BSEC-004")
+        assert_flag_triggered(rule_engine.evaluate(build_profile(company_type="PUBLIC_LIMITED", bsec_listed=True, audit_committee_established=False)), "BSEC-004")
 
     def test_FX001_triggers(self, rule_engine, build_profile):
         assert_flag_triggered(rule_engine.evaluate(build_profile(foreign_exchange_violation=True)), "FX-001")
