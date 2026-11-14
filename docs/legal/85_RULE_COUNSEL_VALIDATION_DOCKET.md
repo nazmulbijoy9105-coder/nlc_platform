@@ -1153,7 +1153,7 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### LBR-002 — Factory License Expired
 
-- **Catalogue anchor:** Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rule 355
+- **Catalogue anchor:** Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355
 - **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — licence validity and renewal require current licence evidence and counsel review
 
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
