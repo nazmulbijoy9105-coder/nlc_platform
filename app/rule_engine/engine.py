@@ -3240,10 +3240,37 @@ class NLCRuleEngine:
     # MODULE 15: BSEC CG CODE 2023
     def _run_bsec_rules(self, c: CompanyProfile) -> None:
         company_type = str(getattr(c.company_type, "value", c.company_type)).upper()
-        # The Corporate Governance Code is a listed-issuer regime, not a
-        # general private-company duty. For public companies, missing listing
-        # status remains UNKNOWN rather than silently becoming unlisted.
+        # The Corporate Governance Code is not a default private-company
+        # obligation. A contradictory positive listing flag on a private or
+        # otherwise unsupported legal form is not silently ignored: preserve
+        # it as an applicability conflict requiring source verification.
         if company_type != "PUBLIC_LIMITED":
+            if c.bsec_listed is True:
+                for rule_id in ("BSEC-001", "BSEC-002", "BSEC-003", "BSEC-004"):
+                    self._add_flag(ComplianceFlag(
+                        rule_id=rule_id,
+                        flag_code="BSEC_LISTING_FLAG_CONFLICTS_WITH_COMPANY_TYPE",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            "The profile reports BSEC-listed status for a company "
+                            "whose verified legal form is not PUBLIC_LIMITED. "
+                            "Resolve issuer identity, legal form and listing evidence "
+                            "before applying the Code."
+                        ),
+                        statutory_basis=(
+                            "BSEC Corporate Governance Code 2018, Conditions 1, 2 and 5; "
+                            "issuer scope requires verification"
+                        ),
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                        detail={
+                            "applicability_state": "CONFLICT",
+                            "company_type": company_type,
+                            "bsec_listed": True,
+                        },
+                    ))
             return
 
         candidates = (
