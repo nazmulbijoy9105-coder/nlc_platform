@@ -762,7 +762,7 @@ def test_labour_section_326_expiry_requires_verified_licence_class_and_direction
     flag = _flag(result, "LBR-002")
     assert flag.flag_code == "LABOUR_LICENSE_EXPIRED_REQUIRES_REVIEW"
     assert flag.severity == Severity.NOT_EVALUATED
-    assert flag.state == RuleState.UNKNOWN
+    assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
     assert flag.detail["candidate_state"] == RuleState.REQUIRES_LAWYER_JUDGMENT.value
     assert flag.eval_state == "UNKNOWN"
     assert flag.score_impact == 0
