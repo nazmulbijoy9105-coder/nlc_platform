@@ -1282,3 +1282,84 @@ def test_compliance_score_impact_requires_verified_rule_and_global_release(monke
     result = compliance_module._applied_score_impacts([flag])
 
     assert result == [{"applied": 10, "status": "APPLIED"}]
+
+
+def test_labour_licence_scope_is_not_inferred_from_manufacturing_status(monkeypatch):
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", engine_module.PRODUCT_SCORING_RULE_IDS
+    )
+    profile = engine_module.CompanyProfile(
+        company_id="labour-scope-unknown",
+        company_name="Non-manufacturing Service Ltd",
+        incorporation_date=date(2020, 1, 1),
+        is_manufacturing=False,
+    )
+
+    output = engine_module.NLCRuleEngine(today=date(2026, 11, 15)).evaluate(profile)
+    finding = next(flag for flag in output.flags if flag.rule_id == "LBR-001")
+
+    assert finding.flag_code == "LABOUR_LICENSE_SCOPE_NOT_VERIFIED"
+    assert finding.state is engine_module.RuleState.UNKNOWN
+    assert finding.severity is engine_module.Severity.NOT_EVALUATED
+    assert finding.score_impact == 0
+
+
+def test_labour_licence_expiry_uses_verified_printed_date_only(monkeypatch):
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", engine_module.PRODUCT_SCORING_RULE_IDS
+    )
+    profile = engine_module.CompanyProfile(
+        company_id="labour-expiry-evidence",
+        company_name="Contractor Establishment Ltd",
+        incorporation_date=date(2020, 1, 1),
+        is_manufacturing=False,
+        labour_establishment_category="CONTRACTOR_ESTABLISHMENT",
+        labour_license_scope_verified=True,
+        labour_license_scope_evidence_ref="LEGAL-SCOPE-INTEGRATION-001",
+        labour_license_scope_verified_at=date(2026, 11, 1),
+        labour_license_scope_verified_by="integration-reviewer",
+        factory_license_required_by_direction=True,
+        labour_license_status_verified=True,
+        labour_license_status_evidence_ref="DIFE-LICENCE-INTEGRATION-001",
+        labour_license_status_verified_at=date(2026, 11, 2),
+        labour_license_status_verified_by="integration-reviewer",
+        factory_license_obtained=True,
+        factory_license_expiry=date(2026, 10, 31),
+    )
+
+    output = engine_module.NLCRuleEngine(today=date(2026, 11, 15)).evaluate(profile)
+    finding = next(flag for flag in output.flags if flag.rule_id == "LBR-002")
+
+    assert finding.flag_code == "LABOUR_LICENSE_EXPIRED_REQUIRES_REVIEW"
+    assert finding.state is engine_module.RuleState.REQUIRES_LAWYER_JUDGMENT
+    assert finding.detail["renewal_term_calculated_automatically"] is False
+    assert finding.score_impact == 0
+
+
+def test_labour_court_order_review_is_independent_of_manufacturing(monkeypatch):
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", engine_module.PRODUCT_SCORING_RULE_IDS
+    )
+    profile = engine_module.CompanyProfile(
+        company_id="labour-court-order",
+        company_name="Service Establishment Ltd",
+        incorporation_date=date(2020, 1, 1),
+        is_manufacturing=None,
+        labour_court_order_pending=True,
+    )
+
+    output = engine_module.NLCRuleEngine(today=date(2026, 11, 15)).evaluate(profile)
+    finding = next(flag for flag in output.flags if flag.rule_id == "LBR-003")
+
+    assert finding.flag_code == "LABOUR_COURT_ORDER_STATUS_REQUIRES_VERIFICATION"
+    assert finding.state is engine_module.RuleState.UNKNOWN
+    assert finding.score_impact == 0
