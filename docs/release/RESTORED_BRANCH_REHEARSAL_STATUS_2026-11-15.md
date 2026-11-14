@@ -53,7 +53,7 @@ The rehearsal script previously pinned its expected head to `0112_runtime_acl_an
 1. the rehearsal expected head with the actual Alembic graph head; and
 2. the rehearsal's 0042 preflight column set with `alembic/env.py`'s historical-evidence guard.
 
-The 0042 schema preflight must reflect the original 0037/0038 shape. In particular, `webhook_deliveries.updated_at` is **not** present in migration 0037; migration 0044 adds it after the historical-schema guard has passed. The 0042 preflight must not require a post-0044 column.
+The 0042 schema preflight must reflect the original 0037/0038 shape. In particular, `webhook_deliveries.updated_at` is **not** present in migration 0037; migration 0044 adds it after the historical-schema guard has passed. The 0042 preflight must not require a post-0044 column. The rehearsal now also checks the post-migration schema explicitly, including `webhook_deliveries.updated_at` as NOT NULL with a server default, and verifies the three evidence-table owners and forced-RLS settings.
 
 ## 4. What is and is not proven
 
