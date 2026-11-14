@@ -919,7 +919,7 @@ def test_pdf_report_scores_product_allowlisted_rules_and_lists_counsel_review_it
 
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     verified = SimpleNamespace(
         rule_id="AGM-001", severity="RED", description="Verified finding",
         score_impact=10, score_impact_applied=10, scoring_status="APPLIED",
