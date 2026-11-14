@@ -459,7 +459,15 @@ class TestAnnualReturnRules:
             annual_return_content_complete=True,
         )
         output = rule_engine.evaluate(profile)
-        for rule_id in ["AR-001", "AR-002", "AR-003", "AR-004"]:
+        # A self-reported filing is not authenticated RJSC evidence. It must
+        # remain UNKNOWN / NOT_EVALUATED rather than being treated as a
+        # verified default or silently promoted to verified compliance.
+        ar001 = [flag for flag in output.flags if flag.rule_id == "AR-001"]
+        assert len(ar001) == 1
+        assert ar001[0].state.value == "UNKNOWN"
+        assert ar001[0].severity.value == "NOT_EVALUATED"
+        assert ar001[0].score_impact == 0
+        for rule_id in ["AR-002", "AR-003", "AR-004"]:
             assert_flag_not_triggered(output, rule_id)
 
 

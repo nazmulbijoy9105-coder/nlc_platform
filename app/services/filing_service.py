@@ -421,8 +421,11 @@ class AnnualReturnService(BaseService[AnnualReturn]):
         """
         Create an annual return record.
         Auto-calculates is_default and delay_days.
-        Section 190 CA 1994: file within 30 days of AGM date.
+        Section 36 and Schedule X: file within 21 days of AGM date.
         """
+        if filing_deadline is None and agm_date is not None:
+            filing_deadline = self.calculate_filing_deadline(agm_date)
+
         is_default = False
         delay_days = 0
 
@@ -486,6 +489,7 @@ class AnnualReturnService(BaseService[AnnualReturn]):
             .where(
                 AnnualReturn.company_id == company_id,
                 AnnualReturn.is_default,
+                AnnualReturn.filed_date.is_(None),
             )
         )
         return result.scalar_one()
@@ -499,8 +503,9 @@ class AnnualReturnService(BaseService[AnnualReturn]):
         late_fee_paid_bdt: float | None = None,
         is_complete: bool = True,
         missing_attachments: str | None = None,
+        submitted_by: uuid.UUID | None = None,
     ) -> AnnualReturn | None:
-        """Mark an annual return as filed."""
+        """Record a user-submitted filing claim; independent verification is separate."""
         annual_return = await self.get_by_id(return_id)
         if not annual_return:
             return None
@@ -521,6 +526,11 @@ class AnnualReturnService(BaseService[AnnualReturn]):
             late_fee_paid_bdt=late_fee_paid_bdt,
             is_complete=is_complete,
             missing_attachments=missing_attachments,
+            filing_status_submitted_by=submitted_by,
+            filing_status_verified=False,
+            filing_status_evidence_ref=None,
+            filing_status_verified_at=None,
+            filing_status_verified_by=None,
         )
         if updated_return is not None:
             from app.services.domain_events import DomainEventType, publish_domain_event
@@ -536,7 +546,7 @@ class AnnualReturnService(BaseService[AnnualReturn]):
 
     @staticmethod
     def calculate_filing_deadline(agm_date: date) -> date:
-        """Section 190: Annual return due within 30 days of AGM."""
+        """Section 36 and Schedule X: annual return due within 21 days of AGM."""
         return agm_date + timedelta(days=21)
 
 

@@ -1,5 +1,7 @@
 # NLC Platform — P0 Fixes: Coordinated Package (v3)
 
+> **2026-11-14 safety correction:** This document contains historical deployment instructions. Do not apply its Steps 1-5 to production. The migration identity script is being corrected for the supported pre-0050 state, where `nlc_private` is absent at revision `0042_dedup_key`. Use it first on the pinned isolated restore branch, run the full migration rehearsal, and obtain a separate production-release approval. Do not put migration credentials in Render's runtime `APP_DATABASE_URL`; use GitHub Actions secrets for the isolated rehearsal.
+
 ## What this is
 
 One coordinated package — **seven files** — that unblocks the three P0

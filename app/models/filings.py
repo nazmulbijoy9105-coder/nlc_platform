@@ -83,7 +83,7 @@ class AGM(FullMixin, Base):
     short_notice_consent_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     short_notice_consent_evidence_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     short_notice_consent_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    short_notice_consent_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    short_notice_consent_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
     notice_days_before: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # AGM-003: notice defective (< 21 days)
     notice_defective: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -302,6 +302,15 @@ class Audit(FullMixin, Base):
 # ═══════════════════════════════════════════════════════════════════
 class AnnualReturn(FullMixin, Base):
     __tablename__ = "annual_returns"
+    __table_args__ = (
+        CheckConstraint(
+            "NOT filing_status_verified OR (filing_status_evidence_ref IS NOT NULL "
+            "AND btrim(filing_status_evidence_ref) <> '' "
+            "AND filing_status_verified_at IS NOT NULL "
+            "AND filing_status_verified_by IS NOT NULL)",
+            name="ck_annual_returns_filing_status_provenance",
+        ),
+    )
 
     company_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -314,7 +323,7 @@ class AnnualReturn(FullMixin, Base):
     financial_year: Mapped[int] = mapped_column(Integer, nullable=False)
     filing_deadline: Mapped[date | None] = mapped_column(
         Date, nullable=True,
-        comment="AGM date + 30 days (Section 190 CA 1994)"
+        comment="AGM date + 21 days (Section 36 and Schedule X, Companies Act 1994)"
     )
 
     # ── Filing ────────────────────────────────────────────────────
@@ -323,6 +332,17 @@ class AnnualReturn(FullMixin, Base):
     filed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     delay_days: Mapped[int] = mapped_column(Integer, default=0)
     rjsc_receipt_number: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # The user who submitted the filing claim; a different reviewer must verify it.
+    filing_status_submitted_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    # AR-001: a missing filing record is not proof of statutory non-filing.
+    filing_status_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    filing_status_evidence_ref: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    filing_status_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    filing_status_verified_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
+    )
 
     # ── Completeness ──────────────────────────────────────────────
     # AR-004: filed but incomplete
