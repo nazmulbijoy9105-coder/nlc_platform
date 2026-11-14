@@ -159,7 +159,8 @@ def _rule_to_response(rule) -> RuleResponse:
         # Catalogue configuration remains visible while score publication is paused.
         # This field describes product policy, not independent legal verification.
         is_black_override=(
-            legally_verified
+            product_scoring_enabled
+            and legally_verified
             and scoring_catalogue_member
             and rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         ),
