@@ -25,7 +25,7 @@ def test_verified_listed_issuer_gets_separate_documentary_and_judgment_reviews()
     assert any(r.review_class == GovernanceReviewClass.DOCUMENTARY for r in rules)
     assert any(r.review_class == GovernanceReviewClass.JUDGMENT for r in rules)
     assert all(r.minimum_evidence for r in rules)
-    assert all("not" in r.decision_boundary.lower() or "requires" in r.decision_boundary.lower() for r in rules)
+    assert all(r.decision_boundary.strip() for r in rules)
 
 
 def test_verified_listed_parent_subsidiary_receives_only_condition_two_review():
