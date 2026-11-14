@@ -739,11 +739,11 @@ LEGAL_SCORE_RELEASED: bool = os.getenv("LEGAL_SCORE_RELEASED", "false").strip().
 
 
 def legal_score_is_released() -> bool:
-    """Return whether product scoring is enabled for the product-owner allowlist.
+    """Return whether the product owner has enabled deterministic scoring.
 
-    This is a product-release switch, not a legal-verification decision.
-    Individual statutory findings, deductions and overrides remain subject to
-    separate counsel, evidence and applicability gates.
+    Applicability, evidence sufficiency, confirmed-violation state, product
+    registry membership, deduction membership and override authorization remain
+    separate gates. No counsel ID allowlist is consulted.
     """
     return (
         LEGAL_SCORE_RELEASED is True
@@ -3654,7 +3654,7 @@ class NLCRuleEngine:
         pre_score = self._calculate_raw_score(self._flags)
         has_black_override = any(
             f.rule_id in PRODUCT_SCORING_RULE_IDS
-                        and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+            and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
             and f.is_black_override
             and f.severity == Severity.BLACK
             and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
@@ -3666,7 +3666,7 @@ class NLCRuleEngine:
             black_count = len([
                 f for f in self._flags
                 if f.rule_id in PRODUCT_SCORING_RULE_IDS
-                                and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+                and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
                 and f.is_black_override
                 and f.severity == Severity.BLACK
                 and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
@@ -3723,7 +3723,8 @@ class NLCRuleEngine:
             and flag.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and flag.eval_state == "VIOLATION"
             and legal_score_is_released()
-                        and flag.rule_id in SCORE_DEDUCTION_RULE_IDS
+            and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+            and flag.rule_id in SCORE_DEDUCTION_RULE_IDS
             and not (
                 flag.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
                 and flag.is_black_override
@@ -3817,7 +3818,7 @@ class NLCRuleEngine:
             for f in active:
                 if (
                     f.rule_id in PRODUCT_SCORING_RULE_IDS
-                                        and (
+                    and (
                         f.severity == Severity.RED
                         or (
                             f.severity == Severity.BLACK
