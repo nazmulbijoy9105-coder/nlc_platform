@@ -1,4 +1,4 @@
-"""P0 regressions: product scoring and independent legal verification stay separate."""
+"""P0 regressions: statutory scoring requires the complete counsel approval register."""
 from datetime import date, datetime, timezone
 from types import SimpleNamespace
 
@@ -76,14 +76,15 @@ def test_pdf_score_reconciliation_ignores_rule_outside_product_allowlist(monkeyp
     assert _verified_flag_score([flag]) == (0, False)
 
 
-def test_pdf_score_reconciliation_counts_product_allowlisted_rules_without_counsel_allowlist(monkeypatch):
+def test_pdf_score_reconciliation_rejects_product_rules_without_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(report_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
     approved = SimpleNamespace(rule_id="AGM-001", severity="RED", score_impact=15, eval_state="VIOLATION")
     unapproved = SimpleNamespace(rule_id="AUD-003", severity="BLACK", score_impact=25, eval_state="VIOLATION")
-    assert _verified_flag_score([approved, unapproved]) == (85, False)
+    assert report_module._legal_score_is_released() is False
+    assert _verified_flag_score([approved, unapproved]) == (0, False)
 
 
 def test_release_switch_without_product_rules_does_not_release_a_score(monkeypatch):
@@ -125,7 +126,7 @@ def test_pdf_requires_explicit_authorisation_for_black_override(monkeypatch):
     assert override is True
 
 
-def test_product_scoring_can_run_with_empty_counsel_allowlist(monkeypatch):
+def test_product_scoring_is_blocked_with_empty_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
@@ -133,13 +134,11 @@ def test_product_scoring_can_run_with_empty_counsel_allowlist(monkeypatch):
         [_engine_flag(severity=Severity.RED, black=False)],
         CompanyProfile(company_id="x", company_name="Test"),
     )
-    assert engine_module.legal_score_is_released() is True
+    assert engine_module.legal_score_is_released() is False
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
-    # Product scoring is released independently of counsel verification;
-    # the confirmed RED finding applies its ordinary category deduction.
-    assert result.final_score == 75
+    assert result.final_score == 100  # non-authoritative arithmetic placeholder
     assert result.override_applied is False
-    assert result.risk_band == Severity.RED
+    assert result.risk_band == Severity.NOT_EVALUATED
 
 
 def test_verified_director_minimum_violation_emits_one_candidate_black_override(monkeypatch, build_profile):
@@ -172,7 +171,7 @@ def test_verified_director_minimum_violation_emits_one_candidate_black_override(
     assert output.score_breakdown.risk_band != Severity.BLACK
 
 
-def test_product_owner_black_override_does_not_require_counsel_allowlist(monkeypatch):
+def test_product_owner_black_override_is_blocked_without_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
@@ -182,15 +181,13 @@ def test_product_owner_black_override_does_not_require_counsel_allowlist(monkeyp
         [flag], CompanyProfile(company_id="x", company_name="Test")
     )
 
-    assert engine_module.legal_score_is_released() is True
+    assert engine_module.legal_score_is_released() is False
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert engine_module.AUTHORIZED_BLACK_OVERRIDE_RULE_IDS == frozenset({"INC-003"})
-    # The product owner has explicitly authorised this override. Counsel
-    # status remains empty and is not consulted for this separate control.
-    assert result.override_applied is True
-    assert result.black_flag_count == 1
-    assert result.final_score == 0
-    assert result.risk_band == Severity.BLACK
+    assert result.override_applied is False
+    assert result.black_flag_count == 0
+    assert result.final_score == 100
+    assert result.risk_band == Severity.NOT_EVALUATED
 
 
 def test_pdf_html_is_unsigned_and_discloses_counsel_review_even_when_product_scoring_is_released(monkeypatch):
