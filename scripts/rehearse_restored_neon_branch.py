@@ -48,7 +48,9 @@ PRE_0042_REQUIRED_COLUMNS = {
 }
 POST_MIGRATION_REQUIRED_COLUMNS = {
     **PRE_0042_REQUIRED_COLUMNS,
-    "webhook_deliveries": PRE_0042_REQUIRED_COLUMNS["webhook_deliveries"] | {"updated_at"},
+    "webhook_deliveries": (
+        PRE_0042_REQUIRED_COLUMNS["webhook_deliveries"] | {"updated_at"}
+    ),
 }
 EVIDENCE_TABLES = (
     "agm_notice_evidence",
