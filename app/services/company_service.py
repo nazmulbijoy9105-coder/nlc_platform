@@ -1038,7 +1038,9 @@ class CompanyService(BaseService[Company]):
             "subsidiary_status_verified_by": str(company.subsidiary_status_verified_by) if company.subsidiary_status_verified_by else None,
 
             # BSEC Corporate Governance
-            "bsec_listed":                   getattr(company, "bsec_listed", False),
+            # Legacy FALSE may be the database default, not verified unlisted status.
+            # Only affirmative listing is passed through; FALSE becomes UNKNOWN.
+            "bsec_listed":                   True if getattr(company, "bsec_listed", None) is True else None,
             "bsec_quarterly_report_filed":  getattr(company, "bsec_quarterly_report_filed", False),
             "cg_certificate_obtained":     getattr(company, "cg_certificate_obtained", False),
             "board_independent_director":   getattr(company, "board_independent_director", False),
