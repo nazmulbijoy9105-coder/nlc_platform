@@ -66,7 +66,7 @@ All candidate outputs remain NOT_EVALUATED with zero score impact pending indepe
 ## 5. Sources checked
 
 1. **Official Bangladesh Laws — Bangladesh Labour (Amendment) Act, 2026 (Act No. 43 of 2026), s. 81:** https://bdlaws.minlaw.gov.bd/act-print-1672.html
-2. **Official Gazette — Bangladesh Labour (Amendment) Act, 2026:** https://dpp.gov.bd/upload_file/gazettes/14212_75510.pdf
+2. **Official DPP Gazette index — 10 April 2026, Act No. 43 of 2026, pages 15785–15831:** https://www.dpp.gov.bd/bgpress/index.php/document/extraordinary_gazettes_monthly/2026-04-02
 3. **Official Gazette — Bangladesh Labour Rules, 2015 (S.R.O. No. 291-Law/2015):** https://dpp.gov.bd/bgpress/bangla/index.php/home/download_file/gazettes/3910_55154.pdf
 4. **Official Gazette — Bangladesh Labour (Amendment) Rules, 2026 (S.R.O. No. 53-Law/2026):** https://dpp.gov.bd/bgpress/bangla/index.php/home/download_file/gazettes/59944_60708.pdf
 5. **Working English transcription of Rule 354 and the 2026 amendment (secondary cross-check):** https://bdadvocacy.com/bangladesh-labour-act-amendment-2026/
