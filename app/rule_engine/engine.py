@@ -1218,16 +1218,27 @@ class NLCRuleEngine:
                         eval_state="UNKNOWN",
                     ))
                 else:
-                    severity = Severity.RED if days_to < 14 else Severity.YELLOW
                     self._add_flag(ComplianceFlag(
                         rule_id="AUD-002",
-                        flag_code="AUDIT_MISSING_PRE_AGM",
-                        severity=severity,
-                        score_impact=12,
+                        flag_code="AUDIT_READINESS_REQUIRES_REVIEW",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"Verified audit completion is absent. AGM in {days_to} days. Section 183 requires accounts to be laid before the AGM.",
+                        description=(
+                            f"Verified audit completion is not recorded and the AGM is "
+                            f"scheduled in {days_to} days. This is a pre-meeting readiness "
+                            "alert, not proof that Section 183 has already been breached. "
+                            "Verify the audit engagement, completion timetable, meeting "
+                            "record and whether the statements will be laid before the AGM."
+                        ),
                         statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
-                        detail={"days_to_agm": days_to}
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                        detail={
+                            "days_to_agm": days_to,
+                            "is_pre_agm_readiness_alert": True,
+                            "statutory_default_established": False,
+                        },
                     ))
 
         if c.agm_held_this_cycle and c.audit_complete is False:
@@ -1253,9 +1264,9 @@ class NLCRuleEngine:
                 self._add_flag(ComplianceFlag(
                     rule_id="AUD-003",
                     flag_code="AGM_HELD_WITHOUT_COMPLETED_AUDIT",
-                    severity=Severity.RED,
+                    severity=Severity.NOT_EVALUATED,
                     score_impact=0,
-                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=(
                         "Verified audit completion is absent for an AGM. Section 183 governs "
                         "accounts laid before the AGM; a lawyer must assess the actual accounts, "
@@ -3029,13 +3040,43 @@ class NLCRuleEngine:
 
     # MODULE 16: FOREIGN EXCHANGE
     def _run_fx_rules(self, c: CompanyProfile) -> None:
-        if c.foreign_exchange_violation:
+        # A profile boolean does not identify the transaction, applicable
+        # Bangladesh Bank permission/circular, statutory subsection, actor,
+        # date, exemption or documentary evidence. Never convert it directly
+        # into a confirmed foreign-exchange violation or score deduction.
+        if c.foreign_exchange_violation is True:
             self._add_flag(ComplianceFlag(
-                rule_id="FX-001", flag_code="FOREIGN_EXCHANGE_VIOLATION",
-                severity=Severity.RED, score_impact=15,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="Foreign exchange violation. FE Regulation Act 1947.",
-                statutory_basis="Foreign Exchange Regulation Act 1947 (Bangladesh)"))
+                rule_id="FX-001",
+                flag_code="FOREIGN_EXCHANGE_TRANSACTION_REQUIRES_LEGAL_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The company profile reports a possible foreign-exchange issue. "
+                    "Identify the exact transaction, parties, currency, date, authorised "
+                    "dealer bank, applicable Bangladesh Bank circular/permission, "
+                    "statutory subsection, exemption and source documents before making "
+                    "any finding. A profile boolean is not proof of a violation."
+                ),
+                statutory_basis=(
+                    "Foreign Exchange Regulation Act 1947 (Bangladesh) and the "
+                    "transaction-specific Bangladesh Bank instruments; exact provision "
+                    "and operative circular require verification"
+                ),
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={
+                    "reported_foreign_exchange_issue": True,
+                    "verification_status": "UNVERIFIED_PROFILE_ASSERTION",
+                    "required_evidence": [
+                        "UNDERLYING_TRANSACTION_DOCUMENTS",
+                        "AUTHORISED_DEALER_BANK_RECORDS",
+                        "APPLICABLE_BANGLADESH_BANK_PERMISSION_OR_CIRCULAR",
+                        "PARTY_AND_RESIDENCY_CLASSIFICATION",
+                        "EXEMPTION_OR_APPROVAL_RECORDS",
+                    ],
+                },
+            ))
 
     # ───────────────────────────────────────────────────────────────────
     # MODULE: BOARD MEETINGS (Section 95, 96, 89)
