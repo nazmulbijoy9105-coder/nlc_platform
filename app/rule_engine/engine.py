@@ -3062,6 +3062,7 @@ class NLCRuleEngine:
                     "establishment_category": c.labour_establishment_category,
                     "scope_evidence_ref": c.labour_license_scope_evidence_ref,
                     "status_evidence_ref": c.labour_license_status_evidence_ref,
+                    "candidate_state": RuleState.REQUIRES_LAWYER_JUDGMENT.value,
                     "required_evidence": required_evidence,
                 },
             ))
@@ -3130,6 +3131,7 @@ class NLCRuleEngine:
                 detail={
                     "printed_expiry_date": c.factory_license_expiry.isoformat(),
                     "status_evidence_ref": c.labour_license_status_evidence_ref,
+                    "candidate_state": RuleState.REQUIRES_LAWYER_JUDGMENT.value,
                     "renewal_term_calculated_automatically": False,
                 },
             ))
