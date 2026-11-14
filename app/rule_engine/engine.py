@@ -754,8 +754,8 @@ def legal_score_is_released() -> bool:
     """Return whether product scoring is enabled for the product-owner allowlist.
 
     This is a product-release switch, not a legal-verification decision.
-    Individual statutory findings, deductions and overrides remain gated by
-    VERIFIED_RULE_IDS and the separate evidence/applicability checks.
+    Individual statutory findings, deductions and overrides remain subject to
+    separate counsel, evidence and applicability gates.
     """
     return (
         LEGAL_SCORE_RELEASED is True
