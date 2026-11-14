@@ -722,13 +722,18 @@ def test_verified_absence_is_scored_but_unknown_is_not(monkeypatch):
 def test_labour_section_326_missing_direction_evidence_is_not_a_breach():
     result = NLCRuleEngine().evaluate(
         _profile(
-            is_manufacturing=True,
-            factory_license_required_by_direction=True,
-            factory_license_obtained=False,
+            is_manufacturing=False,
+            labour_establishment_category="COMMERCIAL_ESTABLISHMENT",
+            labour_license_scope_verified=True,
+            labour_license_scope_evidence_ref="LEGAL-SCOPE-TEST-001",
+            labour_license_scope_verified_at=date(2026, 11, 1),
+            labour_license_scope_verified_by="reviewer",
+            factory_license_required_by_direction=None,
         ),
         today=date(2026, 11, 4),
     )
     flag = _flag(result, "LBR-001")
+    assert flag.flag_code == "LABOUR_LICENSE_REQUIREMENT_UNKNOWN"
     assert flag.severity == Severity.NOT_EVALUATED
     assert flag.state == RuleState.UNKNOWN
     assert flag.eval_state == "UNKNOWN"
@@ -738,16 +743,27 @@ def test_labour_section_326_missing_direction_evidence_is_not_a_breach():
 def test_labour_section_326_expiry_requires_verified_licence_class_and_direction():
     result = NLCRuleEngine().evaluate(
         _profile(
-            is_manufacturing=True,
+            is_manufacturing=False,
+            labour_establishment_category="CONTRACTOR_ESTABLISHMENT",
+            labour_license_scope_verified=True,
+            labour_license_scope_evidence_ref="LEGAL-SCOPE-TEST-002",
+            labour_license_scope_verified_at=date(2026, 11, 1),
+            labour_license_scope_verified_by="reviewer",
             factory_license_required_by_direction=True,
+            labour_license_status_verified=True,
+            labour_license_status_evidence_ref="DIFE-LICENCE-TEST-002",
+            labour_license_status_verified_at=date(2026, 11, 2),
+            labour_license_status_verified_by="reviewer",
             factory_license_obtained=True,
             factory_license_expiry=date(2026, 1, 1),
         ),
         today=date(2026, 11, 4),
     )
     flag = _flag(result, "LBR-002")
+    assert flag.flag_code == "LABOUR_LICENSE_EXPIRED_REQUIRES_REVIEW"
     assert flag.severity == Severity.NOT_EVALUATED
     assert flag.state == RuleState.UNKNOWN
+    assert flag.detail["candidate_state"] == RuleState.REQUIRES_LAWYER_JUDGMENT.value
     assert flag.eval_state == "UNKNOWN"
     assert flag.score_impact == 0
 
