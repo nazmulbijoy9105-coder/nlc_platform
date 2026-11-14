@@ -32,7 +32,6 @@ from app.rule_engine.engine import (
     AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
-    VERIFIED_RULE_IDS,
 )
 from app.services.company_service import CompanyService
 from app.services.domain_events import DomainEventType, publish_domain_event
@@ -42,12 +41,8 @@ from app.services.pdf_report_service import PDFReportService
 
 
 def _legal_score_is_released() -> bool:
-    """Expose a statutory score only after the full catalogue is counsel-verified."""
-    return (
-        LEGAL_SCORE_RELEASED is True
-        and bool(PRODUCT_SCORING_RULE_IDS)
-        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
-    )
+    """Expose score output when the product switch and scoring catalogue are enabled."""
+    return LEGAL_SCORE_RELEASED is True and bool(PRODUCT_SCORING_RULE_IDS)
 
 logger = structlog.get_logger(__name__)
 
@@ -323,26 +318,20 @@ def _flag_to_response(flag) -> FlagResponse:
     score_eligible = (
         _legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
     )
-    legally_verified = flag.rule_id in VERIFIED_RULE_IDS
+    legally_verified = False  # Counsel status is not inferred from product scoring.
     severity = getattr(flag.severity, "value", flag.severity)
     return FlagResponse(
         flag_id=str(flag.id),
         rule_id=flag.rule_id,
         rule_name=(
             (getattr(flag, "description", flag.flag_code) or flag.flag_code)
-            if legally_verified
-            else (
-                "Pending independent counsel review: candidate signal only. "
-                "No breach, liability, penalty or compliance status is determined."
-            )
         ),
-        severity=str(severity) if legally_verified else "NOT_EVALUATED",
+        severity=str(severity),
         score_impact=int(flag.score_impact or 0) if score_eligible else 0,
         status=flag.flag_status.value if hasattr(flag.flag_status, "value") else str(flag.flag_status),
-        legal_review_status="LEGALLY_VERIFIED" if legally_verified else "NOT_LEGALLY_VERIFIED",
+        legal_review_status="NOT_RECORDED", 
         is_black_override=(
-            legally_verified
-            and score_eligible
+            score_eligible
             and bool(getattr(flag, "is_black_override", False))
             and flag.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         ),
