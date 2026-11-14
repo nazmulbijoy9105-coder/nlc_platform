@@ -1,5 +1,5 @@
 # NLC product-owner rule approval register — 13 November 2026
-# Product governance only. All 85 rules are active and score-eligible subject to evidence gates.
+# Product governance only. All 86 rules are active and score-eligible subject to evidence gates.
 # This record does not certify statutory accuracy,
 # legal interpretation, applicability, exceptions, remedies or counsel review.
 jurisdiction: BD
@@ -65,6 +65,7 @@ approved_rule_ids:
   - ESC-005
   - FX-001
   - INC-001
+  - INC-002
   - INC-003
   - INC-004
   - INC-005
@@ -406,6 +407,12 @@ rules:
     counsel_status: REVIEW_REQUIRED
     independently_verified: false
   - rule_id: INC-001
+    product_status: PRODUCT_APPROVED
+    product_active: true
+    score_eligible: true
+    counsel_status: REVIEW_REQUIRED
+    independently_verified: false
+  - rule_id: INC-002
     product_status: PRODUCT_APPROVED
     product_active: true
     score_eligible: true
