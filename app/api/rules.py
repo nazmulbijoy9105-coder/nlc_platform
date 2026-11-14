@@ -63,6 +63,8 @@ class RuleUpdateRequest(BaseModel):
     default_severity: SeverityLevel | None = None
     score_impact: int | None = Field(None, ge=0, le=50)
     is_active: bool | None = None
+    # Optimistic concurrency: the caller must edit the version it actually read.
+    expected_version: str = Field(min_length=1, max_length=20)
     # Required for audit trail
     change_reason: str = Field(
         min_length=10,
@@ -335,7 +337,9 @@ async def update_rule(
         raise HTTPException(status_code=404, detail=f"Rule '{rule_id}' not found.")
 
     # Validate BLACK override rules cannot have severity changed to non-BLACK
-    update_data = body.model_dump(exclude={"change_reason"}, exclude_none=True)
+    update_data = body.model_dump(
+        exclude={"change_reason", "expected_version"}, exclude_none=True
+    )
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided for update.")
 
@@ -351,12 +355,18 @@ async def update_rule(
                 ),
             )
 
-    updated_rule = await svc.update_rule(
-        rule_id=rule_id,
-        **update_data,
-        change_reason=body.change_reason,
-        changed_by=current_user.id,
-    )
+    try:
+        updated_rule = await svc.update_rule(
+            rule_id=rule_id,
+            **update_data,
+            change_reason=body.change_reason,
+            changed_by=current_user.id,
+            expected_version=body.expected_version,
+        )
+    except ValueError as exc:
+        # Stale version or malformed version string: caller must reload and
+        # explicitly reconcile; never silently overwrite a concurrent edit.
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     await activity.log(
         action="LEGAL_RULE_UPDATED",

@@ -791,20 +791,54 @@ class TestRulesService:
         rules = await svc.get_all()
         assert len(rules) >= 75, "integration test setup must seed the complete legal-rule catalogue"
 
-        # Update OFF-001 (lowest impact — safest to test with)
-        await svc.get_by_rule_id("OFF-001")
+        # Update OFF-001 using the exact version read by the administrator.
+        current = await svc.get_by_rule_id("OFF-001")
+        assert current is not None
+        old_version = current.rule_version
 
-        await svc.update_rule(
+        updated = await svc.update_rule(
             rule_id="OFF-001",
             description="Updated description for testing",
             change_reason="Integration test — verifying version snapshot creation",
             changed_by=db_super_admin.id,
+            expected_version=old_version,
         )
+        assert updated is not None
+        major, minor = old_version.split(".")
+        assert updated.rule_version == f"{major}.{int(minor) + 1}"
 
-        # Verify version history exists
+        # The immutable snapshot must contain the exact pre-change version.
         history = await svc.get_version_history("OFF-001")
         assert len(history) >= 1
         assert history[0].rule_id == "OFF-001"
+        assert history[0].version == old_version
+        assert history[0].previous_definition["description"] != updated.description
+
+    @pytest.mark.asyncio
+    async def test_update_rule_rejects_stale_expected_version_without_snapshot(self, db, db_super_admin):
+        from app.models.database import set_rls_context
+        from app.services.rules_service import RulesService as LegalRuleService
+
+        await set_rls_context(db, str(db_super_admin.id))
+        svc = LegalRuleService(db)
+        rule = await svc.get_by_rule_id("OFF-001")
+        assert rule is not None
+        stale_version = "0.0"
+        before = len(await svc.get_version_history("OFF-001"))
+
+        with pytest.raises(ValueError, match="Stale rule version"):
+            await svc.update_rule(
+                rule_id="OFF-001",
+                description="This stale write must not be applied",
+                change_reason="Integration test — stale version must be rejected",
+                changed_by=db_super_admin.id,
+                expected_version=stale_version,
+            )
+
+        after = len(await svc.get_version_history("OFF-001"))
+        unchanged = await svc.get_by_rule_id("OFF-001")
+        assert after == before
+        assert unchanged.description == rule.description
 
 
 
