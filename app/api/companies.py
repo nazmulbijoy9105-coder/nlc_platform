@@ -318,7 +318,6 @@ def _flag_to_response(flag) -> FlagResponse:
     score_eligible = (
         _legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
     )
-    legally_verified = False  # Counsel status is not inferred from product scoring.
     severity = getattr(flag.severity, "value", flag.severity)
     return FlagResponse(
         flag_id=str(flag.id),
