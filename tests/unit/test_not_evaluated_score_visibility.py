@@ -42,18 +42,18 @@ def test_not_evaluated_company_does_not_expose_placeholder_score():
     assert response.compliance_score is None
 
 
-def test_released_company_score_is_visible_with_product_allowlist_only(monkeypatch):
+def test_released_company_score_requires_full_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
     monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", {"AGM-001"})
 
     response = _company_to_response(_company(88, "GREEN"))
 
-    # Still hidden unless the engine release gate itself is open; API mirrors that.
-    assert response.band in ("NOT_EVALUATED", "GREEN")
+    assert response.band == "NOT_EVALUATED"
+    assert response.compliance_score is None
 
 
-def test_product_scoring_flag_is_published_with_counsel_status_separate(monkeypatch):
+def test_unverified_product_flag_is_hidden_until_full_counsel_release(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
     monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", set())
@@ -73,10 +73,10 @@ def test_product_scoring_flag_is_published_with_counsel_status_separate(monkeypa
 
     response = _flag_to_response(flag)
 
-    assert response.severity == "RED"
-    assert response.score_impact == 15
+    assert response.severity == "NOT_EVALUATED"
+    assert response.score_impact == 0
     assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
-    assert response.rule_name == "Approved AGM finding"
+    assert "No breach" in response.rule_name
 
 
 def test_flag_summary_separates_pending_review_from_released_findings(monkeypatch):
@@ -114,7 +114,7 @@ def test_release_switch_without_product_scoring_rules_hides_company_score(monkey
     assert response.violation_count == 0
 
 
-def test_product_switch_and_allowlist_publish_score_without_counsel_status(monkeypatch):
+def test_product_switch_cannot_publish_score_without_counsel_status(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
     monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", set())
@@ -150,14 +150,14 @@ def test_released_flag_reports_rule_specific_counsel_verification(monkeypatch):
     assert response.legal_review_status == "LEGALLY_VERIFIED"
 
 
-def test_partial_counsel_verification_does_not_block_product_score(monkeypatch):
+def test_partial_counsel_verification_does_not_release_full_product_score(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
         companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001", "TAX-001"}
     )
     monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", {"AGM-001"})
 
-    assert companies_api._legal_score_is_released() is True
+    assert companies_api._legal_score_is_released() is False
     response = _company_to_response(_company(88, "GREEN"))
-    assert response.band == "GREEN"
-    assert response.compliance_score == 88
+    assert response.band == "NOT_EVALUATED"
+    assert response.compliance_score is None
