@@ -93,7 +93,7 @@ _RULES = (
         ProvisionStatus.RECONCILE, "LABOUR_DEPT",
         ("ESTABLISHMENT_CATEGORY", "GOVERNMENT_DIRECTION", "DIFE_LICENCE_COPY"),
         Severity.NOT_EVALUATED, 0,
-        applies_if="ESTABLISHMENT_CATEGORY_AND_DIRECTION_VERIFIED",
+        applies_if="LABOUR_LICENSE_SCOPE_VERIFIED",
         exceptions=("VERIFIED_NON_APPLICABLE_ESTABLISHMENT_CATEGORY", "VERIFIED_NO_APPLICABLE_DIRECTION")),
     StatutoryRule(
         "TL-001", "Local Authority", "Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
@@ -1064,7 +1064,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "requirement": "Review the actual establishment category, Rule 354 scope, operative Government direction, DIFE licence status and evidence. Manufacturing status alone is not the licensing predicate.",
         "provision": "UNVERIFIED CANDIDATE — establishment/factory licence applicability and status require source evidence and counsel review",
         "provision_status": ProvisionStatus.RECONCILE,
-        "applicability": "ESTABLISHMENT_CATEGORY_AND_DIRECTION_VERIFIED",
+        "applicability": "LABOUR_LICENSE_SCOPE_VERIFIED",
         "exceptions": ["VERIFIED_NON_APPLICABLE_ESTABLISHMENT_CATEGORY", "VERIFIED_NO_APPLICABLE_DIRECTION"],
         "evidence_required": ["ESTABLISHMENT_CATEGORY", "GOVERNMENT_DIRECTION", "DIFE_LICENCE_COPY"],
         "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
