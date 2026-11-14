@@ -1533,16 +1533,16 @@ class TestUntestedRules:
         assert_flag_triggered(rule_engine.evaluate(build_profile(investigation_order=True)), "ESC-005")
 
     def test_BSEC001_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, bsec_quarterly_report_filed=False)), "BSEC-001")
+        assert_flag_triggered(rule_engine.evaluate(build_profile(company_type="PUBLIC_LIMITED", bsec_listed=True, bsec_quarterly_report_filed=False)), "BSEC-001")
 
     def test_BSEC002_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, cg_certificate_obtained=False)), "BSEC-002")
+        assert_flag_triggered(rule_engine.evaluate(build_profile(company_type="PUBLIC_LIMITED", bsec_listed=True, cg_certificate_obtained=False)), "BSEC-002")
 
     def test_BSEC003_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, board_independent_director=False)), "BSEC-003")
+        assert_flag_triggered(rule_engine.evaluate(build_profile(company_type="PUBLIC_LIMITED", bsec_listed=True, board_independent_director=False)), "BSEC-003")
 
     def test_BSEC004_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, audit_committee_established=False)), "BSEC-004")
+        assert_flag_triggered(rule_engine.evaluate(build_profile(company_type="PUBLIC_LIMITED", bsec_listed=True, audit_committee_established=False)), "BSEC-004")
 
     def test_FX001_triggers(self, rule_engine, build_profile):
         assert_flag_triggered(rule_engine.evaluate(build_profile(foreign_exchange_violation=True)), "FX-001")
