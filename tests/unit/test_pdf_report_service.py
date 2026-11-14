@@ -463,7 +463,7 @@ def test_endpoint_rejects_missing_snapshot(monkeypatch):
 
 
 
-def test_pdf_product_black_override_does_not_require_counsel_allowlist(monkeypatch):
+def test_pdf_product_black_override_is_blocked_without_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
     monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
@@ -478,8 +478,8 @@ def test_pdf_product_black_override_does_not_require_counsel_allowlist(monkeypat
         conditional_applies=True,
     )
 
-    assert report_module._legal_score_is_released() is True
-    assert report_module._verified_flag_score([black]) == (0, True)
+    assert report_module._legal_score_is_released() is False
+    assert report_module._verified_flag_score([black]) == (0, False)
 
 
 
