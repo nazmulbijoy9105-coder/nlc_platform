@@ -359,17 +359,24 @@ async def api_client(db) -> AsyncGenerator[AsyncClient, None]:
 # Rule Engine
 # ---------------------------------------------------------------------------
 
-@pytest.fixture(scope="session")
-def rule_engine():
+@pytest.fixture
+def rule_engine(monkeypatch):
     """
-    Initialised NLCRuleEngine instance.
-    Session-scoped — engine is stateless (flags reset per evaluate() call).
+    Controlled engine fixture for rule-module behaviour tests.
+
+    These tests exercise candidate evaluation/scoring mechanics under an
+    explicitly simulated counsel-approved release. Production approval state
+    is tested separately and remains empty/fail-closed in the real module.
     """
-    try:
-        from C_rule_engine import NLCRuleEngine  # adjust import path as needed
-    except ModuleNotFoundError:
-        from app.rule_engine.engine import NLCRuleEngine
-    return NLCRuleEngine()
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module,
+        "VERIFIED_RULE_IDS",
+        frozenset(engine_module.PRODUCT_SCORING_RULE_IDS),
+    )
+    return engine_module.NLCRuleEngine()
 
 
 # ---------------------------------------------------------------------------
