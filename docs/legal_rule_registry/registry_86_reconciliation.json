@@ -4221,7 +4221,7 @@
         "is_black_override": false,
         "rule_version": "2.1",
         "verification_status": "ACTIVE",
-        "verification_notes": "ACTIVE catalogue status per owner direction. Independent Bangladesh counsel approval is not recorded in VERIFIED_RULE_IDS; statutory scoring remains counsel-gated."
+        "verification_notes": "ACTIVE catalogue status per owner direction. Independent Bangladesh counsel approval is not recorded; this metadata is not a scoring gate."
       },
       "production_database_fields": {
         "rule_id": "INC-002",
@@ -4247,7 +4247,7 @@
         "verification_status": "ACTIVE",
         "verified_by": null,
         "verified_at": null,
-        "verification_notes": "ACTIVE catalogue status per owner direction. Independent Bangladesh counsel approval is not recorded in the engine VERIFIED_RULE_IDS allowlist; statutory scoring remains blocked by the existing counsel gate. Historical predecessor evidence is retained separately; no LegalRuleVersion history has been fabricated.",
+        "verification_notes": "ACTIVE catalogue status per owner direction. Independent Bangladesh counsel approval is not recorded; this metadata is not a scoring gate. Historical predecessor evidence is retained separately; no LegalRuleVersion history has been fabricated.",
         "created_by": null,
         "last_modified_by": null,
         "last_modified_at": null,
