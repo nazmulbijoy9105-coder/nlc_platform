@@ -3834,6 +3834,7 @@ class NLCRuleEngine:
             critical = [
                 f for f in active
                 if f.rule_id in PRODUCT_SCORING_RULE_IDS
+                and f.rule_id in VERIFIED_RULE_IDS
                 and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
                 and f.is_black_override
                 and f.severity == Severity.BLACK
