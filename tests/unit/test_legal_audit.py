@@ -134,7 +134,7 @@ class TestDirectorDisqualification:
         flag = _flag_by_id(result, "DEF-001")
         assert flag is not None
         assert flag.severity == Severity.NOT_EVALUATED
-        assert flag.is_black_override == False
+        assert not flag.is_black_override
 
 
 # ═══════════════════════════════════════════════════════════════════════
