@@ -78,7 +78,7 @@ class TestDirectorDisqualification:
         assert flag is None, "DEF-001 should NOT fire for a valid director"
 
     def test_LEG_002_verified_disqualification_is_not_automatic_black(self):
-        """LEG-002: Undischarged insolvent director with verified evidence → BLACK."""
+        """Verified evidence remains a candidate until the rule has counsel approval."""
         c = _base_profile(
             any_director_disqualified=True,
             current_director_count=2,
@@ -94,9 +94,12 @@ class TestDirectorDisqualification:
         result = NLCRuleEngine().evaluate(c)
         flag = _flag_by_id(result, "DEF-001")
         assert flag is not None, "DEF-001 should fire with verified ground"
-        assert flag.severity == Severity.RED
+        assert flag.severity == Severity.NOT_EVALUATED
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.eval_state == "UNKNOWN"
+        assert flag.detail["candidate_severity"] == Severity.RED.value
         assert flag.is_black_override is False
-        assert flag.score_impact == 10
+        assert flag.score_impact == 0
         # P0 FIX: No "5 years" claim
         assert "5 years" not in (flag.description or "").lower()
         assert "Section 94" in (flag.statutory_basis or "")
