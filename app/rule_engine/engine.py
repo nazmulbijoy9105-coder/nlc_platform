@@ -2930,7 +2930,7 @@ class NLCRuleEngine:
                         "this establishment/class. Verify the direction, scope, "
                         "commencement and exemptions before deciding applicability."
                     ),
-                    statutory_basis=labour_basis,
+                    statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
                     state=RuleState.UNKNOWN,
                     eval_state="UNKNOWN",
                     detail={"applicability_state": "UNKNOWN", "government_direction_verified": False},
@@ -2949,7 +2949,7 @@ class NLCRuleEngine:
                             "direction, class, commencement, exemptions and authentic "
                             "licence search before determining any default."
                         ),
-                        statutory_basis=labour_basis,
+                        statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
                         state=RuleState.UNKNOWN,
                         eval_state="UNKNOWN",
                         detail={"applicability_state": "APPLICABLE_PENDING_SOURCE_VERIFICATION"},
@@ -2968,7 +2968,7 @@ class NLCRuleEngine:
                             "and any renewal application, extension or replacement "
                             "instrument before assessing current validity."
                         ),
-                        statutory_basis=labour_basis,
+                        statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
                         state=RuleState.UNKNOWN,
                         eval_state="UNKNOWN",
                     ))
@@ -2986,7 +2986,7 @@ class NLCRuleEngine:
                             "five-year/contractor one-year term, renewal application, "
                             "extension and operative status before finding a breach."
                         ),
-                        statutory_basis=labour_basis,
+                        statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
                         state=RuleState.UNKNOWN,
                         eval_state="UNKNOWN",
                     ))
