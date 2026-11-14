@@ -1370,7 +1370,11 @@ def test_labour_court_order_review_is_independent_of_manufacturing(monkeypatch):
 @pytest.mark.parametrize(
     ("overrides", "expected_rule", "expected_code"),
     [
-        ({}, "LBR-001", "LABOUR_LICENSE_SCOPE_NOT_VERIFIED"),
+        (
+            {"labour_license_scope_verified": False},
+            "LBR-001",
+            "LABOUR_LICENSE_SCOPE_NOT_VERIFIED",
+        ),
         (
             {"factory_license_required_by_direction": None},
             "LBR-001",
