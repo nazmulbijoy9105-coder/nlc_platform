@@ -79,7 +79,7 @@ def test_counsel_verified_black_override_is_returned_only_after_full_release(mon
     assert result[0].score_impact == 20
 
 
-def test_super_admin_black_override_catalogue_remains_visible_when_scoring_is_disabled(monkeypatch):
+def test_black_override_endpoint_hides_candidates_when_scoring_is_disabled(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
     monkeypatch.setattr(rules_api, "legal_score_is_released", lambda: False)
     monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset())
@@ -98,13 +98,7 @@ def test_super_admin_black_override_catalogue_remains_visible_when_scoring_is_di
     monkeypatch.setattr(rules_api, "RulesService", FakeRulesService)
     result = asyncio.run(rules_api.get_black_overrides(current_user=None, db=object()))
 
-    assert len(result) == 1
-    assert result[0].product_scoring_enabled is False
-    assert result[0].default_severity is None
-    assert result[0].score_impact == 0
-    assert result[0].is_active is True
-    assert result[0].is_black_override is False
-    assert result[0].verification_status == "PENDING"
+    assert result == []
 
 
 def test_unlisted_black_override_is_not_authorized_by_product_release_alone(monkeypatch):
