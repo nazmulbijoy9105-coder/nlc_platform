@@ -53,7 +53,8 @@ def _finding(
     )
 
 
-def test_verified_applicable_evidence_produces_expected_agm_finding():
+def test_counsel_approved_rule_with_verified_applicable_evidence_produces_expected_agm_finding(monkeypatch):
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     result = NLCRuleEngine(today=TODAY).evaluate(_verified_agm_profile())
     finding = next(flag for flag in result.flags if flag.rule_id == "AGM-001")
 
@@ -88,7 +89,7 @@ def test_unknown_never_enters_scoring_even_if_impact_was_supplied(monkeypatch):
     assert NLCRuleEngine(today=TODAY)._eligible_scoring_flags([unknown]) == []
 
 
-def test_product_allowlisted_rule_scores_without_counsel_allowlist(monkeypatch):
+def test_product_allowlist_cannot_score_rule_without_rule_specific_counsel_approval(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001", "AUD-001"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
@@ -96,14 +97,14 @@ def test_product_allowlisted_rule_scores_without_counsel_allowlist(monkeypatch):
     flag = _finding(rule_id="AUD-001")
     engine = NLCRuleEngine(today=TODAY)
 
-    assert engine._eligible_scoring_flags([flag]) == [flag]
-    assert engine._category_deductions(engine._eligible_scoring_flags([flag]))["AUD"] == 10
+    assert engine._eligible_scoring_flags([flag]) == []
+    assert engine._category_deductions(engine._eligible_scoring_flags([flag]))["AUD"] == 0
 
     score = engine._calculate_score([flag], CompanyProfile(
         company_id="fixture-score", company_name="Score Fixture Ltd."
     ))
     assert score.category_deductions["AGM"] == 0
-    assert score.final_score == 90
+    assert score.final_score == 100
 
 
 def test_product_allowlisted_rule_can_score_in_controlled_release_fixture(monkeypatch):
@@ -121,7 +122,7 @@ def test_product_allowlisted_rule_can_score_in_controlled_release_fixture(monkey
 def test_product_allowlisted_black_fact_can_activate_authorized_override(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001", "INC-003"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001", "INC-003"}))
     monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
     black = _finding(
         rule_id="INC-003",
@@ -156,7 +157,7 @@ def test_default_runtime_product_release_is_fail_closed():
 
 
 
-def test_product_release_does_not_require_counsel_allowlist(monkeypatch):
+def test_product_release_uses_product_allowlist_not_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
         engine_module, "PRODUCT_SCORING_RULE_IDS",
@@ -167,3 +168,7 @@ def test_product_release_does_not_require_counsel_allowlist(monkeypatch):
     )
 
     assert engine_module.legal_score_is_released() is True
+
+    # Empty product allowlist still fails closed even when the switch is on.
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset())
+    assert engine_module.legal_score_is_released() is False

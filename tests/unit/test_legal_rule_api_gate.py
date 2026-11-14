@@ -1,4 +1,4 @@
-"""Product scoring eligibility and legal-verification metadata stay independent."""
+"""Rule API must not expose statutory severity before counsel approval."""
 
 import asyncio
 from datetime import datetime
@@ -31,7 +31,7 @@ def _rule(**overrides):
     return SimpleNamespace(**values)
 
 
-def test_product_authorized_black_override_does_not_require_legal_verification(monkeypatch):
+def test_unverified_black_override_is_hidden_until_counsel_approval(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"INC-003"}))
@@ -42,9 +42,9 @@ def test_product_authorized_black_override_does_not_require_legal_verification(m
     monkeypatch.setattr(rules_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
     response = rules_api._rule_to_response(_rule(rule_id="INC-003"))
 
-    assert response.default_severity == "RED"
-    assert response.score_impact == 20
-    assert response.is_black_override is True
+    assert response.default_severity is None
+    assert response.score_impact == 0
+    assert response.is_black_override is False
     assert response.is_active is True
     assert response.verification_status == "PENDING"
     assert response.verified_at is None
@@ -53,7 +53,33 @@ def test_product_authorized_black_override_does_not_require_legal_verification(m
     assert response.description == "Unverified statutory proposition."
 
 
-def test_super_admin_black_override_catalogue_remains_visible_when_scoring_is_disabled(monkeypatch):
+def test_counsel_verified_black_override_is_returned_only_after_full_release(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(rules_api, "legal_score_is_released", lambda: True)
+    monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(rules_api, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(rules_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
+
+    class FakeRulesService:
+        def __init__(self, db):
+            self.db = db
+
+        async def get_all(self):
+            return [_rule(rule_id="INC-003")]
+
+    monkeypatch.setattr(rules_api, "RulesService", FakeRulesService)
+    result = asyncio.run(rules_api.get_black_overrides(current_user=None, db=object()))
+
+    assert len(result) == 1
+    assert result[0].rule_id == "INC-003"
+    assert result[0].is_black_override is True
+    assert result[0].default_severity == "RED"
+    assert result[0].score_impact == 20
+
+
+def test_black_override_endpoint_hides_candidates_when_scoring_is_disabled(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
     monkeypatch.setattr(rules_api, "legal_score_is_released", lambda: False)
     monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset())
@@ -72,13 +98,7 @@ def test_super_admin_black_override_catalogue_remains_visible_when_scoring_is_di
     monkeypatch.setattr(rules_api, "RulesService", FakeRulesService)
     result = asyncio.run(rules_api.get_black_overrides(current_user=None, db=object()))
 
-    assert len(result) == 1
-    assert result[0].product_scoring_enabled is False
-    assert result[0].default_severity == "RED"
-    assert result[0].score_impact == 20
-    assert result[0].is_active is True
-    assert result[0].is_black_override is True
-    assert result[0].verification_status == "PENDING"
+    assert result == []
 
 
 def test_unlisted_black_override_is_not_authorized_by_product_release_alone(monkeypatch):
@@ -89,8 +109,8 @@ def test_unlisted_black_override_is_not_authorized_by_product_release_alone(monk
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     response = rules_api._rule_to_response(_rule())
 
-    assert response.default_severity == "RED"
-    assert response.score_impact == 20
+    assert response.default_severity is None
+    assert response.score_impact == 0
     assert response.is_black_override is False
     assert response.is_active is True
     assert response.verification_status == "PENDING"

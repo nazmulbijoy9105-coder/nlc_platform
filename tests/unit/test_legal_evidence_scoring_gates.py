@@ -24,7 +24,7 @@ def _controlled_complete_catalogue_release_for_scoring_mechanics(monkeypatch, re
     """Synthetic test-only release for arithmetic tests; never changes runtime policy."""
     if request.node.name in {
         "test_product_released_corpus_reports_score_with_full_input_coverage",
-        "test_product_owner_black_override_does_not_require_counsel_allowlist",
+        "test_product_owner_black_override_is_blocked_without_counsel_allowlist",
         "test_production_corpus_remains_unreleased_until_counsel_verifies_full_catalogue",
     }:
         # These tests assert the real production defaults or explicitly
@@ -163,8 +163,8 @@ def test_unapproved_black_rule_cannot_force_black_score_band():
     assert result.risk_band == Severity.NOT_EVALUATED
 
 
-def test_product_owner_black_override_does_not_require_counsel_allowlist(monkeypatch):
-    # Product release and explicit override authority are separate from counsel status.
+def test_product_owner_black_override_is_blocked_without_counsel_allowlist(monkeypatch):
+    # Product-owner override configuration cannot replace independent counsel approval.
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
     monkeypatch.setattr(
         engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"AUD-003"})
@@ -187,9 +187,10 @@ def test_product_owner_black_override_does_not_require_counsel_allowlist(monkeyp
 
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert engine_module.legal_score_is_released() is True
-    assert result.override_applied is True
-    assert result.black_flag_count == 1
-    assert result.risk_band == Severity.BLACK
+    assert result.override_applied is False
+    assert result.black_flag_count == 0
+    assert result.final_score == 100
+    assert result.risk_band == Severity.NOT_EVALUATED
 
 
 def test_counsel_verified_product_authorized_black_override_is_honoured(monkeypatch):
@@ -721,13 +722,18 @@ def test_verified_absence_is_scored_but_unknown_is_not(monkeypatch):
 def test_labour_section_326_missing_direction_evidence_is_not_a_breach():
     result = NLCRuleEngine().evaluate(
         _profile(
-            is_manufacturing=True,
-            factory_license_required_by_direction=True,
-            factory_license_obtained=False,
+            is_manufacturing=False,
+            labour_establishment_category="COMMERCIAL_ESTABLISHMENT",
+            labour_license_scope_verified=True,
+            labour_license_scope_evidence_ref="LEGAL-SCOPE-TEST-001",
+            labour_license_scope_verified_at=date(2026, 11, 1),
+            labour_license_scope_verified_by="reviewer",
+            factory_license_required_by_direction=None,
         ),
         today=date(2026, 11, 4),
     )
     flag = _flag(result, "LBR-001")
+    assert flag.flag_code == "LABOUR_LICENSE_REQUIREMENT_UNKNOWN"
     assert flag.severity == Severity.NOT_EVALUATED
     assert flag.state == RuleState.UNKNOWN
     assert flag.eval_state == "UNKNOWN"
@@ -737,16 +743,27 @@ def test_labour_section_326_missing_direction_evidence_is_not_a_breach():
 def test_labour_section_326_expiry_requires_verified_licence_class_and_direction():
     result = NLCRuleEngine().evaluate(
         _profile(
-            is_manufacturing=True,
+            is_manufacturing=False,
+            labour_establishment_category="CONTRACTOR_ESTABLISHMENT",
+            labour_license_scope_verified=True,
+            labour_license_scope_evidence_ref="LEGAL-SCOPE-TEST-002",
+            labour_license_scope_verified_at=date(2026, 11, 1),
+            labour_license_scope_verified_by="reviewer",
             factory_license_required_by_direction=True,
+            labour_license_status_verified=True,
+            labour_license_status_evidence_ref="DIFE-LICENCE-TEST-002",
+            labour_license_status_verified_at=date(2026, 11, 2),
+            labour_license_status_verified_by="reviewer",
             factory_license_obtained=True,
             factory_license_expiry=date(2026, 1, 1),
         ),
         today=date(2026, 11, 4),
     )
     flag = _flag(result, "LBR-002")
+    assert flag.flag_code == "LABOUR_LICENSE_EXPIRED_REQUIRES_REVIEW"
     assert flag.severity == Severity.NOT_EVALUATED
-    assert flag.state == RuleState.UNKNOWN
+    assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+    assert flag.detail["candidate_state"] == RuleState.REQUIRES_LAWYER_JUDGMENT.value
     assert flag.eval_state == "UNKNOWN"
     assert flag.score_impact == 0
 

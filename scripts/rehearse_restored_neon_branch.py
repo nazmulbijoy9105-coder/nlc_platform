@@ -24,7 +24,7 @@ EXPECTED_PROJECT_ID = "rapid-bonus-26545234"
 EXPECTED_BRANCH_ID = "br-little-cake-aovrrz0y"
 EXPECTED_DATABASE = "neondb"
 EXPECTED_START_REVISION = "0042_dedup_key"
-EXPECTED_HEAD_REVISION = "0112_runtime_acl_and_alembic_rls"
+EXPECTED_HEAD_REVISION = "0114_annual_return_filing_status_provenance"
 PRE_0042_REQUIRED_TABLES = (
     "webhook_endpoints",
     "webhook_deliveries",
@@ -45,6 +45,12 @@ PRE_0042_REQUIRED_COLUMNS = {
         "action_performed", "actor_user_id", "evidence_ref", "outcome",
         "notes", "created_at", "updated_at",
     },
+}
+POST_MIGRATION_REQUIRED_COLUMNS = {
+    **PRE_0042_REQUIRED_COLUMNS,
+    "webhook_deliveries": (
+        PRE_0042_REQUIRED_COLUMNS["webhook_deliveries"] | {"updated_at"}
+    ),
 }
 EVIDENCE_TABLES = (
     "agm_notice_evidence",
@@ -158,6 +164,71 @@ async def _preflight_pre_0042_tables(
         "missing_tables": sorted(missing_tables),
         "missing_columns_by_table": schema_mismatches,
     }
+
+
+async def _post_migration_schema_audit(
+    conn: asyncpg.Connection,
+) -> dict[str, Any]:
+    """Verify the final 0044+ schema shape after the Alembic upgrade."""
+    audit: dict[str, Any] = {}
+    for table_name, required_columns in POST_MIGRATION_REQUIRED_COLUMNS.items():
+        rows = await conn.fetch(
+            """
+            SELECT column_name, is_nullable, column_default
+              FROM information_schema.columns
+             WHERE table_schema = 'public'
+               AND table_name = $1
+            """,
+            table_name,
+        )
+        column_meta = {row["column_name"]: dict(row) for row in rows}
+        missing = sorted(required_columns - set(column_meta))
+        if missing:
+            raise RuntimeError(
+                f"Post-migration table {table_name} is missing columns: {missing!r}"
+            )
+
+        relation = await conn.fetchrow(
+            """
+            SELECT owner_role.rolname AS owner,
+                   relation.relrowsecurity AS rls_enabled,
+                   relation.relforcerowsecurity AS rls_forced
+              FROM pg_class AS relation
+              JOIN pg_namespace AS namespace ON namespace.oid = relation.relnamespace
+              JOIN pg_roles AS owner_role ON owner_role.oid = relation.relowner
+             WHERE namespace.nspname = 'public'
+               AND relation.relname = $1
+               AND relation.relkind IN ('r', 'p')
+            """,
+            table_name,
+        )
+        if relation is None:
+            raise RuntimeError(f"Post-migration table public.{table_name} is missing.")
+        if (
+            relation["owner"] != "nlc_migration_owner"
+            or not relation["rls_enabled"]
+            or not relation["rls_forced"]
+        ):
+            raise RuntimeError(
+                f"Post-migration owner/RLS contract failed for {table_name}: "
+                f"{dict(relation)!r}"
+            )
+
+        if table_name == "webhook_deliveries":
+            updated_at = column_meta["updated_at"]
+            if updated_at["is_nullable"] != "NO" or not updated_at["column_default"]:
+                raise RuntimeError(
+                    "Migration 0044 must add webhook_deliveries.updated_at "
+                    "as NOT NULL with a server default."
+                )
+
+        audit[table_name] = {
+            "columns": sorted(column_meta),
+            "owner": relation["owner"],
+            "rls_enabled": relation["rls_enabled"],
+            "rls_forced": relation["rls_forced"],
+        }
+    return audit
 
 
 async def _identity(conn: asyncpg.Connection) -> dict[str, Any]:
@@ -706,6 +777,9 @@ async def main() -> int:
                     f"Expected one head {EXPECTED_HEAD_REVISION}; observed "
                     f"{after_identity['alembic_versions']!r}."
                 )
+            report["post_migration_schema_audit"] = (
+                await _post_migration_schema_audit(conn)
+            )
             after_counts = await _table_row_counts(conn)
             report["after_table_row_counts"] = after_counts
             report["security_audit"] = await _security_audit(conn)

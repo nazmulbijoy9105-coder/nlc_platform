@@ -819,8 +819,11 @@ def test_score_allocation_uses_product_allowlist_and_excludes_unknown_findings(m
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001", "AUD-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
-    monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
+    # Model a complete, independently counsel-approved test catalogue.
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS",
+        frozenset({"AGM-001", "AUD-001"}),
+    )
     confirmed = SimpleNamespace(
         rule_id="AUD-001",
         state=RuleState.NON_COMPLIANT,
@@ -848,7 +851,7 @@ def test_score_allocation_uses_product_allowlist_and_excludes_unknown_findings(m
     assert allocations[1] == {"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"}
 
 
-def test_score_allocation_applies_product_allowlisted_rule_without_counsel_allowlist(monkeypatch):
+def test_score_allocation_rejects_product_allowlisted_rule_without_counsel_approval(monkeypatch):
     import app.rule_engine.engine as engine_module
     from app.rule_engine.engine import RuleState
     from app.services.compliance_service import _applied_score_impacts
@@ -867,7 +870,9 @@ def test_score_allocation_applies_product_allowlisted_rule_without_counsel_allow
         detail={},
     )
 
-    assert _applied_score_impacts([finding]) == [{"applied": 10, "status": "APPLIED"}]
+    assert _applied_score_impacts([finding]) == [
+        {"applied": 0, "status": "RULE_NOT_COUNSEL_VERIFIED"}
+    ]
 
 
 def test_rescue_planner_remains_deterministic_when_score_release_is_paused(monkeypatch):
@@ -919,7 +924,7 @@ def test_pdf_report_scores_product_allowlisted_rules_and_lists_counsel_review_it
 
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     verified = SimpleNamespace(
         rule_id="AGM-001", severity="RED", description="Verified finding",
         score_impact=10, score_impact_applied=10, scoring_status="APPLIED",
@@ -1022,6 +1027,13 @@ def test_rescue_output_validation_requires_product_release_and_unique_evidenced_
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    with pytest.raises(PermissionError, match="disabled"):
+        validate_rescue_engine_output(output, expected_company_id="tenant-001")
+
+    # A released fixture must approve every rule in its product catalogue.
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"})
+    )
     assert validate_rescue_engine_output(
         output, expected_company_id="tenant-001"
     ) == frozenset({"AGM-001"})
@@ -1145,3 +1157,308 @@ def test_rescue_target_date_prefers_explicit_then_latest_step_date():
     assert _derive_plan_target(date(2026, 11, 30), steps) == date(2026, 11, 30)
     assert _derive_plan_target(None, steps) == latest
     assert _derive_plan_target(None, []) is None
+
+
+# =============================================================================
+# COUNSEL APPROVAL RELEASE BOUNDARIES
+# =============================================================================
+
+def test_company_flag_api_quarantines_unapproved_statutory_candidate(monkeypatch):
+    import app.api.companies as companies_api
+
+    monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", frozenset())
+    flag = SimpleNamespace(
+        id=uuid.uuid4(),
+        rule_id="AGM-001",
+        description="Candidate AGM finding",
+        flag_code="AGM-001",
+        severity="RED",
+        score_impact=15,
+        flag_status="ACTIVE",
+        triggered_date=date(2026, 11, 1),
+        resolved_date=None,
+        is_black_override=True,
+        resolution_notes=None,
+    )
+
+    response = companies_api._flag_to_response(flag)
+
+    assert response.severity == "NOT_EVALUATED"
+    assert response.score_impact == 0
+    assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
+    assert response.is_black_override is False
+    assert "No breach" in response.rule_name
+
+
+@pytest.mark.asyncio
+async def test_black_override_api_requires_full_counsel_release(monkeypatch):
+    import app.api.rules as rules_api
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"})
+    )
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", frozenset({"INC-003"})
+    )
+    monkeypatch.setattr(rules_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(
+        rules_api, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"INC-003"})
+    )
+
+    class FakeRulesService:
+        def __init__(self, db):
+            self.db = db
+
+        async def get_all(self):
+            return [
+                SimpleNamespace(
+                    rule_id="INC-003",
+                    rule_name="Minimum director requirement",
+                    rule_type="THRESHOLD",
+                    statutory_basis="Companies Act 1994, section 90",
+                    description="Verified minimum director finding.",
+                    default_severity="RED",
+                    score_impact=20,
+                    revenue_tier="COMPLIANCE_PACKAGE",
+                    is_active=True,
+                    verification_status="VERIFIED",
+                    verified_at=datetime(2026, 11, 15),
+                    statutory_effective_date=date(1994, 12, 1),
+                    rule_version="2.2",
+                    created_at=datetime(2026, 11, 15),
+                    updated_at=datetime(2026, 11, 15),
+                )
+            ]
+
+    monkeypatch.setattr(rules_api, "RulesService", FakeRulesService)
+    result = await rules_api.get_black_overrides(current_user=None, db=object())
+
+    assert len(result) == 1
+    assert result[0].rule_id == "INC-003"
+    assert result[0].is_black_override is True
+    assert result[0].default_severity == "RED"
+    assert result[0].score_impact == 20
+
+
+def test_rule_evaluator_quarantines_unapproved_candidate_before_score_or_override(monkeypatch):
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-001"})
+    )
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+
+    profile = engine_module.CompanyProfile(
+        company_id="integration-counsel-gate",
+        company_name="Counsel Gate Integration Ltd",
+        incorporation_date=date(2020, 1, 1),
+        first_auditor_appointed=False,
+        first_auditor_appointment_verified=True,
+        first_auditor_appointment_evidence_ref="AUDITOR-SEARCH-INT-001",
+        first_auditor_appointment_verified_at=date(2026, 11, 1),
+        first_auditor_appointment_verified_by="integration-reviewer",
+    )
+    output = engine_module.NLCRuleEngine(today=date(2026, 11, 15)).evaluate(profile)
+    finding = next(flag for flag in output.flags if flag.rule_id == "AUD-001")
+
+    assert finding.severity is engine_module.Severity.NOT_EVALUATED
+    assert finding.state is engine_module.RuleState.UNKNOWN
+    assert finding.eval_state == "UNKNOWN"
+    assert finding.score_impact == 0
+    assert finding.detail["legal_validation_status"] == "PENDING_COUNSEL_APPROVAL"
+    assert finding.detail["statutory_finding_authorized"] is False
+
+
+def test_compliance_score_impact_requires_verified_rule_and_global_release(monkeypatch):
+    import app.rule_engine.engine as engine_module
+    import app.services.compliance_service as compliance_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
+    flag = SimpleNamespace(
+        rule_id="AGM-001",
+        score_impact=10,
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        resolved=False,
+        conditional_applies=True,
+    )
+
+    result = compliance_module._applied_score_impacts([flag])
+
+    assert result == [{"applied": 10, "status": "APPLIED"}]
+
+
+def test_labour_licence_scope_is_not_inferred_from_manufacturing_status(monkeypatch):
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", engine_module.PRODUCT_SCORING_RULE_IDS
+    )
+    profile = engine_module.CompanyProfile(
+        company_id="labour-scope-unknown",
+        company_name="Non-manufacturing Service Ltd",
+        incorporation_date=date(2020, 1, 1),
+        is_manufacturing=False,
+    )
+
+    output = engine_module.NLCRuleEngine(today=date(2026, 11, 15)).evaluate(profile)
+    finding = next(flag for flag in output.flags if flag.rule_id == "LBR-001")
+
+    assert finding.flag_code == "LABOUR_LICENSE_SCOPE_NOT_VERIFIED"
+    assert finding.state is engine_module.RuleState.UNKNOWN
+    assert finding.severity is engine_module.Severity.NOT_EVALUATED
+    assert finding.score_impact == 0
+
+
+def test_labour_licence_expiry_uses_verified_printed_date_only(monkeypatch):
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", engine_module.PRODUCT_SCORING_RULE_IDS
+    )
+    profile = engine_module.CompanyProfile(
+        company_id="labour-expiry-evidence",
+        company_name="Contractor Establishment Ltd",
+        incorporation_date=date(2020, 1, 1),
+        is_manufacturing=False,
+        labour_establishment_category="CONTRACTOR_ESTABLISHMENT",
+        labour_license_scope_verified=True,
+        labour_license_scope_evidence_ref="LEGAL-SCOPE-INTEGRATION-001",
+        labour_license_scope_verified_at=date(2026, 11, 1),
+        labour_license_scope_verified_by="integration-reviewer",
+        factory_license_required_by_direction=True,
+        labour_license_status_verified=True,
+        labour_license_status_evidence_ref="DIFE-LICENCE-INTEGRATION-001",
+        labour_license_status_verified_at=date(2026, 11, 2),
+        labour_license_status_verified_by="integration-reviewer",
+        factory_license_obtained=True,
+        factory_license_expiry=date(2026, 10, 31),
+    )
+
+    output = engine_module.NLCRuleEngine(today=date(2026, 11, 15)).evaluate(profile)
+    finding = next(flag for flag in output.flags if flag.rule_id == "LBR-002")
+
+    assert finding.flag_code == "LABOUR_LICENSE_EXPIRED_REQUIRES_REVIEW"
+    assert finding.state is engine_module.RuleState.REQUIRES_LAWYER_JUDGMENT
+    assert finding.detail["renewal_term_calculated_automatically"] is False
+    assert finding.score_impact == 0
+
+
+def test_labour_court_order_review_is_independent_of_manufacturing(monkeypatch):
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", engine_module.PRODUCT_SCORING_RULE_IDS
+    )
+    profile = engine_module.CompanyProfile(
+        company_id="labour-court-order",
+        company_name="Service Establishment Ltd",
+        incorporation_date=date(2020, 1, 1),
+        is_manufacturing=None,
+        labour_court_order_pending=True,
+    )
+
+    output = engine_module.NLCRuleEngine(today=date(2026, 11, 15)).evaluate(profile)
+    finding = next(flag for flag in output.flags if flag.rule_id == "LBR-003")
+
+    assert finding.flag_code == "LABOUR_COURT_ORDER_STATUS_REQUIRES_VERIFICATION"
+    assert finding.state is engine_module.RuleState.UNKNOWN
+    assert finding.score_impact == 0
+
+
+@pytest.mark.parametrize(
+    ("overrides", "expected_rule", "expected_code"),
+    [
+        (
+            {"labour_license_scope_verified": False},
+            "LBR-001",
+            "LABOUR_LICENSE_SCOPE_NOT_VERIFIED",
+        ),
+        (
+            {"factory_license_required_by_direction": None},
+            "LBR-001",
+            "LABOUR_LICENSE_REQUIREMENT_UNKNOWN",
+        ),
+        ({"factory_license_required_by_direction": False}, None, None),
+        (
+            {"labour_license_status_verified": False},
+            "LBR-001",
+            "LABOUR_LICENSE_STATUS_NOT_VERIFIED",
+        ),
+        (
+            {"factory_license_obtained": False},
+            "LBR-001",
+            "LABOUR_LICENSE_NOT_OBTAINED_REQUIRES_REVIEW",
+        ),
+        (
+            {"factory_license_obtained": None},
+            "LBR-001",
+            "LABOUR_LICENSE_STATUS_UNKNOWN",
+        ),
+        (
+            {"factory_license_expiry": None},
+            "LBR-002",
+            "LABOUR_LICENSE_EXPIRY_NOT_VERIFIED",
+        ),
+        (
+            {"factory_license_expiry": date(2027, 1, 1)},
+            None,
+            None,
+        ),
+    ],
+)
+def test_labour_licence_evaluator_covers_verified_scope_and_status_states(
+    monkeypatch, overrides, expected_rule, expected_code
+):
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", engine_module.PRODUCT_SCORING_RULE_IDS
+    )
+    values = {
+        "company_id": "labour-state-matrix",
+        "company_name": "Labour State Matrix Ltd",
+        "incorporation_date": date(2020, 1, 1),
+        "is_manufacturing": False,
+        "labour_establishment_category": "COMMERCIAL_ESTABLISHMENT",
+        "labour_license_scope_verified": True,
+        "labour_license_scope_evidence_ref": "LEGAL-SCOPE-MATRIX",
+        "labour_license_scope_verified_at": date(2026, 11, 1),
+        "labour_license_scope_verified_by": "integration-reviewer",
+        "factory_license_required_by_direction": True,
+        "labour_license_status_verified": True,
+        "labour_license_status_evidence_ref": "DIFE-MATRIX",
+        "labour_license_status_verified_at": date(2026, 11, 2),
+        "labour_license_status_verified_by": "integration-reviewer",
+        "factory_license_obtained": True,
+        "factory_license_expiry": date(2027, 1, 1),
+    }
+    values.update(overrides)
+    output = engine_module.NLCRuleEngine(today=date(2026, 11, 15)).evaluate(
+        engine_module.CompanyProfile(**values)
+    )
+    labour_flags = [
+        flag for flag in output.flags if flag.rule_id in {"LBR-001", "LBR-002"}
+    ]
+
+    if expected_rule is None:
+        assert labour_flags == []
+    else:
+        assert len(labour_flags) == 1
+        assert labour_flags[0].rule_id == expected_rule
+        assert labour_flags[0].flag_code == expected_code
+        assert labour_flags[0].score_impact == 0

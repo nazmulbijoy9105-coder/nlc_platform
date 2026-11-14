@@ -1210,10 +1210,9 @@ class TestRules:
         assert resp.status_code == 200
         rules = resp.json()
         assert isinstance(rules, list)
-        # Product-owner policy authorizes one evidence-gated company-law override.
-        black_ids = {r["rule_id"] for r in rules}
-        assert black_ids == {"INC-003"}
-        assert all(r["is_black_override"] is True for r in rules)
+        # Product-owner configuration alone is not legal approval.
+        # No statutory BLACK override is active while the counsel register is empty.
+        assert rules == []
 
     @pytest.mark.asyncio
     async def test_get_rule_summary(self, api_client, super_admin_token):
@@ -1268,7 +1267,11 @@ class TestRules:
         )
         assert resp.status_code == 200, resp.text
         assert resp.json()["rule_id"] == "AUD-003"
-        assert resp.json()["default_severity"] == "RED"
+        # Admin edits remain versioned, but the public rule API withholds
+        # statutory severity until this rule has independent counsel approval.
+        assert resp.json()["default_severity"] is None
+        assert resp.json()["score_impact"] == 0
+        assert resp.json()["is_black_override"] is False
 
 
 

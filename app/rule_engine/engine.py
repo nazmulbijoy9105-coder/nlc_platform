@@ -416,12 +416,25 @@ class CompanyProfile:
     winding_up_petition_date: Optional[date] = None
     liquidator_appointed: bool = False
     court_ordered_winding_up: bool = False
-    # ── Labour (Labour Act 2006) ──
-    # Tri-state applicability (R-003/R-008): None = unknown, False = not a factory, True = manufacturing.
+    # ── Labour Act 2006 / Labour Rules 2015 licensing evidence ──
+    # Manufacturing status is a fact, not the licensing-applicability predicate.
     is_manufacturing: bool | None = None
+    # Backward-compatible field name: this represents the reviewed s.326/r.354
+    # licence requirement for the actual establishment category, not only factories.
     factory_license_required_by_direction: bool | None = None
+    # Legacy field names retained for compatibility; these represent the
+    # s.326/r.354 labour licence for the reviewed establishment, not only a factory.
     factory_license_obtained: bool | None = None
     factory_license_expiry: Optional[date] = None
+    labour_establishment_category: Optional[str] = None
+    labour_license_scope_verified: bool = False
+    labour_license_scope_evidence_ref: Optional[str] = None
+    labour_license_scope_verified_at: Optional[date] = None
+    labour_license_scope_verified_by: Optional[str] = None
+    labour_license_status_verified: bool = False
+    labour_license_status_evidence_ref: Optional[str] = None
+    labour_license_status_verified_at: Optional[date] = None
+    labour_license_status_verified_by: Optional[str] = None
     worker_compensation_filed: bool | None = None
     labour_court_order_pending: bool = False
     # -- Additional Companies Act 1994 --
@@ -431,7 +444,7 @@ class CompanyProfile:
     voluntary_winding_up: bool = False
     investigation_order: bool = False
     # -- BSEC Corporate Governance Code 2023 --
-    bsec_listed: bool = False
+    bsec_listed: bool | None = None
     bsec_quarterly_report_filed: bool | None = None
     cg_certificate_obtained: bool | None = None
     board_independent_director: bool | None = None
@@ -738,10 +751,23 @@ LEGAL_SCORE_RELEASED: bool = os.getenv("LEGAL_SCORE_RELEASED", "false").strip().
 
 
 def legal_score_is_released() -> bool:
-    """Return whether product scoring is explicitly released; this is not legal verification."""
+    """Return whether product scoring is enabled for the product-owner allowlist.
+
+    This is a product-release switch, not a legal-verification decision.
+    Individual statutory findings, deductions and overrides remain subject to
+    separate counsel, evidence and applicability gates.
+    """
     return (
         LEGAL_SCORE_RELEASED is True
         and bool(PRODUCT_SCORING_RULE_IDS)
+    )
+
+
+def _counsel_score_basis_is_verified() -> bool:
+    """A company-wide statutory score needs counsel review of the full catalogue."""
+    return (
+        bool(PRODUCT_SCORING_RULE_IDS)
+        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
     )
 
 
@@ -830,6 +856,37 @@ class NLCRuleEngine:
         self._run_accounts_rules(company)
         self._run_structural_change_rules(company)
         self._run_escalation_rules(company)
+
+        # A product-owned rule catalogue is not legal approval. Until each
+        # catalogue rule has independent Bangladesh-counsel verification,
+        # retain candidate signals as review prompts only. This central gate
+        # prevents any individual module from leaking an unverified RED/BLACK
+        # statutory finding or score deduction through the API/PDF/rescue path.
+        for flag in self._flags:
+            if (
+                flag.rule_id in PRODUCT_SCORING_RULE_IDS
+                and flag.rule_id not in VERIFIED_RULE_IDS
+            ):
+                original_detail = dict(flag.detail or {})
+                original_detail.update({
+                    "legal_validation_status": "PENDING_COUNSEL_APPROVAL",
+                    "candidate_severity": str(getattr(flag.severity, "value", flag.severity)),
+                    "candidate_state": str(getattr(flag.state, "value", flag.state)),
+                    "candidate_eval_state": flag.eval_state,
+                    "candidate_score_impact": flag.score_impact,
+                    "statutory_finding_authorized": False,
+                })
+                flag.detail = original_detail
+                flag.severity = Severity.NOT_EVALUATED
+                flag.score_impact = 0
+                flag.state = RuleState.UNKNOWN
+                flag.eval_state = "UNKNOWN"
+                flag.is_black_override = False
+                flag.description = (
+                    "Candidate signal only — independent Bangladesh-counsel "
+                    "validation is pending. No statutory breach or score deduction "
+                    "is asserted. " + flag.description
+                )
 
         # Coverage is calculated in _calculate_score via _input_coverage(company)
 
@@ -1218,16 +1275,27 @@ class NLCRuleEngine:
                         eval_state="UNKNOWN",
                     ))
                 else:
-                    severity = Severity.RED if days_to < 14 else Severity.YELLOW
                     self._add_flag(ComplianceFlag(
                         rule_id="AUD-002",
-                        flag_code="AUDIT_MISSING_PRE_AGM",
-                        severity=severity,
-                        score_impact=12,
+                        flag_code="AUDIT_READINESS_REQUIRES_REVIEW",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=f"Verified audit completion is absent. AGM in {days_to} days. Section 183 requires accounts to be laid before the AGM.",
+                        description=(
+                            f"Verified audit completion is not recorded and the AGM is "
+                            f"scheduled in {days_to} days. This is a pre-meeting readiness "
+                            "alert, not proof that Section 183 has already been breached. "
+                            "Verify the audit engagement, completion timetable, meeting "
+                            "record and whether the statements will be laid before the AGM."
+                        ),
                         statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
-                        detail={"days_to_agm": days_to}
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                        detail={
+                            "days_to_agm": days_to,
+                            "is_pre_agm_readiness_alert": True,
+                            "statutory_default_established": False,
+                        },
                     ))
 
         if c.agm_held_this_cycle and c.audit_complete is False:
@@ -1253,9 +1321,9 @@ class NLCRuleEngine:
                 self._add_flag(ComplianceFlag(
                     rule_id="AUD-003",
                     flag_code="AGM_HELD_WITHOUT_COMPLETED_AUDIT",
-                    severity=Severity.RED,
+                    severity=Severity.NOT_EVALUATED,
                     score_impact=0,
-                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=(
                         "Verified audit completion is absent for an AGM. Section 183 governs "
                         "accounts laid before the AGM; a lawyer must assess the actual accounts, "
@@ -2852,62 +2920,236 @@ class NLCRuleEngine:
         )
 
     def _run_labour_rules(self, c: CompanyProfile) -> None:
-        applicability = self._manufacturing_applicability(c)
-
-        # Factory-license obligations are evaluated only for established
-        # manufacturing entities. UNKNOWN and NOT_APPLICABLE never create
-        # a statutory breach or score deduction.
-        if applicability.state is ApplicabilityState.APPLICABLE and c.factory_license_required_by_direction is True:
-            # The profile does not yet bind a Government direction, class,
-            # licence record and renewal terms to verified source evidence.
-            # Never turn a user-entered boolean or expiry date into a breach.
-            if c.factory_license_obtained is False:
-                self._add_flag(ComplianceFlag(
-                    rule_id="LBR-001",
-                    flag_code="FACTORY_LICENSE_STATUS_REQUIRES_VERIFICATION",
-                    severity=Severity.NOT_EVALUATED,
-                    score_impact=0,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="A factory/establishment licence may be required under section 326 only if the applicable Government direction covers this establishment/class. Verify the direction, class, commencement, exemption and authentic licence search before finding a default.",
-                    statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
-                    state=RuleState.UNKNOWN,
-                    eval_state="UNKNOWN",
-                ))
-
-            if c.factory_license_expiry and self.today > c.factory_license_expiry:
-                delay = (self.today - c.factory_license_expiry).days
-                self._add_flag(ComplianceFlag(
-                    rule_id="LBR-002",
-                    flag_code="FACTORY_LICENSE_EXPIRY_REQUIRES_VERIFICATION",
-                    severity=Severity.NOT_EVALUATED,
-                    score_impact=0,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Recorded licence expiry is {delay} days in the past. Verify the licence class, section 326 Government direction, five-year/contractor one-year term, renewal application, extension and operative status before finding a breach.",
-                    statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
-                    state=RuleState.UNKNOWN,
-                    eval_state="UNKNOWN",
-                ))
-
         # LBR-003 is not gated by manufacturing status: applicability of an
         # existing labour-court order depends on the order's parties and scope.
         if c.labour_court_order_pending:
-            # The current profile stores only a boolean, not the order,
-            # parties, service, operative status, appeal or stay. Do not infer
-            # a statutory breach or adverse score from that boolean.
+            # The profile stores only a Boolean, not the order, parties,
+            # service, operative status, appeal or stay. Do not infer a breach.
             self._add_flag(ComplianceFlag(
                 rule_id="LBR-003",
                 flag_code="LABOUR_COURT_ORDER_STATUS_REQUIRES_VERIFICATION",
                 severity=Severity.NOT_EVALUATED,
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="The profile reports a pending Labour Court order. Verify the certified order, parties and company identity, service, operative directions, appeal/revision and any stay before determining applicability or non-compliance.",
-                statutory_basis="Bangladesh Labour Act 2006 and the specific Labour Court order; enabling provision and operative status require case-specific verification",
+                description=(
+                    "The profile reports a pending Labour Court order. Verify the "
+                    "certified order, parties and company identity, service, operative "
+                    "directions, appeal/revision and any stay before determining "
+                    "applicability or non-compliance."
+                ),
+                statutory_basis=(
+                    "Bangladesh Labour Act 2006 and the specific Labour Court order; "
+                    "enabling provision and operative status require case-specific verification"
+                ),
                 state=RuleState.UNKNOWN,
                 eval_state="UNKNOWN",
-                detail={"profile_order_status": "reported_pending", "order_evidence_verified": False, "stay_or_appeal_checked": False},
+                detail={
+                    "profile_order_status": "reported_pending",
+                    "order_evidence_verified": False,
+                    "stay_or_appeal_checked": False,
+                },
             ))
 
-    # MODULE 14: ADDITIONAL COMPANIES ACT 1994
+        required_evidence = [
+            "ACTUAL_ESTABLISHMENT_CATEGORY_AND_WORKPLACE",
+            "RULE_354_CATEGORY_MAPPING",
+            "APPLICABLE_GOVERNMENT_DIRECTION_OR_NOTIFICATION",
+            "CURRENT_LABOUR_RULES_AND_GAZETTE_AMENDMENTS",
+            "DIFE_REGISTRATION_AND_LICENCE_SEARCH",
+            "ISSUED_LICENCE_AND_PRINTED_EXPIRY_DATE",
+            "CONTRACTOR_AGENCY_STATUS_IF_APPLICABLE",
+        ]
+        scope_verified = (
+            c.labour_license_scope_verified is True
+            and bool(c.labour_license_scope_evidence_ref)
+            and c.labour_license_scope_verified_at is not None
+            and bool(c.labour_license_scope_verified_by)
+            and bool(c.labour_establishment_category)
+        )
+        status_verified = (
+            c.labour_license_status_verified is True
+            and bool(c.labour_license_status_evidence_ref)
+            and c.labour_license_status_verified_at is not None
+            and bool(c.labour_license_status_verified_by)
+        )
+
+        # Section 326(1)(b), as amended in 2026, is not limited to
+        # manufacturing factories. Rule 354 also identifies industrial and
+        # commercial establishments, banks, insurers, shops and contractor
+        # establishments. Never infer non-applicability from is_manufacturing.
+        if not scope_verified:
+            self._add_flag(ComplianceFlag(
+                rule_id="LBR-001",
+                flag_code="LABOUR_LICENSE_SCOPE_NOT_VERIFIED",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "Labour licensing applicability is not established. "
+                    "Section 326(1)(b) is not confined to manufacturing factories; "
+                    "verify the actual establishment category, Rule 354 scope and "
+                    "any applicable Government direction before deciding whether "
+                    "a licence is required. This is not a breach finding."
+                ),
+                statutory_basis="Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={
+                    "is_manufacturing_is_not_the_licensing_test": True,
+                    "establishment_category": c.labour_establishment_category,
+                    "scope_evidence_ref": c.labour_license_scope_evidence_ref,
+                    "required_evidence": required_evidence,
+                },
+            ))
+            return
+
+        if c.factory_license_required_by_direction is None:
+            self._add_flag(ComplianceFlag(
+                rule_id="LBR-001",
+                flag_code="LABOUR_LICENSE_REQUIREMENT_UNKNOWN",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The establishment category has been reviewed, but the "
+                    "applicable s.326(1)(b)/Rule 354 licensing requirement has not "
+                    "been resolved. Obtain the operative direction and legal scope "
+                    "review; do not infer a default from manufacturing status."
+                ),
+                statutory_basis="Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={
+                    "establishment_category": c.labour_establishment_category,
+                    "scope_evidence_ref": c.labour_license_scope_evidence_ref,
+                    "required_evidence": required_evidence,
+                },
+            ))
+            return
+
+        if c.factory_license_required_by_direction is False:
+            return
+
+        if not status_verified:
+            self._add_flag(ComplianceFlag(
+                rule_id="LBR-001",
+                flag_code="LABOUR_LICENSE_STATUS_NOT_VERIFIED",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "A licence requirement is recorded for this establishment, "
+                    "but the actual DIFE licence status has not been independently "
+                    "verified. Obtain the licence or a dated registry/inspection "
+                    "record before making a finding."
+                ),
+                statutory_basis="Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={
+                    "establishment_category": c.labour_establishment_category,
+                    "required_evidence": required_evidence,
+                },
+            ))
+            return
+
+        if c.factory_license_obtained is False:
+            self._add_flag(ComplianceFlag(
+                rule_id="LBR-001",
+                flag_code="LABOUR_LICENSE_NOT_OBTAINED_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "A reviewed licensing requirement and a verified absence of "
+                    "licence are recorded. This candidate requires Bangladesh "
+                    "counsel review of the operative direction, establishment "
+                    "category, commencement date and any exception; no score or "
+                    "statutory breach is asserted by this engine."
+                ),
+                statutory_basis="Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={
+                    "establishment_category": c.labour_establishment_category,
+                    "scope_evidence_ref": c.labour_license_scope_evidence_ref,
+                    "status_evidence_ref": c.labour_license_status_evidence_ref,
+                    "candidate_state": RuleState.REQUIRES_LAWYER_JUDGMENT.value,
+                    "required_evidence": required_evidence,
+                },
+            ))
+            return
+
+        if c.factory_license_obtained is not True:
+            self._add_flag(ComplianceFlag(
+                rule_id="LBR-001",
+                flag_code="LABOUR_LICENSE_STATUS_UNKNOWN",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The licence is required, but the current licence status is "
+                    "unknown. Verify the issued licence and its operative dates."
+                ),
+                statutory_basis="Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"required_evidence": required_evidence},
+            ))
+            return
+
+        # Use the expiry date printed on the verified licence. Do not calculate
+        # an expiry from issue date: Labour Rules 2015 r.355(2) contains an older
+        # 30-June validity formulation while amended Act s.326(1)(b) now states
+        # five-year renewal (one year for contractor agencies). Counsel must
+        # resolve transitional/precedence questions before an automatic term.
+        if c.factory_license_expiry is None:
+            self._add_flag(ComplianceFlag(
+                rule_id="LBR-002",
+                flag_code="LABOUR_LICENSE_EXPIRY_NOT_VERIFIED",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The establishment's licence is recorded as obtained, but "
+                    "its printed expiry date is not available. Do not calculate "
+                    "a renewal deadline from issue date until the amended Act "
+                    "and Labour Rules transition are reconciled."
+                ),
+                statutory_basis="Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={
+                    "status_evidence_ref": c.labour_license_status_evidence_ref,
+                    "required_evidence": ["COMPLETE_LICENCE_COPY_WITH_EXPIRY_DATE"],
+                },
+            ))
+        elif c.factory_license_expiry < self.today:
+            self._add_flag(ComplianceFlag(
+                rule_id="LBR-002",
+                flag_code="LABOUR_LICENSE_EXPIRED_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    f"The verified licence copy records expiry on "
+                    f"{c.factory_license_expiry.isoformat()}. Verify renewal, "
+                    "continued operation, transitional treatment and the "
+                    "applicable contractor/non-contractor term with counsel."
+                ),
+                statutory_basis="Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={
+                    "printed_expiry_date": c.factory_license_expiry.isoformat(),
+                    "status_evidence_ref": c.labour_license_status_evidence_ref,
+                    "candidate_state": RuleState.REQUIRES_LAWYER_JUDGMENT.value,
+                    "renewal_term_calculated_automatically": False,
+                },
+            ))
+
+
+
     def _run_companies_act_extended_rules(self, c: CompanyProfile) -> None:
         if c.agm_adjourned_without_notice:
             self._add_flag(ComplianceFlag(
@@ -2989,53 +3231,116 @@ class NLCRuleEngine:
 
     # MODULE 15: BSEC CG CODE 2023
     def _run_bsec_rules(self, c: CompanyProfile) -> None:
-        # The Code is not a universal private-company obligation. Even where
-        # listed status is asserted, each condition requires verified scope,
-        # current instrument version and condition-specific evidence. Until
-        # those facts are verified, emit review prompts only.
-        if c.bsec_listed:
-            candidates = (
-                ("BSEC-001", "QUARTERLY_REPORT_STATUS_REQUIRES_SOURCE_VERIFICATION",
-                 c.bsec_quarterly_report_filed,
-                 "Quarterly-report status requires the exact applicable BSEC reporting instrument, reporting period, issuer category and due date; it is not Condition 8 of the Corporate Governance Code."),
-                ("BSEC-002", "CG_CERTIFICATE_STATUS_REQUIRES_VERIFICATION",
-                 c.cg_certificate_obtained,
-                 "Corporate-governance compliance certification is associated with Condition 9; verify listed-issuer scope, auditor/certifier, reporting year and filing evidence."),
-                ("BSEC-003", "BOARD_COMPOSITION_STATUS_REQUIRES_VERIFICATION",
-                 c.board_independent_director,
-                 "Board composition is governed by Condition 1 as amended; verify board size, independent-director ratio, female independent-director requirement, eligibility and effective date."),
-                ("BSEC-004", "AUDIT_COMMITTEE_STATUS_REQUIRES_VERIFICATION",
-                 c.audit_committee_established,
-                 "Audit Committee is addressed by Condition 5; verify committee composition, terms, meetings, independence and issuer applicability."),
-            )
-            for rule_id, flag_code, supplied_status, description in candidates:
-                if supplied_status is False:
-                    basis = (
-                        "Applicable BSEC financial-reporting instrument; exact notification, issuer class, reporting period and due date require verification"
-                        if rule_id == "BSEC-001"
-                        else "BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification"
-                    )
-                    self._add_flag(ComplianceFlag(
-                        rule_id=rule_id,
-                        flag_code=flag_code,
-                        severity=Severity.NOT_EVALUATED,
-                        score_impact=0,
-                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=description,
-                        statutory_basis=basis,
-                        state=RuleState.UNKNOWN,
-                        eval_state="UNKNOWN",
-                    ))
+        company_type = str(getattr(c.company_type, "value", c.company_type)).upper()
+        # The Corporate Governance Code is a listed-issuer regime, not a
+        # general private-company duty. For public companies, missing listing
+        # status remains UNKNOWN rather than silently becoming unlisted.
+        if company_type != "PUBLIC_LIMITED":
+            return
+
+        candidates = (
+            ("BSEC-001", "QUARTERLY_REPORT_STATUS_REQUIRES_SOURCE_VERIFICATION",
+             c.bsec_quarterly_report_filed,
+             "Quarterly-report status requires the exact applicable BSEC financial-reporting instrument, issuer class, reporting period and due date; it is not Condition 8 of the Corporate Governance Code."),
+            ("BSEC-002", "CG_CERTIFICATE_STATUS_REQUIRES_VERIFICATION",
+             c.cg_certificate_obtained,
+             "Corporate-governance compliance certification is associated with Condition 9; verify listed-issuer scope, certifier eligibility, reporting year and filing evidence."),
+            ("BSEC-003", "BOARD_COMPOSITION_STATUS_REQUIRES_VERIFICATION",
+             c.board_independent_director,
+             "Board composition is governed by Condition 1 as amended; verify board size, independent-director ratio, female independent-director requirement, eligibility and effective date."),
+            ("BSEC-004", "AUDIT_COMMITTEE_STATUS_REQUIRES_VERIFICATION",
+             c.audit_committee_established,
+             "Audit Committee is addressed by Condition 5; verify committee composition, terms, meetings, independence and issuer applicability."),
+        )
+
+        if c.bsec_listed is None:
+            for rule_id, _flag_code, _status, description in candidates:
+                self._add_flag(ComplianceFlag(
+                    rule_id=rule_id,
+                    flag_code="BSEC_LISTED_ISSUER_APPLICABILITY_UNKNOWN",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=(
+                        "Public-company status alone does not establish that the issuer "
+                        "is listed. Verify the issuer's current BSEC/DSE/CSE listing "
+                        f"status before evaluating this condition. {description}"
+                    ),
+                    statutory_basis=(
+                        "BSEC Corporate Governance Code 2018 and applicable "
+                        "amendments/notifications; issuer scope requires verification"
+                    ),
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                    detail={"applicability_state": "UNKNOWN", "bsec_listed": None},
+                ))
+            return
+
+        if c.bsec_listed is False:
+            return
+
+        for rule_id, flag_code, supplied_status, description in candidates:
+            if supplied_status is not True:
+                basis = (
+                    "Applicable BSEC financial-reporting instrument; exact notification, issuer class, reporting period and due date require verification"
+                    if rule_id == "BSEC-001"
+                    else "BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification"
+                )
+                self._add_flag(ComplianceFlag(
+                    rule_id=rule_id,
+                    flag_code=flag_code,
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=description,
+                    statutory_basis=basis,
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                    detail={
+                        "applicability_state": "APPLICABLE_PENDING_SOURCE_VERIFICATION",
+                        "reported_status": supplied_status,
+                    },
+                ))
 
     # MODULE 16: FOREIGN EXCHANGE
     def _run_fx_rules(self, c: CompanyProfile) -> None:
-        if c.foreign_exchange_violation:
+        # A profile boolean does not identify the transaction, applicable
+        # Bangladesh Bank permission/circular, statutory subsection, actor,
+        # date, exemption or documentary evidence. Never convert it directly
+        # into a confirmed foreign-exchange violation or score deduction.
+        if c.foreign_exchange_violation is True:
             self._add_flag(ComplianceFlag(
-                rule_id="FX-001", flag_code="FOREIGN_EXCHANGE_VIOLATION",
-                severity=Severity.RED, score_impact=15,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="Foreign exchange violation. FE Regulation Act 1947.",
-                statutory_basis="Foreign Exchange Regulation Act 1947 (Bangladesh)"))
+                rule_id="FX-001",
+                flag_code="FOREIGN_EXCHANGE_TRANSACTION_REQUIRES_LEGAL_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The company profile reports a possible foreign-exchange issue. "
+                    "Identify the exact transaction, parties, currency, date, authorised "
+                    "dealer bank, applicable Bangladesh Bank circular/permission, "
+                    "statutory subsection, exemption and source documents before making "
+                    "any finding. A profile boolean is not proof of a violation."
+                ),
+                statutory_basis=(
+                    "Foreign Exchange Regulation Act 1947 (Bangladesh) and the "
+                    "transaction-specific Bangladesh Bank instruments; exact provision "
+                    "and operative circular require verification"
+                ),
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={
+                    "reported_foreign_exchange_issue": True,
+                    "verification_status": "UNVERIFIED_PROFILE_ASSERTION",
+                    "required_evidence": [
+                        "UNDERLYING_TRANSACTION_DOCUMENTS",
+                        "AUTHORISED_DEALER_BANK_RECORDS",
+                        "APPLICABLE_BANGLADESH_BANK_PERMISSION_OR_CIRCULAR",
+                        "PARTY_AND_RESIDENCY_CLASSIFICATION",
+                        "EXEMPTION_OR_APPROVAL_RECORDS",
+                    ],
+                },
+            ))
 
     # ───────────────────────────────────────────────────────────────────
     # MODULE: BOARD MEETINGS (Section 95, 96, 89)
@@ -3110,60 +3415,112 @@ class NLCRuleEngine:
     # MODULE: ACCOUNTS & AUDIT FILING (Section 181, 183, 190)
     # ───────────────────────────────────────────────────────────────────
     def _run_accounts_rules(self, c: CompanyProfile) -> None:
-        # ACC-001: Financial statements not presented at AGM (Section 183)
-        if c.agm_held_this_cycle and c.financial_statements_presented is False:
+        """Emit review-only findings until each accounting fact has authenticated provenance.
+
+        The current CompanyProfile exposes plain booleans for presentation,
+        filing and books status, but no reviewer, evidence reference or
+        verification timestamp for those facts. A false profile value is
+        therefore an assertion/data point, not proof of a statutory default.
+        Keep each rule visible without converting an unverified assertion into
+        a red finding or score deduction.
+        """
+        if c.agm_held_this_cycle is True and c.financial_statements_presented is False:
             self._add_flag(ComplianceFlag(
                 rule_id="ACC-001",
-                flag_code="FINANCIAL_STATEMENTS_NOT_PRESENTED",
-                severity=Severity.RED,
-                score_impact=15,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="AGM held but balance sheet and P&L not presented. Section 183: Board shall lay before AGM.",
+                flag_code="FINANCIAL_STATEMENTS_PRESENTATION_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The company profile reports that financial statements were not "
+                    "presented at the AGM. The current profile has no authenticated "
+                    "AGM-minute or accounts-presentation verification fields. Check "
+                    "the signed AGM minutes, audited statements and any corrected or "
+                    "adjourned meeting record before determining a Section 183 default."
+                ),
                 statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={
+                    "reported_agm_held": True,
+                    "reported_financial_statements_presented": False,
+                    "verification_status": "UNVERIFIED_PROFILE_ASSERTION",
+                    "required_evidence": [
+                        "AUTHENTICATED_AGM_MINUTES",
+                        "AUDITED_FINANCIAL_STATEMENTS",
+                        "MEETING_ADJOURNMENT_OR_CORRECTION_RECORD_IF_ANY",
+                    ],
+                },
             ))
 
-        # ACC-002: Section 190 allows 30 days after the AGM, or if no AGM
-        # was held, 30 days after the latest date on which it should have been held.
-        if c.financial_statements_filed is False and self._agm_history_is_verified(c):
-            filing_deadline: date | None = None
-            deadline_basis: str | None = None
-            agm_due: date | None = None
-            if c.agm_held_this_cycle is True and c.last_agm_date is not None:
-                filing_deadline = c.last_agm_date + timedelta(days=30)
-                deadline_basis = "30 days after AGM"
-            elif c.agm_held_this_cycle is False:
-                if c.agm_count == 0 and c.incorporation_date is not None:
-                    agm_due = self._add_months(c.incorporation_date, 18)
-                elif c.agm_count is not None and c.agm_count > 0 and c.last_agm_date is not None:
-                    agm_due = self._subsequent_agm_deadline(c)
-                if agm_due is not None:
-                    filing_deadline = agm_due + timedelta(days=30)
-                    deadline_basis = "30 days after latest date AGM should have been held"
-            if filing_deadline is not None and self.today > filing_deadline:
-                delay = (self.today - filing_deadline).days
-                self._add_flag(ComplianceFlag(
-                    rule_id="ACC-002",
-                    flag_code="FINANCIAL_STATEMENTS_NOT_FILED",
-                    severity=Severity.RED,
-                    score_impact=15,
-                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description=f"Financial statements not filed with Registrar within 30 days of {deadline_basis}. Overdue by {delay} days. Section 190.",
-                    statutory_basis="Section 190, Companies Act 1994 (Bangladesh)",
-                    detail={"delay": delay, "filing_deadline": str(filing_deadline), "deadline_basis": deadline_basis},
-                ))
+        # Section 190's 30-day period is only calculated from a legally
+        # established trigger. The current profile's filing boolean has no
+        # independent RJSC search/receipt provenance, so it cannot establish
+        # non-filing even when AGM history itself is verified.
+        if c.financial_statements_filed is False:
+            self._add_flag(ComplianceFlag(
+                rule_id="ACC-002",
+                flag_code="FINANCIAL_STATEMENTS_FILING_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The company profile reports that financial statements were not "
+                    "filed. No authenticated RJSC filing search, filing receipt or "
+                    "registry-unavailability record is bound to this field. Verify "
+                    "the Section 190 filing obligation, the applicable AGM/last due "
+                    "date, the filing receipt and any correction or extension before "
+                    "determining a default."
+                ),
+                statutory_basis="Section 190, Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={
+                    "reported_financial_statements_filed": False,
+                    "agm_history_verified": self._agm_history_is_verified(c),
+                    "verification_status": "UNVERIFIED_PROFILE_ASSERTION",
+                    "required_evidence": [
+                        "AUTHENTICATED_RJSC_FILING_SEARCH_OR_RESPONSE",
+                        "FILING_RECEIPT_OR_ACKNOWLEDGEMENT",
+                        "AGM_OR_STATUTORY_DUE_DATE_EVIDENCE",
+                        "EXTENSION_OR_COURT_ORDER_IF_ANY",
+                    ],
+                },
+            ))
 
-        # ACC-003: Books of account not kept (Section 181)
         if c.books_of_account_kept is False:
             self._add_flag(ComplianceFlag(
                 rule_id="ACC-003",
-                flag_code="BOOKS_NOT_KEPT",
-                severity=Severity.RED,
-                score_impact=15,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="Proper books of account not maintained. Section 181: every company shall keep proper books.",
+                flag_code="BOOKS_OF_ACCOUNT_STATUS_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The company profile reports that proper books of account are "
+                    "not kept. The current profile does not bind a reviewer-verified "
+                    "inspection, record inventory, accounting period or branch-office "
+                    "records. Inspect the books, vouchers, branch summaries, location "
+                    "notice and retention period before determining a Section 181 default."
+                ),
                 statutory_basis="Section 181, Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={
+                    "reported_books_of_account_kept": False,
+                    "verification_status": "UNVERIFIED_PROFILE_ASSERTION",
+                    "required_evidence": [
+                        "INSPECTION_RECORD_AND_SCOPE",
+                        "BOOKS_AND_VOUCHER_INVENTORY",
+                        "REGISTERED_OFFICE_OR_APPROVED_ALTERNATE_LOCATION_NOTICE",
+                        "BRANCH_ACCOUNT_SUMMARIES_IF_APPLICABLE",
+                        "TWELVE_YEAR_RETENTION_REVIEW",
+                    ],
+                },
             ))
 
+    # ───────────────────────────────────────────────────────────────────
+    # SCORING ENGINE
+    # ───────────────────────────────────────────────────────────────────
     def _run_escalation_rules(self, c: CompanyProfile) -> None:
         agm_years = self._calculate_agm_default_years(c)
         ar_years = c.unfiled_returns_count or 0  # defensive: None → 0
@@ -3348,6 +3705,7 @@ class NLCRuleEngine:
         pre_score = self._calculate_raw_score(self._flags)
         has_black_override = any(
             f.rule_id in PRODUCT_SCORING_RULE_IDS
+            and f.rule_id in VERIFIED_RULE_IDS
             and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
             and f.is_black_override
             and f.severity == Severity.BLACK
@@ -3360,6 +3718,7 @@ class NLCRuleEngine:
             black_count = len([
                 f for f in self._flags
                 if f.rule_id in PRODUCT_SCORING_RULE_IDS
+                and f.rule_id in VERIFIED_RULE_IDS
                 and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
                 and f.is_black_override
                 and f.severity == Severity.BLACK
@@ -3417,6 +3776,7 @@ class NLCRuleEngine:
             and flag.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and flag.eval_state == "VIOLATION"
             and legal_score_is_released()
+            and flag.rule_id in VERIFIED_RULE_IDS
             and flag.rule_id in SCORE_DEDUCTION_RULE_IDS
             and not (
                 flag.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
@@ -3482,6 +3842,7 @@ class NLCRuleEngine:
             critical = [
                 f for f in active
                 if f.rule_id in PRODUCT_SCORING_RULE_IDS
+                and f.rule_id in VERIFIED_RULE_IDS
                 and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
                 and f.is_black_override
                 and f.severity == Severity.BLACK
@@ -3499,17 +3860,19 @@ class NLCRuleEngine:
         # product-allowlisted findings may still elevate the final risk band below.
         score_band = (
             Severity(self._score_to_band(final, force_black=bool(critical), coverage=coverage))
-            if legal_score_is_released() else Severity.NOT_EVALUATED
+            if legal_score_is_released() and _counsel_score_basis_is_verified()
+            else Severity.NOT_EVALUATED
         )
 
         # Band = worst of (score-based band, highest active flag severity)
         # Prevents false GREEN when a RED-severity rule fires (BLACK handled above)'t override
-        if legal_score_is_released() and not critical:
+        if legal_score_is_released() and _counsel_score_basis_is_verified() and not critical:
             severity_rank = {Severity.GREEN: 0, Severity.YELLOW: 1, Severity.RED: 2, Severity.BLACK: 3}
             max_flag_severity = Severity.GREEN
             for f in active:
                 if (
                     f.rule_id in PRODUCT_SCORING_RULE_IDS
+                    and f.rule_id in VERIFIED_RULE_IDS
                     and (
                         f.severity == Severity.RED
                         or (
@@ -3587,10 +3950,10 @@ class NLCRuleEngine:
             revenue_tier=REVENUE_TIER_MAP[band],
             active_flag_count=len(active),
             coverage=coverage,
-            black_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
-            red_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.severity == Severity.RED and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
-            yellow_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.severity == Severity.YELLOW and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
-            green_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.severity == Severity.GREEN and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            black_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            red_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.RED and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            yellow_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.YELLOW and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            green_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.GREEN and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             bankruptcy_score=max(0, 5 - bnk_ded),
             labour_score=max(0, 5 - lbr_ded),
             bsec_score=max(0, 5 - bsec_ded),

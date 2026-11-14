@@ -1194,43 +1194,75 @@ class TestLabourRules:
         assert not_applicable.reason
         assert unknown.reason
 
-    def test_LBR001_triggers_only_for_confirmed_manufacturing(self, rule_engine, build_profile):
-        profile = build_profile(is_manufacturing=True, factory_license_obtained=False)
-        output = rule_engine.evaluate(profile)
-        # Manufacturing status alone does not establish a Section 326 licence duty.
-        assert_flag_not_triggered(output, "LBR-001")
-
-    @pytest.mark.parametrize("manufacturing_status", [False, None])
-    def test_LBR001_does_not_trigger_when_manufacturing_not_established(
+    @pytest.mark.parametrize("manufacturing_status", [True, False, None])
+    def test_LBR001_requires_verified_establishment_scope_not_manufacturing(
         self, rule_engine, build_profile, manufacturing_status
+    ):
+        output = rule_engine.evaluate(
+            build_profile(is_manufacturing=manufacturing_status)
+        )
+        finding = next(f for f in output.flags if f.rule_id == "LBR-001")
+        assert finding.flag_code == "LABOUR_LICENSE_SCOPE_NOT_VERIFIED"
+        assert finding.eval_state == "UNKNOWN"
+        assert finding.score_impact == 0
+
+    def test_LBR001_verified_no_licence_requirement_is_not_applicable(
+        self, rule_engine, build_profile
     ):
         output = rule_engine.evaluate(build_profile(
-            is_manufacturing=manufacturing_status,
-            factory_license_obtained=False,
+            labour_establishment_category="SERVICE_OFFICE_NOT_IN_RULE_354_CATEGORIES",
+            labour_license_scope_verified=True,
+            labour_license_scope_evidence_ref="LEGAL-SCOPE-TEST-001",
+            labour_license_scope_verified_at=date(2026, 11, 10),
+            labour_license_scope_verified_by="reviewer",
+            factory_license_required_by_direction=False,
         ))
         assert_flag_not_triggered(output, "LBR-001")
-
-    def test_LBR002_triggers_only_for_confirmed_manufacturing(self, rule_engine, build_profile):
-        profile = build_profile(
-            is_manufacturing=True,
-            factory_license_obtained=True,
-            factory_license_expiry=date.today() - timedelta(days=30),
-        )
-        output = rule_engine.evaluate(profile)
-        # Licence expiry is not a breach without verified statutory applicability.
         assert_flag_not_triggered(output, "LBR-002")
 
-    @pytest.mark.parametrize("manufacturing_status", [False, None])
-    def test_LBR002_does_not_trigger_when_manufacturing_not_established(
-        self, rule_engine, build_profile, manufacturing_status
+    def test_LBR001_verified_missing_licence_requires_lawyer_review(
+        self, rule_engine, build_profile
     ):
-        profile = build_profile(
-            is_manufacturing=manufacturing_status,
+        output = rule_engine.evaluate(build_profile(
+            is_manufacturing=False,
+            labour_establishment_category="COMMERCIAL_ESTABLISHMENT",
+            labour_license_scope_verified=True,
+            labour_license_scope_evidence_ref="LEGAL-SCOPE-TEST-002",
+            labour_license_scope_verified_at=date(2026, 11, 10),
+            labour_license_scope_verified_by="reviewer",
+            factory_license_required_by_direction=True,
+            labour_license_status_verified=True,
+            labour_license_status_evidence_ref="DIFE-SEARCH-TEST-002",
+            labour_license_status_verified_at=date(2026, 11, 12),
+            labour_license_status_verified_by="reviewer",
+            factory_license_obtained=False,
+        ))
+        finding = next(f for f in output.flags if f.rule_id == "LBR-001")
+        assert finding.state is RuleState.REQUIRES_LAWYER_JUDGMENT
+        assert finding.severity is Severity.NOT_EVALUATED
+        assert finding.score_impact == 0
+
+    def test_LBR002_uses_printed_expiry_without_computing_term(
+        self, rule_engine, build_profile
+    ):
+        output = rule_engine.evaluate(build_profile(
+            labour_establishment_category="CONTRACTOR_ESTABLISHMENT",
+            labour_license_scope_verified=True,
+            labour_license_scope_evidence_ref="LEGAL-SCOPE-TEST-003",
+            labour_license_scope_verified_at=date(2026, 11, 10),
+            labour_license_scope_verified_by="reviewer",
+            factory_license_required_by_direction=True,
+            labour_license_status_verified=True,
+            labour_license_status_evidence_ref="DIFE-LICENCE-TEST-003",
+            labour_license_status_verified_at=date(2026, 11, 12),
+            labour_license_status_verified_by="reviewer",
             factory_license_obtained=True,
-            factory_license_expiry=date.today() - timedelta(days=30),
-        )
-        output = rule_engine.evaluate(profile)
-        assert_flag_not_triggered(output, "LBR-002")
+            factory_license_expiry=date(2026, 10, 31),
+        ))
+        finding = next(f for f in output.flags if f.rule_id == "LBR-002")
+        assert finding.state is RuleState.REQUIRES_LAWYER_JUDGMENT
+        assert finding.detail["renewal_term_calculated_automatically"] is False
+        assert finding.score_impact == 0
 
     def test_LBR003_court_order_is_not_gated_by_factory_status(self, rule_engine, build_profile):
         profile = build_profile(
@@ -1241,7 +1273,15 @@ class TestLabourRules:
         assert_flag_triggered(output, "LBR-003")
 
     def test_no_labour_flags_when_compliant(self, rule_engine, build_profile):
-        profile = build_profile(is_manufacturing=True)
+        profile = build_profile(
+            is_manufacturing=False,
+            labour_establishment_category="SERVICE_OFFICE_NOT_IN_RULE_354_CATEGORIES",
+            labour_license_scope_verified=True,
+            labour_license_scope_evidence_ref="LEGAL-SCOPE-TEST-004",
+            labour_license_scope_verified_at=date(2026, 11, 10),
+            labour_license_scope_verified_by="reviewer",
+            factory_license_required_by_direction=False,
+        )
         output = rule_engine.evaluate(profile)
         flag_ids = [f.rule_id for f in output.flags]
         assert "LBR-001" not in flag_ids
@@ -1533,16 +1573,16 @@ class TestUntestedRules:
         assert_flag_triggered(rule_engine.evaluate(build_profile(investigation_order=True)), "ESC-005")
 
     def test_BSEC001_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, bsec_quarterly_report_filed=False)), "BSEC-001")
+        assert_flag_triggered(rule_engine.evaluate(build_profile(company_type="PUBLIC_LIMITED", bsec_listed=True, bsec_quarterly_report_filed=False)), "BSEC-001")
 
     def test_BSEC002_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, cg_certificate_obtained=False)), "BSEC-002")
+        assert_flag_triggered(rule_engine.evaluate(build_profile(company_type="PUBLIC_LIMITED", bsec_listed=True, cg_certificate_obtained=False)), "BSEC-002")
 
     def test_BSEC003_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, board_independent_director=False)), "BSEC-003")
+        assert_flag_triggered(rule_engine.evaluate(build_profile(company_type="PUBLIC_LIMITED", bsec_listed=True, board_independent_director=False)), "BSEC-003")
 
     def test_BSEC004_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, audit_committee_established=False)), "BSEC-004")
+        assert_flag_triggered(rule_engine.evaluate(build_profile(company_type="PUBLIC_LIMITED", bsec_listed=True, audit_committee_established=False)), "BSEC-004")
 
     def test_FX001_triggers(self, rule_engine, build_profile):
         assert_flag_triggered(rule_engine.evaluate(build_profile(foreign_exchange_violation=True)), "FX-001")
