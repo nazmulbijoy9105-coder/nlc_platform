@@ -274,9 +274,10 @@
     "declared_basis_differences": 69,
     "declared_condition_differences": 59,
     "computed_snapshot_basis_differences": 69,
-    "computed_snapshot_condition_differences": 78,
+    "computed_snapshot_condition_differences": 59,
     "status": "DOCUMENTED_UNRESOLVED",
-    "instruction": "Do not individually resolve the 69 basis or 59 condition differences."
+    "instruction": "Do not individually resolve the 69 basis or 59 condition differences.",
+    "comparison_normalization": "JSON key order ignored; condition-expression whitespace and case normalized; no legal meaning inferred."
   },
   "ci_policy": {
     "documented_unresolved": "Retained as source reconciliation only; not legal approval.",
@@ -341,7 +342,13 @@
       },
       "differing_fields": [
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "ACC-002": {
       "seed_present": true,
@@ -399,7 +406,13 @@
       },
       "differing_fields": [
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "ACC-003": {
       "seed_present": true,
@@ -457,7 +470,13 @@
       },
       "differing_fields": [
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "AGM-001": {
       "seed_present": true,
@@ -521,7 +540,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "AGM-002": {
       "seed_present": true,
@@ -590,7 +623,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "AGM-003": {
       "seed_present": true,
@@ -657,7 +704,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "AGM-004": {
       "seed_present": true,
@@ -723,7 +788,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "AGM-005": {
       "seed_present": true,
@@ -787,7 +870,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "AGM-006": {
       "seed_present": true,
@@ -850,7 +947,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "AGM-007": {
       "seed_present": true,
@@ -905,7 +1020,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "AR-001": {
       "seed_present": true,
@@ -969,7 +1102,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "AR-002": {
       "seed_present": true,
@@ -1032,7 +1179,25 @@
         "statutory_basis",
         "description",
         "revenue_tier"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "revenue_tier": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "AR-003": {
       "seed_present": true,
@@ -1095,7 +1260,25 @@
         "statutory_basis",
         "description",
         "revenue_tier"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "revenue_tier": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "AR-004": {
       "seed_present": true,
@@ -1157,7 +1340,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "AUD-001": {
       "seed_present": true,
@@ -1218,7 +1415,17 @@
       "differing_fields": [
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "AUD-002": {
       "seed_present": true,
@@ -1283,7 +1490,17 @@
       "differing_fields": [
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "AUD-003": {
       "seed_present": true,
@@ -1349,7 +1566,25 @@
         "description",
         "rule_condition",
         "revenue_tier"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "revenue_tier": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "AUD-004": {
       "seed_present": true,
@@ -1411,7 +1646,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "AUD-005": {
       "seed_present": true,
@@ -1467,7 +1716,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "BNK-001": {
       "seed_present": true,
@@ -1522,7 +1789,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_type": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "BNK-002": {
       "seed_present": true,
@@ -1577,7 +1862,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_type": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "BNK-003": {
       "seed_present": true,
@@ -1632,7 +1935,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_type": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "BOD-001": {
       "seed_present": true,
@@ -1692,7 +2013,21 @@
         "rule_name",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "BOD-002": {
       "seed_present": true,
@@ -1752,7 +2087,21 @@
         "rule_name",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "BOD-003": {
       "seed_present": true,
@@ -1812,7 +2161,21 @@
         "rule_name",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "BSEC-001": {
       "seed_present": true,
@@ -1869,7 +2232,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "BSEC-002": {
       "seed_present": true,
@@ -1927,7 +2308,29 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_type": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "BSEC-003": {
       "seed_present": true,
@@ -1984,7 +2387,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "BSEC-004": {
       "seed_present": true,
@@ -2041,7 +2462,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "CAP-001": {
       "seed_present": true,
@@ -2107,7 +2546,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "CAP-002": {
       "seed_present": true,
@@ -2174,7 +2631,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "CAP-003": {
       "seed_present": true,
@@ -2238,7 +2713,29 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_type": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "CAP-004": {
       "seed_present": true,
@@ -2300,7 +2797,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "CHG-001": {
       "seed_present": true,
@@ -2360,7 +2871,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "DEF-001": {
       "seed_present": true,
@@ -2422,7 +2951,33 @@
         "description",
         "rule_condition",
         "revenue_tier"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_type": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "revenue_tier": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "DEF-002": {
       "seed_present": true,
@@ -2477,7 +3032,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "DIR-001": {
       "seed_present": true,
@@ -2540,7 +3109,17 @@
       "differing_fields": [
         "statutory_basis",
         "description"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "DIR-002": {
       "seed_present": true,
@@ -2603,7 +3182,17 @@
       "differing_fields": [
         "statutory_basis",
         "description"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "DIR-003": {
       "seed_present": true,
@@ -2673,7 +3262,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "DIR-004": {
       "seed_present": true,
@@ -2739,7 +3346,29 @@
         "description",
         "rule_condition",
         "revenue_tier"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "revenue_tier": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "DIR-005": {
       "seed_present": true,
@@ -2801,7 +3430,29 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_type": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "DIR-006": {
       "seed_present": true,
@@ -2856,7 +3507,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "DIR-007": {
       "seed_present": true,
@@ -2924,7 +3593,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "DIR-008": {
       "seed_present": true,
@@ -2984,7 +3667,21 @@
         "rule_name",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "DIR-010": {
       "seed_present": true,
@@ -3043,7 +3740,17 @@
       "differing_fields": [
         "rule_name",
         "description"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "ESC-001": {
       "seed_present": true,
@@ -3108,7 +3815,25 @@
         "statutory_basis",
         "description",
         "revenue_tier"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "revenue_tier": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "ESC-002": {
       "seed_present": true,
@@ -3174,7 +3899,29 @@
         "description",
         "rule_condition",
         "revenue_tier"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "revenue_tier": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "ESC-003": {
       "seed_present": true,
@@ -3240,7 +3987,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "ESC-004": {
       "seed_present": true,
@@ -3295,7 +4056,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_type": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "ESC-005": {
       "seed_present": true,
@@ -3350,7 +4129,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_type": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "FX-001": {
       "seed_present": true,
@@ -3404,7 +4201,21 @@
         "rule_type",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_type": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "INC-001": {
       "seed_present": true,
@@ -3468,7 +4279,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "INC-002": {
       "seed_present": true,
@@ -3530,7 +4359,21 @@
         "rule_condition",
         "default_severity",
         "score_impact"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "default_severity": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "score_impact": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "INC-003": {
       "seed_present": true,
@@ -3594,7 +4437,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "INC-004": {
       "seed_present": true,
@@ -3657,7 +4514,25 @@
         "statutory_basis",
         "description",
         "revenue_tier"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "revenue_tier": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "INC-005": {
       "seed_present": true,
@@ -3721,7 +4596,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "INC-006": {
       "seed_present": true,
@@ -3786,7 +4675,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "INC-007": {
       "seed_present": true,
@@ -3852,7 +4759,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "LBR-001": {
       "seed_present": true,
@@ -3918,7 +4839,29 @@
         "description",
         "rule_condition",
         "revenue_tier"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "revenue_tier": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "LBR-002": {
       "seed_present": true,
@@ -3983,7 +4926,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "LBR-003": {
       "seed_present": true,
@@ -4038,7 +4999,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_type": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "MEM-001": {
       "seed_present": true,
@@ -4094,7 +5073,8 @@
         "created_at": "2026-11-09T12:49:10.893Z",
         "updated_at": "2026-11-09T23:41:25.400Z"
       },
-      "differing_fields": []
+      "differing_fields": [],
+      "field_reconciliation": {}
     },
     "OFF-001": {
       "seed_present": true,
@@ -4156,7 +5136,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "REG-001": {
       "seed_present": true,
@@ -4216,7 +5210,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "REG-002": {
       "seed_present": true,
@@ -4281,7 +5289,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "REG-003": {
       "seed_present": true,
@@ -4341,7 +5363,13 @@
       },
       "differing_fields": [
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "SH-001": {
       "seed_present": true,
@@ -4401,7 +5429,13 @@
       },
       "differing_fields": [
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "SH-002": {
       "seed_present": true,
@@ -4461,7 +5495,13 @@
       },
       "differing_fields": [
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "SH-003": {
       "seed_present": true,
@@ -4523,7 +5563,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "STR-001": {
       "seed_present": true,
@@ -4578,7 +5632,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "STR-002": {
       "seed_present": true,
@@ -4633,7 +5701,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "STR-003": {
       "seed_present": true,
@@ -4688,7 +5770,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "TAX-001": {
       "seed_present": true,
@@ -4751,7 +5847,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "TAX-002": {
       "seed_present": true,
@@ -4816,7 +5930,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "TAX-003": {
       "seed_present": true,
@@ -4880,7 +6012,29 @@
         "description",
         "rule_condition",
         "revenue_tier"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "revenue_tier": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "TAX-004": {
       "seed_present": true,
@@ -4944,7 +6098,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "TL-001": {
       "seed_present": true,
@@ -5007,7 +6179,29 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_type": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "TL-002": {
       "seed_present": true,
@@ -5060,7 +6254,17 @@
       "differing_fields": [
         "statutory_basis",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "TR-001": {
       "seed_present": true,
@@ -5124,7 +6328,21 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "TR-002": {
       "seed_present": true,
@@ -5190,7 +6408,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "TR-003": {
       "seed_present": true,
@@ -5256,7 +6492,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "TR-004": {
       "seed_present": true,
@@ -5323,7 +6577,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "TR-005": {
       "seed_present": true,
@@ -5389,7 +6661,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "TR-006": {
       "seed_present": true,
@@ -5452,7 +6742,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "VAT-002": {
       "seed_present": true,
@@ -5516,7 +6824,25 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     },
     "VAT-003": {
       "seed_present": true,
@@ -5580,7 +6906,26 @@
         "statutory_basis",
         "description",
         "rule_condition"
-      ]
+      ],
+      "field_reconciliation": {
+        "rule_name": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "statutory_basis": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "description": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        },
+        "rule_condition": {
+          "status": "DOCUMENTED_UNRESOLVED",
+          "resolution": null
+        }
+      }
     }
-  }
+  },
+  "approved_exceptions": []
 }
