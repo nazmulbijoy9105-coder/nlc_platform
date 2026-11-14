@@ -274,6 +274,8 @@ async def get_black_overrides(
         for rule in rules
         if rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         and rule.rule_id in PRODUCT_SCORING_RULE_IDS
+        and rule.rule_id in VERIFIED_RULE_IDS
+        and legal_score_is_released()
     ]
 
 
