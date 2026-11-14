@@ -55,6 +55,7 @@ def test_unverified_black_override_is_hidden_until_counsel_approval(monkeypatch)
 
 def test_counsel_verified_black_override_is_returned_only_after_full_release(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
     monkeypatch.setattr(rules_api, "legal_score_is_released", lambda: True)
     monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
