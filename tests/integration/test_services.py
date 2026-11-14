@@ -1365,3 +1365,84 @@ def test_labour_court_order_review_is_independent_of_manufacturing(monkeypatch):
     assert finding.flag_code == "LABOUR_COURT_ORDER_STATUS_REQUIRES_VERIFICATION"
     assert finding.state is engine_module.RuleState.UNKNOWN
     assert finding.score_impact == 0
+
+
+@pytest.mark.parametrize(
+    ("overrides", "expected_rule", "expected_code"),
+    [
+        ({}, "LBR-001", "LABOUR_LICENSE_SCOPE_NOT_VERIFIED"),
+        (
+            {"factory_license_required_by_direction": None},
+            "LBR-001",
+            "LABOUR_LICENSE_REQUIREMENT_UNKNOWN",
+        ),
+        ({"factory_license_required_by_direction": False}, None, None),
+        (
+            {"labour_license_status_verified": False},
+            "LBR-001",
+            "LABOUR_LICENSE_STATUS_NOT_VERIFIED",
+        ),
+        (
+            {"factory_license_obtained": False},
+            "LBR-001",
+            "LABOUR_LICENSE_NOT_OBTAINED_REQUIRES_REVIEW",
+        ),
+        (
+            {"factory_license_obtained": None},
+            "LBR-001",
+            "LABOUR_LICENSE_STATUS_UNKNOWN",
+        ),
+        (
+            {"factory_license_expiry": None},
+            "LBR-002",
+            "LABOUR_LICENSE_EXPIRY_NOT_VERIFIED",
+        ),
+        (
+            {"factory_license_expiry": date(2027, 1, 1)},
+            None,
+            None,
+        ),
+    ],
+)
+def test_labour_licence_evaluator_covers_verified_scope_and_status_states(
+    monkeypatch, overrides, expected_rule, expected_code
+):
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", engine_module.PRODUCT_SCORING_RULE_IDS
+    )
+    values = {
+        "company_id": "labour-state-matrix",
+        "company_name": "Labour State Matrix Ltd",
+        "incorporation_date": date(2020, 1, 1),
+        "is_manufacturing": False,
+        "labour_establishment_category": "COMMERCIAL_ESTABLISHMENT",
+        "labour_license_scope_verified": True,
+        "labour_license_scope_evidence_ref": "LEGAL-SCOPE-MATRIX",
+        "labour_license_scope_verified_at": date(2026, 11, 1),
+        "labour_license_scope_verified_by": "integration-reviewer",
+        "factory_license_required_by_direction": True,
+        "labour_license_status_verified": True,
+        "labour_license_status_evidence_ref": "DIFE-MATRIX",
+        "labour_license_status_verified_at": date(2026, 11, 2),
+        "labour_license_status_verified_by": "integration-reviewer",
+        "factory_license_obtained": True,
+        "factory_license_expiry": date(2027, 1, 1),
+    }
+    values.update(overrides)
+    output = engine_module.NLCRuleEngine(today=date(2026, 11, 15)).evaluate(
+        engine_module.CompanyProfile(**values)
+    )
+    labour_flags = [
+        flag for flag in output.flags if flag.rule_id in {"LBR-001", "LBR-002"}
+    ]
+
+    if expected_rule is None:
+        assert labour_flags == []
+    else:
+        assert len(labour_flags) == 1
+        assert labour_flags[0].rule_id == expected_rule
+        assert labour_flags[0].flag_code == expected_code
+        assert labour_flags[0].score_impact == 0
