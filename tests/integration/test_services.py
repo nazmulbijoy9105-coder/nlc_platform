@@ -1145,3 +1145,140 @@ def test_rescue_target_date_prefers_explicit_then_latest_step_date():
     assert _derive_plan_target(date(2026, 11, 30), steps) == date(2026, 11, 30)
     assert _derive_plan_target(None, steps) == latest
     assert _derive_plan_target(None, []) is None
+
+
+# =============================================================================
+# COUNSEL APPROVAL RELEASE BOUNDARIES
+# =============================================================================
+
+def test_company_flag_api_quarantines_unapproved_statutory_candidate(monkeypatch):
+    import app.api.companies as companies_api
+
+    monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", frozenset())
+    flag = SimpleNamespace(
+        id=uuid.uuid4(),
+        rule_id="AGM-001",
+        description="Candidate AGM finding",
+        flag_code="AGM-001",
+        severity="RED",
+        score_impact=15,
+        flag_status="ACTIVE",
+        triggered_date=date(2026, 11, 1),
+        resolved_date=None,
+        is_black_override=True,
+        resolution_notes=None,
+    )
+
+    response = companies_api._flag_to_response(flag)
+
+    assert response.severity == "NOT_EVALUATED"
+    assert response.score_impact == 0
+    assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
+    assert response.is_black_override is False
+    assert "No breach" in response.rule_name
+
+
+@pytest.mark.asyncio
+async def test_black_override_api_requires_full_counsel_release(monkeypatch):
+    import app.api.rules as rules_api
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"})
+    )
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", frozenset({"INC-003"})
+    )
+    monkeypatch.setattr(rules_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(
+        rules_api, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"INC-003"})
+    )
+
+    class FakeRulesService:
+        def __init__(self, db):
+            self.db = db
+
+        async def get_all(self):
+            return [
+                SimpleNamespace(
+                    rule_id="INC-003",
+                    rule_name="Minimum director requirement",
+                    rule_type="THRESHOLD",
+                    statutory_basis="Companies Act 1994, section 90",
+                    description="Verified minimum director finding.",
+                    default_severity="RED",
+                    score_impact=20,
+                    revenue_tier="COMPLIANCE_PACKAGE",
+                    is_active=True,
+                    verification_status="VERIFIED",
+                    verified_at=datetime(2026, 11, 15),
+                    statutory_effective_date=date(1994, 12, 1),
+                    rule_version="2.2",
+                    created_at=datetime(2026, 11, 15),
+                    updated_at=datetime(2026, 11, 15),
+                )
+            ]
+
+    monkeypatch.setattr(rules_api, "RulesService", FakeRulesService)
+    result = await rules_api.get_black_overrides(current_user=None, db=object())
+
+    assert len(result) == 1
+    assert result[0].rule_id == "INC-003"
+    assert result[0].is_black_override is True
+    assert result[0].default_severity == "RED"
+    assert result[0].score_impact == 20
+
+
+def test_rule_evaluator_quarantines_unapproved_candidate_before_score_or_override(monkeypatch):
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-001"})
+    )
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+
+    profile = engine_module.CompanyProfile(
+        company_id="integration-counsel-gate",
+        company_name="Counsel Gate Integration Ltd",
+        incorporation_date=date(2020, 1, 1),
+        first_auditor_appointed=False,
+        first_auditor_appointment_verified=True,
+        first_auditor_appointment_evidence_ref="AUDITOR-SEARCH-INT-001",
+        first_auditor_appointment_verified_at=date(2026, 11, 1),
+        first_auditor_appointment_verified_by="integration-reviewer",
+    )
+    output = engine_module.NLCRuleEngine(today=date(2026, 11, 15)).evaluate(profile)
+    finding = next(flag for flag in output.flags if flag.rule_id == "AUD-001")
+
+    assert finding.severity is engine_module.Severity.NOT_EVALUATED
+    assert finding.state is engine_module.RuleState.UNKNOWN
+    assert finding.eval_state == "UNKNOWN"
+    assert finding.score_impact == 0
+    assert finding.detail["legal_validation_status"] == "PENDING_COUNSEL_APPROVAL"
+    assert finding.detail["statutory_finding_authorized"] is False
+
+
+def test_compliance_score_impact_requires_verified_rule_and_global_release(monkeypatch):
+    import app.services.compliance_service as compliance_module
+
+    monkeypatch.setattr(compliance_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(compliance_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(compliance_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(compliance_module, "legal_score_is_released", lambda: True)
+    flag = SimpleNamespace(
+        rule_id="AGM-001",
+        score_impact=10,
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        resolved=False,
+        conditional_applies=True,
+    )
+
+    result = compliance_module._applied_score_impacts([flag])
+
+    assert result == [{"applied": 10, "status": "APPLIED"}]
