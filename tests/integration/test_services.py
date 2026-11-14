@@ -871,7 +871,7 @@ def test_score_allocation_rejects_product_allowlisted_rule_without_counsel_appro
     )
 
     assert _applied_score_impacts([finding]) == [
-        {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
+        {"applied": 0, "status": "RULE_NOT_COUNSEL_VERIFIED"}
     ]
 
 
