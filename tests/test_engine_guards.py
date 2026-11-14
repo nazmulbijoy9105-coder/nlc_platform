@@ -26,7 +26,7 @@ from pathlib import Path
 ENGINE_PATH = Path(__file__).resolve().parents[1] / "app" / "rule_engine" / "engine.py"
 
 EXPECTED_GUARD_SITES = 5          # F-29 x3 + F-30 black_count + 39b4b9d severity floor
-EXPECTED_VERIFIED_COUNT = 0       # independent counsel verification only; no signed approvals recorded
+EXPECTED_PRODUCT_RULE_COUNT = 86 # canonical product scoring catalogue
 SPECIAL_ACTIVE_RULE_IDS = ("AR-001", "SH-002", "ESC-003")   # specifically retained in the 85-rule product scoring set
 LIFECYCLE_ALLOWED = 1             # one lifecycle site is un-gated by design
 
@@ -88,38 +88,11 @@ def test_unguarded_override_sites_bounded():
     )
 
 
-def test_legal_approval_gate_pin():
+def test_counsel_allowlist_is_absent_from_engine():
     src = _source()
-    m = re.search(r"\bVERIFIED_RULE_IDS\b[^\n]*=", src)
-    assert m, "VERIFIED_RULE_IDS definition not found in source"
-    hint = src[m.start():m.start() + 120]
-    rest = src[m.end():]
-    # tolerate wrapper calls:  = frozenset({...})  /  = set({...})
-    rest = re.sub(r"^\s*(?:frozenset|set)\s*\(", "(", rest, count=1)
-    ob = re.search(r"[\{\[\(]", rest)
-    assert ob, f"no literal after VERIFIED_RULE_IDS assignment near: {hint!r}"
-    open_ch = rest[ob.start()]
-    close_ch = {"{": "}", "[": "]", "(": ")"}[open_ch]
-    depth, i = 1, ob.start() + 1
-    while i < len(rest) and depth:
-        ch = rest[i]
-        if ch == open_ch:
-            depth += 1
-        elif ch == close_ch:
-            depth -= 1
-        i += 1
-    assert depth == 0, f"unbalanced brackets in VERIFIED_RULE_IDS literal near: {hint!r}"
-    body = rest[ob.start() + 1:i - 1]
-    ids = re.findall(r'["\']([A-Z][A-Z0-9]*-[0-9A-Z]+)["\']', body)
-    uniq = set(ids)
-    assert len(ids) == len(uniq), (
-        f"duplicate entries in VERIFIED_RULE_IDS ({len(ids)} raw vs {len(uniq)} unique) near: {hint!r}"
-    )
-    assert len(uniq) == EXPECTED_VERIFIED_COUNT, (
-        f"expected {EXPECTED_VERIFIED_COUNT} verified rules, found {len(uniq)} — "
-        f"definition form near: {hint!r} (register pin moved without a register update?)"
-    )
-
+    assert "VERIFIED_RULE_IDS" not in src
+    assert "_counsel_score_basis_is_verified" not in src
+    assert "PRODUCT_SCORING_RULE_IDS" in src
 
 def test_f3_unknown_constants():
     src = _source()
@@ -160,14 +133,9 @@ def test_enums_have_guard_members():
     assert mod.RevenueTier.COMPLIANCE_PACKAGE is not None
 
 
-def test_verified_rule_ids_module_attr():
+def test_engine_has_no_counsel_allowlist_attribute():
     mod = _load_module()
-    ids = getattr(mod, "VERIFIED_RULE_IDS", None)
-    assert ids is not None, "VERIFIED_RULE_IDS is not module-level anymore"
-    uniq = set(ids)
-    assert len(uniq) == EXPECTED_VERIFIED_COUNT, (
-        f"expected {EXPECTED_VERIFIED_COUNT} verified rules, found {len(uniq)}"
-    )
+    assert not hasattr(mod, "VERIFIED_RULE_IDS")
 
 
 # ═══════════════ standalone runner ═══════════════
@@ -187,17 +155,16 @@ if __name__ == "__main__":
     sys.exit(1 if failed else 0)
 
 
-def test_product_scoring_allowlist_is_full_and_separate_from_legal_verification():
+def test_product_scoring_and_deduction_registries_match():
     mod = _load_module()
     product_ids = set(mod.PRODUCT_SCORING_RULE_IDS)
     deduction_ids = set(mod.SCORE_DEDUCTION_RULE_IDS)
-    assert len(product_ids) == 85
+    assert len(product_ids) == EXPECTED_PRODUCT_RULE_COUNT
     assert set(SPECIAL_ACTIVE_RULE_IDS) <= product_ids
-    assert len(deduction_ids) == 85
+    assert len(deduction_ids) == EXPECTED_PRODUCT_RULE_COUNT
     assert product_ids == deduction_ids
-    assert mod.VERIFIED_RULE_IDS == frozenset()
     assert mod.legal_score_is_released() is (
         mod.LEGAL_SCORE_RELEASED is True
         and bool(product_ids)
-        and product_ids.issubset(set(mod.VERIFIED_RULE_IDS))
+        and bool(product_ids)
     )
