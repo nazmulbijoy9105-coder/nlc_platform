@@ -819,8 +819,11 @@ def test_score_allocation_uses_product_allowlist_and_excludes_unknown_findings(m
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001", "AUD-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
-    monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
+    # Model a complete, independently counsel-approved test catalogue.
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS",
+        frozenset({"AGM-001", "AUD-001"}),
+    )
     confirmed = SimpleNamespace(
         rule_id="AUD-001",
         state=RuleState.NON_COMPLIANT,
@@ -848,7 +851,7 @@ def test_score_allocation_uses_product_allowlist_and_excludes_unknown_findings(m
     assert allocations[1] == {"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"}
 
 
-def test_score_allocation_applies_product_allowlisted_rule_without_counsel_allowlist(monkeypatch):
+def test_score_allocation_rejects_product_allowlisted_rule_without_counsel_approval(monkeypatch):
     import app.rule_engine.engine as engine_module
     from app.rule_engine.engine import RuleState
     from app.services.compliance_service import _applied_score_impacts
@@ -867,7 +870,9 @@ def test_score_allocation_applies_product_allowlisted_rule_without_counsel_allow
         detail={},
     )
 
-    assert _applied_score_impacts([finding]) == [{"applied": 10, "status": "APPLIED"}]
+    assert _applied_score_impacts([finding]) == [
+        {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
+    ]
 
 
 def test_rescue_planner_remains_deterministic_when_score_release_is_paused(monkeypatch):
@@ -1021,7 +1026,10 @@ def test_rescue_output_validation_requires_product_release_and_unique_evidenced_
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    # A released fixture must approve every rule in its product catalogue.
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"})
+    )
     assert validate_rescue_engine_output(
         output, expected_company_id="tenant-001"
     ) == frozenset({"AGM-001"})
