@@ -2906,11 +2906,6 @@ class NLCRuleEngine:
         )
 
     def _run_labour_rules(self, c: CompanyProfile) -> None:
-        statutory_basis = (
-            "Bangladesh Labour Act 2006, section 326(1)(b), as amended by "
-            "Bangladesh Labour (Amendment) Act 2026 (Act No. 43 of 2026); "
-            "Bangladesh Labour Rules 2015, rules 354-355"
-        )
         required_evidence = [
             "ACTUAL_ESTABLISHMENT_CATEGORY_AND_WORKPLACE",
             "RULE_354_CATEGORY_MAPPING",
