@@ -314,10 +314,11 @@ def _render_rescue_section(rescue_plan: Any) -> str:
 
 
 def _legal_score_is_released() -> bool:
-    """Mirror the engine product-release gate using testable inputs."""
+    """Mirror the engine gate: every catalogue rule needs counsel approval."""
     return (
         LEGAL_SCORE_RELEASED is True
         and bool(PRODUCT_SCORING_RULE_IDS)
+        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
     )
 
 
