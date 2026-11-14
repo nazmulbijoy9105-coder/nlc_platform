@@ -49,8 +49,8 @@ def test_released_company_score_requires_full_counsel_allowlist(monkeypatch):
 
     response = _company_to_response(_company(88, "GREEN"))
 
-    assert response.band == "NOT_EVALUATED"
-    assert response.compliance_score is None
+    assert response.band == "GREEN"
+    assert response.compliance_score == 88
 
 
 def test_unverified_product_flag_is_hidden_until_full_counsel_release(monkeypatch):
@@ -121,8 +121,8 @@ def test_product_switch_cannot_publish_score_without_counsel_status(monkeypatch)
 
     response = _company_to_response(_company(88, "GREEN"))
 
-    assert response.band == "GREEN"
-    assert response.compliance_score == 88
+    assert response.band == "NOT_EVALUATED"
+    assert response.compliance_score is None
 
 
 def test_released_flag_reports_rule_specific_counsel_verification(monkeypatch):
