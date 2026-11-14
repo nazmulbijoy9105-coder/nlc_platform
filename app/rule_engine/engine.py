@@ -2896,10 +2896,6 @@ class NLCRuleEngine:
 
     def _run_labour_rules(self, c: CompanyProfile) -> None:
         applicability = self._manufacturing_applicability(c)
-        labour_basis = (
-            "Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026"
-        )
-
         # A conditional rule must report UNKNOWN when its applicability facts
         # are missing; silence would make UNKNOWN indistinguishable from N/A.
         if applicability.state is ApplicabilityState.UNKNOWN:
@@ -2914,7 +2910,7 @@ class NLCRuleEngine:
                     "nature and location of the establishment before treating the "
                     "section 326 factory-licensing rule as applicable or not applicable."
                 ),
-                statutory_basis=labour_basis,
+                statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
                 state=RuleState.UNKNOWN,
                 eval_state="UNKNOWN",
                 detail={"applicability_state": "UNKNOWN", "reason": applicability.reason},
