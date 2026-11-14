@@ -416,12 +416,23 @@ class CompanyProfile:
     winding_up_petition_date: Optional[date] = None
     liquidator_appointed: bool = False
     court_ordered_winding_up: bool = False
-    # ── Labour (Labour Act 2006) ──
-    # Tri-state applicability (R-003/R-008): None = unknown, False = not a factory, True = manufacturing.
+    # ── Labour Act 2006 / Labour Rules 2015 licensing evidence ──
+    # Manufacturing status is a fact, not the licensing-applicability predicate.
     is_manufacturing: bool | None = None
+    # Backward-compatible field name: this represents the reviewed s.326/r.354
+    # licence requirement for the actual establishment category, not only factories.
     factory_license_required_by_direction: bool | None = None
     factory_license_obtained: bool | None = None
     factory_license_expiry: Optional[date] = None
+    labour_establishment_category: Optional[str] = None
+    labour_license_scope_verified: bool = False
+    labour_license_scope_evidence_ref: Optional[str] = None
+    labour_license_scope_verified_at: Optional[date] = None
+    labour_license_scope_verified_by: Optional[str] = None
+    labour_license_status_verified: bool = False
+    labour_license_status_evidence_ref: Optional[str] = None
+    labour_license_status_verified_at: Optional[date] = None
+    labour_license_status_verified_by: Optional[str] = None
     worker_compensation_filed: bool | None = None
     labour_court_order_pending: bool = False
     # -- Additional Companies Act 1994 --
@@ -2895,122 +2906,207 @@ class NLCRuleEngine:
         )
 
     def _run_labour_rules(self, c: CompanyProfile) -> None:
-        applicability = self._manufacturing_applicability(c)
-        # A conditional rule must report UNKNOWN when its applicability facts
-        # are missing; silence would make UNKNOWN indistinguishable from N/A.
-        if applicability.state is ApplicabilityState.UNKNOWN:
+        statutory_basis = (
+            "Bangladesh Labour Act 2006, section 326(1)(b), as amended by "
+            "Bangladesh Labour (Amendment) Act 2026 (Act No. 43 of 2026); "
+            "Bangladesh Labour Rules 2015, rules 354-355"
+        )
+        required_evidence = [
+            "ACTUAL_ESTABLISHMENT_CATEGORY_AND_WORKPLACE",
+            "RULE_354_CATEGORY_MAPPING",
+            "APPLICABLE_GOVERNMENT_DIRECTION_OR_NOTIFICATION",
+            "CURRENT_LABOUR_RULES_AND_GAZETTE_AMENDMENTS",
+            "DIFE_REGISTRATION_AND_LICENCE_SEARCH",
+            "ISSUED_LICENCE_AND_PRINTED_EXPIRY_DATE",
+            "CONTRACTOR_AGENCY_STATUS_IF_APPLICABLE",
+        ]
+        scope_verified = (
+            c.labour_license_scope_verified is True
+            and bool(c.labour_license_scope_evidence_ref)
+            and c.labour_license_scope_verified_at is not None
+            and bool(c.labour_license_scope_verified_by)
+            and bool(c.labour_establishment_category)
+        )
+        status_verified = (
+            c.labour_license_status_verified is True
+            and bool(c.labour_license_status_evidence_ref)
+            and c.labour_license_status_verified_at is not None
+            and bool(c.labour_license_status_verified_by)
+        )
+
+        # Section 326(1)(b), as amended in 2026, is not limited to
+        # manufacturing factories. Rule 354 also identifies industrial and
+        # commercial establishments, banks, insurers, shops and contractor
+        # establishments. Never infer non-applicability from is_manufacturing.
+        if not scope_verified:
             self._add_flag(ComplianceFlag(
                 rule_id="LBR-001",
-                flag_code="FACTORY_LICENSE_APPLICABILITY_UNKNOWN",
+                flag_code="LABOUR_LICENSE_SCOPE_NOT_VERIFIED",
                 severity=Severity.NOT_EVALUATED,
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                 description=(
-                    "Manufacturing/factory status is not established. Confirm the "
-                    "nature and location of the establishment before treating the "
-                    "section 326 factory-licensing rule as applicable or not applicable."
+                    "Labour licensing applicability is not established. "
+                    "Section 326(1)(b) is not confined to manufacturing factories; "
+                    "verify the actual establishment category, Rule 354 scope and "
+                    "any applicable Government direction before deciding whether "
+                    "a licence is required. This is not a breach finding."
                 ),
-                statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
+                statutory_basis=statutory_basis,
                 state=RuleState.UNKNOWN,
                 eval_state="UNKNOWN",
-                detail={"applicability_state": "UNKNOWN", "reason": applicability.reason},
+                detail={
+                    "is_manufacturing_is_not_the_licensing_test": True,
+                    "establishment_category": c.labour_establishment_category,
+                    "scope_evidence_ref": c.labour_license_scope_evidence_ref,
+                    "required_evidence": required_evidence,
+                },
             ))
+            return
 
-        if applicability.state is ApplicabilityState.APPLICABLE:
-            if c.factory_license_required_by_direction is None:
-                self._add_flag(ComplianceFlag(
-                    rule_id="LBR-001",
-                    flag_code="FACTORY_LICENSE_GOVERNMENT_DIRECTION_UNKNOWN",
-                    severity=Severity.NOT_EVALUATED,
-                    score_impact=0,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=(
-                        "Manufacturing activity is reported, but no authenticated "
-                        "section 326 Government direction has been identified for "
-                        "this establishment/class. Verify the direction, scope, "
-                        "commencement and exemptions before deciding applicability."
-                    ),
-                    statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
-                    state=RuleState.UNKNOWN,
-                    eval_state="UNKNOWN",
-                    detail={"applicability_state": "UNKNOWN", "government_direction_verified": False},
-                ))
-            elif c.factory_license_required_by_direction is True:
-                if c.factory_license_obtained is not True:
-                    self._add_flag(ComplianceFlag(
-                        rule_id="LBR-001",
-                        flag_code="FACTORY_LICENSE_STATUS_REQUIRES_VERIFICATION",
-                        severity=Severity.NOT_EVALUATED,
-                        score_impact=0,
-                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=(
-                            "A section 326 direction is reported to require a licence, "
-                            "but licence status is absent or negative. Verify the "
-                            "direction, class, commencement, exemptions and authentic "
-                            "licence search before determining any default."
-                        ),
-                        statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
-                        state=RuleState.UNKNOWN,
-                        eval_state="UNKNOWN",
-                        detail={"applicability_state": "APPLICABLE_PENDING_SOURCE_VERIFICATION"},
-                    ))
-
-                if c.factory_license_expiry is None:
-                    self._add_flag(ComplianceFlag(
-                        rule_id="LBR-002",
-                        flag_code="FACTORY_LICENSE_EXPIRY_STATUS_UNKNOWN",
-                        severity=Severity.NOT_EVALUATED,
-                        score_impact=0,
-                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=(
-                            "The reported section 326 licensing requirement has no "
-                            "verified licence-expiry/renewal record. Obtain the licence "
-                            "and any renewal application, extension or replacement "
-                            "instrument before assessing current validity."
-                        ),
-                        statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
-                        state=RuleState.UNKNOWN,
-                        eval_state="UNKNOWN",
-                    ))
-                elif self.today > c.factory_license_expiry:
-                    delay = (self.today - c.factory_license_expiry).days
-                    self._add_flag(ComplianceFlag(
-                        rule_id="LBR-002",
-                        flag_code="FACTORY_LICENSE_EXPIRY_REQUIRES_VERIFICATION",
-                        severity=Severity.NOT_EVALUATED,
-                        score_impact=0,
-                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=(
-                            f"Recorded licence expiry is {delay} days in the past. "
-                            "Verify the licence class, section 326 Government direction, "
-                            "five-year/contractor one-year term, renewal application, "
-                            "extension and operative status before finding a breach."
-                        ),
-                        statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
-                        state=RuleState.UNKNOWN,
-                        eval_state="UNKNOWN",
-                    ))
-
-        # LBR-003 is not gated by manufacturing status: applicability of an
-        # existing labour-court order depends on the order's parties and scope.
-        if c.labour_court_order_pending:
-            # The current profile stores only a boolean, not the order,
-            # parties, service, operative status, appeal or stay. Do not infer
-            # a statutory breach or adverse score from that boolean.
+        if c.factory_license_required_by_direction is None:
             self._add_flag(ComplianceFlag(
-                rule_id="LBR-003",
-                flag_code="LABOUR_COURT_ORDER_STATUS_REQUIRES_VERIFICATION",
+                rule_id="LBR-001",
+                flag_code="LABOUR_LICENSE_REQUIREMENT_UNKNOWN",
                 severity=Severity.NOT_EVALUATED,
                 score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="The profile reports a pending Labour Court order. Verify the certified order, parties and company identity, service, operative directions, appeal/revision and any stay before determining applicability or non-compliance.",
-                statutory_basis="Bangladesh Labour Act 2006 and the specific Labour Court order; enabling provision and operative status require case-specific verification",
+                description=(
+                    "The establishment category has been reviewed, but the "
+                    "applicable s.326(1)(b)/Rule 354 licensing requirement has not "
+                    "been resolved. Obtain the operative direction and legal scope "
+                    "review; do not infer a default from manufacturing status."
+                ),
+                statutory_basis=statutory_basis,
                 state=RuleState.UNKNOWN,
                 eval_state="UNKNOWN",
-                detail={"profile_order_status": "reported_pending", "order_evidence_verified": False, "stay_or_appeal_checked": False},
+                detail={
+                    "establishment_category": c.labour_establishment_category,
+                    "scope_evidence_ref": c.labour_license_scope_evidence_ref,
+                    "required_evidence": required_evidence,
+                },
+            ))
+            return
+
+        if c.factory_license_required_by_direction is False:
+            return
+
+        if not status_verified:
+            self._add_flag(ComplianceFlag(
+                rule_id="LBR-001",
+                flag_code="LABOUR_LICENSE_STATUS_NOT_VERIFIED",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "A licence requirement is recorded for this establishment, "
+                    "but the actual DIFE licence status has not been independently "
+                    "verified. Obtain the licence or a dated registry/inspection "
+                    "record before making a finding."
+                ),
+                statutory_basis=statutory_basis,
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={
+                    "establishment_category": c.labour_establishment_category,
+                    "required_evidence": required_evidence,
+                },
+            ))
+            return
+
+        if c.factory_license_obtained is False:
+            self._add_flag(ComplianceFlag(
+                rule_id="LBR-001",
+                flag_code="LABOUR_LICENSE_NOT_OBTAINED_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "A reviewed licensing requirement and a verified absence of "
+                    "licence are recorded. This candidate requires Bangladesh "
+                    "counsel review of the operative direction, establishment "
+                    "category, commencement date and any exception; no score or "
+                    "statutory breach is asserted by this engine."
+                ),
+                statutory_basis=statutory_basis,
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={
+                    "establishment_category": c.labour_establishment_category,
+                    "scope_evidence_ref": c.labour_license_scope_evidence_ref,
+                    "status_evidence_ref": c.labour_license_status_evidence_ref,
+                    "required_evidence": required_evidence,
+                },
+            ))
+            return
+
+        if c.factory_license_obtained is not True:
+            self._add_flag(ComplianceFlag(
+                rule_id="LBR-001",
+                flag_code="LABOUR_LICENSE_STATUS_UNKNOWN",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The licence is required, but the current licence status is "
+                    "unknown. Verify the issued licence and its operative dates."
+                ),
+                statutory_basis=statutory_basis,
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"required_evidence": required_evidence},
+            ))
+            return
+
+        # Use the expiry date printed on the verified licence. Do not calculate
+        # an expiry from issue date: Labour Rules 2015 r.355(2) contains an older
+        # 30-June validity formulation while amended Act s.326(1)(b) now states
+        # five-year renewal (one year for contractor agencies). Counsel must
+        # resolve transitional/precedence questions before an automatic term.
+        if c.factory_license_expiry is None:
+            self._add_flag(ComplianceFlag(
+                rule_id="LBR-002",
+                flag_code="LABOUR_LICENSE_EXPIRY_NOT_VERIFIED",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The establishment's licence is recorded as obtained, but "
+                    "its printed expiry date is not available. Do not calculate "
+                    "a renewal deadline from issue date until the amended Act "
+                    "and Labour Rules transition are reconciled."
+                ),
+                statutory_basis=statutory_basis,
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={
+                    "status_evidence_ref": c.labour_license_status_evidence_ref,
+                    "required_evidence": ["COMPLETE_LICENCE_COPY_WITH_EXPIRY_DATE"],
+                },
+            ))
+        elif c.factory_license_expiry < self.today:
+            self._add_flag(ComplianceFlag(
+                rule_id="LBR-002",
+                flag_code="LABOUR_LICENSE_EXPIRED_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    f"The verified licence copy records expiry on "
+                    f"{c.factory_license_expiry.isoformat()}. Verify renewal, "
+                    "continued operation, transitional treatment and the "
+                    "applicable contractor/non-contractor term with counsel."
+                ),
+                statutory_basis=statutory_basis,
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={
+                    "printed_expiry_date": c.factory_license_expiry.isoformat(),
+                    "status_evidence_ref": c.labour_license_status_evidence_ref,
+                    "renewal_term_calculated_automatically": False,
+                },
             ))
 
-    # MODULE 14: ADDITIONAL COMPANIES ACT 1994
     def _run_companies_act_extended_rules(self, c: CompanyProfile) -> None:
         if c.agm_adjourned_without_notice:
             self._add_flag(ComplianceFlag(
