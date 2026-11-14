@@ -422,6 +422,8 @@ class CompanyProfile:
     # Backward-compatible field name: this represents the reviewed s.326/r.354
     # licence requirement for the actual establishment category, not only factories.
     factory_license_required_by_direction: bool | None = None
+    # Legacy field names retained for compatibility; these represent the
+    # s.326/r.354 labour licence for the reviewed establishment, not only a factory.
     factory_license_obtained: bool | None = None
     factory_license_expiry: Optional[date] = None
     labour_establishment_category: Optional[str] = None
