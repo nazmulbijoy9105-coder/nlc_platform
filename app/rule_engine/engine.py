@@ -763,6 +763,14 @@ def legal_score_is_released() -> bool:
     )
 
 
+def _counsel_score_basis_is_verified() -> bool:
+    """A company-wide statutory score needs counsel review of the full catalogue."""
+    return (
+        bool(PRODUCT_SCORING_RULE_IDS)
+        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
+    )
+
+
 REVENUE_TIER_MAP = {
     Severity.GREEN: RevenueTier.COMPLIANCE_PACKAGE,
     Severity.YELLOW: RevenueTier.COMPLIANCE_PACKAGE,
@@ -3852,12 +3860,13 @@ class NLCRuleEngine:
         # product-allowlisted findings may still elevate the final risk band below.
         score_band = (
             Severity(self._score_to_band(final, force_black=bool(critical), coverage=coverage))
-            if legal_score_is_released() else Severity.NOT_EVALUATED
+            if legal_score_is_released() and _counsel_score_basis_is_verified()
+            else Severity.NOT_EVALUATED
         )
 
         # Band = worst of (score-based band, highest active flag severity)
         # Prevents false GREEN when a RED-severity rule fires (BLACK handled above)'t override
-        if legal_score_is_released() and not critical:
+        if legal_score_is_released() and _counsel_score_basis_is_verified() and not critical:
             severity_rank = {Severity.GREEN: 0, Severity.YELLOW: 1, Severity.RED: 2, Severity.BLACK: 3}
             max_flag_severity = Severity.GREEN
             for f in active:
