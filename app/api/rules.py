@@ -125,9 +125,12 @@ class MessageResponse(BaseModel):
 
 def _rule_to_response(rule) -> RuleResponse:
     scoring_catalogue_member = rule.rule_id in PRODUCT_SCORING_RULE_IDS
-    product_scoring_enabled = legal_score_is_released() and scoring_catalogue_member
-    # Product-owner release is not independent legal/source verification.
-    legally_verified = False
+    legally_verified = rule.rule_id in VERIFIED_RULE_IDS
+    product_scoring_enabled = (
+        legal_score_is_released()
+        and scoring_catalogue_member
+        and legally_verified
+    )
     return RuleResponse(
         rule_id=rule.rule_id,
         rule_name=rule.rule_name,
@@ -141,17 +144,23 @@ def _rule_to_response(rule) -> RuleResponse:
             else "Informational catalogue entry only. No score deduction is applied."
         ),
         default_severity=(
-            None
-            if str(getattr(rule.default_severity, "value", rule.default_severity)).upper() == "NOT_EVALUATED"
-            else str(getattr(rule.default_severity, "value", rule.default_severity))
-        ) if scoring_catalogue_member else None,
+            str(getattr(rule.default_severity, "value", rule.default_severity))
+            if legally_verified
+            and str(getattr(rule.default_severity, "value", rule.default_severity)).upper() != "NOT_EVALUATED"
+            else None
+        ),
         product_scoring_enabled=product_scoring_enabled,
-        score_impact=rule.score_impact if rule.rule_id in SCORE_DEDUCTION_RULE_IDS else 0,
+        score_impact=(
+            rule.score_impact
+            if legally_verified and rule.rule_id in SCORE_DEDUCTION_RULE_IDS
+            else 0
+        ),
         revenue_tier=str(rule.revenue_tier) if scoring_catalogue_member else "COMPLIANCE_PACKAGE",
         # Catalogue configuration remains visible while score publication is paused.
         # This field describes product policy, not independent legal verification.
         is_black_override=(
-            scoring_catalogue_member
+            legally_verified
+            and scoring_catalogue_member
             and rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         ),
         is_active=bool(rule.is_active),
