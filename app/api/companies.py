@@ -323,9 +323,6 @@ def _flag_to_response(flag) -> FlagResponse:
     score_eligible = (
         _legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
     )
-    # Counsel verification is rule-specific and remains distinct from
-    # product scoring release. A verified rule can still be unpublished while
-    # the complete product catalogue release gate remains closed.
     legally_verified = flag.rule_id in VERIFIED_RULE_IDS
     severity = getattr(flag.severity, "value", flag.severity)
     return FlagResponse(
@@ -333,18 +330,20 @@ def _flag_to_response(flag) -> FlagResponse:
         rule_id=flag.rule_id,
         rule_name=(
             (getattr(flag, "description", flag.flag_code) or flag.flag_code)
-            if score_eligible
+            if legally_verified
             else (
-                "Pending product scoring review: internal review signal only. "
+                "Pending independent counsel review: candidate signal only. "
                 "No breach, liability, penalty or compliance status is determined."
             )
         ),
-        severity=str(severity) if score_eligible else "NOT_EVALUATED",
+        severity=str(severity) if legally_verified else "NOT_EVALUATED",
         score_impact=int(flag.score_impact or 0) if score_eligible else 0,
         status=flag.flag_status.value if hasattr(flag.flag_status, "value") else str(flag.flag_status),
         legal_review_status="LEGALLY_VERIFIED" if legally_verified else "NOT_LEGALLY_VERIFIED",
         is_black_override=(
-            bool(getattr(flag, "is_black_override", False))
+            legally_verified
+            and score_eligible
+            and bool(getattr(flag, "is_black_override", False))
             and flag.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         ),
         triggered_at=flag.triggered_date.isoformat() if flag.triggered_date else "",
