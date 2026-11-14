@@ -195,7 +195,11 @@ def build_private_company_calendar(
         code_applies = Applicability.APPLICABLE
     elif bsec_listed is False and bsec_listing_verified:
         code_applies = Applicability.NOT_APPLICABLE
-    elif is_private and bsec_listed is None:
+    elif (
+        is_private and bsec_listed is None
+        and subsidiary_scope_verified
+        and is_subsidiary_of_listed_issuer is False
+    ):
         code_applies = Applicability.NOT_APPLICABLE
     else:
         code_applies = Applicability.UNKNOWN
