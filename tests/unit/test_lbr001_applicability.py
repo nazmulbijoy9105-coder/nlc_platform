@@ -1,5 +1,4 @@
 """LBR-001 applicability (R-003) and unknown handling (R-008)."""
-import pytest
 
 
 def _ids(output):
