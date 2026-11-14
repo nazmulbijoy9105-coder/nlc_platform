@@ -100,7 +100,6 @@ def build_private_company_calendar(
     kind = (company_type or "").upper()
     company_known = company_type_verified and bool(kind)
     is_private = company_known and kind in {"PRIVATE_LIMITED", "PRIVATE_COMPANY"}
-    is_other = company_known and not is_private
     items: list[CalendarObligation] = []
 
     if not company_known:
