@@ -1267,7 +1267,11 @@ class TestRules:
         )
         assert resp.status_code == 200, resp.text
         assert resp.json()["rule_id"] == "AUD-003"
-        assert resp.json()["default_severity"] == "RED"
+        # Admin edits remain versioned, but the public rule API withholds
+        # statutory severity until this rule has independent counsel approval.
+        assert resp.json()["default_severity"] is None
+        assert resp.json()["score_impact"] == 0
+        assert resp.json()["is_black_override"] is False
 
 
 
