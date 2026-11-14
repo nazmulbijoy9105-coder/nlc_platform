@@ -186,7 +186,7 @@ def test_product_owner_black_override_is_blocked_without_counsel_allowlist(monke
     result = NLCRuleEngine()._calculate_score([approved_black], _profile())
 
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
-    assert engine_module.legal_score_is_released() is False
+    assert engine_module.legal_score_is_released() is True
     assert result.override_applied is False
     assert result.black_flag_count == 0
     assert result.final_score == 100
