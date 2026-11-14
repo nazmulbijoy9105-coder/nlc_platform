@@ -157,7 +157,7 @@ def test_default_runtime_product_release_is_fail_closed():
 
 
 
-def test_product_release_requires_counsel_allowlist(monkeypatch):
+def test_product_release_uses_product_allowlist_not_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
         engine_module, "PRODUCT_SCORING_RULE_IDS",
@@ -167,4 +167,8 @@ def test_product_release_requires_counsel_allowlist(monkeypatch):
         engine_module, "VERIFIED_RULE_IDS", frozenset()
     )
 
+    assert engine_module.legal_score_is_released() is True
+
+    # Empty product allowlist still fails closed even when the switch is on.
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset())
     assert engine_module.legal_score_is_released() is False
