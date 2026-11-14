@@ -563,7 +563,7 @@ BLACK_OVERRIDE_RULES: set[str] = set()
 # a reviewed source-control change records reviewer, source and timestamp.
 VERIFIED_RULE_IDS: frozenset[str] = frozenset()
 
-# Product-active catalogue: all 85 owner-approved rules remain enabled for
+# Product-active catalogue: all 86 owner-approved rules remain enabled for
 # evaluation, visibility, alerts and scoring eligibility. Product approval is
 # not independent counsel verification; evidence and state gates still apply.
 PRODUCT_SCORING_RULE_IDS: frozenset[str] = frozenset({
@@ -619,6 +619,7 @@ PRODUCT_SCORING_RULE_IDS: frozenset[str] = frozenset({
     "ESC-005",
     "FX-001",
     "INC-001",
+    "INC-002",
     "INC-003",
     "INC-004",
     "INC-005",
@@ -654,7 +655,7 @@ PRODUCT_SCORING_RULE_IDS: frozenset[str] = frozenset({
     "VAT-003",
 })
 
-# The same 85 product-approved rules may contribute configured deductions,
+# The same 86 product-approved rules may contribute configured deductions,
 # but only for evidence-supported, applicable, confirmed violations. This
 # allowlist does not independently verify statutory propositions.
 SCORE_DEDUCTION_RULE_IDS: frozenset[str] = frozenset({
@@ -710,6 +711,7 @@ SCORE_DEDUCTION_RULE_IDS: frozenset[str] = frozenset({
     "ESC-005",
     "FX-001",
     "INC-001",
+    "INC-002",
     "INC-003",
     "INC-004",
     "INC-005",
