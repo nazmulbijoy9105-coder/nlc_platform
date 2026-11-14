@@ -3102,6 +3102,36 @@ class NLCRuleEngine:
                 },
             ))
 
+        # LBR-003 is not gated by manufacturing status: applicability of an
+        # existing labour-court order depends on the order's parties and scope.
+        if c.labour_court_order_pending:
+            # The profile stores only a Boolean, not the order, parties,
+            # service, operative status, appeal or stay. Do not infer a breach.
+            self._add_flag(ComplianceFlag(
+                rule_id="LBR-003",
+                flag_code="LABOUR_COURT_ORDER_STATUS_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The profile reports a pending Labour Court order. Verify the "
+                    "certified order, parties and company identity, service, operative "
+                    "directions, appeal/revision and any stay before determining "
+                    "applicability or non-compliance."
+                ),
+                statutory_basis=(
+                    "Bangladesh Labour Act 2006 and the specific Labour Court order; "
+                    "enabling provision and operative status require case-specific verification"
+                ),
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={
+                    "profile_order_status": "reported_pending",
+                    "order_evidence_verified": False,
+                    "stay_or_appeal_checked": False,
+                },
+            ))
+
     def _run_companies_act_extended_rules(self, c: CompanyProfile) -> None:
         if c.agm_adjourned_without_notice:
             self._add_flag(ComplianceFlag(
