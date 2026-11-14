@@ -38,7 +38,6 @@ from app.rule_engine.engine import (
     AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
     PRODUCT_SCORING_RULE_IDS,
     SCORE_DEDUCTION_RULE_IDS,
-    VERIFIED_RULE_IDS as VERIFIED_RULE_IDS,  # Compatibility export; not used to claim independent legal review.
     legal_score_is_released,
 )
 from app.models.user import User
@@ -125,11 +124,10 @@ class MessageResponse(BaseModel):
 
 def _rule_to_response(rule) -> RuleResponse:
     scoring_catalogue_member = rule.rule_id in PRODUCT_SCORING_RULE_IDS
-    legally_verified = rule.rule_id in VERIFIED_RULE_IDS
+    legally_verified = str(getattr(rule, "verification_status", "")).upper() == "VERIFIED"
     product_scoring_enabled = (
         legal_score_is_released()
         and scoring_catalogue_member
-        and legally_verified
     )
     return RuleResponse(
         rule_id=rule.rule_id,
@@ -160,8 +158,7 @@ def _rule_to_response(rule) -> RuleResponse:
         # This field describes product policy, not independent legal verification.
         is_black_override=(
             product_scoring_enabled
-            and legally_verified
-            and scoring_catalogue_member
+                and scoring_catalogue_member
             and rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         ),
         is_active=bool(rule.is_active),
@@ -275,7 +272,6 @@ async def get_black_overrides(
         for rule in rules
         if rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         and rule.rule_id in PRODUCT_SCORING_RULE_IDS
-        and rule.rule_id in VERIFIED_RULE_IDS
         and legal_score_is_released()
     ]
 
