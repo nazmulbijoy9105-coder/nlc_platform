@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import re
+from datetime import date
 from pathlib import Path
 
 import app.rule_engine.engine as engine_module
@@ -63,14 +64,14 @@ def test_unverified_statutory_candidate_is_downgraded_before_api_score_or_rescue
     profile = CompanyProfile(
         company_id="counsel-gate-test",
         company_name="Counsel Gate Test Ltd",
-        incorporation_date=__import__("datetime").date(2020, 1, 1),
+        incorporation_date=date(2020, 1, 1),
         first_auditor_appointed=False,
         first_auditor_appointment_verified=True,
         first_auditor_appointment_evidence_ref="AUDITOR-SEARCH-001",
-        first_auditor_appointment_verified_at=__import__("datetime").date(2026, 11, 1),
+        first_auditor_appointment_verified_at=date(2026, 11, 1),
         first_auditor_appointment_verified_by="reviewer-1",
     )
-    output = NLCRuleEngine(today=__import__("datetime").date(2026, 11, 15)).evaluate(profile)
+    output = NLCRuleEngine(today=date(2026, 11, 15)).evaluate(profile)
     matches = [flag for flag in output.flags if flag.rule_id == "AUD-001"]
     assert len(matches) == 1
 
