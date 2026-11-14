@@ -175,8 +175,10 @@ def test_sample_e_verified_rjsc_filing_after_21_days_retains_late_default():
     finding = _by_rule(_flags(profile), "AR-001")
     assert len(finding) == 1
     assert finding[0].flag_code == "ANNUAL_RETURN_FILED_LATE"
-    assert finding[0].state == RuleState.NON_COMPLIANT
-    assert finding[0].eval_state == "VIOLATION"
+    assert finding[0].state == RuleState.UNKNOWN
+    assert finding[0].eval_state == "UNKNOWN"
+    assert finding[0].detail["candidate_state"] == RuleState.NON_COMPLIANT.value
+    assert finding[0].detail["candidate_eval_state"] == "VIOLATION"
     assert finding[0].detail["delay_days"] == 9
 
 
@@ -194,8 +196,10 @@ def test_sample_e_verified_rjsc_non_filing_after_21_days_is_a_candidate_default(
     finding = _by_rule(_flags(profile), "AR-001")
     assert len(finding) == 1
     assert finding[0].flag_code == "ANNUAL_RETURN_DEFAULT"
-    assert finding[0].state == RuleState.NON_COMPLIANT
-    assert finding[0].eval_state == "VIOLATION"
+    assert finding[0].state == RuleState.UNKNOWN
+    assert finding[0].eval_state == "UNKNOWN"
+    assert finding[0].detail["candidate_state"] == RuleState.NON_COMPLIANT.value
+    assert finding[0].detail["candidate_eval_state"] == "VIOLATION"
 
 
 def test_sample_f_verified_first_auditor_appointment_after_one_calendar_month():
@@ -213,6 +217,8 @@ def test_sample_f_verified_first_auditor_appointment_after_one_calendar_month():
     finding = _by_rule(_flags(profile, date(2026, 3, 10)), "AUD-001")
     assert len(finding) == 1
     assert finding[0].flag_code == "FIRST_AUDITOR_APPOINTED_LATE"
-    assert finding[0].state == RuleState.NON_COMPLIANT
+    assert finding[0].state == RuleState.UNKNOWN
+    assert finding[0].detail["candidate_state"] == RuleState.NON_COMPLIANT.value
+    assert finding[0].detail["candidate_eval_state"] == "VIOLATION"
     assert finding[0].detail["deadline"] == "2026-02-28"
     assert finding[0].detail["calculation_method"] == "calendar_month"
