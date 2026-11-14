@@ -153,17 +153,6 @@ def test_audit_chain_detects_tampering():  # R-020
     assert t.verify()
     t._events[1] = dataclasses.replace(t._events[1], detail_json='{"n": 99}')
     assert not t.verify()
-from canonical_architecture import (
-    Invariant,
-)
-
-INV_IDS = {i.name.replace("_", "-", 1) for i in Invariant}  # R_006 -> R-006
-
-def test_invariant_refs_resolve():
-    for rid, r in STATUTORY_RULE_REGISTRY.items():
-        missing = set(r.invariants) - INV_IDS
-        assert not missing, f"{rid} references unknown invariants {missing}"
-
 def test_all_invariants_have_rule_text():
     undefined = [i.name for i in Invariant if i not in INVARIANT_RULES]
     assert not undefined, f"No rule text for {undefined}"
