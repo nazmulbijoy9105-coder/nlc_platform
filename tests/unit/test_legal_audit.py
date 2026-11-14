@@ -472,7 +472,8 @@ def test_DEF_002_notice_count_alone_is_not_a_confirmed_statutory_breach():
     result = NLCRuleEngine().evaluate(profile, today=date(2026, 11, 3))
     flag = _flag_by_id(result, "DEF-002")
     assert flag is not None
-    assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.detail["candidate_state"] == RuleState.REQUIRES_LAWYER_JUDGMENT.value
     assert flag.severity == Severity.NOT_EVALUATED
     assert flag.score_impact == 0
     assert "Case-specific" in flag.statutory_basis
