@@ -1075,7 +1075,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "LBR-002": {
         "rule_id": "LBR-002",
         "legal_domain": "Labour",
-        "law": "Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rule 355",
+        "law": "Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355",
         "requirement": "Use the expiry date printed on a verified licence. Do not calculate a renewal term from issue date until counsel reconciles amended section 326(1)(b), rule 355(2), contractor status and transitional treatment.",
         "provision": "UNVERIFIED CANDIDATE — licence validity and renewal require current licence evidence and counsel review",
         "provision_status": ProvisionStatus.RECONCILE,
