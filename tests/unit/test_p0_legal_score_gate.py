@@ -1,4 +1,4 @@
-"""P0 regressions: statutory scoring requires the complete counsel approval register."""
+"""P0 regressions: product release and independent counsel approval stay separate."""
 from datetime import date, datetime, timezone
 from types import SimpleNamespace
 
@@ -126,7 +126,7 @@ def test_pdf_requires_explicit_authorisation_for_black_override(monkeypatch):
     assert override is True
 
 
-def test_product_scoring_is_blocked_with_empty_counsel_allowlist(monkeypatch):
+def test_product_release_is_independent_of_counsel_allowlist_but_findings_stay_unscored(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
@@ -134,10 +134,12 @@ def test_product_scoring_is_blocked_with_empty_counsel_allowlist(monkeypatch):
         [_engine_flag(severity=Severity.RED, black=False)],
         CompanyProfile(company_id="x", company_name="Test"),
     )
-    assert engine_module.legal_score_is_released() is False
+    assert engine_module.legal_score_is_released() is True
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
-    assert result.final_score == 100  # non-authoritative arithmetic placeholder
+    assert result.category_deductions["AUD"] == 0
+    assert result.final_score == 100  # arithmetic placeholder: no counsel-verified deductions
     assert result.override_applied is False
+    assert result.black_flag_count == 0
     assert result.risk_band == Severity.NOT_EVALUATED
 
 
@@ -181,7 +183,7 @@ def test_product_owner_black_override_is_blocked_without_counsel_allowlist(monke
         [flag], CompanyProfile(company_id="x", company_name="Test")
     )
 
-    assert engine_module.legal_score_is_released() is False
+    assert engine_module.legal_score_is_released() is True
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert engine_module.AUTHORIZED_BLACK_OVERRIDE_RULE_IDS == frozenset({"INC-003"})
     assert result.override_applied is False
