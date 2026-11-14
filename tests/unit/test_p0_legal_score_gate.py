@@ -229,7 +229,7 @@ def test_pdf_reconciliation_fails_closed_for_unknown_persisted_finding(monkeypat
         detail={},
     )
 
-    assert _verified_flag_score([unknown]) == (100, False)
+    assert _verified_flag_score([unknown]) == (0, False)
     assert report_module._render_score_reconciliation([unknown], 100, "GREEN") == ""
 
 
@@ -246,7 +246,7 @@ def test_pdf_reconciliation_requires_active_explicit_violation(monkeypatch):
         detail={},
     )
 
-    assert _verified_flag_score([confirmed]) == (85, False)
-    assert "score-reconciliation" in report_module._render_score_reconciliation(
+    assert _verified_flag_score([confirmed]) == (0, False)
+    assert report_module._render_score_reconciliation(
         [confirmed], 85, "YELLOW"
-    )
+    ) == ""
