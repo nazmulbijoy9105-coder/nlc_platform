@@ -1038,11 +1038,13 @@ class CompanyService(BaseService[Company]):
             "subsidiary_status_verified_by": str(company.subsidiary_status_verified_by) if company.subsidiary_status_verified_by else None,
 
             # BSEC Corporate Governance
-            "bsec_listed":                   getattr(company, "bsec_listed", False),
-            "bsec_quarterly_report_filed":  getattr(company, "bsec_quarterly_report_filed", False),
-            "cg_certificate_obtained":     getattr(company, "cg_certificate_obtained", False),
-            "board_independent_director":   getattr(company, "board_independent_director", False),
-            "audit_committee_established":  getattr(company, "audit_committee_established", False),
+            # Legacy FALSE may be the database default, not verified unlisted status.
+            # Only affirmative listing is passed through; FALSE becomes UNKNOWN.
+            "bsec_listed":                   True if getattr(company, "bsec_listed", None) is True else None,
+            "bsec_quarterly_report_filed":  None,  # No authenticated reporting-evidence fields exist yet.
+            "cg_certificate_obtained":     None,  # No authenticated certificate-evidence fields exist yet.
+            "board_independent_director":   None,  # No authenticated board-composition evidence fields exist yet.
+            "audit_committee_established":  None,  # No authenticated committee-evidence fields exist yet.
 
             # Labour Compliance
             "is_manufacturing":             company.is_manufacturing,
