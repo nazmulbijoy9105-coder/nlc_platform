@@ -3110,276 +3110,107 @@ class NLCRuleEngine:
     # MODULE: ACCOUNTS & AUDIT FILING (Section 181, 183, 190)
     # ───────────────────────────────────────────────────────────────────
     def _run_accounts_rules(self, c: CompanyProfile) -> None:
-        # ACC-001: Financial statements not presented at AGM (Section 183)
-        if c.agm_held_this_cycle and c.financial_statements_presented is False:
+        """Emit review-only findings until each accounting fact has authenticated provenance.
+
+        The current CompanyProfile exposes plain booleans for presentation,
+        filing and books status, but no reviewer, evidence reference or
+        verification timestamp for those facts. A false profile value is
+        therefore an assertion/data point, not proof of a statutory default.
+        Keep each rule visible without converting an unverified assertion into
+        a red finding or score deduction.
+        """
+        if c.agm_held_this_cycle is True and c.financial_statements_presented is False:
             self._add_flag(ComplianceFlag(
                 rule_id="ACC-001",
-                flag_code="FINANCIAL_STATEMENTS_NOT_PRESENTED",
-                severity=Severity.RED,
-                score_impact=15,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="AGM held but balance sheet and P&L not presented. Section 183: Board shall lay before AGM.",
+                flag_code="FINANCIAL_STATEMENTS_PRESENTATION_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The company profile reports that financial statements were not "
+                    "presented at the AGM. The current profile has no authenticated "
+                    "AGM-minute or accounts-presentation verification fields. Check "
+                    "the signed AGM minutes, audited statements and any corrected or "
+                    "adjourned meeting record before determining a Section 183 default."
+                ),
                 statutory_basis="Section 183, Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={
+                    "reported_agm_held": True,
+                    "reported_financial_statements_presented": False,
+                    "verification_status": "UNVERIFIED_PROFILE_ASSERTION",
+                    "required_evidence": [
+                        "AUTHENTICATED_AGM_MINUTES",
+                        "AUDITED_FINANCIAL_STATEMENTS",
+                        "MEETING_ADJOURNMENT_OR_CORRECTION_RECORD_IF_ANY",
+                    ],
+                },
             ))
 
-        # ACC-002: Section 190 allows 30 days after the AGM, or if no AGM
-        # was held, 30 days after the latest date on which it should have been held.
-        if c.financial_statements_filed is False and self._agm_history_is_verified(c):
-            filing_deadline: date | None = None
-            deadline_basis: str | None = None
-            agm_due: date | None = None
-            if c.agm_held_this_cycle is True and c.last_agm_date is not None:
-                filing_deadline = c.last_agm_date + timedelta(days=30)
-                deadline_basis = "30 days after AGM"
-            elif c.agm_held_this_cycle is False:
-                if c.agm_count == 0 and c.incorporation_date is not None:
-                    agm_due = self._add_months(c.incorporation_date, 18)
-                elif c.agm_count is not None and c.agm_count > 0 and c.last_agm_date is not None:
-                    agm_due = self._subsequent_agm_deadline(c)
-                if agm_due is not None:
-                    filing_deadline = agm_due + timedelta(days=30)
-                    deadline_basis = "30 days after latest date AGM should have been held"
-            if filing_deadline is not None and self.today > filing_deadline:
-                delay = (self.today - filing_deadline).days
-                self._add_flag(ComplianceFlag(
-                    rule_id="ACC-002",
-                    flag_code="FINANCIAL_STATEMENTS_NOT_FILED",
-                    severity=Severity.RED,
-                    score_impact=15,
-                    revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description=f"Financial statements not filed with Registrar within 30 days of {deadline_basis}. Overdue by {delay} days. Section 190.",
-                    statutory_basis="Section 190, Companies Act 1994 (Bangladesh)",
-                    detail={"delay": delay, "filing_deadline": str(filing_deadline), "deadline_basis": deadline_basis},
-                ))
+        # Section 190's 30-day period is only calculated from a legally
+        # established trigger. The current profile's filing boolean has no
+        # independent RJSC search/receipt provenance, so it cannot establish
+        # non-filing even when AGM history itself is verified.
+        if c.financial_statements_filed is False:
+            self._add_flag(ComplianceFlag(
+                rule_id="ACC-002",
+                flag_code="FINANCIAL_STATEMENTS_FILING_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The company profile reports that financial statements were not "
+                    "filed. No authenticated RJSC filing search, filing receipt or "
+                    "registry-unavailability record is bound to this field. Verify "
+                    "the Section 190 filing obligation, the applicable AGM/last due "
+                    "date, the filing receipt and any correction or extension before "
+                    "determining a default."
+                ),
+                statutory_basis="Section 190, Companies Act 1994 (Bangladesh)",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={
+                    "reported_financial_statements_filed": False,
+                    "agm_history_verified": self._agm_history_is_verified(c),
+                    "verification_status": "UNVERIFIED_PROFILE_ASSERTION",
+                    "required_evidence": [
+                        "AUTHENTICATED_RJSC_FILING_SEARCH_OR_RESPONSE",
+                        "FILING_RECEIPT_OR_ACKNOWLEDGEMENT",
+                        "AGM_OR_STATUTORY_DUE_DATE_EVIDENCE",
+                        "EXTENSION_OR_COURT_ORDER_IF_ANY",
+                    ],
+                },
+            ))
 
-        # ACC-003: Books of account not kept (Section 181)
         if c.books_of_account_kept is False:
             self._add_flag(ComplianceFlag(
                 rule_id="ACC-003",
-                flag_code="BOOKS_NOT_KEPT",
-                severity=Severity.RED,
-                score_impact=15,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description="Proper books of account not maintained. Section 181: every company shall keep proper books.",
+                flag_code="BOOKS_OF_ACCOUNT_STATUS_REQUIRES_VERIFICATION",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "The company profile reports that proper books of account are "
+                    "not kept. The current profile does not bind a reviewer-verified "
+                    "inspection, record inventory, accounting period or branch-office "
+                    "records. Inspect the books, vouchers, branch summaries, location "
+                    "notice and retention period before determining a Section 181 default."
+                ),
                 statutory_basis="Section 181, Companies Act 1994 (Bangladesh)",
-            ))
-
-    def _run_escalation_rules(self, c: CompanyProfile) -> None:
-        agm_years = self._calculate_agm_default_years(c)
-        ar_years = c.unfiled_returns_count or 0  # defensive: None → 0
-
-        # ═════════════════════════════════════════════════════════════════
-        # P0 LEGAL FIX: DEF-001 — Director Disqualified (Section 94)
-        # ═════════════════════════════════════════════════════════════════
-        # Section 94 of the Companies Act 1994 (Bangladesh) lists these
-        # disqualification grounds:
-        #   (a) Declared of unsound mind by competent court (while in force)
-        #   (b) Undischarged insolvent
-        #   (c) Applied to be adjudicated insolvent & application pending
-        #   (d) Unpaid call on shares 6+ months after deadline
-        #   (e) Minor (under 18)
-        # Section 94(2): AoA may prescribe additional grounds.
-        #
-        # CRITICAL: Section 94 does NOT specify a "5-year" disqualification
-        # period. The previous description claiming "Cannot act as director
-        # for 5 years" was legally unsupported and has been removed.
-        #
-        # Evidence gating: Section 94 findings require structured grounds,
-        # director identity, authoritative evidence, effective date and current
-        # status. DEF-001 remains in the product scoring catalogue, but an
-        # individual finding remains NOT_EVALUATED until its required facts and
-        # evidence are present. The unpaid-call threshold is DISPUTED across
-        # official Bengali and English/case materials.
-        # ═════════════════════════════════════════════════════════════════
-
-        VALID_GROUNDS = {
-            "UNSOUND_MIND", "UNDISCHARGED_INSOLVENT", "PENDING_INSOLVENCY",
-            "UNPAID_CALL", "MINOR", "AOA_PRESCRIBED",
-        }
-
-        # Check for verified, structured disqualification grounds
-        verified_grounds = []
-        unverified_allegations: list[dict[str, Any] | str] = []
-        disputed_grounds = []
-
-        if c.disqualification_grounds:
-            for g in c.disqualification_grounds:
-                ground_type = g.get("ground_type", "")
-                evidence_ref = g.get("evidence_ref")
-                authority = g.get("authority")
-                director_name = g.get("director_name")
-                effective_date = g.get("effective_date")
-                continuing = g.get("continuing_status")
-                base_evidence_complete = (
-                    isinstance(director_name, str) and director_name.strip()
-                    and isinstance(evidence_ref, str) and evidence_ref.strip()
-                    and isinstance(authority, str) and authority.strip()
-                    and bool(effective_date)
-                    and continuing is True
-                )
-                if ground_type == "UNPAID_CALL" and base_evidence_complete:
-                    # BDLaws Bengali text states 180 days; English materials and
-                    # some case materials describe six months. Keep this disputed
-                    # until a Bangladesh company-law reviewer resolves the text.
-                    disputed_grounds.append(g)
-                elif (
-                    ground_type in VALID_GROUNDS
-                    and base_evidence_complete
-                    and (
-                        ground_type != "AOA_PRESCRIBED"
-                        or bool(g.get("aoa_provision_ref"))
-                    )
-                ):
-                    verified_grounds.append(g)
-                else:
-                    unverified_allegations.append(g)
-
-        # Legacy path: disqualification_details (free-text) without structured grounds
-        # → treat as unverified allegations, NOT as BLACK override
-        if not c.disqualification_grounds and c.disqualification_details:
-            unverified_allegations.extend(c.disqualification_details)
-
-        if disputed_grounds:
-            self._add_flag(ComplianceFlag(
-                rule_id="DEF-001",
-                flag_code="DIRECTOR_DISQUALIFICATION_GROUND_DISPUTED",
-                severity=Severity.NOT_EVALUATED,
-                score_impact=0,
-                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="Unpaid-call disqualification evidence is recorded, but statutory materials differ on the threshold (180 days versus six months). Legal review is required before classifying this as a confirmed disqualification.",
-                statutory_basis="Section 94(1)(d), Companies Act 1994 (Bangladesh)",
-                state=RuleState.DISPUTED,
-                eval_state="UNKNOWN",
-                detail={"disputed_grounds": disputed_grounds, "legal_review_required": True},
-            ))
-
-        if verified_grounds:
-            disq_count = len(verified_grounds)
-            # Disqualification is a statutory finding; automatic BLACK is an
-            # NLC risk-policy choice, not a consequence prescribed by Section 94.
-            impact = 10
-            ground_summary = "; ".join(
-                f"{g.get('director_name', 'Director')}: {g.get('ground_type', 'unknown')}"
-                for g in verified_grounds
-            )
-            self._add_flag(ComplianceFlag(
-                rule_id="DEF-001",
-                flag_code="DIRECTOR_DISQUALIFIED",
-                severity=Severity.RED,
-                score_impact=impact,
-                revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                description=(
-                    f"{disq_count} director(s) disqualified under Section 94 "
-                    f"({ground_summary}). Verified evidence on file. "
-                    f"Director(s) cannot act until disqualification ceases per S94."
-                ),
-                statutory_basis="Section 94, Companies Act 1994 (Bangladesh)",
-                detail={
-                    "disqualifications": verified_grounds,
-                    "count": disq_count,
-                    "evidence_verified": True,
-                },
-                is_black_override=False,
-            ))
-        elif unverified_allegations:
-            # P0 EVIDENCE SEMANTICS: Unverified disqualification allegations
-            # must NOT trigger BLACK override. Emit as NOT_EVALUATED to
-            # signal that legal verification is required before any
-            # compliance determination can be made.
-            self._add_flag(ComplianceFlag(
-                rule_id="DEF-001",
-                flag_code="DIRECTOR_DISQUALIFICATION_UNVERIFIED",
-                severity=Severity.NOT_EVALUATED,
-                score_impact=0,
-                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=(
-                    "Disqualification allegation(s) received for director(s) "
-                    "but evidence NOT verified. Section 94 requires a "
-                    "competent court declaration, insolvency certificate, "
-                    "or other authoritative determination. Cannot determine "
-                    "compliance status until evidence is reviewed."
-                ),
-                statutory_basis="Section 94, Companies Act 1994 (Bangladesh)",
-                detail={
-                    "allegations": unverified_allegations,
-                    "evidence_verified": False,
-                    "action_required": "Obtain court order or authoritative evidence per S94 ground",
-                },
                 state=RuleState.UNKNOWN,
-            ))
-
-        if agm_years >= 2 and ar_years >= 2:  # type: ignore
-            self._add_flag(ComplianceFlag(
-                rule_id="ESC-001",
-                flag_code="STRIKE_OFF_STATUS_REQUIRES_REVIEW",
-                severity=Severity.NOT_EVALUATED,
-                score_impact=0,
-                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="A multi-year AGM/annual-return backlog is an internal escalation indicator only. It does not establish that RJSC has commenced strike-off. Verify the Section 346 grounds, Registrar notice, service, procedural stage, appeal, restoration and current company status.",
-                statutory_basis="Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required",
-                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                 eval_state="UNKNOWN",
-                detail={"agm_years": agm_years, "ar_years": ar_years, "official_notice_required": True}
-            ))
-
-        if (
-            agm_years >= 3
-            or ar_years >= 3
-            or c.rjsc_strike_off_notice_date is not None
-            or c.on_rjsc_strike_off_list
-        ):
-            # Suppress ESC-001 if ESC-002 is firing
-            self._flags = [f for f in self._flags if f.rule_id != "ESC-001"]
-            self._add_flag(ComplianceFlag(
-                rule_id="ESC-002",
-                flag_code="STRIKE_OFF_RISK_REVIEW_REQUIRED",
-                severity=Severity.NOT_EVALUATED,
-                score_impact=0,
-                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="Three or more years of apparent filing default or an RJSC strike-off-list indicator requires case-specific lawyer review. This is not a finding that strike-off is imminent or that dissolution has occurred.",
-                statutory_basis="Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required",
-                detail={"agm_years": agm_years, "ar_years": ar_years, "notice_date": c.rjsc_strike_off_notice_date, "on_list": c.on_rjsc_strike_off_list},
-                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
-                eval_state="UNKNOWN",
-                is_black_override=False,
-                escalation_pending=True,
-            ))
-
-        pre_score = self._calculate_raw_score(self._flags)
-        has_black_override = any(
-            f.rule_id in PRODUCT_SCORING_RULE_IDS
-            and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
-            and f.is_black_override
-            and f.severity == Severity.BLACK
-            and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
-            and f.eval_state == "VIOLATION"
-            for f in self._flags if not f.resolved and f.conditional_applies
-        )
-
-        if legal_score_is_released() and (pre_score <= 29 or has_black_override):
-            black_count = len([
-                f for f in self._flags
-                if f.rule_id in PRODUCT_SCORING_RULE_IDS
-                and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
-                and f.is_black_override
-                and f.severity == Severity.BLACK
-                and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
-                and f.eval_state == "VIOLATION"
-                and not f.resolved and f.conditional_applies
-                and f.rule_id not in self._ESC_RULE_IDS
-            ])
-            esc003_impact = 10 if black_count <= 2 else (25 if black_count == 3 else 35)
-            self._add_flag(ComplianceFlag(
-                rule_id="ESC-003",
-                flag_code="RESCUE_REQUIRED_MANDATORY",
-                severity=Severity.BLACK,
-                score_impact=esc003_impact,
-                revenue_tier=RevenueTier.CORPORATE_RESCUE,
-                description="NLC risk policy: rescue workflow recommended. Systemic failure detected.",
-                statutory_basis="NLC internal risk policy; not a statutory risk band under the Companies Act 1994.",
-                detail={"black_count": black_count, "pre_score": pre_score},
-                is_black_override=True,
-                state=RuleState.NON_COMPLIANT
+                detail={
+                    "reported_books_of_account_kept": False,
+                    "verification_status": "UNVERIFIED_PROFILE_ASSERTION",
+                    "required_evidence": [
+                        "INSPECTION_RECORD_AND_SCOPE",
+                        "BOOKS_AND_VOUCHER_INVENTORY",
+                        "REGISTERED_OFFICE_OR_APPROVED_ALTERNATE_LOCATION_NOTICE",
+                        "BRANCH_ACCOUNT_SUMMARIES_IF_APPLICABLE",
+                        "TWELVE_YEAR_RETENTION_REVIEW",
+                    ],
+                },
             ))
 
     # ───────────────────────────────────────────────────────────────────
