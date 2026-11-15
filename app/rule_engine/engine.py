@@ -451,6 +451,11 @@ class CompanyProfile:
     audit_committee_established: bool | None = None
     # -- Bangladesh Bank / Foreign Exchange --
     foreign_exchange_violation: bool = False
+    # Production evaluation binds every emitted rule to the LegalRule catalogue.
+    # Direct pure-engine tests may omit this snapshot; service evaluations must set it.
+    catalogue_binding_required: bool = False
+    catalogue_rule_versions: Dict[str, str] = field(default_factory=dict)
+    catalogue_rule_active: Dict[str, bool] = field(default_factory=dict)
 
 @dataclass
 class ScoreBreakdown:
@@ -834,6 +839,9 @@ class NLCRuleEngine:
     def evaluate(self, company: CompanyProfile, today: date | None = None) -> EngineOutput:
         """Evaluate a company profile. Thread-safety: create a fresh NLCRuleEngine() per call — self._flags is instance state."""
         self._flags = []
+        self._rule_versions = dict(company.catalogue_rule_versions or {})
+        self._rule_active = dict(company.catalogue_rule_active or {})
+        self._catalogue_binding_required = company.catalogue_binding_required is True
         self.today = today or self._default_today or date.today()
 
         self._run_incorporation_rules(company)
@@ -3232,10 +3240,37 @@ class NLCRuleEngine:
     # MODULE 15: BSEC CG CODE 2023
     def _run_bsec_rules(self, c: CompanyProfile) -> None:
         company_type = str(getattr(c.company_type, "value", c.company_type)).upper()
-        # The Corporate Governance Code is a listed-issuer regime, not a
-        # general private-company duty. For public companies, missing listing
-        # status remains UNKNOWN rather than silently becoming unlisted.
+        # The Corporate Governance Code is not a default private-company
+        # obligation. A contradictory positive listing flag on a private or
+        # otherwise unsupported legal form is not silently ignored: preserve
+        # it as an applicability conflict requiring source verification.
         if company_type != "PUBLIC_LIMITED":
+            if c.bsec_listed is True:
+                for rule_id in ("BSEC-001", "BSEC-002", "BSEC-003", "BSEC-004"):
+                    self._add_flag(ComplianceFlag(
+                        rule_id=rule_id,
+                        flag_code="BSEC_LISTING_FLAG_CONFLICTS_WITH_COMPANY_TYPE",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            "The profile reports BSEC-listed status for a company "
+                            "whose verified legal form is not PUBLIC_LIMITED. "
+                            "Resolve issuer identity, legal form and listing evidence "
+                            "before applying the Code."
+                        ),
+                        statutory_basis=(
+                            "BSEC Corporate Governance Code 2018, Conditions 1, 2 and 5; "
+                            "issuer scope requires verification"
+                        ),
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                        detail={
+                            "applicability_state": "CONFLICT",
+                            "company_type": company_type,
+                            "bsec_listed": True,
+                        },
+                    ))
             return
 
         candidates = (
@@ -4247,6 +4282,25 @@ class NLCRuleEngine:
         return 2              # Oct-Dec = Q2
 
     def _add_flag(self, flag: ComplianceFlag) -> None:
+        """Bind each finding to its database catalogue version and activation state."""
+        if self._catalogue_binding_required:
+            version = self._rule_versions.get(flag.rule_id)
+            active = self._rule_active.get(flag.rule_id)
+            if version is not None:
+                flag.rule_version = str(version)
+            if version is None or active is not True:
+                detail = dict(flag.detail or {})
+                detail["rule_catalogue_binding"] = (
+                    "CATALOGUE_ENTRY_MISSING" if version is None else "RULE_INACTIVE"
+                )
+                detail["engine_evaluator_version"] = RULE_ENGINE_VERSION
+                flag.detail = detail
+                flag.severity = Severity.NOT_EVALUATED
+                flag.score_impact = 0
+                flag.state = RuleState.UNKNOWN
+                flag.eval_state = "UNKNOWN"
+                flag.is_black_override = False
+                flag.conditional_applies = False
         self._flags.append(flag)
 
     def _graduated_agm_deduction(self, delay: int) -> int:
