@@ -18,9 +18,13 @@ All seeded IDs present in database: true.
 
 ## Catalogue-level findings
 - Seed: 85 unique canonical rule IDs.
-- Database: 86 unique active IDs; one extra legacy INC-002.
+- Database: 86 unique active IDs; one extra legacy INC-002. All 85 canonical seed IDs are present, but ID presence is not definition parity.
 - All 85 seed IDs are present in the database; field-level differences are recorded row by row.
 - Legal approval remains pending for all 85 canonical rules.
+- Live DB version labels: 1.1 = 60 rows; 2.1 = 20 rows (including the database-only INC-002); 2.2 = 6 rows. These labels are not authoritative legal revision identities.
+- Live DB NULL conditions: 23 rows (17 at DB label 1.1 and 6 at 2.2); no statutory-basis fields are null in the audit projection.
+- The database-only INC-002 is currently active with verification_status ACTIVE; this is not counsel approval and its section 11 proposition is not part of the 85-rule canonical seed.
+- At least one direct identity collision is visible: database INC-001 is "Certificate of Incorporation Not Obtained" (section 9), while seed INC-001 is "MoA/AoA Registration Status Requires Verification" (section 23). Do not merge, overwrite or re-key these without an identity and historical-reference plan.
 - A NULL live DB condition is not cured by a non-NULL seed condition; each must be explicitly classified and resolved.
 - No authoritative immutable, effective-dated LegalRuleRevision model is established by the inspected architecture. LegalRuleVersion snapshots are historical audit snapshots; current LegalRule rows remain mutable.
 - Keep independent counsel verification separate from the scoring gate as instructed; preserve evidence provenance, fact verification, identity controls, human review and product-policy override governance.
