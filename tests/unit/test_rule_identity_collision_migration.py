@@ -1,4 +1,4 @@
-"""Structural guards for the forward-only rule identity collision migration."""
+"""Structural guards for safe legacy identity quarantine."""
 import ast
 from pathlib import Path
 
@@ -26,32 +26,37 @@ def test_identity_migration_uses_unique_revision_after_current_head():
     }
 
 
-def test_identity_migration_archives_and_never_rewrites_historical_findings():
+def test_identity_migration_archives_and_quarantines_without_rewriting_identity():
     source = MIGRATION.read_text(encoding="utf-8")
     for marker in (
         "legal_rule_identity_archive",
         "legacy:INC-001:companies-act-section-9",
         "legacy:INC-002:companies-act-section-11",
-        "PRESERVED_LEGACY_IDENTITY",
-        "RETIRED_LEGACY_IDENTITY",
-        "AMBIGUOUS_UNLESS_HISTORICAL_SNAPSHOT_BINDS_DEFINITION",
-        "historical findings remain unresolved until independently attributed",
+        "QUARANTINED_LEGACY_IDENTITY",
+        "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
+        "Historical references remain attached to the",
     ):
         assert marker in source
+    assert "Refusing rule identity rewrite while FK dependants exist" not in source
     assert "UPDATE public.compliance_evaluation_runs" not in source
     assert "UPDATE public.compliance_flags" not in source
     assert "DELETE FROM public.legal_rules" not in source
+    assert "SET rule_name=" not in source
+    assert "SET statutory_basis=" not in source
+    assert "SET rule_condition=" not in source
     assert "Forward-only" in source
 
 
-def test_identity_migration_checks_schema_and_fails_closed_on_unknown_rows():
+def test_identity_migration_checks_schema_and_exact_legacy_fingerprints():
     source = MIGRATION.read_text(encoding="utf-8")
     for marker in (
         "REQUIRED_RULE_COLUMNS",
         "missing columns:",
-        "Refusing rule identity rewrite while FK dependants exist",
-        "INC-001 has an unrecognized or partially canonical identity",
-        "INC-002 has an unrecognized or incomplete identity",
-        "INC-001 missing; restore canonical row",
+        "certificate_obtained == False",
+        "INC-001 is not the exact reviewed legacy fingerprint",
+        "INC-002 is not the reviewed legacy fingerprint",
+        "default_severity='NOT_EVALUATED'",
+        "score_impact=0",
+        "is_black_override=false",
     ):
         assert marker in source
