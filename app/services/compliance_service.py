@@ -947,7 +947,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             for rule_id, severity in rows
             if score_released and rule_id in PRODUCT_SCORING_RULE_IDS
         ]
-        pending_review_count = None  # Not derived from a code-level counsel allowlist.
+        pending_review_count = int(summary.get("pending_review", 0) or 0)  # Preserve the database's independent review-workflow count.
         not_evaluated_count = sum(
             1 for rule_id, _ in rows
             if not score_released or rule_id not in PRODUCT_SCORING_RULE_IDS
