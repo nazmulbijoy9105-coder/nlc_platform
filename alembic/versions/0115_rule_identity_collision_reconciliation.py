@@ -25,6 +25,33 @@ REQUIRED_RULE_COLUMNS = {
     "is_active", "verification_status", "verification_notes", "updated_at",
 }
 
+# Both fingerprints are known from immutable migrations and the separately
+# observed database inventory. They remain legacy identities, not approvals.
+INC001_LEGACY_FINGERPRINTS = (
+    (
+        "Certificate of Incorporation Not Obtained",
+        "Section 9, Companies Act 1994 (Bangladesh)",
+        "certificate_obtained == False",
+    ),
+    (
+        "Memorandum and Articles Not Filed",
+        "Section 11, Companies Act 1994 (Bangladesh)",
+        "moa_aoa_filed == False",
+    ),
+)
+INC002_LEGACY_FINGERPRINTS = (
+    (
+        "Memorandum and Articles Not Filed",
+        "Section 11, Companies Act 1994 (Bangladesh)",
+        "moa_filed == False OR aoa_filed == False",
+    ),
+    (
+        "Form III Not Filed",
+        "Section 11, Companies Act 1994 (Bangladesh)",
+        "paid_up_capital_bdt > 0 AND form_iii_filed == False AND days_since_incorporation > 28",
+    ),
+)
+
 
 def _archive(bind, rule_id, identity_key, disposition):
     row = bind.execute(
@@ -74,6 +101,18 @@ def _quarantine(bind, rule_id, note):
     """), {"rule_id": rule_id, "note": note})
 
 
+def _matches_legacy(row, fingerprints):
+    condition = row["rule_condition"] or {}
+    if not isinstance(condition, dict):
+        return False
+    return any(
+        row["rule_name"] == name
+        and row["statutory_basis"] == basis
+        and condition.get("trigger") == trigger
+        for name, basis, trigger in fingerprints
+    )
+
+
 def upgrade():
     bind = op.get_bind()
     inspector = sa.inspect(bind)
@@ -110,30 +149,19 @@ def upgrade():
         SELECT rule_name, statutory_basis, rule_condition
         FROM public.legal_rules WHERE rule_id='INC-001'
     """)).mappings().first()
-    if inc001 is None:
-        raise RuntimeError("INC-001 missing; refusing automatic identity creation")
-
-    condition = inc001["rule_condition"] or {}
-    legacy_inc001 = (
-        inc001["rule_name"] == "Certificate of Incorporation Not Obtained"
-        and inc001["statutory_basis"]
-            == "Section 9, Companies Act 1994 (Bangladesh)"
-        and isinstance(condition, dict)
-        and condition.get("trigger") == "certificate_obtained == False"
-    )
-    if not legacy_inc001:
+    if inc001 is None or not _matches_legacy(inc001, INC001_LEGACY_FINGERPRINTS):
         raise RuntimeError(
-            "INC-001 is not the exact reviewed legacy fingerprint; "
-            "refusing mutation: " + repr(dict(inc001))
+            "INC-001 does not match a reviewed historical fingerprint; "
+            "refusing mutation: " + repr(dict(inc001) if inc001 else None)
         )
 
     _archive(
-        bind, "INC-001", "legacy:INC-001:companies-act-section-9",
+        bind, "INC-001", "legacy:INC-001:preserved-original-definition",
         "QUARANTINED_LEGACY_IDENTITY",
     )
     _quarantine(
         bind, "INC-001",
-        "Legacy section-9 identity quarantined. Canonical seed meaning is not "
+        "Legacy INC-001 identity quarantined. Canonical seed meaning is not "
         "bound to this row. Historical references remain attached to the "
         "unchanged legacy identity pending record-level attribution.",
     )
@@ -143,25 +171,18 @@ def upgrade():
         FROM public.legal_rules WHERE rule_id='INC-002'
     """)).mappings().first()
     if inc002 is not None:
-        condition_002 = inc002["rule_condition"]
-        if (
-            inc002["rule_name"] != "Memorandum and Articles Not Filed"
-            or inc002["statutory_basis"]
-                != "Section 11, Companies Act 1994 (Bangladesh)"
-            or not isinstance(condition_002, dict)
-            or not condition_002
-        ):
+        if not _matches_legacy(inc002, INC002_LEGACY_FINGERPRINTS):
             raise RuntimeError(
-                "INC-002 is not the reviewed legacy fingerprint; "
+                "INC-002 does not match a reviewed historical fingerprint; "
                 "refusing retirement: " + repr(dict(inc002))
             )
         _archive(
-            bind, "INC-002", "legacy:INC-002:companies-act-section-11",
+            bind, "INC-002", "legacy:INC-002:preserved-original-definition",
             "QUARANTINED_LEGACY_IDENTITY",
         )
         _quarantine(
             bind, "INC-002",
-            "Legacy section-11 identity quarantined and excluded from the "
+            "Legacy INC-002 identity quarantined and excluded from the "
             "canonical 85-rule manifest. ID is reserved and must never be reused.",
         )
 
