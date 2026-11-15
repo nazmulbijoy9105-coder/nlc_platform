@@ -1262,7 +1262,7 @@ class TestRules:
             headers=_auth(sa_token),
         )
         assert current.status_code == 200, current.text
-        expected_version = current.json()["rule_version"]
+        expected_version = current.json()["version"]
 
         resp = await api_client.patch(
             "/api/v1/rules/AUD-003",
