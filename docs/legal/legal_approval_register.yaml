@@ -162,6 +162,9 @@ rules:
   - rule_id: INC-001
     status: REVIEW_REQUIRED
     score_eligible: false
+  - rule_id: INC-002
+    status: REVIEW_REQUIRED
+    score_eligible: false
   - rule_id: INC-003
     status: REVIEW_REQUIRED
     score_eligible: false

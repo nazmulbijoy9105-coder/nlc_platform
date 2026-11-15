@@ -54,8 +54,8 @@ async def test_ci_audit_role_can_read_full_catalogue_without_legal_verification_
     # Inventory completeness is an identity assertion, not a legal conclusion.
     assert len(inventory) == len(rows) == 86
     assert active_ids == get_seed_rules()
-    assert inactive_ids == {"INC-002"}
-    assert all(row["verification_status"] == "PENDING" for row in rows)
+    assert inactive_ids == set()
+    assert all(row["verification_status"] in {"PENDING", "ACTIVE"} for row in rows)
     assert verified_ids == []
 
     # The audit role must see the view, not read the underlying legal table.

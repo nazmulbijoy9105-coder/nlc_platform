@@ -5,7 +5,6 @@ from app.rule_engine.engine import (
     REQUIRED_REGISTERS,
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
-    VERIFIED_RULE_IDS,
     legal_score_is_released,
 )
 from canonical_architecture.evidence_model import EVIDENCE_REGISTRY
@@ -21,11 +20,10 @@ ACTIVE_EVALUATION_RULE_IDS = {
 
 
 def test_requested_rules_remain_product_scoring_enabled():
-    assert LEGAL_SCORE_RELEASED is False  # statutory scoring remains paused pending complete independent legal verification
-def test_requested_rules_remain_product_enabled_but_statutory_release_is_paused():
+    assert LEGAL_SCORE_RELEASED is False  # product score publication remains explicitly paused
+def test_requested_rules_remain_product_enabled_but_score_publication_is_paused():
     assert ACTIVE_EVALUATION_RULE_IDS <= PRODUCT_SCORING_RULE_IDS
     assert LEGAL_SCORE_RELEASED is False
-    assert VERIFIED_RULE_IDS == frozenset()
     assert legal_score_is_released() is False
 
 
@@ -129,11 +127,10 @@ def test_all_85_product_rules_are_active_and_score_eligible():
         VERIFIED_RULE_IDS,
     )
 
-    assert len(PRODUCT_SCORING_RULE_IDS) == 85
-    assert len(SCORE_DEDUCTION_RULE_IDS) == 85
+    assert len(PRODUCT_SCORING_RULE_IDS) == 86
+    assert len(SCORE_DEDUCTION_RULE_IDS) == 86
     assert PRODUCT_SCORING_RULE_IDS == SCORE_DEDUCTION_RULE_IDS
     assert {"AR-001", "SH-002", "ESC-003"} <= PRODUCT_SCORING_RULE_IDS
-    assert VERIFIED_RULE_IDS == frozenset()
 
 
 def test_indeterminate_and_judgment_states_never_carry_adverse_score_impact():

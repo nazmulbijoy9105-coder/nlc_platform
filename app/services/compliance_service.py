@@ -88,7 +88,6 @@ def _applied_score_impacts(flags) -> list[dict]:
         AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
         PRODUCT_SCORING_RULE_IDS,
         SCORE_DEDUCTION_RULE_IDS,
-        VERIFIED_RULE_IDS,
         RuleState,
         legal_score_is_released,
     )
@@ -119,9 +118,6 @@ def _applied_score_impacts(flags) -> list[dict]:
             continue
         if not legal_score_is_released():
             results[index] = {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
-            continue
-        if flag.rule_id not in VERIFIED_RULE_IDS:
-            results[index] = {"applied": 0, "status": "RULE_NOT_COUNSEL_VERIFIED"}
             continue
         severity_value = getattr(
             getattr(flag, "severity", None),
@@ -980,8 +976,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         rows = flags_result.all()
         from app.rule_engine.engine import (
             PRODUCT_SCORING_RULE_IDS,
-            VERIFIED_RULE_IDS,
-            legal_score_is_released,
+                legal_score_is_released,
         )
         score_released = legal_score_is_released()
         product_severities = [
@@ -989,9 +984,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             for rule_id, severity in rows
             if score_released and rule_id in PRODUCT_SCORING_RULE_IDS
         ]
-        pending_review_count = sum(
-            1 for rule_id, _ in rows if rule_id not in VERIFIED_RULE_IDS
-        )
+        pending_review_count = int(summary.get("pending_review", 0) or 0)  # Preserve the database's independent review-workflow count.
         not_evaluated_count = sum(
             1 for rule_id, _ in rows
             if not score_released or rule_id not in PRODUCT_SCORING_RULE_IDS

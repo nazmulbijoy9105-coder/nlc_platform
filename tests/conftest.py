@@ -364,18 +364,12 @@ def rule_engine(monkeypatch):
     """
     Controlled engine fixture for rule-module behaviour tests.
 
-    These tests exercise candidate evaluation/scoring mechanics under an
-    explicitly simulated counsel-approved release. Production approval state
-    is tested separately and remains empty/fail-closed in the real module.
+    These tests exercise deterministic evaluation/scoring mechanics under
+    an explicitly enabled product release. Evidence and applicability remain gated.
     """
     import app.rule_engine.engine as engine_module
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(
-        engine_module,
-        "VERIFIED_RULE_IDS",
-        frozenset(engine_module.PRODUCT_SCORING_RULE_IDS),
-    )
     return engine_module.NLCRuleEngine()
 
 

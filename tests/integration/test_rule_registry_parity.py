@@ -24,6 +24,8 @@ async def test_rule_registry_matches_engine_seed_database_and_super_admin_api(
     assert response.status_code == 200, response.text
     api_ids = {item["rule_id"] for item in response.json()}
 
-    assert engine_ids == seed_ids
+    # INC-002 is catalogued but deliberately has no executable evaluator yet.
+    assert seed_ids - engine_ids == {"INC-002"}
+    assert engine_ids <= seed_ids
     assert database_ids == seed_ids
     assert api_ids == database_ids

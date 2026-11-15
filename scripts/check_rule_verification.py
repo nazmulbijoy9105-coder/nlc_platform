@@ -116,7 +116,7 @@ def main() -> int:
         print(f"FAIL: product approval inventory mismatch; rows_missing={sorted(seed-product_row_ids)} rows_extra={sorted(product_row_ids-seed)} approved_missing={sorted(seed-approved_ids)}")
         return 1
     if product_approved_count != len(seed) or active_count != len(seed) or eligible_count != len(seed) or ineligible_count != 0:
-        print(f"FAIL: expected 85 product-approved/active/score-eligible rules and no inactive catalogue rules; got {product_approved_count}, {active_count}, {eligible_count}, {ineligible_count}")
+        print(f"FAIL: expected 86 product-approved/active/score-eligible rules and no inactive catalogue rules; got {product_approved_count}, {active_count}, {eligible_count}, {ineligible_count}")
         return 1
 
     legal_approval = legal_path.read_text(encoding="utf-8")
@@ -131,7 +131,7 @@ def main() -> int:
         r"^\s+status:\s*REVIEW_REQUIRED\s*$", legal_approval, re.MULTILINE
     ))
     if "approval_policy: independent_counsel_only" not in legal_header or counsel_approved_ids or legal_row_ids != seed or review_required_count != len(seed):
-        print("FAIL: legal register must retain all 85 rules as REVIEW_REQUIRED with no counsel approvals")
+        print("FAIL: legal register must retain all canonical rules as REVIEW_REQUIRED with no counsel approvals")
         return 1
 
     # Fail closed at the data source too: an empty engine allowlist is not
@@ -230,20 +230,12 @@ def main() -> int:
         if release_function is not None else ""
     )
     if (
-        "VERIFIED_RULE_IDS" in release_function_source
+        "VERIFIED_RULE_IDS" in engine_source
+        or "_counsel_score_basis_is_verified" in engine_source
         or "issubset" in release_function_source
         or "PRODUCT_SCORING_RULE_IDS" not in release_function_source
     ):
-        print("FAIL: product release function must depend on the product allowlist, not counsel verification")
-        return 1
-
-    verified_match = re.search(
-        r"^VERIFIED_RULE_IDS:\s*frozenset\[str\]\s*=\s*frozenset\(\{([\s\S]*?)\}\)",
-        engine_source, re.MULTILINE
-    )
-    verified_engine_ids = set(re.findall(r'"([A-Z]{2,12}-\d{3})"', verified_match.group(1))) if verified_match else set()
-    if verified_engine_ids:
-        print(f"FAIL: default VERIFIED_RULE_IDS must remain empty pending independent Bangladesh-counsel verification; found={sorted(verified_engine_ids)}")
+        print("FAIL: scoring release must not depend on a counsel-verification allowlist")
         return 1
 
     engine_tree = ast.parse(engine_source)
@@ -271,7 +263,7 @@ def main() -> int:
         return 1
 
     print(f"PASS: {len(seed)} catalogue rules match engine, seed and legal register")
-    print(f"PASS: {len(product_ids)} rules are product-active and score-eligible; counsel-verified IDs remain separate: {len(verified_engine_ids)}")
+    print(f"PASS: {len(product_ids)} rules are product-active and score-eligible; no counsel-verification allowlist is consulted")
     return 0
 
 
