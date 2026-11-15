@@ -6,35 +6,36 @@ This patch addresses two confirmed rule-ID collisions, historical-reference
 inventory, and SQLAlchemy relationship-loading observability. It does not
 revise statutory interpretations or claim historical attribution.
 
-| Identity | Existing legacy meaning | Safe disposition |
+| Identity | Known historical definitions | Safe disposition |
 |---|---|---|
-| INC-001 | Certificate of Incorporation Not Obtained; Companies Act 1994, s.9 | Archive exact payload and quarantine the existing row without changing its identity or statutory meaning |
-| INC-002 | Memorandum and Articles Not Filed; Companies Act 1994, s.11 | Archive exact payload and quarantine the existing row; never reuse the ID |
+| INC-001 | Section 9 Certificate of Incorporation definition from migration 0026; section 11 Memorandum/AoA definition from migration 0029 | Archive exact current payload and quarantine without changing its ID or meaning |
+| INC-002 | Section 11 Memorandum/AoA definition from migration 0026; Form III definition from migration 0029 | Archive exact current payload and quarantine; never reuse ID |
 
 ## Why the first migration approach was rejected
 
-The earlier migration attempted to replace the INC-001 definition in place.
-CI exposed five FK dependants: `legal_rule_versions.rule_id`,
+The initial in-place replacement would have changed the meaning behind five
+existing FK relationships: `legal_rule_versions.rule_id`,
 `compliance_flags.rule_id`, `legal_rule_source_mappings.rule_id`,
 `legal_deadline_definitions.rule_id`, and
-`legal_rule_release_events.rule_id`.
+`legal_rule_release_events.rule_id`. Removing the FK guard and rewriting the
+row would silently change what those records appear to reference.
 
-Those are real historical relationships, not disposable blockers. Removing the
-FK guard and rewriting the row would silently change what those records appear
-to reference. This patch therefore preserves the legacy row's rule ID, name,
+Migration 0115 now preserves the existing legacy row's rule ID, name,
 statutory basis and condition. It archives the exact payload and changes only
-the operational quarantine fields: inactive, NOT_EVALUATED, zero score impact,
-no BLACK override, and PENDING verification.
+operational quarantine fields: inactive, NOT_EVALUATED, zero score impact,
+no BLACK override, and PENDING verification. It accepts only explicitly
+enumerated historical fingerprints found in migrations 0026/0029 and the
+previously observed database inventory; unknown variants fail closed.
 
 Canonical INC-001 cannot be activated under the same ID until a separately
-reviewed migration can preserve the existing foreign-key and non-FK reference
-semantics. Do not seed over or overwrite this row.
+reviewed identity/revision migration preserves every FK and non-FK reference.
+Do not seed over or overwrite the quarantined row.
 
 ## Historical attribution
 
 `scripts/audit_rule_historical_attribution.py` scans public-schema text,
 character, JSON, JSONB and array columns for INC-001 and INC-002. It reports
-record locators without exporting row contents. Each hit remains
+record locators without exporting row contents. Every hit remains
 `UNATTRIBUTED`: a rule-ID match alone does not bind the exact historical
 definition, evaluator build, timestamp, input facts, evidence or integrity
 proof.
@@ -54,9 +55,9 @@ cascade and local FK columns. It flags:
 - `EXPLICIT_LOADER_REQUIRED`: relationship is configured with lazy=raise.
 - `BACK_POPULATES_MISMATCH`: reciprocal ORM mapping is inconsistent.
 
-This is an inventory and regression guard, not a claim that every runtime
-service query has been optimized. Query-callsite profiling and per-endpoint
-loader plans remain separate verification work.
+This is an inventory and regression guard, not proof that every runtime service
+query is optimized. Query-callsite profiling and per-endpoint query-count tests
+remain separate verification work.
 
 Run:
 
@@ -72,7 +73,7 @@ python scripts/audit_orm_relationship_loading.py --json-output artifacts/orm-rel
   definitions, release events or evaluation snapshots are rewritten/deleted.
 - INC-001 and INC-002 are quarantined from scoring rather than relabelled.
 - No counsel allowlist is introduced into scoring.
-- Historical reference and ORM audits are read-only.
+- Historical-reference and ORM audits are read-only.
 
 ## Release gates
 
