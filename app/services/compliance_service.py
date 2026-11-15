@@ -266,6 +266,43 @@ class ComplianceService(BaseService[ComplianceFlag]):
         except TypeError as exc:
             raise ValueError(f"CompanyProfile assembly failed: {exc}") from exc
 
+        # Bind the evaluator to the exact active/inactive catalogue snapshot
+        # used for this run. Engine logic remains deployed Python; DB metadata
+        # cannot rewrite evaluator code. A missing/inactive row is fail-closed.
+        catalogue_rows = (
+            await self.db.execute(
+                select(
+                    LegalRule.rule_id,
+                    LegalRule.rule_version,
+                    LegalRule.is_active,
+                ).order_by(LegalRule.rule_id)
+            )
+        ).all()
+        profile.catalogue_binding_required = True
+        profile.catalogue_rule_versions = {
+            row.rule_id: row.rule_version for row in catalogue_rows
+        }
+        profile.catalogue_rule_active = {
+            row.rule_id: bool(row.is_active) for row in catalogue_rows
+        }
+        catalogue_binding = {
+            "record_type": "LEGAL_RULE_CATALOGUE_SNAPSHOT",
+            "rules": [
+                {
+                    "rule_id": row.rule_id,
+                    "rule_version": row.rule_version,
+                    "is_active": bool(row.is_active),
+                }
+                for row in catalogue_rows
+            ],
+            "disclosure": (
+                "This snapshot binds finding metadata and activation to the "
+                "database catalogue. It does not prove statutory correctness "
+                "or independent counsel approval."
+            ),
+        }
+        fact_provenance_snapshot.append(catalogue_binding)
+
         # ── Step 2: Run rule engine ────────────────────────────────
         # Explicit injection supports deterministic tests and controlled
         # evaluation runs. Production callers retain the canonical engine.
