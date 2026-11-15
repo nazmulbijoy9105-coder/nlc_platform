@@ -25,8 +25,9 @@ REQUIRED_RULE_COLUMNS = {
     "is_active", "verification_status", "verification_notes", "updated_at",
 }
 
-# Both fingerprints are known from immutable migrations and the separately
-# observed database inventory. They remain legacy identities, not approvals.
+# Fingerprints include the original 0026/0029 definitions and the subsequent
+# 0030 citation correction (Sections 11 -> 23). They remain legacy identities,
+# not approvals.
 INC001_LEGACY_FINGERPRINTS = (
     (
         "Certificate of Incorporation Not Obtained",
@@ -35,7 +36,7 @@ INC001_LEGACY_FINGERPRINTS = (
     ),
     (
         "Memorandum and Articles Not Filed",
-        "Section 11, Companies Act 1994 (Bangladesh)",
+        "Section 23, Companies Act 1994 (Bangladesh)",
         "moa_aoa_filed == False",
     ),
 )
