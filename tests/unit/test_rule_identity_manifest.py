@@ -4,13 +4,21 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
+
 def _assignment(tree, name):
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign) and any(
             isinstance(target, ast.Name) and target.id == name for target in node.targets
         ):
             return node.value
+        if (
+            isinstance(node, ast.AnnAssign)
+            and isinstance(node.target, ast.Name)
+            and node.target.id == name
+        ):
+            return node.value
     raise AssertionError(f"missing assignment: {name}")
+
 
 def test_statutory_rule_source_has_no_duplicate_literal_identity_declarations():
     path = ROOT / "canonical_architecture" / "statutory_rules.py"
@@ -29,6 +37,7 @@ def test_statutory_rule_source_has_no_duplicate_literal_identity_declarations():
     assert isinstance(legacy, ast.Dict)
     keys = [key.value for key in legacy.keys if isinstance(key, ast.Constant) and isinstance(key.value, str)]
     assert len(keys) == len(set(keys)), {"duplicate_legacy_ids": sorted({x for x in keys if keys.count(x) > 1})}
+
 
 def test_rule_identity_manifest_is_exact_across_canonical_seed_and_rescue():
     from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
