@@ -2,82 +2,86 @@
 
 ## Scope
 
-This patch addresses two confirmed identity collisions and adds a read-only
-inventory tool for historical references. It does not revise statutory
-interpretations or claim historical attribution.
+This patch addresses two confirmed rule-ID collisions, historical-reference
+inventory, and SQLAlchemy relationship-loading observability. It does not
+revise statutory interpretations or claim historical attribution.
 
-| Identity | Legacy meaning | Disposition |
+| Identity | Existing legacy meaning | Safe disposition |
 |---|---|---|
-| INC-001 | Certificate of Incorporation Not Obtained; Companies Act 1994, s.9 | Preserve exact legacy payload under a namespaced legacy key; restore canonical seed identity for MoA/AoA registration verification, s.23 |
-| INC-002 | Memorandum and Articles Not Filed; Companies Act 1994, s.11 | Preserve exact legacy payload under a namespaced legacy key; retain row inactive and never reuse the ID |
+| INC-001 | Certificate of Incorporation Not Obtained; Companies Act 1994, s.9 | Archive exact payload and quarantine the existing row without changing its identity or statutory meaning |
+| INC-002 | Memorandum and Articles Not Filed; Companies Act 1994, s.11 | Archive exact payload and quarantine the existing row; never reuse the ID |
 
-## Migration graph correction
+## Why the first migration approach was rejected
 
-The first draft used revision ID 0112, which collided with the existing
-`0112_runtime_acl_and_alembic_rls` migration. The remediation migration is
-therefore assigned revision `0115_rule_identity_collision_reconciliation`
-after `0114_annual_return_filing_status_provenance`. The migration graph must
-still pass the repository's complete DAG audit and isolated PostgreSQL upgrade
-checks before merge.
+The earlier migration attempted to replace the INC-001 definition in place.
+CI exposed five FK dependants: `legal_rule_versions.rule_id`,
+`compliance_flags.rule_id`, `legal_rule_source_mappings.rule_id`,
+`legal_deadline_definitions.rule_id`, and
+`legal_rule_release_events.rule_id`.
 
-## Historical attribution is separate
+Those are real historical relationships, not disposable blockers. Removing the
+FK guard and rewriting the row would silently change what those records appear
+to reference. This patch therefore preserves the legacy row's rule ID, name,
+statutory basis and condition. It archives the exact payload and changes only
+the operational quarantine fields: inactive, NOT_EVALUATED, zero score impact,
+no BLACK override, and PENDING verification.
 
-Archiving a rule definition is not proof that any historical finding was
-generated under that definition. Rule-ID matches alone are insufficient.
+Canonical INC-001 cannot be activated under the same ID until a separately
+reviewed migration can preserve the existing foreign-key and non-FK reference
+semantics. Do not seed over or overwrite this row.
 
-The read-only tool
+## Historical attribution
+
 `scripts/audit_rule_historical_attribution.py` scans public-schema text,
-character, JSON, JSONB and array columns for references to INC-001 and INC-002.
-It reports table/column/primary-key locators without exporting row contents.
-Tables without primary keys use an ephemeral CTID locator and are explicitly
-reported. The script requires
-`NLC_HISTORICAL_AUDIT_DATABASE_URL`, starts a read-only transaction, and
-intentionally does not fall back to `DATABASE_URL`.
+character, JSON, JSONB and array columns for INC-001 and INC-002. It reports
+record locators without exporting row contents. Each hit remains
+`UNATTRIBUTED`: a rule-ID match alone does not bind the exact historical
+definition, evaluator build, timestamp, input facts, evidence or integrity
+proof.
 
-Every discovered reference is classified `UNATTRIBUTED`. That is deliberate:
-the scan establishes presence, not the exact immutable rule definition,
-evaluator build, evaluation inputs or evidence. A later controlled review may
-upgrade a record only when all required links are independently supported.
+Required future outcomes: `ATTRIBUTED`, `PARTIALLY_ATTRIBUTED`,
+`AMBIGUOUS`, `UNATTRIBUTED`. No automatic promotion is implemented.
 
-Required attribution evidence:
+## SQLAlchemy relationship audit
 
-- Exact rule definition/revision active at evaluation time.
-- Evaluator implementation/version (and deployed code identity).
-- Evaluation timestamp and applicable legal/source version.
-- Input facts and their provenance.
-- Finding payload and evidence references.
-- Integrity evidence binding the record to its evaluation.
+`scripts/audit_orm_relationship_loading.py` imports the complete ORM registry,
+runs `configure_mappers()`, and reports every relationship's target,
+direction, cardinality, loader strategy, back-populates, view-only state,
+cascade and local FK columns. It flags:
 
-Allowed outcomes for a future attribution register are
-`ATTRIBUTED`, `PARTIALLY_ATTRIBUTED`, `AMBIGUOUS` and `UNATTRIBUTED`.
-No automatic transition is implemented by this patch.
+- `ASYNC_LAZY_LOAD_RISK`: implicit lazy SELECT may cause MissingGreenlet.
+- `IMPLICIT_COLLECTION_EAGER_LOAD`: default select-in collections may fan out.
+- `EXPLICIT_LOADER_REQUIRED`: relationship is configured with lazy=raise.
+- `BACK_POPULATES_MISMATCH`: reciprocal ORM mapping is inconsistent.
+
+This is an inventory and regression guard, not a claim that every runtime
+service query has been optimized. Query-callsite profiling and per-endpoint
+loader plans remain separate verification work.
+
+Run:
+
+```bash
+python scripts/audit_orm_relationship_loading.py --json-output artifacts/orm-relationship-loading.json
+```
 
 ## Safety properties
 
-- Migration 0115 is forward-only and follows the current 0114 head.
-- It checks required `legal_rules` columns before mutation.
-- It archives the complete pre-migration legal_rules payload.
-- It rejects unknown/partially canonical INC-001 states and incomplete INC-002
-  states rather than guessing.
-- It checks FK dependants and aborts if any exist.
-- It does not update/delete historical findings, flags or evaluation snapshots.
-- The read-only historical reference scan never changes database state.
-- Canonical INC-001 remains NOT_EVALUATED, zero score impact, no BLACK override,
-  and PENDING verification. No statutory conclusion is promoted.
+- Migration 0115 follows the existing 0114 revision.
+- Existing FK relationships remain attached to the unchanged legacy identity.
+- No historical findings, flags, version rows, source mappings, deadline
+  definitions, release events or evaluation snapshots are rewritten/deleted.
+- INC-001 and INC-002 are quarantined from scoring rather than relabelled.
+- No counsel allowlist is introduced into scoring.
+- Historical reference and ORM audits are read-only.
 
-## Operational boundary
+## Release gates
 
-No Neon or Render database has been changed by this patch. The actual Render
-runtime database target, complete non-FK reference inventory, isolated restore
-rehearsal, and historical attribution review remain outstanding.
+1. Full Alembic DAG and fresh PostgreSQL upgrades pass.
+2. Migration is rehearsed on an isolated restore containing the five FK relationships.
+3. Historical reference inventory is run against the actual restored runtime schema.
+4. Every candidate reference is reviewed; no finding is attributed from ID alone.
+5. ORM relationship inventory is reviewed alongside service query callsites and endpoint query-count tests.
+6. Canonical 85-rule manifest, engine and database parity are reconciled without overwriting the quarantined legacy identity.
 
-## Acceptance criteria
-
-1. The Alembic graph has one unique head and no duplicate revision IDs.
-2. The archive contains the exact pre-migration INC-001 and INC-002 payloads.
-3. Active canonical IDs reconcile across engine, seed, registry and database.
-4. INC-002 is inactive and remains queryable in the archive.
-5. INC-001 matches the complete canonical seed fingerprint.
-6. Historical references are inventoried without changing their source records.
-7. No historical finding is attributed from its rule ID alone.
-8. The migration has passed isolated restore and fresh PostgreSQL upgrades.
+No Neon or Render database has been changed. This PR is not approval to run a
+production migration and does not claim that historical attribution is complete.
