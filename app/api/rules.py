@@ -388,7 +388,13 @@ async def update_rule(
         fields=list(update_data.keys()),
         change_reason=body.change_reason,
     )
-    return _rule_to_response(updated_rule)
+
+    # UPDATE/flush may leave server-generated timestamp columns expired.
+    # Explicitly refresh while the AsyncSession is active so response
+    # serialization cannot trigger an implicit async lazy load (MissingGreenlet).
+    await db.refresh(updated_rule)
+    response = _rule_to_response(updated_rule)
+    return response
 
 
 # ---------------------------------------------------------------------------
