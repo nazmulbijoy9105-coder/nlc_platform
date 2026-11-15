@@ -27,7 +27,6 @@ def _controlled_complete_catalogue_release_for_scoring_mechanics(monkeypatch, re
         "test_production_corpus_remains_unreleased_until_product_release",
     }:
         # These tests assert the real production defaults or explicitly
-        # exercise the separation between product release and counsel status.
         return
     catalogue = engine_module.PRODUCT_SCORING_RULE_IDS
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
@@ -327,7 +326,6 @@ def test_agm_quorum_requires_verified_attendance_and_quorum_basis():
     flag = _flag(result, "AGM-005")
     assert flag.state == RuleState.NON_COMPLIANT
     # AGM-005 is owner-approved; company-specific attendance and quorum facts remain evidence-gated.
-    # Company evidence may establish the factual finding, but no rule is
 
 
 def test_unknown_red_finding_does_not_force_red_risk_band():
@@ -442,9 +440,6 @@ def test_released_score_uses_one_category_cap_formula_for_all_paths(monkeypatch)
     monkeypatch.setattr(
         engine_module,
         "PRODUCT_SCORING_RULE_IDS",
-        frozenset({"AGM-001", "AGM-002", "INC-003", "INC-004", "AUD-001"}),
-    )
-    monkeypatch.setattr(
         frozenset({"AGM-001", "AGM-002", "INC-003", "INC-004", "AUD-001"}),
     )
     profile = _profile()
@@ -1341,8 +1336,6 @@ def test_api_marks_duplicate_scoring_event_as_suppressed(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
         engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"DIR-001", "AGM-001"})
-    )
-    monkeypatch.setattr(
     )
     flags = [
         ComplianceFlag(
