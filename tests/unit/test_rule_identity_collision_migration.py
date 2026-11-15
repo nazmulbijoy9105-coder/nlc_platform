@@ -37,6 +37,7 @@ def test_identity_migration_archives_and_quarantines_without_rewriting_identity(
         "Historical references remain attached to the",
         "INC001_LEGACY_FINGERPRINTS",
         "INC002_LEGACY_FINGERPRINTS",
+        "Section 23, Companies Act 1994 (Bangladesh)",
     ):
         assert marker in source
     assert "Refusing rule identity rewrite while FK dependants exist" not in source
