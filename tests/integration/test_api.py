@@ -1257,12 +1257,20 @@ class TestRules:
             "sub": str(db_super_admin.id), "user_id": str(db_super_admin.id), "type": "access",
             "role": "SUPER_ADMIN", "email": db_super_admin.email, "company_ids": [],
         })
+        current = await api_client.get(
+            "/api/v1/rules/AUD-003",
+            headers=_auth(sa_token),
+        )
+        assert current.status_code == 200, current.text
+        expected_version = current.json()["rule_version"]
+
         resp = await api_client.patch(
             "/api/v1/rules/AUD-003",
             headers=_auth(sa_token),
             json={
-                "default_severity": "RED",  # Illegal: can't downgrade BLACK override
-                "change_reason": "Testing BLACK override protection",
+                "default_severity": "RED",  # Catalogue edit; not a BLACK override
+                "expected_version": expected_version,
+                "change_reason": "Testing versioned catalogue severity update",
             }
         )
         assert resp.status_code == 200, resp.text
