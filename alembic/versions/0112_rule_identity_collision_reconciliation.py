@@ -170,6 +170,14 @@ def upgrade():
         FROM public.legal_rules WHERE rule_id='INC-002'
     """)).mappings().first()
     if legacy_002 is not None:
+        if (
+            legacy_002["rule_name"] != "Memorandum and Articles Not Filed"
+            or legacy_002["statutory_basis"] != "Section 11, Companies Act 1994 (Bangladesh)"
+        ):
+            raise RuntimeError(
+                "INC-002 has an unrecognized identity; refusing retirement: "
+                + repr(dict(legacy_002))
+            )
         _archive(
             bind, "INC-002", "legacy:INC-002:companies-act-section-11",
             "RETIRED_LEGACY_IDENTITY",
