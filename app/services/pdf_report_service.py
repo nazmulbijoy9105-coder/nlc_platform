@@ -663,7 +663,7 @@ def build_compliance_report_html(
     # The HTML builder is also called directly by tests and internal jobs.
     # Enforce the release boundary here, not only in the HTTP endpoint:
     # stale cached scores, flags and rescue plans must never leak into a report.
-    review_flags = []
+    review_flags: list[Any] = []
     if not _legal_score_is_released():
         flags = ()
         rescue_plan = None
@@ -672,7 +672,6 @@ def build_compliance_report_html(
     else:
         score = company.current_compliance_score or 0
         band = company.current_risk_band or "NOT_EVALUATED"
-        review_flags = []  # Not governed by a code-level counsel allowlist.
         flags = [
             flag for flag in (flags or [])
             if getattr(flag, "rule_id", "") in PRODUCT_SCORING_RULE_IDS
