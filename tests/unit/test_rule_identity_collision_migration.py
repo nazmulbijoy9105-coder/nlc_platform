@@ -30,11 +30,13 @@ def test_identity_migration_archives_and_quarantines_without_rewriting_identity(
     source = MIGRATION.read_text(encoding="utf-8")
     for marker in (
         "legal_rule_identity_archive",
-        "legacy:INC-001:companies-act-section-9",
-        "legacy:INC-002:companies-act-section-11",
+        "legacy:INC-001:preserved-original-definition",
+        "legacy:INC-002:preserved-original-definition",
         "QUARANTINED_LEGACY_IDENTITY",
         "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
         "Historical references remain attached to the",
+        "INC001_LEGACY_FINGERPRINTS",
+        "INC002_LEGACY_FINGERPRINTS",
     ):
         assert marker in source
     assert "Refusing rule identity rewrite while FK dependants exist" not in source
@@ -47,14 +49,17 @@ def test_identity_migration_archives_and_quarantines_without_rewriting_identity(
     assert "Forward-only" in source
 
 
-def test_identity_migration_checks_schema_and_exact_legacy_fingerprints():
+def test_identity_migration_checks_schema_and_known_legacy_fingerprints():
     source = MIGRATION.read_text(encoding="utf-8")
     for marker in (
         "REQUIRED_RULE_COLUMNS",
         "missing columns:",
         "certificate_obtained == False",
-        "INC-001 is not the exact reviewed legacy fingerprint",
-        "INC-002 is not the reviewed legacy fingerprint",
+        "moa_aoa_filed == False",
+        "moa_filed == False OR aoa_filed == False",
+        "form_iii_filed == False",
+        "INC-001 does not match a reviewed historical fingerprint",
+        "INC-002 does not match a reviewed historical fingerprint",
         "default_severity='NOT_EVALUATED'",
         "score_impact=0",
         "is_black_override=false",
