@@ -21,3 +21,8 @@ def test_legacy_and_canonical_rule_ids_are_reported_as_distinct_candidates():
     assert old["rule_id"] == "INC-001"
     assert retired["rule_id"] == "INC-002"
     assert old["attribution_status"] == retired["attribution_status"] == "UNATTRIBUTED"
+
+
+def test_reference_inventory_excludes_catalogue_and_quarantine_source_rows():
+    from scripts.audit_rule_historical_attribution import EXCLUDED_REFERENCE_TABLES
+    assert EXCLUDED_REFERENCE_TABLES == {"legal_rules", "legal_rule_identity_archive"}
