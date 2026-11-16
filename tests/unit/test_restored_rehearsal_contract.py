@@ -92,12 +92,5 @@ def test_0115_identity_preflight_runs_after_upgrade_to_0114_and_before_head():
     assert upgrade_0114 < identity_preflight < upgrade_head
 
 
-def test_rehearsal_provider_membership_contract_includes_migration_owner():
-    assert (
-        "neondb_owner",
-        "nlc_migration_owner",
-        "cloud_admin",
-        True,
-        False,
-        False,
-    ) in EXPECTED_PROVIDER_MEMBERSHIPS
+def test_rehearsal_rejects_any_membership_involving_app_or_audit_roles():
+    assert EXPECTED_PROVIDER_MEMBERSHIPS == set()
