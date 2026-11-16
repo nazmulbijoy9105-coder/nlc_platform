@@ -30,6 +30,8 @@ def test_identity_migration_archives_and_quarantines_without_rewriting_identity(
     source = MIGRATION.read_text(encoding="utf-8")
     for marker in (
         "legal_rule_identity_archive",
+        "payload_sha256",
+        "hashlib.sha256",
         "legacy:INC-001:preserved-original-definition",
         "legacy:INC-002:preserved-original-definition",
         "QUARANTINED_LEGACY_IDENTITY",
@@ -65,3 +67,13 @@ def test_identity_migration_checks_schema_and_known_legacy_fingerprints():
         "is_black_override=false",
     ):
         assert marker in source
+
+
+def test_archive_rls_is_applied_after_archive_and_quarantine_writes():
+    source = MIGRATION.read_text(encoding="utf-8")
+    final_quarantine = source.index("Legacy INC-002 identity quarantined")
+    enable_rls = source.index("ALTER TABLE public.legal_rule_identity_archive ENABLE")
+    assert enable_rls > final_quarantine
+    assert "ALTER TABLE public.legal_rule_identity_archive FORCE ROW LEVEL SECURITY" in source
+    assert "payload_sha256" in source
+    assert "ON CONFLICT (legacy_identity_key) DO NOTHING" not in source
