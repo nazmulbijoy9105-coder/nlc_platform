@@ -110,7 +110,7 @@ An alias is unique within its source namespace and applicable validity interval.
 - `evaluator_name`, `evaluator_version`, evaluator artifact/commit hash.
 - `approval_state`, `approval_evidence`, `created_at`.
 
-Use exclusion/uniqueness constraints to prevent overlapping effective intervals for the same identity and revision-selection scope, while supporting legally valid concurrent jurisdiction/company-class scopes where needed. Revision immutability must be enforced at the database boundary.
+Use a database exclusion constraint or a serialized insert trigger to prevent overlapping effective intervals for the same identity and revision-selection scope, while supporting legally valid concurrent jurisdiction/company-class scopes where needed. Revision immutability must be enforced at the database boundary.
 
 ### Historical finding resolution
 
@@ -202,7 +202,7 @@ The migrations create **zero canonical identity, alias, or revision rows**. They
 
 1. The canonical registry is not yet wired into a deterministic runtime alias resolver, API, evaluator, evidence ledger, or historical replay.
 2. No identity lifecycle/supersession event model exists yet. Initial identity, alias and revision rows are immutable; retirement/correction must be represented by append-only events before lifecycle operations are enabled.
-3. Effective interval overlap is not yet prevented by a database exclusion constraint. Current checks reject inverted intervals only; overlapping revisions must be rejected before date-selected evaluation is enabled.
+3. Migration 0116 now adds a PostgreSQL BEFORE INSERT guard that serializes writes per canonical identity and rejects overlapping half-open effective intervals (including unbounded end dates). The fresh-database 0042→head migration and integration run must pass before this database guard is considered verified.
 4. No runtime or audit-role grants are provided. This is intentional, not a completed tenant-facing access design; a reviewed least-privilege policy and tenant isolation tests are still required.
 5. The ORM relationship inventory is not proof that all service callsites are optimized. Query-callsite review and endpoint query-count tests remain outstanding.
 6. Historical finding-level attribution remains blocked until an authorized read-only finding inventory can be obtained. No rule-ID-only match may be treated as attribution.
@@ -319,3 +319,8 @@ A read-only schema inspection on 16 November confirms the restored 0042 branch c
 The restored 0042 `annual_returns` table does not yet contain the filing-status provenance columns introduced by 0114. The restored 0042 `legal_rules` table also lacks `verification_status` and `verification_notes`; the rehearsal intentionally checks these only after upgrading the isolated branch through 0114. Current production at 0112 already has the latter two legal-rule columns and webhook-delivery `updated_at`, but does not yet have the 0114 annual-return provenance columns.
 
 This is a schema observation, not a migration rehearsal. No Alembic command or DDL was executed. The staged preflight remains necessary to prove that the historical 0043–0114 chain actually reaches the expected schema without data loss.
+
+
+### 9.9 Database-level effective-date overlap guard
+
+Migration 0116 now installs `trg_legal_rule_revision_no_overlap` on `legal_rule_revisions`. Before each insert it takes a transaction-scoped advisory lock keyed by canonical identity, then rejects any overlapping PostgreSQL `daterange` using half-open `[)` intervals; NULL `effective_to` is treated as an unbounded upper endpoint. This prevents two concurrent writers from both inserting overlapping revisions for the same canonical identity. The trigger function is not directly executable by PUBLIC, the runtime role, or the audit role. Unit-level structural coverage has been added; the fresh PostgreSQL migration/integration run remains the required database execution proof.
