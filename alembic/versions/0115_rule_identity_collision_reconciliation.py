@@ -26,11 +26,10 @@ REQUIRED_RULE_COLUMNS = {
     "is_active", "verification_status", "verification_notes", "updated_at",
 }
 
-# Both fingerprints are known from immutable migrations and the separately
-# observed database inventory. They remain legacy identities, not approvals.
-# This migration runs after 0029 and 0030. Only the post-0030 Section 23
-# definitions are valid current-row fingerprints; old Section 9/11 snapshots
-# must not be mistaken for the row expected at this point in the DAG.
+# These fingerprints are the exact post-0030 migration-chain definitions.
+# They remain legacy identities, not legal approvals. A restored database
+# whose row drifted from this chain must fail closed for separate review; do
+# not widen the accepted fingerprint list from a production snapshot alone.
 INC001_LEGACY_FINGERPRINTS = (
     (
         "Memorandum and Articles Not Filed",
