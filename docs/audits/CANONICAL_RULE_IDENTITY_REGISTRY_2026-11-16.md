@@ -297,3 +297,16 @@ This comparison sharpens the release risk:
 - The migration must preserve each branch's exact historical row payload before any quarantine operation; it must not overwrite a newer production state with the older restored state.
 
 The 0115 preflight must therefore be reviewed against the post-0114 restored branch payload, and production deployment must be evaluated separately against the live 0112 payload. No automatic copying, overwrite, or promotion is justified by matching name/basis/trigger alone.
+
+
+### 9.7 Corrected 0115 disposition: observed legacy definitions are quarantine candidates, not unresolved migration fingerprints
+
+The migration and rehearsal preflight now explicitly recognise the currently observed legacy identity tuples for quarantine:
+- INC-001: “Certificate of Incorporation Not Obtained”, Section 9, trigger `certificate_obtained == False`.
+- INC-002: “Memorandum and Articles Not Filed”, Section 11, trigger `moa_filed == False OR aoa_filed == False`.
+
+The historical post-0030 Section 23 variants remain separately accepted only as legacy quarantine fingerprints for databases that actually contain those definitions. The migration does not map either set to a canonical seed identity, approve the legal proposition, reactivate either rule, or attribute historical findings. Unknown tuples still abort before quarantine.
+
+The archive captures the full current row payload and SHA-256 before changing the legacy row to inactive / NOT_EVALUATED / zero score impact. This preserves the differing restore-versus-production operational metadata in each database's own archive. The restore preflight now tests both acceptance of the observed Section 9/11 tuples for quarantine and rejection of an unrecognised identity tuple.
+
+This is an engineering disposition to preserve and isolate known legacy rows. It is not a Bangladesh counsel determination that either statutory proposition is correct. The migration has not been run on either branch; production remains at 0112 and the restore branch remains at 0042.
