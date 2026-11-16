@@ -212,17 +212,27 @@ The migrations create **zero canonical identity, alias, or revision rows**. They
 **Status:** consolidated schema and quarantine proposal under CI validation; not a production-ready identity resolver, not an approved legal catalogue, and not authorization to execute a production migration.
 
 
-### 9.2 Restored Neon rehearsal preflight — observed blocker (16 November 2026)
+### 9.2 Restored Neon rehearsal preflight — identity drift pending post-0114 check (16 November 2026)
 
 Read-only inspection of isolated restored branch `br-little-cake-aovrrz0y` in project `rapid-bonus-26545234` confirmed its Alembic revision is exactly `0042_dedup_key`. No migration command was run and no database writes were made.
 
-The restored `public.legal_rules` schema does **not** contain `verification_status` or `verification_notes`, both required by migration 0115. The inspected row fingerprints also differ from the only fingerprints currently accepted by 0115:
+At revision 0042, the restored `public.legal_rules` schema does not yet contain `verification_status` or `verification_notes`. This is **not by itself a confirmed 0115 schema defect**, because revisions 0043–0114 may add those fields. The rehearsal has therefore been staged: it first upgrades the isolated branch to `0114_annual_return_filing_status_provenance`, then checks the exact 0115 schema and identity fingerprints, and only runs the remaining migrations if that preflight passes.
 
-| ID | Restored branch row | 0115 currently expects |
+The row identity fields observed on the 0042 restore branch are:
+
+| ID | Restored row | 0115 currently expects |
 |---|---|---|
 | INC-001 | Certificate of Incorporation Not Obtained; Companies Act 1994 s9; trigger `certificate_obtained == False` | MoA/AoA not filed; s23; trigger `moa_aoa_filed == False` |
 | INC-002 | Memorandum and Articles Not Filed; Companies Act 1994 s11; trigger `moa_filed == False OR aoa_filed == False` | Form III Not Filed; s23; Form III trigger |
 
-These are substantive identity differences, not harmless formatting differences. The 0115 migration would fail closed on this branch. The rehearsal script now checks the required `legal_rules` columns and exact fingerprints **before** invoking Alembic, and returns `BLOCKED_SCHEMA_DRIFT` or `BLOCKED_LEGACY_IDENTITY_DRIFT` without applying DDL.
+The current production branch also has those s9/s11 identity fields. A read-only full-row SHA-256 snapshot returned:
+- INC-001: `ace6b7d2ee5cc7c338f3b26094f3dde6a8eaf33fdd9fde4f825cac493d88106f`
+- INC-002: `694b7a040b85f4ab4b94a0808d37dc0fb03b72dda792eb8cf546e3b77dcc6ff9`
 
-**Disposition:** do not add these observed s9/s11 rows to the accepted migration fingerprints yet. First reconcile the restored branch snapshot, the actual source migration history, the production rule inventory, and the intended disposition of each legacy definition. An independently reviewed, hashed snapshot and explicit legal/technical decision are required before broadening 0115. This branch is not yet eligible for the 0042→0116 rehearsal.
+These hashes describe the observed production rows at the time of inspection, not legal approval or historical attribution. They are not yet accepted migration fingerprints. The 0115 preflight deliberately blocks if the post-0114 row schema or exact rule identity fields do not match its reviewed contract. Do not widen the fingerprint list until the snapshot is independently reviewed and the intended quarantine disposition is explicitly approved.
+
+### 9.3 Restored-branch role contract
+
+The restored 0042 branch currently reports `rolinherit=true` for `nlc_app_role` and `nlc_ci_audit_role`, while the current production branch reports both as `NOINHERIT`. The migration-owner topology is present on the restore branch: `nlc_migration_owner` is NOLOGIN/BYPASSRLS and `nlc_migration_user` has a non-admin, non-inheriting SET ROLE membership. The rehearsal's expected Neon provider membership set has been corrected to include the provider grant to `nlc_migration_owner`.
+
+The app/audit role inheritance difference remains a release gate. Do not treat the production role state as evidence that the restored branch has inherited it; the isolated rehearsal must verify the final state after the migrations and explicit role hardening step.
