@@ -208,6 +208,7 @@ def upgrade():
 
 
 def downgrade():
+    # Forward-only: restoring a quarantined identity requires a reviewed migration.
     raise RuntimeError(
         "0115 is forward-only: restoring quarantined legacy rules requires "
         "a separately reviewed, evidence-backed procedure."
