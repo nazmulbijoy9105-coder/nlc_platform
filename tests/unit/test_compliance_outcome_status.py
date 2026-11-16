@@ -59,3 +59,11 @@ def test_not_applicable_condition_is_not_positive_compliance():
         conditional_applies=False,
     )
     assert derive_compliance_outcome(flag, counsel_verified_rule=True) == "NOT_APPLICABLE"
+
+
+def test_unknown_applicability_never_becomes_compliant():
+    flag = SimpleNamespace(
+        state="COMPLIANT", eval_state="PASS", conditional_applies=None,
+        resolved=False,
+    )
+    assert derive_compliance_outcome(flag, counsel_verified_rule=True) == "REVIEW_REQUIRED"
