@@ -250,3 +250,26 @@ Read-only checks against the current production Neon branch `br-purple-fog-aodj8
 These are positive spot checks, not a complete tenant-isolation certification. In particular, no valid signed-user cross-tenant denial matrix has been executed here, and finding-level historical attribution remains blocked by the audit role's lack of access to compliance finding records.
 
 The production role attributes are NOINHERIT, but `neondb_owner` still has membership rows in `nlc_app_role` and `nlc_ci_audit_role` with ADMIN OPTION. The DBA runbook requires those memberships to be revoked. Therefore the production tenant-security gate remains PARTIAL, not PASS.
+
+
+### 9.5 Production migration-head and restore snapshot comparison (16 November 2026)
+
+A fresh read-only comparison of the two Neon branches confirms that they are at different schema revisions:
+
+| Branch | Branch ID | Alembic revision |
+|---|---|---|
+| Isolated restore | `br-little-cake-aovrrz0y` | `0042_dedup_key` |
+| Current production | `br-purple-fog-aodj8s04` | `0112_runtime_acl_and_alembic_rls` |
+
+Production is therefore two revisions behind the code's `0114` pre-identity migration point. Revisions `0113_score_history_append_only` and `0114_annual_return_filing_status_provenance` are not yet recorded as applied in production. The 0114 migration adds authenticated annual-return filing-status provenance; the 0113 migration makes score history append-only. Do not infer their schema effects from CI alone.
+
+A second full-row hash comparison confirms that the two branches' legacy rows are not byte-for-byte equivalent, even though their identity-defining fields (name, statutory basis, trigger) currently match each other:
+
+| ID | Restore at 0042 | Production at 0112 |
+|---|---|---|
+| INC-001 | `2220b12a61131f99bbe03ce67b2beae0a65bfa9dae45c1c7a4057eefe4fb3282` | `ace6b7d2ee5cc7c338f3b26094f3dde6a8eaf33fdd9fde4f825cac493d88106f` |
+| INC-002 | `7678569897dcf2ca37071234d4316b109367efa16ad179e3c8ae72355e8c31e6` | `694b7a040b85f4ab4b94a0808d37dc0fb03b72dda792eb8cf546e3b77dcc6ff9` |
+
+The current identity preflight checks the post-0114 schema and the legal identity fields, not equality of every mutable operational column. The full-row hash difference must be reconciled as a separate data-preservation question before any migration is approved. Do not replace either branch's data or accept the production hash as a migration fingerprint without comparing the full JSON payloads and reviewing the differing fields.
+
+**Release consequence:** there are now two separate rehearsal tasks: (1) upgrade the isolated 0042 restore branch through 0114 and stop at the 0115 identity preflight; (2) separately verify production's 0112→0114 deployment path under the CI-gated migration process. Neither has been executed by this read-only inspection.
