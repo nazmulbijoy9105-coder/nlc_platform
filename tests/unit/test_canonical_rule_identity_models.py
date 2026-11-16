@@ -67,6 +67,7 @@ def test_revision_effective_intervals_are_database_guarded_against_overlap():
         / "0116_canonical_rule_identity_registry.py"
     )
     source = migration.read_text(encoding="utf-8")
+    assert "RETURNS trigger LANGUAGE plpgsql VOLATILE AS $overlap$" in source
     assert "pg_advisory_xact_lock" in source
     assert "hashtextextended(NEW.canonical_rule_id::text, 0)" in source
     assert "daterange(" in source
