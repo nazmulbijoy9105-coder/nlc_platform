@@ -7,6 +7,7 @@ Historical FK dependants intentionally remain attached to the unchanged
 legacy legal_rules rows. Canonical INC-001 activation is deferred until a
 separate, evidence-backed identity/revision migration can preserve all links.
 """
+import hashlib
 import json
 
 import sqlalchemy as sa
@@ -70,6 +71,7 @@ def _archive(bind, rule_id, identity_key, disposition):
             "key": identity_key,
             "id": rule_id,
             "payload": payload,
+            "payload_sha256": payload_sha256,
             "disposition": disposition,
         },
     )
@@ -132,37 +134,11 @@ def upgrade():
             postgresql.JSONB(astext_type=sa.Text()),
             nullable=False,
         ),
+        sa.Column("payload_sha256", sa.String(64), nullable=False),
         sa.Column("disposition", sa.String(64), nullable=False),
         sa.Column("historical_resolution", sa.String(96), nullable=False),
         sa.Column("captured_at", sa.DateTime(timezone=True), nullable=False),
         schema="public",
-    )
-
-    # This archive contains identity evidence. Force RLS and deny runtime/audit
-    # access; the migration owner has the required BYPASSRLS capability.
-    op.execute(f"ALTER TABLE public.{ARCHIVE_TABLE} ENABLE ROW LEVEL SECURITY")
-    op.execute(f"ALTER TABLE public.{ARCHIVE_TABLE} FORCE ROW LEVEL SECURITY")
-    op.execute(
-        f"REVOKE ALL PRIVILEGES ON TABLE public.{ARCHIVE_TABLE} "
-        "FROM PUBLIC, nlc_app_role, nlc_ci_audit_role"
-    )
-    op.execute("""
-        CREATE FUNCTION public.prevent_legacy_rule_identity_archive_mutation()
-        RETURNS trigger LANGUAGE plpgsql AS $fn$
-        BEGIN
-            RAISE EXCEPTION 'legal_rule_identity_archive is append-only: % is forbidden',
-                TG_OP USING ERRCODE = '55000';
-        END;
-        $fn$
-    """)
-    op.execute(
-        f"CREATE TRIGGER trg_{ARCHIVE_TABLE}_append_only "
-        f"BEFORE UPDATE OR DELETE ON public.{ARCHIVE_TABLE} "
-        "FOR EACH ROW EXECUTE FUNCTION public.prevent_legacy_rule_identity_archive_mutation()"
-    )
-    op.execute(
-        "REVOKE ALL ON FUNCTION public.prevent_legacy_rule_identity_archive_mutation() "
-        "FROM PUBLIC, nlc_app_role, nlc_ci_audit_role"
     )
 
     inc001 = bind.execute(sa.text("""
@@ -206,6 +182,36 @@ def upgrade():
             "canonical 85-rule manifest. ID is reserved and must never be reused.",
         )
 
+
+    # Apply access restrictions only after the migration transaction has
+    # captured and quarantined the exact rows. FORCE RLS with no policy would
+    # otherwise block this migration's own archive INSERT on owner roles.
+    # This archive contains identity evidence. Force RLS and deny runtime/audit
+    # access; the migration owner has the required BYPASSRLS capability.
+    op.execute(f"ALTER TABLE public.{ARCHIVE_TABLE} ENABLE ROW LEVEL SECURITY")
+    op.execute(f"ALTER TABLE public.{ARCHIVE_TABLE} FORCE ROW LEVEL SECURITY")
+    op.execute(
+        f"REVOKE ALL PRIVILEGES ON TABLE public.{ARCHIVE_TABLE} "
+        "FROM PUBLIC, nlc_app_role, nlc_ci_audit_role"
+    )
+    op.execute("""
+        CREATE FUNCTION public.prevent_legacy_rule_identity_archive_mutation()
+        RETURNS trigger LANGUAGE plpgsql AS $fn$
+        BEGIN
+            RAISE EXCEPTION 'legal_rule_identity_archive is append-only: % is forbidden',
+                TG_OP USING ERRCODE = '55000';
+        END;
+        $fn$
+    """)
+    op.execute(
+        f"CREATE TRIGGER trg_{ARCHIVE_TABLE}_append_only "
+        f"BEFORE UPDATE OR DELETE ON public.{ARCHIVE_TABLE} "
+        "FOR EACH ROW EXECUTE FUNCTION public.prevent_legacy_rule_identity_archive_mutation()"
+    )
+    op.execute(
+        "REVOKE ALL ON FUNCTION public.prevent_legacy_rule_identity_archive_mutation() "
+        "FROM PUBLIC, nlc_app_role, nlc_ci_audit_role"
+    )
 
 def downgrade():
     # Forward-only: restoring a quarantined identity requires a reviewed migration.
