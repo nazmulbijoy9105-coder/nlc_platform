@@ -310,3 +310,12 @@ The historical post-0030 Section 23 variants remain separately accepted only as 
 The archive captures the full current row payload and SHA-256 before changing the legacy row to inactive / NOT_EVALUATED / zero score impact. This preserves the differing restore-versus-production operational metadata in each database's own archive. The restore preflight now tests both acceptance of the observed Section 9/11 tuples for quarantine and rejection of an unrecognised identity tuple.
 
 This is an engineering disposition to preserve and isolate known legacy rows. It is not a Bangladesh counsel determination that either statutory proposition is correct. The migration has not been run on either branch; production remains at 0112 and the restore branch remains at 0042.
+
+
+### 9.8 Fresh restore-schema preflight observation
+
+A read-only schema inspection on 16 November confirms the restored 0042 branch contains all three tables required by the rehearsal's pre-0042 gate: `webhook_endpoints`, `webhook_deliveries`, and `rescue_audit_log`. Their required 0037/0038 columns are present. `webhook_deliveries.updated_at` is absent at 0042, as expected by the rehearsal contract for the later 0044 migration to add it.
+
+The restored 0042 `annual_returns` table does not yet contain the filing-status provenance columns introduced by 0114. The restored 0042 `legal_rules` table also lacks `verification_status` and `verification_notes`; the rehearsal intentionally checks these only after upgrading the isolated branch through 0114. Current production at 0112 already has the latter two legal-rule columns and webhook-delivery `updated_at`, but does not yet have the 0114 annual-return provenance columns.
+
+This is a schema observation, not a migration rehearsal. No Alembic command or DDL was executed. The staged preflight remains necessary to prove that the historical 0043–0114 chain actually reaches the expected schema without data loss.
