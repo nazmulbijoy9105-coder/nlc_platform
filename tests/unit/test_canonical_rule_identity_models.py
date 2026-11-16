@@ -1,5 +1,7 @@
 """Structural safeguards for the additive canonical rule identity registry."""
-from pathlib import Path\n\nfrom sqlalchemy import CheckConstraint, UniqueConstraint
+from pathlib import Path
+
+from sqlalchemy import CheckConstraint, UniqueConstraint
 
 from app.models import LegalRuleAlias, LegalRuleIdentity, LegalRuleRevision
 
