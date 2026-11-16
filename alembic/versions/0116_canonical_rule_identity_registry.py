@@ -117,6 +117,42 @@ def upgrade() -> None:
         ["canonical_rule_id", "effective_from", "effective_to"],
     )
 
+    # Serialize inserts per canonical identity and reject overlapping
+    # half-open effective intervals. This is database-enforced, including
+    # concurrent writers; NULL effective_to represents an unbounded end date.
+    op.execute("""
+        CREATE FUNCTION public.prevent_legal_rule_revision_overlap()
+        RETURNS trigger LANGUAGE plpgsql AS $
+        BEGIN
+            PERFORM pg_advisory_xact_lock(
+                hashtextextended(NEW.canonical_rule_id::text, 0)
+            );
+            IF EXISTS (
+                SELECT 1
+                  FROM public.legal_rule_revisions existing
+                 WHERE existing.canonical_rule_id = NEW.canonical_rule_id
+                   AND daterange(
+                       existing.effective_from, existing.effective_to, '[)'
+                   ) && daterange(
+                       NEW.effective_from, NEW.effective_to, '[)'
+                   )
+            ) THEN
+                RAISE EXCEPTION
+                    'Overlapping effective interval for canonical legal rule %',
+                    NEW.canonical_rule_id
+                    USING ERRCODE = '23P01';
+            END IF;
+            RETURN NEW;
+        END;
+        $
+    """)
+    op.execute("""
+        CREATE TRIGGER trg_legal_rule_revision_no_overlap
+        BEFORE INSERT ON public.legal_rule_revisions
+        FOR EACH ROW
+        EXECUTE FUNCTION public.prevent_legal_rule_revision_overlap()
+    """)
+
     # These governance tables remain inaccessible to runtime and audit roles
     # until a separately reviewed service/API contract grants scoped access.
     for table in ("legal_rule_identities", "legal_rule_aliases", "legal_rule_revisions"):
