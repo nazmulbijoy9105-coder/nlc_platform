@@ -94,3 +94,18 @@ def test_0115_identity_preflight_runs_after_upgrade_to_0114_and_before_head():
 
 def test_rehearsal_rejects_any_membership_involving_app_or_audit_roles():
     assert EXPECTED_PROVIDER_MEMBERSHIPS == set()
+
+def test_role_security_preflight_runs_before_any_alembic_migration():
+    source = (ROOT / "scripts/rehearse_restored_neon_branch.py").read_text(
+        encoding="utf-8"
+    )
+    role_preflight = source.index("_preflight_restricted_role_security(conn)")
+    upgrade_0114 = source.index(
+        '["alembic", "upgrade", EXPECTED_PRE_IDENTITY_REVISION]'
+    )
+    upgrade_head = source.index('["alembic", "upgrade", "head"]')
+
+    assert role_preflight < upgrade_0114 < upgrade_head
+    assert 'report["migration_applied"] = False' in source[role_preflight:upgrade_0114]
+    assert '"BLOCKED_ROLE_SECURITY"' in source[role_preflight:upgrade_0114]
+
