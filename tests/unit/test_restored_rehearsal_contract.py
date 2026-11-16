@@ -7,6 +7,7 @@ from pathlib import Path
 
 from scripts.rehearse_restored_neon_branch import (
     EXPECTED_HEAD_REVISION,
+    EXPECTED_PRE_IDENTITY_REVISION,
     EXPECTED_START_REVISION,
     POST_MIGRATION_REQUIRED_COLUMNS,
     PRE_0042_REQUIRED_COLUMNS,
@@ -74,3 +75,17 @@ def test_webhook_deliveries_preflight_uses_original_0037_shape():
     assert "updated_at" in PRE_0042_REQUIRED_COLUMNS["webhook_endpoints"]
     assert "updated_at" in PRE_0042_REQUIRED_COLUMNS["rescue_audit_log"]
     assert "updated_at" in POST_MIGRATION_REQUIRED_COLUMNS["webhook_deliveries"]
+
+
+def test_0115_identity_preflight_runs_after_upgrade_to_0114_and_before_head():
+    source = (ROOT / "scripts/rehearse_restored_neon_branch.py").read_text(
+        encoding="utf-8"
+    )
+    upgrade_0114 = source.index('["alembic", "upgrade", EXPECTED_PRE_IDENTITY_REVISION]')
+    identity_preflight = source.index(
+        "_preflight_legacy_rule_identities(conn)", upgrade_0114
+    )
+    upgrade_head = source.index('["alembic", "upgrade", "head"]', identity_preflight)
+
+    assert EXPECTED_PRE_IDENTITY_REVISION == "0114_annual_return_filing_status_provenance"
+    assert upgrade_0114 < identity_preflight < upgrade_head
