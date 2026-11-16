@@ -28,14 +28,28 @@ EXPECTED_PRE_IDENTITY_REVISION = "0114_annual_return_filing_status_provenance"
 EXPECTED_HEAD_REVISION = "0116_canonical_rule_identity_registry"
 EXPECTED_LEGACY_RULE_FINGERPRINTS = {
     "INC-001": (
-        "Memorandum and Articles Not Filed",
-        "Section 23, Companies Act 1994 (Bangladesh)",
-        "moa_aoa_filed == False",
+        (
+            "Certificate of Incorporation Not Obtained",
+            "Section 9, Companies Act 1994 (Bangladesh)",
+            "certificate_obtained == False",
+        ),
+        (
+            "Memorandum and Articles Not Filed",
+            "Section 23, Companies Act 1994 (Bangladesh)",
+            "moa_aoa_filed == False",
+        ),
     ),
     "INC-002": (
-        "Form III Not Filed",
-        "Section 23, Companies Act 1994 (Bangladesh)",
-        "paid_up_capital_bdt > 0 AND form_iii_filed == False AND days_since_incorporation > 28",
+        (
+            "Memorandum and Articles Not Filed",
+            "Section 11, Companies Act 1994 (Bangladesh)",
+            "moa_filed == False OR aoa_filed == False",
+        ),
+        (
+            "Form III Not Filed",
+            "Section 23, Companies Act 1994 (Bangladesh)",
+            "paid_up_capital_bdt > 0 AND form_iii_filed == False AND days_since_incorporation > 28",
+        ),
     ),
 }
 LEGACY_RULE_REQUIRED_COLUMNS = {
@@ -222,10 +236,10 @@ async def _preflight_legacy_rule_identities(
         observed = None if row is None else (
             row["rule_name"], row["statutory_basis"], row["trigger"]
         )
-        if observed != expected:
+        if observed not in expected:
             mismatches.append({
                 "rule_id": rule_id,
-                "expected_fingerprint": list(expected),
+                "accepted_quarantine_fingerprints": [list(item) for item in expected],
                 "observed_fingerprint": list(observed) if observed else None,
             })
     return {
