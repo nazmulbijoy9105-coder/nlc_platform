@@ -181,3 +181,26 @@ No fallback to name similarity, section similarity, insertion order, current act
 | Legal approval | All 85 entries `REVIEW_REQUIRED` in inspected register | No counsel sign-off claimed |
 
 **Decision:** proceed with the identity registry design and collision inventory. Do not execute a data migration, alter production rows, change evaluator IDs, or promote legal/scoring status until the finding-level inventory and rule-by-rule identity decisions are approved.
+
+
+## 9. Engineering implementation added to PR #344
+
+The branch now contains an additive first implementation:
+
+- `app/models/rules.py`: ORM models `LegalRuleIdentity`, `LegalRuleAlias`, and `LegalRuleRevision`.
+- `app/models/__init__.py`: exports the three new models for metadata registration.
+- `alembic/versions/0114_canonical_rule_identity_registry.py`: additive migration chained after `0113_score_history_append_only`; creates the three registry tables, UUID keys, foreign keys, status/validity checks, uniqueness constraints, lookup indexes and database-level UPDATE/DELETE rejection.
+- `tests/unit/test_canonical_rule_identity_models.py`: structural tests for UUID identity, namespace-scoped alias collision representation, effective dates, evaluator separation and `lazy="raise"` relationships.
+
+The migration deliberately creates **zero identity or alias rows**. It does not backfill any of the 85 seed IDs, the production-only `INC-002`, or any historical finding. Existing `legal_rules.rule_id`, `legal_rule_versions.rule_id`, compliance findings, source mappings and rescue audit records remain untouched.
+
+### 9.1 Known implementation limitations — must be resolved before production use
+
+1. The registry tables are not yet wired into the runtime alias resolver, API, evaluator, evidence records or historical replay.
+2. No identity lifecycle/supersession event table exists yet. The initial identity, alias and revision rows are immutable; retirement/correction must be represented by append-only events before lifecycle operations are enabled.
+3. Effective interval overlap is not yet prevented by a database exclusion constraint. The current check only rejects an inverted interval; overlapping revisions must be rejected by a later constraint/resolver and test before date-selected evaluation is enabled.
+4. No tenant-facing or application-role grants/RLS policies are added. The registry remains unavailable to application code until a least-privilege access design is reviewed.
+5. The migration and tests have not yet been run in CI or against an isolated PostgreSQL restore. No migration success is claimed.
+6. Model metadata/migration parity and exact Alembic single-head status still require CI verification.
+
+**Status:** schema foundation only, pending CI and independent review. This is not a production-ready identity resolver or approved legal catalogue.
