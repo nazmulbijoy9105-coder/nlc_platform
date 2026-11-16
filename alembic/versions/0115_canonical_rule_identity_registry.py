@@ -141,6 +141,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     raise RuntimeError(
-        "0114 is forward-only: canonical identity and alias evidence must not "
+         "0115 is forward-only: canonical identity and alias evidence must not "
         "be removed by an Alembic downgrade."
     )
