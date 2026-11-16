@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Enum,
@@ -21,6 +22,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -199,6 +201,12 @@ class LegalRuleIdentity(Base):
 class LegalRuleAlias(Base):
     """Source-namespaced historical identifier; collisions remain representable."""
     __tablename__ = "legal_rule_aliases"
+    __table_args__ = (
+        UniqueConstraint(
+            "source_namespace", "historical_rule_id", "canonical_rule_id",
+            name="uq_legal_rule_alias_source_historical_canonical",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -228,13 +236,23 @@ class LegalRuleAlias(Base):
     )
 
     identity: Mapped[LegalRuleIdentity] = relationship(
-        "LegalRuleIdentity", back_populates="aliases"
+        "LegalRuleIdentity", back_populates="aliases", lazy="raise"
     )
 
 
 class LegalRuleRevision(Base):
     """Immutable, effective-dated legal/evaluator definition for an identity."""
     __tablename__ = "legal_rule_revisions"
+    __table_args__ = (
+        CheckConstraint(
+            "effective_to IS NULL OR effective_to > effective_from",
+            name="ck_legal_rule_revision_effective_interval",
+        ),
+        UniqueConstraint(
+            "canonical_rule_id", "revision_number",
+            name="uq_legal_rule_revision_number",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -268,5 +286,5 @@ class LegalRuleRevision(Base):
     )
 
     identity: Mapped[LegalRuleIdentity] = relationship(
-        "LegalRuleIdentity", back_populates="revisions"
+        "LegalRuleIdentity", back_populates="revisions", lazy="raise"
     )
