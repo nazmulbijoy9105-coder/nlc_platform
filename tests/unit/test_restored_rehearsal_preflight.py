@@ -95,7 +95,7 @@ async def test_0115_preflight_blocks_missing_legal_rule_schema_columns():
 
 
 @pytest.mark.asyncio
-async def test_0115_preflight_blocks_unreviewed_inc001_inc002_fingerprints():
+async def test_0115_preflight_accepts_observed_legacy_rows_for_quarantine_only():
     class Connection:
         async def fetch(self, query, *args):
             if "information_schema.columns" in query:
@@ -118,7 +118,32 @@ async def test_0115_preflight_blocks_unreviewed_inc001_inc002_fingerprints():
 
     report = await rehearsal._preflight_legacy_rule_identities(Connection())
 
+    assert report["status"] == "PASS"
+    assert report["fingerprint_mismatches"] == []
+
+
+@pytest.mark.asyncio
+async def test_0115_preflight_still_blocks_unrecognised_identity_drift():
+    class Connection:
+        async def fetch(self, query, *args):
+            if "information_schema.columns" in query:
+                return [{"column_name": name} for name in rehearsal.LEGACY_RULE_REQUIRED_COLUMNS]
+            return [
+                {
+                    "rule_id": "INC-001",
+                    "rule_name": "Unexpected renamed obligation",
+                    "statutory_basis": "Section 9, Companies Act 1994 (Bangladesh)",
+                    "trigger": "certificate_obtained == False",
+                },
+                {
+                    "rule_id": "INC-002",
+                    "rule_name": "Memorandum and Articles Not Filed",
+                    "statutory_basis": "Section 11, Companies Act 1994 (Bangladesh)",
+                    "trigger": "moa_filed == False OR aoa_filed == False",
+                },
+            ]
+
+    report = await rehearsal._preflight_legacy_rule_identities(Connection())
+
     assert report["status"] == "BLOCKED_LEGACY_IDENTITY_DRIFT"
-    assert {item["rule_id"] for item in report["fingerprint_mismatches"]} == {
-        "INC-001", "INC-002"
-    }
+    assert [item["rule_id"] for item in report["fingerprint_mismatches"]] == ["INC-001"]
