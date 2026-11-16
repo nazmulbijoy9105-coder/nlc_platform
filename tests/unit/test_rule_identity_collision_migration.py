@@ -72,8 +72,8 @@ def test_identity_migration_checks_schema_and_known_legacy_fingerprints():
 def test_archive_rls_is_applied_after_archive_and_quarantine_writes():
     source = MIGRATION.read_text(encoding="utf-8")
     final_quarantine = source.index("Legacy INC-002 identity quarantined")
-    enable_rls = source.index("ALTER TABLE public.legal_rule_identity_archive ENABLE")
+    enable_rls = source.index('f"ALTER TABLE public.{ARCHIVE_TABLE} ENABLE ROW LEVEL SECURITY"')
     assert enable_rls > final_quarantine
-    assert "ALTER TABLE public.legal_rule_identity_archive FORCE ROW LEVEL SECURITY" in source
+    assert 'f"ALTER TABLE public.{ARCHIVE_TABLE} FORCE ROW LEVEL SECURITY"' in source
     assert "payload_sha256" in source
     assert "ON CONFLICT (legacy_identity_key) DO NOTHING" not in source
