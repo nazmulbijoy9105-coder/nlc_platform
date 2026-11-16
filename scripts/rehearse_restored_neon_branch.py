@@ -354,6 +354,80 @@ async def _table_row_counts(conn: asyncpg.Connection) -> dict[str, int]:
     return counts
 
 
+async def _preflight_restricted_role_security(
+    conn: asyncpg.Connection,
+) -> dict[str, Any]:
+    """Block before DDL if app/audit roles or their memberships are unsafe."""
+    role_rows = await conn.fetch(
+        """
+        SELECT rolname, rolcanlogin, rolsuper, rolcreatedb, rolcreaterole,
+               rolinherit, rolreplication, rolbypassrls
+        FROM pg_roles
+        WHERE rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
+        ORDER BY rolname
+        """
+    )
+    roles = [dict(row) for row in role_rows]
+    if {row["rolname"] for row in roles} != {
+        "nlc_app_role",
+        "nlc_ci_audit_role",
+    }:
+        return {
+            "status": "BLOCKED_ROLE_SECURITY",
+            "roles": roles,
+            "reason": "One or more restricted NLC runtime roles are missing.",
+        }
+
+    unsafe_roles = [
+        role["rolname"]
+        for role in roles
+        if (
+            not role["rolcanlogin"]
+            or role["rolsuper"]
+            or role["rolcreatedb"]
+            or role["rolcreaterole"]
+            or role["rolinherit"]
+            or role["rolreplication"]
+            or role["rolbypassrls"]
+        )
+    ]
+    membership_rows = await conn.fetch(
+        """
+        SELECT member_role.rolname AS member_role,
+               granted_role.rolname AS granted_role,
+               grantor_role.rolname AS grantor_role,
+               membership.admin_option,
+               membership.inherit_option,
+               membership.set_option
+        FROM pg_auth_members membership
+        JOIN pg_roles granted_role ON granted_role.oid = membership.roleid
+        JOIN pg_roles member_role ON member_role.oid = membership.member
+        JOIN pg_roles grantor_role ON grantor_role.oid = membership.grantor
+        WHERE member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
+           OR granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
+        ORDER BY 1, 2, 3
+        """
+    )
+    memberships = [dict(row) for row in membership_rows]
+    if unsafe_roles or memberships:
+        return {
+            "status": "BLOCKED_ROLE_SECURITY",
+            "roles": roles,
+            "unsafe_roles": unsafe_roles,
+            "restricted_memberships": memberships,
+            "reason": (
+                "Restricted roles must be NOINHERIT and have no membership "
+                "rows involving nlc_app_role or nlc_ci_audit_role before "
+                "the isolated migration rehearsal."
+            ),
+        }
+    return {
+        "status": "PASS",
+        "roles": roles,
+        "restricted_memberships": [],
+    }
+
+
 async def _security_audit(conn: asyncpg.Connection) -> dict[str, Any]:
     role_rows = await conn.fetch(
         """
@@ -821,6 +895,28 @@ async def main() -> int:
                 print(
                     "BLOCKED_SCHEMA_DRIFT: no Alembic command was run; "
                     f"pre-0042 schema gaps: {preflight!r}",
+                    file=sys.stderr,
+                )
+                return 2
+
+            role_preflight = await _preflight_restricted_role_security(conn)
+            report["pre_migration_role_security_preflight"] = role_preflight
+            if role_preflight["status"] != "PASS":
+                report["status"] = role_preflight["status"]
+                report["migration_applied"] = False
+                report["error"] = (
+                    "Migration rehearsal blocked before Alembic: restricted "
+                    "application/audit roles or memberships are not hardened. "
+                    "No migration command was run; complete the reviewed DBA "
+                    "role-hardening procedure and repeat the read-only preflight."
+                )
+                report["finished_at"] = datetime.now(timezone.utc).isoformat()
+                REPORT_PATH.write_text(
+                    json.dumps(report, indent=2, default=str) + "\\n"
+                )
+                print(
+                    "BLOCKED_ROLE_SECURITY: no Alembic command was run; "
+                    f"role preflight: {role_preflight!r}",
                     file=sys.stderr,
                 )
                 return 2
