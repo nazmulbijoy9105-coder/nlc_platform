@@ -25,6 +25,23 @@ EXPECTED_BRANCH_ID = "br-little-cake-aovrrz0y"
 EXPECTED_DATABASE = "neondb"
 EXPECTED_START_REVISION = "0042_dedup_key"
 EXPECTED_HEAD_REVISION = "0116_canonical_rule_identity_registry"
+EXPECTED_LEGACY_RULE_FINGERPRINTS = {
+    "INC-001": (
+        "Memorandum and Articles Not Filed",
+        "Section 23, Companies Act 1994 (Bangladesh)",
+        "moa_aoa_filed == False",
+    ),
+    "INC-002": (
+        "Form III Not Filed",
+        "Section 23, Companies Act 1994 (Bangladesh)",
+        "paid_up_capital_bdt > 0 AND form_iii_filed == False AND days_since_incorporation > 28",
+    ),
+}
+LEGACY_RULE_REQUIRED_COLUMNS = {
+    "rule_id", "rule_name", "statutory_basis", "rule_condition",
+    "default_severity", "score_impact", "is_black_override", "is_active",
+    "verification_status", "verification_notes", "updated_at",
+}
 PRE_0042_REQUIRED_TABLES = (
     "webhook_endpoints",
     "webhook_deliveries",
@@ -163,6 +180,58 @@ async def _preflight_pre_0042_tables(
     return {
         "missing_tables": sorted(missing_tables),
         "missing_columns_by_table": schema_mismatches,
+    }
+
+
+async def _preflight_legacy_rule_identities(
+    conn: asyncpg.Connection,
+) -> dict[str, Any]:
+    """Check 0115's exact schema and row fingerprints before any Alembic DDL."""
+    column_rows = await conn.fetch(
+        """
+        SELECT column_name
+          FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = 'legal_rules'
+        """
+    )
+    actual_columns = {row["column_name"] for row in column_rows}
+    missing_columns = sorted(LEGACY_RULE_REQUIRED_COLUMNS - actual_columns)
+    if missing_columns:
+        return {
+            "table_exists": bool(column_rows),
+            "missing_columns": missing_columns,
+            "fingerprint_mismatches": [],
+            "status": "BLOCKED_SCHEMA_DRIFT",
+        }
+
+    rows = await conn.fetch(
+        """
+        SELECT rule_id, rule_name, statutory_basis,
+               rule_condition ->> 'trigger' AS trigger
+          FROM public.legal_rules
+         WHERE rule_id = ANY($1::text[])
+         ORDER BY rule_id
+        """,
+        list(EXPECTED_LEGACY_RULE_FINGERPRINTS),
+    )
+    actual = {row["rule_id"]: row for row in rows}
+    mismatches = []
+    for rule_id, expected in EXPECTED_LEGACY_RULE_FINGERPRINTS.items():
+        row = actual.get(rule_id)
+        observed = None if row is None else (
+            row["rule_name"], row["statutory_basis"], row["trigger"]
+        )
+        if observed != expected:
+            mismatches.append({
+                "rule_id": rule_id,
+                "expected_fingerprint": list(expected),
+                "observed_fingerprint": list(observed) if observed else None,
+            })
+    return {
+        "table_exists": bool(column_rows),
+        "missing_columns": [],
+        "fingerprint_mismatches": mismatches,
+        "status": "PASS" if not mismatches else "BLOCKED_LEGACY_IDENTITY_DRIFT",
     }
 
 
