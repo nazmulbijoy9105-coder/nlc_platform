@@ -33,6 +33,7 @@ from app.models.compliance import ComplianceEvaluationRun, ComplianceFlag, Compl
 from app.models.company_fact import CompanyFact
 from app.models.rules import LegalRule
 from app.compliance.fact_provenance import coerce_company_profile_fact_value
+from app.compliance.outcome_status import derive_compliance_outcome
 from app.compliance.evaluation_integrity import calculate_evaluation_score_hash
 from app.models.enums import (
     ExposureBand,
@@ -205,6 +206,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         from app.rule_engine import CompanyProfile
         from app.rule_engine.engine import (
             PRODUCT_SCORING_RULE_IDS,
+            VERIFIED_RULE_IDS,
             legal_score_is_released,
         )
         from app.services.company_service import CompanyService
@@ -380,6 +382,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "risk_severity": f.severity,
                     "legal_state": getattr(f.state, "value", f.state),
                     "evaluation_state": getattr(f.eval_state, "value", f.eval_state),
+                    "compliance_outcome": derive_compliance_outcome(
+                        f, counsel_verified_rule=f.rule_id in VERIFIED_RULE_IDS
+                    ),
                     "description": f.description,
                     "score_impact": f.score_impact,
                     "score_impact_applied": applied_impacts[index]["applied"],
@@ -399,6 +404,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "rule_id": flag.rule_id,
                     "engine_state": getattr(flag.state, "value", flag.state),
                     "engine_evaluation_state": getattr(flag.eval_state, "value", flag.eval_state),
+                    "compliance_outcome": derive_compliance_outcome(
+                        flag, counsel_verified_rule=flag.rule_id in VERIFIED_RULE_IDS
+                    ),
                     "review_status": applied_impacts[index]["status"],
                     "message": (
                         "No statutory conclusion is issued. Evidence review is required. Product scoring "
@@ -417,6 +425,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "rule_id": flag.rule_id,
                     "engine_state": getattr(flag.state, "value", flag.state),
                     "engine_evaluation_state": getattr(flag.eval_state, "value", flag.eval_state),
+                    "compliance_outcome": derive_compliance_outcome(
+                        flag, counsel_verified_rule=flag.rule_id in VERIFIED_RULE_IDS
+                    ),
                     "risk_severity": "NOT_EVALUATED",
                     "description": "Internal review signal only. No legal conclusion, breach, liability or penalty is determined.",
                     "statutory_basis": "Independent legal/source verification pending; statutory basis not released.",
