@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import asyncio
 from pathlib import Path
 
 from scripts.rehearse_restored_neon_branch import (
@@ -10,6 +11,7 @@ from scripts.rehearse_restored_neon_branch import (
     EXPECTED_PRE_IDENTITY_REVISION,
     EXPECTED_PROVIDER_MEMBERSHIPS,
     EXPECTED_START_REVISION,
+    _preflight_restricted_role_security,
     POST_MIGRATION_REQUIRED_COLUMNS,
     PRE_0042_REQUIRED_COLUMNS,
 )
@@ -109,3 +111,57 @@ def test_role_security_preflight_runs_before_any_alembic_migration():
     assert 'report["migration_applied"] = False' in source[role_preflight:upgrade_0114]
     assert '"BLOCKED_ROLE_SECURITY"' in source[role_preflight:upgrade_0114]
 
+class _FakeRoleConnection:
+    def __init__(self, roles, memberships):
+        self.roles = roles
+        self.memberships = memberships
+
+    async def fetch(self, query):
+        if "FROM pg_auth_members membership" in query:
+            return self.memberships
+        return self.roles
+
+
+def _role_row(name, *, inherit=False):
+    return {
+        "rolname": name,
+        "rolcanlogin": True,
+        "rolsuper": False,
+        "rolcreatedb": False,
+        "rolcreaterole": False,
+        "rolinherit": inherit,
+        "rolreplication": False,
+        "rolbypassrls": False,
+    }
+
+
+def test_role_preflight_blocks_inherit_and_owner_membership_before_migration():
+    conn = _FakeRoleConnection(
+        [_role_row("nlc_app_role", inherit=True), _role_row("nlc_ci_audit_role")],
+        [{
+            "member_role": "neondb_owner",
+            "granted_role": "nlc_app_role",
+            "grantor_role": "cloud_admin",
+            "admin_option": True,
+            "inherit_option": False,
+            "set_option": False,
+        }],
+    )
+
+    result = asyncio.run(_preflight_restricted_role_security(conn))
+
+    assert result["status"] == "BLOCKED_ROLE_SECURITY"
+    assert result["unsafe_roles"] == ["nlc_app_role"]
+    assert result["restricted_memberships"][0]["granted_role"] == "nlc_app_role"
+
+
+def test_role_preflight_passes_only_noinherit_roles_without_memberships():
+    conn = _FakeRoleConnection(
+        [_role_row("nlc_app_role"), _role_row("nlc_ci_audit_role")],
+        [],
+    )
+
+    result = asyncio.run(_preflight_restricted_role_security(conn))
+
+    assert result["status"] == "PASS"
+    assert result["restricted_memberships"] == []
