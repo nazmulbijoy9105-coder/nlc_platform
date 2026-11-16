@@ -78,11 +78,10 @@ EVIDENCE_TABLES = (
     "webhook_endpoints",
     "webhook_deliveries",
 )
-EXPECTED_PROVIDER_MEMBERSHIPS = {
-    ("neondb_owner", "nlc_app_role", "cloud_admin", True, False, False),
-    ("neondb_owner", "nlc_ci_audit_role", "cloud_admin", True, False, False),
-    ("neondb_owner", "nlc_migration_owner", "cloud_admin", True, False, False),
-}
+# The release runbook requires no membership rows involving either
+# restricted application/audit role. Neon owner -> migration-owner is a
+# separate controlled migration membership and is intentionally not in this set.
+EXPECTED_PROVIDER_MEMBERSHIPS: set[tuple[str, str, str, bool, bool, bool]] = set()
 REPORT_PATH = Path("artifacts/neon-restored-branch-rehearsal.json")
 
 
