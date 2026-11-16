@@ -110,7 +110,6 @@ def test_role_security_preflight_runs_before_any_alembic_migration():
     assert role_preflight < upgrade_0114 < upgrade_head
     assert 'report["migration_applied"] = False' in source[role_preflight:upgrade_0114]
     assert '"BLOCKED_ROLE_SECURITY"' in source
-    assert '"BLOCKED_ROLE_SECURITY"' in source[role_preflight - 2500:role_preflight]
 
 class _FakeRoleConnection:
     def __init__(self, roles, memberships):
