@@ -185,22 +185,28 @@ No fallback to name similarity, section similarity, insertion order, current act
 
 ## 9. Engineering implementation added to PR #344
 
-The branch now contains an additive first implementation:
+The consolidated branch now contains the legacy collision-preservation layer followed by the canonical registry foundation:
 
-- `app/models/rules.py`: ORM models `LegalRuleIdentity`, `LegalRuleAlias`, and `LegalRuleRevision`.
-- `app/models/__init__.py`: exports the three new models for metadata registration.
-- `alembic/versions/0114_canonical_rule_identity_registry.py`: additive migration chained after `0113_score_history_append_only`; creates the three registry tables, UUID keys, foreign keys, status/validity checks, uniqueness constraints, lookup indexes and database-level UPDATE/DELETE rejection.
-- `tests/unit/test_canonical_rule_identity_models.py`: structural tests for UUID identity, namespace-scoped alias collision representation, effective dates, evaluator separation and `lazy="raise"` relationships.
+- `0115_rule_identity_collision_reconciliation`: archives the exact legacy INC-001/INC-002 row payloads, preserves the textual IDs and all existing FK references, and quarantines those legacy rows from scoring. It accepts only the post-0030 Section 23 fingerprints. Any mismatch aborts rather than guessing.
+- `0116_canonical_rule_identity_registry`: creates empty `legal_rule_identities`, `legal_rule_aliases`, and `legal_rule_revisions` tables with UUID identities, FK restrictions, uniqueness/validity checks, lookup indexes, and database UPDATE/DELETE rejection.
+- Both migrations enable and FORCE RLS on their new public tables, revoke all privileges from PUBLIC, `nlc_app_role`, and `nlc_ci_audit_role`, and do not grant runtime access. The archive and canonical registry remain inaccessible until an explicit least-privilege access contract is approved.
+- `app/models/rules.py`: ORM models mirror the migration constraints and use `lazy="raise"` for new identity relationships.
+- `scripts/audit_orm_relationship_loading.py`: read-only mapper relationship/loading inventory.
+- `scripts/audit_rule_historical_attribution.py`: read-only reference inventory; excludes the current catalogue and quarantine archive from candidate finding-reference counts. Every match remains UNATTRIBUTED.
+- `scripts/rehearse_restored_neon_branch.py`: final expected migration head is `0116_canonical_rule_identity_registry`.
+- Outcome derivation keeps lifecycle separate from compliance. A positive COMPLIANT outcome requires explicit engine COMPLIANT + PASS, applicable context, and the independent counsel-verification allowlist. Product scoring eligibility is not a substitute for counsel approval.
 
-The migration deliberately creates **zero identity or alias rows**. It does not backfill any of the 85 seed IDs, the production-only `INC-002`, or any historical finding. Existing `legal_rules.rule_id`, `legal_rule_versions.rule_id`, compliance findings, source mappings and rescue audit records remain untouched.
+The migrations create **zero canonical identity, alias, or revision rows**. They do not reassign any historical finding. The 0115 quarantine is a proposed migration effect, not a production action; it has not been run against Render or production Neon.
 
 ### 9.1 Known implementation limitations — must be resolved before production use
 
-1. The registry tables are not yet wired into the runtime alias resolver, API, evaluator, evidence records or historical replay.
-2. No identity lifecycle/supersession event table exists yet. The initial identity, alias and revision rows are immutable; retirement/correction must be represented by append-only events before lifecycle operations are enabled.
-3. Effective interval overlap is not yet prevented by a database exclusion constraint. The current check only rejects an inverted interval; overlapping revisions must be rejected by a later constraint/resolver and test before date-selected evaluation is enabled.
-4. No tenant-facing or application-role grants/RLS policies are added. The registry remains unavailable to application code until a least-privilege access design is reviewed.
-5. The migration and tests have not yet been run in CI or against an isolated PostgreSQL restore. No migration success is claimed.
-6. Model metadata/migration parity and exact Alembic single-head status still require CI verification.
+1. The canonical registry is not yet wired into a deterministic runtime alias resolver, API, evaluator, evidence ledger, or historical replay.
+2. No identity lifecycle/supersession event model exists yet. Initial identity, alias and revision rows are immutable; retirement/correction must be represented by append-only events before lifecycle operations are enabled.
+3. Effective interval overlap is not yet prevented by a database exclusion constraint. Current checks reject inverted intervals only; overlapping revisions must be rejected before date-selected evaluation is enabled.
+4. No runtime or audit-role grants are provided. This is intentional, not a completed tenant-facing access design; a reviewed least-privilege policy and tenant isolation tests are still required.
+5. The ORM relationship inventory is not proof that all service callsites are optimized. Query-callsite review and endpoint query-count tests remain outstanding.
+6. Historical finding-level attribution remains blocked until an authorized read-only finding inventory can be obtained. No rule-ID-only match may be treated as attribution.
+7. The consolidated CI run and isolated PostgreSQL restore rehearsal from 0042 through 0116 must pass before merge consideration. CI success alone does not prove production schema parity or legal correctness.
+8. All 85 rules remain `REVIEW_REQUIRED` in the legal approval register; legacy INC-002 is quarantined, not canonically approved or scored.
 
-**Status:** schema foundation only, pending CI and independent review. This is not a production-ready identity resolver or approved legal catalogue.
+**Status:** consolidated schema and quarantine proposal under CI validation; not a production-ready identity resolver, not an approved legal catalogue, and not authorization to execute a production migration.
