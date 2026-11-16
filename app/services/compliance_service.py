@@ -89,6 +89,7 @@ def _applied_score_impacts(flags) -> list[dict]:
         AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
         PRODUCT_SCORING_RULE_IDS,
         SCORE_DEDUCTION_RULE_IDS,
+        VERIFIED_RULE_IDS,
         RuleState,
         legal_score_is_released,
     )
@@ -119,6 +120,9 @@ def _applied_score_impacts(flags) -> list[dict]:
             continue
         if not legal_score_is_released():
             results[index] = {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
+            continue
+        if flag.rule_id not in VERIFIED_RULE_IDS:
+            results[index] = {"applied": 0, "status": "RULE_NOT_COUNSEL_VERIFIED"}
             continue
         severity_value = getattr(
             getattr(flag, "severity", None),
@@ -202,6 +206,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         from app.rule_engine import CompanyProfile
         from app.rule_engine.engine import (
             PRODUCT_SCORING_RULE_IDS,
+            VERIFIED_RULE_IDS,
             legal_score_is_released,
         )
         from app.services.company_service import CompanyService
@@ -378,7 +383,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "legal_state": getattr(f.state, "value", f.state),
                     "evaluation_state": getattr(f.eval_state, "value", f.eval_state),
                     "compliance_outcome": derive_compliance_outcome(
-                        f, counsel_verified_rule=False  # No independently approved revision is wired yet
+                        f, counsel_verified_rule=f.rule_id in VERIFIED_RULE_IDS
                     ),
                     "description": f.description,
                     "score_impact": f.score_impact,
@@ -400,7 +405,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "engine_state": getattr(flag.state, "value", flag.state),
                     "engine_evaluation_state": getattr(flag.eval_state, "value", flag.eval_state),
                     "compliance_outcome": derive_compliance_outcome(
-                        flag, counsel_verified_rule=False  # Product eligibility is not counsel approval
+                        flag, counsel_verified_rule=flag.rule_id in VERIFIED_RULE_IDS
                     ),
                     "review_status": applied_impacts[index]["status"],
                     "message": (
@@ -986,6 +991,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         rows = flags_result.all()
         from app.rule_engine.engine import (
             PRODUCT_SCORING_RULE_IDS,
+            VERIFIED_RULE_IDS,
             legal_score_is_released,
         )
         score_released = legal_score_is_released()
@@ -995,7 +1001,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             if score_released and rule_id in PRODUCT_SCORING_RULE_IDS
         ]
         pending_review_count = sum(
-            1 for _rule_id, _severity in rows
+            1 for rule_id, _severity in rows if rule_id not in VERIFIED_RULE_IDS
         )
         not_evaluated_count = sum(
             1 for rule_id, _ in rows
