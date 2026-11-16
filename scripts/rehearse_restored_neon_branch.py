@@ -24,7 +24,7 @@ EXPECTED_PROJECT_ID = "rapid-bonus-26545234"
 EXPECTED_BRANCH_ID = "br-little-cake-aovrrz0y"
 EXPECTED_DATABASE = "neondb"
 EXPECTED_START_REVISION = "0042_dedup_key"
-EXPECTED_HEAD_REVISION = "0115_canonical_rule_identity_registry"
+EXPECTED_HEAD_REVISION = "0116_canonical_rule_identity_registry"
 PRE_0042_REQUIRED_TABLES = (
     "webhook_endpoints",
     "webhook_deliveries",
