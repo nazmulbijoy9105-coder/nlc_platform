@@ -67,3 +67,11 @@ def test_unknown_applicability_never_becomes_compliant():
         resolved=False,
     )
     assert derive_compliance_outcome(flag, counsel_verified_rule=True) == "REVIEW_REQUIRED"
+
+
+def test_resolved_lifecycle_does_not_mask_failed_evaluation():
+    flag = SimpleNamespace(
+        state="UNKNOWN", eval_state="FAILED", resolved=True,
+        conditional_applies=True,
+    )
+    assert derive_compliance_outcome(flag, counsel_verified_rule=True) == "FAILED"
