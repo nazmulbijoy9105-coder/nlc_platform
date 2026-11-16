@@ -81,6 +81,7 @@ EVIDENCE_TABLES = (
 EXPECTED_PROVIDER_MEMBERSHIPS = {
     ("neondb_owner", "nlc_app_role", "cloud_admin", True, False, False),
     ("neondb_owner", "nlc_ci_audit_role", "cloud_admin", True, False, False),
+    ("neondb_owner", "nlc_migration_owner", "cloud_admin", True, False, False),
 }
 REPORT_PATH = Path("artifacts/neon-restored-branch-rehearsal.json")
 
