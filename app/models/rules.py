@@ -189,6 +189,15 @@ class LegalRuleIdentity(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default="now()"
     )
+    __table_args__ = (
+        CheckConstraint(
+            "identity_status IN ('ACTIVE', 'RETIRED', 'QUARANTINED')",
+            name="ck_legal_rule_identity_status",
+        ),
+        UniqueConstraint(
+            "obligation_key", name="uq_legal_rule_identity_obligation_key"
+        ),
+    )
 
     aliases: Mapped[list["LegalRuleAlias"]] = relationship(
         "LegalRuleAlias", back_populates="identity", lazy="raise"
@@ -202,6 +211,14 @@ class LegalRuleAlias(Base):
     """Source-namespaced historical identifier; collisions remain representable."""
     __tablename__ = "legal_rule_aliases"
     __table_args__ = (
+        CheckConstraint(
+            "resolution_status IN ('RESOLVED', 'AMBIGUOUS', 'UNRESOLVED', 'RETIRED')",
+            name="ck_legal_rule_alias_resolution_status",
+        ),
+        CheckConstraint(
+            "valid_to IS NULL OR valid_from IS NULL OR valid_to > valid_from",
+            name="ck_legal_rule_alias_validity",
+        ),
         UniqueConstraint(
             "source_namespace", "historical_rule_id", "canonical_rule_id",
             name="uq_legal_rule_alias_source_historical_canonical",
@@ -247,6 +264,9 @@ class LegalRuleRevision(Base):
         CheckConstraint(
             "effective_to IS NULL OR effective_to > effective_from",
             name="ck_legal_rule_revision_effective_interval",
+        ),
+        CheckConstraint(
+            "revision_number > 0", name="ck_legal_rule_revision_positive"
         ),
         UniqueConstraint(
             "canonical_rule_id", "revision_number",
