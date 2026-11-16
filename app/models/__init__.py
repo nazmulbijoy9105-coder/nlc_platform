@@ -107,7 +107,13 @@ from .rescue_audit_log import RescueAuditLog
 from .rjsc_forms import RJSCFormFiling
 
 # ── Rules (Legal Rules + Version History) ────────────────────────────
-from .rules import (\n    LegalRule,\n    LegalRuleAlias,\n    LegalRuleIdentity,\n    LegalRuleRevision,\n    LegalRuleVersion,\n)
+from .rules import (
+    LegalRule,
+    LegalRuleAlias,
+    LegalRuleIdentity,
+    LegalRuleRevision,
+    LegalRuleVersion,
+)
 from .legal_provenance import (
     LegalDeadlineDefinition,
     LegalRuleReleaseEvent,
