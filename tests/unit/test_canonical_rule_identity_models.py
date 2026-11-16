@@ -47,3 +47,10 @@ def test_identity_alias_and_revision_relationships_are_lazy_raise():
     assert LegalRuleIdentity.revisions.property.lazy == "raise"
     assert LegalRuleAlias.identity.property.lazy == "raise"
     assert LegalRuleRevision.identity.property.lazy == "raise"
+
+
+def test_registry_created_at_defaults_are_database_now_expressions():
+    for model in (LegalRuleIdentity, LegalRuleAlias, LegalRuleRevision):
+        default = model.__table__.c.created_at.server_default
+        assert default is not None
+        assert "now()" in str(default.arg)
