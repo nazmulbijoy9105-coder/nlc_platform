@@ -8,6 +8,7 @@ from pathlib import Path
 from scripts.rehearse_restored_neon_branch import (
     EXPECTED_HEAD_REVISION,
     EXPECTED_PRE_IDENTITY_REVISION,
+    EXPECTED_PROVIDER_MEMBERSHIPS,
     EXPECTED_START_REVISION,
     POST_MIGRATION_REQUIRED_COLUMNS,
     PRE_0042_REQUIRED_COLUMNS,
@@ -89,3 +90,14 @@ def test_0115_identity_preflight_runs_after_upgrade_to_0114_and_before_head():
 
     assert EXPECTED_PRE_IDENTITY_REVISION == "0114_annual_return_filing_status_provenance"
     assert upgrade_0114 < identity_preflight < upgrade_head
+
+
+def test_rehearsal_provider_membership_contract_includes_migration_owner():
+    assert (
+        "neondb_owner",
+        "nlc_migration_owner",
+        "cloud_admin",
+        True,
+        False,
+        False,
+    ) in EXPECTED_PROVIDER_MEMBERSHIPS
