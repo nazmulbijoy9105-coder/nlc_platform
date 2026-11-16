@@ -56,15 +56,19 @@ def _archive(bind, rule_id, identity_key, disposition):
     ).mappings().first()
     if row is None:
         return None
-    payload = json.dumps(row["payload"], sort_keys=True, default=str)
+
+    payload = json.dumps(
+        row["payload"], sort_keys=True, separators=(",", ":"), default=str
+    )
+    payload_sha256 = hashlib.sha256(payload.encode("utf-8")).hexdigest()
     bind.execute(
         sa.text("""
             INSERT INTO public.legal_rule_identity_archive
                 (legacy_identity_key, legacy_rule_id, original_payload,
-                 disposition, historical_resolution, captured_at)
-            VALUES (:key, :id, CAST(:payload AS jsonb), :disposition,
+                 payload_sha256, disposition, historical_resolution, captured_at)
+            VALUES (:key, :id, CAST(:payload AS jsonb), :payload_sha256,
+                    :disposition,
                     'UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW', now())
-            ON CONFLICT (legacy_identity_key) DO NOTHING
         """),
         {
             "key": identity_key,
@@ -186,7 +190,7 @@ def upgrade():
     # captured and quarantined the exact rows. FORCE RLS with no policy would
     # otherwise block this migration's own archive INSERT on owner roles.
     # This archive contains identity evidence. Force RLS and deny runtime/audit
-    # access; the migration owner has the required BYPASSRLS capability.
+    # access after the migration's archive writes are complete.
     op.execute(f"ALTER TABLE public.{ARCHIVE_TABLE} ENABLE ROW LEVEL SECURITY")
     op.execute(f"ALTER TABLE public.{ARCHIVE_TABLE} FORCE ROW LEVEL SECURITY")
     op.execute(
