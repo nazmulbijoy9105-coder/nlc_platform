@@ -152,6 +152,10 @@ def upgrade() -> None:
         FOR EACH ROW
         EXECUTE FUNCTION public.prevent_legal_rule_revision_overlap()
     """)
+    op.execute(
+        "REVOKE ALL ON FUNCTION public.prevent_legal_rule_revision_overlap() "
+        "FROM PUBLIC, nlc_app_role, nlc_ci_audit_role"
+    )
 
     # These governance tables remain inaccessible to runtime and audit roles
     # until a separately reviewed service/API contract grants scoped access.
