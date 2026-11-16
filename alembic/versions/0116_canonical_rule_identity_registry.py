@@ -122,7 +122,7 @@ def upgrade() -> None:
     # concurrent writers; NULL effective_to represents an unbounded end date.
     op.execute("""
         CREATE FUNCTION public.prevent_legal_rule_revision_overlap()
-        RETURNS trigger LANGUAGE plpgsql AS $
+        RETURNS trigger LANGUAGE plpgsql AS $overlap$
         BEGIN
             PERFORM pg_advisory_xact_lock(
                 hashtextextended(NEW.canonical_rule_id::text, 0)
@@ -144,7 +144,7 @@ def upgrade() -> None:
             END IF;
             RETURN NEW;
         END;
-        $
+        $overlap$
     """)
     op.execute("""
         CREATE TRIGGER trg_legal_rule_revision_no_overlap
