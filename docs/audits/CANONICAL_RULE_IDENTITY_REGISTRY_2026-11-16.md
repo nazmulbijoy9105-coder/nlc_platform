@@ -273,3 +273,27 @@ A second full-row hash comparison confirms that the two branches' legacy rows ar
 The current identity preflight checks the post-0114 schema and the legal identity fields, not equality of every mutable operational column. The full-row hash difference must be reconciled as a separate data-preservation question before any migration is approved. Do not replace either branch's data or accept the production hash as a migration fingerprint without comparing the full JSON payloads and reviewing the differing fields.
 
 **Release consequence:** there are now two separate rehearsal tasks: (1) upgrade the isolated 0042 restore branch through 0114 and stop at the 0115 identity preflight; (2) separately verify production's 0112→0114 deployment path under the CI-gated migration process. Neither has been executed by this read-only inspection.
+
+
+### 9.6 Field-level legacy row differences (read-only comparison)
+
+The full JSON payloads for the two branches were compared field by field. For both IDs, the identity-defining fields (name, statutory basis, and trigger) match between the 0042 restore and 0112 production snapshots, but the operational/evaluation metadata does not:
+
+| Field | Restore INC-001 / INC-002 | Production INC-001 / INC-002 |
+|---|---|---|
+| `default_severity` | RED / RED | NOT_EVALUATED / NOT_EVALUATED |
+| `score_impact` | 15 / 25 | 0 / 0 |
+| `rule_version` | 2.0 / 2.0 | 2.1 / 2.1 |
+| `verification_status` | column absent at 0042 | PENDING / ACTIVE |
+| `verification_notes` | column absent at 0042 | NULL / owner note records counsel gate and no fabricated version history |
+| `updated_at` | 2026-09-30 / 2026-07-10 | 2026-11-09 / 2026-11-14 |
+
+Production also has `verified_at` and `verified_by` fields, currently NULL; these columns are absent from the 0042 snapshot. The restore and production rows therefore represent different points in the operational history, not interchangeable snapshots.
+
+This comparison sharpens the release risk:
+- The restored 0042 rows still carry RED severity and nonzero score impacts.
+- Production currently has NOT_EVALUATED severity and zero score impact for both rows.
+- Production INC-002 has `verification_status='ACTIVE'`, but its verification note explicitly says independent Bangladesh counsel approval is not recorded and statutory scoring remains blocked by the counsel gate. ACTIVE is not approval.
+- The migration must preserve each branch's exact historical row payload before any quarantine operation; it must not overwrite a newer production state with the older restored state.
+
+The 0115 preflight must therefore be reviewed against the post-0114 restored branch payload, and production deployment must be evaluated separately against the live 0112 payload. No automatic copying, overwrite, or promotion is justified by matching name/basis/trigger alone.
