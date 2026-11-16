@@ -18,6 +18,8 @@ import sqlalchemy as sa
 
 TARGET_RULE_IDS = ("INC-001", "INC-002")
 SCHEMA = "public"
+# Catalogue rows and their quarantine archive are sources, not finding references.
+EXCLUDED_REFERENCE_TABLES = {"legal_rules", "legal_rule_identity_archive"}
 
 
 def classify_reference_match(
@@ -49,8 +51,12 @@ def scan_connection(connection: sa.Connection) -> dict[str, Any]:
     matches: list[dict[str, Any]] = []
     scanned_columns = 0
     skipped_tables: list[str] = []
+    excluded_tables: list[str] = []
 
     for table_name in inspector.get_table_names(schema=SCHEMA):
+        if table_name in EXCLUDED_REFERENCE_TABLES:
+            excluded_tables.append(table_name)
+            continue
         columns = inspector.get_columns(table_name, schema=SCHEMA)
         candidate_columns = [
             column["name"] for column in columns
@@ -102,6 +108,7 @@ def scan_connection(connection: sa.Connection) -> dict[str, Any]:
             rule_id: counts.get(rule_id, 0) for rule_id in TARGET_RULE_IDS
         },
         "tables_without_primary_key": sorted(skipped_tables),
+        "excluded_source_tables": sorted(excluded_tables),
         "attribution_status": "UNATTRIBUTED",
         "attribution_warning": (
             "This inventory does not prove attribution. Do not relabel or replay "
