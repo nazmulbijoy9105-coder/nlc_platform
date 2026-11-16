@@ -22,8 +22,11 @@ def derive_compliance_outcome(flag, *, counsel_verified_rule: bool) -> str:
 
     if getattr(flag, "resolved", False):
         return "RESOLVED"
-    if getattr(flag, "conditional_applies", True) is False:
+    applicability = getattr(flag, "conditional_applies", True)
+    if applicability is False:
         return "NOT_APPLICABLE"
+    if applicability is None:
+        return "REVIEW_REQUIRED"
 
     tokens = {state, evaluation}
     if tokens & {"NOT_AUTHORISED", "NOT_AUTHORIZED", "UNAUTHORISED", "UNAUTHORIZED"}:
