@@ -20,8 +20,6 @@ def derive_compliance_outcome(flag, *, counsel_verified_rule: bool) -> str:
     state = _value(getattr(flag, "state", None))
     evaluation = _value(getattr(flag, "eval_state", None))
 
-    if getattr(flag, "resolved", False):
-        return "RESOLVED"
     applicability = getattr(flag, "conditional_applies", True)
     if applicability is False:
         return "NOT_APPLICABLE"
@@ -41,6 +39,8 @@ def derive_compliance_outcome(flag, *, counsel_verified_rule: bool) -> str:
         return "NON_COMPLIANT"
     if state == "NOT_APPLICABLE":
         return "NOT_APPLICABLE"
+    if getattr(flag, "resolved", False):
+        return "RESOLVED"
     if state == "COMPLIANT" and evaluation in {"COMPLIANT", "PASS", "PASSED"}:
         return "COMPLIANT" if counsel_verified_rule else "REVIEW_REQUIRED"
     if state in {"UNKNOWN", "CONTRADICTORY", "DISPUTED", "REQUIRES_LAWYER_JUDGMENT"}:
