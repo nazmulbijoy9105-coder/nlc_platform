@@ -810,6 +810,28 @@ async def main() -> int:
                 )
                 return 2
 
+            legacy_preflight = await _preflight_legacy_rule_identities(conn)
+            report["legacy_rule_identity_preflight"] = legacy_preflight
+            if legacy_preflight["status"] != "PASS":
+                report["status"] = legacy_preflight["status"]
+                report["migration_applied"] = False
+                report["error"] = (
+                    "Migration 0115 preflight blocked before Alembic. "
+                    "The restored branch schema/fingerprints do not match the "
+                    "explicitly reviewed migration contract; no automatic "
+                    "fingerprint widening or data mutation is permitted."
+                )
+                report["finished_at"] = datetime.now(timezone.utc).isoformat()
+                REPORT_PATH.write_text(
+                    json.dumps(report, indent=2, default=str) + "\n"
+                )
+                print(
+                    f"{legacy_preflight['status']}: no Alembic command was run; "
+                    f"0115 preflight: {legacy_preflight!r}",
+                    file=sys.stderr,
+                )
+                return 2
+
             before_counts = await _table_row_counts(conn)
             report["before_table_row_counts"] = before_counts
         finally:
