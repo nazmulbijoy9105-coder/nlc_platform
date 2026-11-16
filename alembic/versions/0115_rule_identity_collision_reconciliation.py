@@ -26,11 +26,17 @@ REQUIRED_RULE_COLUMNS = {
     "is_active", "verification_status", "verification_notes", "updated_at",
 }
 
-# These fingerprints are the exact post-0030 migration-chain definitions.
-# They remain legacy identities, not legal approvals. A restored database
-# whose row drifted from this chain must fail closed for separate review; do
-# not widen the accepted fingerprint list from a production snapshot alone.
+# Fingerprints are accepted only to quarantine an existing legacy row.
+# They do not establish legal equivalence, approval, or historical attribution.
+# The first tuple for each ID is the currently observed production/restore
+# definition (INC-001 s9; INC-002 s11). The Section 23 variants are retained
+# only for databases that genuinely carry the post-0030 migration-chain rows.
 INC001_LEGACY_FINGERPRINTS = (
+    (
+        "Certificate of Incorporation Not Obtained",
+        "Section 9, Companies Act 1994 (Bangladesh)",
+        "certificate_obtained == False",
+    ),
     (
         "Memorandum and Articles Not Filed",
         "Section 23, Companies Act 1994 (Bangladesh)",
@@ -38,6 +44,11 @@ INC001_LEGACY_FINGERPRINTS = (
     ),
 )
 INC002_LEGACY_FINGERPRINTS = (
+    (
+        "Memorandum and Articles Not Filed",
+        "Section 11, Companies Act 1994 (Bangladesh)",
+        "moa_filed == False OR aoa_filed == False",
+    ),
     (
         "Form III Not Filed",
         "Section 23, Companies Act 1994 (Bangladesh)",
@@ -150,7 +161,7 @@ def upgrade():
     """)).mappings().first()
     if inc001 is None or not _matches_legacy(inc001, INC001_LEGACY_FINGERPRINTS):
         raise RuntimeError(
-            "INC-001 does not match a reviewed historical fingerprint; "
+            "INC-001 does not match an explicitly quarantinable legacy fingerprint; "
             "refusing mutation: " + repr(dict(inc001) if inc001 else None)
         )
 
@@ -160,7 +171,7 @@ def upgrade():
     )
     _quarantine(
         bind, "INC-001",
-        "Legacy INC-001 identity quarantined. Canonical seed meaning is not "
+        "Legacy INC-001 identity quarantined. canonical Section 23 seed meaning is not "
         "bound to this row. Historical references remain attached to the "
         "unchanged legacy identity pending record-level attribution.",
     )
@@ -172,7 +183,7 @@ def upgrade():
     if inc002 is not None:
         if not _matches_legacy(inc002, INC002_LEGACY_FINGERPRINTS):
             raise RuntimeError(
-                "INC-002 does not match a reviewed historical fingerprint; "
+                "INC-002 does not match an explicitly quarantinable legacy fingerprint; "
                 "refusing retirement: " + repr(dict(inc002))
             )
         _archive(
@@ -182,7 +193,7 @@ def upgrade():
         _quarantine(
             bind, "INC-002",
             "Legacy INC-002 identity quarantined and excluded from the "
-            "canonical 85-rule manifest. ID is reserved and must never be reused.",
+            "canonical 85-rule manifest. This is not a legal conclusion; ID is reserved and must never be reused.",
         )
 
 
