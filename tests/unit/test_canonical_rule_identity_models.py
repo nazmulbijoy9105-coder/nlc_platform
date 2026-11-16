@@ -1,5 +1,5 @@
 """Structural safeguards for the additive canonical rule identity registry."""
-from sqlalchemy import CheckConstraint, UniqueConstraint
+from pathlib import Path\n\nfrom sqlalchemy import CheckConstraint, UniqueConstraint
 
 from app.models import LegalRuleAlias, LegalRuleIdentity, LegalRuleRevision
 
@@ -54,3 +54,23 @@ def test_registry_created_at_defaults_are_database_now_expressions():
         default = model.__table__.c.created_at.server_default
         assert default is not None
         assert "now()" in str(default.arg)
+
+
+
+def test_revision_effective_intervals_are_database_guarded_against_overlap():
+    migration = (
+        Path(__file__).resolve().parents[2]
+        / "alembic"
+        / "versions"
+        / "0116_canonical_rule_identity_registry.py"
+    )
+    source = migration.read_text(encoding="utf-8")
+    assert "pg_advisory_xact_lock" in source
+    assert "hashtextextended(NEW.canonical_rule_id::text, 0)" in source
+    assert "daterange(" in source
+    assert "existing.effective_from, existing.effective_to, '[)'" in source
+    assert "NEW.effective_from, NEW.effective_to, '[)'" in source
+    assert "trg_legal_rule_revision_no_overlap" in source
+    assert "BEFORE INSERT ON public.legal_rule_revisions" in source
+    assert "Overlapping effective interval" in source
+    assert "REVOKE ALL ON FUNCTION public.prevent_legal_rule_revision_overlap()" in source
