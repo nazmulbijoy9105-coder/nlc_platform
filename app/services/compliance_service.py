@@ -421,7 +421,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "engine_state": getattr(flag.state, "value", flag.state),
                     "engine_evaluation_state": getattr(flag.eval_state, "value", flag.eval_state),
                     "compliance_outcome": derive_compliance_outcome(
-                        flag, counsel_verified_rule=flag.rule_id in VERIFIED_RULE_IDS
+                        flag, counsel_verified_rule=False  # Product eligibility is not counsel approval
                     ),
                     "risk_severity": "NOT_EVALUATED",
                     "description": "Internal review signal only. No legal conclusion, breach, liability or penalty is determined.",
@@ -986,7 +986,6 @@ class ComplianceService(BaseService[ComplianceFlag]):
         rows = flags_result.all()
         from app.rule_engine.engine import (
             PRODUCT_SCORING_RULE_IDS,
-            VERIFIED_RULE_IDS,
             legal_score_is_released,
         )
         score_released = legal_score_is_released()
