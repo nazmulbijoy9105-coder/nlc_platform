@@ -78,3 +78,47 @@ async def test_restored_rehearsal_blocks_before_alembic_on_pre_0042_schema_drift
 
 async def _async_value(value):
     return value
+
+
+@pytest.mark.asyncio
+async def test_0115_preflight_blocks_missing_legal_rule_schema_columns():
+    class Connection:
+        async def fetch(self, query, *args):
+            assert "information_schema.columns" in query
+            return [{"column_name": "rule_id"}, {"column_name": "rule_name"}]
+
+    report = await rehearsal._preflight_legacy_rule_identities(Connection())
+
+    assert report["status"] == "BLOCKED_SCHEMA_DRIFT"
+    assert "verification_status" in report["missing_columns"]
+    assert "verification_notes" in report["missing_columns"]
+
+
+@pytest.mark.asyncio
+async def test_0115_preflight_blocks_unreviewed_inc001_inc002_fingerprints():
+    class Connection:
+        async def fetch(self, query, *args):
+            if "information_schema.columns" in query:
+                return [{"column_name": name} for name in rehearsal.LEGACY_RULE_REQUIRED_COLUMNS]
+            assert "rule_condition ->> 'trigger'" in query
+            return [
+                {
+                    "rule_id": "INC-001",
+                    "rule_name": "Certificate of Incorporation Not Obtained",
+                    "statutory_basis": "Section 9, Companies Act 1994 (Bangladesh)",
+                    "trigger": "certificate_obtained == False",
+                },
+                {
+                    "rule_id": "INC-002",
+                    "rule_name": "Memorandum and Articles Not Filed",
+                    "statutory_basis": "Section 11, Companies Act 1994 (Bangladesh)",
+                    "trigger": "moa_filed == False OR aoa_filed == False",
+                },
+            ]
+
+    report = await rehearsal._preflight_legacy_rule_identities(Connection())
+
+    assert report["status"] == "BLOCKED_LEGACY_IDENTITY_DRIFT"
+    assert {item["rule_id"] for item in report["fingerprint_mismatches"]} == {
+        "INC-001", "INC-002"
+    }
