@@ -236,3 +236,17 @@ These hashes describe the observed production rows at the time of inspection, no
 The restored 0042 branch currently reports `rolinherit=true` for `nlc_app_role` and `nlc_ci_audit_role`, while the current production branch reports both as `NOINHERIT`. The migration-owner topology is present on the restore branch: `nlc_migration_owner` is NOLOGIN/BYPASSRLS and `nlc_migration_user` has a non-admin, non-inheriting SET ROLE membership. This controlled migration membership is separate from app/audit memberships.
 
 Both the restored and current production branches still show `neondb_owner` as a member of `nlc_app_role` and `nlc_ci_audit_role`, with `ADMIN OPTION=true`, `INHERIT OPTION=false`, and `SET OPTION=false`. The current production roles themselves are `NOINHERIT`; the restored branch roles are still `INHERIT`. The DBA remediation runbook requires no membership rows involving either restricted app/audit role. The rehearsal now expects an empty membership set for those roles and will block until the authorised DBA revokes the memberships and sets both roles to `NOINHERIT`. Do not remove the separate `nlc_migration_user` → `nlc_migration_owner` SET ROLE membership.
+
+
+### 9.4 Read-only production tenant-security spot checks (16 November 2026)
+
+Read-only checks against the current production Neon branch `br-purple-fog-aodj8s04` returned:
+
+- Every public base table except `alembic_version` has both RLS enabled and FORCE RLS; the query for gaps returned zero rows.
+- The `nlc_app_role` has only one table DELETE grant, on `webhook_endpoints`; no TRUNCATE, REFERENCES or TRIGGER grants were found.
+- An unsigned ADMIN spoof using a zero signature returned `nlc_current_user_principal() = NULL` and zero visible company/user rows when connected directly as `nlc_app_role`.
+- `nlc_ci_audit_role` cannot SELECT `public.compliance_flags`, but can SELECT `audit.legal_rule_registry_inventory`.
+
+These are positive spot checks, not a complete tenant-isolation certification. In particular, no valid signed-user cross-tenant denial matrix has been executed here, and finding-level historical attribution remains blocked by the audit role's lack of access to compliance finding records.
+
+The production role attributes are NOINHERIT, but `neondb_owner` still has membership rows in `nlc_app_role` and `nlc_ci_audit_role` with ADMIN OPTION. The DBA runbook requires those memberships to be revoked. Therefore the production tenant-security gate remains PARTIAL, not PASS.
