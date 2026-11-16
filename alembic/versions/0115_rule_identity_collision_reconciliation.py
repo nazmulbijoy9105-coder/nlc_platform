@@ -148,12 +148,12 @@ def upgrade():
     )
     op.execute("""
         CREATE FUNCTION public.prevent_legacy_rule_identity_archive_mutation()
-        RETURNS trigger LANGUAGE plpgsql AS $
+        RETURNS trigger LANGUAGE plpgsql AS $fn$
         BEGIN
             RAISE EXCEPTION 'legal_rule_identity_archive is append-only: % is forbidden',
                 TG_OP USING ERRCODE = '55000';
         END;
-        $
+        $fn$
     """)
     op.execute(
         f"CREATE TRIGGER trg_{ARCHIVE_TABLE}_append_only "
