@@ -912,7 +912,7 @@ async def main() -> int:
                 )
                 report["finished_at"] = datetime.now(timezone.utc).isoformat()
                 REPORT_PATH.write_text(
-                    json.dumps(report, indent=2, default=str) + "\\n"
+                    json.dumps(report, indent=2, default=str) + "\n"
                 )
                 print(
                     "BLOCKED_ROLE_SECURITY: no Alembic command was run; "
