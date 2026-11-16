@@ -24,6 +24,7 @@ EXPECTED_PROJECT_ID = "rapid-bonus-26545234"
 EXPECTED_BRANCH_ID = "br-little-cake-aovrrz0y"
 EXPECTED_DATABASE = "neondb"
 EXPECTED_START_REVISION = "0042_dedup_key"
+EXPECTED_PRE_IDENTITY_REVISION = "0114_annual_return_filing_status_provenance"
 EXPECTED_HEAD_REVISION = "0116_canonical_rule_identity_registry"
 EXPECTED_LEGACY_RULE_FINGERPRINTS = {
     "INC-001": (
@@ -810,28 +811,6 @@ async def main() -> int:
                 )
                 return 2
 
-            legacy_preflight = await _preflight_legacy_rule_identities(conn)
-            report["legacy_rule_identity_preflight"] = legacy_preflight
-            if legacy_preflight["status"] != "PASS":
-                report["status"] = legacy_preflight["status"]
-                report["migration_applied"] = False
-                report["error"] = (
-                    "Migration 0115 preflight blocked before Alembic. "
-                    "The restored branch schema/fingerprints do not match the "
-                    "explicitly reviewed migration contract; no automatic "
-                    "fingerprint widening or data mutation is permitted."
-                )
-                report["finished_at"] = datetime.now(timezone.utc).isoformat()
-                REPORT_PATH.write_text(
-                    json.dumps(report, indent=2, default=str) + "\n"
-                )
-                print(
-                    f"{legacy_preflight['status']}: no Alembic command was run; "
-                    f"0115 preflight: {legacy_preflight!r}",
-                    file=sys.stderr,
-                )
-                return 2
-
             before_counts = await _table_row_counts(conn)
             report["before_table_row_counts"] = before_counts
         finally:
@@ -841,7 +820,47 @@ async def main() -> int:
         env["ENVIRONMENT"] = "production"
         env["MIGRATION_DATABASE_URL"] = raw_url
         env["DATABASE_URL"] = raw_url
-        report["alembic_upgrade_output"] = _run_command(
+        report["upgrade_to_0114_output"] = _run_command(
+            ["alembic", "upgrade", EXPECTED_PRE_IDENTITY_REVISION], env
+        )
+        report["migration_applied_through_0114"] = True
+
+        conn = await _connect(raw_url, assume_migration_owner=True)
+        try:
+            pre_identity = await _identity(conn)
+            report["pre_identity_upgrade_identity"] = pre_identity
+            if pre_identity["alembic_versions"] != [EXPECTED_PRE_IDENTITY_REVISION]:
+                raise RuntimeError(
+                    "Expected the isolated branch to stop at "
+                    f"{EXPECTED_PRE_IDENTITY_REVISION}; observed "
+                    f"{pre_identity['alembic_versions']!r}."
+                )
+            legacy_preflight = await _preflight_legacy_rule_identities(conn)
+            report["legacy_rule_identity_preflight"] = legacy_preflight
+        finally:
+            await conn.close()
+
+        if legacy_preflight["status"] != "PASS":
+            report["status"] = legacy_preflight["status"]
+            report["migration_applied"] = False
+            report["error"] = (
+                "Migration 0115 preflight blocked after upgrading the isolated "
+                "branch through 0114. The 0043-0114 migrations were applied to "
+                "the rehearsal branch only; 0115/0116 were not run. Resolve the "
+                "schema/fingerprint mismatch with an explicit reviewed disposition."
+            )
+            report["finished_at"] = datetime.now(timezone.utc).isoformat()
+            REPORT_PATH.write_text(
+                json.dumps(report, indent=2, default=str) + "\n"
+            )
+            print(
+                f"{legacy_preflight['status']}: branch stopped at 0114; "
+                f"0115/0116 not applied: {legacy_preflight!r}",
+                file=sys.stderr,
+            )
+            return 2
+
+        report["upgrade_to_head_output"] = _run_command(
             ["alembic", "upgrade", "head"], env
         )
         report["migration_applied"] = True
