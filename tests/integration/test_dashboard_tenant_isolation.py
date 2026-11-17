@@ -243,6 +243,8 @@ async def test_dashboard_aggregates_withhold_pending_cached_black_band(
     from datetime import datetime, timezone
 
     import app.rule_engine.engine as engine_module
+    from sqlalchemy import text
+
     from app.models.compliance import ComplianceEvaluationRun
     from app.models.enums import RiskBand
     from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
@@ -280,16 +282,27 @@ async def test_dashboard_aggregates_withhold_pending_cached_black_band(
     await set_admin_context(db)
     monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
 
+    # This is a portfolio-wide aggregate. The shared CI database can contain
+    # other active companies from independently committed setup data, so derive
+    # the expected denominator from the same authorised admin portfolio rather
+    # than assuming these two fixtures are the only active rows.
+    portfolio_result = await db.execute(
+        text("SELECT COUNT(*) FROM companies WHERE is_active IS TRUE")
+    )
+    expected_portfolio_count = int(portfolio_result.scalar_one())
+
     risk_rows = await CompanyService(db).get_risk_distribution(include_all_companies=True)
     by_band = {str(row["risk_band"]): int(row["company_count"]) for row in risk_rows}
     assert by_band.get("GREEN") == 1
     assert by_band.get("BLACK", 0) == 0
-    assert by_band.get("NOT_EVALUATED") == 1
+    assert by_band.get("NOT_EVALUATED") == expected_portfolio_count - 1
+    assert sum(by_band.values()) == expected_portfolio_count
 
     kpis = await ComplianceService(db).get_dashboard_kpis()
+    assert kpis["total_companies"] == expected_portfolio_count
     assert kpis["green_count"] == 1
     assert kpis["red_black_count"] == 0
-    assert kpis["not_evaluated_count"] == 1
+    assert kpis["not_evaluated_count"] == expected_portfolio_count - 1
 
 
 @pytest.mark.asyncio
