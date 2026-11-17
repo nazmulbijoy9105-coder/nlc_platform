@@ -189,6 +189,9 @@ def main() -> None:
                 if literal_string(k)
             }
         statutory_law = literal_string(statutory_fields.get("law", ast.Constant(None)))
+        statutory_requirement = literal_string(
+            statutory_fields.get("requirement", ast.Constant(None))
+        )
         basis_comparison = (
             "NOT_COMPARABLE_MISSING_STATUTORY_DEFINITION"
             if statutory_node is None else
@@ -205,6 +208,7 @@ def main() -> None:
             "seed_check_function": check_fn,
             "runtime_evaluator_status": "FOUND" if evaluator is not None else "NOT_FOUND_OR_NOT_MODULE_LEVEL",
             "seed_fact_inputs": seed_data_points,
+            "statutory_requirement": statutory_requirement,
             "evidence_contract": evidence_contract,
             "applicability_contract": applicability_contract,
             "fact_evidence_gaps": [
