@@ -142,6 +142,17 @@ async def test_unassigned_user_cannot_read_existing_finding_binding(db):
     ))
     await db.flush()
 
+    # Exercise the append-only triggers against an existing row using the
+    # privileged integration connection; runtime-role privilege checks alone
+    # do not prove that the database triggers themselves reject mutation.
+    for statement in (
+        "UPDATE public.compliance_finding_bindings SET finding_snapshot = '{}'::jsonb WHERE compliance_flag_id = :flag_id",
+        "DELETE FROM public.compliance_finding_bindings WHERE compliance_flag_id = :flag_id",
+    ):
+        with pytest.raises(DBAPIError):
+            async with db.begin_nested():
+                await db.execute(text(statement), {"flag_id": flag_id})
+
     await set_rls_context(db, "00000000-0000-0000-0000-000000000001")
     result = await db.execute(text("SELECT count(*) FROM public.compliance_finding_bindings"))
     assert result.scalar_one() == 0
