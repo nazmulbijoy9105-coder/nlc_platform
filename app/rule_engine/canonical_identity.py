@@ -109,7 +109,15 @@ def resolve_rule_identity(
     for alias in matching:
         start = _as_date(alias.get("valid_from"))
         end = _as_date(alias.get("valid_to"))
-        if alias.get("valid_from") is not None and start is None:
+        # The database insert guard requires a concrete alias start date.
+        # Match that contract here; an open-ended start is not a defensible
+        # temporal mapping and must never resolve as if valid since forever.
+        if alias.get("valid_from") is None:
+            return RuleResolution(
+                status="INVALID_ALIAS_INTERVAL", **base,
+                detail="Alias valid_from is required; an undated alias cannot resolve.",
+            )
+        if start is None:
             return RuleResolution(
                 status="INVALID_ALIAS_INTERVAL", **base,
                 detail="Alias valid_from is not a valid ISO date.",
