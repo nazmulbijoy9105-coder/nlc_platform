@@ -54,24 +54,30 @@ A full-stack compliance intelligence platform that:
 nlc_platform/
 ├── app/
 │   ├── main.py              # FastAPI app factory + middleware; no schema migration at startup
-│   ├── api/                 # 11 routers, 80+ endpoints
-│   ├── models/              # 28 SQLAlchemy ORM tables (147+ columns on companies)
-│   ├── services/            # 12 service files (CompanyService, ComplianceService, etc.)
+│   ├── api/                 # FastAPI routers and versioned endpoints
+│   ├── models/              # SQLAlchemy ORM models and RLS-aware schemas
+│   ├── services/            # Domain, statutory filing, evidence and compliance services
 │   ├── core/                # config, security, dependencies (RBAC + RLS)
-│   ├── rule_engine/         # Deterministic 85-rule ILRMF engine v2.1
+│   ├── rule_engine/         # Deterministic 85-rule ILRMF engine v2.2
 │   └── worker/              # Celery tasks + beat schedule (7-year retention)
 ├── alembic/                 # Versioned Alembic revision DAG (including merge revisions)
 ├── scripts/                 # Audits and development-only utilities; production registry is migration-controlled
-├── tests/                   # 288 unit tests + integration tests (unit + integration)
+├── tests/                   # Unit, PostgreSQL integration, security and runtime regression suites
 ├── tools/                   # audit_rule_parity.py (canonical AST-based parity check)
 ├── docs/                    # LEGAL_BASIS_MATRIX.md, LAWYER_LEGAL_REVIEW_PACK.md
-├── .github/workflows/       # CI: compile + pytest + parity audit
+├── .github/workflows/       # CI, migration rehearsal, production parity and controlled deployment
 ├── Dockerfile               # Multi-stage build
 ├── docker-compose.yml       # Full local stack
 ├── render.yaml              # Render.com deployment blueprint
-├── .env.example             # All config variables documented (v2.1)
+├── .env.example             # Example configuration (never production secrets)
 ├── CHANGELOG.md             # Version history
 └── pytest.ini               # Test configuration
+
+## Score freshness and release contract
+
+A company score is a product risk indicator only — not legal advice and not a certification. The API may publish a score or risk band only when the latest evaluation is completed, uses the current engine and scoring specification, passes evaluation-ledger integrity checks, reconciles to its score snapshot, and matches the company's cached score, band and evaluation timestamp. Changes to company profile, facts, directors, shareholders, share transfers, AGM, audit, annual-return, statutory-register or share-evidence inputs invalidate the cached statutory score. Until a new valid evaluation completes, the current score and risk band are withheld as `NOT_EVALUATED` or `STALE`.
+
+`NOT_EVALUATED` is an evaluation/data status. It is not a GREEN result, a legal conclusion, or evidence that a company is compliant.
 
 ## 85 ILRMF Rules — 17 Modules
 
@@ -145,9 +151,10 @@ python -m compileall app/              # Compile check
 python tools/audit_rule_parity.py --no-db  # Rule parity (AST-based)
 
 # Deployment (Render.com)
-# Native Render autoDeploy is disabled; GitHub Actions deploys only after CI succeeds on current main
-# Apply reviewed Alembic migrations as a separately authorized release operation; API startup performs no schema migration
-# Canonical legal-rule registry is managed by versioned Alembic migrations; do not seed production at runtime
+# Render native autoDeploy is disabled. The controlled GitHub Actions workflow runs after successful CI on current main.
+# The workflow requires NLC_MIGRATION_DATABASE_URL and RENDER_DEPLOY_HOOK_URL GitHub Actions secrets.
+# Missing migration credentials abort before the Render deploy hook; API startup performs no migration or seed.
+# Production legal-rule registry changes are forward-only, reviewed Alembic migrations; seed scripts are development-only.
 
 API Endpoints
 Router
