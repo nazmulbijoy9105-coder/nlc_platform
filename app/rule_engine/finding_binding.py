@@ -82,9 +82,6 @@ def _evidence_status(
 ) -> str:
     if not evidence:
         return "MISSING"
-    # Without an evaluator-declared required-fact set, completeness cannot be asserted.
-    if not required_fact_keys:
-        return "PARTIAL"
     if any(item["verification_status"] in {"REJECTED", "SUPERSEDED"} for item in evidence):
         return "INVALID"
     values_by_key: dict[str, set[str]] = defaultdict(set)
@@ -92,6 +89,10 @@ def _evidence_status(
         values_by_key[item["fact_key"]].add(item["fact_value_hash"])
     if any(len(values) > 1 for values in values_by_key.values()):
         return "CONFLICT"
+    # Without an evaluator-declared required-fact set, completeness cannot be asserted.
+    # Known invalidity and conflicting values still take precedence over PARTIAL.
+    if not required_fact_keys:
+        return "PARTIAL"
     present = set(values_by_key)
     required = {str(key) for key in required_fact_keys}
     if required - present:
