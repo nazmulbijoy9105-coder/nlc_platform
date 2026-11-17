@@ -47,10 +47,23 @@ def test_released_company_score_requires_full_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
     monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", {"AGM-001"})
 
-    response = _company_to_response(_company(88, "GREEN"))
+    from datetime import datetime, timezone
+
+    company = _company(88, "GREEN")
+    evaluated_at = datetime.now(timezone.utc)
+    company.last_evaluated_at = evaluated_at
+    company.updated_at = evaluated_at
+    evaluation_run = SimpleNamespace(
+        evaluation_status="COMPLETED",
+        score=88,
+        risk_band="GREEN",
+        calculated_at=evaluated_at,
+    )
+    response = _company_to_response(company, evaluation_run=evaluation_run)
 
     assert response.band == "GREEN"
     assert response.compliance_score == 88
+    assert response.evaluation_status == "EVALUATED"
 
 
 def test_unverified_product_flag_is_hidden_until_full_counsel_release(monkeypatch):
