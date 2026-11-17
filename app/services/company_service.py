@@ -505,7 +505,7 @@ class CompanyService(BaseService[Company]):
         from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
 
         scope = ""
-        params = {
+        params: dict[str, str | bool] = {
             "engine_version": RULE_ENGINE_VERSION,
             "scoring_spec_version": SCORING_SPEC_VERSION,
         }
