@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.rule_engine.canonical_identity import RuleResolution
+from app.rule_engine.canonical_identity import RuleResolution, canonical_definition_hash, canonical_definition_json
 from app.rule_engine.finding_binding import (
     build_finding_binding_snapshot,
     persist_finding_binding,
@@ -173,7 +173,7 @@ async def test_persistence_rejects_tampered_evidence_payload_before_insert():
     session = MagicMock()
     result = _build(required_fact_keys=["agm_held"])
     result["evidence"][0]["fact_value_snapshot"] = True
-    with pytest.raises(ValueError, match="Evidence manifest digest"):
+    with pytest.raises(ValueError, match="Evidence manifest canonical payload"):
         await persist_finding_binding(session, result)
     assert not session.add.called
 
@@ -193,6 +193,9 @@ async def test_persistence_rejects_tampered_canonical_payload_before_insert():
     session = MagicMock()
     result = _build(required_fact_keys=["agm_held"])
     result["evidence"][0]["evidence_canonical"] += " "
+    manifest = {"evidence": result["evidence"]}
+    result["binding"]["evidence_manifest_canonical"] = canonical_definition_json(manifest)
+    result["binding"]["evidence_manifest_hash"] = canonical_definition_hash(manifest)
     with pytest.raises(ValueError, match="Evidence canonical payload"):
         await persist_finding_binding(session, result)
     assert not session.add.called
