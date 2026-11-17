@@ -129,22 +129,29 @@ async def test_alias_overlap_guard_rejects_overlapping_resolved_intervals(db):
 
 @pytest.mark.asyncio
 async def test_alias_overlap_guard_allows_adjacent_and_unresolved_intervals(db):
-    canonical_id = await _insert_alias_identity(db)
+    first_canonical_id = await _insert_alias_identity(db)
+    second_canonical_id = await _insert_alias_identity(db)
+    ambiguous_canonical_id = await _insert_alias_identity(db)
+    unresolved_canonical_id = await _insert_alias_identity(db)
     historical_id = f"adjacent-{uuid.uuid4()}"
     await _insert_alias(
-        db, canonical_id=canonical_id, historical_id=historical_id,
+        db, canonical_id=first_canonical_id, historical_id=historical_id,
         status="RESOLVED", valid_from="2020-01-01", valid_to="2021-01-01",
     )
     # Half-open intervals [2020, 2021) and [2021, 2022) do not overlap.
     await _insert_alias(
-        db, canonical_id=canonical_id, historical_id=historical_id,
+        db, canonical_id=second_canonical_id, historical_id=historical_id,
         status="RESOLVED", valid_from="2021-01-01", valid_to="2022-01-01",
     )
     # Non-resolved candidates remain representable even when their dates
     # overlap a resolved mapping; they are not active resolution claims.
     await _insert_alias(
-        db, canonical_id=canonical_id, historical_id=historical_id,
+        db, canonical_id=ambiguous_canonical_id, historical_id=historical_id,
         status="AMBIGUOUS", valid_from="2020-06-01", valid_to="2020-07-01",
+    )
+    await _insert_alias(
+        db, canonical_id=unresolved_canonical_id, historical_id=historical_id,
+        status="UNRESOLVED", valid_from="2020-06-01", valid_to="2020-07-01",
     )
 
 
