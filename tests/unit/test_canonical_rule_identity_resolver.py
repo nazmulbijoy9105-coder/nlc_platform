@@ -191,3 +191,9 @@ def test_non_positive_revision_number_fails_closed():
     invalid = dict(REVISION_ROW, revision_number=0)
     result = resolve(revisions=[invalid])
     assert result.status == "INVALID_REVISION_METADATA"
+
+@pytest.mark.parametrize("invalid_number", [True, 1.5, "1"])
+def test_revision_number_rejects_coercible_non_integer_values(invalid_number):
+    invalid = dict(REVISION_ROW, revision_number=invalid_number)
+    result = resolve(revisions=[invalid])
+    assert result.status == "INVALID_REVISION_METADATA"
