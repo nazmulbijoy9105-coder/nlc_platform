@@ -24,6 +24,7 @@ REVISION_ROW = {
     "approval_state": "REVIEW_REQUIRED",
 }
 ALIAS_ROW = {
+    "id": "00000000-0000-0000-0000-000000000003",
     "source_namespace": NS,
     "historical_rule_id": LEGACY,
     "canonical_rule_id": CANONICAL,
