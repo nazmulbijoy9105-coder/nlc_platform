@@ -8,6 +8,7 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
+    JSONB,
     ForeignKey,
     Integer,
     String,
@@ -28,7 +29,7 @@ class ComplianceFindingBinding(Base):
     __table_args__ = (
         UniqueConstraint("compliance_flag_id", name="uq_finding_binding_compliance_flag"),
         CheckConstraint(
-            "length(btrim(source_namespace)) > 0 AND length(btrim(historical_rule_id)) > 0",
+            "length(btrim(jurisdiction)) > 0 AND length(btrim(source_namespace)) > 0 AND length(btrim(historical_rule_id)) > 0",
             name="ck_finding_binding_lookup_key_nonempty",
         ),
         CheckConstraint(
@@ -86,6 +87,7 @@ class ComplianceFindingBinding(Base):
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="RESTRICT"), nullable=False)
     compliance_flag_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("compliance_flags.id", ondelete="RESTRICT"), nullable=False)
     evaluation_run_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("compliance_evaluation_runs.id", ondelete="RESTRICT"))
+    jurisdiction: Mapped[str] = mapped_column(String(32), nullable=False)
     source_namespace: Mapped[str] = mapped_column(String(255), nullable=False)
     historical_rule_id: Mapped[str] = mapped_column(String(100), nullable=False)
     resolution_status: Mapped[str] = mapped_column(String(40), nullable=False)
@@ -105,6 +107,7 @@ class ComplianceFindingBinding(Base):
     evaluator_artifact_hash: Mapped[str | None] = mapped_column(String(64))
     evidence_status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="MISSING")
     evidence_manifest_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    finding_snapshot: Mapped[dict] = mapped_column(JSONB, nullable=False)
     finding_snapshot_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
 
@@ -139,6 +142,7 @@ class ComplianceFindingEvidence(Base):
     company_fact_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("company_facts.id", ondelete="RESTRICT"), nullable=False)
     evidence_role: Mapped[str] = mapped_column(String(80), nullable=False)
     fact_key: Mapped[str] = mapped_column(String(120), nullable=False)
+    fact_value_snapshot: Mapped[object] = mapped_column(JSONB, nullable=False)
     fact_value_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     trust_level: Mapped[str] = mapped_column(String(40), nullable=False)
     verification_status: Mapped[str] = mapped_column(String(20), nullable=False)
