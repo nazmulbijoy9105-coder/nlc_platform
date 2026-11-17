@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -211,9 +211,6 @@ def test_portfolio_validation_withholds_pdf_for_malformed_rule_findings():
 
 def test_portfolio_validation_withholds_pdf_when_company_data_changed_after_run():
     run, company = _records()
-    company.updated_at = run.calculated_at.replace(microsecond=0)
-    # Ensure the changed marker is strictly later than the evaluation timestamp.
-    from datetime import timedelta
     company.updated_at = run.calculated_at + timedelta(seconds=1)
 
     result = _validation(run, company)
