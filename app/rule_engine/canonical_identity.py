@@ -20,10 +20,14 @@ class RuleResolution:
     historical_rule_id: str
     effective_date: date
     canonical_rule_id: str | None = None
+    alias_id: str | None = None
     revision_id: str | None = None
     revision_number: int | None = None
     approval_state: str | None = None
     definition_hash: str | None = None
+    evaluator_name: str | None = None
+    evaluator_version: str | None = None
+    evaluator_artifact_hash: str | None = None
     detail: str = ""
 
     @property
@@ -245,9 +249,13 @@ def resolve_rule_identity(
         status="RESOLVED",
         **base,
         canonical_rule_id=canonical_id,
+        alias_id=str(alias.get("id") or "") or None,
         revision_id=str(revision.get("id") or "") or None,
         revision_number=revision_number,
         approval_state=str(revision.get("approval_state", "REVIEW_REQUIRED")),
         definition_hash=actual_hash,
+        evaluator_name=str(revision.get("evaluator_name") or "") or None,
+        evaluator_version=str(revision.get("evaluator_version") or "") or None,
+        evaluator_artifact_hash=str(revision.get("evaluator_artifact_hash") or "") or None,
         detail="Identity and dated revision resolved. This is not legal approval or scoring authorisation.",
     )
