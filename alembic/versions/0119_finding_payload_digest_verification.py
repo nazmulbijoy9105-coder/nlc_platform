@@ -27,7 +27,7 @@ def upgrade() -> None:
                     '0119 requires an explicit canonical-payload backfill before existing 0118 rows can be upgraded';
             END IF;
         END;
-        $$
+        $$;
     """)
     op.add_column("compliance_finding_bindings",
                   sa.Column("finding_snapshot_canonical", sa.Text(), nullable=True))
@@ -132,7 +132,10 @@ def upgrade() -> None:
         FOR EACH ROW EXECUTE FUNCTION public.nlc_verify_finding_evidence_payloads()
     """)
 
-    # At COMMIT, compare the exact manifest with child rows inserted in the same transaction.
+    # Reconstruct the exact Python manifest shape, including the canonical
+    # evidence JSON string itself. Without that key, every non-empty manifest
+    # would differ from the DB aggregate and the deferred trigger would reject
+    # an otherwise valid transaction at COMMIT.
     op.execute("""
         CREATE FUNCTION public.nlc_verify_finding_manifest_children()
         RETURNS trigger LANGUAGE plpgsql
@@ -155,6 +158,7 @@ def upgrade() -> None:
                 jsonb_agg(
                     e.evidence_canonical::jsonb ||
                     jsonb_build_object(
+                        'evidence_canonical', e.evidence_canonical,
                         'fact_value_canonical', e.fact_value_canonical,
                         'evidence_hash', e.evidence_hash
                     )
