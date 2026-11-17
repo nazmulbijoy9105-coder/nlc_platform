@@ -298,11 +298,13 @@ async def test_dashboard_aggregates_withhold_completed_but_stale_profile_band(
     from app.services.compliance_service import ComplianceService
 
     await set_admin_context(db)
-    evaluated_at = datetime.now(timezone.utc)
+    # The run is deliberately older than the row's transaction timestamp.
+    # The companies.updated_at trigger uses transaction_timestamp(), so this
+    # simulates a later profile change without fighting the database trigger.
+    evaluated_at = datetime(2020, 1, 1, tzinfo=timezone.utc)
     db_company.current_compliance_score = 20
     db_company.current_risk_band = RiskBand.RED
     db_company.last_evaluated_at = evaluated_at
-    db_company.updated_at = evaluated_at + timedelta(seconds=1)
 
     db.add(ComplianceEvaluationRun(
         id=uuid.uuid4(), company_id=db_company.id, score=20,
