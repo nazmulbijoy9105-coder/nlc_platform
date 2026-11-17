@@ -158,7 +158,7 @@ __all__ = [
     "SubscriptionPlanPrice",
     "ComplexityLevel",
     "ComplianceCalendarEvent",
-    "ComplianceEvent",
+    "ComplianceEvent",\n    "ComplianceFindingBinding",\n    "ComplianceFindingEvidence",
     "ComplianceEvaluationRun",
     "ComplianceFlag",
     "ComplianceScoreHistory",
