@@ -432,7 +432,7 @@ def _evaluation_run_is_current(company, evaluation_run) -> bool:
 
 
 def _company_evaluation_status(company, evaluation_run) -> str:
-    if not _legal_score_is_released() or evaluation_run is None:
+    if evaluation_run is None:
         return "NOT_EVALUATED"
     run_status = str(getattr(evaluation_run, "evaluation_status", "") or "")
     if run_status in {"PENDING", "IN_PROGRESS"}:
@@ -440,6 +440,8 @@ def _company_evaluation_status(company, evaluation_run) -> str:
     if run_status == "FAILED":
         return "FAILED"
     if run_status == "COMPLETED":
+        if not _legal_score_is_released():
+            return "NOT_EVALUATED"
         return "EVALUATED" if _evaluation_run_is_current(company, evaluation_run) else "STALE"
     return "NOT_EVALUATED"
 
