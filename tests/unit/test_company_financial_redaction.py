@@ -55,3 +55,85 @@ def test_company_response_includes_financial_fields_with_permission():
     assert response.tax_return_filed_for_current_fy is True
     assert response.advance_tax_q1_paid is True
     assert response.penalty_notices_received == 2
+
+
+def test_company_response_withholds_cached_black_band_when_latest_run_is_pending(monkeypatch):
+    from datetime import datetime, timezone
+
+    from app.api import companies as companies_api
+    from app.models.enums import RiskBand
+
+    monkeypatch.setattr(companies_api, "_legal_score_is_released", lambda: True)
+    company = _company()
+    now = datetime.now(timezone.utc)
+    company.current_risk_band = RiskBand.BLACK
+    company.current_compliance_score = 10
+    company.last_evaluated_at = now
+    company.updated_at = now
+    pending_run = SimpleNamespace(
+        evaluation_status="PENDING",
+        score=None,
+        risk_band=RiskBand.NOT_EVALUATED,
+        calculated_at=now,
+    )
+
+    response = _company_to_response(company, evaluation_run=pending_run)
+
+    assert response.band == "NOT_EVALUATED"
+    assert response.compliance_score is None
+    assert response.evaluation_status == "PENDING"
+    assert response.black_flags == 0
+
+
+def test_company_response_marks_cached_score_stale_after_profile_change(monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
+    from app.api import companies as companies_api
+    from app.models.enums import RiskBand
+
+    monkeypatch.setattr(companies_api, "_legal_score_is_released", lambda: True)
+    company = _company()
+    evaluated_at = datetime.now(timezone.utc)
+    company.current_risk_band = RiskBand.RED
+    company.current_compliance_score = 20
+    company.last_evaluated_at = evaluated_at
+    company.updated_at = evaluated_at + timedelta(seconds=1)
+    completed_run = SimpleNamespace(
+        evaluation_status="COMPLETED",
+        score=20,
+        risk_band=RiskBand.RED,
+        calculated_at=evaluated_at,
+    )
+
+    response = _company_to_response(company, evaluation_run=completed_run)
+
+    assert response.band == "NOT_EVALUATED"
+    assert response.compliance_score is None
+    assert response.evaluation_status == "STALE"
+
+
+def test_company_response_releases_only_matching_completed_evaluation(monkeypatch):
+    from datetime import datetime, timezone
+
+    from app.api import companies as companies_api
+    from app.models.enums import RiskBand
+
+    monkeypatch.setattr(companies_api, "_legal_score_is_released", lambda: True)
+    company = _company()
+    now = datetime.now(timezone.utc)
+    company.current_risk_band = RiskBand.GREEN
+    company.current_compliance_score = 85
+    company.last_evaluated_at = now
+    company.updated_at = now
+    completed_run = SimpleNamespace(
+        evaluation_status="COMPLETED",
+        score=85,
+        risk_band=RiskBand.GREEN,
+        calculated_at=now,
+    )
+
+    response = _company_to_response(company, evaluation_run=completed_run)
+
+    assert response.band == "GREEN"
+    assert response.compliance_score == 85
+    assert response.evaluation_status == "EVALUATED"
