@@ -14,11 +14,16 @@ from app.models.company import Company
 from app.models.company_fact import CompanyFact
 from app.models.documents import Document
 from app.compliance.fact_provenance import coerce_company_profile_fact_value
+from app.services.score_invalidation import invalidate_company_score
 
 
 class CompanyFactService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
+
+    async def _mark_company_facts_changed(self, company_id: uuid.UUID) -> None:
+        """Clear cached statutory results whenever source facts change."""
+        await invalidate_company_score(self.db, company_id)
 
     @staticmethod
     def _normalize_fact_key(fact_key: str) -> str:
@@ -89,6 +94,7 @@ class CompanyFactService:
         )
         self.db.add(fact)
         await self.db.flush()
+        await self._mark_company_facts_changed(company_id)
         from app.services.domain_events import DomainEventType, publish_domain_event
         await publish_domain_event(
             self.db, company_id=company_id,
@@ -146,6 +152,7 @@ class CompanyFactService:
         )
         self.db.add(fact)
         await self.db.flush()
+        await self._mark_company_facts_changed(document.company_id)
         from app.services.domain_events import DomainEventType, publish_domain_event
         await publish_domain_event(
             self.db, company_id=document.company_id,
@@ -218,6 +225,7 @@ class CompanyFactService:
         fact.verification_status = decision
         fact.verification_note = note
         await self.db.flush()
+        await self._mark_company_facts_changed(fact.company_id)
         from app.services.domain_events import DomainEventType, publish_domain_event
         await publish_domain_event(
             self.db, company_id=fact.company_id,

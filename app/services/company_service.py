@@ -23,6 +23,7 @@ from app.models.charges import CompanyCharge
 from app.models.enums import CompanyStatus, CompanyType, LifecycleStage, RevenueTier, RiskBand
 from app.models.people import Director, Shareholder
 from app.services.base import BaseService
+from app.services.score_invalidation import invalidate_company_score
 
 
 def _agm_profile_evidence(latest_agm) -> dict:
@@ -241,6 +242,19 @@ def _charge_event_from_record(charge: CompanyCharge):
 
 class CompanyService(BaseService[Company]):
     model = Company
+
+    async def update_by_id(self, record_id: uuid.UUID, **kwargs) -> Company | None:
+        """Update company profile and invalidate any cached statutory score."""
+        updates = {key: value for key, value in kwargs.items() if value is not None}
+        if not updates:
+            return await self.get_by_id(record_id)
+        company = await super().update_by_id(record_id, **updates)
+        if company is None:
+            return None
+        await invalidate_company_score(self.db, record_id)
+        await self.db.flush()
+        await self.db.refresh(company)
+        return company
 
     # ── CREATE ────────────────────────────────────────────────────
 
@@ -480,13 +494,21 @@ class CompanyService(BaseService[Company]):
         include_assigned_staff: bool = False,
         include_all_companies: bool = False,
     ) -> list[dict]:
-        """Return risk aggregates for either the admin portfolio or user scope.
+        """Return risk aggregates only from a current, completed evaluation.
 
-        Portfolio-wide access is explicit and still relies on the authenticated
-        database session's RLS policy; tenant users must supply their own UUID.
+        Cached company bands are not authoritative on their own. A row is
+        counted in a statutory band only when the latest immutable run is
+        COMPLETED and its timestamp, score and band match the company cache.
+        Pending, failed, unreleased, missing or mismatched runs are counted as
+        NOT_EVALUATED rather than leaking a stale RED/BLACK result.
         """
+        from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
+
         scope = ""
-        params = {}
+        params: dict[str, str | bool] = {
+            "engine_version": RULE_ENGINE_VERSION,
+            "scoring_spec_version": SCORING_SPEC_VERSION,
+        }
         if not include_all_companies:
             if user_id is None:
                 raise ValueError("user_id is required for tenant-scoped risk distribution")
@@ -502,27 +524,55 @@ class CompanyService(BaseService[Company]):
                     )
                 )
             """
-            params = {
+            params.update({
                 "user_id": str(user_id),
                 "include_assigned_staff": include_assigned_staff,
-            }
+            })
         result = await self.db.execute(
             text(
                 """
+                WITH latest_run AS (
+                    SELECT DISTINCT ON (company_id)
+                        company_id, evaluation_status, score, risk_band, calculated_at,
+                        engine_version, score_breakdown_snapshot
+                    FROM compliance_evaluation_runs
+                    ORDER BY company_id, calculated_at DESC, id DESC
+                ),
+                current_company_state AS (
+                    SELECT
+                        c.id,
+                        CASE
+                            WHEN lr.evaluation_status = 'COMPLETED'
+                             AND lr.score IS NOT NULL
+                             AND lr.risk_band <> 'NOT_EVALUATED'
+                             AND lr.engine_version = :engine_version
+                             AND lr.score_breakdown_snapshot ->> 'scoring_spec_version' = :scoring_spec_version
+                             AND lr.score_breakdown_snapshot ->> 'score_reconciles' = 'true'
+                             AND lr.score_breakdown_snapshot ->> 'final_score' = lr.score::text
+                             AND c.last_evaluated_at = lr.calculated_at
+                             AND c.updated_at <= c.last_evaluated_at
+                             AND c.current_compliance_score = lr.score
+                             AND c.current_risk_band = lr.risk_band
+                            THEN lr.risk_band
+                            ELSE 'NOT_EVALUATED'::risk_band
+                        END AS risk_band
+                    FROM companies c
+                    LEFT JOIN latest_run lr ON lr.company_id = c.id
+                    WHERE c.is_active IS TRUE
+                    """
+                    + scope
+                    + """
+                )
                 SELECT
-                    c.current_risk_band AS risk_band,
+                    current_company_state.risk_band AS risk_band,
                     COUNT(*) AS company_count,
                     ROUND(
                         COUNT(*) * 100.0 / NULLIF(SUM(COUNT(*)) OVER (), 0),
                         1
                     ) AS percentage
-                FROM companies c
-                WHERE c.is_active IS TRUE
-                """
-                + scope
-                + """
-                GROUP BY c.current_risk_band
-                ORDER BY CASE c.current_risk_band
+                FROM current_company_state
+                GROUP BY current_company_state.risk_band
+                ORDER BY CASE current_company_state.risk_band
                     WHEN 'BLACK' THEN 1
                     WHEN 'RED' THEN 2
                     WHEN 'YELLOW' THEN 3

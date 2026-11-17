@@ -17,7 +17,7 @@ Coverage:
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
@@ -971,9 +971,11 @@ def test_pdf_report_scores_product_allowlisted_rules_and_lists_counsel_review_it
         state="NON_COMPLIANT", eval_state="VIOLATION", resolved=False,
         conditional_applies=True, detail={},
     )
+    evaluated_at = datetime(2026, 11, 13, tzinfo=timezone.utc)
     company = SimpleNamespace(
         company_name="Integration Review Ltd", registration_number="IR-1",
         current_compliance_score=90, current_risk_band="RED",
+        last_evaluated_at=evaluated_at, updated_at=evaluated_at,
     )
 
     page = report_module.build_compliance_report_html(

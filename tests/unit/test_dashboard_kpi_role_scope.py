@@ -172,7 +172,20 @@ async def test_released_legal_staff_kpis_include_assignment_and_membership_scope
     assert "assigned_staff_id = CAST(:uid AS uuid)" in db.calls[0][0]
     assert "company_user_access AS cua" in db.calls[0][0]
     assert "cua.is_active IS TRUE" in db.calls[0][0]
-    assert db.calls[0][1] == {"uid": str(user_id)}
+    assert "FROM compliance_evaluation_runs" in db.calls[0][0]
+    assert "lr.evaluation_status = 'COMPLETED'" in db.calls[0][0]
+    assert "c.updated_at <= c.last_evaluated_at" in db.calls[0][0]
+    assert "lr.engine_version = :engine_version" in db.calls[0][0]
+    assert "score_breakdown_snapshot ->> 'scoring_spec_version'" in db.calls[0][0]
+    assert "score_breakdown_snapshot ->> 'score_reconciles'" in db.calls[0][0]
+    assert "ELSE 'NOT_EVALUATED'::risk_band" in db.calls[0][0]
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
+
+    assert db.calls[0][1] == {
+        "uid": str(user_id),
+        "engine_version": RULE_ENGINE_VERSION,
+        "scoring_spec_version": SCORING_SPEC_VERSION,
+    }
 
 
 

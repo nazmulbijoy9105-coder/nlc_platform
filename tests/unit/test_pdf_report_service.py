@@ -35,6 +35,7 @@ COMPANY = SimpleNamespace(
     current_compliance_score=85,
     current_risk_band="GREEN",
     last_evaluated_at=datetime(2026, 10, 20, 1, 0),
+    updated_at=datetime(2026, 10, 20, 1, 0),
 )
 FLAGS = [
     SimpleNamespace(
@@ -146,7 +147,7 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
         calculated_at=WHEN,
         evaluation_status="COMPLETED",
         score_hash="",
-        engine_version="test-engine-v1",
+        engine_version=report_module.RULE_ENGINE_VERSION,
         trigger_source="UNIT_TEST",
         fact_provenance_snapshot=[],
         score_breakdown_snapshot={
@@ -185,9 +186,13 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
 
     class FakeDB:
         async def execute(self, statement):
-            if str(statement).strip().lower().startswith("select compliance_evaluation_runs.id, compliance_evaluation_runs.score_hash"):
+            sql = str(statement).strip().lower()
+            if sql.startswith("select compliance_evaluation_runs.id, compliance_evaluation_runs.score_hash"):
                 return SimpleNamespace(one_or_none=lambda: None)
-            return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
+            if "compliance_evaluation_runs" in sql:
+                captured["snapshot_query"] = str(statement)
+                return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
+            return SimpleNamespace(scalar_one_or_none=lambda: None)
 
     response = asyncio.run(
         PDFReportService(db=FakeDB()).generate_company_compliance_pdf(str(uuid4()))
@@ -197,8 +202,9 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
     assert response.status_code == 200
     assert response.media_type == "application/pdf"
     assert response.body == b"%PDF-1.7 stub"
+    assert "ORDER BY compliance_evaluation_runs.calculated_at DESC" in captured["snapshot_query"]
     assert response.headers["x-snapshot-hash"] == snapshot.score_hash
-    assert response.headers["x-engine-version"] == "test-engine-v1"
+    assert response.headers["x-engine-version"] == report_module.RULE_ENGINE_VERSION
     assert (
         response.headers["content-disposition"]
         == 'attachment; filename="compliance_report_C-1_X-Evil_1_2020.pdf"'
@@ -519,6 +525,8 @@ def test_pdf_separates_unverified_findings_from_verified_score_report(monkeypatc
         registration_number="P-1",
         current_compliance_score=90,
         current_risk_band="GREEN",
+        last_evaluated_at=WHEN,
+        updated_at=WHEN,
     )
 
     page = build_compliance_report_html(
@@ -568,7 +576,7 @@ def test_endpoint_withholds_pdf_when_evaluation_score_hash_is_tampered(monkeypat
         calculated_at=WHEN,
         evaluation_status="COMPLETED",
         score_hash="f" * 64,
-        engine_version="test-engine-v1",
+        engine_version=report_module.RULE_ENGINE_VERSION,
         trigger_source="UNIT_TEST",
         fact_provenance_snapshot=[],
         score_breakdown_snapshot={
@@ -604,3 +612,54 @@ def test_endpoint_withholds_pdf_when_evaluation_score_hash_is_tampered(monkeypat
 
     assert exc.value.status_code == 409
     assert "SCORE_HASH_MISMATCH" in exc.value.detail
+
+
+def test_html_builder_withholds_score_when_company_data_changed_after_evaluation(monkeypatch):
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    stale_company = SimpleNamespace(
+        **{
+            **COMPANY.__dict__,
+            "updated_at": datetime(2026, 10, 20, 1, 0, 1),
+        }
+    )
+
+    page = build_compliance_report_html(stale_company, FLAGS, WHEN)
+
+    assert "NOT EVALUATED" in page
+    assert "85 / 100" not in page
+    assert "AGM overdue" not in page
+
+
+def test_endpoint_withholds_pdf_when_latest_run_is_pending_even_if_old_score_is_cached(monkeypatch):
+    _patch_services(monkeypatch)
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+
+    pending_latest_run = SimpleNamespace(
+        evaluation_status="PENDING",
+        score_hash=None,
+        engine_version=None,
+        flags_snapshot=[],
+        rule_outcomes_snapshot=None,
+        rule_catalogue_count=0,
+        calculated_at=datetime(2026, 10, 21, 1, 0),
+    )
+
+    class FakeDB:
+        async def execute(self, statement):
+            if "compliance_evaluation_runs" in str(statement).lower():
+                return SimpleNamespace(scalar_one_or_none=lambda: pending_latest_run)
+            return SimpleNamespace(scalar_one_or_none=lambda: None)
+
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(
+            PDFReportService(db=FakeDB()).generate_company_compliance_pdf(str(uuid4()))
+        )
+
+    assert exc.value.status_code == 409
+    assert "latest evaluation run is incomplete" in exc.value.detail

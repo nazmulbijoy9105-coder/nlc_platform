@@ -17,6 +17,8 @@ def _company(score=75, band="RED", name="Test Co"):
         registration_number="TEST-FE8A8D55",
         current_compliance_score=score,
         current_risk_band=band,
+        last_evaluated_at=WHEN,
+        updated_at=WHEN,
     )
 
 
