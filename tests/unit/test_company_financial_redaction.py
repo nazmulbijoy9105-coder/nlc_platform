@@ -113,7 +113,6 @@ def test_company_response_withholds_cached_black_band_when_latest_run_is_pending
 
     from app.api import companies as companies_api
     from app.models.enums import RiskBand
-    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
 
     monkeypatch.setattr(companies_api, "_legal_score_is_released", lambda: True)
     company = _company()
