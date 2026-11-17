@@ -1,9 +1,13 @@
-from datetime import date
+from datetime import date, datetime
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.rule_engine.canonical_identity import RuleResolution
-from app.rule_engine.finding_binding import build_finding_binding_snapshot
+from app.rule_engine.finding_binding import (
+    build_finding_binding_snapshot,
+    persist_finding_binding,
+)
 
 
 def _resolution(status="RESOLVED"):
@@ -72,7 +76,7 @@ def test_binding_captures_exact_canonical_alias_revision_and_evaluator():
 
 
 def test_identity_resolution_does_not_imply_legal_approval_or_attribution():
-    binding = _build()["binding"]
+    binding = _build(required_fact_keys=["agm_held"])["binding"]
     assert binding["attribution_status"] == "CURRENT_EVALUATION"
     assert binding["evidence_status"] == "COMPLETE"
     assert _resolution().approval_state == "REVIEW_REQUIRED"
@@ -144,3 +148,36 @@ def test_resolved_identity_without_alias_metadata_is_rejected():
 def test_evidence_without_source_actor_is_rejected():
     with pytest.raises(ValueError, match="asserted_by"):
         _build(facts=[_fact(asserted_by="")])
+
+
+
+def test_datetime_effective_date_is_rejected():
+    with pytest.raises(ValueError, match="without a time"):
+        _build(effective_date=datetime(2026, 1, 1, 12, 0))
+
+
+@pytest.mark.asyncio
+async def test_persistence_flushes_in_caller_transaction_without_commit():
+    session = MagicMock()
+    session.flush = AsyncMock()
+    session.add = MagicMock()
+    session.add_all = MagicMock()
+    result = _build(required_fact_keys=["agm_held"])
+
+    binding = await persist_finding_binding(session, result)
+
+    assert binding.id is not None
+    assert session.add.call_count == 1
+    assert session.add_all.call_count == 1
+    assert session.flush.await_count == 2
+    assert not session.commit.called
+
+
+def test_persistence_rejects_historical_attribution_shortcut():
+    session = MagicMock()
+    result = _build(required_fact_keys=["agm_held"])
+    result["binding"]["attribution_status"] = "ATTRIBUTED"
+
+    with pytest.raises(ValueError, match="historical attribution"):
+        import asyncio
+        asyncio.run(persist_finding_binding(session, result))
