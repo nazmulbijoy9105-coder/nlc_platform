@@ -107,6 +107,8 @@ class ComplianceFindingBinding(Base):
     evidence_status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="MISSING")
     evidence_manifest_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     finding_snapshot: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    finding_snapshot_canonical: Mapped[str] = mapped_column(Text, nullable=False)
+    evidence_manifest_canonical: Mapped[str] = mapped_column(Text, nullable=False)
     finding_snapshot_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
 
@@ -142,6 +144,8 @@ class ComplianceFindingEvidence(Base):
     evidence_role: Mapped[str] = mapped_column(String(80), nullable=False)
     fact_key: Mapped[str] = mapped_column(String(120), nullable=False)
     fact_value_snapshot: Mapped[object] = mapped_column(JSONB, nullable=False)
+    fact_value_canonical: Mapped[str] = mapped_column(Text, nullable=False)
+    evidence_canonical: Mapped[str] = mapped_column(Text, nullable=False)
     fact_value_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     trust_level: Mapped[str] = mapped_column(String(40), nullable=False)
     verification_status: Mapped[str] = mapped_column(String(20), nullable=False)
