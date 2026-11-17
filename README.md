@@ -194,6 +194,13 @@ Finance/subscription routes do not establish an automated payment-gateway integr
 - **AI governance:** AI cannot modify statutory rules; generated legal documents require human approval.
 
 
+## Database migration status
+
+- Current `main` contains **119 Alembic revision files** under `alembic/versions/` and has source head `0117_canonical_registry_runtime_read`.
+- A read-only production inspection on **17 November 2026** observed Alembic revision `0112_runtime_acl_and_alembic_rls`; revisions 0113–0117 were not yet deployed at that observation time.
+- CI must prove one Alembic head, audit the revision DAG, upgrade independent fresh PostgreSQL databases, and rehearse supported historical baselines. Do not infer production migration state from the source tree.
+- Re-check `alembic_version` in the target environment before every release. Production migrations run only through the controlled deployment workflow; never use hand-written SQL or runtime seed scripts to reconcile the legal-rule registry.
+
 ## Deployment
 
 **Render.com (Production)**
