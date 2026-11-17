@@ -107,8 +107,14 @@ async def test_unassigned_user_cannot_read_existing_finding_binding(db):
         financial_year_end=date(2025, 12, 31),
     ))
     await db.flush()
+    # Use a seeded catalogue key to satisfy the real compliance_flags FK.
+    # The fixture's finding remains explicitly unresolved; this is not a legal assertion.
+    rule_result = await db.execute(text("SELECT rule_id FROM legal_rules ORDER BY rule_id LIMIT 1"))
+    fixture_rule_id = rule_result.scalar_one_or_none()
+    assert fixture_rule_id is not None, "integration DB must contain seeded legal_rules"
+
     db.add(ComplianceFlag(
-        id=flag_id, company_id=company_id, rule_id="TEST-UNRESOLVED",
+        id=flag_id, company_id=company_id, rule_id=fixture_rule_id,
         rule_version="test", flag_code="TEST-UNRESOLVED",
         statutory_basis="Not a statutory conclusion",
         severity=SeverityLevel.NOT_EVALUATED, score_impact=0,
@@ -128,7 +134,7 @@ async def test_unassigned_user_cannot_read_existing_finding_binding(db):
     db.add(ComplianceFindingBinding(
         company_id=company_id, compliance_flag_id=flag_id,
         evaluation_run_id=run_id, jurisdiction="BD",
-        source_namespace="test-fixture", historical_rule_id="TEST-UNRESOLVED",
+        source_namespace="test-fixture", historical_rule_id=fixture_rule_id,
         resolution_status="UNRESOLVED", attribution_status="CURRENT_EVALUATION",
         effective_date=date.today(), evidence_status="MISSING",
         evidence_manifest_hash="b" * 64, finding_snapshot={},
