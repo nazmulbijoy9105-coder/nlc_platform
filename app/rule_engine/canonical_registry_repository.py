@@ -29,7 +29,7 @@ def _row_identity(row: LegalRuleIdentity) -> dict[str, Any]:
 
 def _row_alias(row: LegalRuleAlias) -> dict[str, Any]:
     return {
-        "source_namespace": row.source_namespace,
+        "id": str(row.id),\n        "source_namespace": row.source_namespace,
         "historical_rule_id": row.historical_rule_id,
         "canonical_rule_id": str(row.canonical_rule_id),
         "resolution_status": row.resolution_status,
@@ -47,7 +47,7 @@ def _row_revision(row: LegalRuleRevision) -> dict[str, Any]:
         "effective_to": row.effective_to,
         "definition_json": row.definition_json,
         "definition_hash": row.definition_hash,
-        "approval_state": row.approval_state,
+        "approval_state": row.approval_state,\n        "evaluator_name": row.evaluator_name,\n        "evaluator_version": row.evaluator_version,\n        "evaluator_artifact_hash": row.evaluator_artifact_hash,
     }
 
 
