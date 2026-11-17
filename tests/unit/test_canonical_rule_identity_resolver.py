@@ -161,6 +161,11 @@ def test_invalid_alias_date_fails_closed():
     assert result.status == "INVALID_ALIAS_INTERVAL"
 
 
+def test_missing_alias_start_date_fails_closed():
+    result = resolve(aliases=[dict(ALIAS_ROW, valid_from=None)])
+    assert result.status == "INVALID_ALIAS_INTERVAL"
+
+
 def test_invalid_revision_interval_fails_closed():
     bad = dict(REVISION_ROW, effective_from="2026-02-01",
                effective_to="2026-01-01")
