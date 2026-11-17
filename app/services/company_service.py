@@ -536,9 +536,8 @@ class CompanyService(BaseService[Company]):
                     LEFT JOIN latest_run lr ON lr.company_id = c.id
                     WHERE c.is_active IS TRUE
                     """
-                )
-                + scope
-                + """
+                    + scope
+                    + """
                 )
                 SELECT
                     current_company_state.risk_band AS risk_band,
