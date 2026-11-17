@@ -78,59 +78,6 @@ def upgrade() -> None:
         "legal_rule_aliases", ["source_namespace", "historical_rule_id"],
     )
 
-    # A historical alias may have multiple candidate rows while its status is
-    # AMBIGUOUS/UNRESOLVED. However, two RESOLVED rows for the same source ID
-    # must never claim overlapping validity periods. Serialize by the natural
-    # source key so concurrent inserts cannot both pass the overlap check.
-    op.execute("""
-        CREATE FUNCTION public.prevent_legal_rule_alias_overlap()
-        RETURNS trigger LANGUAGE plpgsql VOLATILE AS $alias_overlap$
-        BEGIN
-            IF NEW.resolution_status <> 'RESOLVED' THEN
-                RETURN NEW;
-            END IF;
-
-            PERFORM pg_advisory_xact_lock(
-                hashtextextended(
-                    jsonb_build_array(
-                        NEW.source_namespace, NEW.historical_rule_id
-                    )::text,
-                    0
-                )
-            );
-
-            IF EXISTS (
-                SELECT 1
-                  FROM public.legal_rule_aliases existing
-                 WHERE existing.source_namespace = NEW.source_namespace
-                   AND existing.historical_rule_id = NEW.historical_rule_id
-                   AND existing.resolution_status = 'RESOLVED'
-                   AND daterange(
-                       existing.valid_from, existing.valid_to, '[)'
-                   ) && daterange(
-                       NEW.valid_from, NEW.valid_to, '[)'
-                   )
-            ) THEN
-                RAISE EXCEPTION
-                    'Overlapping resolved alias interval for source % / historical ID %',
-                    NEW.source_namespace, NEW.historical_rule_id
-                    USING ERRCODE = '23P01';
-            END IF;
-            RETURN NEW;
-        END;
-        $alias_overlap$
-    """)
-    op.execute("""
-        CREATE TRIGGER trg_legal_rule_alias_no_overlap
-        BEFORE INSERT ON public.legal_rule_aliases
-        FOR EACH ROW
-        EXECUTE FUNCTION public.prevent_legal_rule_alias_overlap()
-    """)
-    op.execute(
-        "REVOKE ALL ON FUNCTION public.prevent_legal_rule_alias_overlap() "
-        "FROM PUBLIC, nlc_app_role, nlc_ci_audit_role"
-    )
-
     op.create_table(
         "legal_rule_revisions",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True,
