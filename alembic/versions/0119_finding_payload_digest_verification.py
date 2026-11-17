@@ -27,7 +27,7 @@ def upgrade() -> None:
                     '0119 requires an explicit canonical-payload backfill before existing 0118 rows can be upgraded';
             END IF;
         END;
-        $
+        $$
     """)
     op.add_column("compliance_finding_bindings",
                   sa.Column("finding_snapshot_canonical", sa.Text(), nullable=True))
@@ -74,13 +74,13 @@ def upgrade() -> None:
         SET search_path = pg_catalog, public, extensions
         AS $function$
         BEGIN
-            IF encode(public.digest(convert_to(NEW.fact_value_canonical, 'UTF8'), 'sha256'), 'hex')
+            IF encode(digest(convert_to(NEW.fact_value_canonical, 'UTF8'), 'sha256'), 'hex')
                    IS DISTINCT FROM NEW.fact_value_hash
                OR (NEW.fact_value_canonical::jsonb -> 'value')
                    IS DISTINCT FROM NEW.fact_value_snapshot THEN
                 RAISE EXCEPTION 'Fact value canonical payload or SHA-256 digest mismatch';
             END IF;
-            IF encode(public.digest(convert_to(NEW.evidence_canonical, 'UTF8'), 'sha256'), 'hex')
+            IF encode(digest(convert_to(NEW.evidence_canonical, 'UTF8'), 'sha256'), 'hex')
                    IS DISTINCT FROM NEW.evidence_hash
                OR (NEW.evidence_canonical::jsonb -> 'fact_value_snapshot')
                    IS DISTINCT FROM NEW.fact_value_snapshot
@@ -100,12 +100,11 @@ def upgrade() -> None:
         FOR EACH ROW EXECUTE FUNCTION public.nlc_verify_finding_evidence_payloads()
     """)
 
-    # At COMMIT, compare the binding's exact manifest with the child evidence
-    # rows actually inserted in the same transaction. Empty evidence is [].
+    # At COMMIT, compare the exact manifest with child rows inserted in the same transaction.
     op.execute("""
         CREATE FUNCTION public.nlc_verify_finding_manifest_children()
         RETURNS trigger LANGUAGE plpgsql
-        SET search_path = pg_catalog, public
+        SET search_path = pg_catalog, public, extensions
         AS $function$
         DECLARE target_binding uuid; expected_manifest jsonb; actual_manifest jsonb;
         BEGIN
