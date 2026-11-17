@@ -186,10 +186,13 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
 
     class FakeDB:
         async def execute(self, statement):
-            if str(statement).strip().lower().startswith("select compliance_evaluation_runs.id, compliance_evaluation_runs.score_hash"):
-                captured["snapshot_query"] = str(statement)
+            sql = str(statement).strip().lower()
+            if sql.startswith("select compliance_evaluation_runs.id, compliance_evaluation_runs.score_hash"):
                 return SimpleNamespace(one_or_none=lambda: None)
-            return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
+            if "compliance_evaluation_runs" in sql:
+                captured["snapshot_query"] = str(statement)
+                return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
+            return SimpleNamespace(scalar_one_or_none=lambda: None)
 
     response = asyncio.run(
         PDFReportService(db=FakeDB()).generate_company_compliance_pdf(str(uuid4()))
