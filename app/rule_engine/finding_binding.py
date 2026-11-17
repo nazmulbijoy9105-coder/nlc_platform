@@ -33,13 +33,28 @@ def _iso_utc_datetime(value: Any, field: str) -> str | None:
     return parsed.astimezone(timezone.utc).isoformat(timespec="microseconds")
 
 
+def _required_uuid(value: Any, field: str) -> str:
+    try:
+        return str(uuid.UUID(str(value)))
+    except (TypeError, ValueError, AttributeError) as exc:
+        raise ValueError(f"{field} must be a valid UUID") from exc
+
+
 def _normalise_fact(
     fact: Mapping[str, Any], *, company_id: str, evidence_role: str
 ) -> dict[str, Any]:
-    fact_id = str(fact.get("fact_id") or fact.get("id") or "")
-    fact_key = str(fact.get("fact_key") or "")
-    if not fact_id or not fact_key:
-        raise ValueError("Every finding evidence item requires fact_id and fact_key")
+    fact_id = _required_uuid(fact.get("fact_id") or fact.get("id"), "company_fact_id")
+    fact_key = str(fact.get("fact_key") or "").strip()
+    evidence_role = str(evidence_role or "").strip()
+    if not fact_key or len(fact_key) > 120:
+        raise ValueError("fact_key must contain 1 to 120 non-whitespace characters")
+    if not evidence_role or len(evidence_role) > 80:
+        raise ValueError("evidence_role must contain 1 to 80 non-whitespace characters")
+    observed = fact.get("observed_on")
+    try:
+        observed_date = observed if isinstance(observed, date) and not isinstance(observed, datetime) else date.fromisoformat(str(observed))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("observed_on must be an ISO-8601 calendar date") from exc
     value_hash = _stable_hash({"value": fact.get("fact_value", fact.get("value"))})
     trust = str(fact.get("trust_level") or "USER_ASSERTED").upper()
     verification = str(fact.get("verification_status") or "UNVERIFIED").upper()
@@ -73,14 +88,14 @@ def _normalise_fact(
         "fact_value_hash": value_hash,
         "trust_level": trust,
         "verification_status": verification,
-        "observed_on": str(fact.get("observed_on") or ""),
+        "observed_on": observed_date.isoformat(),
         "source_reference": fact.get("source_reference"),
-        "document_id": str(fact["document_id"]) if fact.get("document_id") else None,
+        "document_id": _required_uuid(fact["document_id"], "document_id") if fact.get("document_id") else None,
         "document_sha256": document_hash,
-        "asserted_by": str(fact.get("asserted_by") or ""),
-        "authorized_uploader_id": str(fact["authorized_uploader_id"]) if fact.get("authorized_uploader_id") else None,
+        "asserted_by": _required_uuid(fact.get("asserted_by"), "asserted_by"),
+        "authorized_uploader_id": _required_uuid(fact["authorized_uploader_id"], "authorized_uploader_id") if fact.get("authorized_uploader_id") else None,
         "uploaded_at": _iso_utc_datetime(fact.get("uploaded_at"), "uploaded_at"),
-        "verified_by": str(fact["verified_by"]) if fact.get("verified_by") else None,
+        "verified_by": _required_uuid(fact["verified_by"], "verified_by") if fact.get("verified_by") else None,
         "verified_at": _iso_utc_datetime(fact.get("verified_at"), "verified_at"),
     }
     if not snapshot["asserted_by"] or not snapshot["observed_on"]:
@@ -152,6 +167,24 @@ def build_finding_binding_snapshot(
     ):
         raise ValueError("Resolution key must exactly match the finding's namespaced legacy identity")
 
+    company_id = _required_uuid(company_id, "company_id")
+    compliance_flag_id = _required_uuid(compliance_flag_id, "compliance_flag_id")
+    evaluation_run_id = _required_uuid(evaluation_run_id, "evaluation_run_id")
+    if len(source_namespace.strip()) > 255 or not source_namespace.strip():
+        raise ValueError("source_namespace must contain 1 to 255 non-whitespace characters")
+    if len(historical_rule_id.strip()) > 100 or not historical_rule_id.strip():
+        raise ValueError("historical_rule_id must contain 1 to 100 non-whitespace characters")
+    if len(jurisdiction.strip()) > 32 or not jurisdiction.strip():
+        raise ValueError("jurisdiction must contain 1 to 32 non-whitespace characters")
+    if isinstance(required_fact_keys, (str, bytes)) or not isinstance(required_fact_keys, Sequence):
+        raise ValueError("required_fact_keys must be a sequence of fact-key strings")
+    required_keys = [str(key).strip() for key in required_fact_keys]
+    if any(not key or len(key) > 120 for key in required_keys):
+        raise ValueError("required_fact_keys contains an empty or overlength key")
+    if len(required_keys) != len(set(required_keys)):
+        raise ValueError("required_fact_keys must not contain duplicates")
+    if evidence_roles is not None and not isinstance(evidence_roles, Mapping):
+        raise ValueError("evidence_roles must be a mapping of fact IDs to role names")
     evidence_roles = evidence_roles or {}
     evidence_rows = [
         _normalise_fact(
@@ -162,7 +195,7 @@ def build_finding_binding_snapshot(
         for fact in evidence_facts
     ]
     evidence_rows.sort(key=lambda item: (item["fact_key"], item["company_fact_id"]))
-    evidence_status = _evidence_status(evidence_rows, required_fact_keys)
+    evidence_status = _evidence_status(evidence_rows, required_keys)
     evidence_manifest_hash = _stable_hash({"evidence": evidence_rows})
     finding_hash = _stable_hash({"finding": finding_snapshot})
 
