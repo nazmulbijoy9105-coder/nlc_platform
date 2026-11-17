@@ -198,7 +198,11 @@ def upgrade() -> None:
         AS $function$
         DECLARE flag_company uuid; run_company uuid;
                 alias_canonical uuid; alias_namespace text; alias_rule text;
+                alias_start date; alias_end date; identity_jurisdiction text; identity_state text;
                 revision_canonical uuid; revision_number_value integer;
+                revision_start date; revision_end date; revision_hash text;
+                revision_evaluator_name text; revision_evaluator_version text;
+                revision_evaluator_hash text;
         BEGIN
             SELECT company_id INTO flag_company
               FROM public.compliance_flags WHERE id = NEW.compliance_flag_id;
@@ -213,18 +217,34 @@ def upgrade() -> None:
                 END IF;
             END IF;
             IF NEW.resolution_status = 'RESOLVED' THEN
-                SELECT canonical_rule_id, source_namespace, historical_rule_id
-                  INTO alias_canonical, alias_namespace, alias_rule
+                SELECT canonical_rule_id, source_namespace, historical_rule_id, valid_from, valid_to
+                  INTO alias_canonical, alias_namespace, alias_rule, alias_start, alias_end
                   FROM public.legal_rule_aliases WHERE id = NEW.alias_id;
-                SELECT canonical_rule_id, revision_number
-                  INTO revision_canonical, revision_number_value
+                SELECT jurisdiction, identity_status
+                  INTO identity_jurisdiction, identity_state
+                  FROM public.legal_rule_identities WHERE id = NEW.canonical_rule_id;
+                SELECT canonical_rule_id, revision_number, effective_from, effective_to,
+                       definition_hash, evaluator_name, evaluator_version, evaluator_artifact_hash
+                  INTO revision_canonical, revision_number_value, revision_start, revision_end,
+                       revision_hash, revision_evaluator_name, revision_evaluator_version,
+                       revision_evaluator_hash
                   FROM public.legal_rule_revisions WHERE id = NEW.revision_id;
                 IF alias_canonical IS DISTINCT FROM NEW.canonical_rule_id
                    OR revision_canonical IS DISTINCT FROM NEW.canonical_rule_id
                    OR alias_namespace IS DISTINCT FROM NEW.source_namespace
                    OR alias_rule IS DISTINCT FROM NEW.historical_rule_id
-                   OR revision_number_value IS DISTINCT FROM NEW.revision_number THEN
-                    RAISE EXCEPTION 'Finding binding canonical identity, alias and revision do not reconcile';
+                   OR revision_number_value IS DISTINCT FROM NEW.revision_number
+                   OR identity_jurisdiction IS DISTINCT FROM NEW.jurisdiction
+                   OR identity_state IS DISTINCT FROM 'ACTIVE'
+                   OR alias_start IS NULL OR alias_start > NEW.effective_date
+                   OR (alias_end IS NOT NULL AND NEW.effective_date >= alias_end)
+                   OR revision_start IS NULL OR revision_start > NEW.effective_date
+                   OR (revision_end IS NOT NULL AND NEW.effective_date >= revision_end)
+                   OR revision_hash IS DISTINCT FROM NEW.definition_hash
+                   OR revision_evaluator_name IS DISTINCT FROM NEW.evaluator_name
+                   OR revision_evaluator_version IS DISTINCT FROM NEW.evaluator_version
+                   OR revision_evaluator_hash IS DISTINCT FROM NEW.evaluator_artifact_hash THEN
+                    RAISE EXCEPTION 'Finding binding canonical identity, jurisdiction, alias, revision and evaluator snapshot do not reconcile';
                 END IF;
             END IF;
             RETURN NEW;
