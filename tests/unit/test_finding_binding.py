@@ -189,6 +189,19 @@ async def test_persistence_rejects_tampered_finding_payload_before_insert():
 
 
 @pytest.mark.asyncio
+async def test_persistence_rejects_tampered_fact_value_canonical_payload_before_insert():
+    session = MagicMock()
+    result = _build(required_fact_keys=["agm_held"])
+    result["evidence"][0]["fact_value_canonical"] += " "
+    manifest = {"evidence": result["evidence"]}
+    result["binding"]["evidence_manifest_canonical"] = canonical_definition_json(manifest)
+    result["binding"]["evidence_manifest_hash"] = canonical_definition_hash(manifest)
+    with pytest.raises(ValueError, match="Company fact canonical payload"):
+        await persist_finding_binding(session, result)
+    assert not session.add.called
+
+
+@pytest.mark.asyncio
 async def test_persistence_rejects_tampered_canonical_payload_before_insert():
     session = MagicMock()
     result = _build(required_fact_keys=["agm_held"])
