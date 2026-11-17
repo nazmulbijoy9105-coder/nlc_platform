@@ -669,7 +669,12 @@ def build_compliance_report_html(
     # Enforce the release boundary here, not only in the HTTP endpoint:
     # stale cached scores, flags and rescue plans must never leak into a report.
     review_flags = []
-    if not _legal_score_is_released():
+    score_is_current = (
+        _legal_score_is_released()
+        and getattr(company, "last_evaluated_at", None) is not None
+        and getattr(company, "updated_at", None) == company.last_evaluated_at
+    )
+    if not score_is_current:
         flags = ()
         rescue_plan = None
         score = 0
@@ -885,6 +890,7 @@ class PDFReportService:
             or snapshot.risk_band != company.current_risk_band
             or company.last_evaluated_at is None
             or snapshot.calculated_at != company.last_evaluated_at
+            or getattr(company, "updated_at", None) != company.last_evaluated_at
         ):
             raise HTTPException(
                 status_code=409,
