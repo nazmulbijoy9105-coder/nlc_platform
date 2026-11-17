@@ -6,6 +6,7 @@ compliance outcome. ATTRIBUTED is deliberately not assigned automatically.
 from __future__ import annotations
 
 import re
+import uuid
 from collections import defaultdict
 from datetime import date, datetime
 from typing import Any, Mapping, Sequence
@@ -199,13 +200,13 @@ async def persist_finding_binding(session: Any, snapshot: Mapping[str, Any]):
         raise ValueError("This write path only records current evaluations; historical attribution requires separate review")
     if not binding_values.get("company_id") or not binding_values.get("compliance_flag_id"):
         raise ValueError("Finding binding requires a tenant and compliance flag")
+    binding_values.setdefault("id", uuid.uuid4())
     binding = ComplianceFindingBinding(**binding_values)
     session.add(binding)
     await session.flush()
     rows = [
         ComplianceFindingEvidence(
             binding_id=binding.id,
-            company_id=binding_values["company_id"],
             **dict(evidence),
         )
         for evidence in evidence_values
