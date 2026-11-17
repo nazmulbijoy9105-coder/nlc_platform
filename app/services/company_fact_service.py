@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company import Company
@@ -19,6 +19,14 @@ from app.compliance.fact_provenance import coerce_company_profile_fact_value
 class CompanyFactService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
+
+    async def _mark_company_facts_changed(self, company_id: uuid.UUID) -> None:
+        """Advance the company freshness marker whenever source facts change."""
+        await self.db.execute(
+            update(Company)
+            .where(Company.id == company_id)
+            .values(updated_at=datetime.now(timezone.utc))
+        )
 
     @staticmethod
     def _normalize_fact_key(fact_key: str) -> str:
@@ -89,6 +97,7 @@ class CompanyFactService:
         )
         self.db.add(fact)
         await self.db.flush()
+        await self._mark_company_facts_changed(company_id)
         from app.services.domain_events import DomainEventType, publish_domain_event
         await publish_domain_event(
             self.db, company_id=company_id,
@@ -146,6 +155,7 @@ class CompanyFactService:
         )
         self.db.add(fact)
         await self.db.flush()
+        await self._mark_company_facts_changed(document.company_id)
         from app.services.domain_events import DomainEventType, publish_domain_event
         await publish_domain_event(
             self.db, company_id=document.company_id,
@@ -218,6 +228,7 @@ class CompanyFactService:
         fact.verification_status = decision
         fact.verification_note = note
         await self.db.flush()
+        await self._mark_company_facts_changed(fact.company_id)
         from app.services.domain_events import DomainEventType, publish_domain_event
         await publish_domain_event(
             self.db, company_id=fact.company_id,
