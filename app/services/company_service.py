@@ -480,10 +480,13 @@ class CompanyService(BaseService[Company]):
         include_assigned_staff: bool = False,
         include_all_companies: bool = False,
     ) -> list[dict]:
-        """Return risk aggregates for either the admin portfolio or user scope.
+        """Return risk aggregates only from a current, completed evaluation.
 
-        Portfolio-wide access is explicit and still relies on the authenticated
-        database session's RLS policy; tenant users must supply their own UUID.
+        Cached company bands are not authoritative on their own. A row is
+        counted in a statutory band only when the latest immutable run is
+        COMPLETED and its timestamp, score and band match the company cache.
+        Pending, failed, unreleased, missing or mismatched runs are counted as
+        NOT_EVALUATED rather than leaking a stale RED/BLACK result.
         """
         scope = ""
         params = {}
@@ -509,20 +512,43 @@ class CompanyService(BaseService[Company]):
         result = await self.db.execute(
             text(
                 """
+                WITH latest_run AS (
+                    SELECT DISTINCT ON (company_id)
+                        company_id, evaluation_status, score, risk_band, calculated_at
+                    FROM compliance_evaluation_runs
+                    ORDER BY company_id, calculated_at DESC
+                ),
+                current_company_state AS (
+                    SELECT
+                        c.id,
+                        CASE
+                            WHEN lr.evaluation_status = 'COMPLETED'
+                             AND lr.score IS NOT NULL
+                             AND lr.risk_band <> 'NOT_EVALUATED'
+                             AND c.last_evaluated_at = lr.calculated_at
+                             AND c.current_compliance_score = lr.score
+                             AND c.current_risk_band = lr.risk_band
+                            THEN lr.risk_band
+                            ELSE 'NOT_EVALUATED'::risk_band
+                        END AS risk_band
+                    FROM companies c
+                    LEFT JOIN latest_run lr ON lr.company_id = c.id
+                    WHERE c.is_active IS TRUE
+                    """
+                )
+                + scope
+                + """
+                )
                 SELECT
-                    c.current_risk_band AS risk_band,
+                    current_company_state.risk_band AS risk_band,
                     COUNT(*) AS company_count,
                     ROUND(
                         COUNT(*) * 100.0 / NULLIF(SUM(COUNT(*)) OVER (), 0),
                         1
                     ) AS percentage
-                FROM companies c
-                WHERE c.is_active IS TRUE
-                """
-                + scope
-                + """
-                GROUP BY c.current_risk_band
-                ORDER BY CASE c.current_risk_band
+                FROM current_company_state
+                GROUP BY current_company_state.risk_band
+                ORDER BY CASE current_company_state.risk_band
                     WHEN 'BLACK' THEN 1
                     WHEN 'RED' THEN 2
                     WHEN 'YELLOW' THEN 3
