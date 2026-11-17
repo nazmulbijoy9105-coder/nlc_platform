@@ -502,8 +502,13 @@ class CompanyService(BaseService[Company]):
         Pending, failed, unreleased, missing or mismatched runs are counted as
         NOT_EVALUATED rather than leaking a stale RED/BLACK result.
         """
+        from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
+
         scope = ""
-        params = {}
+        params = {
+            "engine_version": RULE_ENGINE_VERSION,
+            "scoring_spec_version": SCORING_SPEC_VERSION,
+        }
         if not include_all_companies:
             if user_id is None:
                 raise ValueError("user_id is required for tenant-scoped risk distribution")
@@ -519,16 +524,17 @@ class CompanyService(BaseService[Company]):
                     )
                 )
             """
-            params = {
+            params.update({
                 "user_id": str(user_id),
                 "include_assigned_staff": include_assigned_staff,
-            }
+            })
         result = await self.db.execute(
             text(
                 """
                 WITH latest_run AS (
                     SELECT DISTINCT ON (company_id)
-                        company_id, evaluation_status, score, risk_band, calculated_at
+                        company_id, evaluation_status, score, risk_band, calculated_at,
+                        engine_version, score_breakdown_snapshot
                     FROM compliance_evaluation_runs
                     ORDER BY company_id, calculated_at DESC, id DESC
                 ),
@@ -539,6 +545,10 @@ class CompanyService(BaseService[Company]):
                             WHEN lr.evaluation_status = 'COMPLETED'
                              AND lr.score IS NOT NULL
                              AND lr.risk_band <> 'NOT_EVALUATED'
+                             AND lr.engine_version = :engine_version
+                             AND lr.score_breakdown_snapshot ->> 'scoring_spec_version' = :scoring_spec_version
+                             AND lr.score_breakdown_snapshot ->> 'score_reconciles' = 'true'
+                             AND lr.score_breakdown_snapshot ->> 'final_score' = lr.score::text
                              AND c.last_evaluated_at = lr.calculated_at
                              AND c.updated_at <= c.last_evaluated_at
                              AND c.current_compliance_score = lr.score
