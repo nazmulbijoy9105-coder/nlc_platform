@@ -204,7 +204,7 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
     assert response.body == b"%PDF-1.7 stub"
     assert "ORDER BY compliance_evaluation_runs.calculated_at DESC" in captured["snapshot_query"]
     assert response.headers["x-snapshot-hash"] == snapshot.score_hash
-    assert response.headers["x-engine-version"] == "test-engine-v1"
+    assert response.headers["x-engine-version"] == report_module.RULE_ENGINE_VERSION
     assert (
         response.headers["content-disposition"]
         == 'attachment; filename="compliance_report_C-1_X-Evil_1_2020.pdf"'
