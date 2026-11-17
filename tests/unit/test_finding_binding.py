@@ -123,13 +123,38 @@ def test_user_asserted_evidence_is_not_marked_complete():
 
 
 def test_conflicting_fact_values_are_detected():
-    second = _fact(fact_id="fact-2", fact_value=True)
+    second = _fact(fact_id="00000000-0000-0000-0000-000000000102", fact_value=True)
     assert _build(facts=[_fact(), second])["binding"]["evidence_status"] == "CONFLICT"
 
 
 def test_rejected_evidence_is_invalid():
     fact = _fact(verification_status="REJECTED", verified_by=None, verified_at=None)
     assert _build(facts=[fact])["binding"]["evidence_status"] == "INVALID"
+
+
+
+@pytest.mark.parametrize("observed_on", ["", "not-a-date", "2026-02-30"])
+def test_invalid_evidence_observed_date_is_rejected(observed_on):
+    with pytest.raises(ValueError, match="observed_on"):
+        _build(facts=[_fact(observed_on=observed_on)])
+
+
+def test_non_uuid_fact_identity_is_rejected_before_persistence():
+    with pytest.raises(ValueError, match="company_fact_id"):
+        _build(facts=[_fact(fact_id="not-a-uuid")])
+
+
+def test_required_fact_keys_reject_string_and_duplicates():
+    with pytest.raises(ValueError, match="sequence"):
+        _build(required_fact_keys="agm_held")
+    with pytest.raises(ValueError, match="duplicates"):
+        _build(required_fact_keys=["agm_held", "agm_held"])
+
+
+def test_evidence_role_length_is_bounded_by_database_contract():
+    fact_id = _fact()["fact_id"]
+    with pytest.raises(ValueError, match="evidence_role"):
+        _build(evidence_roles={fact_id: "R" * 81})
 
 
 def test_resolution_key_mismatch_is_rejected():
