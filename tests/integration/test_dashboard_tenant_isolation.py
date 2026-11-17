@@ -28,9 +28,14 @@ async def test_risk_distribution_aggregates_only_the_authenticated_users_members
     db.add(ComplianceEvaluationRun(
         id=uuid.uuid4(), company_id=db_company.id, score=85,
         risk_band=RiskBand.GREEN, calculated_at=evaluated_at,
-        engine_version="test", score_hash="d" * 64,
+        engine_version=RULE_ENGINE_VERSION, score_hash="d" * 64,
         evaluation_status="COMPLETED", trigger_source="TEST",
         active_flags_count=0, black_flags_count=0,
+        score_breakdown_snapshot={
+            "scoring_spec_version": SCORING_SPEC_VERSION,
+            "score_reconciles": True,
+            "final_score": 85,
+        },
         flags_snapshot=[], fact_provenance_snapshot=[],
     ))
     await db.flush()
