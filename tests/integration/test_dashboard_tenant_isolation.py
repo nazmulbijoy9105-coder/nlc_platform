@@ -326,3 +326,56 @@ async def test_dashboard_aggregates_withhold_completed_but_stale_profile_band(
     kpis = await ComplianceService(db).get_dashboard_kpis()
     assert kpis["red_black_count"] == 0
     assert kpis["not_evaluated_count"] >= 1
+
+
+@pytest.mark.asyncio
+async def test_company_profile_update_clears_cached_statutory_score(db, db_company):
+    from datetime import datetime, timezone
+
+    from app.models.enums import RiskBand
+
+    await set_admin_context(db)
+    db_company.current_compliance_score = 85
+    db_company.current_risk_band = RiskBand.GREEN
+    db_company.last_evaluated_at = datetime.now(timezone.utc)
+    await db.flush()
+
+    updated = await CompanyService(db).update_by_id(
+        db_company.id,
+        company_name="Updated Test Company Ltd",
+    )
+
+    assert updated is not None
+    assert updated.current_compliance_score is None
+    assert updated.current_risk_band == RiskBand.NOT_EVALUATED
+    assert updated.last_evaluated_at is None
+
+
+@pytest.mark.asyncio
+async def test_company_fact_assertion_clears_cached_statutory_score(
+    db, db_company, db_client_user
+):
+    from datetime import date, datetime, timezone
+
+    from app.models.enums import RiskBand
+    from app.services.company_fact_service import CompanyFactService
+
+    await set_admin_context(db)
+    db_company.current_compliance_score = 85
+    db_company.current_risk_band = RiskBand.GREEN
+    db_company.last_evaluated_at = datetime.now(timezone.utc)
+    await db.flush()
+    await set_rls_context(db, str(db_client_user.id))
+
+    await CompanyFactService(db).assert_fact(
+        company_id=db_company.id,
+        fact_key="company_name",
+        fact_value="New asserted company name",
+        asserted_by=db_client_user.id,
+        observed_on=date.today(),
+    )
+    await db.refresh(db_company)
+
+    assert db_company.current_compliance_score is None
+    assert db_company.current_risk_band == RiskBand.NOT_EVALUATED
+    assert db_company.last_evaluated_at is None
