@@ -281,3 +281,125 @@ async def test_runtime_role_cannot_update_or_delete_finding_audit_rows(db):
                 async with db.begin_nested():
                     await db.execute(text("SET LOCAL ROLE nlc_app_role"))
                     await db.execute(text(statement))
+
+
+@pytest.mark.asyncio
+async def test_nonempty_evidence_manifest_matches_database_rows_at_commit(db):
+    """A real child evidence row must match the canonical parent manifest."""
+    from app.models.company_fact import CompanyFact
+    from app.models.user import User
+    from app.models.enums import UserRole
+    from app.rule_engine.canonical_identity import RuleResolution
+    from app.rule_engine.finding_binding import (
+        build_finding_binding_snapshot,
+        persist_finding_binding,
+    )
+
+    today = date.today()
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    flag_id = uuid.uuid4()
+    run_id = uuid.uuid4()
+    db.add(User(
+        id=user_id,
+        email=f"finding-evidence-{user_id.hex[:12]}@nlctest.com",
+        full_name="Finding Evidence Integration Actor",
+        password_hash="!integration-only-no-login",
+        role=UserRole.ADMIN_STAFF,
+        is_active=True,
+        totp_enabled=False,
+    ))
+    db.add(Company(
+        id=company_id,
+        registration_number=f"FINDING-{company_id.hex[:16]}",
+        company_name="Finding Evidence Integration Ltd",
+        company_type=CompanyType.PRIVATE_LIMITED,
+        incorporation_date=date(2020, 1, 1),
+        financial_year_end=date(2025, 12, 31),
+    ))
+    await db.flush()
+
+    rule_result = await db.execute(
+        text("SELECT rule_id FROM legal_rules ORDER BY rule_id LIMIT 1")
+    )
+    rule_id = rule_result.scalar_one()
+    db.add(ComplianceFlag(
+        id=flag_id,
+        company_id=company_id,
+        rule_id=rule_id,
+        rule_version="integration",
+        flag_code="TEST-EVIDENCE-MANIFEST",
+        statutory_basis="Integration fixture only; not a legal conclusion.",
+        severity=SeverityLevel.NOT_EVALUATED,
+        score_impact=0,
+        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+        evaluation_state="NOT_EVALUATED",
+        flag_status=FlagStatus.ACTIVE,
+        triggered_date=today,
+        description="Integration fixture only; not a legal finding.",
+    ))
+    db.add(ComplianceEvaluationRun(
+        id=run_id,
+        company_id=company_id,
+        risk_band=RiskBand.NOT_EVALUATED,
+        calculated_at=datetime.now(timezone.utc),
+        engine_version="integration",
+        score_hash="e" * 64,
+        evaluation_status="NOT_RELEASED",
+        trigger_source="TEST",
+        active_flags_count=1,
+        black_flags_count=0,
+        flags_snapshot=[],
+        fact_provenance_snapshot=[],
+    ))
+    fact = CompanyFact(
+        id=uuid.uuid4(),
+        company_id=company_id,
+        fact_key="integration_evidence_fact",
+        fact_value=False,
+        trust_level="USER_ASSERTED",
+        asserted_by=user_id,
+        observed_on=today,
+        verification_status="UNVERIFIED",
+    )
+    db.add(fact)
+    await db.flush()
+
+    source_namespace = "integration-test:manifest"
+    resolution = RuleResolution(
+        status="UNRESOLVED",
+        source_namespace=source_namespace,
+        historical_rule_id=rule_id,
+        effective_date=today,
+    )
+    snapshot = build_finding_binding_snapshot(
+        company_id=str(company_id),
+        compliance_flag_id=str(flag_id),
+        evaluation_run_id=str(run_id),
+        source_namespace=source_namespace,
+        historical_rule_id=rule_id,
+        jurisdiction="BD",
+        effective_date=today,
+        resolution=resolution,
+        finding_snapshot={"evaluation_state": "NOT_EVALUATED", "score_impact": 0},
+        evidence_facts=[{
+            "fact_id": str(fact.id),
+            "fact_key": fact.fact_key,
+            "fact_value": fact.fact_value,
+            "trust_level": fact.trust_level,
+            "verification_status": fact.verification_status,
+            "observed_on": today.isoformat(),
+            "asserted_by": str(user_id),
+        }],
+        required_fact_keys=[fact.fact_key],
+    )
+    await persist_finding_binding(db, snapshot)
+
+    # Force deferred constraint triggers now, so a mismatch fails this test
+    # rather than being hidden by the fixture's transaction rollback.
+    await db.execute(text("SET CONSTRAINTS ALL IMMEDIATE"))
+    result = await db.execute(
+        text("SELECT count(*) FROM compliance_finding_evidence WHERE company_fact_id=:fact_id"),
+        {"fact_id": fact.id},
+    )
+    assert result.scalar_one() == 1
