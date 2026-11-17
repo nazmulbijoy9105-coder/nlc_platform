@@ -170,11 +170,14 @@ def build_finding_binding_snapshot(
     company_id = _required_uuid(company_id, "company_id")
     compliance_flag_id = _required_uuid(compliance_flag_id, "compliance_flag_id")
     evaluation_run_id = _required_uuid(evaluation_run_id, "evaluation_run_id")
-    if len(source_namespace.strip()) > 255 or not source_namespace.strip():
+    source_namespace = source_namespace.strip()
+    historical_rule_id = historical_rule_id.strip()
+    jurisdiction = jurisdiction.strip()
+    if len(source_namespace) > 255 or not source_namespace:
         raise ValueError("source_namespace must contain 1 to 255 non-whitespace characters")
-    if len(historical_rule_id.strip()) > 100 or not historical_rule_id.strip():
+    if len(historical_rule_id) > 100 or not historical_rule_id:
         raise ValueError("historical_rule_id must contain 1 to 100 non-whitespace characters")
-    if len(jurisdiction.strip()) > 32 or not jurisdiction.strip():
+    if len(jurisdiction) > 32 or not jurisdiction:
         raise ValueError("jurisdiction must contain 1 to 32 non-whitespace characters")
     if isinstance(required_fact_keys, (str, bytes)) or not isinstance(required_fact_keys, Sequence):
         raise ValueError("required_fact_keys must be a sequence of fact-key strings")
