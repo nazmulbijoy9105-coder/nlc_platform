@@ -37,7 +37,23 @@ def test_85_rule_fact_evidence_contracts_are_complete_and_fail_closed(tmp_path: 
         text=True,
     )
 
+    source = json.loads(source_report.read_text(encoding="utf-8"))
     report = json.loads(contract_report.read_text(encoding="utf-8"))
+    source_by_id = {rule["historical_rule_id"]: rule for rule in source["rules"]}
+    contract_by_id = {rule["historical_rule_id"]: rule for rule in report["rules"]}
+    for rule_id, source_rule in source_by_id.items():
+        declared_inputs = {
+            condition.strip("'\\\"")
+            for condition in source_rule["applicability_contract"]["required_conditions"]
+        }
+        contract_fact_keys = {
+            fact["fact_key"] for fact in contract_by_id[rule_id]["facts"]
+        }
+        assert declared_inputs <= contract_fact_keys, (
+            f"{rule_id} omits applicability-required facts: "
+            f"{sorted(declared_inputs - contract_fact_keys)}"
+        )
+
     assert report["baseline_commit"] == "cefe6f169cd283d2e61071a3b7438657da04321e"
     assert report["report_type"] == "FAIL_CLOSED_FACT_EVIDENCE_CONTRACT_DRAFTS_NOT_APPROVED"
     assert report["rule_count"] == 85
