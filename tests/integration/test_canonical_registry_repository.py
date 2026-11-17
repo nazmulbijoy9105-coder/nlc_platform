@@ -44,7 +44,7 @@ def _registry_rows():
         effective_to=None,
         definition_json=DEFINITION,
         definition_hash=canonical_definition_hash(DEFINITION),
-        approval_state="REVIEW_REQUIRED",
+        approval_state="REVIEW_REQUIRED",\n        evaluator_name="agm_evaluator",\n        evaluator_version="2.1.0",\n        evaluator_artifact_hash="a" * 64,
     )
     return alias, identity, revision
 
