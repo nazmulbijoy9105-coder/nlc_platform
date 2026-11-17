@@ -118,10 +118,10 @@ def upgrade() -> None:
         RETURNS trigger LANGUAGE plpgsql
         SET search_path = pg_catalog, public
         AS $function$
-        DECLARE context_author uuid; context_digest text;
+        DECLARE context_author uuid; context_digest text; context_authored_at timestamptz;
         BEGIN
-            SELECT authored_by, context_sha256
-              INTO context_author, context_digest
+            SELECT authored_by, context_sha256, authored_at
+              INTO context_author, context_digest, context_authored_at
               FROM public.legal_rule_finding_contexts
              WHERE id = NEW.context_id;
             IF context_author IS NULL THEN
@@ -129,6 +129,9 @@ def upgrade() -> None:
             END IF;
             IF NEW.reviewed_by = context_author THEN
                 RAISE EXCEPTION 'Finding context author cannot independently review own context';
+            END IF;
+            IF NEW.reviewed_at < context_authored_at THEN
+                RAISE EXCEPTION 'Finding context review cannot precede context authorship';
             END IF;
             IF NEW.reviewed_context_sha256 IS DISTINCT FROM context_digest THEN
                 RAISE EXCEPTION 'Finding context review digest does not match exact context version';
