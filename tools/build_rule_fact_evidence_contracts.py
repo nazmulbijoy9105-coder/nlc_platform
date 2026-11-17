@@ -36,19 +36,7 @@ def build_contract(rule: dict[str, Any]) -> dict[str, Any]:
         }
         for fact in rule["seed_fact_inputs"]
     ]
-    # Preserve the seed facts and append missing inputs exposed by the
-    # applicability contract. These remain unmapped draft fields.
-    applicability_fact_keys = [
-        source_label(condition)
-        for condition in rule["applicability_contract"]["required_conditions"]
-    ]
-    existing_fact_keys = {item["fact_key"] for item in facts}
-    for fact_key in applicability_fact_keys:
-        if fact_key not in existing_fact_keys:
-            facts.append(
-                {
-                    "fact_key": fact_key,
-                    "source_expression": fact_key,
+
     # AGM-005's seed inputs omit the company-wide member count even though
     # its pinned statutory-registry requirement makes that count necessary to
     # select the applicable quorum threshold. Preserve it as an explicit draft
@@ -71,20 +59,6 @@ def build_contract(rule: dict[str, Any]) -> dict[str, Any]:
                     "mapping_status": "REQUIRES_DOMAIN_MAPPING",
                 }
             )
-            existing_fact_keys.add(fact_key)
-
-    # AGM-005's statutory registry requirement explicitly distinguishes the
-    # two-member and three-member default quorum thresholds. Capture member
-    # count as a required draft input; do not infer type, evidence or meaning.
-    if rule["historical_rule_id"] == "AGM-005":
-        requirement = rule.get("statutory_requirement")
-        if not isinstance(requirement, str) or not requirement.strip():
-            raise ValueError("AGM-005 statutory requirement is missing")
-        if "member_count" not in existing_fact_keys:
-            facts.append(
-                {
-                    "fact_key": "member_count",
-                    "source_expression": requirement,
 
     # The applicability registry is a second, independent source of required
     # company facts. Preserve every declared input as a fact contract as well;
