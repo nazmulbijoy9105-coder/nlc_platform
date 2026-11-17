@@ -74,6 +74,7 @@ async def test_context_database_triggers_bind_digest_and_reviewer_to_exact_versi
     review_definition = review_fn.scalar_one()
     assert "reviewed_by = context_author" in review_definition
     assert "reviewed_context_sha256" in review_definition
+    assert "context_authored_at" in review_definition
     assert "context_digest" in review_definition
 
 
