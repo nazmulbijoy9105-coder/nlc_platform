@@ -528,7 +528,7 @@ async def test_nonempty_evidence_manifest_matches_database_rows_at_commit(db):
 
 @pytest.mark.asyncio
 async def test_flag_evaluation_finding_and_evidence_rollback_atomically(db):
-    """A failure after all flushes leaves none of the four record types behind."""
+    """A failure after all flushes leaves no parent or evidence records behind."""
     from app.models.company_fact import CompanyFact
     from app.models.user import User
     from app.models.enums import UserRole
@@ -651,6 +651,7 @@ async def test_flag_evaluation_finding_and_evidence_rollback_atomically(db):
         ("compliance_evaluation_runs", "id", run_id),
         ("company_facts", "id", fact_id),
         ("compliance_finding_bindings", "compliance_flag_id", flag_id),
+        ("compliance_finding_evidence", "company_id", company_id),
     ):
         result = await db.execute(
             text(f"SELECT count(*) FROM public.{table} WHERE {column} = :value"),
