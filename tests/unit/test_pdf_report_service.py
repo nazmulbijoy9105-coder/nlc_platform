@@ -147,7 +147,7 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
         calculated_at=WHEN,
         evaluation_status="COMPLETED",
         score_hash="",
-        engine_version="test-engine-v1",
+        engine_version=report_module.RULE_ENGINE_VERSION,
         trigger_source="UNIT_TEST",
         fact_provenance_snapshot=[],
         score_breakdown_snapshot={
@@ -576,7 +576,7 @@ def test_endpoint_withholds_pdf_when_evaluation_score_hash_is_tampered(monkeypat
         calculated_at=WHEN,
         evaluation_status="COMPLETED",
         score_hash="f" * 64,
-        engine_version="test-engine-v1",
+        engine_version=report_module.RULE_ENGINE_VERSION,
         trigger_source="UNIT_TEST",
         fact_provenance_snapshot=[],
         score_breakdown_snapshot={
