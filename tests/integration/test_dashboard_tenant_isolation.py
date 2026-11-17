@@ -379,3 +379,54 @@ async def test_company_fact_assertion_clears_cached_statutory_score(
     assert db_company.current_compliance_score is None
     assert db_company.current_risk_band == RiskBand.NOT_EVALUATED
     assert db_company.last_evaluated_at is None
+
+
+@pytest.mark.asyncio
+async def test_director_change_invalidates_cached_statutory_score(db, db_company):
+    from datetime import datetime, timezone
+
+    from app.models.enums import RiskBand
+    from app.services.people_service import DirectorService
+
+    await set_admin_context(db)
+    db_company.current_compliance_score = 85
+    db_company.current_risk_band = RiskBand.GREEN
+    db_company.last_evaluated_at = datetime.now(timezone.utc)
+    await db.flush()
+
+    await DirectorService(db).appoint_director(
+        db_company.id,
+        full_name="Integration Director",
+        appointment_date=date(2024, 1, 1),
+    )
+    await db.refresh(db_company)
+
+    assert db_company.current_compliance_score is None
+    assert db_company.current_risk_band == RiskBand.NOT_EVALUATED
+    assert db_company.last_evaluated_at is None
+
+
+@pytest.mark.asyncio
+async def test_agm_change_invalidates_cached_statutory_score(db, db_company):
+    from datetime import datetime, timezone
+
+    from app.models.enums import RiskBand
+    from app.services.filing_service import AGMService
+
+    await set_admin_context(db)
+    db_company.current_compliance_score = 85
+    db_company.current_risk_band = RiskBand.GREEN
+    db_company.last_evaluated_at = datetime.now(timezone.utc)
+    await db.flush()
+
+    await AGMService(db).create_agm(
+        company_id=db_company.id,
+        financial_year=2025,
+        agm_held=False,
+        created_by=None,
+    )
+    await db.refresh(db_company)
+
+    assert db_company.current_compliance_score is None
+    assert db_company.current_risk_band == RiskBand.NOT_EVALUATED
+    assert db_company.last_evaluated_at is None
