@@ -242,9 +242,9 @@ async def test_dashboard_aggregates_withhold_pending_cached_black_band(
     import uuid
     from datetime import datetime, timezone
 
-    import app.rule_engine.engine as engine_module
     from sqlalchemy import text
 
+    import app.rule_engine.engine as engine_module
     from app.models.compliance import ComplianceEvaluationRun
     from app.models.enums import RiskBand
     from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
