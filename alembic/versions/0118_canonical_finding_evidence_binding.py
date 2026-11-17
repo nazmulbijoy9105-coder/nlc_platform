@@ -78,8 +78,7 @@ def upgrade() -> None:
             "'REGISTRY_UNAVAILABLE')",
             name="ck_finding_binding_resolution_status"),
         sa.CheckConstraint(
-            "attribution_status IN ('CURRENT_EVALUATION','ATTRIBUTED',"
-            "'UNATTRIBUTED','AMBIGUOUS','QUARANTINED')",
+            "attribution_status IN ('CURRENT_EVALUATION','UNATTRIBUTED','AMBIGUOUS','QUARANTINED')",
             name="ck_finding_binding_attribution_status"),
         sa.CheckConstraint(
             "evidence_status IN ('COMPLETE','PARTIAL','MISSING','INVALID',"
