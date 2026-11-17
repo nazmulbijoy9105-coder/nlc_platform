@@ -26,7 +26,7 @@ class ComplianceFindingBinding(Base):
 
     __tablename__ = "compliance_finding_bindings"
     __table_args__ = (
-        UniqueConstraint("compliance_flag_id", name="uq_finding_binding_compliance_flag"),
+        UniqueConstraint("compliance_flag_id", "evaluation_run_id", name="uq_finding_binding_flag_run"),
         CheckConstraint(
             "length(btrim(jurisdiction)) > 0 AND length(btrim(source_namespace)) > 0 AND length(btrim(historical_rule_id)) > 0",
             name="ck_finding_binding_lookup_key_nonempty",
@@ -85,7 +85,7 @@ class ComplianceFindingBinding(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="RESTRICT"), nullable=False)
     compliance_flag_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("compliance_flags.id", ondelete="RESTRICT"), nullable=False)
-    evaluation_run_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("compliance_evaluation_runs.id", ondelete="RESTRICT"))
+    evaluation_run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("compliance_evaluation_runs.id", ondelete="RESTRICT"), nullable=False)
     jurisdiction: Mapped[str] = mapped_column(String(32), nullable=False)
     source_namespace: Mapped[str] = mapped_column(String(255), nullable=False)
     historical_rule_id: Mapped[str] = mapped_column(String(100), nullable=False)
