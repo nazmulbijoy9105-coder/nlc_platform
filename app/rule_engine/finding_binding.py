@@ -9,7 +9,7 @@ import hashlib
 import re
 import uuid
 from collections import defaultdict
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any, Mapping, Sequence
 
 from app.rule_engine.canonical_identity import RuleResolution, canonical_definition_hash, canonical_definition_json
@@ -20,6 +20,17 @@ _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 def _stable_hash(value: Mapping[str, Any]) -> str:
     return canonical_definition_hash(value)
+
+
+def _iso_utc_datetime(value: Any, field: str) -> str | None:
+    if value is None:
+        return None
+    parsed = value if isinstance(value, datetime) else datetime.fromisoformat(
+        str(value).replace("Z", "+00:00")
+    )
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError(f"{field} must include a timezone offset")
+    return parsed.astimezone(timezone.utc).isoformat(timespec="microseconds")
 
 
 def _normalise_fact(
@@ -68,9 +79,9 @@ def _normalise_fact(
         "document_sha256": document_hash,
         "asserted_by": str(fact.get("asserted_by") or ""),
         "authorized_uploader_id": str(fact["authorized_uploader_id"]) if fact.get("authorized_uploader_id") else None,
-        "uploaded_at": str(fact["uploaded_at"]) if fact.get("uploaded_at") else None,
+        "uploaded_at": _iso_utc_datetime(fact.get("uploaded_at"), "uploaded_at"),
         "verified_by": str(fact["verified_by"]) if fact.get("verified_by") else None,
-        "verified_at": str(fact["verified_at"]) if fact.get("verified_at") else None,
+        "verified_at": _iso_utc_datetime(fact.get("verified_at"), "verified_at"),
     }
     if not snapshot["asserted_by"] or not snapshot["observed_on"]:
         raise ValueError("Evidence requires asserted_by and observed_on")
