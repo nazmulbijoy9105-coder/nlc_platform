@@ -50,15 +50,26 @@ def _as_date(value: Any) -> date | None:
     return None
 
 
-def canonical_definition_hash(definition: Mapping[str, Any]) -> str:
-    """SHA-256 of canonical UTF-8 JSON; keys/order/spacing cannot alter digest."""
-    payload = json.dumps(
+def canonical_definition_json(definition: Mapping[str, Any]) -> str:
+    """Return the canonical JSON text used as the cross-layer digest contract.
+
+    Contract v1: Python JSON scalar semantics; lexicographically sorted object
+    keys; compact separators; literal UTF-8 Unicode; no NaN or infinities.
+    Callers persist this exact text when a database must independently hash
+    the payload. PostgreSQL JSONB text output is deliberately not the contract.
+    """
+    return json.dumps(
         definition,
         sort_keys=True,
         separators=(",", ":"),
         ensure_ascii=False,
         allow_nan=False,
-    ).encode("utf-8")
+    )
+
+
+def canonical_definition_hash(definition: Mapping[str, Any]) -> str:
+    """SHA-256 of the UTF-8 bytes of canonical JSON contract v1."""
+    payload = canonical_definition_json(definition).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
 
 
