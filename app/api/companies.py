@@ -418,10 +418,18 @@ def _evaluation_run_is_current(company, evaluation_run) -> bool:
         "value",
         getattr(company, "current_risk_band", None),
     )
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
+
+    score_snapshot = getattr(evaluation_run, "score_breakdown_snapshot", None)
     return bool(
         run_status == "COMPLETED"
         and evaluation_run.score is not None
         and run_band != "NOT_EVALUATED"
+        and getattr(evaluation_run, "engine_version", None) == RULE_ENGINE_VERSION
+        and isinstance(score_snapshot, dict)
+        and score_snapshot.get("scoring_spec_version") == SCORING_SPEC_VERSION
+        and score_snapshot.get("score_reconciles") is True
+        and score_snapshot.get("final_score") == evaluation_run.score
         and company.last_evaluated_at is not None
         and company.last_evaluated_at == evaluation_run.calculated_at
         and getattr(company, "updated_at", None) is not None
