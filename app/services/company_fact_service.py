@@ -7,13 +7,12 @@ from typing import Any
 
 from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company import Company
 from app.models.company_fact import CompanyFact
 from app.models.documents import Document
-from app.models.enums import RiskBand
 from app.compliance.fact_provenance import coerce_company_profile_fact_value
 
 
@@ -23,16 +22,7 @@ class CompanyFactService:
 
     async def _mark_company_facts_changed(self, company_id: uuid.UUID) -> None:
         """Clear cached statutory results whenever source facts change."""
-        await self.db.execute(
-            update(Company)
-            .where(Company.id == company_id)
-            .values(
-                updated_at=datetime.now(timezone.utc),
-                current_compliance_score=None,
-                current_risk_band=RiskBand.NOT_EVALUATED,
-                last_evaluated_at=None,
-            )
-        )
+        await invalidate_company_score(self.db, company_id)
 
     @staticmethod
     def _normalize_fact_key(fact_key: str) -> str:
@@ -105,6 +95,7 @@ class CompanyFactService:
         await self.db.flush()
         await self._mark_company_facts_changed(company_id)
         from app.services.domain_events import DomainEventType, publish_domain_event
+from app.services.score_invalidation import invalidate_company_score
         await publish_domain_event(
             self.db, company_id=company_id,
             event_type=DomainEventType.COMPANY_FACT_ASSERTED,
