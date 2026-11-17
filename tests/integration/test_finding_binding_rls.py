@@ -54,6 +54,17 @@ async def test_finding_binding_tables_are_forced_tenant_scoped_append_only(db):
         assert "nlc_can_edit_company" in (by_command["INSERT"][3] or "")
         assert "nlc_can_access_company" in (by_command["INSERT"][3] or "")
 
+        if table == "compliance_finding_bindings":
+            constraint = await db.execute(
+                text(
+                    "SELECT pg_get_constraintdef(oid) FROM pg_constraint "
+                    "WHERE conrelid='public.compliance_finding_bindings'::regclass "
+                    "AND conname='ck_finding_binding_attribution_status'"
+                )
+            )
+            definition = constraint.scalar_one()
+            assert "'ATTRIBUTED'" not in definition
+
         for privilege in ("SELECT", "INSERT"):
             result = await db.execute(
                 text("SELECT has_table_privilege('nlc_app_role', :table, :privilege)"),
