@@ -11,7 +11,7 @@ from collections import defaultdict
 from datetime import date, datetime
 from typing import Any, Mapping, Sequence
 
-from app.rule_engine.canonical_identity import RuleResolution, canonical_definition_hash
+from app.rule_engine.canonical_identity import RuleResolution, canonical_definition_hash, canonical_definition_json
 
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -73,6 +73,8 @@ def _normalise_fact(
     }
     if not snapshot["asserted_by"] or not snapshot["observed_on"]:
         raise ValueError("Evidence requires asserted_by and observed_on")
+    snapshot["evidence_canonical"] = canonical_definition_json(snapshot)
+    snapshot["fact_value_canonical"] = canonical_definition_json({"value": snapshot["fact_value_snapshot"]})
     snapshot["evidence_hash"] = _stable_hash(snapshot)
     return snapshot
 
@@ -184,6 +186,8 @@ def build_finding_binding_snapshot(
         "evidence_status": evidence_status,
         "evidence_manifest_hash": evidence_manifest_hash,
         "finding_snapshot": dict(finding_snapshot),
+        "finding_snapshot_canonical": canonical_definition_json({"finding": dict(finding_snapshot)}),
+        "evidence_manifest_canonical": canonical_definition_json({"evidence": evidence_rows}),
         "finding_snapshot_hash": finding_hash,
     }
     return {"binding": binding, "evidence": evidence_rows}
@@ -213,6 +217,11 @@ async def persist_finding_binding(session: Any, snapshot: Mapping[str, Any]):
     if binding_values.get("finding_snapshot_hash") != _stable_hash({"finding": finding_payload}):
         raise ValueError("Finding snapshot digest does not match its payload")
     evidence_manifest = {"evidence": evidence_values}
+    from app.rule_engine.canonical_identity import canonical_definition_json
+    if binding_values.get("finding_snapshot_canonical") != canonical_definition_json({"finding": dict(finding_payload)}):
+        raise ValueError("Finding canonical payload does not match its JSON snapshot")
+    if binding_values.get("evidence_manifest_canonical") != canonical_definition_json(evidence_manifest):
+        raise ValueError("Evidence manifest canonical payload does not match its rows")
     if binding_values.get("evidence_manifest_hash") != _stable_hash(evidence_manifest):
         raise ValueError("Evidence manifest digest does not match its payload")
     for evidence in evidence_values:
@@ -220,6 +229,10 @@ async def persist_finding_binding(session: Any, snapshot: Mapping[str, Any]):
             raise ValueError("Every evidence item must be a mapping")
         evidence_copy = dict(evidence)
         stored_evidence_hash = evidence_copy.pop("evidence_hash", None)
+        if evidence.get("evidence_canonical") != canonical_definition_json(evidence_copy):
+            raise ValueError("Evidence canonical payload does not match its fields")
+        if evidence.get("fact_value_canonical") != canonical_definition_json({"value": evidence.get("fact_value_snapshot")}):
+            raise ValueError("Company fact canonical payload does not match its snapshot")
         if stored_evidence_hash != _stable_hash(evidence_copy):
             raise ValueError("Evidence snapshot digest does not match its payload")
         if evidence.get("fact_value_hash") != _stable_hash({"value": evidence.get("fact_value_snapshot")}):
