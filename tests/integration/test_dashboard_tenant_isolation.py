@@ -17,6 +17,7 @@ async def test_risk_distribution_aggregates_only_the_authenticated_users_members
 
     from app.models.compliance import ComplianceEvaluationRun
     from app.models.enums import RiskBand
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
 
     await set_admin_context(db)
     evaluated_at = datetime.now(timezone.utc)
@@ -239,6 +240,7 @@ async def test_dashboard_aggregates_withhold_pending_cached_black_band(
     import app.rule_engine.engine as engine_module
     from app.models.compliance import ComplianceEvaluationRun
     from app.models.enums import RiskBand
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
     from app.services.compliance_service import ComplianceService
 
     await set_admin_context(db)
@@ -255,14 +257,15 @@ async def test_dashboard_aggregates_withhold_pending_cached_black_band(
     db.add_all([
         ComplianceEvaluationRun(
             id=uuid.uuid4(), company_id=db_company.id, score=85,
-            risk_band=RiskBand.GREEN, calculated_at=now, engine_version="test",
+            risk_band=RiskBand.GREEN, calculated_at=now, engine_version=RULE_ENGINE_VERSION,
             score_hash="a" * 64, evaluation_status="COMPLETED",
             trigger_source="TEST", active_flags_count=0, black_flags_count=0,
+            score_breakdown_snapshot={"scoring_spec_version": SCORING_SPEC_VERSION, "score_reconciles": True, "final_score": 85},
             flags_snapshot=[], fact_provenance_snapshot=[],
         ),
         ComplianceEvaluationRun(
             id=uuid.uuid4(), company_id=db_other_company.id, score=None,
-            risk_band=RiskBand.NOT_EVALUATED, calculated_at=now, engine_version="test",
+            risk_band=RiskBand.NOT_EVALUATED, calculated_at=now, engine_version=RULE_ENGINE_VERSION,
             score_hash="b" * 64, evaluation_status="PENDING",
             trigger_source="TEST", active_flags_count=0, black_flags_count=0,
             flags_snapshot=[], fact_provenance_snapshot=[],
@@ -295,6 +298,7 @@ async def test_dashboard_aggregates_withhold_completed_but_stale_profile_band(
     import app.rule_engine.engine as engine_module
     from app.models.compliance import ComplianceEvaluationRun
     from app.models.enums import RiskBand
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
     from app.services.compliance_service import ComplianceService
 
     await set_admin_context(db)
@@ -308,9 +312,10 @@ async def test_dashboard_aggregates_withhold_completed_but_stale_profile_band(
 
     db.add(ComplianceEvaluationRun(
         id=uuid.uuid4(), company_id=db_company.id, score=20,
-        risk_band=RiskBand.RED, calculated_at=evaluated_at, engine_version="test",
+        risk_band=RiskBand.RED, calculated_at=evaluated_at, engine_version=RULE_ENGINE_VERSION,
         score_hash="c" * 64, evaluation_status="COMPLETED",
         trigger_source="TEST", active_flags_count=1, black_flags_count=0,
+        score_breakdown_snapshot={"scoring_spec_version": SCORING_SPEC_VERSION, "score_reconciles": True, "final_score": 20},
         flags_snapshot=[], fact_provenance_snapshot=[],
     ))
     await db.flush()
