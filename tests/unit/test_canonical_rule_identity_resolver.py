@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 import pytest
 
@@ -172,3 +172,22 @@ def test_empty_lookup_key_is_rejected(source_namespace, historical_rule_id):
     result = resolve(source_namespace=source_namespace,
                      historical_rule_id=historical_rule_id)
     assert result.status == "INVALID_LOOKUP_KEY"
+
+
+
+def test_datetime_is_not_accepted_as_effective_date():
+    result = resolve(effective_date=datetime(2026, 1, 1, 12, 0))
+    assert result.status == "INVALID_EFFECTIVE_DATE"
+
+
+def test_missing_revision_number_fails_closed():
+    invalid = dict(REVISION_ROW)
+    invalid.pop("revision_number")
+    result = resolve(revisions=[invalid])
+    assert result.status == "INVALID_REVISION_METADATA"
+
+
+def test_non_positive_revision_number_fails_closed():
+    invalid = dict(REVISION_ROW, revision_number=0)
+    result = resolve(revisions=[invalid])
+    assert result.status == "INVALID_REVISION_METADATA"
