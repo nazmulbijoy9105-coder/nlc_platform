@@ -168,7 +168,10 @@ async def aggregate_rule_outcomes(
             latest = await db.execute(
                 select(ComplianceEvaluationRun.id)
                 .where(ComplianceEvaluationRun.company_id == company.id)
-                .order_by(ComplianceEvaluationRun.calculated_at.desc())
+                .order_by(
+                    ComplianceEvaluationRun.calculated_at.desc(),
+                    ComplianceEvaluationRun.id.desc(),
+                )
                 .limit(1)
             )
             if latest.scalar_one_or_none() != run.id:
@@ -343,7 +346,10 @@ async def evaluate_all_companies(
                 latest_result = await db.execute(
                     select(ComplianceEvaluationRun)
                     .where(ComplianceEvaluationRun.company_id == company.id)
-                    .order_by(ComplianceEvaluationRun.calculated_at.desc())
+                    .order_by(
+                    ComplianceEvaluationRun.calculated_at.desc(),
+                    ComplianceEvaluationRun.id.desc(),
+                )
                     .limit(1)
                 )
                 run = latest_result.scalar_one_or_none()
@@ -416,7 +422,10 @@ async def evaluate_one_company(
             latest_result = await db.execute(
                 select(ComplianceEvaluationRun)
                 .where(ComplianceEvaluationRun.company_id == company.id)
-                .order_by(ComplianceEvaluationRun.calculated_at.desc())
+                .order_by(
+                    ComplianceEvaluationRun.calculated_at.desc(),
+                    ComplianceEvaluationRun.id.desc(),
+                )
                 .limit(1)
             )
             run = latest_result.scalar_one_or_none()
