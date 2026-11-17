@@ -182,6 +182,7 @@ async def test_alias_overlap_guard_serializes_concurrent_resolved_inserts(test_e
             first, canonical_id=canonical_ids[0], historical_id=historical_id,
             status="RESOLVED", valid_from="2020-01-01", valid_to="2022-01-01",
         )
+        second_pid = (await second.execute(text("SELECT pg_backend_pid()"))).scalar_one()
 
         async def competing_insert():
             second_started.set()
@@ -192,6 +193,24 @@ async def test_alias_overlap_guard_serializes_concurrent_resolved_inserts(test_e
 
         competing = asyncio.create_task(competing_insert())
         await second_started.wait()
+        # Prove the second backend is actually blocked on the advisory lock
+        # before releasing the first transaction; otherwise this is merely
+        # a sequential duplicate-insert test.
+        async with test_engine.connect() as observer:
+            waiting_on_lock = False
+            for _ in range(500):
+                wait_event = await observer.execute(
+                    text(
+                        "SELECT wait_event_type FROM pg_stat_activity "
+                        "WHERE pid = :pid"
+                    ),
+                    {"pid": second_pid},
+                )
+                if wait_event.scalar_one_or_none() == "Lock":
+                    waiting_on_lock = True
+                    break
+                await asyncio.sleep(0.01)
+        assert waiting_on_lock, "second insert never waited for the advisory lock"
         await first_tx.commit()
 
         with pytest.raises(DBAPIError) as exc_info:
