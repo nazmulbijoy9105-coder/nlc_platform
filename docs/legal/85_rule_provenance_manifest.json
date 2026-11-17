@@ -7,8 +7,8 @@
   "scoring_release_policy": "No rule is legally verified or score-releasable by inclusion in this manifest. Independent counsel approval and separate product release approval are mandatory.",
   "canonical_id_inventory": {
     "path": "docs/legal/legal_approval_register.yaml",
-    "source_revision": null,
-    "source_revision_status": "UNPINNED_REQUIRES_COMMIT_SHA"
+    "source_revision": "cefe6f169cd283d2e61071a3b7438657da04321e",
+    "source_revision_status": "PINNED"
   },
   "rules": [
     {
