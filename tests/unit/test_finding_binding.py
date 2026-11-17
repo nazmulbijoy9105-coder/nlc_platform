@@ -161,6 +161,26 @@ def test_datetime_effective_date_is_rejected():
 
 
 @pytest.mark.asyncio
+async def test_persistence_rejects_tampered_evidence_payload_before_insert():
+    session = MagicMock()
+    result = _build(required_fact_keys=["agm_held"])
+    result["evidence"][0]["fact_value_snapshot"] = True
+    with pytest.raises(ValueError, match="Evidence manifest digest"):
+        await persist_finding_binding(session, result)
+    assert not session.add.called
+
+
+@pytest.mark.asyncio
+async def test_persistence_rejects_tampered_finding_payload_before_insert():
+    session = MagicMock()
+    result = _build(required_fact_keys=["agm_held"])
+    result["binding"]["finding_snapshot"]["evaluation_state"] = "COMPLIANT"
+    with pytest.raises(ValueError, match="Finding snapshot digest"):
+        await persist_finding_binding(session, result)
+    assert not session.add.called
+
+
+@pytest.mark.asyncio
 async def test_persistence_flushes_in_caller_transaction_without_commit():
     session = MagicMock()
     session.flush = AsyncMock()
