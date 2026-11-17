@@ -10,6 +10,7 @@ evidence sufficiency, historical attribution, and scoring eligibility.
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql import JSONB
 
 revision = "0118_canonical_finding_evidence_binding"
 down_revision = "0117_canonical_registry_runtime_read"
@@ -30,6 +31,7 @@ def upgrade() -> None:
         sa.Column("evaluation_run_id", postgresql.UUID(as_uuid=True),
                   sa.ForeignKey("compliance_evaluation_runs.id", ondelete="RESTRICT"),
                   nullable=True),
+        sa.Column("jurisdiction", sa.String(32), nullable=False),
         sa.Column("source_namespace", sa.String(255), nullable=False),
         sa.Column("historical_rule_id", sa.String(100), nullable=False),
         sa.Column("resolution_status", sa.String(40), nullable=False),
@@ -58,13 +60,14 @@ def upgrade() -> None:
         sa.Column("evidence_status", sa.String(20), nullable=False,
                   server_default="MISSING"),
         sa.Column("evidence_manifest_hash", sa.String(64), nullable=False),
+        sa.Column("finding_snapshot", JSONB(), nullable=False),
         sa.Column("finding_snapshot_hash", sa.String(64), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False,
                   server_default=sa.text("now()")),
         sa.UniqueConstraint("compliance_flag_id",
                             name="uq_finding_binding_compliance_flag"),
         sa.CheckConstraint(
-            "length(btrim(source_namespace)) > 0 AND length(btrim(historical_rule_id)) > 0",
+            "length(btrim(jurisdiction)) > 0 AND length(btrim(source_namespace)) > 0 AND length(btrim(historical_rule_id)) > 0",
             name="ck_finding_binding_lookup_key_nonempty"),
         sa.CheckConstraint(
             "resolution_status IN ('RESOLVED','AMBIGUOUS','RETIRED','UNRESOLVED',"
@@ -132,6 +135,7 @@ def upgrade() -> None:
                   sa.ForeignKey("company_facts.id", ondelete="RESTRICT"), nullable=False),
         sa.Column("evidence_role", sa.String(80), nullable=False),
         sa.Column("fact_key", sa.String(120), nullable=False),
+        sa.Column("fact_value_snapshot", JSONB(), nullable=False),
         sa.Column("fact_value_hash", sa.String(64), nullable=False),
         sa.Column("trust_level", sa.String(40), nullable=False),
         sa.Column("verification_status", sa.String(20), nullable=False),
@@ -239,7 +243,7 @@ def upgrade() -> None:
         SET search_path = pg_catalog, public
         AS $function$
         DECLARE binding_company uuid; fact_company uuid; fact_document uuid;
-                fact_key_value text; fact_trust text; fact_status text;
+                fact_key_value text; fact_value_value jsonb; fact_trust text; fact_status text;
                 fact_observed date; fact_source text; fact_asserted uuid;
                 fact_uploader uuid; fact_uploaded timestamptz;
                 fact_verified_by uuid; fact_verified_at timestamptz;
@@ -247,10 +251,10 @@ def upgrade() -> None:
         BEGIN
             SELECT company_id INTO binding_company
               FROM public.compliance_finding_bindings WHERE id = NEW.binding_id;
-            SELECT company_id, document_id, fact_key, trust_level,
+            SELECT company_id, document_id, fact_key, fact_value, trust_level,
                    verification_status, observed_on, source_reference, asserted_by,
                    authorized_uploader_id, uploaded_at, verified_by, verified_at
-              INTO fact_company, fact_document, fact_key_value, fact_trust,
+              INTO fact_company, fact_document, fact_key_value, fact_value_value, fact_trust,
                    fact_status, fact_observed, fact_source, fact_asserted,
                    fact_uploader, fact_uploaded, fact_verified_by, fact_verified_at
               FROM public.company_facts WHERE id = NEW.company_fact_id;
@@ -258,7 +262,8 @@ def upgrade() -> None:
                OR binding_company IS DISTINCT FROM NEW.company_id THEN
                 RAISE EXCEPTION 'Finding evidence, fact and binding must share one company';
             END IF;
-            IF NEW.document_id IS DISTINCT FROM fact_document
+            IF NEW.fact_value_snapshot IS DISTINCT FROM fact_value_value
+               OR NEW.document_id IS DISTINCT FROM fact_document
                OR NEW.fact_key IS DISTINCT FROM fact_key_value
                OR NEW.trust_level IS DISTINCT FROM fact_trust
                OR NEW.verification_status IS DISTINCT FROM fact_status
