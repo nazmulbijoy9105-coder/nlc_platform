@@ -41,7 +41,7 @@ class ComplianceFindingBinding(Base):
             name="ck_finding_binding_resolution_status",
         ),
         CheckConstraint(
-            "attribution_status IN ('CURRENT_EVALUATION','ATTRIBUTED','UNATTRIBUTED','AMBIGUOUS','QUARANTINED')",
+            "attribution_status IN ('CURRENT_EVALUATION','UNATTRIBUTED','AMBIGUOUS','QUARANTINED')",
             name="ck_finding_binding_attribution_status",
         ),
         CheckConstraint(
