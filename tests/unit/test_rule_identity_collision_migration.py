@@ -109,3 +109,11 @@ def test_canonical_alias_registry_rejects_overlapping_resolved_mappings():
     # overlapping RESOLVED claim is rejected by the database trigger.
     assert "NEW.resolution_status <> 'RESOLVED'" in source
     assert "existing.resolution_status = 'RESOLVED'" in source
+
+
+def test_alias_overlap_guard_requires_read_committed_isolation():
+    migration = ROOT / "alembic" / "versions" / "0118_legal_rule_alias_overlap_guard.py"
+    source = migration.read_text(encoding="utf-8")
+    assert "current_setting('transaction_isolation')" in source
+    assert "READ COMMITTED" in source
+    assert "USING ERRCODE = '25000'" in source
