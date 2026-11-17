@@ -32,6 +32,9 @@ def _models():
         definition_json=DEFINITION,
         definition_hash=canonical_definition_hash(DEFINITION),
         approval_state="REVIEW_REQUIRED",
+        evaluator_name=None,
+        evaluator_version=None,
+        evaluator_artifact_hash=None,
     )
     return alias, identity, revision
 
