@@ -35,6 +35,10 @@ from .domain_event import DomainEventConsumption, DomainEventOutbox
 
 # ── Compliance (Flags, Score History, Events) ────────────────────────
 from .finding_evidence import ComplianceFindingBinding, ComplianceFindingEvidence
+from .governed_finding_context import (
+    LegalRuleFindingContext,
+    LegalRuleFindingContextReview,
+)
 from .compliance import (
     ComplianceEvent,
     ComplianceEvaluationRun,
@@ -162,6 +166,8 @@ __all__ = [
     "ComplianceEvent",
     "ComplianceFindingBinding",
     "ComplianceFindingEvidence",
+    "LegalRuleFindingContext",
+    "LegalRuleFindingContextReview",
     "ComplianceEvaluationRun",
     "ComplianceFlag",
     "ComplianceScoreHistory",
