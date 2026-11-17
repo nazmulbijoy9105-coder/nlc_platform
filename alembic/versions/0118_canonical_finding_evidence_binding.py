@@ -198,7 +198,8 @@ def upgrade() -> None:
         AS $function$
         DECLARE flag_company uuid; run_company uuid;
                 alias_canonical uuid; alias_namespace text; alias_rule text;
-                alias_start date; alias_end date; identity_jurisdiction text; identity_state text;
+                alias_start date; alias_end date; alias_state text;
+                identity_jurisdiction text; identity_state text;
                 revision_canonical uuid; revision_number_value integer;
                 revision_start date; revision_end date; revision_hash text;
                 revision_evaluator_name text; revision_evaluator_version text;
@@ -217,8 +218,8 @@ def upgrade() -> None:
                 END IF;
             END IF;
             IF NEW.resolution_status = 'RESOLVED' THEN
-                SELECT canonical_rule_id, source_namespace, historical_rule_id, valid_from, valid_to
-                  INTO alias_canonical, alias_namespace, alias_rule, alias_start, alias_end
+                SELECT canonical_rule_id, source_namespace, historical_rule_id, valid_from, valid_to, resolution_status
+                  INTO alias_canonical, alias_namespace, alias_rule, alias_start, alias_end, alias_state
                   FROM public.legal_rule_aliases WHERE id = NEW.alias_id;
                 SELECT jurisdiction, identity_status
                   INTO identity_jurisdiction, identity_state
@@ -233,6 +234,7 @@ def upgrade() -> None:
                    OR revision_canonical IS DISTINCT FROM NEW.canonical_rule_id
                    OR alias_namespace IS DISTINCT FROM NEW.source_namespace
                    OR alias_rule IS DISTINCT FROM NEW.historical_rule_id
+                   OR alias_state IS DISTINCT FROM 'RESOLVED'
                    OR revision_number_value IS DISTINCT FROM NEW.revision_number
                    OR identity_jurisdiction IS DISTINCT FROM NEW.jurisdiction
                    OR identity_state IS DISTINCT FROM 'ACTIVE'
