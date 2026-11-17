@@ -43,6 +43,9 @@ def test_risk_distribution_requires_user_and_active_membership_filter():
     assert "from compliance_evaluation_runs" in sql
     assert "lr.evaluation_status = 'completed'" in sql
     assert "c.updated_at <= c.last_evaluated_at" in sql
+    assert "lr.engine_version = :engine_version" in sql
+    assert "score_breakdown_snapshot ->> 'scoring_spec_version'" in sql
+    assert "score_breakdown_snapshot ->> 'score_reconciles'" in sql
     assert "else 'not_evaluated'::risk_band" in sql
     assert db.params[0] == {
         "user_id": str(user_id),
