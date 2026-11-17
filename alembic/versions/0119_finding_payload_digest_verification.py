@@ -45,10 +45,10 @@ def upgrade() -> None:
     op.execute("""
         CREATE FUNCTION public.nlc_verify_finding_binding_payloads()
         RETURNS trigger LANGUAGE plpgsql
-        SET search_path = pg_catalog, public
+        SET search_path = pg_catalog, public, extensions
         AS $function$
         BEGIN
-            IF encode(public.digest(convert_to(NEW.finding_snapshot_canonical, 'UTF8'), 'sha256'), 'hex')
+            IF encode(digest(convert_to(NEW.finding_snapshot_canonical, 'UTF8'), 'sha256'), 'hex')
                    IS DISTINCT FROM NEW.finding_snapshot_hash
                OR (NEW.finding_snapshot_canonical::jsonb -> 'finding')
                    IS DISTINCT FROM NEW.finding_snapshot THEN
