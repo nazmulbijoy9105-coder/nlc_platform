@@ -831,7 +831,7 @@ class PDFReportService:
         score_snapshot = await self.db.execute(
             select(ComplianceEvaluationRun)
             .where(ComplianceEvaluationRun.company_id == company.id)
-            .order_by(ComplianceEvaluationRun.calculated_at.desc())
+            .order_by(ComplianceEvaluationRun.calculated_at.desc(), ComplianceEvaluationRun.id.desc())
             .limit(1)
         )
         snapshot = score_snapshot.scalar_one_or_none()
