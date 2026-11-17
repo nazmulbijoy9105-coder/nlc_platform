@@ -75,13 +75,12 @@ async def resolve_from_registry(
             revisions=(),
         )
     if not source_namespace or not historical_rule_id or not jurisdiction:
-        return resolve_rule_identity(
+        return RuleResolution(
+            status="INVALID_LOOKUP_KEY",
             source_namespace=source_namespace,
             historical_rule_id=historical_rule_id,
             effective_date=effective_date,
-            aliases=(),
-            identities={},
-            revisions=(),
+            detail="Source namespace, historical rule ID and jurisdiction are required.",
         )
 
     try:
@@ -110,6 +109,17 @@ async def resolve_from_registry(
                 select(LegalRuleIdentity).where(LegalRuleIdentity.id.in_(identity_ids))
             )
         ).scalars().all()
+        if not identity_rows:
+            # Alias rows have a restrictive FK to identities. A missing target
+            # here therefore indicates an RLS/visibility problem, not a valid
+            # absent identity; do not misreport it as a clean "not found".
+            return RuleResolution(
+                status="REGISTRY_UNAVAILABLE",
+                source_namespace=source_namespace,
+                historical_rule_id=historical_rule_id,
+                effective_date=effective_date,
+                detail="Registry alias exists but its canonical identity is not visible to this database session.",
+            )
         identities = {str(row.id): _row_identity(row) for row in identity_rows}
 
         revision_rows = (
