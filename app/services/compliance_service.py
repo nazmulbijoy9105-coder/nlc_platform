@@ -955,7 +955,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
         result = await self.db.execute(
             select(ComplianceEvaluationRun)
             .where(ComplianceEvaluationRun.company_id == company_id)
-            .order_by(ComplianceEvaluationRun.calculated_at.desc())
+            .order_by(
+                ComplianceEvaluationRun.calculated_at.desc(),
+                ComplianceEvaluationRun.id.desc(),
+            )
             .limit(1)
         )
         return result.scalar_one_or_none()
