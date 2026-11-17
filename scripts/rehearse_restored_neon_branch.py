@@ -83,6 +83,23 @@ POST_MIGRATION_REQUIRED_COLUMNS = {
     "webhook_deliveries": (
         PRE_0042_REQUIRED_COLUMNS["webhook_deliveries"] | {"updated_at"}
     ),
+    "compliance_finding_bindings": {
+        "id", "company_id", "compliance_flag_id", "evaluation_run_id",
+        "jurisdiction", "source_namespace", "historical_rule_id",
+        "resolution_status", "attribution_status", "canonical_rule_id",
+        "alias_id", "revision_id", "effective_date", "revision_number",
+        "definition_hash", "evaluator_name", "evaluator_version",
+        "evaluator_artifact_hash", "evidence_status",
+        "evidence_manifest_hash", "finding_snapshot", "finding_snapshot_hash",
+        "created_at",
+    },
+    "compliance_finding_evidence": {
+        "id", "binding_id", "company_id", "company_fact_id", "evidence_role",
+        "fact_key", "fact_value_snapshot", "fact_value_hash", "trust_level",
+        "verification_status", "observed_on", "source_reference", "document_id",
+        "document_sha256", "asserted_by", "authorized_uploader_id", "uploaded_at",
+        "verified_by", "verified_at", "captured_at", "evidence_hash",
+    },
 }
 EVIDENCE_TABLES = (
     "agm_notice_evidence",
