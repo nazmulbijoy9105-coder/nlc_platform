@@ -19,14 +19,14 @@ def upgrade() -> None:
         CREATE FUNCTION public.prevent_legal_rule_alias_overlap()
         RETURNS trigger LANGUAGE plpgsql VOLATILE AS $alias_overlap$
         BEGIN
+            IF NEW.resolution_status <> 'RESOLVED' THEN
+                RETURN NEW;
+            END IF;
+
             IF current_setting('transaction_isolation') <> 'read committed' THEN
                 RAISE EXCEPTION
                     'Alias overlap guard requires READ COMMITTED isolation'
                     USING ERRCODE = '25000';
-            END IF;
-
-            IF NEW.resolution_status <> 'RESOLVED' THEN
-                RETURN NEW;
             END IF;
 
             PERFORM pg_advisory_xact_lock(
