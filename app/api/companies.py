@@ -424,7 +424,7 @@ def _evaluation_run_is_current(company, evaluation_run) -> bool:
     score_snapshot = getattr(evaluation_run, "score_breakdown_snapshot", None)
     return bool(
         not evaluation_run_integrity_problems(evaluation_run)
-        run_status == "COMPLETED"
+        and run_status == "COMPLETED"
         and evaluation_run.score is not None
         and run_band != "NOT_EVALUATED"
         and getattr(evaluation_run, "engine_version", None) == RULE_ENGINE_VERSION
