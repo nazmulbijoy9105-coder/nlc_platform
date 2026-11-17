@@ -1,4 +1,6 @@
-"""Statutory calendar must remain unavailable until legal approval is real."""
+"""Statutory calendar creation stays gated by registered product-owner releases."""
+
+import pytest
 
 from fastapi import HTTPException
 
@@ -38,22 +40,18 @@ def test_calendar_api_returns_unavailable_not_an_empty_no_deadline_claim(monkeyp
         calendar_api._require_calendar_release()
     except HTTPException as exc:
         assert exc.status_code == 503
-        assert "pending rule-level legal validation" in exc.detail
+        assert "No registered product-owner approved deadline manifest" in exc.detail
     else:
-        raise AssertionError("calendar endpoint must fail closed before legal approval")
+        raise AssertionError("calendar endpoint must fail closed before a product-owner deadline manifest")
 
 
-def test_customer_facing_dashboard_deadlines_fail_closed(monkeypatch):
+def test_customer_facing_dashboard_reads_only_persisted_deadline_events():
     import app.api.companies as companies_api
 
-    monkeypatch.setattr(companies_api, "calendar_manifest_is_released", lambda: False)
-    try:
-        companies_api._require_legal_dashboard_release(deadlines=True)
-    except HTTPException as exc:
-        assert exc.status_code == 503
-        assert "Statutory deadlines are unavailable" in exc.detail
-    else:
-        raise AssertionError("dashboard must not expose unapproved statutory deadlines")
+    # New events can only be written through the source/mapping/owner-release
+    # endpoint after a verified tenant fact is supplied. An empty result is
+    # reported separately; it is not interpreted as no statutory obligations.
+    companies_api._require_legal_dashboard_release(deadlines=True)
 
 
 def test_dashboard_risk_aggregates_fail_closed_until_score_release(monkeypatch):
@@ -83,7 +81,7 @@ def test_legacy_calendar_generator_cannot_emit_unverified_deadlines():
             )
         )
     except RuntimeError as exc:
-        assert "independently approved" in str(exc)
+        assert "product-owner deadline registry" in str(exc)
     else:
         raise AssertionError("legacy calendar generator must remain disabled")
 
@@ -149,6 +147,17 @@ def test_source_specific_penalty_service_requires_event_type_allowlist(monkeypat
         trigger_evidence_verified=True,
     ) == Decimal("100.00")
 
+    # The wrapper derives an omitted due date from the overdue interval.
+    assert calendar_service.calculate_rule_penalty(
+        rule,
+        event_type="FIRST_AGM",
+        days_overdue=20,
+        trigger_date=date(2026, 1, 1),
+        as_of=date(2026, 1, 21),
+        applicable=True,
+        trigger_evidence_verified=True,
+    ) == Decimal("100.00")
+
     # A registered rule is still rejected when the event is not applicable
     # or the caller mutates any source/formula field.
     assert calendar_service.calculate_rule_penalty(
@@ -206,3 +215,99 @@ def test_calendar_release_requires_exact_nonempty_approved_manifest(monkeypatch)
         assert exc.status_code == 503
     else:
         raise AssertionError("event-type/rule allowlists without a definition manifest must remain closed")
+
+
+@pytest.mark.asyncio
+async def test_customer_calendar_generation_uses_source_backed_definitions_and_tenant_facts(monkeypatch):
+    from types import SimpleNamespace
+    from uuid import uuid4
+
+    from app.api import calendar as calendar_module
+
+    company_id = uuid4()
+    definition_with_fact = SimpleNamespace(
+        id=uuid4(),
+        rule_id="AGM-001",
+        trigger_fact_key="incorporation_date",
+        event_type="FIRST_AGM",
+        period_label="AGM-001-2026",
+    )
+    definition_without_fact = SimpleNamespace(
+        id=uuid4(),
+        rule_id="AUD-001",
+        trigger_fact_key="auditor_appointment_date",
+        event_type="AUDITOR_APPOINTMENT",
+        period_label="AUD-001-2026",
+    )
+    fact = SimpleNamespace(id=uuid4())
+
+    class Result:
+        def __init__(self, rows=None, scalar=None):
+            self.rows = rows or []
+            self.scalar = scalar
+
+        def scalars(self):
+            return self
+
+        def all(self):
+            return self.rows
+
+        def scalar_one_or_none(self):
+            return self.scalar
+
+    class FakeDb:
+        def __init__(self):
+            self.call_count = 0
+
+        async def execute(self, statement):
+            self.call_count += 1
+            if self.call_count == 1:
+                return Result(rows=[definition_with_fact, definition_without_fact])
+            if self.call_count == 2:
+                return Result(scalar=fact)
+            if self.call_count == 3:
+                return Result(scalar=None)
+            raise AssertionError("unexpected database query")
+
+    class FakeCalendarService:
+        def __init__(self, db):
+            self.db = db
+
+        async def get_calendar(self, requested_company_id, include_past_days, include_future_days):
+            assert requested_company_id == company_id
+            assert include_past_days == 0
+            assert include_future_days == 3 * 366
+            return [{"event_id": "already-persisted"}]
+
+    seen = []
+
+    async def fake_preview_or_release_deadline(**kwargs):
+        seen.append(kwargs["definition_id"])
+        return {
+            "status": "PRODUCT_OWNER_RELEASED",
+            "customer_calendar_write": True,
+            "calendar_event_id": "fixture-event",
+        }
+
+    monkeypatch.setattr(
+        calendar_module,
+        "preview_or_release_deadline",
+        fake_preview_or_release_deadline,
+    )
+    monkeypatch.setattr(calendar_module, "ComplianceCalendarService", FakeCalendarService)
+
+    result = await calendar_module.generate_calendar(
+        company_id=company_id,
+        years_ahead=3,
+        db=FakeDb(),
+        current_user=SimpleNamespace(role="CLIENT_DIRECTOR"),
+    )
+
+    assert result["processed"] == 2
+    assert result["count"] == 1
+    assert result["without_trigger_fact"] == 1
+    assert result["results"][0]["status"] == "PRODUCT_OWNER_RELEASED"
+    assert result["results"][1]["status"] == "NO_TRIGGER_FACT"
+    assert seen == [definition_with_fact.id]
+    assert result["events"] == [{"event_id": "already-persisted"}]
+    assert result["no_obligation_inference"] is True

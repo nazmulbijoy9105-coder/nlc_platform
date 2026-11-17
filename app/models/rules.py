@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Enum,
@@ -21,6 +22,8 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -163,3 +166,146 @@ class LegalRuleVersion(UUIDPrimaryKeyMixin, Base):
 
     def __repr__(self) -> str:
         return f"<LegalRuleVersion {self.rule_id} v{self.version} @ {self.changed_at}>"
+
+
+class LegalRuleIdentity(Base):
+    """Permanent identity for one legally distinct compliance obligation.
+
+    This identity is deliberately separate from a mutable rule definition,
+    statutory citation, evaluator implementation, or legacy textual rule ID.
+    """
+    __tablename__ = "legal_rule_identities"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    jurisdiction: Mapped[str] = mapped_column(String(8), nullable=False)
+    obligation_key: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    identity_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="QUARANTINED",
+        server_default="QUARANTINED",
+    )
+    creation_basis: Mapped[str] = mapped_column(Text, nullable=False)
+    created_by: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    __table_args__ = (
+        CheckConstraint(
+            "identity_status IN ('ACTIVE', 'RETIRED', 'QUARANTINED')",
+            name="ck_legal_rule_identity_status",
+        ),
+        UniqueConstraint(
+            "obligation_key", name="uq_legal_rule_identity_obligation_key"
+        ),
+    )
+
+    aliases: Mapped[list["LegalRuleAlias"]] = relationship(
+        "LegalRuleAlias", back_populates="identity", lazy="raise"
+    )
+    revisions: Mapped[list["LegalRuleRevision"]] = relationship(
+        "LegalRuleRevision", back_populates="identity", lazy="raise"
+    )
+
+
+class LegalRuleAlias(Base):
+    """Source-namespaced historical identifier; collisions remain representable."""
+    __tablename__ = "legal_rule_aliases"
+    __table_args__ = (
+        CheckConstraint(
+            "resolution_status IN ('RESOLVED', 'AMBIGUOUS', 'UNRESOLVED', 'RETIRED')",
+            name="ck_legal_rule_alias_resolution_status",
+        ),
+        CheckConstraint(
+            "valid_to IS NULL OR valid_from IS NULL OR valid_to > valid_from",
+            name="ck_legal_rule_alias_validity",
+        ),
+        UniqueConstraint(
+            "source_namespace", "historical_rule_id", "canonical_rule_id",
+            name="uq_legal_rule_alias_source_historical_canonical",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    canonical_rule_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("legal_rule_identities.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    source_namespace: Mapped[str] = mapped_column(String(255), nullable=False)
+    historical_rule_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    resolution_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="UNRESOLVED",
+        server_default="UNRESOLVED",
+    )
+    mapping_basis: Mapped[str | None] = mapped_column(Text, nullable=True)
+    evidence_ref: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    evidence_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    valid_from: Mapped[date | None] = mapped_column(Date, nullable=True)
+    valid_to: Mapped[date | None] = mapped_column(Date, nullable=True)
+    approved_by: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default="now()"
+    )
+
+    identity: Mapped[LegalRuleIdentity] = relationship(
+        "LegalRuleIdentity", back_populates="aliases", lazy="raise"
+    )
+
+
+class LegalRuleRevision(Base):
+    """Immutable, effective-dated legal/evaluator definition for an identity."""
+    __tablename__ = "legal_rule_revisions"
+    __table_args__ = (
+        CheckConstraint(
+            "effective_to IS NULL OR effective_to > effective_from",
+            name="ck_legal_rule_revision_effective_interval",
+        ),
+        CheckConstraint(
+            "revision_number > 0", name="ck_legal_rule_revision_positive"
+        ),
+        UniqueConstraint(
+            "canonical_rule_id", "revision_number",
+            name="uq_legal_rule_revision_number",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    canonical_rule_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("legal_rule_identities.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    revision_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    effective_from: Mapped[date] = mapped_column(Date, nullable=False)
+    effective_to: Mapped[date | None] = mapped_column(Date, nullable=True)
+    legal_source_revision_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    provision_reference: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    definition_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    definition_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    evaluator_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    evaluator_version: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    evaluator_artifact_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    approval_state: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="REVIEW_REQUIRED",
+        server_default="REVIEW_REQUIRED",
+    )
+    approval_evidence: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default="'{}'::jsonb"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default="now()"
+    )
+
+    identity: Mapped[LegalRuleIdentity] = relationship(
+        "LegalRuleIdentity", back_populates="revisions", lazy="raise"
+    )

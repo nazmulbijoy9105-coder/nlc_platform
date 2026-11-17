@@ -272,8 +272,10 @@ class ComplianceCalendarService:
         include_past_days: int = 365,
         include_future_days: int = 365,
     ) -> list[dict]:
-        if not calendar_manifest_is_released():
-            return []
+        # Reading already-persisted company events is safe. New statutory
+        # calendar writes are handled by the source/version/evidence-bound
+        # product-owner release path; an empty calendar is not proof that no
+        # statutory obligation exists.
         result = await self.db.execute(
             select(Company).where(Company.id == company_id)
         )
@@ -337,7 +339,7 @@ def calculate_rule_penalty(
     *,
     event_type: str,
     days_overdue: int,
-    due_date: date,
+    due_date: date | None = None,
     trigger_date: date,
     as_of: date,
     applicable: bool,
@@ -351,6 +353,8 @@ def calculate_rule_penalty(
         or (event_type, rule) not in APPROVED_PENALTY_RULES
     ):
         return None
+    if due_date is None:
+        due_date = as_of - timedelta(days=days_overdue)
     return calculate_approved_penalty(
         rule,
         days_overdue=days_overdue,

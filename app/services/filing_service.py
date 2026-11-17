@@ -6,7 +6,7 @@ Implements _create_agm, _update_agm, _get_agm_response stubs
 and equivalent functions for Audit and AnnualReturn.
 
 These three tables feed directly into the rule engine evaluation.
-Every create/update triggers a score re-evaluation via background task.
+Every scoring-input create/update invalidates the cached score and publishes its domain event.
 """
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ from app.models.company import Company
 from app.models.filings import AGM, AnnualReturn, Audit
 from app.models.infrastructure import StatutoryRegister
 from app.services.base import BaseService
+from app.services.score_invalidation import invalidate_company_score
 
 if TYPE_CHECKING:
     import uuid
@@ -116,6 +117,7 @@ class AGMService(BaseService[AGM]):
             is_default=is_default,
             delay_days=delay_days,
         )
+        await invalidate_company_score(self.db, company_id)
         from app.services.domain_events import DomainEventType, publish_domain_event
         await publish_domain_event(
             self.db, company_id=company_id,
@@ -253,6 +255,7 @@ class AGMService(BaseService[AGM]):
             delay_days=delay_days,
         )
         if updated_agm is not None:
+            await invalidate_company_score(self.db, updated_agm.company_id)
             from app.services.domain_events import DomainEventType, publish_domain_event
             await publish_domain_event(
                 self.db, company_id=updated_agm.company_id,
@@ -330,7 +333,7 @@ class AuditService(BaseService[Audit]):
             # Calculate delay relative to FY end (approximate)
             pass  # Will be calculated by rule engine from AGM date
 
-        return await self.create(
+        audit = await self.create(
             company_id=company_id,
             financial_year=financial_year,
             auditor_name=auditor_name,
@@ -347,6 +350,8 @@ class AuditService(BaseService[Audit]):
             report_qualified=report_qualified,
             qualification_notes=qualification_notes,
         )
+        await invalidate_company_score(self.db, company_id)
+        return audit
 
     async def get_for_company(
         self,
@@ -384,7 +389,7 @@ class AuditService(BaseService[Audit]):
         audit = await self.get_by_id(audit_id)
         if not audit:
             return None
-        return await self.update_instance(
+        updated = await self.update_instance(
             audit,
             audit_complete=True,
             audit_signed_date=signed_date,
@@ -395,6 +400,9 @@ class AuditService(BaseService[Audit]):
             report_qualified=report_qualified,
             qualification_notes=qualification_notes,
         )
+        if updated is not None:
+            await invalidate_company_score(self.db, updated.company_id)
+        return updated
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -421,8 +429,11 @@ class AnnualReturnService(BaseService[AnnualReturn]):
         """
         Create an annual return record.
         Auto-calculates is_default and delay_days.
-        Section 190 CA 1994: file within 30 days of AGM date.
+        Section 36 and Schedule X: file within 21 days of AGM date.
         """
+        if filing_deadline is None and agm_date is not None:
+            filing_deadline = self.calculate_filing_deadline(agm_date)
+
         is_default = False
         delay_days = 0
 
@@ -447,6 +458,7 @@ class AnnualReturnService(BaseService[AnnualReturn]):
             filing_fee_paid_bdt=filing_fee_paid_bdt,
             late_fee_paid_bdt=late_fee_paid_bdt,
         )
+        await invalidate_company_score(self.db, company_id)
         from app.services.domain_events import DomainEventType, publish_domain_event
         await publish_domain_event(
             self.db, company_id=company_id,
@@ -486,6 +498,7 @@ class AnnualReturnService(BaseService[AnnualReturn]):
             .where(
                 AnnualReturn.company_id == company_id,
                 AnnualReturn.is_default,
+                AnnualReturn.filed_date.is_(None),
             )
         )
         return result.scalar_one()
@@ -499,8 +512,9 @@ class AnnualReturnService(BaseService[AnnualReturn]):
         late_fee_paid_bdt: float | None = None,
         is_complete: bool = True,
         missing_attachments: str | None = None,
+        submitted_by: uuid.UUID | None = None,
     ) -> AnnualReturn | None:
-        """Mark an annual return as filed."""
+        """Record a user-submitted filing claim; independent verification is separate."""
         annual_return = await self.get_by_id(return_id)
         if not annual_return:
             return None
@@ -521,8 +535,14 @@ class AnnualReturnService(BaseService[AnnualReturn]):
             late_fee_paid_bdt=late_fee_paid_bdt,
             is_complete=is_complete,
             missing_attachments=missing_attachments,
+            filing_status_submitted_by=submitted_by,
+            filing_status_verified=False,
+            filing_status_evidence_ref=None,
+            filing_status_verified_at=None,
+            filing_status_verified_by=None,
         )
         if updated_return is not None:
+            await invalidate_company_score(self.db, updated_return.company_id)
             from app.services.domain_events import DomainEventType, publish_domain_event
             await publish_domain_event(
                 self.db, company_id=updated_return.company_id,
@@ -536,7 +556,7 @@ class AnnualReturnService(BaseService[AnnualReturn]):
 
     @staticmethod
     def calculate_filing_deadline(agm_date: date) -> date:
-        """Section 190: Annual return due within 30 days of AGM."""
+        """Section 36 and Schedule X: annual return due within 21 days of AGM."""
         return agm_date + timedelta(days=21)
 
 
@@ -557,7 +577,7 @@ class StatutoryRegisterService(BaseService[StatutoryRegister]):
         location: str | None = None,
         notes: str | None = None,
     ) -> StatutoryRegister:
-        return await self.create(
+        entry = await self.create(
             company_id=company_id,
             register_type=register_type,
             is_maintained=is_maintained,
@@ -565,6 +585,8 @@ class StatutoryRegisterService(BaseService[StatutoryRegister]):
             location=location,
             notes=notes,
         )
+        await invalidate_company_score(self.db, company_id)
+        return entry
 
     async def get_for_company(self, company_id: uuid.UUID) -> list[StatutoryRegister]:
         result = await self.db.execute(
@@ -597,4 +619,7 @@ class StatutoryRegisterService(BaseService[StatutoryRegister]):
         if notes is not None:
             updates["notes"] = notes  # type: ignore
 
-        return await self.update_instance(entry, **updates)
+        updated = await self.update_instance(entry, **updates)
+        if updated is not None:
+            await invalidate_company_score(self.db, updated.company_id)
+        return updated

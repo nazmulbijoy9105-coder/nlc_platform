@@ -7,6 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from app.main import (
     AccessLogMiddleware,
     RequestIDMiddleware,
+    RedactedUnhandledExceptionMiddleware,
     SecurityHeadersMiddleware,
     create_app,
     http_exception_handler,
@@ -46,6 +47,7 @@ def test_create_app_registers_health_rjsc_and_root_routes():
         RequestIDMiddleware,
         AccessLogMiddleware,
         SecurityHeadersMiddleware,
+        RedactedUnhandledExceptionMiddleware,
     }.issubset(middleware)
 
 
@@ -86,3 +88,39 @@ def test_unhandled_exception_handler_does_not_expose_exception_text():
     assert response.status_code == 500
     assert b"secret database password" not in response.body
     assert b"request-test-123" in response.body
+
+
+
+def test_redacted_exception_middleware_never_returns_request_secrets():
+    async def failing_app(scope, receive, send):
+        raise RuntimeError("Bearer sensitive-test-token must not escape")
+
+    middleware = RedactedUnhandledExceptionMiddleware(failing_app)
+    sent = []
+
+    async def receive():
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    async def send(message):
+        sent.append(message)
+
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "method": "POST",
+        "path": "/api/v1/companies/example/evaluate",
+        "headers": [(b"authorization", b"Bearer sensitive-test-token")],
+        "state": {"request_id": "redaction-test-request"},
+    }
+    asyncio.run(middleware(scope, receive, send))
+
+    response_start = next(item for item in sent if item["type"] == "http.response.start")
+    response_body = b"".join(
+        item.get("body", b"") for item in sent if item["type"] == "http.response.body"
+    )
+    response_headers = dict(response_start["headers"])
+
+    assert response_start["status"] == 500
+    assert b"sensitive-test-token" not in response_body
+    assert response_headers[b"x-request-id"] == b"redaction-test-request"
+    assert response_headers[b"cache-control"].startswith(b"no-store")

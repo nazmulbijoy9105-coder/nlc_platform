@@ -4,6 +4,12 @@
 jurisdiction: BD
 snapshot_date: 2026-11-11
 approval_policy: fail_closed
+# NLC independent Bangladesh-counsel verification register — snapshot 2026-11-13
+# Product-owner approvals are recorded separately in docs/product/product_rule_approval_register.yaml.
+# Only a rule-specific independent counsel disposition may change this register.
+jurisdiction: BD
+snapshot_date: 2026-11-13
+approval_policy: independent_counsel_only
 approved_rule_ids: []
 rules:
   - rule_id: ACC-001

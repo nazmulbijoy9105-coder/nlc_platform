@@ -24,6 +24,8 @@ from datetime import date, timedelta
 
 import pytest
 
+import app.rule_engine.engine as engine_module
+
 from app.rule_engine.engine import (
     ApplicabilityState,
     ChargeEvent,
@@ -41,6 +43,13 @@ from tests.conftest import (
 
 # All tests in this file are unit tests
 pytestmark = [pytest.mark.unit, pytest.mark.rule]
+
+
+@pytest.fixture(autouse=True)
+def _synthetic_complete_legal_release_for_engine_mechanics(monkeypatch):
+    """Exercise scoring mechanics only under an isolated complete-release fixture."""
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", engine_module.PRODUCT_SCORING_RULE_IDS)
 
 
 # =============================================================================
@@ -450,7 +459,15 @@ class TestAnnualReturnRules:
             annual_return_content_complete=True,
         )
         output = rule_engine.evaluate(profile)
-        for rule_id in ["AR-001", "AR-002", "AR-003", "AR-004"]:
+        # A self-reported filing is not authenticated RJSC evidence. It must
+        # remain UNKNOWN / NOT_EVALUATED rather than being treated as a
+        # verified default or silently promoted to verified compliance.
+        ar001 = [flag for flag in output.flags if flag.rule_id == "AR-001"]
+        assert len(ar001) == 1
+        assert ar001[0].state.value == "UNKNOWN"
+        assert ar001[0].severity.value == "NOT_EVALUATED"
+        assert ar001[0].score_impact == 0
+        for rule_id in ["AR-002", "AR-003", "AR-004"]:
             assert_flag_not_triggered(output, rule_id)
 
 
@@ -912,7 +929,13 @@ class TestEscalationRules:
         assert_flag_triggered(output, "ESC-002")
 
     @pytest.mark.black
-    def test_ESC002_does_not_force_black_without_authorized_override(self, rule_engine, black_band_profile):
+    def test_ESC002_does_not_force_black_without_authorized_override(self, monkeypatch, rule_engine, black_band_profile):
+        import app.rule_engine.engine as engine_module
+        candidate = rule_engine.evaluate(black_band_profile)
+        controlled_ids = frozenset(flag.rule_id for flag in candidate.flags)
+        monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+        monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", controlled_ids)
+        monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", controlled_ids)
         output = rule_engine.evaluate(black_band_profile)
         # ESC-002 or ESC-003 should force BLACK
         has_black_override = any(
@@ -945,6 +968,7 @@ class TestEscalationRules:
 
 
     def test_ESC003_counts_only_active_black_flags(self, monkeypatch, rule_engine, build_profile):
+        import app.rule_engine.engine as engine_module
         """ESC-003 uses same filter as _calculate_score for counting BLACK flags.
 
         _run_escalation_rules must filter on not resolved and conditional_applies,
@@ -969,6 +993,11 @@ class TestEscalationRules:
             directors_verified_at=date.today(),
             directors_verified_by="reviewer-001",
         )
+        candidate = rule_engine.evaluate(profile)
+        controlled_ids = frozenset(flag.rule_id for flag in candidate.flags)
+        monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+        monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", controlled_ids)
+        monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", controlled_ids)
         output = rule_engine.evaluate(profile)
 
         # ESC-003 is an escalation marker, not a score-bearing finding.
@@ -1165,43 +1194,75 @@ class TestLabourRules:
         assert not_applicable.reason
         assert unknown.reason
 
-    def test_LBR001_triggers_only_for_confirmed_manufacturing(self, rule_engine, build_profile):
-        profile = build_profile(is_manufacturing=True, factory_license_obtained=False)
-        output = rule_engine.evaluate(profile)
-        # Manufacturing status alone does not establish a Section 326 licence duty.
-        assert_flag_not_triggered(output, "LBR-001")
-
-    @pytest.mark.parametrize("manufacturing_status", [False, None])
-    def test_LBR001_does_not_trigger_when_manufacturing_not_established(
+    @pytest.mark.parametrize("manufacturing_status", [True, False, None])
+    def test_LBR001_requires_verified_establishment_scope_not_manufacturing(
         self, rule_engine, build_profile, manufacturing_status
+    ):
+        output = rule_engine.evaluate(
+            build_profile(is_manufacturing=manufacturing_status)
+        )
+        finding = next(f for f in output.flags if f.rule_id == "LBR-001")
+        assert finding.flag_code == "LABOUR_LICENSE_SCOPE_NOT_VERIFIED"
+        assert finding.eval_state == "UNKNOWN"
+        assert finding.score_impact == 0
+
+    def test_LBR001_verified_no_licence_requirement_is_not_applicable(
+        self, rule_engine, build_profile
     ):
         output = rule_engine.evaluate(build_profile(
-            is_manufacturing=manufacturing_status,
-            factory_license_obtained=False,
+            labour_establishment_category="SERVICE_OFFICE_NOT_IN_RULE_354_CATEGORIES",
+            labour_license_scope_verified=True,
+            labour_license_scope_evidence_ref="LEGAL-SCOPE-TEST-001",
+            labour_license_scope_verified_at=date(2026, 11, 10),
+            labour_license_scope_verified_by="reviewer",
+            factory_license_required_by_direction=False,
         ))
         assert_flag_not_triggered(output, "LBR-001")
-
-    def test_LBR002_triggers_only_for_confirmed_manufacturing(self, rule_engine, build_profile):
-        profile = build_profile(
-            is_manufacturing=True,
-            factory_license_obtained=True,
-            factory_license_expiry=date.today() - timedelta(days=30),
-        )
-        output = rule_engine.evaluate(profile)
-        # Licence expiry is not a breach without verified statutory applicability.
         assert_flag_not_triggered(output, "LBR-002")
 
-    @pytest.mark.parametrize("manufacturing_status", [False, None])
-    def test_LBR002_does_not_trigger_when_manufacturing_not_established(
-        self, rule_engine, build_profile, manufacturing_status
+    def test_LBR001_verified_missing_licence_requires_lawyer_review(
+        self, rule_engine, build_profile
     ):
-        profile = build_profile(
-            is_manufacturing=manufacturing_status,
+        output = rule_engine.evaluate(build_profile(
+            is_manufacturing=False,
+            labour_establishment_category="COMMERCIAL_ESTABLISHMENT",
+            labour_license_scope_verified=True,
+            labour_license_scope_evidence_ref="LEGAL-SCOPE-TEST-002",
+            labour_license_scope_verified_at=date(2026, 11, 10),
+            labour_license_scope_verified_by="reviewer",
+            factory_license_required_by_direction=True,
+            labour_license_status_verified=True,
+            labour_license_status_evidence_ref="DIFE-SEARCH-TEST-002",
+            labour_license_status_verified_at=date(2026, 11, 12),
+            labour_license_status_verified_by="reviewer",
+            factory_license_obtained=False,
+        ))
+        finding = next(f for f in output.flags if f.rule_id == "LBR-001")
+        assert finding.state is RuleState.REQUIRES_LAWYER_JUDGMENT
+        assert finding.severity is Severity.NOT_EVALUATED
+        assert finding.score_impact == 0
+
+    def test_LBR002_uses_printed_expiry_without_computing_term(
+        self, rule_engine, build_profile
+    ):
+        output = rule_engine.evaluate(build_profile(
+            labour_establishment_category="CONTRACTOR_ESTABLISHMENT",
+            labour_license_scope_verified=True,
+            labour_license_scope_evidence_ref="LEGAL-SCOPE-TEST-003",
+            labour_license_scope_verified_at=date(2026, 11, 10),
+            labour_license_scope_verified_by="reviewer",
+            factory_license_required_by_direction=True,
+            labour_license_status_verified=True,
+            labour_license_status_evidence_ref="DIFE-LICENCE-TEST-003",
+            labour_license_status_verified_at=date(2026, 11, 12),
+            labour_license_status_verified_by="reviewer",
             factory_license_obtained=True,
-            factory_license_expiry=date.today() - timedelta(days=30),
-        )
-        output = rule_engine.evaluate(profile)
-        assert_flag_not_triggered(output, "LBR-002")
+            factory_license_expiry=date(2026, 10, 31),
+        ))
+        finding = next(f for f in output.flags if f.rule_id == "LBR-002")
+        assert finding.state is RuleState.REQUIRES_LAWYER_JUDGMENT
+        assert finding.detail["renewal_term_calculated_automatically"] is False
+        assert finding.score_impact == 0
 
     def test_LBR003_court_order_is_not_gated_by_factory_status(self, rule_engine, build_profile):
         profile = build_profile(
@@ -1212,7 +1273,15 @@ class TestLabourRules:
         assert_flag_triggered(output, "LBR-003")
 
     def test_no_labour_flags_when_compliant(self, rule_engine, build_profile):
-        profile = build_profile(is_manufacturing=True)
+        profile = build_profile(
+            is_manufacturing=False,
+            labour_establishment_category="SERVICE_OFFICE_NOT_IN_RULE_354_CATEGORIES",
+            labour_license_scope_verified=True,
+            labour_license_scope_evidence_ref="LEGAL-SCOPE-TEST-004",
+            labour_license_scope_verified_at=date(2026, 11, 10),
+            labour_license_scope_verified_by="reviewer",
+            factory_license_required_by_direction=False,
+        )
         output = rule_engine.evaluate(profile)
         flag_ids = [f.rule_id for f in output.flags]
         assert "LBR-001" not in flag_ids
@@ -1272,8 +1341,12 @@ class TestEngineIntegrity:
         assert output.score_breakdown.final_score == 100  # all generated findings remain UNKNOWN without sufficient evidence
         assert output.score_breakdown.override_applied is False
 
-    def test_score_never_exceeds_100_with_no_flags(self, rule_engine, build_profile):
-        """A complete, finding-free profile receives the released product score."""
+    def test_score_never_exceeds_100_with_no_flags(self, monkeypatch, rule_engine, build_profile):
+        """A complete, finding-free profile receives a score in an explicit controlled fixture."""
+        import app.rule_engine.engine as engine_module
+        monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+        monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+        monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
         profile = build_profile()
         output = rule_engine.evaluate(profile)
         assert output.score_breakdown.final_score == 100
@@ -1281,6 +1354,10 @@ class TestEngineIntegrity:
 
     def test_product_score_does_not_force_black_without_authorized_override(self, monkeypatch, rule_engine, build_profile):
         """Product deductions do not force BLACK without a separately authorised override."""
+        import app.rule_engine.engine as engine_module
+        monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+        monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
+        monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
         monkeypatch.setattr(
             "app.rule_engine.engine.AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset()
         )
@@ -1496,16 +1573,16 @@ class TestUntestedRules:
         assert_flag_triggered(rule_engine.evaluate(build_profile(investigation_order=True)), "ESC-005")
 
     def test_BSEC001_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, bsec_quarterly_report_filed=False)), "BSEC-001")
+        assert_flag_triggered(rule_engine.evaluate(build_profile(company_type="PUBLIC_LIMITED", bsec_listed=True, bsec_quarterly_report_filed=False)), "BSEC-001")
 
     def test_BSEC002_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, cg_certificate_obtained=False)), "BSEC-002")
+        assert_flag_triggered(rule_engine.evaluate(build_profile(company_type="PUBLIC_LIMITED", bsec_listed=True, cg_certificate_obtained=False)), "BSEC-002")
 
     def test_BSEC003_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, board_independent_director=False)), "BSEC-003")
+        assert_flag_triggered(rule_engine.evaluate(build_profile(company_type="PUBLIC_LIMITED", bsec_listed=True, board_independent_director=False)), "BSEC-003")
 
     def test_BSEC004_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(bsec_listed=True, audit_committee_established=False)), "BSEC-004")
+        assert_flag_triggered(rule_engine.evaluate(build_profile(company_type="PUBLIC_LIMITED", bsec_listed=True, audit_committee_established=False)), "BSEC-004")
 
     def test_FX001_triggers(self, rule_engine, build_profile):
         assert_flag_triggered(rule_engine.evaluate(build_profile(foreign_exchange_violation=True)), "FX-001")
@@ -1544,7 +1621,11 @@ class TestVerdictRegression:
         output = rule_engine.evaluate(profile, today=date(2026, 10, 1))
         assert_flag_triggered(output, "TAX-003")
 
-    def test_product_eligible_red_flag_escalates_band(self, rule_engine, build_profile):
+    def test_product_eligible_red_flag_escalates_band(self, monkeypatch, rule_engine, build_profile):
+        import app.rule_engine.engine as engine_module
+        monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+        monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"TL-002"}))
+        monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"TL-002"}))
         profile = build_profile(trade_license_expiry=date.today() - timedelta(days=100))
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "TL-002")
@@ -1577,6 +1658,7 @@ def test_black_override_requires_separate_authorization(
     )
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
     monkeypatch.setattr(
         engine_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset()
     )

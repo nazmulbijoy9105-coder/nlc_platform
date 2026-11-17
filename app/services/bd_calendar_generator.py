@@ -2,9 +2,9 @@
 
 The former implementation emitted hard-coded AGM and tax dates without
 rule-level approval, company-specific applicability, temporal-law versioning,
-holiday/extension checks or verified event provenance. Customer-facing
-calendar generation is now owned by ComplianceCalendarService and remains
-unavailable until the independent legal release gate is opened.
+holiday/extension checks or verified event provenance. Customer-facing deadline persistence is now controlled by the source-backed
+product-owner workflow and verified tenant facts. This compatibility shim must
+not emit hard-coded dates.
 """
 from datetime import date
 from typing import NoReturn
@@ -28,5 +28,5 @@ class BDCalendarGenerator:
     ) -> NoReturn:
         raise RuntimeError(
             "Legacy BDCalendarGenerator is disabled: statutory calendar events "
-            "require the independently approved ComplianceCalendarService release gate."
+            "must use the source-backed product-owner deadline registry and verified tenant facts."
         )

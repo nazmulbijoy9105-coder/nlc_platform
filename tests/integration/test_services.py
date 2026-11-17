@@ -17,7 +17,7 @@ Coverage:
 from __future__ import annotations
 
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
@@ -218,7 +218,9 @@ class TestComplianceService:
         # immediately at fixture construction instead of deep in persistence.
         from app.rule_engine.engine import (
             ExposureBand,
+            ComplianceFlag,
             RevenueTier,
+            RuleState,
             ScoreBreakdown,
             Severity,
         )
@@ -253,8 +255,19 @@ class TestComplianceService:
             coverage=1.0,
             revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
         )
+        review_finding = ComplianceFlag(
+            rule_id="AGM-001",
+            flag_code="AGM_TEST",
+            severity=Severity.RED,
+            score_impact=10,
+            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+            description="Controlled evidence review fixture",
+            statutory_basis="Test fixture only",
+            state=RuleState.NON_COMPLIANT,
+            eval_state="VIOLATION",
+        )
         mock_output = SimpleNamespace(
-            flags=[],
+            flags=[review_finding],
             engine_version="test-engine-v1",
             ilrmf_version="test-ilrmf-v1",
             score_breakdown=score_breakdown,
@@ -270,15 +283,21 @@ class TestComplianceService:
         )
 
         assert result is not None
-        # The product-controlled scoring release exposes the deterministic score.
-        assert result["score"] == 90
-        assert result["risk_band"] == "GREEN"
+        # Findings are evaluated and persisted, but statutory scores are not
+        # published until both product release and independent legal review exist.
+        assert result["score"] is None
+        assert result["risk_band"] == "NOT_EVALUATED"
+        assert result["legal_evaluation_status"] == "NOT_EVALUATED_PRODUCT_SCORING_DISABLED"
+        assert len(result["review_findings"]) == 1
+        assert result["review_findings"][0]["rule_id"] == "AGM-001"
+        assert result["review_findings"][0]["score_impact_applied"] == 0
+        assert "No statutory conclusion" in result["review_findings"][0]["message"]
         mock_engine.evaluate.assert_called_once()
 
         # The evaluation-run JSONB snapshot persists the full score contract,
         # including category deductions; no schema migration is required.
         from sqlalchemy import select
-        from app.models.compliance import ComplianceEvaluationRun
+        from app.models.compliance import ComplianceEvaluationRun, ComplianceScoreHistory, ComplianceFlag
 
         persisted_result = await db.execute(
             select(ComplianceEvaluationRun)
@@ -287,7 +306,44 @@ class TestComplianceService:
             .limit(1)
         )
         persisted_run = persisted_result.scalar_one()
-        assert persisted_run.score_breakdown_snapshot["category_deductions"] == {}
+        assert persisted_run.score_breakdown_snapshot is None
+        assert len(persisted_run.flags_snapshot) == 1
+        assert persisted_run.flags_snapshot[0]["scoring_status"] == "LEGAL_SCORE_NOT_RELEASED"
+        assert persisted_run.flags_snapshot[0]["score_impact_applied"] == 0
+        assert persisted_run.score is None
+        assert persisted_run.risk_band == "NOT_EVALUATED"
+        assert len(persisted_run.flags_snapshot) == 1
+        assert persisted_run.flags_snapshot[0]["scoring_status"] == "LEGAL_SCORE_NOT_RELEASED"
+        assert persisted_run.flags_snapshot[0]["score_impact_applied"] == 0
+        # Immutable evaluation evidence preserves the engine's internal raw label;
+        # customer-facing ComplianceFlag rows and API serializers must redact it.
+        assert persisted_run.flags_snapshot[0]["severity"] == "RED"
+
+        persisted_flag_result = await db.execute(
+            select(ComplianceFlag).where(
+                ComplianceFlag.company_id == db_company.id,
+                ComplianceFlag.rule_id == "AGM-001",
+                ComplianceFlag.flag_status == "ACTIVE",
+            )
+        )
+        persisted_flag = persisted_flag_result.scalar_one()
+        assert str(persisted_flag.severity.value if hasattr(persisted_flag.severity, "value") else persisted_flag.severity) == "NOT_EVALUATED"
+        assert persisted_flag.score_impact == 0
+        assert "verification pending" in persisted_flag.statutory_basis.lower()
+        assert "No legal conclusion" in persisted_flag.description
+
+        history_result = await db.execute(
+            select(ComplianceScoreHistory)
+            .where(ComplianceScoreHistory.company_id == db_company.id)
+            .order_by(ComplianceScoreHistory.calculated_at.desc())
+            .limit(1)
+        )
+        history = history_result.scalar_one()
+        assert history.score is None
+        assert str(history.risk_band.value if hasattr(history.risk_band, "value") else history.risk_band) == "NOT_EVALUATED"
+        await db.refresh(db_company)
+        assert db_company.current_compliance_score is None
+        assert str(db_company.current_risk_band.value if hasattr(db_company.current_risk_band, "value") else db_company.current_risk_band) == "NOT_EVALUATED"
 
 
 # =============================================================================
@@ -735,17 +791,710 @@ class TestRulesService:
         rules = await svc.get_all()
         assert len(rules) >= 75, "integration test setup must seed the complete legal-rule catalogue"
 
-        # Update OFF-001 (lowest impact — safest to test with)
-        await svc.get_by_rule_id("OFF-001")
+        # Update OFF-001 using the exact version read by the administrator.
+        current = await svc.get_by_rule_id("OFF-001")
+        assert current is not None
+        old_version = current.rule_version
 
-        await svc.update_rule(
+        updated = await svc.update_rule(
             rule_id="OFF-001",
             description="Updated description for testing",
             change_reason="Integration test — verifying version snapshot creation",
             changed_by=db_super_admin.id,
+            expected_version=old_version,
         )
+        assert updated is not None
+        major, minor = old_version.split(".")
+        assert updated.rule_version == f"{major}.{int(minor) + 1}"
 
-        # Verify version history exists
+        # The immutable snapshot must contain the exact pre-change version.
         history = await svc.get_version_history("OFF-001")
         assert len(history) >= 1
         assert history[0].rule_id == "OFF-001"
+        assert history[0].version == old_version
+        assert history[0].previous_definition["description"] != updated.description
+
+    @pytest.mark.asyncio
+    async def test_update_rule_rejects_stale_expected_version_without_snapshot(self, db, db_super_admin):
+        from app.models.database import set_rls_context
+        from app.services.rules_service import RulesService as LegalRuleService
+
+        await set_rls_context(db, str(db_super_admin.id))
+        svc = LegalRuleService(db)
+        rule = await svc.get_by_rule_id("OFF-001")
+        assert rule is not None
+        stale_version = "0.0"
+        before = len(await svc.get_version_history("OFF-001"))
+
+        with pytest.raises(ValueError, match="Stale rule version"):
+            await svc.update_rule(
+                rule_id="OFF-001",
+                description="This stale write must not be applied",
+                change_reason="Integration test — stale version must be rejected",
+                changed_by=db_super_admin.id,
+                expected_version=stale_version,
+            )
+
+        after = len(await svc.get_version_history("OFF-001"))
+        unchanged = await svc.get_by_rule_id("OFF-001")
+        assert after == before
+        assert unchanged.description == rule.description
+
+
+
+# =============================================================================
+# PAUSED SCORE RELEASE: FINDING, ALLOCATION AND RESCUE-PLANNER CONTRACTS
+# =============================================================================
+
+def test_score_allocation_uses_product_allowlist_and_excludes_unknown_findings(monkeypatch):
+    import app.rule_engine.engine as engine_module
+    from app.rule_engine.engine import RuleState
+    from app.services.compliance_service import _applied_score_impacts
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001", "AUD-001"}))
+    # Model a complete, independently counsel-approved test catalogue.
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS",
+        frozenset({"AGM-001", "AUD-001"}),
+    )
+    confirmed = SimpleNamespace(
+        rule_id="AUD-001",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+        resolved=False,
+        conditional_applies=True,
+        severity="RED",
+        score_impact=15,
+        detail={},
+    )
+    unknown = SimpleNamespace(
+        rule_id="AGM-001",
+        state=RuleState.UNKNOWN,
+        eval_state="UNKNOWN",
+        resolved=False,
+        conditional_applies=True,
+        severity="NOT_EVALUATED",
+        score_impact=25,
+        detail={},
+    )
+
+    allocations = _applied_score_impacts([confirmed, unknown])
+
+    assert allocations[0] == {"applied": 15, "status": "APPLIED"}
+    assert allocations[1] == {"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"}
+
+
+def test_score_allocation_rejects_product_allowlisted_rule_without_counsel_approval(monkeypatch):
+    import app.rule_engine.engine as engine_module
+    from app.rule_engine.engine import RuleState
+    from app.services.compliance_service import _applied_score_impacts
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    finding = SimpleNamespace(
+        rule_id="AGM-001",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+        resolved=False,
+        conditional_applies=True,
+        severity="RED",
+        score_impact=10,
+        detail={},
+    )
+
+    assert _applied_score_impacts([finding]) == [
+        {"applied": 0, "status": "RULE_NOT_COUNSEL_VERIFIED"}
+    ]
+
+
+def test_rescue_planner_remains_deterministic_when_score_release_is_paused(monkeypatch):
+    import app.rule_engine.engine as engine_module
+    from app.rule_engine.engine import (
+        ComplianceFlag,
+        NLCRuleEngine,
+        RevenueTier,
+        RuleState,
+        Severity,
+    )
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    finding = ComplianceFlag(
+        rule_id="AGM-001",
+        flag_code="AGM_EVIDENCE_CONFIRMED",
+        severity=Severity.RED,
+        score_impact=0,
+        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+        description="Confirmed fact fixture; review required",
+        statutory_basis="Controlled test fixture",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+    )
+    score = SimpleNamespace(risk_band=Severity.NOT_EVALUATED)
+
+    steps = NLCRuleEngine._generate_rescue_sequence(
+        None, None, [finding], score
+    )
+
+    assert len(steps) == 1
+    assert steps[0]["related_rules"] == ["AGM-001"]
+
+    dispositions = NLCRuleEngine._build_rescue_dispositions(
+        [finding], score, steps
+    )
+    assert dispositions[0]["disposition"] == "REVIEW_REQUIRED"
+    assert dispositions[0]["reason"] == "PRODUCT_SCORE_RELEASE_DISABLED"
+
+
+
+# =============================================================================
+# PDF AND RESCUE RELEASE BOUNDARIES (EXERCISED IN THE INTEGRATION JOB)
+# =============================================================================
+
+def test_pdf_report_scores_product_allowlisted_rules_and_lists_counsel_review_items(monkeypatch):
+    from app.services import pdf_report_service as report_module
+
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    verified = SimpleNamespace(
+        rule_id="AGM-001", severity="RED", description="Verified finding",
+        score_impact=10, score_impact_applied=10, scoring_status="APPLIED",
+        state="NON_COMPLIANT", eval_state="VIOLATION", resolved=False,
+        conditional_applies=True, detail={},
+    )
+    unverified = SimpleNamespace(
+        rule_id="MEM-001", severity="BLACK", description="Unverified legal conclusion",
+        score_impact=30, score_impact_applied=0, scoring_status="LEGAL_VERIFICATION_PENDING",
+        state="NON_COMPLIANT", eval_state="VIOLATION", resolved=False,
+        conditional_applies=True, detail={},
+    )
+    evaluated_at = datetime(2026, 11, 13, tzinfo=timezone.utc)
+    company = SimpleNamespace(
+        company_name="Integration Review Ltd", registration_number="IR-1",
+        current_compliance_score=90, current_risk_band="RED",
+        last_evaluated_at=evaluated_at, updated_at=evaluated_at,
+    )
+
+    page = report_module.build_compliance_report_html(
+        company, [verified, unverified], datetime(2026, 11, 13)
+    )
+
+    assert "Verified finding" in page
+    assert "MEM-001" in page
+    assert "Independent Bangladesh-counsel/source verification remains pending" in page
+    assert "Unverified legal conclusion" not in page
+    assert "effective deductions -10 pts" in page
+
+
+def test_pdf_builder_with_paused_release_suppresses_stale_score_and_flags(monkeypatch):
+    from app.services import pdf_report_service as report_module
+
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
+    company = SimpleNamespace(
+        company_name="Paused Integration Ltd", registration_number="PI-1",
+        current_compliance_score=12, current_risk_band="BLACK",
+    )
+    stale_flag = SimpleNamespace(
+        rule_id="INC-003", severity="BLACK", description="Stale BLACK conclusion",
+        score_impact=50,
+    )
+
+    page = report_module.build_compliance_report_html(
+        company, [stale_flag], datetime(2026, 11, 13)
+    )
+
+    assert "NOT EVALUATED" in page
+    assert "12 / 100" not in page
+    assert "Stale BLACK conclusion" not in page
+    assert "Score reconciliation" not in page
+
+
+def test_pdf_rescue_section_renders_structured_progress_and_blocked_reason():
+    from app.services.pdf_report_service import _render_rescue_section
+
+    step = SimpleNamespace(
+        step_number=1, step_title="Verify records", step_description="Review the evidence",
+        step_status="BLOCKED", target_completion_date=date(2026, 12, 1),
+        statutory_basis="Controlled test basis", complexity="HIGH",
+        completion_notes="Awaiting documents", blocked_reason="Missing source evidence",
+    )
+    plan = SimpleNamespace(
+        steps=[step], started_at=datetime(2026, 11, 1),
+        target_completion_date=date(2026, 12, 1), completed_steps=0,
+        total_steps=8, blocked_steps=1, completion_percentage=0,
+        plan_name="Evidence review plan", initial_risk_band="NOT_EVALUATED",
+        initial_score=None,
+    )
+
+    html = _render_rescue_section(plan)
+
+    assert "Corporate Rescue Plan" in html
+    assert "Verify records" in html
+    assert "Missing source evidence" in html
+    assert "BLOCKED" in html
+
+
+def test_rescue_output_validation_requires_product_release_and_unique_evidenced_findings(monkeypatch):
+    import app.rule_engine.engine as engine_module
+    from app.rule_engine.engine import RuleState, Severity
+    from app.services.rescue_service import validate_rescue_engine_output
+
+    flag = SimpleNamespace(
+        rule_id="AGM-001", state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION", severity=Severity.RED, score_impact=10,
+        resolved=False, conditional_applies=True,
+    )
+    output = SimpleNamespace(
+        company_id="tenant-001",
+        score_breakdown=SimpleNamespace(final_score=40, risk_band=Severity.RED),
+        flags=[flag],
+        rescue_sequence=[{"related_rules": ["AGM-001"]}],
+    )
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    with pytest.raises(PermissionError, match="disabled"):
+        validate_rescue_engine_output(output, expected_company_id="tenant-001")
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    with pytest.raises(PermissionError, match="disabled"):
+        validate_rescue_engine_output(output, expected_company_id="tenant-001")
+
+    # A released fixture must approve every rule in its product catalogue.
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"})
+    )
+    assert validate_rescue_engine_output(
+        output, expected_company_id="tenant-001"
+    ) == frozenset({"AGM-001"})
+
+    with pytest.raises(PermissionError, match="tenant"):
+        validate_rescue_engine_output(output, expected_company_id="other-tenant")
+
+    duplicate_output = SimpleNamespace(
+        company_id="tenant-001",
+        score_breakdown=output.score_breakdown,
+        flags=[flag, flag],
+        rescue_sequence=[{"related_rules": ["AGM-001"]}],
+    )
+    with pytest.raises(PermissionError, match="unique"):
+        validate_rescue_engine_output(duplicate_output, expected_company_id="tenant-001")
+
+    empty_plan = SimpleNamespace(
+        company_id="tenant-001",
+        score_breakdown=output.score_breakdown,
+        flags=[flag],
+        rescue_sequence=[],
+    )
+    with pytest.raises(ValueError, match="sequence"):
+        validate_rescue_engine_output(empty_plan, expected_company_id="tenant-001")
+
+
+
+def test_score_allocation_covers_inactive_excluded_black_and_duplicate_paths(monkeypatch):
+    import app.rule_engine.engine as engine_module
+    from app.rule_engine.engine import RuleState
+    from app.services.compliance_service import _applied_score_impacts
+
+    product_ids = frozenset({"AGM-001", "AUD-001", "INC-003", "X-001"})
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", product_ids)
+    monkeypatch.setattr(engine_module, "SCORE_DEDUCTION_RULE_IDS", product_ids)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", product_ids)
+    monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
+
+    def finding(rule_id, *, resolved=False, state=RuleState.NON_COMPLIANT,
+                eval_state="VIOLATION", severity="RED", impact=5,
+                black_override=False, event_key=None):
+        return SimpleNamespace(
+            rule_id=rule_id, resolved=resolved, conditional_applies=True,
+            state=state, eval_state=eval_state, severity=severity,
+            score_impact=impact, is_black_override=black_override,
+            detail={"scoring_event_key": event_key} if event_key else {},
+        )
+
+    rows = [
+        finding("AGM-001", resolved=True),
+        finding("AGM-001", state=RuleState.UNKNOWN, eval_state="UNKNOWN"),
+        finding("MEM-001"),
+        finding("INC-003", severity="BLACK", black_override=True, impact=0),
+        finding("X-001"),
+        finding("AUD-001", event_key="shared-event"),
+        finding("AGM-001", event_key="shared-event"),
+    ]
+    results = _applied_score_impacts(rows)
+
+    assert results[0]["status"] == "INACTIVE"
+    assert results[1]["status"] == "NOT_A_CONFIRMED_VIOLATION"
+    assert results[2]["status"] == "EXCLUDED_FROM_PRODUCT_SCORING"
+    assert results[3]["status"] == "BLACK_OVERRIDE_APPLIED"
+    assert results[4]["status"] == "NO_SCORING_CATEGORY"
+    assert results[5]["status"] == "DUPLICATE_EVENT_SUPPRESSED"
+    assert results[6]["status"] == "APPLIED"
+
+
+def test_rescue_dispositions_keep_candidates_review_only_when_product_release_is_paused(monkeypatch):
+    import app.rule_engine.engine as engine_module
+    from app.rule_engine.engine import (
+        ComplianceFlag,
+        NLCRuleEngine,
+        RevenueTier,
+        RuleState,
+        Severity,
+    )
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+
+    def flag(rule_id, state=RuleState.NON_COMPLIANT, eval_state="VIOLATION",
+             resolved=False):
+        return ComplianceFlag(
+            rule_id=rule_id, flag_code=f"{rule_id}_DISPOSITION",
+            severity=Severity.RED, score_impact=0,
+            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+            description="Controlled fixture", statutory_basis="Test only",
+            state=state, eval_state=eval_state, resolved=resolved,
+        )
+
+    rows = [
+        flag("AGM-001", resolved=True),
+        flag("AUD-001", state=RuleState.UNKNOWN, eval_state="UNKNOWN"),
+        flag("AGM-002"),
+        flag("AGM-003"),
+    ]
+    score = SimpleNamespace(risk_band=Severity.NOT_EVALUATED)
+    steps = [{"related_rules": ["AGM-002"], "rescue_id": "RES-AGM-002"}]
+
+    dispositions = NLCRuleEngine._build_rescue_dispositions(rows, score, steps)
+
+    assert [item["disposition"] for item in dispositions] == [
+        "NO_ACTION", "WAITING_EVIDENCE", "REVIEW_REQUIRED", "BLOCKED"
+    ]
+    assert dispositions[2]["reason"] == "PRODUCT_SCORE_RELEASE_DISABLED"
+
+
+def test_rescue_target_date_prefers_explicit_then_latest_step_date():
+    from app.services.rescue_service import _derive_plan_target
+
+    first = date(2026, 12, 1)
+    latest = date(2026, 12, 15)
+    steps = [
+        SimpleNamespace(target_completion_date=first),
+        SimpleNamespace(target_completion_date=latest),
+        SimpleNamespace(target_completion_date=None),
+    ]
+
+    assert _derive_plan_target(date(2026, 11, 30), steps) == date(2026, 11, 30)
+    assert _derive_plan_target(None, steps) == latest
+    assert _derive_plan_target(None, []) is None
+
+
+# =============================================================================
+# COUNSEL APPROVAL RELEASE BOUNDARIES
+# =============================================================================
+
+def test_company_flag_api_quarantines_unapproved_statutory_candidate(monkeypatch):
+    import app.api.companies as companies_api
+
+    monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", frozenset())
+    flag = SimpleNamespace(
+        id=uuid.uuid4(),
+        rule_id="AGM-001",
+        description="Candidate AGM finding",
+        flag_code="AGM-001",
+        severity="RED",
+        score_impact=15,
+        flag_status="ACTIVE",
+        triggered_date=date(2026, 11, 1),
+        resolved_date=None,
+        is_black_override=True,
+        resolution_notes=None,
+    )
+
+    response = companies_api._flag_to_response(flag)
+
+    assert response.severity == "NOT_EVALUATED"
+    assert response.score_impact == 0
+    assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
+    assert response.is_black_override is False
+    assert "No breach" in response.rule_name
+
+
+@pytest.mark.asyncio
+async def test_black_override_api_requires_full_counsel_release(monkeypatch):
+    import app.api.rules as rules_api
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"})
+    )
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", frozenset({"INC-003"})
+    )
+    monkeypatch.setattr(rules_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(
+        rules_api, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"INC-003"})
+    )
+
+    class FakeRulesService:
+        def __init__(self, db):
+            self.db = db
+
+        async def get_all(self):
+            return [
+                SimpleNamespace(
+                    rule_id="INC-003",
+                    rule_name="Minimum director requirement",
+                    rule_type="THRESHOLD",
+                    statutory_basis="Companies Act 1994, section 90",
+                    description="Verified minimum director finding.",
+                    default_severity="RED",
+                    score_impact=20,
+                    revenue_tier="COMPLIANCE_PACKAGE",
+                    is_active=True,
+                    verification_status="VERIFIED",
+                    verified_at=datetime(2026, 11, 15),
+                    statutory_effective_date=date(1994, 12, 1),
+                    rule_version="2.2",
+                    created_at=datetime(2026, 11, 15),
+                    updated_at=datetime(2026, 11, 15),
+                )
+            ]
+
+    monkeypatch.setattr(rules_api, "RulesService", FakeRulesService)
+    result = await rules_api.get_black_overrides(current_user=None, db=object())
+
+    assert len(result) == 1
+    assert result[0].rule_id == "INC-003"
+    assert result[0].is_black_override is True
+    assert result[0].default_severity == "RED"
+    assert result[0].score_impact == 20
+
+
+def test_rule_evaluator_quarantines_unapproved_candidate_before_score_or_override(monkeypatch):
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-001"})
+    )
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+
+    profile = engine_module.CompanyProfile(
+        company_id="integration-counsel-gate",
+        company_name="Counsel Gate Integration Ltd",
+        incorporation_date=date(2020, 1, 1),
+        first_auditor_appointed=False,
+        first_auditor_appointment_verified=True,
+        first_auditor_appointment_evidence_ref="AUDITOR-SEARCH-INT-001",
+        first_auditor_appointment_verified_at=date(2026, 11, 1),
+        first_auditor_appointment_verified_by="integration-reviewer",
+    )
+    output = engine_module.NLCRuleEngine(today=date(2026, 11, 15)).evaluate(profile)
+    finding = next(flag for flag in output.flags if flag.rule_id == "AUD-001")
+
+    assert finding.severity is engine_module.Severity.NOT_EVALUATED
+    assert finding.state is engine_module.RuleState.UNKNOWN
+    assert finding.eval_state == "UNKNOWN"
+    assert finding.score_impact == 0
+    assert finding.detail["legal_validation_status"] == "PENDING_COUNSEL_APPROVAL"
+    assert finding.detail["statutory_finding_authorized"] is False
+
+
+def test_compliance_score_impact_requires_verified_rule_and_global_release(monkeypatch):
+    import app.rule_engine.engine as engine_module
+    import app.services.compliance_service as compliance_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
+    flag = SimpleNamespace(
+        rule_id="AGM-001",
+        score_impact=10,
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        resolved=False,
+        conditional_applies=True,
+    )
+
+    result = compliance_module._applied_score_impacts([flag])
+
+    assert result == [{"applied": 10, "status": "APPLIED"}]
+
+
+def test_labour_licence_scope_is_not_inferred_from_manufacturing_status(monkeypatch):
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", engine_module.PRODUCT_SCORING_RULE_IDS
+    )
+    profile = engine_module.CompanyProfile(
+        company_id="labour-scope-unknown",
+        company_name="Non-manufacturing Service Ltd",
+        incorporation_date=date(2020, 1, 1),
+        is_manufacturing=False,
+    )
+
+    output = engine_module.NLCRuleEngine(today=date(2026, 11, 15)).evaluate(profile)
+    finding = next(flag for flag in output.flags if flag.rule_id == "LBR-001")
+
+    assert finding.flag_code == "LABOUR_LICENSE_SCOPE_NOT_VERIFIED"
+    assert finding.state is engine_module.RuleState.UNKNOWN
+    assert finding.severity is engine_module.Severity.NOT_EVALUATED
+    assert finding.score_impact == 0
+
+
+def test_labour_licence_expiry_uses_verified_printed_date_only(monkeypatch):
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", engine_module.PRODUCT_SCORING_RULE_IDS
+    )
+    profile = engine_module.CompanyProfile(
+        company_id="labour-expiry-evidence",
+        company_name="Contractor Establishment Ltd",
+        incorporation_date=date(2020, 1, 1),
+        is_manufacturing=False,
+        labour_establishment_category="CONTRACTOR_ESTABLISHMENT",
+        labour_license_scope_verified=True,
+        labour_license_scope_evidence_ref="LEGAL-SCOPE-INTEGRATION-001",
+        labour_license_scope_verified_at=date(2026, 11, 1),
+        labour_license_scope_verified_by="integration-reviewer",
+        factory_license_required_by_direction=True,
+        labour_license_status_verified=True,
+        labour_license_status_evidence_ref="DIFE-LICENCE-INTEGRATION-001",
+        labour_license_status_verified_at=date(2026, 11, 2),
+        labour_license_status_verified_by="integration-reviewer",
+        factory_license_obtained=True,
+        factory_license_expiry=date(2026, 10, 31),
+    )
+
+    output = engine_module.NLCRuleEngine(today=date(2026, 11, 15)).evaluate(profile)
+    finding = next(flag for flag in output.flags if flag.rule_id == "LBR-002")
+
+    assert finding.flag_code == "LABOUR_LICENSE_EXPIRED_REQUIRES_REVIEW"
+    assert finding.state is engine_module.RuleState.REQUIRES_LAWYER_JUDGMENT
+    assert finding.detail["renewal_term_calculated_automatically"] is False
+    assert finding.score_impact == 0
+
+
+def test_labour_court_order_review_is_independent_of_manufacturing(monkeypatch):
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", engine_module.PRODUCT_SCORING_RULE_IDS
+    )
+    profile = engine_module.CompanyProfile(
+        company_id="labour-court-order",
+        company_name="Service Establishment Ltd",
+        incorporation_date=date(2020, 1, 1),
+        is_manufacturing=None,
+        labour_court_order_pending=True,
+    )
+
+    output = engine_module.NLCRuleEngine(today=date(2026, 11, 15)).evaluate(profile)
+    finding = next(flag for flag in output.flags if flag.rule_id == "LBR-003")
+
+    assert finding.flag_code == "LABOUR_COURT_ORDER_STATUS_REQUIRES_VERIFICATION"
+    assert finding.state is engine_module.RuleState.UNKNOWN
+    assert finding.score_impact == 0
+
+
+@pytest.mark.parametrize(
+    ("overrides", "expected_rule", "expected_code"),
+    [
+        (
+            {"labour_license_scope_verified": False},
+            "LBR-001",
+            "LABOUR_LICENSE_SCOPE_NOT_VERIFIED",
+        ),
+        (
+            {"factory_license_required_by_direction": None},
+            "LBR-001",
+            "LABOUR_LICENSE_REQUIREMENT_UNKNOWN",
+        ),
+        ({"factory_license_required_by_direction": False}, None, None),
+        (
+            {"labour_license_status_verified": False},
+            "LBR-001",
+            "LABOUR_LICENSE_STATUS_NOT_VERIFIED",
+        ),
+        (
+            {"factory_license_obtained": False},
+            "LBR-001",
+            "LABOUR_LICENSE_NOT_OBTAINED_REQUIRES_REVIEW",
+        ),
+        (
+            {"factory_license_obtained": None},
+            "LBR-001",
+            "LABOUR_LICENSE_STATUS_UNKNOWN",
+        ),
+        (
+            {"factory_license_expiry": None},
+            "LBR-002",
+            "LABOUR_LICENSE_EXPIRY_NOT_VERIFIED",
+        ),
+        (
+            {"factory_license_expiry": date(2027, 1, 1)},
+            None,
+            None,
+        ),
+    ],
+)
+def test_labour_licence_evaluator_covers_verified_scope_and_status_states(
+    monkeypatch, overrides, expected_rule, expected_code
+):
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", engine_module.PRODUCT_SCORING_RULE_IDS
+    )
+    values = {
+        "company_id": "labour-state-matrix",
+        "company_name": "Labour State Matrix Ltd",
+        "incorporation_date": date(2020, 1, 1),
+        "is_manufacturing": False,
+        "labour_establishment_category": "COMMERCIAL_ESTABLISHMENT",
+        "labour_license_scope_verified": True,
+        "labour_license_scope_evidence_ref": "LEGAL-SCOPE-MATRIX",
+        "labour_license_scope_verified_at": date(2026, 11, 1),
+        "labour_license_scope_verified_by": "integration-reviewer",
+        "factory_license_required_by_direction": True,
+        "labour_license_status_verified": True,
+        "labour_license_status_evidence_ref": "DIFE-MATRIX",
+        "labour_license_status_verified_at": date(2026, 11, 2),
+        "labour_license_status_verified_by": "integration-reviewer",
+        "factory_license_obtained": True,
+        "factory_license_expiry": date(2027, 1, 1),
+    }
+    values.update(overrides)
+    output = engine_module.NLCRuleEngine(today=date(2026, 11, 15)).evaluate(
+        engine_module.CompanyProfile(**values)
+    )
+    labour_flags = [
+        flag for flag in output.flags if flag.rule_id in {"LBR-001", "LBR-002"}
+    ]
+
+    if expected_rule is None:
+        assert labour_flags == []
+    else:
+        assert len(labour_flags) == 1
+        assert labour_flags[0].rule_id == expected_rule
+        assert labour_flags[0].flag_code == expected_code
+        assert labour_flags[0].score_impact == 0

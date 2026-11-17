@@ -107,7 +107,19 @@ from .rescue_audit_log import RescueAuditLog
 from .rjsc_forms import RJSCFormFiling
 
 # ── Rules (Legal Rules + Version History) ────────────────────────────
-from .rules import LegalRule, LegalRuleVersion
+from .rules import (
+    LegalRule,
+    LegalRuleAlias,
+    LegalRuleIdentity,
+    LegalRuleRevision,
+    LegalRuleVersion,
+)
+from .legal_provenance import (
+    LegalDeadlineDefinition,
+    LegalRuleReleaseEvent,
+    LegalRuleSourceMapping,
+    LegalSource,
+)
 
 # ── Users ────────────────────────────────────────────────────────────
 from .user import User
@@ -161,7 +173,14 @@ __all__ = [
     "EventAction",
     "ExposureBand",
     "FlagStatus",
+    "LegalDeadlineDefinition",
+    "LegalRuleReleaseEvent",
+    "LegalRuleSourceMapping",
+    "LegalSource",
     "LegalRule",
+    "LegalRuleAlias",
+    "LegalRuleIdentity",
+    "LegalRuleRevision",
     "LegalRuleVersion",
     "LifecycleStage",
     "Notification",

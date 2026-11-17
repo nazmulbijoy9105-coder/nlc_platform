@@ -48,6 +48,10 @@ def _annual_return():
         filing_deadline=date(2026, 8, 14),
         is_default=True,
         rjsc_receipt_number="RJSC-RECEIPT-UNVERIFIED",
+        filing_status_verified=False,
+        filing_status_evidence_ref=None,
+        filing_status_verified_at=None,
+        filing_status_verified_by=None,
         late_fee_paid_bdt=None,
         created_at=datetime.now(timezone.utc),
     )

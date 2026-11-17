@@ -18,10 +18,10 @@ AI Constitution compliance:
 
 from __future__ import annotations
 
+import os as _os
 import time
 import uuid
 from contextlib import asynccontextmanager
-from datetime import UTC
 from typing import TYPE_CHECKING
 
 import structlog
@@ -41,7 +41,9 @@ from app.api import (
     filings,
     finance,
     health,
+    legal_provenance,
     notifications,
+    portfolio_compliance,
     rescue,
     rjsc_forms,
     rules,
@@ -218,6 +220,70 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 
+
+class RedactedUnhandledExceptionMiddleware:
+    """Catch unexpected HTTP exceptions before the ASGI server logs frame locals.
+
+    ServerErrorMiddleware/ASGI server tracebacks can include request scope locals,
+    including Authorization and Cookie headers. Keep the application log minimal;
+    Sentry receives the exception only through the configured scrubber.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+
+        try:
+            await self.app(scope, receive, send)
+        except Exception as exc:
+            state = scope.get("state") or {}
+            request_id = state.get("request_id") or str(uuid.uuid4())
+            logger.error(
+                "unhandled_exception",
+                path=scope.get("path", ""),
+                method=scope.get("method", ""),
+                request_id=request_id,
+                error_type=type(exc).__name__,
+            )
+            try:
+                import sentry_sdk
+                sentry_sdk.capture_exception(exc)
+            except Exception:
+                # Error reporting must never replace the safe HTTP response.
+                pass
+
+            headers = {
+                "X-Request-ID": request_id,
+                "Cache-Control": "no-store, no-cache, must-revalidate",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Referrer-Policy": "strict-origin-when-cross-origin",
+            }
+            if settings.environment == "production":
+                headers["Strict-Transport-Security"] = (
+                    "max-age=31536000; includeSubDomains; preload"
+                )
+            response = JSONResponse(
+                status_code=500,
+                content={
+                    "error": True,
+                    "status_code": 500,
+                    "detail": (
+                        "An unexpected error occurred. Please contact NLC support "
+                        "with your request ID."
+                    ),
+                    "request_id": request_id,
+                },
+                headers=headers,
+            )
+            await response(scope, receive, send)
+
+
+
 # ---------------------------------------------------------------------------
 # Exception handlers
 # ---------------------------------------------------------------------------
@@ -303,8 +369,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 
 
 # ── Sentry Error Monitoring ──────────────────────────────────────
-import os as _os
-
 _sentry_dsn = _os.environ.get("SENTRY_DSN", "")
 if _sentry_dsn:
     try:
@@ -365,6 +429,8 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(AccessLogMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
+    # Catch unexpected errors before the ASGI server can emit frame locals.
+    app.add_middleware(RedactedUnhandledExceptionMiddleware)
     # ------------------------------------------------------------------
     # Exception handlers
     # ------------------------------------------------------------------
@@ -385,6 +451,7 @@ def create_app() -> FastAPI:
 
     # Protected routes — all require valid JWT
     app.include_router(companies.router,  prefix=f"{API_PREFIX}/companies",  tags=["Companies"])
+    app.include_router(portfolio_compliance.router, prefix=API_PREFIX, tags=["Portfolio Compliance"])
     app.include_router(filings.router,    prefix=f"{API_PREFIX}/filings",    tags=["Filings"])
     app.include_router(rescue.router,     prefix=f"{API_PREFIX}/rescue",     tags=["Corporate Rescue"])
     app.include_router(documents.router,  prefix=f"{API_PREFIX}/documents",  tags=["Documents"])
@@ -393,6 +460,7 @@ def create_app() -> FastAPI:
     app.include_router(subscriptions.router, prefix=f"{API_PREFIX}/subscriptions", tags=["Subscriptions & Entitlements"])
     app.include_router(rjsc_forms.router, prefix=f"{API_PREFIX}/rjsc-forms", tags=["RJSC Forms"])
     app.include_router(calendar.router, prefix=API_PREFIX, tags=["Compliance Calendar"])
+    app.include_router(legal_provenance.router, prefix=API_PREFIX, tags=["Legal Source Provenance"])
     app.include_router(rules.router,      prefix=f"{API_PREFIX}/rules",      tags=["Legal Rules"])
     app.include_router(admin.router,      prefix=f"{API_PREFIX}/admin",      tags=["Admin"])
     app.include_router(notifications.router, prefix=f"{API_PREFIX}/notifications", tags=["Notifications"])

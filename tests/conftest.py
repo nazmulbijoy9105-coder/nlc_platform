@@ -187,7 +187,12 @@ async def test_engine(request):
     seed_proc = subprocess.run(
         [sys.executable, "scripts/seed_rules.py", "--apply"],
         cwd=Path(__file__).resolve().parent.parent,
-        env={**os.environ, "DATABASE_URL": TEST_DATABASE_URL},
+        env={
+            **os.environ,
+            "DATABASE_URL": TEST_DATABASE_URL,
+            "NLC_ALLOW_DEVELOPMENT_RULE_SEED": "true",
+            "ENVIRONMENT": "test",
+        },
         capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     if seed_proc.returncode != 0:
@@ -354,17 +359,24 @@ async def api_client(db) -> AsyncGenerator[AsyncClient, None]:
 # Rule Engine
 # ---------------------------------------------------------------------------
 
-@pytest.fixture(scope="session")
-def rule_engine():
+@pytest.fixture
+def rule_engine(monkeypatch):
     """
-    Initialised NLCRuleEngine instance.
-    Session-scoped — engine is stateless (flags reset per evaluate() call).
+    Controlled engine fixture for rule-module behaviour tests.
+
+    These tests exercise candidate evaluation/scoring mechanics under an
+    explicitly simulated counsel-approved release. Production approval state
+    is tested separately and remains empty/fail-closed in the real module.
     """
-    try:
-        from C_rule_engine import NLCRuleEngine  # adjust import path as needed
-    except ModuleNotFoundError:
-        from app.rule_engine.engine import NLCRuleEngine
-    return NLCRuleEngine()
+    import app.rule_engine.engine as engine_module
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module,
+        "VERIFIED_RULE_IDS",
+        frozenset(engine_module.PRODUCT_SCORING_RULE_IDS),
+    )
+    return engine_module.NLCRuleEngine()
 
 
 # ---------------------------------------------------------------------------

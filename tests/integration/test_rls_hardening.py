@@ -1131,3 +1131,207 @@ async def test_activity_logs_are_company_scoped_for_legal_staff_and_actor_bound_
                 resource_type="Test",
             )
 
+@pytest.mark.asyncio
+async def test_client_cannot_update_foreign_company_even_when_uuid_is_known(
+    db, db_client_user, db_company, db_other_company
+):
+    """A member of tenant A cannot read or mutate tenant B by guessing its UUID."""
+    await set_rls_context(db, str(db_client_user.id))
+    own = await db.execute(
+        text("SELECT company_name FROM companies WHERE id = :company_id"),
+        {"company_id": db_company.id},
+    )
+    assert own.scalar_one() == db_company.company_name
+
+    expected_foreign_name = db_other_company.company_name
+    foreign_before = await db.execute(
+        text("SELECT company_name FROM companies WHERE id = :company_id"),
+        {"company_id": db_other_company.id},
+    )
+    assert foreign_before.scalar_one_or_none() is None
+
+    update_result = await db.execute(
+        text("UPDATE companies SET company_name = :new_name WHERE id = :company_id"),
+        {
+            "new_name": "FORBIDDEN CROSS TENANT WRITE",
+            "company_id": db_other_company.id,
+        },
+    )
+    assert update_result.rowcount == 0
+
+    # Switch to the trusted test principal only to verify the stored row stayed
+    # unchanged; the attempted client UPDATE must not have touched tenant B.
+    await set_admin_context(db)
+    foreign_after = await db.execute(
+        text("SELECT company_name FROM companies WHERE id = :company_id"),
+        {"company_id": db_other_company.id},
+    )
+    assert foreign_after.scalar_one() == expected_foreign_name
+    await db.rollback()
+
+
+@pytest.mark.asyncio
+async def test_runtime_acl_exposes_only_webhook_endpoint_delete_and_read_only_views(db):
+    """Check effective grants, including PUBLIC and inherited role privileges."""
+    delete_grants = await db.execute(
+        text(
+            """
+            SELECT c.relname
+              FROM pg_class AS c
+              JOIN pg_namespace AS n ON n.oid = c.relnamespace
+             WHERE n.nspname = 'public'
+               AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+               AND has_table_privilege('nlc_app_role', c.oid, 'DELETE')
+             ORDER BY c.relname
+            """
+        )
+    )
+    assert {row[0] for row in delete_grants.fetchall()} == {
+        "webhook_endpoints"
+    }
+
+    views = (
+        "vw_admin_dashboard_kpis",
+        "vw_company_flag_summary",
+        "vw_risk_distribution",
+        "vw_upcoming_deadlines",
+        "vw_revenue_pipeline",
+    )
+    view_grants = await db.execute(
+        text(
+            """
+            SELECT c.relname,
+                   has_table_privilege('nlc_app_role', c.oid, 'SELECT'),
+                   has_table_privilege('nlc_app_role', c.oid, 'INSERT'),
+                   has_table_privilege('nlc_app_role', c.oid, 'UPDATE'),
+                   has_table_privilege('nlc_app_role', c.oid, 'DELETE')
+              FROM pg_class AS c
+              JOIN pg_namespace AS n ON n.oid = c.relnamespace
+             WHERE n.nspname = 'public'
+               AND c.relkind = 'v'
+               AND c.relname = ANY(:view_names)
+             ORDER BY c.relname
+            """
+        ),
+        {"view_names": list(views)},
+    )
+    rows = view_grants.fetchall()
+    assert {row[0] for row in rows} == set(views)
+    for _name, can_select, can_insert, can_update, can_delete in rows:
+        assert can_select is True
+        assert can_insert is False
+        assert can_update is False
+        assert can_delete is False
+
+    # Append-only audit evidence must never regain runtime DELETE access.
+    for table in ("user_activity_logs", "rescue_audit_log"):
+        allowed = await db.execute(
+            text(
+                "SELECT has_table_privilege('nlc_app_role', "
+                "to_regclass('public.' || CAST(:table_name AS text)), 'DELETE')"
+            ),
+            {"table_name": table},
+        )
+        assert allowed.scalar_one() is False
+
+
+@pytest.mark.asyncio
+async def test_alembic_version_is_forced_rls_and_unavailable_to_runtime(db):
+    relation = await db.execute(
+        text(
+            """
+            SELECT c.relrowsecurity, c.relforcerowsecurity
+              FROM pg_class AS c
+              JOIN pg_namespace AS n ON n.oid = c.relnamespace
+             WHERE n.nspname = 'public'
+               AND c.relname = 'alembic_version'
+            """
+        )
+    )
+    assert relation.one() == (True, True)
+
+    for privilege in ("SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE"):
+        allowed = await db.execute(
+            text(
+                "SELECT has_table_privilege('nlc_app_role', "
+                "to_regclass('public.alembic_version'), :privilege)"
+            ),
+            {"privilege": privilege},
+        )
+        assert allowed.scalar_one() is False
+
+
+@pytest.mark.asyncio
+async def test_canonical_rule_registry_is_signed_read_only_and_not_audit_visible(db, db_super_admin):
+    from app.models.database import set_app_role
+
+    tables = (
+        "legal_rule_identities",
+        "legal_rule_aliases",
+        "legal_rule_revisions",
+    )
+    for table in tables:
+        relation = await db.execute(
+            text(
+                "SELECT c.relrowsecurity, c.relforcerowsecurity "
+                "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+                "WHERE n.nspname = 'public' AND c.relname = :table"
+            ),
+            {"table": table},
+        )
+        assert relation.one() == (True, True)
+
+        policies = await db.execute(
+            text(
+                "SELECT policyname, cmd, roles, qual "
+                "FROM pg_policies WHERE schemaname = 'public' AND tablename = :table"
+            ),
+            {"table": table},
+        )
+        rows = policies.fetchall()
+        assert len(rows) == 1
+        policy_name, command, roles, expression = rows[0]
+        assert policy_name == f"{table}_signed_runtime_read"
+        assert command == "SELECT"
+        assert "nlc_app_role" in roles
+        assert "nlc_current_user_context_valid" in expression
+        assert "nlc_current_user_principal" in expression
+
+        for privilege in ("SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"):
+            result = await db.execute(
+                text(
+                    "SELECT has_table_privilege('nlc_app_role', "
+                    "'public.' || :table, :privilege)"
+                ),
+                {"table": table, "privilege": privilege},
+            )
+            assert result.scalar_one() is (privilege == "SELECT")
+
+        audit_select = await db.execute(
+            text(
+                "SELECT has_table_privilege('nlc_ci_audit_role', "
+                "'public.' || :table, 'SELECT')"
+            ),
+            {"table": table},
+        )
+        assert audit_select.scalar_one() is False
+
+    # Unsigned runtime sessions see no registry rows; a signed user and the
+    # trusted background ADMIN principal can execute read queries.
+    await set_app_role(db)
+    unsigned = await db.execute(
+        text("SELECT count(*) FROM public.legal_rule_identities")
+    )
+    assert unsigned.scalar_one() == 0
+
+    await set_rls_context(db, str(db_super_admin.id))
+    signed_user = await db.execute(
+        text("SELECT count(*) FROM public.legal_rule_identities")
+    )
+    assert signed_user.scalar_one() >= 0
+
+    await set_admin_context(db)
+    signed_admin = await db.execute(
+        text("SELECT count(*) FROM public.legal_rule_revisions")
+    )
+    assert signed_admin.scalar_one() >= 0

@@ -10,6 +10,8 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException, Response
 
+from app.compliance.evaluation_integrity import calculate_evaluation_score_hash
+from app.compliance.rule_outcome_ledger import hash_rule_outcomes_snapshot
 from app.services import pdf_render, pdf_report_service as report_module
 from app.services.pdf_report_service import (
     LOGO_FILE,
@@ -33,6 +35,7 @@ COMPANY = SimpleNamespace(
     current_compliance_score=85,
     current_risk_band="GREEN",
     last_evaluated_at=datetime(2026, 10, 20, 1, 0),
+    updated_at=datetime(2026, 10, 20, 1, 0),
 )
 FLAGS = [
     SimpleNamespace(
@@ -85,6 +88,13 @@ def _patch_services(monkeypatch, company=COMPANY, flags=FLAGS):
 
     monkeypatch.setattr(report_module, "CompanyService", FakeCompanyService)
 
+    async def no_previous_chain_problem(db, run):
+        return None
+
+    monkeypatch.setattr(
+        report_module, "evaluation_run_chain_problem", no_previous_chain_problem
+    )
+
 
 # --------------------------------------------------------------------------- endpoint
 
@@ -98,6 +108,10 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
         "app.services.pdf_report_service.PRODUCT_SCORING_RULE_IDS",
         frozenset({"AGM-001"}),
     )
+    monkeypatch.setattr(
+        "app.services.pdf_report_service.VERIFIED_RULE_IDS",
+        frozenset({"AGM-001"}),
+    )
     captured = {}
 
     async def fake_render(html_content):
@@ -107,13 +121,40 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
     monkeypatch.setattr(report_module, "render_html_to_pdf_async", fake_render)
 
     # Mock the COM-007 snapshot lookup: this test does not need a real database.
+    rule_outcomes = [{
+        "rule_id": "AGM-001",
+        "rule_version": "2.2",
+        "statutory_basis": "Companies Act 1994 s.81",
+        "verification_status": "PENDING",
+        "verified_by": None,
+        "verified_at": None,
+        "outcome_state": "NON_COMPLIANT",
+        "assessment_source": "ENGINE_FINDING",
+        "findings": [{
+            "flag_code": "AGM-001",
+            "outcome_state": "NON_COMPLIANT",
+            "evaluation_state": "VERIFIED_ABSENT",
+            "severity": "RED",
+            "description": "AGM missing",
+            "statutory_basis": "Companies Act 1994 s.81",
+        }],
+    }]
     snapshot = SimpleNamespace(
+        company_id=COMPANY.id,
+        previous_hash=None,
         score=85,
         risk_band="GREEN",
         calculated_at=WHEN,
         evaluation_status="COMPLETED",
-        score_hash="test-snapshot-hash",
-        engine_version="test-engine-v1",
+        score_hash="",
+        engine_version=report_module.RULE_ENGINE_VERSION,
+        trigger_source="UNIT_TEST",
+        fact_provenance_snapshot=[],
+        score_breakdown_snapshot={
+            "scoring_spec_version": report_module.SCORING_SPEC_VERSION,
+            "score_reconciles": True,
+            "final_score": 85,
+        },
         flags_snapshot=[{
             "rule_id": "AGM-001",
             "severity": "RED",
@@ -124,11 +165,34 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
             "detail": None,
             "statutory_basis": "Companies Act 1994 s.81",
         }],
+        rule_outcomes_snapshot=rule_outcomes,
+        rule_outcomes_hash=hash_rule_outcomes_snapshot(rule_outcomes),
+        rule_catalogue_count=1,
+    )
+    snapshot.score_hash = calculate_evaluation_score_hash(
+        previous_hash=snapshot.previous_hash,
+        company_id=snapshot.company_id,
+        score=snapshot.score,
+        risk_band=snapshot.risk_band,
+        calculated_at=snapshot.calculated_at,
+        engine_version=snapshot.engine_version,
+        trigger_source=snapshot.trigger_source,
+        flags_snapshot=snapshot.flags_snapshot,
+        fact_provenance_snapshot=snapshot.fact_provenance_snapshot,
+        score_breakdown_snapshot=snapshot.score_breakdown_snapshot,
+        rule_outcomes_hash=snapshot.rule_outcomes_hash,
+        rule_outcomes_snapshot=snapshot.rule_outcomes_snapshot,
     )
 
     class FakeDB:
         async def execute(self, statement):
-            return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
+            sql = str(statement).strip().lower()
+            if sql.startswith("select compliance_evaluation_runs.id, compliance_evaluation_runs.score_hash"):
+                return SimpleNamespace(one_or_none=lambda: None)
+            if "compliance_evaluation_runs" in sql:
+                captured["snapshot_query"] = str(statement)
+                return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
+            return SimpleNamespace(scalar_one_or_none=lambda: None)
 
     response = asyncio.run(
         PDFReportService(db=FakeDB()).generate_company_compliance_pdf(str(uuid4()))
@@ -138,8 +202,9 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
     assert response.status_code == 200
     assert response.media_type == "application/pdf"
     assert response.body == b"%PDF-1.7 stub"
-    assert response.headers["x-snapshot-hash"] == "test-snapshot-hash"
-    assert response.headers["x-engine-version"] == "test-engine-v1"
+    assert "ORDER BY compliance_evaluation_runs.calculated_at DESC" in captured["snapshot_query"]
+    assert response.headers["x-snapshot-hash"] == snapshot.score_hash
+    assert response.headers["x-engine-version"] == report_module.RULE_ENGINE_VERSION
     assert (
         response.headers["content-disposition"]
         == 'attachment; filename="compliance_report_C-1_X-Evil_1_2020.pdf"'
@@ -382,6 +447,8 @@ def test_endpoint_rejects_score_snapshot_mismatch(monkeypatch):
 
     class FakeDB:
         async def execute(self, statement):
+            if str(statement).strip().lower().startswith("select compliance_evaluation_runs.id, compliance_evaluation_runs.score_hash"):
+                return SimpleNamespace(one_or_none=lambda: None)
             return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
 
     with pytest.raises(HTTPException) as exc:
@@ -399,3 +466,200 @@ def test_endpoint_rejects_missing_snapshot(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         asyncio.run(PDFReportService(db=FakeDB()).generate_company_compliance_pdf("00000000-0000-4000-8000-000000000001"))
     assert exc.value.status_code == 409
+
+
+
+def test_pdf_product_black_override_is_blocked_without_counsel_allowlist(monkeypatch):
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
+    black = SimpleNamespace(
+        rule_id="INC-003",
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        severity="BLACK",
+        is_black_override=True,
+        score_impact=0,
+        resolved=False,
+        conditional_applies=True,
+    )
+
+    assert report_module._legal_score_is_released() is False
+    assert report_module._verified_flag_score([black]) == (0, False)
+
+
+
+def test_pdf_separates_unverified_findings_from_verified_score_report(monkeypatch):
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        report_module, "PRODUCT_SCORING_RULE_IDS",
+        frozenset({"AGM-001"}),
+    )
+    monkeypatch.setattr(
+        report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"})
+    )
+    verified = SimpleNamespace(
+        rule_id="AGM-001",
+        severity="RED",
+        description="Verified AGM review item",
+        score_impact=10,
+        resolved=False,
+        conditional_applies=True,
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        detail={},
+    )
+    unverified = SimpleNamespace(
+        rule_id="MEM-001",
+        severity="BLACK",
+        description="UNVERIFIED_SECRET_DESC",
+        score_impact=0,
+        resolved=False,
+        conditional_applies=True,
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        detail={},
+    )
+    company = SimpleNamespace(
+        company_name="Partial Review Ltd",
+        registration_number="P-1",
+        current_compliance_score=90,
+        current_risk_band="GREEN",
+        last_evaluated_at=WHEN,
+        updated_at=WHEN,
+    )
+
+    page = build_compliance_report_html(
+        company, [verified, unverified], WHEN
+    )
+
+    assert "Verified AGM review item" in page
+    assert "MEM-001" in page
+    assert "Independent Bangladesh-counsel/source verification remains pending" in page
+    assert "UNVERIFIED_SECRET_DESC" not in page
+    assert "BLACK-severity compliance breach" not in page
+
+def test_endpoint_withholds_pdf_when_evaluation_score_hash_is_tampered(monkeypatch):
+    _patch_services(monkeypatch)
+    monkeypatch.setattr("app.services.pdf_report_service.LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        "app.services.pdf_report_service.PRODUCT_SCORING_RULE_IDS",
+        frozenset({"AGM-001"}),
+    )
+    monkeypatch.setattr(
+        "app.services.pdf_report_service.VERIFIED_RULE_IDS",
+        frozenset({"AGM-001"}),
+    )
+    rule_outcomes = [{
+        "rule_id": "AGM-001",
+        "rule_version": "2.2",
+        "statutory_basis": "Companies Act 1994 s.81",
+        "verification_status": "PENDING",
+        "verified_by": None,
+        "verified_at": None,
+        "outcome_state": "NON_COMPLIANT",
+        "assessment_source": "ENGINE_FINDING",
+        "findings": [{
+            "flag_code": "AGM-001",
+            "outcome_state": "NON_COMPLIANT",
+            "evaluation_state": "VERIFIED_ABSENT",
+            "severity": "RED",
+            "description": "AGM missing",
+            "statutory_basis": "Companies Act 1994 s.81",
+        }],
+    }]
+    snapshot = SimpleNamespace(
+        company_id=COMPANY.id,
+        previous_hash=None,
+        score=85,
+        risk_band="GREEN",
+        calculated_at=WHEN,
+        evaluation_status="COMPLETED",
+        score_hash="f" * 64,
+        engine_version=report_module.RULE_ENGINE_VERSION,
+        trigger_source="UNIT_TEST",
+        fact_provenance_snapshot=[],
+        score_breakdown_snapshot={
+            "scoring_spec_version": report_module.SCORING_SPEC_VERSION,
+            "score_reconciles": True,
+            "final_score": 85,
+        },
+        flags_snapshot=[{
+            "rule_id": "AGM-001",
+            "severity": "RED",
+            "category": "AGM",
+            "score_impact": 15,
+            "score_impact_applied": 15,
+            "description": "AGM missing",
+            "detail": None,
+            "statutory_basis": "Companies Act 1994 s.81",
+        }],
+        rule_outcomes_snapshot=rule_outcomes,
+        rule_outcomes_hash=hash_rule_outcomes_snapshot(rule_outcomes),
+        rule_catalogue_count=1,
+    )
+
+    class FakeDB:
+        async def execute(self, statement):
+            if str(statement).strip().lower().startswith("select compliance_evaluation_runs.id, compliance_evaluation_runs.score_hash"):
+                return SimpleNamespace(one_or_none=lambda: None)
+            return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
+
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(
+            PDFReportService(db=FakeDB()).generate_company_compliance_pdf(str(uuid4()))
+        )
+
+    assert exc.value.status_code == 409
+    assert "SCORE_HASH_MISMATCH" in exc.value.detail
+
+
+def test_html_builder_withholds_score_when_company_data_changed_after_evaluation(monkeypatch):
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    stale_company = SimpleNamespace(
+        **{
+            **COMPANY.__dict__,
+            "updated_at": datetime(2026, 10, 20, 1, 0, 1),
+        }
+    )
+
+    page = build_compliance_report_html(stale_company, FLAGS, WHEN)
+
+    assert "NOT EVALUATED" in page
+    assert "85 / 100" not in page
+    assert "AGM overdue" not in page
+
+
+def test_endpoint_withholds_pdf_when_latest_run_is_pending_even_if_old_score_is_cached(monkeypatch):
+    _patch_services(monkeypatch)
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+
+    pending_latest_run = SimpleNamespace(
+        evaluation_status="PENDING",
+        score_hash=None,
+        engine_version=None,
+        flags_snapshot=[],
+        rule_outcomes_snapshot=None,
+        rule_catalogue_count=0,
+        calculated_at=datetime(2026, 10, 21, 1, 0),
+    )
+
+    class FakeDB:
+        async def execute(self, statement):
+            if "compliance_evaluation_runs" in str(statement).lower():
+                return SimpleNamespace(scalar_one_or_none=lambda: pending_latest_run)
+            return SimpleNamespace(scalar_one_or_none=lambda: None)
+
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(
+            PDFReportService(db=FakeDB()).generate_company_compliance_pdf(str(uuid4()))
+        )
+
+    assert exc.value.status_code == 409
+    assert "latest evaluation run is incomplete" in exc.value.detail

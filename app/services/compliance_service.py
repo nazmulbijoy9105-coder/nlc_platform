@@ -20,7 +20,6 @@ AI Constitution Article 1: Rule engine output is immutable — AI cannot alter i
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 import uuid
 from fastapi.encoders import jsonable_encoder
@@ -32,7 +31,10 @@ from sqlalchemy import select, text, update
 from app.models.company import Company
 from app.models.compliance import ComplianceEvaluationRun, ComplianceFlag, ComplianceScoreHistory
 from app.models.company_fact import CompanyFact
+from app.models.rules import LegalRule
 from app.compliance.fact_provenance import coerce_company_profile_fact_value
+from app.compliance.outcome_status import derive_compliance_outcome
+from app.compliance.evaluation_integrity import calculate_evaluation_score_hash
 from app.models.enums import (
     ExposureBand,
     FlagStatus,
@@ -86,6 +88,8 @@ def _applied_score_impacts(flags) -> list[dict]:
     from app.rule_engine.engine import (
         AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
         PRODUCT_SCORING_RULE_IDS,
+        SCORE_DEDUCTION_RULE_IDS,
+        VERIFIED_RULE_IDS,
         RuleState,
         legal_score_is_released,
     )
@@ -105,13 +109,21 @@ def _applied_score_impacts(flags) -> list[dict]:
         if not confirmed_violation:
             results[index] = {"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"}
             continue
+        if not PRODUCT_SCORING_RULE_IDS:
+            results[index] = {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
+            continue
+        if (
+            flag.rule_id not in PRODUCT_SCORING_RULE_IDS
+            or flag.rule_id not in SCORE_DEDUCTION_RULE_IDS
+        ):
+            results[index] = {"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"}
+            continue
         if not legal_score_is_released():
             results[index] = {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
             continue
-        if flag.rule_id not in PRODUCT_SCORING_RULE_IDS:
-            results[index] = {"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"}
+        if flag.rule_id not in VERIFIED_RULE_IDS:
+            results[index] = {"applied": 0, "status": "RULE_NOT_COUNSEL_VERIFIED"}
             continue
-
         severity_value = getattr(
             getattr(flag, "severity", None),
             "value",
@@ -194,6 +206,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         from app.rule_engine import CompanyProfile
         from app.rule_engine.engine import (
             PRODUCT_SCORING_RULE_IDS,
+            VERIFIED_RULE_IDS,
             legal_score_is_released,
         )
         from app.services.company_service import CompanyService
@@ -255,6 +268,43 @@ class ComplianceService(BaseService[ComplianceFlag]):
         except TypeError as exc:
             raise ValueError(f"CompanyProfile assembly failed: {exc}") from exc
 
+        # Bind the evaluator to the exact active/inactive catalogue snapshot
+        # used for this run. Engine logic remains deployed Python; DB metadata
+        # cannot rewrite evaluator code. A missing/inactive row is fail-closed.
+        catalogue_rows = (
+            await self.db.execute(
+                select(
+                    LegalRule.rule_id,
+                    LegalRule.rule_version,
+                    LegalRule.is_active,
+                ).order_by(LegalRule.rule_id)
+            )
+        ).all()
+        profile.catalogue_binding_required = True
+        profile.catalogue_rule_versions = {
+            row.rule_id: row.rule_version for row in catalogue_rows
+        }
+        profile.catalogue_rule_active = {
+            row.rule_id: bool(row.is_active) for row in catalogue_rows
+        }
+        catalogue_binding = {
+            "record_type": "LEGAL_RULE_CATALOGUE_SNAPSHOT",
+            "rules": [
+                {
+                    "rule_id": row.rule_id,
+                    "rule_version": row.rule_version,
+                    "is_active": bool(row.is_active),
+                }
+                for row in catalogue_rows
+            ],
+            "disclosure": (
+                "This snapshot binds finding metadata and activation to the "
+                "database catalogue. It does not prove statutory correctness "
+                "or independent counsel approval."
+            ),
+        }
+        fact_provenance_snapshot.append(catalogue_binding)
+
         # ── Step 2: Run rule engine ────────────────────────────────
         # Explicit injection supports deterministic tests and controlled
         # evaluation runs. Production callers retain the canonical engine.
@@ -271,7 +321,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         api_raw_total = output.score_breakdown.raw_total if score_is_released else None
 
         # ── Step 3: Persist results ────────────────────────────────
-        await self._persist_evaluation(
+        evaluation_run = await self._persist_evaluation(
             company_id, output, trigger_source,
             fact_provenance_snapshot=fact_provenance_snapshot,
         )
@@ -332,6 +382,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "risk_severity": f.severity,
                     "legal_state": getattr(f.state, "value", f.state),
                     "evaluation_state": getattr(f.eval_state, "value", f.eval_state),
+                    "compliance_outcome": derive_compliance_outcome(
+                        f, counsel_verified_rule=f.rule_id in VERIFIED_RULE_IDS
+                    ),
                     "description": f.description,
                     "score_impact": f.score_impact,
                     "score_impact_applied": applied_impacts[index]["applied"],
@@ -346,14 +399,38 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 for index, f in enumerate(output.flags)
                 if score_is_released and f.rule_id in PRODUCT_SCORING_RULE_IDS
             ],
+            "review_findings": [
+                {
+                    "rule_id": flag.rule_id,
+                    "engine_state": getattr(flag.state, "value", flag.state),
+                    "engine_evaluation_state": getattr(flag.eval_state, "value", flag.eval_state),
+                    "compliance_outcome": derive_compliance_outcome(
+                        flag, counsel_verified_rule=flag.rule_id in VERIFIED_RULE_IDS
+                    ),
+                    "review_status": applied_impacts[index]["status"],
+                    "message": (
+                        "No statutory conclusion is issued. Evidence review is required. Product scoring "
+                        "release is not independent legal verification, legal advice or certification."
+                    ),
+                    "score_impact_applied": 0,
+                }
+                for index, flag in enumerate(output.flags)
+                if not (
+                    score_is_released
+                    and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+                )
+            ],
             "excluded_rule_findings": [
                 {
                     "rule_id": flag.rule_id,
-                    "legal_state": getattr(flag.state, "value", flag.state),
-                    "evaluation_state": getattr(flag.eval_state, "value", flag.eval_state),
-                    "risk_severity": flag.severity,
-                    "description": flag.description,
-                    "statutory_basis": flag.statutory_basis,
+                    "engine_state": getattr(flag.state, "value", flag.state),
+                    "engine_evaluation_state": getattr(flag.eval_state, "value", flag.eval_state),
+                    "compliance_outcome": derive_compliance_outcome(
+                        flag, counsel_verified_rule=False  # Product eligibility is not counsel approval
+                    ),
+                    "risk_severity": "NOT_EVALUATED",
+                    "description": "Internal review signal only. No legal conclusion, breach, liability or penalty is determined.",
+                    "statutory_basis": "Independent legal/source verification pending; statutory basis not released.",
                     "score_impact_applied": 0,
                     "scoring_eligibility": "EXCLUDED_FROM_PRODUCT_SCORING",
                     "scoring_status": applied_impacts[index]["status"],
@@ -393,6 +470,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "rescue_sequence": output.rescue_sequence if score_is_released else None,
             "engine_version":  output.engine_version,
             "ilrmf_version":   output.ilrmf_version,
+            "evaluation_run_id": str(evaluation_run.id),
+            "evaluation_hash": evaluation_run.score_hash,
+            "evaluation_run_status": evaluation_run.evaluation_status,
+            "evaluation_calculated_at": evaluation_run.calculated_at.isoformat(),
         }
 
     async def _persist_evaluation(
@@ -401,7 +482,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         output,  # EngineOutput from C_rule_engine.py
         trigger_source: str,
         fact_provenance_snapshot: list[dict] | None = None,
-    ) -> None:
+    ) -> ComplianceEvaluationRun:
         """
         Persist all evaluation results to DB atomically.
         Order: resolve old flags → insert new flags → score snapshot → update company.
@@ -496,7 +577,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 existing_flag.score_impact = flag.score_impact if approved else 0
                 existing_flag.statutory_basis = (
                     flag.statutory_basis if approved
-                    else "Excluded from the product scoring allowlist."
+                    else "Independent legal/source verification pending; statutory basis not released."
                 )
                 existing_flag.description = (
                     flag.description if approved
@@ -521,7 +602,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     statutory_basis=(
                         flag.statutory_basis
                         if legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
-                        else "Product scoring is disabled or this rule is outside the scoring allowlist."
+                        else "Independent legal/source verification pending; statutory basis not released."
                     ),
                     severity=SeverityLevel(flag.severity)
                     if legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
@@ -597,7 +678,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
         previous_result = await self.db.execute(
             select(ComplianceEvaluationRun.score_hash)
             .where(ComplianceEvaluationRun.company_id == company_id)
-            .order_by(ComplianceEvaluationRun.calculated_at.desc())
+            .order_by(
+                ComplianceEvaluationRun.calculated_at.desc(),
+                ComplianceEvaluationRun.id.desc(),
+            )
             .limit(1)
         )
         previous_hash = previous_result.scalar_one_or_none()
@@ -725,24 +809,36 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "green": sb.green_flag_count,
             },
         }
-        hash_material = json.dumps(
-            {
-                "previous_hash": previous_hash or "GENESIS",
-                "company_id": str(company_id),
-                "score": score_for_current,
-                "risk_band": risk_band.value,
-                "calculated_at": now.isoformat(),
-                "engine_version": engine_version,
-                "trigger_source": trigger_source,
-                "flags_snapshot": flags_snapshot,
-                "fact_provenance_snapshot": fact_provenance_snapshot,
-                "score_breakdown_snapshot": score_breakdown_snapshot,
-            },
-            sort_keys=True,
-            separators=(",", ":"),
-            default=str,
+        # Persist the active catalogue and each rule's emitted engine finding.
+        # Rules with no emitted finding remain NOT_EVALUATED, never COMPLIANT.
+        from app.compliance.rule_outcome_ledger import (
+            build_rule_outcomes_snapshot,
+            hash_rule_outcomes_snapshot,
         )
-        evaluation_hash = hashlib.sha256(hash_material.encode()).hexdigest()
+
+        catalogue_result = await self.db.execute(
+            select(LegalRule).where(LegalRule.is_active.is_(True)).order_by(LegalRule.rule_id)
+        )
+        active_legal_rules = list(catalogue_result.scalars().all())
+        rule_outcomes_snapshot = jsonable_encoder(
+            build_rule_outcomes_snapshot(active_legal_rules, output.flags)
+        )
+        rule_outcomes_hash = hash_rule_outcomes_snapshot(rule_outcomes_snapshot)
+
+        evaluation_hash = calculate_evaluation_score_hash(
+            previous_hash=previous_hash,
+            company_id=company_id,
+            score=score_for_current,
+            risk_band=risk_band,
+            calculated_at=now,
+            engine_version=engine_version,
+            trigger_source=trigger_source,
+            flags_snapshot=flags_snapshot,
+            fact_provenance_snapshot=fact_provenance_snapshot,
+            score_breakdown_snapshot=score_breakdown_snapshot,
+            rule_outcomes_hash=rule_outcomes_hash,
+            rule_outcomes_snapshot=rule_outcomes_snapshot,
+        )
         black_flags = (
             output.score_breakdown.black_flag_count
             if legal_score_is_released() else 0
@@ -763,6 +859,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
             flags_snapshot=flags_snapshot,
             fact_provenance_snapshot=fact_provenance_snapshot,
             score_breakdown_snapshot=score_breakdown_snapshot,
+            rule_outcomes_snapshot=rule_outcomes_snapshot,
+            rule_outcomes_hash=rule_outcomes_hash,
+            rule_catalogue_count=len(active_legal_rules),
         )
         self.db.add(evaluation_run)
 
@@ -772,6 +871,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "current_risk_band":        risk_band,
             "rescue_required":          rescue_required,
             "last_evaluated_at":        now,
+            # Keep the profile freshness marker exactly aligned with this run.
+            # Any later company-profile update advances updated_at and makes
+            # the cached score fail closed until a new evaluation completes.
+            "updated_at":               now,
         }
         if rescue_required:
             company_svc_update["rescue_triggered_at"] = now
@@ -841,7 +944,45 @@ class ComplianceService(BaseService[ComplianceFlag]):
             notif_svc = NotificationService(self.db)
             await notif_svc.queue_for_new_flags(company_id, notification_flags)
 
+        return evaluation_run
+
     # ── Flag Management ───────────────────────────────────────────
+
+    async def get_latest_evaluation_run(
+        self, company_id: uuid.UUID
+    ) -> ComplianceEvaluationRun | None:
+        """Return the latest immutable evaluation run for this tenant company."""
+        result = await self.db.execute(
+            select(ComplianceEvaluationRun)
+            .where(ComplianceEvaluationRun.company_id == company_id)
+            .order_by(
+                ComplianceEvaluationRun.calculated_at.desc(),
+                ComplianceEvaluationRun.id.desc(),
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_latest_evaluation_runs(
+        self, company_ids: list[uuid.UUID]
+    ) -> dict[uuid.UUID, ComplianceEvaluationRun]:
+        """Return one latest immutable evaluation run per requested company."""
+        if not company_ids:
+            return {}
+        result = await self.db.execute(
+            select(ComplianceEvaluationRun)
+            .where(ComplianceEvaluationRun.company_id.in_(company_ids))
+            .distinct(ComplianceEvaluationRun.company_id)
+            .order_by(
+                ComplianceEvaluationRun.company_id,
+                ComplianceEvaluationRun.calculated_at.desc(),
+                ComplianceEvaluationRun.id.desc(),
+            )
+        )
+        return {
+            row.company_id: row
+            for row in result.scalars().all()
+        }
 
     async def get_active_flags(self, company_id: uuid.UUID) -> list[ComplianceFlag]:
         """Return all ACTIVE compliance flags for a company."""
@@ -879,21 +1020,31 @@ class ComplianceService(BaseService[ComplianceFlag]):
             )
         )
         rows = flags_result.all()
-        from app.rule_engine.engine import PRODUCT_SCORING_RULE_IDS, legal_score_is_released
-        verified_severities = [
+        from app.rule_engine.engine import (
+            PRODUCT_SCORING_RULE_IDS,
+            VERIFIED_RULE_IDS,
+            legal_score_is_released,
+        )
+        score_released = legal_score_is_released()
+        product_severities = [
             str(getattr(severity, "value", severity)).upper()
             for rule_id, severity in rows
-            if legal_score_is_released() and rule_id in PRODUCT_SCORING_RULE_IDS
+            if score_released and rule_id in PRODUCT_SCORING_RULE_IDS
         ]
-        black_count = verified_severities.count("BLACK")
-        red_count = verified_severities.count("RED")
-        yellow_count = verified_severities.count("YELLOW")
-        pending_review_count = len(rows) - len(verified_severities)
+        pending_review_count = sum(
+            1 for rule_id, _severity in rows if rule_id not in VERIFIED_RULE_IDS
+        )
+        not_evaluated_count = sum(
+            1 for rule_id, _ in rows
+            if not score_released or rule_id not in PRODUCT_SCORING_RULE_IDS
+        )
+        black_count = product_severities.count("BLACK")
+        red_count = product_severities.count("RED")
+        yellow_count = product_severities.count("YELLOW")
         summary.update({
-            # Customer-facing active counts include only rules approved for release.
-            # Unapproved engine flags remain separately visible as review prompts.
-            "total_active": len(verified_severities),
-            "total_active_flags": len(verified_severities),
+            # Product scoring and counsel review are independent dimensions.
+            "total_active": len(product_severities),
+            "total_active_flags": len(product_severities),
             "pending_review": pending_review_count,
             "pending_review_flags": pending_review_count,
             "black": black_count,
@@ -902,7 +1053,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "black_flags": black_count,
             "red_flags": red_count,
             "yellow_flags": yellow_count,
-            "not_evaluated": pending_review_count,
+            "not_evaluated": not_evaluated_count,
         })
         return summary
 
@@ -964,11 +1115,18 @@ class ComplianceService(BaseService[ComplianceFlag]):
         history = []
         for row in rows:
             stored_band = getattr(row.risk_band, "value", row.risk_band)
-            released = legal_score_is_released() and stored_band != "NOT_EVALUATED"
+            run_status = str(getattr(row, "evaluation_status", "NOT_RELEASED") or "NOT_RELEASED")
+            released = (
+                legal_score_is_released()
+                and run_status == "COMPLETED"
+                and stored_band != "NOT_EVALUATED"
+                and row.score is not None
+            )
             history.append({
                 "month": row.snapshot_month.isoformat(),
                 "score": row.score if released else None,
                 "risk_band": row.risk_band if released else "NOT_EVALUATED",
+                "evaluation_status": run_status,
                 "agm_score": row.agm_score if released else None,
                 "audit_score": row.audit_score if released else None,
                 "return_score": row.return_score if released else None,
@@ -997,21 +1155,40 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
 
     async def get_dashboard_kpis(self, user_id=None) -> dict:
-        """Return legal risk KPIs only after release; otherwise return evidence-review metrics.
+        """Return KPIs for the same authorised company scope as the company list.
 
-        The unreleased path deliberately does not read or aggregate current_risk_band.
-        Evaluation-state counts are operational review signals, not legal findings.
+        Legal staff may have access through either an explicit staff assignment
+        or an active company_user_access membership. Keep this scope identical
+        in evidence-review and released-risk modes.
         """
-        from app.rule_engine.engine import legal_score_is_released
+        from app.rule_engine.engine import (
+            RULE_ENGINE_VERSION,
+            SCORING_SPEC_VERSION,
+            legal_score_is_released,
+        )
+
+        scope = ""
+        params = {}
+        if user_id:
+            scope = """
+                AND (
+                    c.assigned_staff_id = CAST(:uid AS uuid)
+                    OR EXISTS (
+                        SELECT 1
+                        FROM company_user_access AS cua
+                        WHERE cua.company_id = c.id
+                          AND cua.user_id = CAST(:uid AS uuid)
+                          AND cua.is_active IS TRUE
+                    )
+                )
+            """
+            params = {"uid": str(user_id)}
 
         if not legal_score_is_released():
-            scope = " AND assigned_staff_id = CAST(:uid AS uuid)" if user_id else ""
-            params = {"uid": str(user_id)} if user_id else {}
-
             total_result = await self.db.execute(
                 text(
-                    "SELECT COUNT(*) FROM companies "
-                    "WHERE is_active = true" + scope
+                    "SELECT COUNT(*) FROM companies AS c "
+                    "WHERE c.is_active IS TRUE" + scope
                 ),
                 params,
             )
@@ -1027,9 +1204,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     JOIN compliance_flags AS cf
                       ON cf.company_id = c.id
                      AND cf.flag_status = 'ACTIVE'
-                    WHERE c.is_active = true
+                    WHERE c.is_active IS TRUE
                     """
-                    + (" AND c.assigned_staff_id = CAST(:uid AS uuid)" if user_id else "")
+                    + scope
                     + """
                     GROUP BY cf.evaluation_state
                     ORDER BY cf.evaluation_state
@@ -1051,9 +1228,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     JOIN compliance_flags AS cf
                       ON cf.company_id = c.id
                      AND cf.flag_status = 'ACTIVE'
-                    WHERE c.is_active = true
+                    WHERE c.is_active IS TRUE
                     """
-                    + (" AND c.assigned_staff_id = CAST(:uid AS uuid)" if user_id else "")
+                    + scope
                 ),
                 params,
             )
@@ -1074,36 +1251,56 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "upcoming_deadlines": None,
             }
 
-        # Released statutory risk aggregates are available only on the approved path.
-        if user_id:
-            query = text("""
+        query = text(
+            """
+            WITH latest_run AS (
+                SELECT DISTINCT ON (company_id)
+                    company_id, evaluation_status, score, risk_band, calculated_at,
+                    engine_version, score_breakdown_snapshot
+                FROM compliance_evaluation_runs
+                ORDER BY company_id, calculated_at DESC, id DESC
+            ),
+            current_company_state AS (
                 SELECT
-                    COUNT(*) as total_companies,
-                    COUNT(*) FILTER (WHERE current_risk_band = 'GREEN') as green_count,
-                    COUNT(*) FILTER (WHERE current_risk_band = 'YELLOW') as yellow_count,
-                    COUNT(*) FILTER (WHERE current_risk_band IN ('RED', 'BLACK')) as red_black_count,
-                    COUNT(*) FILTER (WHERE current_risk_band = 'NOT_EVALUATED') as not_evaluated_count,
-                    0 as upcoming_deadlines
-                FROM companies
-                WHERE assigned_staff_id = :uid AND is_active = true
-            """)
-            result = await self.db.execute(query, {"uid": str(user_id)})
-        else:
-            query = text("""
-                SELECT
-                    COUNT(*) as total_companies,
-                    COUNT(*) FILTER (WHERE current_risk_band = 'GREEN') as green_count,
-                    COUNT(*) FILTER (WHERE current_risk_band = 'YELLOW') as yellow_count,
-                    COUNT(*) FILTER (WHERE current_risk_band IN ('RED', 'BLACK')) as red_black_count,
-                    COUNT(*) FILTER (
-                        WHERE current_risk_band = 'NOT_EVALUATED'
-                           OR current_risk_band IS NULL
-                    ) as not_evaluated_count,
-                    0 as upcoming_deadlines
-                FROM companies
-                WHERE is_active = true
-            """)
-            result = await self.db.execute(query)
+                    c.id,
+                    CASE
+                        WHEN lr.evaluation_status = 'COMPLETED'
+                         AND lr.score IS NOT NULL
+                         AND lr.risk_band <> 'NOT_EVALUATED'
+                         AND lr.engine_version = :engine_version
+                         AND lr.score_breakdown_snapshot ->> 'scoring_spec_version' = :scoring_spec_version
+                         AND lr.score_breakdown_snapshot ->> 'score_reconciles' = 'true'
+                         AND lr.score_breakdown_snapshot ->> 'final_score' = lr.score::text
+                         AND c.last_evaluated_at = lr.calculated_at
+                             AND c.updated_at <= c.last_evaluated_at
+                         AND c.current_compliance_score = lr.score
+                         AND c.current_risk_band = lr.risk_band
+                        THEN lr.risk_band
+                        ELSE 'NOT_EVALUATED'::risk_band
+                    END AS risk_band
+                FROM companies AS c
+                LEFT JOIN latest_run AS lr ON lr.company_id = c.id
+                WHERE c.is_active IS TRUE
+                """
+            + scope
+            + """
+            )
+            SELECT
+                COUNT(*) AS total_companies,
+                COUNT(*) FILTER (WHERE risk_band = 'GREEN') AS green_count,
+                COUNT(*) FILTER (WHERE risk_band = 'YELLOW') AS yellow_count,
+                COUNT(*) FILTER (WHERE risk_band IN ('RED', 'BLACK')) AS red_black_count,
+                COUNT(*) FILTER (WHERE risk_band = 'NOT_EVALUATED') AS not_evaluated_count,
+                0 AS upcoming_deadlines
+            FROM current_company_state
+            """
+        )
+        released_params = {
+            **params,
+            "engine_version": RULE_ENGINE_VERSION,
+            "scoring_spec_version": SCORING_SPEC_VERSION,
+        }
+        result = await self.db.execute(query, released_params)
         row = result.mappings().one_or_none()
         result_dict = dict(row) if row else {}
         result_dict.update({

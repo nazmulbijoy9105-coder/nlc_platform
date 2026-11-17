@@ -36,9 +36,10 @@ from app.core.dependencies import (
 from app.models.enums import SeverityLevel
 from app.rule_engine.engine import (
     AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
-    LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
-    VERIFIED_RULE_IDS,
+    SCORE_DEDUCTION_RULE_IDS,
+    VERIFIED_RULE_IDS as VERIFIED_RULE_IDS,  # Compatibility export; not used to claim independent legal review.
+    legal_score_is_released,
 )
 from app.models.user import User
 from app.services.notification_service import ActivityService
@@ -62,6 +63,8 @@ class RuleUpdateRequest(BaseModel):
     default_severity: SeverityLevel | None = None
     score_impact: int | None = Field(None, ge=0, le=50)
     is_active: bool | None = None
+    # Optimistic concurrency: the caller must edit the version it actually read.
+    expected_version: str = Field(min_length=1, max_length=20)
     # Required for audit trail
     change_reason: str = Field(
         min_length=10,
@@ -82,9 +85,9 @@ class RuleResponse(BaseModel):
     revenue_tier: str
     is_black_override: bool
     is_active: bool
-    verification_status: str = Field(description="Citation review status only; not a legal opinion or confirmation of company-specific applicability.")
-    verified_at: str | None = Field(description="Date the citation review status was recorded, if applicable.")
-    statutory_effective_date: str | None = Field(description="Recorded statutory effective date; applicability must still be assessed for the relevant company and period.")
+    verification_status: str = Field(description="Independent legal/source review status; PENDING means no trusted verification record exists. Product-owner release is separate.")
+    verified_at: str | None = Field(description="Independent legal/source verification timestamp; unavailable until a trusted verification record exists.")
+    statutory_effective_date: str | None = Field(description="Authoritatively source-verified statutory effective date; omitted until source verification is recorded.")
     version: str
     created_at: str
     updated_at: str | None
@@ -124,8 +127,12 @@ class MessageResponse(BaseModel):
 
 def _rule_to_response(rule) -> RuleResponse:
     scoring_catalogue_member = rule.rule_id in PRODUCT_SCORING_RULE_IDS
-    product_scoring_enabled = LEGAL_SCORE_RELEASED and scoring_catalogue_member
     legally_verified = rule.rule_id in VERIFIED_RULE_IDS
+    product_scoring_enabled = (
+        legal_score_is_released()
+        and scoring_catalogue_member
+        and legally_verified
+    )
     return RuleResponse(
         rule_id=rule.rule_id,
         rule_name=rule.rule_name,
@@ -139,26 +146,32 @@ def _rule_to_response(rule) -> RuleResponse:
             else "Informational catalogue entry only. No score deduction is applied."
         ),
         default_severity=(
-            None
-            if str(getattr(rule.default_severity, "value", rule.default_severity)).upper() == "NOT_EVALUATED"
-            else str(getattr(rule.default_severity, "value", rule.default_severity))
-        ) if scoring_catalogue_member else None,
+            str(getattr(rule.default_severity, "value", rule.default_severity))
+            if legally_verified
+            and str(getattr(rule.default_severity, "value", rule.default_severity)).upper() != "NOT_EVALUATED"
+            else None
+        ),
         product_scoring_enabled=product_scoring_enabled,
-        score_impact=rule.score_impact if scoring_catalogue_member else 0,
+        score_impact=(
+            rule.score_impact
+            if legally_verified and rule.rule_id in SCORE_DEDUCTION_RULE_IDS
+            else 0
+        ),
         revenue_tier=str(rule.revenue_tier) if scoring_catalogue_member else "COMPLIANCE_PACKAGE",
         # Catalogue configuration remains visible while score publication is paused.
         # This field describes product policy, not independent legal verification.
         is_black_override=(
-            scoring_catalogue_member
+            product_scoring_enabled
+            and legally_verified
+            and scoring_catalogue_member
             and rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         ),
-        is_active=bool(rule.is_active and scoring_catalogue_member),
-        verification_status=rule.verification_status if legally_verified else "PENDING",
-        verified_at=rule.verified_at.isoformat() if legally_verified and rule.verified_at else None,
-        statutory_effective_date=(
-            rule.statutory_effective_date.isoformat()
-            if legally_verified and rule.statutory_effective_date else None
-        ),
+        is_active=bool(rule.is_active),
+        verification_status="VERIFIED" if legally_verified else "PENDING",
+        # Owner attestation does not establish independent legal/source
+        # verification. Do not expose legacy timestamps or dates as verified.
+        verified_at=None,
+        statutory_effective_date=None,
         version=rule.rule_version,
         created_at=rule.created_at.isoformat(),
         updated_at=rule.updated_at.isoformat() if rule.updated_at else None,
@@ -173,7 +186,7 @@ def _rule_to_response(rule) -> RuleResponse:
     "",
     response_model=list[RuleResponse],
     summary="List all ILRMF legal rules",
-    description="Returns public legal-rule metadata and citation-review status. Citation verification is not a legal opinion or confirmation of company-specific applicability; tenant and user data are not exposed.",
+    description="Returns public rule metadata, product-scoring eligibility, catalogue activation and independent legal/source review status. Product-owner release does not constitute independent legal verification; tenant and user data are not exposed.",
 )
 async def list_rules(
     rule_type: str | None = None,
@@ -213,6 +226,7 @@ async def get_rule_summary(
     by_severity: dict[str, int] = {}
     total_max_deduction = 0
     black_overrides = 0
+    score_release_available = legal_score_is_released()
     active_count = 0
 
     for r in rules:
@@ -222,7 +236,8 @@ async def get_rule_summary(
         by_severity[r.default_severity] = by_severity.get(r.default_severity, 0) + 1
         if r.is_active and r.rule_id in PRODUCT_SCORING_RULE_IDS:
             active_count += 1
-            total_max_deduction += r.score_impact
+            if score_release_available:
+                total_max_deduction += r.score_impact
         if (
             r.rule_id in PRODUCT_SCORING_RULE_IDS
             and r.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
@@ -262,6 +277,8 @@ async def get_black_overrides(
         for rule in rules
         if rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         and rule.rule_id in PRODUCT_SCORING_RULE_IDS
+        and rule.rule_id in VERIFIED_RULE_IDS
+        and legal_score_is_released()
     ]
 
 
@@ -320,7 +337,9 @@ async def update_rule(
         raise HTTPException(status_code=404, detail=f"Rule '{rule_id}' not found.")
 
     # Validate BLACK override rules cannot have severity changed to non-BLACK
-    update_data = body.model_dump(exclude={"change_reason"}, exclude_none=True)
+    update_data = body.model_dump(
+        exclude={"change_reason", "expected_version"}, exclude_none=True
+    )
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided for update.")
 
@@ -336,12 +355,18 @@ async def update_rule(
                 ),
             )
 
-    updated_rule = await svc.update_rule(
-        rule_id=rule_id,
-        **update_data,
-        change_reason=body.change_reason,
-        changed_by=current_user.id,
-    )
+    try:
+        updated_rule = await svc.update_rule(
+            rule_id=rule_id,
+            **update_data,
+            change_reason=body.change_reason,
+            changed_by=current_user.id,
+            expected_version=body.expected_version,
+        )
+    except ValueError as exc:
+        # Stale version or malformed version string: caller must reload and
+        # explicitly reconcile; never silently overwrite a concurrent edit.
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     await activity.log(
         action="LEGAL_RULE_UPDATED",
@@ -363,7 +388,13 @@ async def update_rule(
         fields=list(update_data.keys()),
         change_reason=body.change_reason,
     )
-    return _rule_to_response(updated_rule)
+
+    # UPDATE/flush may leave server-generated timestamp columns expired.
+    # Explicitly refresh while the AsyncSession is active so response
+    # serialization cannot trigger an implicit async lazy load (MissingGreenlet).
+    await db.refresh(updated_rule)
+    response = _rule_to_response(updated_rule)
+    return response
 
 
 # ---------------------------------------------------------------------------

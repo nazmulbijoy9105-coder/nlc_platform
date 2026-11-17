@@ -24,13 +24,14 @@ async def test_super_admin_kpis_include_the_authorized_portfolio(
     result = await ComplianceService(db).get_dashboard_kpis()
 
     assert result["total_companies"] >= 2
-    assert (
-        result["green_count"]
-        + result["yellow_count"]
-        + result["red_black_count"]
-        + result["not_evaluated_count"]
-        == result["total_companies"]
-    )
+    assert result["dashboard_mode"] == "EVIDENCE_REVIEW"
+    assert result["statutory_score_release_status"] == "NOT_RELEASED"
+    assert result["statutory_risk_aggregates_available"] is False
+    assert result["green_count"] is None
+    assert result["yellow_count"] is None
+    assert result["red_black_count"] is None
+    assert result["not_evaluated_count"] == result["total_companies"]
+    assert result["upcoming_deadlines"] is None
 
 
 @pytest.mark.asyncio
@@ -43,7 +44,10 @@ async def test_admin_staff_kpis_include_the_authorized_portfolio(
     result = await ComplianceService(db).get_dashboard_kpis()
 
     assert result["total_companies"] >= 2
-    assert result["not_evaluated_count"] >= 2 or result["green_count"] + result["yellow_count"] + result["red_black_count"] >= 2
+    assert result["dashboard_mode"] == "EVIDENCE_REVIEW"
+    assert result["not_evaluated_count"] >= 2
+    assert result["green_count"] is None
+    assert result["red_black_count"] is None
 
 
 @pytest.mark.asyncio

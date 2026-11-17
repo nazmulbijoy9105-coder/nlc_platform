@@ -1,12 +1,12 @@
-# SEED-01: This script upserts by rule_id (SELECT then UPDATE/INSERT).
+# SEED-01: This script inserts missing rule IDs only; existing definitions are preserved.
 # It must NEVER seed based on COUNT(*) < N. Count checks are verification only.
 #!/usr/bin/env python3
 """
 NEUM LEX COUNSEL — Legal Rules Seeder
 scripts/seed_rules.py
 
-Standalone script to seed all 85 ILRMF rules (engine parity).
-Safe to run multiple times — upserts by rule_id.
+Development-only bootstrap utility for the 85-rule ILRMF catalogue.
+Safe to repeat — inserts missing IDs and preserves existing definitions.
 
 Statutory bases must match app/rule_engine/engine.py.
 ID parity is verified by tests; field-level statutory_basis
@@ -14,8 +14,11 @@ parity is enforced in tests/unit/test_canonical_integrity.py.
 
 USAGE:
   python scripts/seed_rules.py                 # dry-run only
-  python scripts/seed_rules.py --apply         # explicitly write to DATABASE_URL
-  python scripts/seed_rules.py --apply --verbose
+  NLC_ALLOW_DEVELOPMENT_RULE_SEED=true python scripts/seed_rules.py --apply
+
+The --apply path is a development-only bootstrap aid. Production/Render
+registry changes must be introduced through reviewed, forward-only Alembic
+migrations; this script refuses writes in deployment environments.
 """
 from __future__ import annotations
 
@@ -27,6 +30,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Dict, List
+from urllib.parse import urlparse
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -135,8 +139,8 @@ ILRMF_RULES: List[Dict[str, Any]] = [
     {"rule_id": "ESC-004", "rule_name": "Voluntary Winding Up", "rule_type": "THRESHOLD", "statutory_basis": "Section 286 and following provisions, Companies Act 1994 (Bangladesh)", "description": "Reported voluntary winding-up resolution. Verify the statutory ground, resolution, applicable solvency declaration, liquidator appointment, creditor process and current status under Part V; no automatic BLACK classification.", "rule_condition": {"check_fn": "check_esc_004", "trigger": "voluntary_winding_up == True", "data_points": ["voluntary_winding_up"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "CORPORATE_RESCUE", "is_black_override": False},
     {"rule_id": "ESC-005", "rule_name": "Investigation Order Pending", "rule_type": "THRESHOLD", "statutory_basis": "Sections 195 and 197; section 199 where related entities are included, Companies Act 1994 (Bangladesh)", "description": "Reported company investigation. Verify the Government inspector appointment under section 195 or 197, the scope of any section 199 related-entity investigation, authenticated order, parties and current status. An inquiry is not itself a finding of liability.", "rule_condition": {"check_fn": "check_esc_005", "trigger": "investigation_order == True", "data_points": ["investigation_order"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "STRUCTURED_REGULARIZATION", "is_black_override": False},
     {"rule_id": "FX-001", "rule_name": "Foreign Exchange Violation", "rule_type": "THRESHOLD", "statutory_basis": "Foreign Exchange Regulation Act 1947 (Bangladesh)", "description": "Foreign exchange violation detected under FE Regulation Act 1947.", "rule_condition": {"check_fn": "check_fx_001", "trigger": "foreign_exchange_violation == True", "data_points": ["foreign_exchange_violation"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "STRUCTURED_REGULARIZATION", "is_black_override": False},
-    {"rule_id": "LBR-001", "rule_name": "Factory License Missing", "rule_type": "THRESHOLD", "statutory_basis": "Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026", "description": "Review prompt only: verify a Government direction under section 326, establishment class, effective date, exemptions and authentic licence status.", "rule_condition": {"check_fn": "check_lbr_001", "trigger": "factory_license_required_by_direction == True AND factory_license_obtained == False", "data_points": ["factory_license_obtained"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "STRUCTURED_REGULARIZATION", "is_black_override": False},
-    {"rule_id": "LBR-002", "rule_name": "Factory License Expired", "rule_type": "DEADLINE", "statutory_basis": "Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026", "description": "Review prompt only: verify the section 326 Government direction, licence class, five-year/contractor one-year term, renewal application and any extension.", "rule_condition": {"check_fn": "check_lbr_002", "trigger": "factory_license_required_by_direction == True AND factory_license_expiry < today", "data_points": ["factory_license_expiry"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
+    {"rule_id": "LBR-001", "rule_name": "Establishment Licence Applicability and Status", "rule_type": "THRESHOLD", "statutory_basis": "Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355", "description": "Review prompt only: verify the actual establishment category, Rule 354 scope, any operative Government direction, authentic DIFE licence status and the unresolved renewal-term interaction between amended section 326 and rule 355. Manufacturing status alone is not the licensing predicate.", "rule_condition": {"check_fn": "check_lbr_001", "trigger": "labour_license_scope_verified == True AND labour_license_scope_evidence_ref IS NOT NULL AND labour_license_scope_verified_at IS NOT NULL AND labour_license_scope_verified_by IS NOT NULL AND factory_license_required_by_direction == True AND labour_license_status_verified == True AND labour_license_status_evidence_ref IS NOT NULL AND labour_license_status_verified_at IS NOT NULL AND labour_license_status_verified_by IS NOT NULL AND factory_license_obtained == False", "data_points": ["labour_establishment_category", "labour_license_scope_verified", "labour_license_scope_evidence_ref", "labour_license_scope_verified_at", "labour_license_scope_verified_by", "factory_license_required_by_direction", "labour_license_status_verified", "labour_license_status_evidence_ref", "labour_license_status_verified_at", "labour_license_status_verified_by", "factory_license_obtained"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
+    {"rule_id": "LBR-002", "rule_name": "Establishment Licence Expiry Requires Review", "rule_type": "DEADLINE", "statutory_basis": "Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355", "description": "Use the expiry date printed on a verified licence. Do not calculate a renewal term from issue date until counsel reconciles amended section 326(1)(b), rule 355(2), contractor status and transitional treatment.", "rule_condition": {"check_fn": "check_lbr_002", "trigger": "labour_license_scope_verified == True AND labour_license_scope_evidence_ref IS NOT NULL AND labour_license_scope_verified_at IS NOT NULL AND labour_license_scope_verified_by IS NOT NULL AND factory_license_required_by_direction == True AND labour_license_status_verified == True AND labour_license_status_evidence_ref IS NOT NULL AND labour_license_status_verified_at IS NOT NULL AND labour_license_status_verified_by IS NOT NULL AND factory_license_obtained == True AND factory_license_expiry IS NOT NULL AND factory_license_expiry < today", "data_points": ["labour_license_scope_verified", "labour_license_scope_evidence_ref", "labour_license_scope_verified_at", "labour_license_scope_verified_by", "factory_license_required_by_direction", "labour_license_status_verified", "labour_license_status_evidence_ref", "labour_license_status_verified_at", "labour_license_status_verified_by", "factory_license_obtained", "factory_license_expiry"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
     {"rule_id": "LBR-003", "rule_name": "Labour Court Order Pending", "rule_type": "THRESHOLD", "statutory_basis": "Bangladesh Labour Act 2006 and the specific Labour Court order; enabling provision and operative status require case-specific verification", "description": "Review prompt only: verify certified order, parties, company identity, service, operative directions, appeal/revision and stay before finding non-compliance.", "rule_condition": {"check_fn": "check_lbr_003", "trigger": "labour_court_order_pending == True", "data_points": ["labour_court_order_pending"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "STRUCTURED_REGULARIZATION", "is_black_override": False},
     {"rule_id": "STR-001", "rule_name": "Name Change Not Filed", "rule_type": "DEADLINE", "statutory_basis": "Sections 11 and 88(1), Companies Act 1994 (Bangladesh)", "description": "Name change under Section 11; copy of special resolution to RJSC within 15 days under Section 88(1). Further name-change certificate/registration steps must be separately verified.", "rule_condition": {"check_fn": "check_str_001", "trigger": "name_change_pending == True AND days_since_name_change > 15", "data_points": ["name_change_pending", "name_change_date"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
     {"rule_id": "STR-002", "rule_name": "Object Clause Change Not Filed", "rule_type": "DEADLINE", "statutory_basis": "Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh)", "description": "MoA object-clause alteration: Sections 12 and 15-16 may require court confirmation/registration; copy of special resolution is filed under Section 88(1) within 15 days. Do not treat the 15-day copy filing as completion of court confirmation.", "rule_condition": {"check_fn": "check_str_002", "trigger": "object_clause_change_pending == True AND days_since_object_change > 15", "data_points": ["object_clause_change_pending", "object_clause_change_date"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
@@ -174,6 +178,34 @@ def get_database_url() -> str:
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql+asyncpg://", 1)
     return url
+
+
+def assert_seed_write_allowed(database_url: str) -> None:
+    """Permit bootstrap writes only to an explicitly opted-in local database."""
+    environment = os.environ.get("ENVIRONMENT", "development").strip().lower()
+    is_render = (
+        os.environ.get("RENDER", "").strip().lower() == "true"
+        or bool(os.environ.get("RENDER_SERVICE_ID", "").strip())
+    )
+    if environment in {"prod", "production"} or is_render:
+        raise RuntimeError(
+            "Rule seed writes are disabled in production/Render. "
+            "Use a reviewed, forward-only Alembic migration."
+        )
+    if os.environ.get("NLC_ALLOW_DEVELOPMENT_RULE_SEED", "").strip().lower() != "true":
+        raise RuntimeError(
+            "Rule seed writes require explicit local development opt-in: "
+            "set NLC_ALLOW_DEVELOPMENT_RULE_SEED=true. "
+            "Production registry changes must use Alembic."
+        )
+
+    host = urlparse(database_url).hostname
+    local_hosts = {"localhost", "127.0.0.1", "::1", "host.docker.internal"}
+    if host not in local_hosts:
+        raise RuntimeError(
+            "Rule seed writes are restricted to local PostgreSQL hosts. "
+            "Use Alembic for Neon, Render, or any remote database."
+        )
 
 
 async def seed_rules(dry_run: bool = True, verbose: bool = False) -> int:
@@ -225,6 +257,7 @@ async def seed_rules(dry_run: bool = True, verbose: bool = False) -> int:
         return 0
 
     db_url = get_database_url()
+    assert_seed_write_allowed(db_url)
     engine = create_async_engine(db_url, echo=False)
 
     async with engine.begin() as conn:
@@ -245,6 +278,13 @@ async def seed_rules(dry_run: bool = True, verbose: bool = False) -> int:
             existing = res.fetchone()
 
             if existing:
+                # Catalogue activation is separate from definition changes.
+                # Keep existing rule definitions immutable here, but ensure every
+                # canonical seed ID remains active for deterministic evaluation.
+                await conn.execute(
+                    sa.text("UPDATE legal_rules SET is_active = TRUE, updated_at = :now WHERE rule_id = :rid"),
+                    {"now": now, "rid": rule["rule_id"]},
+                )
                 actual = dict(existing._mapping)
                 expected = {
                     "rule_name": rule["rule_name"],
@@ -335,7 +375,7 @@ def main():
     p.add_argument(
         "--apply",
         action="store_true",
-        help="Insert missing rules only; existing rule changes require the audited Super Admin workflow",
+        help="Development-only bootstrap insert; requires NLC_ALLOW_DEVELOPMENT_RULE_SEED=true and is blocked on production/Render",
     )
     p.add_argument("--verbose", "-v", action="store_true")
     args = p.parse_args()

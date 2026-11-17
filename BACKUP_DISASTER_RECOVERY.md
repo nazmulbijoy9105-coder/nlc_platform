@@ -3,6 +3,8 @@
 **Platform:** Render backend + Neon PostgreSQL + Vercel frontend.  
 **Status:** Operational procedures are being brought into line with the deployed infrastructure. Do not use the legacy Fly.io instructions.
 
+> **Current read-only update — 13 November 2026:** see [PRODUCTION_READ_ONLY_AUDIT_2026-11-13.md](docs/release/PRODUCTION_READ_ONLY_AUDIT_2026-11-13.md). Production is at Alembic revision `0111_rule_outcome_ledger`; the restored 7 November snapshot branch remains at `0042_dedup_key`. The three rescue/webhook evidence tables now exist but are empty schema-only reconstructions. The production snapshot schedule remains empty. The 8 November incident facts below are historical and must not be treated as current state.
+
 ## 1. Non-negotiable recovery rules
 
 1. Never run a database restore, migration, DROP, TRUNCATE, or table recreation against production as an exploratory step.

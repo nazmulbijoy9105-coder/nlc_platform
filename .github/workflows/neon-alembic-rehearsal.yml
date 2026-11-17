@@ -1,0 +1,138 @@
+name: Neon Alembic Rehearsal
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  neon-alembic-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_PROJECT_ID: rapid-bonus-26545234
+      NEON_PARENT_BRANCH_ID: br-square-queen-aoyflteh
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Rehearse Alembic from the isolated Neon snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${NEON_API_KEY:-}" ]]; then
+            echo "::error::Add the repository Actions secret NEON_API_KEY before running this workflow."
+            exit 1
+          fi
+
+          API="https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID"
+          AUTH=(-H "Authorization: Bearer $NEON_API_KEY" -H "Accept: application/json")
+          BRANCH_ID=""
+          cleanup() {
+            if [[ -n "$BRANCH_ID" ]]; then
+              curl --silent --show-error --fail --request DELETE "${AUTH[@]}" \
+                "$API/branches/$BRANCH_ID" >/dev/null \
+                || echo "::warning::Temporary Neon branch cleanup must be checked manually: $BRANCH_ID"
+            fi
+          }
+          trap cleanup EXIT
+
+          parent_json=$(curl --silent --show-error --fail "${AUTH[@]}" \
+            "$API/branches/$NEON_PARENT_BRANCH_ID")
+          parent_name=$(jq -r '.branch.name // empty' <<<"$parent_json")
+          parent_default=$(jq -r 'if .branch.default == null then "unknown" else (.branch.default | tostring) end' <<<"$parent_json")
+          if [[ "$parent_name" != "rehearsal-drift" || "$parent_default" != "false" ]]; then
+            echo "::error::Refusing migration rehearsal: fixed parent is not the expected non-default rehearsal-drift branch."
+            exit 1
+          fi
+
+          branch_name="nlc-0108-rehearsal-$GITHUB_RUN_ID"
+          payload=$(jq -n --arg name "$branch_name" --arg parent "$NEON_PARENT_BRANCH_ID" \
+            '{branch:{name:$name,parent_id:$parent},endpoints:[{type:"read_write"}]}')
+          created=$(curl --silent --show-error --fail --request POST \
+            "${AUTH[@]}" -H "Content-Type: application/json" \
+            --data "$payload" "$API/branches")
+          BRANCH_ID=$(jq -r '.branch.id // empty' <<<"$created")
+          ENDPOINT_ID=$(jq -r '.endpoints[0].id // empty' <<<"$created")
+          if [[ -z "$BRANCH_ID" || -z "$ENDPOINT_ID" ]]; then
+            echo "::error::Neon did not return the temporary branch and read-write endpoint IDs."
+            exit 1
+          fi
+          echo "Created disposable Neon branch $BRANCH_ID from rehearsal-drift."
+
+          get_uri() {
+            local role="$1"
+            curl --silent --show-error --fail --get "${AUTH[@]}" \
+              --data-urlencode "branch_id=$BRANCH_ID" \
+              --data-urlencode "endpoint_id=$ENDPOINT_ID" \
+              --data-urlencode "database_name=neondb" \
+              --data-urlencode "role_name=$role" \
+              --data-urlencode "pooled=false" \
+              "$API/connection_uri" | jq -r '.uri // empty'
+          }
+
+          MIGRATION_URL=$(get_uri "neondb_owner")
+          AUDIT_URL=$(get_uri "nlc_ci_audit_role")
+          if [[ -z "$MIGRATION_URL" || -z "$AUDIT_URL" ]]; then
+            echo "::error::Neon did not return direct connection URIs for the migration and audit roles."
+            exit 1
+          fi
+          echo "::add-mask::$MIGRATION_URL"
+          echo "::add-mask::$AUDIT_URL"
+
+          ready=false
+          for attempt in $(seq 1 30); do
+            if DATABASE_URL="$MIGRATION_URL" python - <<'PY'
+          import asyncio
+          import os
+          import asyncpg
+
+          async def main():
+              connection = await asyncpg.connect(os.environ["DATABASE_URL"], timeout=5)
+              await connection.close()
+
+          asyncio.run(main())
+          PY
+            then
+              ready=true
+              break
+            fi
+            sleep 2
+          done
+          if [[ "$ready" != "true" ]]; then
+            echo "::error::Temporary Neon compute did not become reachable."
+            exit 1
+          fi
+
+          unset MIGRATION_DATABASE_URL || true
+          DATABASE_URL="$MIGRATION_URL" python -m alembic upgrade head
+          current=$(DATABASE_URL="$MIGRATION_URL" python -m alembic current)
+          echo "$current"
+          if ! grep -q "0108_audit_legal_rule_registry_inventory" <<<"$current"; then
+            echo "::error::Neon rehearsal did not reach Alembic revision 0108."
+            exit 1
+          fi
+
+          mkdir -p artifacts
+          DATABASE_URL="$AUDIT_URL" GITHUB_SHA="$GITHUB_SHA" \
+            python tools/audit_rule_parity.py --no-api \
+              --report-json artifacts/neon-rule-registry-parity.json
+          echo "Neon Alembic 0108 rehearsal and read-only catalogue parity passed."
+
+      - name: Upload Neon rehearsal parity report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neon-alembic-0108-rehearsal
+          path: artifacts/neon-rule-registry-parity.json
+          if-no-files-found: warn

@@ -17,6 +17,10 @@ from fastapi import HTTPException, Response
 from sqlalchemy import select
 
 from app.models.compliance import ComplianceEvaluationRun
+from app.compliance.evaluation_integrity import (
+    evaluation_run_chain_problem,
+    evaluation_run_integrity_problems,
+)
 
 # Import CATEGORY_CAPS for score reconciliation (cap adjustment display)
 from app.rule_engine.engine import (
@@ -24,7 +28,9 @@ from app.rule_engine.engine import (
     CATEGORY_CAPS,
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
-    RuleState,
+    RULE_ENGINE_VERSION,
+    SCORE_DEDUCTION_RULE_IDS,
+    VERIFIED_RULE_IDS,
 )
 from app.services.company_service import CompanyService
 from app.services.pdf_render import (
@@ -35,6 +41,7 @@ from app.services.pdf_render import (
 )
 from app.services.rescue_service import RescueService
 from canonical_architecture.scoring_spec import allocate_flag_deductions
+from canonical_architecture.scoring_spec import SCORING_SPEC_VERSION
 
 REPORT_TZ = ZoneInfo("Asia/Dhaka")
 LOGO_FILE = "nlc_logo.svg"
@@ -73,6 +80,9 @@ h2 { color: __NAVY__; }
 .flags-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
 .flags-table th, .flags-table td { border: 1px solid #dee2e6; padding: 8px; text-align: left; font-size: 12px; }
 .flags-table th { background-color: __NAVY__; color: white; }
+.unsigned-banner { background:#991b1b; color:#fff; border:2px solid #7f1d1d; padding:12px; margin:14px 0; text-align:center; font-size:14px; font-weight:bold; letter-spacing:.3px; }
+.liability-box { border:2px solid #991b1b; background:#fff7f7; padding:12px; margin:14px 0; font-size:10px; line-height:1.5; }
+.signature-box { border:1px solid #64748b; padding:12px; margin:18px 0; page-break-inside:avoid; font-size:10px; line-height:1.8; }
 .footer { margin-top: 40px; font-size: 10px; color: #6c757d; text-align: center; border-top: 1px solid #dee2e6; padding-top: 10px; }
 
 /* ── Risk band legend ───────────────────────────────────── */
@@ -165,22 +175,22 @@ def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue
     yellow_count = sum(1 for f in (flags or []) if verified_severity(f) == "YELLOW")
 
     if band == "BLACK":
-        urgency = "<strong>Critical legal deficiency detected.</strong> The company has a BLACK-severity compliance breach requiring immediate remediation. The compliance score has been overridden to 0 pending resolution of the critical flag(s)."
+        urgency = "<strong>Critical product-risk indicator detected.</strong> A product-allowlisted BLACK-severity finding requires urgent professional review and remediation. The compliance score has been overridden to 0 pending resolution of the critical flag(s)."
     elif band == "RED":
-        urgency = "<strong>Significant compliance gaps detected.</strong> The company requires structured remediation to address active RED-severity findings and restore compliance standing."
+        urgency = "<strong>Significant product-risk findings detected.</strong> Review the active RED-severity product findings and determine appropriate remediation with qualified counsel."
     elif band == "YELLOW":
-        urgency = "<strong>Compliance monitoring recommended.</strong> The company has minor deficiencies that should be addressed to maintain good standing."
+        urgency = "<strong>Product-risk monitoring recommended.</strong> The company has product findings that should be reviewed and addressed where appropriate."
     elif band == "NOT_EVALUATED":
         urgency = "<strong>Not evaluated: no customer-facing score is available.</strong> Product scoring may be disabled, or the company facts and evidence may be insufficient for evaluation. This report is not a compliance certification."
     else:
-        urgency = "<strong>Company is in good compliance standing.</strong> No critical issues detected. Continue regular monitoring."
+        urgency = "<strong>No adverse product-risk findings detected.</strong> This is not a compliance certification. Continue evidence-based monitoring."
 
     parts = [urgency]
     score_summary = "NOT EVALUATED" if band == "NOT_EVALUATED" else f"{score}/100"
     parts.append(
         f"Active flags: <strong>{flag_count}</strong> "
         f"({black_count} BLACK, {red_count} RED, {yellow_count} YELLOW). "
-        f"Compliance score: <strong>{esc(score_summary)}</strong>."
+        f"Product risk score: <strong>{esc(score_summary)}</strong>."
     )
 
     if rescue_plan is not None:
@@ -305,8 +315,46 @@ def _render_rescue_section(rescue_plan: Any) -> str:
 
 
 def _legal_score_is_released() -> bool:
-    """Mirror the engine's two-part release gate using this module's testable inputs."""
-    return LEGAL_SCORE_RELEASED is True and bool(PRODUCT_SCORING_RULE_IDS)
+    """Mirror the engine gate: every catalogue rule needs counsel approval."""
+    return (
+        LEGAL_SCORE_RELEASED is True
+        and bool(PRODUCT_SCORING_RULE_IDS)
+        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
+    )
+
+
+def _is_active_confirmed_violation(flag: Any) -> bool:
+    """Accept only active, applicable, explicitly classified violations.
+
+    Engine flags expose RuleState/eval_state; persisted ORM flags expose
+    evaluation_state/flag_status/resolved_date. Missing classification fails
+    closed instead of defaulting to a violation.
+    """
+    evaluation_state = getattr(
+        flag, "evaluation_state", getattr(flag, "eval_state", "UNKNOWN")
+    )
+    if getattr(evaluation_state, "value", evaluation_state) != "VIOLATION":
+        return False
+
+    state = getattr(flag, "state", None)
+    if state is not None:
+        state_value = getattr(state, "value", state)
+        if state_value not in ("NON_COMPLIANT", "VERIFIED_ABSENT"):
+            return False
+
+    flag_status = getattr(flag, "flag_status", None)
+    if flag_status is not None and getattr(flag_status, "value", flag_status) != "ACTIVE":
+        return False
+
+    resolved = getattr(flag, "resolved", None)
+    if resolved is None:
+        resolved = getattr(flag, "resolved_date", None) is not None
+    if resolved:
+        return False
+
+    if not getattr(flag, "conditional_applies", True):
+        return False
+    return True
 
 
 def _verified_flag_score(flags: Any) -> tuple[int, bool]:
@@ -319,17 +367,9 @@ def _verified_flag_score(flags: Any) -> tuple[int, bool]:
     has_black_override = False
     for flag in flags:
         rule_id = getattr(flag, "rule_id", "")
-        state = getattr(flag, "state", RuleState.NON_COMPLIANT)
-        eval_state = getattr(flag, "eval_state", "VIOLATION")
-        active = (
-            not getattr(flag, "resolved", False)
-            and getattr(flag, "conditional_applies", True)
-        )
         if (
-            not active
-            or state not in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
-            or eval_state != "VIOLATION"
-            or rule_id not in PRODUCT_SCORING_RULE_IDS
+            not _is_active_confirmed_violation(flag)
+            or rule_id not in SCORE_DEDUCTION_RULE_IDS
         ):
             continue
 
@@ -383,7 +423,10 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
 
     for f in (flags or []):
         rule_id = getattr(f, "rule_id", "") or ""
-        if rule_id not in PRODUCT_SCORING_RULE_IDS:
+        if (
+            not _is_active_confirmed_violation(f)
+            or rule_id not in SCORE_DEDUCTION_RULE_IDS
+        ):
             continue
 
         scoring_status = getattr(f, "scoring_status", None)
@@ -523,16 +566,85 @@ def _render_score_reconciliation(flags: Any, score: int, band: str) -> str:
     </div>
     """
 
+def _render_review_queue(flags: Any) -> str:
+    """Show unverified rule IDs as neutral review prompts, never as breaches."""
+    if not flags:
+        return ""
+    items = "".join(
+        f"<li>{esc(getattr(flag, 'rule_id', 'Unknown rule'))}: "
+        "Independent Bangladesh-counsel/source verification remains pending. "
+        "Product scoring release is not legal approval or certification.</li>"
+        for flag in flags
+    )
+    return (
+        '<section class="review-queue"><h3>Items pending legal/source review</h3>'
+        f"<ul>{items}</ul></section>"
+    )
+
+
 def _flag_impact_label(flag: Any) -> str:
     rule_id = getattr(flag, "rule_id", "") or ""
-    if not _legal_score_is_released() or rule_id not in PRODUCT_SCORING_RULE_IDS:
-        return "Not scored — excluded from product scoring"
+    if not _legal_score_is_released():
+        return "Not evaluated — product score release disabled"
+    if rule_id not in SCORE_DEDUCTION_RULE_IDS:
+        return "Not eligible for a product score deduction"
     applied = getattr(
         flag,
         "score_impact_applied",
         getattr(flag, "score_impact", 0),
     ) or 0
     return f"-{int(applied)} pts" if applied else "Not applied"
+
+
+
+def _render_rule_outcome_ledger(items: list[dict] | None) -> str:
+    """Render the immutable rule ledger without treating missing findings as passes."""
+    if not items:
+        return (
+            '<section><h3>Statutory Rule Outcome Ledger</h3>'
+            '<p>Unavailable for this historical evaluation. No rule-level pass count is inferred.</p></section>'
+        )
+    catalogue_items = [
+        item for item in items
+        if item.get("assessment_source") != "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE"
+    ]
+    unmapped_items = [
+        item for item in items
+        if item.get("assessment_source") == "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE"
+    ]
+    counts: dict[str, int] = {}
+    unmapped_counts: dict[str, int] = {}
+    rows: list[str] = []
+    for item in items:
+        state = str(item.get("outcome_state") or "UNKNOWN")
+        target = unmapped_counts if item in unmapped_items else counts
+        target[state] = target.get(state, 0) + 1
+        rows.append(
+            "<tr>"
+            f"<td>{esc(item.get('rule_id', ''))}</td>"
+            f"<td>{esc(item.get('rule_version', ''))}</td>"
+            f"<td>{esc(state)}</td>"
+            f"<td>{esc(item.get('verification_status', 'PENDING'))}</td>"
+            f"<td>{esc(item.get('assessment_source', ''))}</td>"
+            f"<td>{esc(item.get('statutory_basis', ''))}</td>"
+            "</tr>"
+        )
+    summary = " · ".join(
+        f"{esc(state)}: {count}" for state, count in sorted(counts.items())
+    ) or "No catalogue outcomes"
+    unmapped_summary = " · ".join(
+        f"{esc(state)}: {count}" for state, count in sorted(unmapped_counts.items())
+    ) or "None"
+    return (
+        '<section class="rule-outcome-ledger"><h3>Statutory Rule Outcome Ledger</h3>'
+        f'<p><strong>Active catalogue rules:</strong> {len(catalogue_items)} · {summary}</p>'
+        f'<p><strong>Unmapped engine findings (excluded from catalogue totals):</strong> {len(unmapped_items)} · {unmapped_summary}</p>'
+        '<p>NOT_EVALUATED means no engine finding was emitted for that catalogue rule; '
+        'it is not a finding of compliance. Catalogue verification status is shown separately.</p>'
+        '<table class="flags-table"><tr><th>Rule ID</th><th>Rule Version</th>'
+        '<th>Outcome</th><th>Legal Source Verification</th><th>Assessment Basis</th>'
+        f'<th>Statutory Basis</th></tr>{"".join(rows)}</table></section>'
+    )
 
 
 def build_compliance_report_html(
@@ -544,6 +656,7 @@ def build_compliance_report_html(
     engine_version: str = "unknown",
     snapshot_hash: str = "unknown",
     evaluation_at: datetime | None = None,
+    rule_outcomes_snapshot: list[dict] | None = None,
 ) -> str:
     """Pure function: company + flags + rescue_plan -> report HTML. All dynamic values escaped.
 
@@ -556,7 +669,14 @@ def build_compliance_report_html(
     # The HTML builder is also called directly by tests and internal jobs.
     # Enforce the release boundary here, not only in the HTTP endpoint:
     # stale cached scores, flags and rescue plans must never leak into a report.
-    if not _legal_score_is_released():
+    review_flags = []
+    score_is_current = (
+        _legal_score_is_released()
+        and getattr(company, "last_evaluated_at", None) is not None
+        and getattr(company, "updated_at", None) is not None
+        and company.updated_at <= company.last_evaluated_at
+    )
+    if not score_is_current:
         flags = ()
         rescue_plan = None
         score = 0
@@ -564,6 +684,14 @@ def build_compliance_report_html(
     else:
         score = company.current_compliance_score or 0
         band = company.current_risk_band or "NOT_EVALUATED"
+        review_flags = [
+            flag for flag in (flags or [])
+            if getattr(flag, "rule_id", "") not in VERIFIED_RULE_IDS
+        ]
+        flags = [
+            flag for flag in (flags or [])
+            if getattr(flag, "rule_id", "") in PRODUCT_SCORING_RULE_IDS
+        ]
     company_name = company.company_name or "[COMPANY NAME NOT ON FILE]"
     score_display = "NOT EVALUATED" if band == "NOT_EVALUATED" else f"{score} / 100"
     score_css_class = "score-warn" if band == "NOT_EVALUATED" else _score_class(score)
@@ -587,6 +715,8 @@ def build_compliance_report_html(
     summary_html = _render_exec_summary(company, flags, band, score, rescue_plan)
     rescue_html = _render_rescue_section(rescue_plan)
     reconciliation_html = _render_score_reconciliation(flags, score, band)
+    review_html = _render_review_queue(review_flags)
+    rule_outcomes_html = _render_rule_outcome_ledger(rule_outcomes_snapshot)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -596,6 +726,7 @@ def build_compliance_report_html(
     <style>{_CSS}</style>
 </head>
 <body>
+    <div class="unsigned-banner">UNSIGNED — FOR COUNSEL REVIEW ONLY — NO NLC LIABILITY WITHOUT SIGNATURE</div>
     <div class="header">
         {logo_html}
         <div class="title">RJSC Compliance Intelligence Report</div>
@@ -624,12 +755,36 @@ def build_compliance_report_html(
         <div class="score-box">
         <div class="score-number {score_css_class}">{esc(score_display)}</div>
         <div class="band">Risk Band: {esc(band)}</div>
-        {('<div style="font-size:11px;color:#B91C1C;margin-top:8px;"><strong>Score Override:</strong> A BLACK-severity rule has been triggered. The compliance score is set to 0 regardless of accumulated deductions, as the company has a critical legal deficiency requiring immediate remediation.</div>') if band == 'BLACK' else ''}
+        {('<div style="font-size:11px;color:#B91C1C;margin-top:8px;"><strong>Score Override:</strong> A BLACK-severity rule has been triggered. The product risk score is set to 0 under the configured critical-override policy, as the company has a critical legal deficiency requiring immediate remediation.</div>') if band == 'BLACK' else ''}
     </div>
     {('<div style="font-size:10px;color:#8B6914;background:#FFF8E1;border:1px solid #FFD54F;padding:6px;margin:8px 0;border-radius:4px;"><strong>TEST ASSESSMENT:</strong> This report was generated for a test company. Do not use for legal or regulatory purposes.</div>') if 'TEST' in (company.registration_number or '').upper() else ''}
     {legend_html}
     {summary_html}
     {reconciliation_html}
+    {review_html}
+
+    <div class="liability-box">
+        <strong>LIABILITY AND RELIANCE NOTICE</strong><br>
+        This is an unsigned, automated product output prepared for preliminary information and review only.
+        It is not legal advice, a legal opinion, a statutory certificate, an RJSC determination, or confirmation
+        that any company is compliant or non-compliant. No NLC legal opinion, professional certification,
+        or liability for legal conclusions is assumed or represented by this unsigned report. NLC accepts no
+        liability for reliance on legal conclusions in this report unless and until an independent Bangladesh
+        company-law counsel has reviewed the relevant facts and sources and signed the approval block below.
+        Product scoring release is a product-owner setting and does not constitute independent legal verification.
+    </div>
+
+    <div class="signature-box">
+        <h3>Lawyer Review &amp; Signature</h3>
+        <p><strong>Reviewing Bangladesh Company-Law Counsel:</strong> __________________________________</p>
+        <p><strong>Date:</strong> ____________________ &nbsp; <strong>Comments / qualifications:</strong> ______________________________</p>
+        <p>☐ I have independently reviewed the relevant company facts, evidence, statutory sources, rule application and score reconciliation.</p>
+        <p>☐ I approve the legal conclusions stated in this report, subject to the comments or qualifications recorded above.</p>
+        <p><strong>Signature:</strong> _________________________________________________________________</p>
+        <p><strong>Approval status:</strong> UNSIGNED — no counsel approval is represented until completed and signed.</p>
+    </div>
+
+    {rule_outcomes_html}
 
     <h3>Active Compliance Flags</h3>
     <table class="flags-table">
@@ -641,7 +796,8 @@ def build_compliance_report_html(
 
     <div class="footer">
         <p>This compliance intelligence output is subject to professional review under the Companies Act 1994 (Bangladesh).</p>
-        <p>Automated compliance screening. Not legal advice. Consult your legal counsel.</p>
+        <p><strong>Status: UNSIGNED</strong></p>
+        <p>Automated compliance screening. Not legal advice. For counsel review only.</p>
         <div class="audit-meta">Engine: {esc(engine_version)} | Snapshot: {esc(snapshot_hash[:16]) if snapshot_hash else 'unknown'} | Generated: {esc(generated_at.isoformat())}</div>
     </div>
 </body>
@@ -671,13 +827,13 @@ class PDFReportService:
         except Exception:
             rescue_plan = None
 
-        # COM-007: bind report to evidence snapshot + engine version
+        # COM-007: bind report to the latest evaluation run, not merely the
+        # older run whose timestamp still matches the cached company score.
+        # A newer PENDING/FAILED/NOT_RELEASED run invalidates the old band.
         score_snapshot = await self.db.execute(
             select(ComplianceEvaluationRun)
-            .where(
-                ComplianceEvaluationRun.company_id == company.id,
-                ComplianceEvaluationRun.calculated_at == company.last_evaluated_at,
-            )
+            .where(ComplianceEvaluationRun.company_id == company.id)
+            .order_by(ComplianceEvaluationRun.calculated_at.desc(), ComplianceEvaluationRun.id.desc())
             .limit(1)
         )
         snapshot = score_snapshot.scalar_one_or_none()
@@ -689,18 +845,55 @@ class PDFReportService:
         if (
             getattr(snapshot, "evaluation_status", None) != "COMPLETED"
             or not getattr(snapshot, "score_hash", None)
-            or not getattr(snapshot, "engine_version", None)
+            or getattr(snapshot, "engine_version", None) != RULE_ENGINE_VERSION
             or not isinstance(getattr(snapshot, "flags_snapshot", None), list)
         ):
             raise HTTPException(
                 status_code=409,
                 detail="PDF withheld: the latest evaluation run is incomplete or lacks audit identity.",
             )
+        outcomes = getattr(snapshot, "rule_outcomes_snapshot", None)
+        if (
+            not isinstance(outcomes, list)
+            or not outcomes
+            or getattr(snapshot, "rule_catalogue_count", None) != len(outcomes)
+            or not getattr(snapshot, "rule_outcomes_hash", None)
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="PDF withheld: the authoritative run has no complete statutory rule outcome ledger.",
+            )
+        integrity_problems = evaluation_run_integrity_problems(snapshot)
+        chain_problem = await evaluation_run_chain_problem(self.db, snapshot)
+        if chain_problem:
+            integrity_problems.append(chain_problem)
+        if integrity_problems:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "PDF withheld: evaluation evidence integrity checks failed: "
+                    + ", ".join(integrity_problems)
+                ),
+            )
+
+        score_snapshot_data = snapshot.score_breakdown_snapshot
+        if (
+            not isinstance(score_snapshot_data, dict)
+            or score_snapshot_data.get("scoring_spec_version") != SCORING_SPEC_VERSION
+            or score_snapshot_data.get("score_reconciles") is not True
+            or score_snapshot_data.get("final_score") != snapshot.score
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="PDF withheld: the authoritative run does not contain a reconciled score under the current scoring specification.",
+            )
         if (
             snapshot.score != company.current_compliance_score
             or snapshot.risk_band != company.current_risk_band
             or company.last_evaluated_at is None
             or snapshot.calculated_at != company.last_evaluated_at
+            or getattr(company, "updated_at", None) is None
+            or company.updated_at > company.last_evaluated_at
         ):
             raise HTTPException(
                 status_code=409,
@@ -727,6 +920,7 @@ class PDFReportService:
                 engine_version=engine_version,
                 snapshot_hash=snapshot_hash,
                 evaluation_at=snapshot.calculated_at,
+                rule_outcomes_snapshot=outcomes,
             )
         except ScoreReconciliationError as exc:
             raise HTTPException(

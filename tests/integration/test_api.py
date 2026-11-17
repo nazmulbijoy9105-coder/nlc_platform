@@ -306,7 +306,7 @@ class TestCompanies:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_get_dashboard_kpis_exposes_product_released_risk_aggregates(
+    async def test_get_dashboard_kpis_exposes_evidence_review_while_score_release_is_paused(
         self, api_client, admin_token
     ):
         resp = await api_client.get(
@@ -315,12 +315,137 @@ class TestCompanies:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["dashboard_mode"] == "STATUTORY_RISK"
-        assert data["statutory_score_release_status"] == "RELEASED"
-        assert data["statutory_risk_aggregates_available"] is True
-        assert data["green_count"] is not None
-        assert data["yellow_count"] is not None
-        assert data["red_black_count"] is not None
+        assert data["dashboard_mode"] == "EVIDENCE_REVIEW"
+        assert data["statutory_score_release_status"] == "NOT_RELEASED"
+        assert data["statutory_risk_aggregates_available"] is False
+        assert data["green_count"] is None
+        assert data["yellow_count"] is None
+        assert data["red_black_count"] is None
+        assert data["upcoming_deadlines"] is None
+
+    @pytest.mark.asyncio
+    async def test_manual_evaluation_and_customer_views_withhold_unreleased_score(
+        self, api_client, admin_token, db_company, db
+    ):
+        from sqlalchemy import select
+        from app.models.compliance import ComplianceEvaluationRun, ComplianceScoreHistory
+
+        evaluated = await api_client.post(
+            f"/api/v1/companies/{db_company.id}/evaluate",
+            headers=_auth(admin_token),
+        )
+        assert evaluated.status_code == 200, evaluated.text
+        evaluation = evaluated.json()
+        assert evaluation["current_score"] is None
+        assert evaluation["risk_band"] == "NOT_EVALUATED"
+        assert evaluation["active_flags"] == 0
+        assert evaluation["black_flags"] == 0
+        assert evaluation["red_flags"] == 0
+        assert evaluation["yellow_flags"] == 0
+        assert evaluation["evaluation_run_status"] == "NOT_RELEASED"
+
+        customer_view = await api_client.get(
+            f"/api/v1/companies/{db_company.id}/compliance",
+            headers=_auth(admin_token),
+        )
+        assert customer_view.status_code == 200, customer_view.text
+        state = customer_view.json()
+        assert state["current_score"] is None
+        assert state["risk_band"] == "NOT_EVALUATED"
+        assert state["active_flags"] == 0
+        assert state["black_flags"] == 0
+        assert state["red_flags"] == 0
+        assert state["yellow_flags"] == 0
+
+        flags_response = await api_client.get(
+            f"/api/v1/companies/{db_company.id}/flags",
+            headers=_auth(admin_token),
+        )
+        assert flags_response.status_code == 200, flags_response.text
+        for flag in flags_response.json():
+            assert flag["severity"] == "NOT_EVALUATED"
+            assert flag["score_impact"] == 0
+            assert flag["legal_review_status"] == "NOT_LEGALLY_VERIFIED"
+            assert "No breach" in flag["rule_name"]
+
+        history_response = await api_client.get(
+            f"/api/v1/companies/{db_company.id}/score-history",
+            headers=_auth(admin_token),
+        )
+        assert history_response.status_code == 200, history_response.text
+        for entry in history_response.json():
+            assert entry["score"] is None
+            assert entry["risk_band"] == "NOT_EVALUATED"
+            assert entry["active_flags"] == 0
+
+        run_result = await db.execute(
+            select(ComplianceEvaluationRun)
+            .where(ComplianceEvaluationRun.company_id == db_company.id)
+            .order_by(ComplianceEvaluationRun.calculated_at.desc())
+            .limit(1)
+        )
+        run = run_result.scalar_one()
+        assert run.score is None
+        assert run.risk_band == "NOT_EVALUATED"
+        assert run.score_breakdown_snapshot is None
+
+        # A legacy completed snapshot must not make the customer API appear
+        # released after the product/legal release gate has been closed.
+        from datetime import timedelta
+        from app.models.enums import RiskBand
+
+        legacy_run = ComplianceEvaluationRun(
+            id=uuid.uuid4(),
+            company_id=db_company.id,
+            score=88,
+            risk_band=RiskBand.GREEN,
+            calculated_at=run.calculated_at + timedelta(seconds=1),
+            engine_version=run.engine_version,
+            score_hash="a" * 64,
+            previous_hash=run.score_hash,
+            evaluation_status="COMPLETED",
+            trigger_source="LEGACY_TEST",
+            active_flags_count=0,
+            black_flags_count=0,
+            flags_snapshot=[],
+            fact_provenance_snapshot=[],
+            score_breakdown_snapshot={},
+        )
+        db.add(legacy_run)
+        db_company.current_compliance_score = 88
+        db_company.current_risk_band = RiskBand.GREEN
+        await db.flush()
+
+        stale_state_response = await api_client.get(
+            f"/api/v1/companies/{db_company.id}/compliance",
+            headers=_auth(admin_token),
+        )
+        assert stale_state_response.status_code == 200, stale_state_response.text
+        stale_state = stale_state_response.json()
+        assert stale_state["current_score"] is None
+        assert stale_state["risk_band"] == "NOT_EVALUATED"
+        assert stale_state["evaluation_run_status"] == "NOT_RELEASED"
+
+        history_result = await db.execute(
+            select(ComplianceScoreHistory)
+            .where(ComplianceScoreHistory.company_id == db_company.id)
+            .order_by(ComplianceScoreHistory.calculated_at.desc())
+            .limit(1)
+        )
+        history = history_result.scalar_one()
+        assert history.score is None
+        assert str(history.risk_band.value if hasattr(history.risk_band, "value") else history.risk_band) == "NOT_EVALUATED"
+
+    @pytest.mark.asyncio
+    async def test_company_compliance_pdf_returns_409_while_release_is_paused(
+        self, api_client, admin_token, db_company
+    ):
+        response = await api_client.get(
+            f"/api/v1/companies/{db_company.id}/compliance-pdf",
+            headers=_auth(admin_token),
+        )
+        assert response.status_code == 409, response.text
+        assert "PDF withheld" in response.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_get_compliance_returns_summary(self, api_client, admin_token, db_company):
@@ -522,8 +647,9 @@ class TestRescue:
             headers=_auth(super_admin_tok),
             json={"company_id": str(db_company.id)}
         )
-        assert resp.status_code == 422
-        assert "RED or BLACK" in resp.json()["detail"]
+        # The score-release gate takes precedence over risk-band evaluation.
+        assert resp.status_code == 409
+        assert "scoring is disabled" in resp.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_create_rescue_plan_for_red_company(
@@ -632,14 +758,17 @@ class TestRescue:
             headers=headers,
             json={"status": "IN_PROGRESS"},
         )
-        assert update_step.status_code == 404
+        # Mutating an existing rescue plan remains disabled while score
+        # publication is paused, even if the plan ID does not exist.
+        assert update_step.status_code == 503
 
         engagement = await api_client.post(
             f"/api/v1/rescue/plans/{plan_id}/engagement",
             headers=headers,
             json={"confirmed_fee_bdt": 1000},
         )
-        assert engagement.status_code == 404
+        # Commercial engagement creation is a mutation and stays withheld.
+        assert engagement.status_code == 503
 
     @pytest.mark.asyncio
     async def test_rescue_requires_auth(self, api_client):
@@ -664,14 +793,14 @@ class TestRescue:
     async def test_admin_engagement_creation_reaches_plan_lookup_after_product_release(
         self, api_client, super_admin_tok
     ):
-        """Product release no longer blocks admin actions; the missing plan does."""
+        """Engagement creation remains withheld while statutory scoring is paused."""
         plan_id = "00000000-0000-4000-8000-000000000001"
         response = await api_client.post(
             f"/api/v1/rescue/plans/{plan_id}/engagement",
             headers=_auth(super_admin_tok),
             json={"confirmed_fee_bdt": 1000, "payment_terms": "Test terms"},
         )
-        assert response.status_code == 404, response.text
+        assert response.status_code == 503, response.text
 
 
 # =============================================================================
@@ -1081,10 +1210,9 @@ class TestRules:
         assert resp.status_code == 200
         rules = resp.json()
         assert isinstance(rules, list)
-        # Product-owner policy authorizes one evidence-gated company-law override.
-        black_ids = {r["rule_id"] for r in rules}
-        assert black_ids == {"INC-003"}
-        assert all(r["is_black_override"] is True for r in rules)
+        # Product-owner configuration alone is not legal approval.
+        # No statutory BLACK override is active while the counsel register is empty.
+        assert rules == []
 
     @pytest.mark.asyncio
     async def test_get_rule_summary(self, api_client, super_admin_token):
@@ -1129,17 +1257,29 @@ class TestRules:
             "sub": str(db_super_admin.id), "user_id": str(db_super_admin.id), "type": "access",
             "role": "SUPER_ADMIN", "email": db_super_admin.email, "company_ids": [],
         })
+        current = await api_client.get(
+            "/api/v1/rules/AUD-003",
+            headers=_auth(sa_token),
+        )
+        assert current.status_code == 200, current.text
+        expected_version = current.json()["version"]
+
         resp = await api_client.patch(
             "/api/v1/rules/AUD-003",
             headers=_auth(sa_token),
             json={
-                "default_severity": "RED",  # Illegal: can't downgrade BLACK override
-                "change_reason": "Testing BLACK override protection",
+                "default_severity": "RED",  # Catalogue edit; not a BLACK override
+                "expected_version": expected_version,
+                "change_reason": "Testing versioned catalogue severity update",
             }
         )
         assert resp.status_code == 200, resp.text
         assert resp.json()["rule_id"] == "AUD-003"
-        assert resp.json()["default_severity"] == "RED"
+        # Admin edits remain versioned, but the public rule API withholds
+        # statutory severity until this rule has independent counsel approval.
+        assert resp.json()["default_severity"] is None
+        assert resp.json()["score_impact"] == 0
+        assert resp.json()["is_black_override"] is False
 
 
 
@@ -1180,18 +1320,22 @@ class TestRules:
                 # The storage sentinel is not a default severity or legal
                 # conclusion, so expose null and a separate product switch.
                 assert item["default_severity"] is None
-                assert item["product_scoring_enabled"] is True
+                assert item["product_scoring_enabled"] is False
                 assert item["score_impact"] == 0
                 assert item["is_active"] is True
             else:
+                # SH-002 is part of the 85-rule product-approved scoring
+                # catalogue. The deployment release switch is currently
+                # paused, so the API must preserve its canonical statutory
+                # basis while reporting product_scoring_enabled=False.
                 assert item["statutory_basis"] == (
-                    "Informational catalogue entry; no score deduction is applied."
+                    "Section 158, Companies Act 1994 (Bangladesh)"
                 )
-                assert "Informational catalogue entry" in item["description"]
+                assert "Section 158" in item["description"]
                 assert item["default_severity"] is None
                 assert item["product_scoring_enabled"] is False
                 assert item["score_impact"] == 0
-                assert item["is_active"] is False
+                assert item["is_active"] is True
 
 
 # =============================================================================

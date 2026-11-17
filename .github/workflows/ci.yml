@@ -79,7 +79,7 @@ jobs:
       - name: Validate backup tooling syntax
         run: |
           bash -n scripts/backup_to_s3.sh
-          python -m py_compile scripts/verify_backup.py
+          python -m py_compile scripts/verify_backup.py scripts/rehearse_restored_neon_branch.py
 
       - name: Lint scoring and migration release changes
         run: |
@@ -103,27 +103,42 @@ jobs:
             app/services/filing_service.py \
             app/services/compliance_calendar.py \
             app/services/legal_deadline_engine.py \
+            app/api/legal_provenance.py \
+            app/models/legal_provenance.py \
             app/rule_engine/engine.py \
             canonical_architecture/scoring_spec.py canonical_architecture/legal_coverage.py
           ruff check --select E4,E7,E9,F \
             app/services/compliance_calendar.py \
             app/services/legal_deadline_engine.py \
-            app/api/calendar.py app/api/rescue.py \
-            app/models/compliance_calendar.py app/models/rescue.py \
+            app/api/calendar.py app/api/legal_provenance.py app/api/companies.py app/api/rescue.py \
+            app/services/bd_calendar_generator.py \
+            app/models/compliance_calendar.py app/models/legal_provenance.py app/models/rescue.py \
             tests/unit/test_legal_deadline_engine.py \
+            tests/unit/test_legal_provenance.py \
             tests/unit/test_legal_calendar_gate.py \
             tests/unit/test_legal_rescue_gate.py \
             tests/integration/test_compliance_calendar.py \
             alembic/versions/0091_calendar_legal_provenance.py \
             alembic/versions/0092_rescue_source_rule_ids.py \
-            alembic/versions/0093_verified_rule_audit_view.py
+            alembic/versions/0093_verified_rule_audit_view.py \
+            alembic/versions/0109_product_owner_legal_provenance.py
 
-      - name: Audit complete Alembic revision DAG
+      - name: Audit complete Alembic revision DAG and emit inventory
         run: |
+          set -euo pipefail
           alembic heads
           HEAD_COUNT="$(alembic heads | grep -c '(head)')"
           test "$HEAD_COUNT" -eq 1
-          python scripts/audit_alembic_graph.py
+          mkdir -p artifacts
+          python scripts/audit_alembic_graph.py --json-output artifacts/alembic-migration-inventory.json
+
+      - name: Upload complete Alembic migration inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alembic-migration-inventory
+          path: artifacts/alembic-migration-inventory.json
+          if-no-files-found: error
 
       - name: Run unit tests with coverage baseline
         run: |
@@ -196,7 +211,17 @@ jobs:
           if-no-files-found: warn
 
       - name: Static engine/seed rule parity audit
-        run: python tools/audit_rule_parity.py --no-db --no-api
+        run: |
+          mkdir -p artifacts
+          python tools/audit_rule_parity.py --no-db --no-api --report-json artifacts/rule-registry-static-parity.json
+
+      - name: Upload static rule registry parity report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rule-registry-static-parity
+          path: artifacts/rule-registry-static-parity.json
+          if-no-files-found: warn
 
       # Live DB/API parity is a separate release gate in production-parity.yml.
       # It must be dispatched after the read-only audit role and API are ready.
@@ -439,9 +464,13 @@ jobs:
             -v ON_ERROR_STOP=1 \
             -c "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(32)"
 
-          # Simulate historical table loss only in this disposable CI database.
-          # The recovery script upgrades to head and verifies the complete schema.
-          DATABASE_URL="$BASELINE_DATABASE_URL" python scripts/test_missing_table_recovery.py
+          # Exercise the restored-branch safety gate in a separate disposable
+          # database. Missing 0037/0038 tables must block before migration 0044;
+          # the baseline database remains intact for the full forward upgrade.
+          createdb -h localhost -U nlc_test nlc_test_missing_table_guard
+          GUARD_DATABASE_URL="postgresql+asyncpg://nlc_test@localhost:5432/nlc_test_missing_table_guard"
+          DATABASE_URL="$GUARD_DATABASE_URL" alembic upgrade 0042_dedup_key
+          DATABASE_URL="$GUARD_DATABASE_URL" python scripts/test_missing_table_recovery.py
 
           # The env.py preflight must widen the legacy column before the next
           # long revision identifier is written.
@@ -519,6 +548,8 @@ jobs:
             tests/integration/test_finance_wallet_reference_integrity.py \
             tests/integration/test_finance_cross_table_wallet_reference_guard.py \
             tests/integration/test_agm_share_event_rls.py \
+            tests/integration/test_legal_provenance_acl.py \
+            tests/integration/test_articles_rls_security.py \
             tests/unit/test_rjsc_forms_idor.py \
             tests/unit/test_service_data_leak.py \
             -q -rs --tb=short --junitxml=/tmp/nlc-security-tests.xml \
@@ -542,6 +573,9 @@ jobs:
               "test_filed_by_audit_trail_is_recorded",
               "test_user_cannot_mark_other_companys_filing",
               "test_unverified_zero_director_records_do_not_trigger_inc003_and_agm_unknown",
+              "test_articles_evidence_tables_have_signed_tenant_write_policies",
+              "test_unsigned_admin_guc_cannot_authorize_articles_staff_write",
+              "test_legacy_agm_evidence_reference_uses_canonical_text_type",
           }
           collected = {case.get("name", "").split("[", 1)[0] for case in cases}
           missing = sorted(expected - collected)

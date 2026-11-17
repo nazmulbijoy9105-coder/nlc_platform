@@ -17,21 +17,31 @@ def _company(score=75, band="RED", name="Test Co"):
         registration_number="TEST-FE8A8D55",
         current_compliance_score=score,
         current_risk_band=band,
+        last_evaluated_at=WHEN,
+        updated_at=WHEN,
     )
 
 
 def _flag(rid, sev, imp):
-    return SimpleNamespace(rule_id=rid, severity=sev, description="d", score_impact=imp)
+    return SimpleNamespace(rule_id=rid, severity=sev, description="d", score_impact=imp, evaluation_state="VIOLATION", flag_status="ACTIVE", resolved_date=None)
 
 
 
 
 def _enable_authorized_score_for_report_test(monkeypatch, rule_ids):
-    # Arithmetic/report rendering tests opt into an isolated approved-rule
-    # fixture. Product scoring release is enabled; legal verification remains separate.
+    # Arithmetic/report tests opt into an isolated complete catalogue. This
+    # fixture is local to the test and never changes production verification.
     monkeypatch.setattr("app.services.pdf_report_service.LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
         "app.services.pdf_report_service.PRODUCT_SCORING_RULE_IDS",
+        frozenset(rule_ids),
+    )
+    monkeypatch.setattr(
+        "app.services.pdf_report_service.SCORE_DEDUCTION_RULE_IDS",
+        frozenset(rule_ids),
+    )
+    monkeypatch.setattr(
+        "app.services.pdf_report_service.VERIFIED_RULE_IDS",
         frozenset(rule_ids),
     )
 
@@ -99,15 +109,15 @@ def test_reconciliation_mismatch_is_rejected(monkeypatch):
         build_compliance_report_html(_company(score=74), FLAGS, WHEN)
 
 
-def test_product_allowlisted_findings_are_shown_as_score_deductions_while_legal_review_is_pending():
+def test_paused_release_hides_allowlisted_findings_and_stale_score():
     page = build_compliance_report_html(
         _company(score=100, band="NOT_EVALUATED"),
         [_flag("AGM-001", "RED", 20)],
         WHEN,
     )
-    assert "-20 pts" in page
-    assert "Product scoring may be disabled" in page
-    assert "Score reconciliation" not in page
+    assert "NOT EVALUATED" in page
+    assert "AGM-001" not in page
+    assert "-20 pts" not in page
     assert "Score reconciliation" not in page
 
 def test_real_evaluation_snapshot_reconciles_nominal_and_applied_impacts(monkeypatch):
@@ -122,6 +132,9 @@ def test_real_evaluation_snapshot_reconciles_nominal_and_applied_impacts(monkeyp
             description="d",
             score_impact=12,
             score_impact_applied=10,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED",
         ),
         SimpleNamespace(
@@ -130,6 +143,9 @@ def test_real_evaluation_snapshot_reconciles_nominal_and_applied_impacts(monkeyp
             description="d",
             score_impact=10,
             score_impact_applied=10,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED",
         ),
         SimpleNamespace(
@@ -138,6 +154,9 @@ def test_real_evaluation_snapshot_reconciles_nominal_and_applied_impacts(monkeyp
             description="d",
             score_impact=5,
             score_impact_applied=5,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED",
         ),
     ]
@@ -168,6 +187,9 @@ def test_global_budget_allocation_reconciles_each_persisted_finding(monkeypatch)
             description="d",
             score_impact=impact,
             score_impact_applied=allocated,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED" if allocated else "CATEGORY_CAP_REACHED",
             detail={},
         )
@@ -191,6 +213,9 @@ def test_snapshot_applied_impact_mismatch_is_rejected(monkeypatch):
             description="d",
             score_impact=12,
             score_impact_applied=9,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED",
         ),
         SimpleNamespace(
@@ -199,6 +224,9 @@ def test_snapshot_applied_impact_mismatch_is_rejected(monkeypatch):
             description="d",
             score_impact=10,
             score_impact_applied=10,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED",
         ),
         SimpleNamespace(
@@ -207,6 +235,9 @@ def test_snapshot_applied_impact_mismatch_is_rejected(monkeypatch):
             description="d",
             score_impact=5,
             score_impact_applied=5,
+            evaluation_state="VIOLATION",
+            flag_status="ACTIVE",
+            resolved_date=None,
             scoring_status="APPLIED",
         ),
     ]

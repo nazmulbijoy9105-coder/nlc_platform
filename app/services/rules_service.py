@@ -65,6 +65,7 @@ class RulesService(BaseService[LegalRule]):
         *,
         change_reason: str,
         changed_by: uuid.UUID,
+        expected_version: str | None = None,
         sro_reference: str | None = None,
         # Updatable fields
         rule_name: str | None = None,
@@ -88,9 +89,26 @@ class RulesService(BaseService[LegalRule]):
         4. Increment rule_version
         5. Update last_modified_by + last_modified_at
         """
-        rule = await self.get_by_rule_id(rule_id)
+        if not change_reason or len(change_reason.strip()) < 10:
+            raise ValueError("change_reason must contain at least 10 non-whitespace characters")
+        if changed_by is None:
+            raise ValueError("changed_by is required for every legal-rule change")
+
+        # Serialize concurrent edits. The row lock prevents two admins from
+        # snapshotting the same version and then overwriting one another.
+        result = await self.db.execute(
+            select(LegalRule)
+            .where(LegalRule.rule_id == rule_id)
+            .with_for_update()
+        )
+        rule = result.scalar_one_or_none()
         if not rule:
             return None
+        if expected_version is not None and rule.rule_version != expected_version:
+            raise ValueError(
+                f"Stale rule version for {rule_id}: expected {expected_version}, "
+                f"current version is {rule.rule_version}"
+            )
 
         # ── Step 1: Snapshot current state ─────────────────────────
         await self._create_version_snapshot(
@@ -103,10 +121,15 @@ class RulesService(BaseService[LegalRule]):
         # ── Step 2: Increment version ───────────────────────────────
         current_version = rule.rule_version or "1.0"
         try:
-            major, minor = current_version.split(".")
-            new_version = f"{major}.{int(minor) + 1}"
-        except (ValueError, AttributeError):
-            new_version = "1.1"
+            parts = current_version.split(".")
+            if len(parts) != 2 or not all(part.isdigit() for part in parts):
+                raise ValueError("rule_version must be MAJOR.MINOR")
+            major, minor = parts
+            new_version = f"{int(major)}.{int(minor) + 1}"
+        except (ValueError, AttributeError) as exc:
+            raise ValueError(
+                f"Cannot version malformed legal rule version: {current_version!r}"
+            ) from exc
 
         # ── Step 3: Apply updates ───────────────────────────────────
         updates: dict[str, Any] = {
@@ -131,7 +154,12 @@ class RulesService(BaseService[LegalRule]):
         if rule_condition is not None:
             updates["rule_condition"] = rule_condition
 
-        return await self.update_instance(rule, **updates)
+        # Assign and flush inside the caller's transaction. Do not commit here:
+        # the version snapshot and new definition must commit or roll back together.
+        for field_name, value in updates.items():
+            setattr(rule, field_name, value)
+        await self.db.flush()
+        return rule
 
     async def _create_version_snapshot(
         self,

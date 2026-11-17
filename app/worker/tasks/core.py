@@ -24,7 +24,7 @@ DOCUMENT TASKS:
 
 MAINTENANCE TASKS:
   monthly_score_snapshot_all      Take monthly score snapshot for all companies
-  cleanup_old_activity_logs       Archive logs >7 years to S3, remove from DB
+  cleanup_old_activity_logs       Archive logs >7 years to S3, retain DB evidence
   cleanup_expired_notifications   Mark stale pending notifications as FAILED
   database_health_check           Quick DB connectivity verification
   sync_sro_registry               Alert Super Admin of pending SRO rule updates
@@ -972,7 +972,7 @@ def cleanup_old_activity_logs(
     retain_years: int = 7,
 ) -> dict[str, Any]:
     """
-    Archive activity logs older than retain_years to S3, then delete from DB.
+    Archive activity logs older than retain_years to S3; retain DB evidence.
     Runs every Sunday at 02:00 UTC.
 
     7-year retention requirement: Bangladesh companies must maintain corporate
@@ -982,8 +982,8 @@ def cleanup_old_activity_logs(
     1. Find user_activity_logs older than 7 years
     2. Export to JSON
     3. Upload to S3 (nlc-backups/activity_logs/YYYY/)
-    4. Delete from DB only after successful S3 upload
-    5. Same for compliance_events
+    4. Keep the source rows append-only after successful S3 upload
+    5. No database deletion is performed by the runtime role
     """
     logger.info(f"[Cleanup] Activity log retention check (retain={retain_years} years)")
 
@@ -992,13 +992,14 @@ def cleanup_old_activity_logs(
     async def _cleanup():
         import json
 
-        from sqlalchemy import delete, select
+        from sqlalchemy import select
 
         from app.models.database import AsyncSessionLocal, set_admin_context
         from app.models.infrastructure import UserActivityLog
 
         archived = 0
         deleted = 0
+        retained = 0
 
         async with AsyncSessionLocal() as db, db.begin():
             await set_admin_context(db)
@@ -1012,7 +1013,12 @@ def cleanup_old_activity_logs(
             old_logs = count_result.scalars().all()
 
             if not old_logs:
-                return {"archived": 0, "deleted": 0, "total_checked": 0}
+                return {
+                    "archived": 0,
+                    "deleted": 0,
+                    "retained": 0,
+                    "total_checked": 0,
+                }
 
             logger.info(
                 f"[Cleanup] Found {len(old_logs)} logs older than "
@@ -1065,26 +1071,33 @@ def cleanup_old_activity_logs(
                         f"[Cleanup] Archived {archived} logs to s3://"
                         f"{settings.s3_backup_bucket}/{archive_key}"
                     )
+                else:
+                    logger.warning(
+                        "[Cleanup] S3 credentials are not configured; "
+                        "source activity logs remain in PostgreSQL."
+                    )
             except Exception as archive_err:
                 logger.error(
                     f"[Cleanup] S3 archival failed: {archive_err!r}. "
-                    f"Skipping deletion to preserve data."
+                    f"Source rows remain in PostgreSQL."
                 )
-                return {"archived": 0, "deleted": 0, "error": str(archive_err)}
+                return {
+                    "archived": 0,
+                    "deleted": 0,
+                    "retained": len(old_logs),
+                    "error": str(archive_err),
+                }
 
-            # Delete from DB only if archival succeeded
-            if archived > 0:
-                old_ids = [log.id for log in old_logs]
-                await db.execute(
-                    delete(UserActivityLog).where(
-                        UserActivityLog.id.in_(old_ids)
-                    )
-                )
-                deleted = archived
+            # Activity logs are append-only under the runtime ACL. A successful
+            # object-store upload is not permission to hard-delete statutory
+            # audit evidence; retain source rows until a separately controlled
+            # retention workflow with verifiable archive receipts exists.
+            retained = len(old_logs)
 
         return {
             "archived":      archived,
             "deleted":       deleted,
+            "retained":      retained,
             "cutoff_date":   cutoff_date.isoformat(),
             "retain_years":  retain_years,
         }
@@ -1093,7 +1106,8 @@ def cleanup_old_activity_logs(
         result = run_async(_cleanup())
         logger.info(
             f"[Cleanup] Log cleanup complete: "
-            f"archived={result['archived']} deleted={result['deleted']}"
+            f"archived={result['archived']} deleted={result['deleted']} "
+            f"retained={result.get('retained', 0)}"
         )
         return cast("dict[str, Any]", result)
     except Exception:

@@ -198,6 +198,7 @@ def test_verified_zero_directors_triggers_minimum_director_rule():
 def test_score_impact_reporting_respects_product_release_gate_and_category_caps(monkeypatch):
     # Simulate an internally source-checked rule while the release gate is closed.
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
     flags = [
         SimpleNamespace(
@@ -220,7 +221,7 @@ def test_score_impact_reporting_respects_product_release_gate_and_category_caps(
     # gate is still closed; TAX-001 is not in the internal allowlist.
     assert applied[0] == {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
     assert applied[1] == {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
-    assert applied[2] == {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
+    assert applied[2] == {"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"}
 
 
 def test_unknown_flags_are_not_reported_as_applied_deductions():
@@ -279,13 +280,19 @@ def test_unverified_director_rows_do_not_inflate_evidence_coverage():
     assert _input_coverage(verified) > 0.0
 
 
-def test_black_override_is_reported_separately_from_category_deduction():
+def test_non_catalogue_black_surcharge_is_excluded_from_product_scoring(monkeypatch):
+    # This test isolates a catalogue that deliberately contains AGM-001 only.
+    # ESC-003 is active in the real 85-rule product register, but absent here.
     flag = SimpleNamespace(
         rule_id="ESC-003", score_impact=10, state=RuleState.NON_COMPLIANT,
         eval_state="VIOLATION", resolved=False, conditional_applies=True,
         is_black_override=True, severity="BLACK",
     )
 
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     assert _applied_score_impacts([flag])[0] == {
         "applied": 0,
         "status": "EXCLUDED_FROM_PRODUCT_SCORING",
