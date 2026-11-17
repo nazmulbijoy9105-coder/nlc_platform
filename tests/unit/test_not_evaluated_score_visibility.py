@@ -9,6 +9,57 @@ from app.api import companies as companies_api
 from app.api.companies import _company_to_response, _flag_to_response
 
 
+def _valid_evaluation_run(company, *, score, risk_band, calculated_at):
+    from app.compliance.evaluation_integrity import calculate_evaluation_score_hash
+    from app.compliance.rule_outcome_ledger import hash_rule_outcomes_snapshot
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
+
+    outcomes = [{
+        "rule_id": "AGM-001",
+        "assessment_source": "NO_FINDING_EMITTED_NOT_PROOF_OF_COMPLIANCE",
+        "findings": [],
+    }]
+    flags_snapshot = []
+    fact_provenance_snapshot = []
+    score_breakdown_snapshot = {
+        "scoring_spec_version": SCORING_SPEC_VERSION,
+        "score_reconciles": True,
+        "final_score": score,
+    }
+    outcomes_hash = hash_rule_outcomes_snapshot(outcomes)
+    score_hash = calculate_evaluation_score_hash(
+        previous_hash=None,
+        company_id=company.id,
+        score=score,
+        risk_band=risk_band,
+        calculated_at=calculated_at,
+        engine_version=RULE_ENGINE_VERSION,
+        trigger_source="TEST",
+        flags_snapshot=flags_snapshot,
+        fact_provenance_snapshot=fact_provenance_snapshot,
+        score_breakdown_snapshot=score_breakdown_snapshot,
+        rule_outcomes_hash=outcomes_hash,
+        rule_outcomes_snapshot=outcomes,
+    )
+    return SimpleNamespace(
+        company_id=company.id,
+        evaluation_status="COMPLETED",
+        score=score,
+        risk_band=risk_band,
+        calculated_at=calculated_at,
+        engine_version=RULE_ENGINE_VERSION,
+        trigger_source="TEST",
+        previous_hash=None,
+        score_hash=score_hash,
+        flags_snapshot=flags_snapshot,
+        fact_provenance_snapshot=fact_provenance_snapshot,
+        score_breakdown_snapshot=score_breakdown_snapshot,
+        rule_outcomes_snapshot=outcomes,
+        rule_outcomes_hash=outcomes_hash,
+        rule_catalogue_count=1,
+    )
+
+
 def _company(score, band):
     return SimpleNamespace(
         id=uuid4(),
@@ -49,23 +100,12 @@ def test_released_company_score_requires_full_counsel_allowlist(monkeypatch):
 
     from datetime import datetime, timezone
 
-    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
-
     company = _company(88, "GREEN")
     evaluated_at = datetime.now(timezone.utc)
     company.last_evaluated_at = evaluated_at
     company.updated_at = evaluated_at
-    evaluation_run = SimpleNamespace(
-        evaluation_status="COMPLETED",
-        score=88,
-        risk_band="GREEN",
-        calculated_at=evaluated_at,
-        engine_version=RULE_ENGINE_VERSION,
-        score_breakdown_snapshot={
-            "scoring_spec_version": SCORING_SPEC_VERSION,
-            "score_reconciles": True,
-            "final_score": 88,
-        },
+    evaluation_run = _valid_evaluation_run(
+        company, score=88, risk_band="GREEN", calculated_at=evaluated_at
     )
     response = _company_to_response(company, evaluation_run=evaluation_run)
 
