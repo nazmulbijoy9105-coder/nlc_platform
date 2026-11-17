@@ -194,8 +194,9 @@ Finance/subscription routes do not establish an automated payment-gateway integr
 - **AI governance:** AI cannot modify statutory rules; generated legal documents require human approval.
 
 
-Deployment
-Render.com (Production)
+## Deployment
+
+**Render.com (Production)**
 
      Backend: https://nlc-platform.onrender.com
      Frontend: https://nlc-frontend.vercel.app
