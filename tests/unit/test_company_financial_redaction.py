@@ -62,6 +62,7 @@ def test_company_response_withholds_cached_black_band_when_latest_run_is_pending
 
     from app.api import companies as companies_api
     from app.models.enums import RiskBand
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
 
     monkeypatch.setattr(companies_api, "_legal_score_is_released", lambda: True)
     company = _company()
@@ -90,6 +91,7 @@ def test_company_response_marks_cached_score_stale_after_profile_change(monkeypa
 
     from app.api import companies as companies_api
     from app.models.enums import RiskBand
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
 
     monkeypatch.setattr(companies_api, "_legal_score_is_released", lambda: True)
     company = _company()
@@ -103,6 +105,12 @@ def test_company_response_marks_cached_score_stale_after_profile_change(monkeypa
         score=20,
         risk_band=RiskBand.RED,
         calculated_at=evaluated_at,
+        engine_version=RULE_ENGINE_VERSION,
+        score_breakdown_snapshot={
+            "scoring_spec_version": SCORING_SPEC_VERSION,
+            "score_reconciles": True,
+            "final_score": 20,
+        },
     )
 
     response = _company_to_response(company, evaluation_run=completed_run)
@@ -130,6 +138,12 @@ def test_company_response_releases_only_matching_completed_evaluation(monkeypatc
         score=85,
         risk_band=RiskBand.GREEN,
         calculated_at=now,
+        engine_version=RULE_ENGINE_VERSION,
+        score_breakdown_snapshot={
+            "scoring_spec_version": SCORING_SPEC_VERSION,
+            "score_reconciles": True,
+            "final_score": 85,
+        },
     )
 
     response = _company_to_response(company, evaluation_run=completed_run)
