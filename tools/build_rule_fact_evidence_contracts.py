@@ -49,6 +49,20 @@ def build_contract(rule: dict[str, Any]) -> dict[str, Any]:
                 {
                     "fact_key": fact_key,
                     "source_expression": fact_key,
+    # AGM-005's seed inputs omit the company-wide member count even though
+    # its pinned statutory-registry requirement makes that count necessary to
+    # select the applicable quorum threshold. Preserve it as an explicit draft
+    # candidate with its own source provenance; do not infer a type or mapping.
+    if rule["historical_rule_id"] == "AGM-005":
+        requirement = rule.get("statutory_requirement")
+        if not isinstance(requirement, str) or not requirement.strip():
+            raise ValueError("AGM-005 statutory requirement is required for member_count")
+        if not any(item["fact_key"] == "member_count" for item in facts):
+            facts.append(
+                {
+                    "fact_key": "member_count",
+                    "source_expression": "statutory_registry.requirement",
+                    "source_evidence": requirement,
                     "data_type": "UNSPECIFIED",
                     "collection_source": "UNSPECIFIED",
                     "verification_method": "UNSPECIFIED",
@@ -71,6 +85,23 @@ def build_contract(rule: dict[str, Any]) -> dict[str, Any]:
                 {
                     "fact_key": "member_count",
                     "source_expression": requirement,
+
+    # The applicability registry is a second, independent source of required
+    # company facts. Preserve every declared input as a fact contract as well;
+    # otherwise evidence-gated inputs (including *_evidence_ref fields) can be
+    # silently omitted when the seed's data_points list is incomplete.
+    applicability_fact_keys = [
+        source_label(condition)
+        for condition in rule["applicability_contract"]["required_conditions"]
+    ]
+    existing_fact_keys = {item["fact_key"] for item in facts}
+    for fact_key in applicability_fact_keys:
+        if fact_key not in existing_fact_keys:
+            facts.append(
+                {
+                    "fact_key": fact_key,
+                    "source_expression": "applicability_contract.required_conditions",
+                    "source_artifact": "canonical_architecture/applicability_model.py",
                     "data_type": "UNSPECIFIED",
                     "collection_source": "UNSPECIFIED",
                     "verification_method": "UNSPECIFIED",
@@ -79,6 +110,7 @@ def build_contract(rule: dict[str, Any]) -> dict[str, Any]:
                     "mapping_status": "REQUIRES_DOMAIN_MAPPING",
                 }
             )
+            existing_fact_keys.add(fact_key)
 
     applicability = [
         {
