@@ -150,6 +150,11 @@ def resolve_rule_identity(
             status="UNRESOLVED", **base,
             detail=f"Alias resolution state is {alias_state}; RESOLVED is required.",
         )
+    if not str(alias.get("id") or "").strip():
+        return RuleResolution(
+            status="INVALID_ALIAS_METADATA", **base,
+            detail="Resolved alias has no immutable registry row identifier.",
+        )
 
     canonical_id = str(alias.get("canonical_rule_id") or "")
     identity = identities.get(canonical_id)
