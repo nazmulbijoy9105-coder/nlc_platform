@@ -73,3 +73,30 @@ python -m pytest tests/unit/test_legal_provenance_manifest.py -q
 ```
 
 The test is a structural/fail-closed baseline. It does not validate legal meaning, the truth of a citation, Gazette authenticity, database parity, counsel qualifications or production release readiness.
+
+
+## Statutory source-chain intake
+
+The generated `bd_statutory_source_chain.json` is the rule-by-rule intake ledger for primary legislation and amendment history. Its schema is `bd_statutory_source_chain.schema.json`.
+
+For each source instrument, record a stable `source_ref`, instrument type and exact provision, authentic language, publisher, official URL, Gazette number/part/page where applicable, assent date, publication date, commencement date, retrieval timestamp, and SHA-256 of the captured artifact. A URL alone is not evidence that the retrieved bytes are authentic or unchanged.
+
+For every amendment event, record the amending instrument, affected provision, publication and commencement dates separately, effect, and any saving or transitional provision. Link operative periods to both the authoritative text artifact and the commencement evidence. Use half-open intervals `[effective_from, effective_to)`; do not fill a date merely because the consolidated text displays it.
+
+The intake builder creates empty dossiers from the pinned 85-ID manifest:
+
+```bash
+python tools/build_bd_statutory_source_chain.py \
+  --manifest docs/legal/85_rule_provenance_manifest.json \
+  --output docs/legal/bd_statutory_source_chain.json
+```
+
+The generated records intentionally remain `UNRESOLVED`. Populate source records only after retrieving the underlying official artifact and recording its hash. `OFFICIAL_CONSOLIDATED_TEXT_AS_CROSS_CHECK_ONLY` and `ENGLISH_TRANSLATION_AS_RESEARCH_AID_ONLY` cannot independently establish the authentic Bangla text or commencement. No source-chain status of `VERIFIED` and no legal approval may be set by the generator.
+
+Validate with:
+
+```bash
+python -m pytest tests/unit/test_bd_statutory_source_chain.py -q
+```
+
+These checks establish inventory integrity and deterministic generation only. They do not establish the truth of any statutory proposition, source authenticity, amendment completeness, operative dates, or legal approval.
